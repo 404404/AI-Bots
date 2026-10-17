@@ -35,13 +35,33 @@ export interface DesktopNotificationSnapshot {
   permission: DesktopNotificationPermission;
 }
 
+export type NotificationPreferenceLock = (run: () => Promise<void>) => Promise<void>;
+export function browserNotificationPreferenceLock(): NotificationPreferenceLock | undefined {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined' || !navigator.locks)
+    return undefined;
+  return (run) => navigator.locks.request(DESKTOP_NOTIFICATIONS_KEY, run);
+}
+export function mountNotificationPreferenceSync(
+  prefs: DesktopNotificationPrefs,
+  source: Pick<Window, 'addEventListener' | 'removeEventListener'>,
+): () => void {
+  const changed = (event: StorageEvent): void => {
+    if (event.key === DESKTOP_NOTIFICATIONS_KEY || event.key === null) prefs.refreshPermission();
+  };
+  source.addEventListener('storage', changed);
+  return () => source.removeEventListener('storage', changed);
+}
 export class DesktopNotificationPrefs {
   #snapshot: DesktopNotificationSnapshot;
   readonly #listeners = new Set<() => void>();
   readonly #storage: ConfigStorage | undefined;
   readonly api: DesktopNotificationApi | undefined;
 
-  constructor(storage: ConfigStorage | undefined, api: DesktopNotificationApi | undefined) {
+  constructor(
+    storage: ConfigStorage | undefined,
+    api: DesktopNotificationApi | undefined,
+    readonly lock: NotificationPreferenceLock | undefined = browserNotificationPreferenceLock(),
+  ) {
     this.#storage = storage;
     this.api = api;
     let enabled = false;
@@ -77,31 +97,40 @@ export class DesktopNotificationPrefs {
 
   refreshPermission(): void {
     const permission = this.api?.permission() ?? 'unsupported';
-    if (permission !== this.#snapshot.permission) this.#set({ ...this.#snapshot, permission });
+    let enabled = this.#snapshot.enabled;
+    try {
+      if (this.#storage) enabled = this.#storage.getItem(DESKTOP_NOTIFICATIONS_KEY) === 'on';
+    } catch {}
+    this.#set({ enabled, permission });
   }
 
-  readonly setEnabled = async (enabled: boolean, requestPermission = true): Promise<void> => {
-    if (!enabled) {
-      this.#persist(false);
-      return;
-    }
-    if (this.api === undefined) return;
-    let permission = this.api.permission();
-    if (permission === 'default' && requestPermission) {
+  readonly setEnabled = async (
+    enabled: boolean,
+    requestPermission = true,
+    beforePersist?: () => void | Promise<void>,
+  ): Promise<void> => {
+    if (enabled && this.api && this.api.permission() === 'default' && requestPermission) {
       try {
-        permission = await this.api.requestPermission();
-      } catch {
-        permission = this.api.permission();
-      }
+        await this.api.requestPermission();
+      } catch {}
     }
-    this.#set({ ...this.#snapshot, permission });
-    if (permission === 'granted') this.#persist(true);
+    const commit = async (): Promise<void> => {
+      this.refreshPermission();
+      await beforePersist?.();
+      this.refreshPermission();
+      if (!enabled || this.#snapshot.permission === 'granted') this.#persist(enabled);
+    };
+    if (this.lock) await this.lock(commit);
+    else await commit();
   };
 
   #persist(enabled: boolean): void {
+    if (!this.#storage) throw new Error('client-persistence-unavailable');
     try {
-      this.#storage?.setItem(DESKTOP_NOTIFICATIONS_KEY, enabled ? 'on' : 'off');
-    } catch {}
+      this.#storage.setItem(DESKTOP_NOTIFICATIONS_KEY, enabled ? 'on' : 'off');
+    } catch {
+      throw new Error('client-persistence-unavailable');
+    }
     this.#set({ ...this.#snapshot, enabled });
   }
 

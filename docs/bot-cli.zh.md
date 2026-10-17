@@ -895,3 +895,5 @@ printf '%s' '{"notifications":false}' | deepseekbot client-preferences-set CLIEN
 补充覆盖清单仍把本地文件打开方式、输入框 footer 和 DM trace 展示记录为本切片不可用；`client-preferences-set` 对这些字段拒绝 `unsupported-client-preference`。连接的 Web Client 不具备的原生通知控制保持 unsupported，存储成功不证明系统通知已送达。布局与快捷键属于独立切片。
 
 `no-connected-client`、`unknown-client-target`、`client-target-stale`、`client-target-replaced` 区分无在线目标、未知目标、过期租约与已替换实例。刷新保留标签页 id，但替换 generation。未派发请求超时返回 `client-unresponsive`；已派发写入未确认完成返回 `client-outcome-uncertain`，必须重新读取 owner 进行核对，不能盲目重试。待执行命令有界、仅存于进程内，Host 重启后不重放；偏好继续由选中 Client 的现有 owner 持久化。
+
+通知 owner 在读回／比较前刷新真实同源存储，并通过 storage 事件同步其他标签页。浏览器支持 Web Locks 时，UI 与 CLI 都通过同一个 owner 锁写入；CLI 在锁内再次核对状态和 Host 来源授权。缺少 Web Locks 时受限修改拒绝 client-concurrency-unavailable，普通 UI 仍可使用。原生连接 Provider 的认证 HTTP 请求共享 OperatorPeer；私有 mount／tab-owner proof 提供 Client 实例隔离，不能把 Peer id 当作浏览器身份。

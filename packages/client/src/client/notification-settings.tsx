@@ -1,4 +1,4 @@
-import { useSyncExternalStore, type ReactElement } from 'react';
+import { useState, useSyncExternalStore, type ReactElement } from 'react';
 import { Button, Switch } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type { DesktopNotificationPrefs } from './desktop-notifications.js';
@@ -17,9 +17,11 @@ export function DesktopNotificationSetting({
     desktopNotifications.subscribe,
     desktopNotifications.getSnapshot,
   );
+  const [error, setError] = useState(false);
   const checked = state.enabled && state.permission === 'granted';
-  const description =
-    state.permission === 'unsupported'
+  const description = error
+    ? t('desktopNotify.row.failed')
+    : state.permission === 'unsupported'
       ? t('desktopNotify.row.unsupported')
       : state.permission === 'denied'
         ? t('desktopNotify.row.denied')
@@ -33,7 +35,10 @@ export function DesktopNotificationSetting({
         <Switch
           checked={checked}
           disabled={state.permission === 'unsupported' || state.permission === 'denied'}
-          onChange={(enabled) => void desktopNotifications.setEnabled(enabled)}
+          onChange={(enabled) => {
+            setError(false);
+            void desktopNotifications.setEnabled(enabled).catch(() => setError(true));
+          }}
           label={t('desktopNotify.row.title')}
         />
       }

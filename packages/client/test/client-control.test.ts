@@ -4,6 +4,7 @@ import {
   createClientTarget,
 } from '../src/client/client-control.js';
 import {
+  mountNotificationPreferenceSync,
   DESKTOP_NOTIFICATIONS_KEY,
   DesktopNotificationPrefs,
   type DesktopNotificationApi,
@@ -21,7 +22,7 @@ function fixture(permission: 'granted' | 'denied' | 'default' | 'unsupported' = 
     permission === 'unsupported'
       ? undefined
       : { permission: () => permission, requestPermission: request, show: vi.fn() };
-  const notifications = new DesktopNotificationPrefs(storage, api);
+  const notifications = new DesktopNotificationPrefs(storage, api, async (run) => await run());
   const handlers = createClientPreferenceHandlers({
     readTheme: () => 'system',
     readLocale: () => 'en',
@@ -101,26 +102,113 @@ it.each(['default', 'denied', 'unsupported'] as const)(
 it('reports unavailable persistence and never requests permission if the OS state changes during a CLI write', async () => {
   let reads = 0;
   const requestPermission = vi.fn(async () => 'granted' as const);
-  const notifications = new DesktopNotificationPrefs(undefined, {
-    permission: () => (++reads < 4 ? 'granted' : 'default'),
-    requestPermission,
-    show: vi.fn(),
-  });
+  const notifications = new DesktopNotificationPrefs(
+    undefined,
+    {
+      permission: () => (++reads < 4 ? 'granted' : 'default'),
+      requestPermission,
+      show: vi.fn(),
+    },
+    async (run) => await run(),
+  );
   const handlers = createClientPreferenceHandlers({
     readTheme: () => 'system',
     readLocale: () => 'en',
     notifications,
   });
   const before = (await handlers.get('preferences')!({})) as { stateFingerprint: string };
-  const result = await handlers.get('preferences-set')!({
-    scope: 'browser-origin',
-    expectedState: before.stateFingerprint,
-    patch: { notifications: true },
-  });
-  expect(result).toMatchObject({
-    outcome: 'permission-pending',
-    changed: false,
-    persistence: 'unavailable',
-  });
+  await expect(
+    handlers.get('preferences-set')!({
+      scope: 'browser-origin',
+      expectedState: before.stateFingerprint,
+      patch: { notifications: true },
+    }),
+  ).rejects.toThrow('stale-client-preferences');
   expect(requestPermission).not.toHaveBeenCalled();
+});
+
+it('serializes UI and scoped writes across two owners and rejects an old review after a peer edit', async () => {
+  const f = fixture();
+  let tail = Promise.resolve();
+  const lock = (run: () => Promise<void>): Promise<void> => {
+    const next = tail.then(run);
+    tail = next.catch(() => {});
+    return next;
+  };
+  const a = new DesktopNotificationPrefs(f.storage, f.api, lock);
+  const b = new DesktopNotificationPrefs(f.storage, f.api, lock);
+  const handlers = createClientPreferenceHandlers({
+    readTheme: () => 'system',
+    readLocale: () => 'en',
+    notifications: a,
+  });
+  const old = (await handlers.get('preferences')!({})) as { stateFingerprint: string };
+  let release!: () => void;
+  const held = lock(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+  );
+  await Promise.resolve();
+  const ui = b.setEnabled(true);
+  const scoped = handlers.get('preferences-set')!({
+    scope: 'browser-origin',
+    expectedState: old.stateFingerprint,
+    patch: { notifications: false },
+  });
+  const stale = expect(scoped).rejects.toThrow('stale-client-preferences');
+  release();
+  await held;
+  await ui;
+  await stale;
+  expect(f.values.get(DESKTOP_NOTIFICATIONS_KEY)).toBe('on');
+  expect(await handlers.get('preferences')!({})).toMatchObject({
+    value: { notifications: { enabled: true } },
+  });
+});
+it('reconciles peer-tab storage events through the same notification owner', async () => {
+  const f = fixture();
+  const events = new EventTarget();
+  const stop = mountNotificationPreferenceSync(f.notifications, events as unknown as Window);
+  const changed = vi.fn();
+  const unsubscribe = f.notifications.subscribe(changed);
+  f.values.set(DESKTOP_NOTIFICATIONS_KEY, 'on');
+  events.dispatchEvent(Object.assign(new Event('storage'), { key: DESKTOP_NOTIFICATIONS_KEY }));
+  expect(f.notifications.getSnapshot().enabled).toBe(true);
+  expect(changed).toHaveBeenCalledOnce();
+  stop();
+  unsubscribe();
+});
+it('refuses scoped CAS without a shared browser lock while ordinary UI still uses its owner', async () => {
+  const f = fixture();
+  const notifications = new DesktopNotificationPrefs(f.storage, f.api, undefined);
+  const handlers = createClientPreferenceHandlers({
+    readTheme: () => 'system',
+    readLocale: () => 'en',
+    notifications,
+  });
+  const before = (await handlers.get('preferences')!({})) as { stateFingerprint: string };
+  await expect(
+    handlers.get('preferences-set')!({
+      scope: 'browser-origin',
+      expectedState: before.stateFingerprint,
+      patch: { notifications: true },
+    }),
+  ).rejects.toThrow('client-concurrency-unavailable');
+  await notifications.setEnabled(true);
+  expect(notifications.getSnapshot().enabled).toBe(true);
+});
+
+it('keeps the visible owner value when local persistence refuses a write', async () => {
+  const f = fixture();
+  const storage = {
+    getItem: f.storage.getItem,
+    setItem: () => {
+      throw new Error('quota');
+    },
+  };
+  const notifications = new DesktopNotificationPrefs(storage, f.api, async (run) => await run());
+  await expect(notifications.setEnabled(true)).rejects.toThrow('client-persistence-unavailable');
+  expect(notifications.getSnapshot().enabled).toBe(false);
 });

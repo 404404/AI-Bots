@@ -94,6 +94,8 @@ const CODES = new Set([
   'client-target-stale',
   'client-command-expired',
   'client-busy',
+  'client-persistence-unavailable',
+  'client-concurrency-unavailable',
   'client-capacity',
   'client-outcome-uncertain',
   'client-unresponsive',
