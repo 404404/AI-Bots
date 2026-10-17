@@ -260,7 +260,36 @@ async function pressVisible(selector) {
   }
   return false;
 }
+async function captureStage(stage) {
+  console.log(JSON.stringify({ phase: 'stable-capture', stage }));
+  save(
+    'capture-' + stage,
+    await page.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          '[role="region"],[role="tabpanel"],[data-channel-workspace],.bh-message-content,[data-pinned-panel],[data-sessions],[data-flip-key]',
+        ),
+      ].map((node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          tag: node.tagName,
+          attributes: Object.fromEntries(
+            [...node.attributes]
+              .filter((attribute) =>
+                /^(?:role|aria-label|aria-pressed|class|data-channel-workspace|data-pinned-panel|data-sessions|data-flip-key)$/u.test(
+                  attribute.name,
+                ),
+              )
+              .map((attribute) => [attribute.name, attribute.value]),
+          ),
+          bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        };
+      }),
+    ),
+  );
+}
 async function captureStableViews(home, assignmentId, closing) {
+  await captureStage('initial');
   const contact = `[data-channel-id=${JSON.stringify(home.channelId)}]`;
   await page.waitForFunction(
     (selector) =>
@@ -271,17 +300,27 @@ async function captureStableViews(home, assignmentId, closing) {
     contact,
   );
   assert.ok(await pressVisible(contact), 'Tob DM control missing');
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll('[data-dock-panel="bh:channel-body"]')].some(
-      (node) => node.getBoundingClientRect().height > 0,
-    ),
-  );
+  await captureStage('contact-open');
+  let messagesRegion;
+  for (const name of ['消息', 'Messages']) {
+    const element = await page.$(`::-p-aria([name="${name}"][role="region"])`);
+    if (element && (await element.isVisible())) {
+      messagesRegion = element;
+      break;
+    }
+  }
+  assert.ok(messagesRegion, 'Observed Messages region missing');
   const homeOpen = await page.evaluate(() =>
     [...document.querySelectorAll('[data-home-panel]')].some(
       (node) => node.getBoundingClientRect().height > 0,
     ),
   );
-  if (homeOpen) await pressVisible('[data-pinned-panel="bh:home"][aria-pressed="true"]');
+  if (homeOpen)
+    assert.ok(
+      await pressVisible('[data-pinned-panel="bh:home"][aria-pressed="true"]'),
+      'Open Home toggle missing',
+    );
+  await captureStage('home-closed');
   await pause(500);
   const sessionsOpen = await page.evaluate(() =>
     [...document.querySelectorAll('[data-sessions]')].some(
@@ -293,8 +332,18 @@ async function captureStableViews(home, assignmentId, closing) {
       await pressVisible('button[aria-label="Sessions"],button[aria-label="会话"]'),
       'Sessions control missing',
     );
+  await captureStage('sessions-visible');
   let box;
-  for (const body of await page.$$('[data-dock-panel="bh:channel-body"]')) {
+  const messageContent = `[data-channel-workspace=${JSON.stringify(home.channelId)}] .bh-message-content`;
+  await page.waitForFunction(
+    (selector) =>
+      [...document.querySelectorAll(selector)].some(
+        (node) => node.getBoundingClientRect().height > 0,
+      ),
+    {},
+    messageContent,
+  );
+  for (const body of await page.$$(messageContent)) {
     const bounds = await body.boundingBox();
     if (bounds && bounds.height > 0 && bounds.y >= 0) {
       box = bounds;
@@ -320,6 +369,7 @@ async function captureStableViews(home, assignmentId, closing) {
       if (bounds) await button.click();
     }
   await page.mouse.wheel({ deltaY: 20000 });
+  await captureStage('final-reply-visible');
   await shot('stable-revoked-scope');
   const row = `[data-flip-key=${JSON.stringify(assignmentId)}] .bh-session-row`;
   await page.waitForFunction(
@@ -330,6 +380,7 @@ async function captureStableViews(home, assignmentId, closing) {
     {},
     row,
   );
+  await captureStage('assignment-row-visible');
   await shot('stable-tob-assignment-list');
   assert.ok(await pressVisible(row), 'Exact owned Assignment row missing');
   await poll(
@@ -339,6 +390,7 @@ async function captureStableViews(home, assignmentId, closing) {
       text.includes('memory-target-unavailable') &&
       /返回 Tob 私聊|(?:Back|Return) to Tob/u.test(text),
   );
+  await captureStage('assignment-session-visible');
   await shot('stable-assignment-session');
 }
 async function submit(home, prompt) {
