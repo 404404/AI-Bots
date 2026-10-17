@@ -20,3 +20,13 @@ The approval JSON scroll container clips the Group proposal in the full-frame im
 Four successful Tob turns used `deepseek-official/deepseek-flash`, confirmed by native Session model-selection projection. A prior Go quota failure left an old model label in the Session footer; that label does not identify the later successful turns. First failures and full snapshots remain in private task evidence.
 
 Native Desktop, CI and Human QA were pending when these Web assets were captured. No merge or release is claimed.
+
+## macOS Desktop follow-up
+
+Root's serialized native runner exercised the same product source in the macOS Desktop Client on 2026-10-17 UTC, using the original absolute Profile home. Captures are 2522 × 1640 pixels, except the cropped attachment proposal. All 19 native screenshots were inspected; all 30 JSON records parsed successfully.
+
+`native-group-delete-before.png` shows the actual pending approval, followed by `native-group-delete-after.png`. `native-group-delete-denied.png` and `native-group-delete-stale.png` show successful safety refusals: the Group remains after denial or a concurrent Human rename. `native-attachment-upload-before.png` shows metadata only; `native-attachment-upload-after.png` reports the retained reference and explicitly says no file was sent.
+
+The four completed native turns invoked the real ordinary Shell CLI, with actual approval decisions and independent Human CLI canonical readback. The full run and a subsequent actual same-Profile Desktop restart both recorded `errors: []`; restart readback used the newly created native fixture, not the earlier Web data. Root stopped only its own candidate and restored the main Desktop. No additional product source or build was needed.
+
+Native automation is passed; Human QA remains pending. The reviewed product revision is `6396cbd26d98042898443dda7333781b5f2e7a79`, whose runtime product source matches the committed `c125e7059` build. Later review-asset commits do not change product code.
