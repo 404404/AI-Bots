@@ -335,7 +335,7 @@ describe('cloud organizations', () => {
     await restarted.logout(config.instanceId);
     expect(restarted.getSnapshot().rows[0]?.organization).toBeUndefined();
   });
-  it('retains the original creation operation across response loss and app restart', async () => {
+  it('retains the original creation operation across response loss, restart and unchanged import', async () => {
     const f = organizationsFixture();
     const client = new CloudClient(f.rt);
     await client.importConfig(JSON.stringify(config));
@@ -346,6 +346,7 @@ describe('cloud organizations', () => {
     ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
     const restarted = new CloudClient(f.rt);
     await restarted.load();
+    await restarted.importConfig(JSON.stringify(config));
     expect(restarted.getSnapshot().rows[0]?.pendingCreate?.name).toBe('Mobile project');
     await expect(restarted.createOrganization(config.instanceId, 'Other')).rejects.toMatchObject({
       code: 'PENDING_ORGANIZATION_CREATE',

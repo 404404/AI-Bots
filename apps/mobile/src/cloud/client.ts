@@ -323,7 +323,7 @@ export class CloudClient {
         this.identities.delete(config.instanceId);
         this.organizations.delete(config.instanceId);
       }
-      await this.save({ config, ...(!changed && old?.session ? { session: old.session } : {}) });
+      await this.save({ ...(!changed ? old : {}), config });
       return config;
     });
   private async acceptTokens(
