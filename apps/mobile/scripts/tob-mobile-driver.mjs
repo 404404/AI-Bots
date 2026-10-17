@@ -176,7 +176,9 @@ export async function main(mode, args) {
       console.log(
         JSON.stringify({
           event: 'native_checkpoint',
-          verifiedAdmin: true,
+          verifiedIdentity: true,
+          instanceRole: state.instanceRole ?? 'admin',
+          verifiedAdmin: (state.instanceRole ?? 'admin') === 'admin',
           sameSession: true,
           refreshChangedSinceCheckpoint: hash !== previous,
         }),
