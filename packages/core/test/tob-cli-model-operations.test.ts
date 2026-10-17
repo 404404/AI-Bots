@@ -132,6 +132,76 @@ describe('Tob scoped model and runtime operations', () => {
     });
   });
 
+  it('uses native device Settings revisions, exact readback and mandatory Human review', async () => {
+    const f = fixture();
+    f.rows.push({
+      ns: 'botharness-browser',
+      revision: 2,
+      value: {
+        target: 'local',
+        localDriver: 'current',
+        containerDriver: 'current',
+        privateValue: 'must-stay-private',
+      },
+    });
+    f.rows.push({
+      ns: 'botharness-computer',
+      revision: 5,
+      value: { target: 'local', idleStopMinutes: 30, exportDir: '', autoAllowActions: false },
+    });
+    const browser = await f.run('settings', { ns: 'botharness-browser' });
+    expect(browser).toEqual({
+      scope: 'global',
+      ns: 'botharness-browser',
+      revision: 2,
+      value: { target: 'local', localDriver: 'current', containerDriver: 'current' },
+    });
+    const operation = (await f.prepare('settings-set', {
+      ns: 'botharness-computer',
+      expectedRevision: 5,
+      previousValue: { autoAllowActions: false },
+      patch: { autoAllowActions: true },
+    }))!;
+    expect(operation.proposal).toMatchObject({
+      requireHumanReview: true,
+      target: 'botharness-computer',
+      patch: { autoAllowActions: true },
+    });
+    expect(await operation.run(() => {})).toMatchObject({
+      revision: 6,
+      value: { autoAllowActions: true },
+    });
+    expect(f.native.update).toHaveBeenCalledWith(
+      'botharness-computer',
+      { autoAllowActions: true },
+      5,
+    );
+    expect(f.runtimeChanged).not.toHaveBeenCalled();
+    await expect(
+      f.prepare('settings-set', {
+        ns: 'botharness-computer',
+        expectedRevision: 5,
+        previousValue: { autoAllowActions: false },
+        patch: { autoAllowActions: true },
+      }),
+    ).rejects.toMatchObject({ code: 'stale-setting' });
+    await expect(
+      f.prepare('settings-set', {
+        ns: 'botharness-browser',
+        expectedRevision: 2,
+        previousValue: { target: 'local' },
+        patch: { target: ['container'] },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid-setting' });
+    await expect(
+      f.prepare('settings-set', {
+        ns: 'botharness-browser',
+        expectedRevision: 2,
+        previousValue: { browserPath: '' },
+        patch: { browserPath: '/any/path' },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid-input' });
+  });
   it('discovers only supported live settings and bounded Bot identity', async () => {
     const f = fixture();
     expect(await f.run('list')).toEqual({

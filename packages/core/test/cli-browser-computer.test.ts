@@ -96,6 +96,26 @@ function scratch() {
 
 describe('Browser observation, takeover audit and profile commands', () => {
   it.each([
+    ['browser-profile-pair', [], '/api/browser/profile/pair', {}],
+    ['browser-profile-forget', [], '/api/browser/profile/forget', {}],
+    ['browser-daily-connect', ['ada'], '/api/browser/daily/connect', { slug: 'ada' }],
+    ['browser-daily-grant', ['ada'], '/api/browser/daily/grant', { slug: 'ada' }],
+    ['browser-daily-return', ['ada'], '/api/browser/daily/return', { slug: 'ada' }],
+    ['browser-borrow-pair', ['ada'], '/api/browser/borrow/pair', { slug: 'ada' }],
+    ['browser-borrow-return', ['ada'], '/api/browser/borrow/return', { slug: 'ada' }],
+  ] as const)(
+    'requires Human confirmation and uses the existing %s control route',
+    async (command, rest, path, body) => {
+      const live = await host(() => ({ json: { ok: true, permissionRequired: true } }));
+      expect((await invoke([command, ...rest], live.url)).code).not.toBe(0);
+      expect(live.calls).toEqual([]);
+      const result = await invoke([command, ...rest, '--confirm'], live.url);
+      expect(result.code).toBe(0);
+      expect(result.json.permissionRequired).toBe(true);
+      expect(live.calls).toEqual([{ method: 'POST', path, body }]);
+    },
+  );
+  it.each([
     [404, 'browser not running'],
     [404, 'no browser tab'],
     [503, 'frame unavailable'],
