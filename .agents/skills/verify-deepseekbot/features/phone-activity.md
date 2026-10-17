@@ -29,10 +29,15 @@ the shared QA Host. Use only the dedicated QA conversations.
 
 Use the same shared-device queue. Open Activity on the selected Host with a pending
 question/approval, a Human mention, a reply and ordinary unread group messages.
-Confirm three independently collapsible sections, yellow action and blue unread
-badges, and handled history only through the filter. The floating header contains
+Confirm exactly three pinned, underlined tabs: Needs you (default), For you and
+Other unread. Needs you retains approvals, formal questions and private input.
+Switch all three tabs; only their own rows appear, without collapsible section
+headings. All and handled history remain available through the filter. The header contains
 sorting, filtering and Activity search; no permanent chips appear above the feed.
-Open Filters, combine Bot/Channel/unread/category, clear them, and close the sheet.
+Open Filters, combine Bot/Channel/unread/category, switch tabs and confirm those
+other filters survive. Reset returns to Needs you and default filters, preserving
+the search. Close the sheet. While a question submission is pending, switch tabs;
+a late refusal must not restore its post in the new tab.
 Search a safe summary beyond the first page and use Load more. Default ordering
 puts mentions before replies; explicit newest/oldest replaces that priority.
 Scroll under the header with search open and closed; verify light/dark and large
