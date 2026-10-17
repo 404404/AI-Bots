@@ -134,7 +134,7 @@
     {
       "id": "phone.pairing",
       "label": "Pair once, list devices, restart and revoke device streams",
-      "source": "packages/client/src/client/pairing-settings.tsx",
+      "source": "packages/client/src/client/paired-devices.tsx",
       "guide": ".agents/skills/verify-deepseekbot/features/phone-pairing.md",
       "task": 1967,
       "gap": null
@@ -1819,7 +1819,7 @@
       "behaviors": ["phone.pairing"],
       "reason": "Direct CLI and scoped Tob Shell management with Human Devices dialog handoff; authorized synthetic device pairing, list, revoke, stream close and denied access. Physical phone and native Desktop remain separate qualification.",
       "task": 2098,
-      "sha256": "101c4a788e76ce170c2cf9e4d939d8d3baec58cbf3cb243e9b46f119579eafe7"
+      "sha256": "c295845735d8327bfbc0f249d053b2a59f6d9db31139ed124a88209a6c5b63f4"
     }
   ],
   "native": [
