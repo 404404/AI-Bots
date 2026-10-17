@@ -8,7 +8,7 @@ import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
-import { ProfileSheet } from './primitives/profile-sheet';
+import { SheetScreen } from './primitives/sheet-screen';
 import { errorText, Notice } from './request-parts';
 import { UsageCard } from './shell/usage-card';
 import { t } from './strings';
@@ -55,10 +55,10 @@ export function SettingsView({
   const [versionCopied, setVersionCopied] = useState(false);
   const status = [STATUS[connection.status], connection.route].filter((part) => part !== '');
   return (
-    <ProfileSheet>
+    <SheetScreen onClose={actions.onClose}>
       <ScrollView
         nestedScrollEnabled
-        style={{ flex: 1, backgroundColor: theme.color.base }}
+        style={{ flex: 1 }}
         contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
         <View
@@ -152,6 +152,6 @@ export function SettingsView({
         </SettingsSection>
         {statistics}
       </ScrollView>
-    </ProfileSheet>
+    </SheetScreen>
   );
 }

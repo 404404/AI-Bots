@@ -99,6 +99,13 @@ export const markdownTable = { minColumnWidth: 96, maxColumnWidth: 280 } as cons
 
 export const drawerSpring = { duration: 280, dampingRatio: 1 } as const;
 
+export const streamReveal = {
+  duration: 180,
+  stagger: 72,
+  maxGlyphs: 48,
+  maxFreshSpans: 8,
+} as const;
+
 export const lift = 0.96;
 
 export const PRESS_TINT = 0.12;

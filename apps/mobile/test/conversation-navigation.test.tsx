@@ -21,6 +21,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('expo-router', () => ({
+  useIsFocused: () => true,
   Stack: { Screen: () => null },
   useRouter: () => ({
     canGoBack: () => state.history.length > 1,
@@ -44,6 +45,7 @@ vi.mock('../src/host/host-session', () => ({
   useConversation: () => (state.active ? {} : undefined),
   useChannelConversation: () => undefined,
   useConversationTimelineSnapshot: () => state.conversation,
+  useStreamPlayback: () => undefined,
 }));
 vi.mock('../src/host/share-attachment', () => ({ shareAttachment: vi.fn() }));
 vi.mock('../src/host/native-dm-activity', () => ({ useHiddenDmActivity: () => [] }));
@@ -81,10 +83,12 @@ vi.mock('../src/ui/chat/image-viewer', () => ({ ImageViewer: () => null }));
 vi.mock('../src/ui/chat/jump-to-latest', () => ({ JumpToLatest: () => null }));
 vi.mock('../src/ui/chat/message-actions', () => ({ MessageActions: () => null }));
 vi.mock('../src/ui/chat/message-bubble', () => ({
-  MessageBubble: ({ message }: { message: { body: string } }) => (
-    <span data-testid="message">{message.body}</span>
-  ),
-  LiveDraftBubble: () => <span data-testid="draft">visible draft</span>,
+  PlaybackBubble: ({ message }: { message?: { body: string } }) =>
+    message === undefined ? (
+      <span data-testid="draft">visible draft</span>
+    ) : (
+      <span data-testid="message">{message.body}</span>
+    ),
 }));
 vi.mock('../src/ui/chat/message-menu', () => ({ copyMessage: vi.fn(), shareText: vi.fn() }));
 vi.mock('../src/ui/chat/mention-suggestions', () => ({ MentionSuggestions: () => null }));

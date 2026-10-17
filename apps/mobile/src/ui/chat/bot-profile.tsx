@@ -14,7 +14,7 @@ import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
-import { ProfileSheet } from '../primitives/profile-sheet';
+import { SheetScreen } from '../primitives/sheet-screen';
 import { useSheetContent } from '../primitives/sheet-content';
 import {
   ActivityIcon,
@@ -171,7 +171,7 @@ function ProfileAction({
         gap: space.x2,
         paddingVertical: space.x4,
         borderRadius: radius.md,
-        backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
       })}
     >
       {icon(theme.color.fg)}
@@ -275,7 +275,7 @@ function ProfileRow({
       />
     );
   const shape = {
-    backgroundColor: theme.layer.sheet.fill,
+    backgroundColor: theme.layer.raised.fill,
     paddingHorizontal: space.x5,
     paddingVertical: space.x4,
     borderTopLeftRadius: row.first ? radius.md : 0,
@@ -305,7 +305,7 @@ function ProfileRow({
             alignItems: 'center',
             gap: space.x3,
             minHeight: theme.touch,
-            backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+            backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
           },
         ]}
       >
@@ -336,7 +336,7 @@ function ProfileRow({
             alignItems: 'center',
             gap: space.x3,
             minHeight: theme.touch,
-            backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+            backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
           },
         ]}
       >
@@ -445,7 +445,6 @@ export function BotProfileSheet({
   routines?: ProfileRoutines | undefined;
   initialProfile?: BotProfile | undefined;
 }) {
-  const theme = useDesignTheme();
   const [profile, setProfile] = useState(initialProfile);
   const content = useSheetContent();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -483,7 +482,7 @@ export function BotProfileSheet({
   }));
 
   return (
-    <ProfileSheet onMount={content.mount}>
+    <SheetScreen onMount={content.mount}>
       <SectionList
         ref={mount}
         sections={sections}
@@ -492,7 +491,7 @@ export function BotProfileSheet({
         nestedScrollEnabled
         initialNumToRender={3}
         maxToRenderPerBatch={3}
-        style={{ flex: 1, backgroundColor: theme.color.surface }}
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: space.x5, paddingTop: space.x6 }}
         ListHeaderComponent={
           <ProfileHeader
@@ -544,6 +543,6 @@ export function BotProfileSheet({
           )
         }
       />
-    </ProfileSheet>
+    </SheetScreen>
   );
 }

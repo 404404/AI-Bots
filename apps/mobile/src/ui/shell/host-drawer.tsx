@@ -413,7 +413,7 @@ export function HostDrawer() {
               bottom: 0,
               left: 0,
               width,
-              backgroundColor: theme.layer.sheet.fill,
+              backgroundColor: theme.overlay.fill,
               borderTopRightRadius: radius.lg,
               borderBottomRightRadius: radius.lg,
               boxShadow: glassShadow(theme.scheme),

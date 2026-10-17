@@ -37,7 +37,7 @@ vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 vi.mock('expo-router', () => {
   const Stack = () => null;
   Stack.Screen = () => null;
-  return { Redirect: () => null, Stack, useRouter: () => ({ push }) };
+  return { Redirect: () => null, Stack, useIsFocused: () => true, useRouter: () => ({ push }) };
 });
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({

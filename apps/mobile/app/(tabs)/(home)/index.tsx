@@ -1,4 +1,4 @@
-import { Redirect, Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useIsFocused, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
@@ -32,11 +32,12 @@ const NONE: HumanAttentionItem[] = [];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const focused = useIsFocused();
   const bottom = useFloatingTabInset();
   const { saved, client, inbox } = useHostSession();
   const look = useHostLook(saved?.hostId);
-  const snapshot = useHostSnapshot(client);
-  const list = useInbox(inbox);
+  const snapshot = useHostSnapshot(client, focused);
+  const list = useInbox(inbox, focused);
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;

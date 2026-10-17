@@ -1363,7 +1363,7 @@
       "behaviors": ["phone.android-interactions"],
       "reason": "Matching Windows Android lease only: profile/settings content-first scroll and handle gestures, dark-theme 30fps composer pixel regression; scroll selection excludes the underlying dimmed chat. Prepared QA surface, FFmpeg and native build required; no model or iOS claim.",
       "task": 2028,
-      "sha256": "c52351252b76b7b7f8d15dda24d29a7415a76512dac73d01077efb1843c8b4c0"
+      "sha256": "6f618d74345592e46f70e4bc5b0e7845df50f57a517e0c448e0a91f47b13afae"
     },
     {
       "path": "scripts/e2e-mobile-pair-android.mjs",
