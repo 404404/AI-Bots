@@ -3,6 +3,7 @@ export function fixtureExpression(
   state: {
     config: { environment: string };
     userId: string;
+    instanceRole?: 'admin' | 'user';
     accessToken?: string;
     refreshToken?: string;
   },
