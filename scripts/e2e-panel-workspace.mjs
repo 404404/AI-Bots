@@ -314,6 +314,116 @@ try {
     JSON.stringify(pointerPositions, null, 2),
   );
   await proof('01b-pointer-menus');
+  step = 'all-panel-header-menus';
+  const headerMenuResults = [];
+  const panelSwitches = await page.$$eval(`${rail} [data-pinned-panel]`, (nodes) =>
+    nodes.map((node) => ({
+      id: node.dataset.pinnedPanel,
+      open: node.getAttribute('aria-pressed') === 'true',
+    })),
+  );
+  for (const { id, open } of panelSwitches) {
+    const toggle = `${rail} [data-pinned-panel="${id}"]`;
+    const header = `[data-dock-header="${id}"]`;
+    if (!open) await page.click(toggle);
+    await page.waitForSelector(header, { visible: true });
+    const otherPanels = await page.evaluate((current) => {
+      window.__headerMenuPeers = [...document.querySelectorAll('[data-dock-header]')].filter(
+        (node) => node.dataset.dockHeader !== current,
+      );
+      return window.__headerMenuPeers.map((node) => node.dataset.dockHeader).sort();
+    }, id);
+    const point = await page.$eval(header, (node) => {
+      const box = node.getBoundingClientRect();
+      return { x: box.left + 30, y: box.top + box.height / 2 };
+    });
+    await page.mouse.click(point.x, point.y, { button: 'right' });
+    await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+    const box = await page.$eval('[data-pointer-menu] [role="menu"]', (node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        x: rect.x,
+        y: rect.y,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: innerWidth,
+        height: innerHeight,
+        label: node.textContent,
+      };
+    });
+    assert.ok(
+      Math.abs(box.x - point.x) <= 1 && Math.abs(box.y - point.y) <= 1,
+      `Panel header pointer: ${JSON.stringify({ id, point, box })}`,
+    );
+    assert.ok(box.right <= box.width && box.bottom <= box.height);
+    assert.equal(
+      await page.$$eval('[data-pointer-menu] [role="menuitem"]', (nodes) => nodes.length),
+      1,
+    );
+    headerMenuResults.push({ id, point, box });
+    await page.screenshot({ path: resolve(out, `header-menu-${id.replaceAll(':', '-')}.png`) });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+    assert.equal(
+      await page.$eval(header, (node) => node === document.activeElement),
+      true,
+      'Escape restores header focus',
+    );
+    if (id === 'bh:channel-body') {
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+      await page.click('.bh-dock-body [role="textbox"]');
+      await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+      assert.ok(
+        await page.$eval(
+          '.bh-dock-body [role="textbox"]',
+          (node) => node === document.activeElement,
+        ),
+        'Outside click keeps composer focus',
+      );
+    }
+    await page.focus(header);
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('F10');
+    await page.keyboard.up('Shift');
+    await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+    const keyboardPosition = await page.$eval(header, (node) => {
+      const anchor = node.getBoundingClientRect();
+      const menu = document
+        .querySelector('[data-pointer-menu] [role="menu"]')
+        .getBoundingClientRect();
+      return { dx: menu.left - anchor.left, dy: menu.top - anchor.bottom };
+    });
+    assert.ok(
+      Math.abs(keyboardPosition.dx) <= 1 && Math.abs(keyboardPosition.dy) <= 1,
+      `Panel header keyboard: ${JSON.stringify({ id, keyboardPosition })}`,
+    );
+    await page.click('[data-pointer-menu] [role="menuitem"]');
+    await page.waitForSelector(header, { hidden: true });
+    await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+    assert.equal(await page.$eval(toggle, (node) => node.getAttribute('aria-pressed')), 'false');
+    assert.deepEqual(
+      await page.$$eval('[data-dock-header]', (nodes) =>
+        nodes.map((node) => node.dataset.dockHeader).sort(),
+      ),
+      otherPanels,
+      'Close only removes the selected Panel',
+    );
+    assert.ok(
+      await page.evaluate(() => window.__headerMenuPeers.every((node) => node.isConnected)),
+      'Other Panel headers stay mounted',
+    );
+    assert.ok((await storage()).parked[id], `Closed Panel ${id} keeps its layout position`);
+    if (open) {
+      await page.click(toggle);
+      await page.waitForSelector(header, { visible: true });
+    }
+  }
+  writeFileSync(
+    resolve(out, 'all-panel-header-menus.json'),
+    JSON.stringify(headerMenuResults, null, 2),
+  );
+  await proof('01c-all-panel-header-menus');
   step = 'channel-search-alignment';
   await page.click('[data-dock-header="bh:channels"] .bh-search-btn');
   await sleep(250);

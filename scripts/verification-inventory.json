@@ -1562,7 +1562,7 @@
       "behaviors": ["desktop.bot-mode.entry", "desktop.bot-mode.dock"],
       "reason": "Runs qualified Web/macOS workspace movement, spacing, shortcut routing, persistence and exit restoration against a real isolated Client.",
       "task": 2017,
-      "sha256": "13f0c982c0ea6c501dc597a66a2127f53bd1029b8f73a367cb9c38d8f28dd4e2"
+      "sha256": "714c4f4ae8a81d49ffea414cee878c888c1e875759ab3ecf9d2b0d8c54370c40"
     }
   ],
   "native": [

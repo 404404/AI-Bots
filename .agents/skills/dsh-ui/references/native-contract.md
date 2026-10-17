@@ -66,7 +66,7 @@ Application-defined context menus use `packages/client/src/client/ds/pointer-men
 
 `PointerMenu` portals to `document.body`, measures its rendered coordinate scale and the actual native menu rectangle, and positions the menu at the requested viewport point. It alone owns window-edge clamping, native traffic-light clearance, available menu size and resize/scroll repositioning. A menu moves away from the pointer only to remain inside the safe viewport; native scrolling and submenu behavior remain intact. This keeps panel transforms, clipping ancestors and CSS zoom out of feature code.
 
-Regression: run `scripts/e2e-panel-workspace.mjs` against an isolated Host. It checks both a Panel-header menu and a Channel-row menu at 100% and 125% CSS zoom, verifies alignment within one rendered pixel away from edges, tests bottom/right clamping and keyboard dismissal, and saves numeric evidence. CSS zoom stress is Web evidence, not qualification of native macOS window behavior.
+Regression: run `scripts/e2e-panel-workspace.mjs` against an isolated Host. It checks Channel-header and Channel-row menus at 100% and 125% CSS zoom, plus every Control Rail Panel’s header at normal scale, verifies alignment within one rendered pixel away from edges, tests bottom/right clamping and keyboard dismissal, and saves numeric evidence. Panel header Close menus use the same `usePanelMenu` → `PointerMenu` path regardless of Panel type. Closing affects only that Panel; its Control Rail switch and remembered position remain available. Escape restores header focus, and Shift+F10 anchors to the header’s lower-left corner. CSS zoom stress is Web evidence, not qualification of native macOS window behavior.
 
 ## Panel scrollbar visibility
 

@@ -19,7 +19,17 @@ export function usePanelMenu({
   const trigger = useRef<HTMLElement | null>(null);
   const close = () => {
     setPoint(undefined);
-    if (trigger.current?.isConnected) trigger.current.focus({ preventScroll: true });
+    const target = trigger.current;
+    const closingMenu = document.activeElement?.closest('[data-pointer-menu]');
+    queueMicrotask(() => {
+      const active = document.activeElement;
+      if (
+        trigger.current === target &&
+        target?.isConnected &&
+        (active === document.body || (active !== null && closingMenu?.contains(active)))
+      )
+        target.focus({ preventScroll: true });
+    });
   };
   const open = (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => {
     event.preventDefault();
