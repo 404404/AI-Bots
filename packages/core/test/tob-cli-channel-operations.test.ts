@@ -716,19 +716,20 @@ describe('reviewed Group end and local attachment transfer', () => {
       expect(b.effect).not.toHaveBeenCalled();
     },
   );
-  it('uploads bounded bytes via the canonical owner and replays the same identity; conflicts preserve the original', async () => {
+  it('uploads bytes above the image limit via the canonical owner and replays identity without sending', async () => {
     const f = fixture();
-    const args = upload();
+    const bytes = Buffer.alloc(4 * 1024 * 1024, 77);
+    const args = { ...upload(), data: bytes.toString('base64') };
     const prepared = (await f.prepare('attachment-upload', args))!;
     expect(prepared.proposal).toMatchObject({
-      patch: { name: 'qa.txt', bytes: 21, sendsMessage: false },
+      patch: { name: 'qa.txt', bytes: bytes.length, sendsMessage: false },
     });
     expect(JSON.stringify(prepared.proposal)).not.toContain(args.data);
     const b = await broker(f, async () => {});
     const result = await b.invoke('attachment-upload', args);
     expect(result).toMatchObject({
       ok: true,
-      value: { attachment: { fileId: 'file:' + uploadId, name: 'qa.txt', size: 21 } },
+      value: { attachment: { fileId: 'file:' + uploadId, name: 'qa.txt', size: bytes.length } },
     });
     expect(await b.invoke('attachment-upload', args)).toEqual(result);
     expect(
@@ -737,7 +738,7 @@ describe('reviewed Group end and local attachment transfer', () => {
         data: Buffer.from('changed').toString('base64'),
       }),
     ).toMatchObject({ ok: false, error: { code: 'invalid-ref' } });
-    expect(f.core.attachments.acquired(uploadId)).toMatchObject({ size: 21 });
+    expect(f.core.attachments.acquired(uploadId)).toMatchObject({ size: bytes.length });
     expect(f.core.channels.list()).toHaveLength(0);
   });
   it('rejects content/path injection, malformed identities and byte overflow before requesting approval', async () => {
