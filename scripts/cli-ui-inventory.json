@@ -312,13 +312,25 @@
     },
     {
       "id": "im-apps",
-      "description": "Existing Human CLI covers IM application status/setup/credentials/binding. Tob can inspect qualified app/setup availability and edit existing pairing, reception/wake, bridges/targets, approval routes and failure alerts. Credential/verification/token submission remains in existing Human private stdin flows; no new Provider or external-send authority.",
+      "description": "Tob reuses qualified native setup start/poll/cancel with owned opaque receipts, platform/expiry and Human-reviewed state. Human Applications resumes that exact attempt by poll/adoption in its existing private form; QR/native attempt ids and secrets stay out of broker output. Human CLI receipt/resume shares the same owner. Existing pairing/reception/wake/bridges/routes/alerts remain current owners; no new Provider or external-send authority.",
       "scope": "Host",
       "surfaces": [
         "setting:packages/client/src/client/im-apps-section.tsx:{app.name}",
+        "setting:packages/client/src/client/im-apps-section.tsx:{t('imApps.resumeSetupFor', { platform: externalPlatformLabel(receipt.platform, t), })}",
         "setting:packages/client/src/client/im-apps-section.tsx:{t('imApps.allApps')}"
       ],
-      "commands": ["im-apps", "im-app-add", "im-app-remove", "im-bind", "im-unbind"]
+      "commands": [
+        "im-apps",
+        "im-authorize",
+        "pairing-status",
+        "im-cancel",
+        "im-setup-receipts",
+        "im-setup-resume",
+        "im-app-add",
+        "im-app-remove",
+        "im-bind",
+        "im-unbind"
+      ]
     },
     {
       "id": "diagnostics",

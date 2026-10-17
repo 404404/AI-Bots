@@ -17,6 +17,11 @@ import {
   type BotCreationReceipt,
 } from '../bots/creation.js';
 import { TobError, type TobService, type TobHome } from '../tob/service.js';
+import type {
+  TobImSetupReceipt,
+  TobImSetupResume,
+  TobImSetupService,
+} from '../tob/cli-im-setup-operations.js';
 import { directToolTrace, summarizeToolTrace, type TurnTrace } from '../bots/tool-trace.js';
 import type { BotOnboarding, OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
 import type { HttpsFallback } from '../memory/clone.js';
@@ -462,6 +467,7 @@ export type BridgeResult<T> = { ok: true; value: T } | { ok: false; error: Bridg
 export interface MessagingAppsView {
   apps: MessagingApp[];
   setups: NonNullable<MessagingSnapshot['appSetups']>;
+  pendingSetups?: TobImSetupReceipt[];
 }
 
 export interface BridgeMethods {
@@ -513,6 +519,8 @@ export interface BridgeMethods {
   messagingDefaults(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   messagingDefaultsSet(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   messagingApps(): Promise<BridgeResult<MessagingAppsView>>;
+  imSetupReceipts(): Promise<BridgeResult<{ receipts: TobImSetupReceipt[] }>>;
+  imSetupResume(payload: unknown): Promise<BridgeResult<TobImSetupResume>>;
   messagingSnapshot(payload: unknown): Promise<BridgeResult<MessagingSnapshot>>;
   messagingReachable(
     payload: unknown,
@@ -786,6 +794,7 @@ export interface ApprovalReviewerModelView {
 }
 
 export interface BridgeMethodsDeps {
+  tobImSetup?: TobImSetupService;
   approvalReviewer?: ApprovalReviewerSettings;
   composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
@@ -1672,7 +1681,34 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       return messagingCall(async (service) => ({
         apps: await service.apps(),
         setups: await service.setups(),
+        ...(deps.tobImSetup ? { pendingSetups: (await deps.tobImSetup.list()).receipts } : {}),
       }));
+    },
+    async imSetupReceipts() {
+      if (!deps.tobImSetup) return unavailable();
+      try {
+        return { ok: true, value: await deps.tobImSetup.list() };
+      } catch (error) {
+        const code = error instanceof TobError ? error.code : 'setup-failed';
+        return { ok: false, error: { code, message: code } };
+      }
+    },
+    async imSetupResume(payload) {
+      const source = asObject(payload);
+      const receiptId = asNonBlank(source, 'receiptId');
+      if (
+        !receiptId ||
+        !/^[A-Za-z0-9_-]{1,128}$/u.test(receiptId) ||
+        Object.keys(source).some((key) => key !== 'receiptId')
+      )
+        return invalidInput('An owned setup receipt is required');
+      if (!deps.tobImSetup) return unavailable();
+      try {
+        return { ok: true, value: await deps.tobImSetup.resume(receiptId) };
+      } catch (error) {
+        const code = error instanceof TobError ? error.code : 'setup-failed';
+        return { ok: false, error: { code, message: code } };
+      }
     },
     messagingSnapshot(payload) {
       const slug = asSlug(payload);

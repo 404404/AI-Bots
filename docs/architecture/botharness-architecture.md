@@ -1,5 +1,7 @@
 # BotHarness 架构与数据流
 
+#2094 的 IM 配置沿用合格 Provider 的 `dsh-im/app-setup` exact Fetch Registration。受限 Tob CLI 只启动、查询、取消，并通过不透明收据引用原尝试；引用绑定当前 Human、受保护 Tob 身份代次与平台，状态／过期／原生凭据继续由 Provider 持有。收据仅是有界进程内引用，取消重查原生状态指纹，不增加配置生命周期或数据库。已认证 Human 在“应用”的对应平台／有效期行继续，通过 Human 专用查询与 `ProviderAppSetup.adopt` poll 同一尝试，复用已有私密配置表单且不重复 start。模型只看安全状态，二维码、原生 attempt id、Provider 指令／原始错误与秘密不进入 broker；详见 [ADR-0161](../adr/0161-cli-im-authorization-keeps-provider-attempt-authority.md#scoped-tob-consumer-2094)。
+
 #2094 沿用 ADR-0224 的 application-defined Tob CLI broker，开放已有 Workspace Grant、访问模式、Browser/Computer 能力、审批模板／规则／审核模型和连接器策略 owner。策略快照绑定规范旧值及 Bot 身份代次；每次写入必须经 Human 新作决定，Full access、自动审核和记住规则不能替代。审批后、异步读取后及实际写入前重查来源和快照；Workspace status await 后的 Grant 提交额外使用原 owner 的同步 validation callback。Browser/Computer native Settings 仅开放现有 UI 字段并使用 revision、准确 previousValue 和规范读回。所有权限仍由既有 owner 在执行和后续委派中消费；无新 Tool、权限库或持久 schema。浏览器配对／系统授权、私密凭据与验证码、其他 Bot 的审批卡和外部测试投递保留已有 Human 入口，不因可列出状态而开放。
 
 #2053 的本地 Group 发送复核试点由 Channel owner 在正式 Source Event / placement 追加的同一事务内比较实际观察依据。

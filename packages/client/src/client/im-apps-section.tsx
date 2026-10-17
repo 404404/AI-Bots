@@ -7,7 +7,8 @@ import type { BridgeActions } from './actions.js';
 import { BOT_SETTINGS_SECTIONS, type BotSettings } from './bot-settings.js';
 import { openExternalBindingSettings } from './bot-settings-open.js';
 import { externalPlatformLabel } from './bridge-source-label.js';
-import { loadMessagingApps, type BridgeCall, type MessagingApp } from './bridge.js';
+import { loadMessagingApps, resumeImSetup, type BridgeCall, type MessagingApp } from './bridge.js';
+import type { TobImSetupReceipt } from '../../../core/src/tob/cli-im-setup-operations.js';
 import { Combobox } from './combobox.js';
 import { EmptyState } from './ds/empty-state.js';
 import { Field } from './ds/field.js';
@@ -24,6 +25,7 @@ export type ImAppsNotice = 'settings-unavailable';
 export interface ImAppsList {
   apps: MessagingApp[];
   setups: AppSetupDescriptor[];
+  pendingSetups?: TobImSetupReceipt[];
 }
 
 export interface ImAppsFace {
@@ -33,6 +35,7 @@ export interface ImAppsFace {
   bind(app: MessagingApp, botSlug: string): Promise<void>;
   unbind(app: MessagingApp): Promise<void>;
   bindCreated(botSlug: string): Promise<void>;
+  resumeSetup?(receiptId: string, botSlug: string): Promise<void>;
   appSetup?: ProviderAppSetup;
 }
 
@@ -100,6 +103,12 @@ export function createImApps({
       await actions.messagingIdentity(botSlug, setup.binding(botSlug));
       setup.forget(botSlug);
     },
+    resumeSetup: async (receiptId, botSlug) => {
+      if (!actions.appSetup) throw new Error('setup-unavailable');
+      await actions.messagingSnapshot(botSlug);
+      const resumed = await resumeImSetup(call, receiptId);
+      await actions.appSetup.adopt(botSlug, resumed.descriptor, resumed.attemptId);
+    },
     ...(actions.appSetup === undefined ? {} : { appSetup: actions.appSetup }),
   };
 }
@@ -109,7 +118,7 @@ type Loaded = { status: 'loading' } | { status: 'failed' } | ({ status: 'ready' 
 type Dialog =
   | { kind: 'bind'; app: MessagingApp }
   | { kind: 'unbind'; app: MessagingApp }
-  | { kind: 'create'; creating: boolean };
+  | { kind: 'create'; creating: boolean; receipt?: TobImSetupReceipt };
 
 export function ImAppsSection({
   imApps,
@@ -214,6 +223,46 @@ export function ImAppsSection({
       >
         {notice === 'settings-unavailable' ? <Note>{t('imApps.settingsUnavailable')}</Note> : null}
       </SettingsRow>
+      {loaded.status === 'ready'
+        ? (loaded.pendingSetups ?? []).map((receipt) => {
+            const expired = receipt.expiresAt <= Date.now();
+            const finished = ['ready', 'cancelled', 'expired', 'failed'].includes(receipt.state);
+            const available = loaded.setups.some((setup) => setup.platform === receipt.platform);
+            return (
+              <SettingsRow
+                key={receipt.receiptId}
+                data={{ 'data-im-setup-receipt': receipt.receiptId }}
+                title={t('imApps.resumeSetupFor', {
+                  platform: externalPlatformLabel(receipt.platform, t),
+                })}
+                description={t('imApps.setupExpires', {
+                  expires: new Date(receipt.expiresAt).toLocaleString(),
+                })}
+                control={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={expired || finished || !available || !imApps.resumeSetup}
+                    aria-label={t('imApps.resumeSetupFor', {
+                      platform: externalPlatformLabel(receipt.platform, t),
+                    })}
+                    onClick={() => open({ kind: 'create', creating: false, receipt })}
+                  >
+                    {t(
+                      expired
+                        ? 'imApps.setupExpired'
+                        : finished
+                          ? 'imApps.setupFinished'
+                          : !available
+                            ? 'imApps.setupUnavailable'
+                            : 'imApps.resumeSetup',
+                    )}
+                  </Button>
+                }
+              />
+            );
+          })
+        : null}
       {loaded.status === 'loading' ? null : loaded.status === 'failed' ? (
         <EmptyState status title={t('imApps.loadFailed')} />
       ) : loaded.apps.length === 0 ? (
@@ -321,26 +370,47 @@ export function ImAppsSection({
           botSlug={botSlug}
           descriptors={loaded.status === 'ready' ? loaded.setups : []}
           t={t}
-          title={t('imApps.create')}
+          title={t(dialog.receipt ? 'imApps.resumeSetup' : 'imApps.create')}
           labels={labels}
           error={error}
           onCancel={dismiss}
           onBack={() => {
-            setDialog({ kind: 'create', creating: false });
+            setDialog({ ...dialog, creating: false });
           }}
           onCreated={() => run(() => imApps.bindCreated(botSlug))}
         />
       ) : dialog?.kind === 'create' ? (
         <FormDialog
-          title={t('imApps.create')}
-          description={t('imApps.createHint')}
+          title={t(dialog.receipt ? 'imApps.resumeSetup' : 'imApps.create')}
+          description={
+            dialog.receipt
+              ? t('imApps.resumeSetupFor', {
+                  platform: externalPlatformLabel(dialog.receipt.platform, t),
+                })
+              : t('imApps.createHint')
+          }
           labels={labels}
           submitLabel={t('imApps.next')}
           submitDisabled={botSlug === ''}
+          busy={busy}
           error={error}
           onCancel={dismiss}
           onSubmit={() => {
-            setDialog({ kind: 'create', creating: true });
+            if (!dialog.receipt) {
+              setDialog({ ...dialog, creating: true });
+              return;
+            }
+            const resume = imApps.resumeSetup;
+            if (!resume) {
+              setFailed(true);
+              return;
+            }
+            setBusy(true);
+            setFailed(false);
+            void resume(dialog.receipt.receiptId, botSlug)
+              .then(() => setDialog({ ...dialog, creating: true }))
+              .catch(() => setFailed(true))
+              .finally(() => setBusy(false));
           }}
         >
           {botPicker}

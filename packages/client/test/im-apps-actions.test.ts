@@ -18,6 +18,90 @@ import { zhTranslate } from '../src/client/locale.js';
 import { BotSettings } from '../src/client/bot-settings.js';
 import { createStore } from '../src/client/store.js';
 import { chooseOption, comboboxOption, dialog, openCombobox } from './primitive-mocks.js';
+import { ProviderAppSetup } from '../src/client/provider-app-setup.js';
+
+it('resumes the exact owned pending attempt in the existing private setup dialog without another start', async () => {
+  const expiresAt = Date.now() + 60_000;
+  const receipt = {
+    receiptId: 'owned-receipt',
+    platform: 'feishu' as const,
+    state: 'credentials',
+    expiresAt,
+    stateFingerprint: 'a'.repeat(64),
+    handoff: 'applications-settings' as const,
+  };
+  const descriptor = {
+    version: 1 as const,
+    platform: 'feishu' as const,
+    providerId: 'dsh-im/feishu',
+    endpoint: 'dsh-im/app-setup' as const,
+    kind: 'credentials' as const,
+  };
+  const methods: string[] = [];
+  const setup = new ProviderAppSetup({
+    async call(_channel, endpoint, payload) {
+      expect(endpoint).toBe('dsh-im/app-setup');
+      const input = payload as { method: string; payload: { attemptId: string } };
+      methods.push(input.method);
+      expect(input.payload.attemptId).toBe('native-exact-attempt');
+      return {
+        ok: true,
+        value: {
+          version: 1,
+          attemptId: 'native-exact-attempt',
+          channel: 'feishu',
+          state: 'credentials',
+          expiresAt,
+        },
+      };
+    },
+  });
+  const resume = vi.fn(async (receiptId: string, botSlug: string) => {
+    expect(receiptId).toBe(receipt.receiptId);
+    await setup.adopt(botSlug, descriptor, 'native-exact-attempt');
+  });
+  await render({
+    load: async () => ({ apps: [], setups: [descriptor], pendingSetups: [receipt] }),
+    appSetup: setup,
+    resumeSetup: resume,
+  });
+  const row = host.querySelector('[data-im-setup-receipt="owned-receipt"]')!;
+  expect(row.textContent).toContain('继续配置 Lark/飞书');
+  expect(row.textContent).toContain('此配置尝试有效至');
+  await act(async () => {
+    button('继续配置', row).click();
+  });
+  await chooseOption('Bot', 'ada', dialog());
+  await act(async () => {
+    button('下一步', dialog()).click();
+  });
+  expect(resume).toHaveBeenCalledWith('owned-receipt', 'ada');
+  expect(dialog().getAttribute('aria-label')).toBe('继续配置');
+  expect(dialog().querySelector('input[name="appSecret"]')?.getAttribute('type')).toBe('password');
+  expect(methods.length).toBeGreaterThanOrEqual(1);
+  expect(methods.every((method) => method === 'setup.poll')).toBe(true);
+});
+
+it('disables the resume action for expired or terminal setup receipts', async () => {
+  const base = {
+    platform: 'weixin' as const,
+    stateFingerprint: 'b'.repeat(64),
+    handoff: 'applications-settings' as const,
+  };
+  await render({
+    load: async () => ({
+      apps: [],
+      setups: [],
+      pendingSetups: [
+        { ...base, receiptId: 'expired', state: 'pending', expiresAt: Date.now() - 1 },
+        { ...base, receiptId: 'ready', state: 'ready', expiresAt: Date.now() + 60_000 },
+      ],
+    }),
+    resumeSetup: vi.fn(),
+  });
+  expect(button('已过期').disabled).toBe(true);
+  expect(button('已结束').disabled).toBe(true);
+});
 
 let host: HTMLDivElement;
 let root: Root;

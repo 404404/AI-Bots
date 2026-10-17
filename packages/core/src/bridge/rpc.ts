@@ -505,6 +505,16 @@ export class BotharnessBridgeService extends TypertRemoteService {
   messagingApps(): Promise<MessagingAppsView> {
     return unwrapAsync(this.methods.messagingApps());
   }
+  imSetupReceipts(): Promise<{
+    receipts: import('../tob/cli-im-setup-operations.js').TobImSetupReceipt[];
+  }> {
+    return unwrapAsync(this.methods.imSetupReceipts());
+  }
+  imSetupResume(
+    receiptId: string,
+  ): Promise<import('../tob/cli-im-setup-operations.js').TobImSetupResume> {
+    return unwrapAsync(this.methods.imSetupResume({ receiptId }));
+  }
   messagingSnapshot(slug: string): Promise<MessagingSnapshot> {
     return unwrapAsync(this.methods.messagingSnapshot({ slug }));
   }
@@ -1877,6 +1887,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'pairingReview',
   'senderAccess',
   'messagingApps',
+  'imSetupReceipts',
+  'imSetupResume',
   'messagingSnapshot',
   'messagingTargets',
   'messagingReachable',
