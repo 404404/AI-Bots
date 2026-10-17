@@ -677,10 +677,7 @@ export async function runLiveCli(
     );
     if (command === 'human-name') return rpc('humanIdentity', {});
     return rpc('clientControl', {
-      action:
-        command === 'client-targets'
-          ? 'targets'
-          : command.slice('client-'.length),
+      action: command === 'client-targets' ? 'targets' : command.slice('client-'.length),
       ...client.args,
     });
   }

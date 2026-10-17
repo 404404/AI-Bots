@@ -1018,17 +1018,17 @@ printf '%s' '{"notifications":false}' | deepseekbot client-preferences-set CLIEN
 
 通过 `client-layout-set CLIENT_ID --generation GENERATION --scope browser-origin --expected-state FINGERPRINT --patch-stdin` 提交一条 JSON 修改：
 
-| `type` | 字段 |
-| --- | --- |
-| `gap` | 整数 `gap`：0–16 |
-| `rail-order` | 不重复的稳定面板 ID 数组 `order` |
-| `rail-location` | `before`：left、right 或发现的 Dockview 列组 ID |
-| `control` | `panel`、`visible`；Channel 子面板须传 `channelId` |
-| `visibility` | `panel`、`open`；Channel 子面板须传 `channelId` |
-| `move` | `panel`、`target`、`direction`（left/right/above/below）；Channel 子面板须传 `channelId` |
-| `size` | 全局 `panel`、`width`、`height`：0.05–1 的比例 |
-| `child-resize` | `channelId`、二进制分割 `path`（根为空字符串）、`ratio`：0.2–0.8 |
-| `child-axis` | `channelId`、`path`、`axis`（horizontal/vertical） |
+| `type`          | 字段                                                                                     |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `gap`           | 整数 `gap`：0–16                                                                         |
+| `rail-order`    | 不重复的稳定面板 ID 数组 `order`                                                         |
+| `rail-location` | `before`：left、right 或发现的 Dockview 列组 ID                                          |
+| `control`       | `panel`、`visible`；Channel 子面板须传 `channelId`                                       |
+| `visibility`    | `panel`、`open`；Channel 子面板须传 `channelId`                                          |
+| `move`          | `panel`、`target`、`direction`（left/right/above/below）；Channel 子面板须传 `channelId` |
+| `size`          | 全局 `panel`、`width`、`height`：0.05–1 的比例                                           |
+| `child-resize`  | `channelId`、二进制分割 `path`（根为空字符串）、`ratio`：0.2–0.8                         |
+| `child-axis`    | `channelId`、`path`、`axis`（horizontal/vertical）                                       |
 
 Channel 移动以叶节点为目标，`messages` 是固定内容叶；隐藏子面板保留分割树及百分比。全局移动要求源与目标在可见的独立面板组；不支持的组合拓扑、隐藏目标与不适用的 Bot 子面板均返回明确拒绝。应用时必须仍处于指定 Channel。既有 v1–v8 迁移及备份继续由布局 owner 负责。不可读／更高版本存储拒绝并要求恢复；保存失败返回 `client-outcome-uncertain`，再次修改前须重新读取。同源标签页共享持久化，精确运行代次选择实际执行的 owner。原生重启、实体几何与 UI 证据仍须单独验证。
 

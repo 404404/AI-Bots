@@ -1,4 +1,7 @@
-import { createTobClientLayoutOperations, TOB_CLIENT_LAYOUT_CAPABILITIES } from './cli-client-layout.js';
+import {
+  createTobClientLayoutOperations,
+  TOB_CLIENT_LAYOUT_CAPABILITIES,
+} from './cli-client-layout.js';
 import { validateClientPatch, type ClientTarget } from '../client-control/contracts.js';
 import type { ClientControlService } from '../client-control/service.js';
 import type { PrepareTobOperation, TobCliCapability } from './cli-operations.js';

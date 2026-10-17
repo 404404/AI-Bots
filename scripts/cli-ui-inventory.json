@@ -74,10 +74,7 @@
         "storage:packages/client/src/client/channel-dock-layout.ts:setItem(backupKey)",
         "storage:packages/client/src/client/channel-dock-layout.ts:setItem(key)"
       ],
-      "commands": [
-        "client-layout",
-        "client-layout-set"
-      ]
+      "commands": ["client-layout", "client-layout-set"]
     },
     {
       "id": "client-shortcuts",

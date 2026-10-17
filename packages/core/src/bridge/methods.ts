@@ -1906,7 +1906,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           value = await deps.clientControl.request(input['target'], 'layout', {});
         else if (input['action'] === 'layout-set')
           value = await deps.clientControl.request(input['target'], 'layout-set', {
-            scope: input['scope'], patch: input['patch'], expectedState: input['expectedState'],
+            scope: input['scope'],
+            patch: input['patch'],
+            expectedState: input['expectedState'],
           });
         else if (input['action'] === 'preferences')
           value = await deps.clientControl.request(input['target'], 'preferences', {});
