@@ -16,7 +16,7 @@ const label = flag('--label');
 for (const key of ['--serial', '--owner', '--batch', '--mode', '--title', '--label'])
   assert(args.includes(key) && flag(key) && !flag(key).startsWith('--'), `Missing ${key}`);
 assert(
-  ['profile', 'settings', 'keyboard'].includes(mode) && /^[a-z0-9-]+$/.test(label),
+  ['profile', 'settings', 'keyboard', 'form-keyboard'].includes(mode) && /^[a-z0-9-]+$/.test(label),
   'Invalid mode/label',
 );
 const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
@@ -40,7 +40,8 @@ const prefix = join(out, label);
 const call = (...command) =>
   execFileSync(adb, ['-s', serial, ...command], {
     encoding: 'utf8',
-    timeout: 15000,
+    timeout: 35000,
+    maxBuffer: 16 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -61,7 +62,10 @@ function dump() {
   call('shell', 'uiautomator', 'dump', '/sdcard/bh-interactions.xml');
   const xml = call('exec-out', 'cat', '/sdcard/bh-interactions.xml');
   call('shell', 'rm', '/sdcard/bh-interactions.xml');
-  assert(!xml.includes('deepseekbot://pair?p='), 'PAIRING_SCREEN_CAPTURE_REFUSED');
+  assert(
+    !xml.replaceAll('deepseekbot://pair?p=…', '').includes('deepseekbot://pair?p='),
+    'PAIRING_SCREEN_CAPTURE_REFUSED',
+  );
   return xml;
 }
 const tap = (node) => {
@@ -74,7 +78,10 @@ function capture(name) {
   writeFileSync(`${prefix}-${name}.xml`, xml);
   writeFileSync(
     `${prefix}-${name}.png`,
-    execFileSync(adb, ['-s', serial, 'exec-out', 'screencap', '-p'], { timeout: 15000 }),
+    execFileSync(adb, ['-s', serial, 'exec-out', 'screencap', '-p'], {
+      timeout: 15000,
+      maxBuffer: 16 * 1024 * 1024,
+    }),
   );
   return nodes(xml);
 }
@@ -93,7 +100,7 @@ const scroll = (list) => {
 const handle = (list) => list.find((node) => node['resource-id'] === 'sheet-screen-handle');
 const proof = [];
 try {
-  if (Number.isFinite(imeTop())) {
+  if (mode !== 'form-keyboard' && Number.isFinite(imeTop())) {
     call('shell', 'input', 'keyevent', '4');
     await sleep(500);
   }
@@ -104,11 +111,39 @@ try {
   );
   if (mode !== 'settings') {
     assert(field, 'OPEN_DESIGNATED_QA_CHAT_FIRST');
-    assert(!field.text || field.text === field['content-desc'], 'EMPTY_QA_COMPOSER_REQUIRED');
+    if (mode !== 'form-keyboard')
+      assert(!field.text || field.text === field['content-desc'], 'EMPTY_QA_COMPOSER_REQUIRED');
   }
-  assert(!handle(initial), 'CLOSE_EXISTING_SHEET_FIRST');
+  if (mode !== 'form-keyboard') assert(!handle(initial), 'CLOSE_EXISTING_SHEET_FIRST');
   const [, , width, height] = bounds(initial[0]);
-  if (mode === 'profile' || mode === 'settings') {
+  if (mode === 'form-keyboard') {
+    capture('initial');
+    tap(field);
+    await sleep(1000);
+    const shown = capture('shown');
+    const input = shown.find(
+      (node) => node.focused === 'true' && node.class === 'android.widget.EditText',
+    );
+    const top = imeTop();
+    assert(Number.isFinite(top) && top < height * 0.8, 'REAL_SOFT_KEYBOARD_REQUIRED');
+    assert(input && bounds(input)[1] >= 0 && bounds(input)[3] <= top + 1, 'INPUT_UNDER_KEYBOARD');
+    if (args.includes('--action')) {
+      const action = shown.find(
+        (node) => node.clickable === 'true' && node['content-desc'] === flag('--action'),
+      );
+      assert(
+        action && bounds(action)[1] >= 0 && bounds(action)[3] <= top + 1,
+        'FORM_ACTION_UNDER_KEYBOARD',
+      );
+    }
+    proof.push({
+      step: 'focused-form-clearance',
+      keyboardTop: top,
+      inputBounds: bounds(input),
+      roundingTolerancePx: 1,
+      actionChecked: args.includes('--action'),
+    });
+  } else if (mode === 'profile' || mode === 'settings') {
     tap(
       initial.find(
         (node) =>

@@ -1,6 +1,11 @@
 import { dmChannelId } from '../channels/channel.js';
 import type { PersonaBotDetail } from '../bridge/methods.js';
-import type { ModelPreset, ModelRoute } from '../models/presets.js';
+import {
+  isAssignmentModelOption,
+  type AssignmentModelOption,
+  type ModelPreset,
+  type ModelRoute,
+} from '../models/presets.js';
 import type { PersonaBotActivitySnapshot } from '../state/bot-state.js';
 import type {
   BotCreateCliIo,
@@ -84,7 +89,14 @@ export async function runOnlineManagement(
     usage('--timeout must be between 0 and 600 seconds.');
   const limit = values.limit === undefined ? 50 : Number(values.limit);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) usage('--limit must be 1–100.');
-  let presetInput;
+  let presetInput:
+    | {
+        name: string;
+        orchestrator: ModelRoute;
+        assignmentDefault: ModelRoute;
+        assignmentModels?: AssignmentModelOption[];
+      }
+    | undefined;
   if (command === 'model-preset-create') {
     const name = values.name?.trim();
     if (!name) usage('--name is required for a Model Preset.');
@@ -93,6 +105,24 @@ export async function runOnlineManagement(
       orchestrator: route(values, 'orchestrator'),
       assignmentDefault: route(values, 'assignment'),
     };
+    if (values['plan-stdin']) {
+      let input: unknown;
+      try {
+        input = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
+      } catch {
+        usage('Plan stdin must contain assignmentModels.');
+      }
+      if (
+        typeof input !== 'object' ||
+        input === null ||
+        !('assignmentModels' in input) ||
+        !Array.isArray(input.assignmentModels) ||
+        !input.assignmentModels.every(isAssignmentModelOption) ||
+        Object.keys(input).some((key) => key !== 'assignmentModels')
+      )
+        usage('Plan stdin must contain only valid assignmentModels.');
+      presetInput.assignmentModels = input.assignmentModels;
+    }
   }
   if (command === 'model-preset-apply' && !values.preset?.trim()) usage('--preset is required.');
   let confirmation: string | undefined;

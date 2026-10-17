@@ -3,15 +3,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-  type ScrollViewInstance,
-} from 'react-native';
+import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
 import { hostSession } from '../src/host/host-session';
 import { nativeCarrier } from '../src/host/native-carrier';
@@ -19,7 +11,7 @@ import { pairHost, type PairingFailure } from '../src/host/pairing';
 import { mobileTelemetry } from '../src/telemetry/native';
 import type { PairingMethod } from '../src/telemetry/schema';
 import { Button } from '../src/ui/primitives/button';
-import { useMounted } from '../src/ui/mounted';
+import { KeyboardFormScroll } from '../src/ui/primitives/keyboard-form';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
 
@@ -38,37 +30,6 @@ export default function PairScreen() {
   const lastMethod = useRef<PairingMethod>('paste');
   const pending = useRef<AbortController | undefined>(undefined);
   const handled = useRef<string | undefined>(undefined);
-  const scroll = useRef<ScrollViewInstance | null>(null);
-  const keyboardTop = useRef<number | undefined>(undefined);
-  const [keyboardSpace, setKeyboardSpace] = useState(0);
-  const showPair = () => scroll.current?.scrollToEnd({ animated: true });
-  const adjustForKeyboard = () => {
-    if (Platform.OS !== 'android') return;
-    const top = keyboardTop.current;
-    const view = scroll.current;
-    if (top === undefined || view === null) return;
-    view.getNativeScrollRef()?.measureInWindow((_x, y, _width, height) => {
-      if (scroll.current !== view || keyboardTop.current !== top) return;
-      setKeyboardSpace(Math.max(0, y + height - top));
-    });
-  };
-  const mounted = useMounted<ScrollViewInstance>((node) => {
-    scroll.current = node;
-    const shown = Keyboard.addListener('keyboardDidShow', (event) => {
-      keyboardTop.current = event.endCoordinates.screenY;
-      adjustForKeyboard();
-      showPair();
-    });
-    const hidden = Keyboard.addListener('keyboardDidHide', () => {
-      keyboardTop.current = undefined;
-      setKeyboardSpace(0);
-    });
-    return () => {
-      shown.remove();
-      hidden.remove();
-      scroll.current = null;
-    };
-  }, []);
 
   const pair = async (text: string, method: PairingMethod, retry = false): Promise<void> => {
     if (pending.current !== undefined || (!retry && method === 'qr' && handled.current === text))
@@ -111,17 +72,11 @@ export default function PairScreen() {
   } as const;
 
   return (
-    <ScrollView
-      ref={mounted}
-      onLayout={adjustForKeyboard}
-      onContentSizeChange={() => {
-        if (Keyboard.isVisible()) showPair();
-      }}
-      automaticallyAdjustKeyboardInsets
+    <KeyboardFormScroll
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 16 + keyboardSpace, gap: 12 }}
+      contentContainerStyle={{ padding: 16, gap: 12 }}
     >
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <View
@@ -165,6 +120,7 @@ export default function PairScreen() {
       ) : null}
       <Text style={{ color: theme.ink, fontWeight: '600' }}>{t.pasteLink}</Text>
       <TextInput
+        accessibilityLabel={t.pasteLink}
         value={link}
         onChangeText={(value) => {
           setLink(value);
@@ -175,7 +131,6 @@ export default function PairScreen() {
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="url"
-        onFocus={showPair}
         returnKeyType="go"
         onSubmitEditing={() => void pair(link, 'paste')}
         style={{
@@ -196,6 +151,6 @@ export default function PairScreen() {
       >
         <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t.pair}</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardFormScroll>
   );
 }

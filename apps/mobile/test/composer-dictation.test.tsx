@@ -15,6 +15,7 @@ const speech = vi.hoisted(() => ({
   gesture: undefined as Record<string, (...args: unknown[]) => unknown> | undefined,
 }));
 
+vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
 vi.mock('react-native', async () => {
   const shim = await import('./react-native-shim');
   const { createElement } = await import('react');

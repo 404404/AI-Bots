@@ -1,17 +1,21 @@
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
+import { useSegments } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { actionCount } from '../../src/host/inbox';
-import { useHostSession, useInbox } from '../../src/host/host-session';
+import { useActivityCount } from '../../src/host/native-activity-count';
+import { badgeCount } from '../../src/ui/primitives/badge-count';
 import { EdgeFade } from '../../src/ui/chat/header-chrome';
-import { glassShadow, useDesignTheme } from '../../src/ui/design/theme';
+import { useDesignTheme } from '../../src/ui/design/theme';
+import { Text } from '../../src/ui/primitives/text';
 import { edge, edgeFade, navigationBar, radius, space } from '../../src/ui/design/tokens';
 import { FloatingTabInset } from '../../src/ui/shell/floating-tab-inset';
 import { HostDrawer } from '../../src/ui/shell/host-drawer';
 import { ActivityIcon, ChatsIcon } from '../../src/ui/shell/icons';
+import { NavigationButton } from '../../src/ui/shell/navigation-button.android';
+import { NavigationIcon } from '../../src/ui/shell/navigation-icon.android';
 import {
   ScrollChromeProvider,
   useChromeHidden,
@@ -53,9 +57,16 @@ function ScrollTabBar({
 function AndroidTabLayout() {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
-  const { inbox } = useHostSession();
-  const pending = actionCount(useInbox(inbox));
-  const height = navigationBar.height;
+  const { width, fontScale } = useWindowDimensions();
+  const pending = useActivityCount().count ?? 0;
+  const activitySelected = useSegments().includes('(activity)');
+  const scale = Math.max(1, fontScale);
+  const barWidth = Math.min(
+    width - insets.left - insets.right - space.x6 * 2,
+    navigationBar.itemWidth * 2 * scale + space.x3 * 2,
+  );
+  const iconHeight = Math.max(navigationBar.indicatorHeight, theme.type.title.line * scale);
+  const height = iconHeight + theme.type.meta.line * scale + space.x5;
   const bottom = Math.max(insets.bottom, space.x4);
   const reserved = height + bottom + space.x5;
   return (
@@ -66,29 +77,41 @@ function AndroidTabLayout() {
           tabBar={(props) => <ScrollTabBar {...props} reserved={reserved} />}
           screenOptions={{
             headerShown: false,
+            tabBarButton: (props) => <NavigationButton {...props} />,
             tabBarActiveTintColor: theme.color.fg,
             tabBarInactiveTintColor: theme.color.muted,
             tabBarStyle: {
               position: 'absolute',
-              marginHorizontal: space.x6,
+              marginLeft: (width - barWidth + insets.left - insets.right) / 2,
+              marginRight: (width - barWidth - insets.left + insets.right) / 2,
+              width: barWidth,
               bottom,
               height,
               paddingVertical: navigationBar.itemPadding,
               paddingHorizontal: space.x2,
-              borderRadius: radius.round,
+              borderRadius: navigationBar.radius,
               borderTopWidth: edge.hairline,
               borderWidth: edge.hairline,
               borderColor: theme.layer.raised.edge,
               borderTopColor: theme.layer.raised.edge,
               backgroundColor: theme.layer.raised.fill,
-              boxShadow: glassShadow(theme.scheme),
+              elevation: 0,
+              boxShadow: navigationBar.shadow[theme.scheme],
             },
             tabBarItemStyle: {
-              borderRadius: radius.round,
+              borderRadius: radius.lg,
               overflow: 'hidden',
               minHeight: theme.touch,
             },
-            tabBarLabelStyle: { fontSize: theme.type.meta.size },
+            tabBarIconStyle: {
+              width: (barWidth - space.x2 * 2 - edge.hairline * 2) / 2,
+              height: iconHeight,
+            },
+            tabBarLabel: ({ color, children }) => (
+              <Text variant="meta" strong style={{ color, textAlign: 'center' }}>
+                {children}
+              </Text>
+            ),
             tabBarLabelPosition: 'below-icon',
             sceneStyle: { backgroundColor: theme.color.base },
           }}
@@ -98,18 +121,9 @@ function AndroidTabLayout() {
             options={{
               title: t.chats,
               tabBarIcon: ({ color, focused }) => (
-                <View
-                  style={{
-                    width: navigationBar.indicatorWidth,
-                    height: navigationBar.indicatorHeight,
-                    borderRadius: radius.round,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: focused ? theme.layer.raised.selected : undefined,
-                  }}
-                >
+                <NavigationIcon focused={focused} color={color}>
                   <ChatsIcon color={color} size={theme.type.title.line} />
-                </View>
+                </NavigationIcon>
               ),
             }}
           />
@@ -117,21 +131,18 @@ function AndroidTabLayout() {
             name="(activity)"
             options={{
               title: t.activity,
+              tabBarAccessibilityLabel:
+                pending > 0 ? `${badgeCount(pending)}, ${t.activity}` : t.activity,
               tabBarIcon: ({ color, focused }) => (
-                <View
-                  style={{
-                    width: navigationBar.indicatorWidth,
-                    height: navigationBar.indicatorHeight,
-                    borderRadius: radius.round,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: focused ? theme.layer.raised.selected : undefined,
-                  }}
+                <NavigationIcon
+                  focused={focused}
+                  color={color}
+                  count={pending}
+                  countVisible={!activitySelected}
                 >
                   <ActivityIcon color={color} size={theme.type.title.line} />
-                </View>
+                </NavigationIcon>
               ),
-              ...(pending > 0 ? { tabBarBadge: pending } : {}),
             }}
           />
         </Tabs>
