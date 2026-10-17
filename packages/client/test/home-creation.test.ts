@@ -35,6 +35,28 @@ describe('Home creation navigation', () => {
     expect(home.draft(other).read()?.displayName).toBe('Personal');
   });
 
+  it('keeps a section destination while choosing sources, with independent drafts', () => {
+    const home = new HomeCreation();
+    const target = { sectionId: 'research', sectionName: 'Research' };
+    home.open({ source: 'empty', ...target });
+    home.draft({ source: 'empty', ...target }).write(draft('Investigator'));
+    for (const source of ['git', 'zip', 'empty'] as const) {
+      expect(home.chooseSource(source)).toBe(true);
+      expect(home.getSnapshot()).toEqual({ source, ...target });
+    }
+    expect(home.draft(home.getSnapshot()!).read()?.displayName).toBe('Investigator');
+    home.setBusy({ source: 'empty', ...target }, true);
+    expect(home.chooseSource('git')).toBe(false);
+    expect(home.getSnapshot()).toEqual({ source: 'empty', ...target });
+    home.setBusy({ source: 'empty', ...target }, false);
+    home.back();
+    home.chooseSource('git');
+    expect(home.getSnapshot()).toEqual({ source: 'git' });
+    home.open({ source: 'empty', ...target });
+    home.open({ source: 'zip' });
+    expect(home.getSnapshot()).toEqual({ source: 'zip' });
+  });
+
   it('keeps selected local ZIP private in memory through back navigation and releases it on success', () => {
     const home = new HomeCreation();
     const request = { source: 'zip' as const };
