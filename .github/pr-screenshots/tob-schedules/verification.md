@@ -1,0 +1,18 @@
+# #2093 verification phases
+
+Product: `cc4f14d6db734830cba46dc8a5df2da5c014f5ba`; base: `a3e2c4e64d131191e686e33cb207d3db9b3a0937`.
+
+| Phase | Evidence and result | Limit |
+| --- | --- | --- |
+| Source | 48 focused tests across 3 files, one worker; root types and build passed on final product code. | Local full suite was interrupted during shared resource pressure; it did not pass. |
+| CLI transport | Scoped CLI → broker regression covers creation, replay and pause. Live Human CLI independently covered calendar preview, create/change/enable/disable/history and confirmed deletion of its exact test task. | Human CLI checks alone do not prove Tob model behavior. |
+| Natural Tob | Human requests in Home caused reviewed schedule creation, title edit and pause through native Shell CLI. New call IDs, completed turns, handled Human delivery and real replies were retained. | These captures precede final one-time replay validation hardening. No legacy own-Bot schedule tool appeared in the fresh successful journey. |
+| Actual scheduler | Planned occurrence was handled with a canonical Source Event and Session. That Session's successful `channel_send` returned the exact synthetic DM message ID. | Preview or next-run text alone was not counted as execution. |
+| Web rendering | Created task's next occurrence, changed title/history and paused task rendered in existing schedule UI. | Screenshots are candidate interaction states, not base/head UI redesign evidence. |
+| Final restart | Rebuilt committed product restarted the same isolated Profile; selected task identity/title, disabled state and actual firing identity persisted and rendered. | No fresh model journey was repeated after the narrow final correction. |
+| Native / Human | Pending parent’s exclusive macOS validation and Human QA. | Web is not native evidence. |
+| CI / release | CI pending; no merge, release or deployment performed. | Local source/build proof is separate from remote CI and publishing. |
+
+First failures were retained privately: shared AX Go returned `429 GoUsageLimitError`; an available official DeepSeek route was then selected only in this isolated Profile through the existing owner. The first official-route trace included an unnecessary own-Bot schedule read; explicit Tob guidance fixed routing, and the fresh successful trace used only scoped schedule CLI. Evidence-driver author-field and panel-visibility corrections were kept separate from product behavior. Outdated drivers were stopped.
+
+Generation 100 is an additive table migration, but it advances the shared operational database generation. Older builds reject this newer generation. A plain Git revert does not downgrade an already upgraded Profile; recovery needs a compatible forward build or a pre-upgrade backup, with later state preserved before restoration. Never delete receipts or lower the generation marker to force a downgrade.
