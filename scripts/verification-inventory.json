@@ -1707,7 +1707,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Home configuration and scoped CLI journeys; no-model dashboard ranges/navigation; simple real Home-to-DM turn, live working root, handled delivery and positive usage. Web/native remain independent gates.",
       "task": 2087,
-      "sha256": "e519680e7e8c8778e7134d45d4b93edafb2f5db3f1ecdb64867f05ed0cfb2ec6"
+      "sha256": "7e5126f681a25accfb0cf30e9f0e439b888313947d730c36beda9bb5d0c6b47c"
     },
     {
       "path": "scripts/e2e-tob-model-runtime.mjs",
