@@ -28,7 +28,14 @@ export function createClientTarget(storage: Pick<Storage, 'getItem' | 'setItem'>
   targetOwners.set(target, ownerProof);
   return target;
 }
-export type ClientControlHandler = (args: Record<string, unknown>) => unknown | Promise<unknown>;
+export interface ClientControlContext {
+  signal: AbortSignal;
+  authorize(): Promise<void>;
+}
+export type ClientControlHandler = (
+  args: Record<string, unknown>,
+  context?: ClientControlContext,
+) => unknown | Promise<unknown>;
 const origins = new WeakMap<BridgeCall, () => ClientTarget | undefined>();
 const proofs = new WeakMap<BridgeCall, () => string | undefined>();
 export function currentClientProof(call: BridgeCall): string | undefined {
@@ -51,8 +58,8 @@ export function mountClientControl(input: {
   let timer: ReturnType<typeof setTimeout> | undefined;
   origins.set(input.call, () => (registered ? input.target : undefined));
   proofs.set(input.call, () => (registered ? proof : undefined));
-  const invoke = async (args: Record<string, unknown>): Promise<unknown> => {
-    const response = (await input.call('clientControl', { ...args, proof })) as {
+  const invoke = async (args: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> => {
+    const response = (await input.call('clientControl', { ...args, proof }, signal)) as {
       ok: boolean;
       value?: unknown;
       error?: { code?: string };
@@ -76,7 +83,17 @@ export function mountClientControl(input: {
           if (Date.now() >= command.expiresAt) throw new Error('client-command-expired');
           const handler = input.handlers.get(command.operation);
           if (!handler) throw new Error('client-control-unsupported');
-          result = { ok: true, value: await handler(command.args) };
+          const signal = AbortSignal.timeout(Math.max(1, command.expiresAt - Date.now()));
+          const context: ClientControlContext = {
+            signal,
+            authorize: async () => {
+              if (signal.aborted) throw new Error('client-command-expired');
+              await invoke({ action: 'authorize', target: input.target, id: command.id }, signal);
+              if (signal.aborted) throw new Error('client-command-expired');
+            },
+          };
+          await context.authorize();
+          result = { ok: true, value: await handler(command.args, context) };
         } catch (error) {
           result = {
             ok: false,
@@ -119,6 +136,7 @@ export function createClientPreferenceHandlers(input: {
     return {
       scope: 'browser-origin',
       persistence: input.notifications.persisted() ? 'confirmed' : 'unavailable',
+      concurrency: input.notifications.lock ? 'serialized' : 'unsupported',
       value,
       stateFingerprint: preferenceState(value),
       fields: {
@@ -143,7 +161,7 @@ export function createClientPreferenceHandlers(input: {
     ['preferences', snapshot],
     [
       'preferences-set',
-      async (args) => {
+      async (args, context) => {
         if (args.scope !== 'browser-origin') throw new Error('client-scope-mismatch');
         const patch = validateClientPatch(args.patch);
         if ('theme' in patch || 'locale' in patch) throw new Error('host-scope-required');
@@ -160,7 +178,17 @@ export function createClientPreferenceHandlers(input: {
                   : `permission-${state.permission}`,
               changed: false,
             };
-          await input.notifications.setEnabled(patch.notifications === true, false);
+          if (!input.notifications.lock) throw new Error('client-concurrency-unavailable');
+          const check = (): void => {
+            if (context?.signal.aborted) throw new Error('client-command-expired');
+            if (snapshot().stateFingerprint !== args.expectedState)
+              throw new Error('stale-client-preferences');
+          };
+          await input.notifications.setEnabled(patch.notifications === true, false, async () => {
+            check();
+            await context?.authorize();
+            check();
+          });
           const saved = input.notifications.getSnapshot();
           if (patch.notifications === true && saved.permission !== 'granted')
             return {

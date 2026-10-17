@@ -176,3 +176,17 @@ it('binds current attribution and polling proof to the transport Peer rather tha
   service.register(newer, 'web', 'next-private-proof', 'private-owner-proof', 'peer-b');
   expect(service.requireOrigin(newer, 'next-private-proof', 'peer-b')).toEqual(newer);
 });
+
+it('rechecks source authority after dispatch and before Client application', async () => {
+  const service = fixture();
+  service.register(a, 'web');
+  let allowed = true;
+  const request = service.request(a, 'preferences-set', {}, () => {
+    if (!allowed) throw new Error('human-dm-required');
+  });
+  const command = service.poll(a).commands[0]!;
+  allowed = false;
+  expect(() => service.authorize(a, command.id)).toThrow('human-dm-required');
+  service.complete(a, command.id, { ok: false, code: 'human-dm-required' });
+  await expect(request).rejects.toThrow('human-dm-required');
+});

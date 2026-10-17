@@ -125,6 +125,14 @@ export class ClientControlService {
     }
     return { commands };
   }
+  authorize(target: unknown, id: unknown) {
+    const client = this.#target(target);
+    const pending = typeof id === 'string' ? client.pending.get(id) : undefined;
+    if (!pending || !pending.delivered || Date.now() >= pending.command.expiresAt)
+      throw new TobError('client-command-expired');
+    pending.guard();
+    return { authorized: true };
+  }
   complete(target: unknown, id: unknown, result: unknown) {
     const client = this.#target(target);
     const pending = typeof id === 'string' ? client.pending.get(id) : undefined;

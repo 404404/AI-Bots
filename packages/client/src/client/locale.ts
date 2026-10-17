@@ -782,6 +782,7 @@ export const zh = {
   'sendKey.row.title': '发送消息',
   'sendKey.row.description': '选择发送消息的按键，另一种组合用于换行',
   'desktopNotify.row.title': '桌面通知',
+  'desktopNotify.row.failed': '通知偏好没有保存，请重试。',
   'desktopNotify.row.description':
     '页面不在前台时，Bot 需要你审批、@你、回复你或在私聊里回复完成，会弹出系统通知。点击通知跳到对应消息。只对这个浏览器生效。',
   'desktopNotify.row.denied': '浏览器已拒绝通知。请在浏览器的网站设置里允许通知后再打开。',
@@ -4477,6 +4478,7 @@ export const en = {
   'sendKey.row.title': 'Send messages',
   'sendKey.row.description': 'Choose the key that sends a message; the other inserts a new line',
   'desktopNotify.row.title': 'Desktop notifications',
+  'desktopNotify.row.failed': 'Could not save the notification preference. Try again.',
   'desktopNotify.row.description':
     'While this page is in the background, show a system notification when a Bot needs your approval, mentions or replies to you, or finishes replying in a DM. Click it to jump to the message. Applies to this browser only.',
   'desktopNotify.row.denied':
