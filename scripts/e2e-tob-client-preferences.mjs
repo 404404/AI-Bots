@@ -852,7 +852,9 @@ try {
     assert.deepEqual((await read()).value.notifications, saved.value.notifications);
     await shot('reload-persistence');
     steps.push(
-      'direct CLI notification owner; second-context isolation; shared Host scope refusal; same-tab reload persistence and old generation refusal',
+      native
+        ? 'single native Client owner read/write; rendered notification controls; reload persistence and old generation refusal; OS permission status only'
+        : 'direct CLI notification owner; second-context isolation; shared Host scope refusal; same-tab reload persistence and old generation refusal',
     );
   }
 
@@ -941,7 +943,27 @@ try {
   );
   writeFileSync(
     resolve(out, 'result.json'),
-    JSON.stringify({ steps, errors, final: await read() }, null, 2),
+    JSON.stringify(
+      {
+        environment: native ? 'native-single-client' : 'web-multiple-contexts',
+        omittedChecks: native
+          ? [
+              'same-origin second tab and storage-event synchronization',
+              'independent browser-context notification isolation',
+              'Host theme rendered in three concurrent Clients',
+              'Human OS permission prompt and actual notification delivery',
+            ]
+          : [
+              'native Desktop rendering',
+              'Human OS permission prompt and actual notification delivery',
+            ],
+        steps,
+        errors,
+        final: await read(),
+      },
+      null,
+      2,
+    ),
   );
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ out, steps }));
