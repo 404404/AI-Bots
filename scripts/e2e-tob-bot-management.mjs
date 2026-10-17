@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, mkdirSync, writeFileSync, copyFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -591,6 +591,10 @@ try {
       'restart-read',
       'transfer',
       'retry',
+      'market-search',
+      'market-custom',
+      'market-git',
+      'market-zip',
     ].includes(phase),
     'unknown phase',
   );
@@ -827,6 +831,194 @@ try {
     await shot('created-bot-model-configured');
     steps.push(
       'natural model request reviewed correct Bot and current revision, completed native turn, canonical Orchestrator route and visible model chip',
+    );
+  }
+  if (phase === 'market-search') {
+    const before = await rpc('list');
+    const expectation = process.env.BH_E2E_MARKET_EXPECT || 'matches';
+    assert.ok(['matches', 'no-matches', 'unavailable'].includes(expectation));
+    const need =
+      process.env.BH_E2E_MARKET_NEED ||
+      '帮我准备一个研究助手 Bot 的方案，比较水果的信息并记住简洁回答的偏好';
+    const context = await beginPrompt(
+      home,
+      need +
+        '。先给我自定义 SOUL 和初始 Core Memory 方案，同时实际搜索市场并展示结果；先不要创建或导入。',
+    );
+    const completed = await completeTurn(
+      home,
+      context,
+      'marketplace-list',
+      expectation === 'unavailable' ? 'marketplace-unavailable' : undefined,
+    );
+    assert.match(completed.reply, /SOUL|人格/iu);
+    assert.match(completed.reply, /Memory|记忆/iu);
+    if (expectation !== 'unavailable')
+      assert.ok(
+        completed.calls.some((call) => call.result?.includes(expectation)),
+        'actual search result status missing',
+      );
+    const fresh = (await rpc('channelMessages', { channelId: home.channelId })).messages.filter(
+      (message) => !context.previousMessages.has(message.id),
+    );
+    assert.ok(!fresh.some((message) => message.toolApprovalRequest));
+    assert.deepEqual(await rpc('list'), before);
+    await shot('market-custom-and-search');
+    steps.push(
+      'real Tob custom SOUL/Core Memory proposal plus actual scoped Marketplace query; ' +
+        expectation +
+        '; no approval or creation',
+    );
+  }
+  if (phase === 'market-custom') {
+    const name = 'Custom Market QA ' + Date.now().toString(36);
+    const personaMarker = 'Compare fruit research clearly and cite uncertainty.';
+    const memoryMarker = 'The Human prefers concise comparisons.';
+    const before = (await rpc('list')).bots;
+    const context = await beginPrompt(
+      home,
+      `我选择定制方案。请创建名叫“${name}”的 Bot，SOUL.md 写入原文：${personaMarker} MEMORY.md 写入原文：${memoryMarker} 这次明确跳过市场搜索，只创建这一个普通 Bot。`,
+    );
+    const proposal = await review(
+      home,
+      context,
+      'create',
+      (value) =>
+        value.patch?.displayName === name &&
+        value.patch?.persona === personaMarker &&
+        value.patch?.coreMemory === memoryMarker,
+    );
+    const completed = await completeTurn(home, context, 'create');
+    assert.ok(
+      !completed.calls.some((call) =>
+        JSON.stringify(call.args).includes('deepseekbot marketplace-list'),
+      ),
+      'explicit skip still searched',
+    );
+    const created = (await rpc('list')).bots.filter(
+      (bot) => !before.some((previous) => previous.slug === bot.slug),
+    );
+    assert.equal(created.length, 1);
+    fixture = {
+      botSlug: created[0].slug,
+      channelId: undefined,
+      operationKey: proposal.target,
+      input: proposal.patch,
+      personaMarker,
+      memoryMarker,
+    };
+    const replay = await humanCli('create', createArguments(fixture.input, fixture.operationKey));
+    fixture.channelId = replay.operation.channelId;
+    await verifyCreated(fixture);
+    await openCreatedDm(fixture, name);
+    saveFixture();
+    steps.push(
+      'chosen custom proposal with explicit search skip creates exactly one Bot/Memory/DM through reviewed CLI',
+    );
+  }
+  if (phase === 'market-git' || phase === 'market-zip') {
+    const git = phase === 'market-git';
+    const name = (git ? 'Git' : 'ZIP') + ' Import QA ' + Date.now().toString(36);
+    let source, sourceArg, expectedSoul, expectedMemory;
+    if (git) {
+      sourceArg = process.env.BH_E2E_GIT_URL;
+      expectedSoul = process.env.BH_E2E_GIT_SOUL;
+      expectedMemory = process.env.BH_E2E_GIT_MEMORY;
+      assert.ok(
+        sourceArg && expectedSoul && expectedMemory,
+        'Designated Git fixture URL and exact Soul/Memory markers required',
+      );
+      source = await humanCli('bot-import-preview', ['--from-git', sourceArg]);
+      if (process.env.BH_E2E_GIT_COMMIT)
+        assert.equal(source.source.commit, process.env.BH_E2E_GIT_COMMIT);
+    } else {
+      expectedSoul = 'Imported ZIP personality remains unchanged.';
+      expectedMemory = 'Imported ZIP initial Memory remains unchanged.';
+      const seed = await humanCli('create', [
+        '--name',
+        'ZIP source ' + Date.now(),
+        '--persona',
+        expectedSoul,
+        '--core-memory',
+        expectedMemory,
+        '--operation-key',
+        'zip-seed-' + Date.now(),
+      ]);
+      const files = await humanCli('bot-zip-files', [seed.bot.id]);
+      const local = resolve(out, 'fixture.zip');
+      await humanCli('bot-zip-export', [
+        seed.bot.id,
+        '--all',
+        '--out',
+        local,
+        '--expected-state',
+        files.stateFingerprint,
+      ]);
+      sourceArg = resolve(home.workspacePath, 'selected-import-' + Date.now() + '.zip');
+      copyFileSync(local, sourceArg);
+      source = await humanCli('bot-import-preview', ['--from-zip', sourceArg]);
+    }
+    const before = (await rpc('list')).bots;
+    const prompt = git
+      ? `我选择这个 Git 仓库 ${sourceArg}。请先检查再导入为名叫“${name}”的普通 Bot，完整保留原 SOUL.md 和 MEMORY.md，不应用定制人格、不安装依赖或运行仓库代码。`
+      : `我选择你工作区里的 ZIP 文件 ${sourceArg}。请先检查再导入为名叫“${name}”的普通 Bot，完整保留原 SOUL.md 和 MEMORY.md，不应用定制人格。`;
+    const context = await beginPrompt(home, prompt);
+    const proposal = await review(
+      home,
+      context,
+      'create',
+      (value) =>
+        value.patch?.import === true &&
+        value.patch?.metadata?.displayName === name &&
+        (git
+          ? value.patch?.source?.commit === source.source.commit
+          : value.patch?.source?.source?.sha256 === source.source.sha256),
+    );
+    await completeTurn(home, context, 'create');
+    const created = (await rpc('list')).bots.filter(
+      (bot) => !before.some((previous) => previous.slug === bot.slug),
+    );
+    assert.equal(created.length, 1);
+    const replayArgs = [
+      '--name',
+      name,
+      git ? '--from-git' : '--from-zip',
+      sourceArg,
+      '--operation-key',
+      proposal.target,
+      git ? '--expected-commit' : '--expected-archive',
+      git ? source.source.commit : source.source.sha256,
+    ];
+    if (proposal.patch.metadata.description !== undefined)
+      replayArgs.push('--description', proposal.patch.metadata.description);
+    for (const role of proposal.patch.metadata.roles ?? []) replayArgs.push('--role', role);
+    const replay = await humanCli('create', replayArgs);
+    assert.equal(replay.bot.id, created[0].slug);
+    const channelId = replay.operation.channelId;
+    assert.ok(
+      (await rpc('memoryFile', { channelId, path: 'SOUL.md' })).file.body.includes(expectedSoul),
+    );
+    assert.ok(
+      (await rpc('memoryFile', { channelId, path: 'MEMORY.md' })).file.body.includes(
+        expectedMemory,
+      ),
+    );
+    const detail = await rpc('get', { slug: created[0].slug });
+    assert.deepEqual(detail.bot.workspaces, []);
+    assert.notEqual(created[0].slug, home.botSlug);
+    await openCreatedDm({ channelId }, name);
+    writeFileSync(
+      resolve(out, 'market-import-readback.json'),
+      JSON.stringify(
+        { proposal, source, receipt: replay.operation, bot: created[0].slug, channelId },
+        null,
+        2,
+      ),
+    );
+    steps.push(
+      'real Tob inspected and approved ' +
+        (git ? 'Git' : 'ZIP') +
+        ' import, retained source Soul/Memory, one ordinary identity/DM and independent exact-key reconciliation',
     );
   }
   if (phase === 'retry') {

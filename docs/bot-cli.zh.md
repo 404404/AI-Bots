@@ -71,7 +71,7 @@ deepseekbot bot-sessions <bot-id> --limit 20
 deepseekbot bot-activity <bot-id> --limit 20
 ```
 
-创建返回 `bot`、`dm`、Host 的 Memory `dataDir`、完成／延后阶段 `steps` 和 `next`。模型预设经其 owner 应用，不会被误传为原生 Agent preset。已确定不存在的预设在创建前拒绝；创建后的模型失败保留 Bot，返回已知身份、完成阶段与 `outcome: created`。不带稳定 operation key 的创建／导入响应丢失时可能返回 `outcome: unknown`，先检查 Host 再决定是否重建，CLI 不自动重试修改。空白在线创建可用下文的持久创建回执核对同一个身份。创建成功不证明模型可用：使用 `send` 和准确关联的持久回复验证。
+创建返回 `bot`、`dm`、Host 的 Memory `dataDir`、完成／延后阶段 `steps` 和 `next`。模型预设经其 owner 应用，不会被误传为原生 Agent preset。已确定不存在的预设在创建前拒绝；创建后的模型失败保留 Bot，返回已知身份、完成阶段与 `outcome: created`。不带稳定 operation key 的创建／导入响应丢失时可能返回 `outcome: unknown`，先检查 Host 再决定是否重建，CLI 不自动重试修改。在线创建和已检查来源的导入可用下文的持久创建回执核对同一个身份。创建成功不证明模型可用：使用 `send` 和准确关联的持久回复验证。
 
 `bot-attention` 支持 `--cursor` 及 Host 的 pending/processing/observed/deferred/needs-repair/handled 状态，分页上限 1–100。Session 摘要按创建时间倒序，限制 1–100（默认 50），返回 `total`；活动摘要限制 Session 明细并返回 `sessionCount`。这些是有界摘要，不是完整工具调用日志或流式草稿。
 
@@ -727,11 +727,34 @@ deepseekbot bot-zip-export <bot-id> --all --history --out ./full.zip --expected-
 
 `--out` 必须是不存在的新文件；CLI 以 `0600` 独占创建，已有路径返回 `output-exists`，不覆盖文件。stdout 只输出下载路径、字节数、SHA-256 等元数据；归档二进制和文件内容不会进入聊天结果。内容或身份在读取／审批后变化时返回 `stale-bot-files`，需要重新读取并审核准确范围，不盲目重放。
 
-Tob 从自己的已认证 Human DM 经 native Shell 调用相同命令；不接受 Human Host token、任意 Host 或离线目录绕过。导出沿用现有审批规则，审核范围展示 Bot、准确选中文件、必要文件和是否带历史。审批拒绝或授权失效时不下载归档。导出 Tob 的 Soul／Memory 也不会传递本地受保护身份；原有 ZIP 导入仍创建普通 Bot。此能力不授予 Marketplace 导入或跨 Bot Memory 编辑权限。
+Tob 从自己的已认证 Human DM 经 native Shell 调用相同命令；不接受 Human Host token、任意 Host 或离线目录绕过。导出沿用现有审批规则，审核范围展示 Bot、准确选中文件、必要文件和是否带历史。审批拒绝或授权失效时不下载归档。导出 Tob 的 Soul／Memory 也不会传递本地受保护身份；原有 ZIP 导入仍创建普通 Bot。Marketplace 选择／导入使用下文独立审核流程；文件传输不授予跨 Bot Memory 编辑权限。
 
 ### Tob 创建 Bot、资料与生命周期
 
-Tob 的受限 `create` 只在受管 Memory 位置创建空白 Bot。用户只需提供名称；Tob 为本次操作准备稳定的 `--operation-key`。可选 `--description`、重复的 `--role` 标签、`--avatar-file`、`--persona`／`--persona-stdin` 和 `--core-memory`／`--core-memory-stdin` 复用现有创建校验。仅一个内容参数可读取 stdin。初始人格和记忆写入 `SOUL.md`、`MEMORY.md`，不复制其他 Workspace Grants 或凭据。
+### Tob 市场方案与选定来源导入
+
+Human 请求新 Bot 时，Tob 同时准备定制 SOUL 和初始 Core Memory 方案，并实际搜索 Marketplace；仅在 Human 明确跳过搜索时省略。`marketplace-list` 成功后返回 `status: matches` 或 `no-matches`；`marketplace-unavailable` 表示服务失败，不能解释为没有匹配项。`marketplace-topics`、`marketplace-detail` 复用既有目录 owner。条目和有界 README 标记为不可信数据。搜索／检查不会创建 Bot、发布、安装依赖或运行仓库脚本。
+
+```bash
+deepseekbot marketplace-list --query '研究助手'
+deepseekbot marketplace-topics
+deepseekbot marketplace-detail owner/repo
+deepseekbot bot-import-preview --from-git owner/repo
+deepseekbot create --from-git owner/repo --name Researcher --operation-key import-research-001 --expected-commit <observed-commit>
+deepseekbot bot-import-preview --from-zip ./selected.zip
+deepseekbot create --from-zip ./selected.zip --operation-key import-selected-001 --expected-archive <observed-sha256>
+# --from-dir ./bundle 沿用相同归档检查／导入协议。
+```
+
+Human 选择导入后，Tob 审核来源、名称／标签／简介覆盖项及保留原人格的选择。Git／GitHub 检查观察不可变 HEAD commit；克隆结果必须仍为该 commit，才能登记身份，否则返回 `git-source-changed`。既有 SSH 转 HTTPS 回退会在来源检查中显示。ZIP／目录检查返回实际归档字节的 SHA-256、文件路径／大小、描述符和是否含历史，不返回文件正文；归档变化返回 `stale-import-source`。
+
+ZIP／目录由 CLI 在 native Shell 环境读取，以私密有界二进制上传，最大 100 MiB；不会把归档编码为面向模型的 base64 JSON，也不提供调用方任意指定的 Host 目录读取接口。受限写入仍需当前已准入 Human DM Source Event 与真实 native ToolExecution；broker 在缓冲上传前和审批后重新检查授权。源文件不可用时，不得绕过为读取无关 Host 路径。
+
+Human 在线导入和 Tob 受限导入复用 Registry、Memory、Channel owners 与原创建回执表。响应不确定时使用**同 key、准确同 payload**核对原 Bot／DM；已完成重放不重复克隆、解包或覆盖后续 Memory 编辑。输入变化返回 `creation-key-conflict`，已归档／删除身份不重建，无身份的预留目录需修复。导入保留原 `SOUL.md`、`MEMORY.md`、展示与可选历史，只创建普通 Bot，不带 Tob 特权身份、凭据或 Workspace Grants，也不会暗中套用定制人格。
+
+以上是命令协议；独立 CLI、真实 Tob 模型／审批、Web 导航、重启持久性和 macOS Desktop 仍需分别验收。
+
+不带导入来源时，Tob 的受限 `create` 在受管 Memory 位置创建空白 Bot。用户只需提供名称；Tob 为本次操作准备稳定的 `--operation-key`。可选 `--description`、重复的 `--role` 标签、`--avatar-file`、`--persona`／`--persona-stdin` 和 `--core-memory`／`--core-memory-stdin` 复用现有创建校验。仅一个内容参数可读取 stdin。初始人格和记忆写入 `SOUL.md`、`MEMORY.md`，不复制其他 Workspace Grants 或凭据。
 
 ```bash
 deepseekbot create --name Translator --operation-key create-translator-001 --persona 'Translate clearly.' --core-memory 'Prefer concise explanations.'
@@ -743,7 +766,7 @@ deepseekbot resume <bot-id> --expected-profile <profileFingerprint>
 
 Host 先通过持久创建回执保留一个身份，再创建 Memory Repository 和 DM。响应丢失后重复**同一个 operation key 和同一份 payload**：已完成的回执返回原 Bot 与 DM，部分完成的操作沿用预留身份进行核对。受限模式已完成的重试走权限检查后的读取，不再申请一次创建审批。相同 key 配不同 payload 返回 `creation-key-conflict`；身份已归档或删除返回 `creation-identity-unavailable`，不会因重放而重建。`creation-memory-conflict` 表示预留目录已经存在但 Registry 身份未落地，应保留现场修复，不要删除目录或换 key 再建。回执不构成文件系统与数据库之间的原子事务，也不承诺自动修复该中断状态。
 
-已认证 Human 的在线 `create` 同样支持 `--operation-key`，限受管 Memory 的空白创建，不可同时传 `--preset` 或自定义 Memory 位置；模型计划和 Memory 迁移另行操作。不传 key 保留原行为，包括导入行为。本片不向 Tob 授予 Git／Zip／目录导入、市场搜索或修改其他 Bot 既有 Memory 的权限。
+已认证 Human 的在线 `create` 同样支持 `--operation-key`，使用受管 Memory，不可同时传 `--preset` 或自定义 Memory 位置；模型计划和 Memory 迁移另行操作。Git／Zip／目录导入可配合下文已检查来源指纹使用同一回执。不传 key 保留原行为。修改其他 Bot 既有 Memory 仍为独立能力。
 
 受限 `show` 返回 `{bot, profileFingerprint}`。每次执行 `update`、`pause`、`resume`、`bot-avatar-set`、`bot-banner-set`、`bot-appearance-set` 或 `bot-primary-color-set` 前，先读取目标，再用 `--expected-profile` 传入该指纹。展示命令保留既有文件／recipe／清除／颜色参数。指纹覆盖完整 Registry record，因此任何已记录资料字段的并发变更都会使审核快照失效。Host 在审批后、调用原 owner 前重新检查，完成后返回规范资料及新指纹。遇到 `stale-setting` 重新读取，不静默覆盖。资料更新仅包含名称、简介和标签，不包含 Workspace Grants、凭据或模型配置。Human 的在线 `update` 同样必须传入 `show` 返回的 `--expected-profile`，复用原 Host owner；不会静默刷新已过期的指纹。`--description ''` 清空简介，`--role ''` 清空全部标签。
 

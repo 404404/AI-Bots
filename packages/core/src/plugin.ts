@@ -15,6 +15,11 @@ import {
   TOB_CLIENT_PREFERENCE_CAPABILITIES,
 } from './tob/cli-client-preferences.js';
 import { createTobBackupOperations, TOB_BACKUP_CAPABILITIES } from './tob/cli-backup-operations.js';
+import { createBotImports } from './bots/imports.js';
+import {
+  createTobMarketplaceOperations,
+  TOB_MARKETPLACE_CAPABILITIES,
+} from './tob/cli-marketplace.js';
 import { createBotTransfer } from './bots/transfer.js';
 import {
   createTobBotTransferOperations,
@@ -1240,6 +1245,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                         }
                       : undefined,
                   )) ??
+                  (await tobMarketplaceOperations(command, args)) ??
                   (await tobModelOperations(command, args)) ??
                   (await tobMaintenanceOperations(command, args)) ??
                   (await tobDeviceOperations(command, args)) ??
@@ -1271,6 +1277,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   ...TOB_MEMORY_CAPABILITIES,
                   ...TOB_MEMORY_EDIT_CAPABILITIES,
                   ...TOB_BACKUP_CAPABILITIES,
+                  ...TOB_MARKETPLACE_CAPABILITIES,
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
                   ...TOB_DEVICE_CAPABILITIES,
@@ -2310,6 +2317,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
+  const botImports = createBotImports(core.creations);
+  const tobMarketplaceOperations = createTobMarketplaceOperations({
+    imports: botImports,
+    registry: core.registry,
+    bridge: () => bridgeMethods,
+  });
   const botTransfer = createBotTransfer(core.registry);
   const tobBotTransferOperations = createTobBotTransferOperations(botTransfer);
   const tobBotCreationOperations = createTobBotCreationOperations({
@@ -2505,6 +2518,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     );
     const botZipHttp = createBotZipHttp({
       transfer: botTransfer,
+      imports: botImports,
       registry: core.registry,
       detail: (slug) => bridgeMethods.get({ slug }),
       log: (message) => ctx.logger.info(message),
