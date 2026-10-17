@@ -1,0 +1,136 @@
+{
+  "default-dark": [
+    {
+      "name": "Fixed header and last row reachable",
+      "passed": true
+    },
+    {
+      "name": "Root handle drag closes sheet",
+      "passed": true
+    },
+    {
+      "name": "Immediate setting survives dismiss and reopen",
+      "passed": true
+    },
+    {
+      "name": "Accessible Close handle tap dismisses scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Canonical preference survives cold restart",
+      "passed": true
+    },
+    {
+      "name": "Original Streaming restored",
+      "passed": true
+    }
+  ],
+  "child-dark": [
+    {
+      "name": "Child Back returns within Settings",
+      "passed": true
+    },
+    {
+      "name": "Child handle activation closes whole sheet",
+      "passed": true
+    },
+    {
+      "name": "Child handle drag closes whole sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to Settings root",
+      "passed": true
+    }
+  ],
+  "default-light": [
+    {
+      "name": "Fixed header and final row reachable",
+      "passed": true
+    },
+    {
+      "name": "Handle activation closes scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Handle drag dismisses sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to root",
+      "passed": true
+    }
+  ],
+  "intermediate-light": [
+    {
+      "name": "Fixed header and final row reachable",
+      "passed": true
+    },
+    {
+      "name": "Handle activation closes scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Handle drag dismisses sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to root",
+      "passed": true
+    }
+  ],
+  "maximum-light": [
+    {
+      "name": "Fixed header and final row reachable",
+      "passed": true
+    },
+    {
+      "name": "Handle activation closes scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Handle drag dismisses sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to root",
+      "passed": true
+    }
+  ],
+  "maximum-dark": [
+    {
+      "name": "Fixed header and final row reachable",
+      "passed": true
+    },
+    {
+      "name": "Handle activation closes scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Handle drag dismisses sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to root",
+      "passed": true
+    }
+  ],
+  "intermediate-dark": [
+    {
+      "name": "Fixed header and final row reachable",
+      "passed": true
+    },
+    {
+      "name": "Handle activation closes scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Handle drag dismisses sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to root",
+      "passed": true
+    }
+  ]
+}
