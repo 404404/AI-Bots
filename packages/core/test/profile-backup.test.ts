@@ -22,6 +22,7 @@ import {
 } from '../src/database/owner.js';
 import {
   exportProfileBackup,
+  profileBackupReviewScope,
   inspectProfileBackup,
   restoreProfileBackup,
   type ProfileBackupSource,
@@ -803,7 +804,13 @@ it('restores content without imported device, push, secret execution or protecte
   }
 });
 
-it.each(['allow', 'other-review', 'different-context', 'revoked-authority'] as const)(
+it.each([
+  'allow',
+  'other-review',
+  'wrong-plan-review',
+  'different-context',
+  'revoked-authority',
+] as const)(
   'keeps only its own canonical export approval outside scope CAS: %s',
   async (caseName) => {
     const core = mount();
@@ -856,11 +863,20 @@ it.each(['allow', 'other-review', 'different-context', 'revoked-authority'] as c
       author: { kind: 'bot', slug: 'keeper' },
       toolApprovalRequest: {
         sessionId: 'review-session',
-        callId: 'export-call',
+        callId: 'export-call:cli:11111111-1111-4111-8111-111111111111',
         toolName: 'deepseekbot profile-backup-export',
         role: 'orchestrator',
         cwd: core.registry.memoryDirFor('keeper')!,
-        input: '{}',
+        input: JSON.stringify({
+          parentShellCallId: 'export-call',
+          command: 'profile-backup-export',
+          target: 'Profile',
+          patch: {
+            export: true,
+            planId: '33333333-3333-4333-8333-333333333333',
+            destination: 'protected-host-file',
+          },
+        }),
       },
     });
     await core.channels.appendMessage(channel.id, {
@@ -871,7 +887,7 @@ it.each(['allow', 'other-review', 'different-context', 'revoked-authority'] as c
       replyTo: 'export-review',
       toolApprovalDecision: { requestMessageId: 'export-review', outcome: 'allowed-once' },
     });
-    if (caseName === 'other-review')
+    if (caseName === 'other-review' || caseName === 'wrong-plan-review')
       await core.channels.appendMessage(channel.id, {
         id: 'unrelated-review',
         at: '2026-10-18T00:00:05Z',
@@ -879,13 +895,28 @@ it.each(['allow', 'other-review', 'different-context', 'revoked-authority'] as c
         author: { kind: 'bot', slug: 'keeper' },
         toolApprovalRequest: {
           sessionId: 'review-session',
-          callId: 'different-call',
+          callId:
+            (caseName === 'other-review' ? 'different-call' : 'export-call') +
+            ':cli:22222222-2222-4222-8222-222222222222',
           toolName: 'deepseekbot profile-backup-export',
           role: 'orchestrator',
           cwd: core.registry.memoryDirFor('keeper')!,
-          input: '{}',
+          input: JSON.stringify({
+            parentShellCallId: caseName === 'other-review' ? 'different-call' : 'export-call',
+            command: 'profile-backup-export',
+            target: 'Profile',
+            patch: {
+              export: true,
+              planId:
+                caseName === 'wrong-plan-review'
+                  ? '44444444-4444-4444-8444-444444444444'
+                  : '33333333-3333-4333-8333-333333333333',
+              destination: 'protected-host-file',
+            },
+          }),
         },
       });
+    const exportContext = { ...context, exportPlanId: '33333333-3333-4333-8333-333333333333' };
     const request = new Request('http://localhost' + PROFILE_BACKUP_PATH, {
       method: 'POST',
       body: JSON.stringify({ token: preview.token }),
@@ -906,8 +937,8 @@ it.each(['allow', 'other-review', 'different-context', 'revoked-authority'] as c
       request,
       undefined,
       caseName === 'different-context'
-        ? { ...context, sourceEventIds: ['unrelated-source'] }
-        : context,
+        ? { ...exportContext, sourceEventIds: ['unrelated-source'] }
+        : exportContext,
     );
     if (caseName !== 'allow') {
       expect(await response.json()).toMatchObject({ error: { code: 'preview-stale' } });
@@ -919,45 +950,103 @@ it.each(['allow', 'other-review', 'different-context', 'revoked-authority'] as c
   },
 );
 
-it.each(['source', 'memory', 'profile', 'grant'] as const)(
-  'refuses a scoped reviewed export after an actual %s change',
-  async (change) => {
-    const core = mount();
-    expect(
-      core.registry.create({ slug: 'keeper', displayName: 'Keeper', persona: 'AAAA' }).ok,
-    ).toBe(true);
-    const channel = core.channels.getOrCreateDm('keeper', 'Keeper')!;
-    const handler = createProfileBackupHttp(source(core), root(), core.profileRecovery, catalog);
-    const preview = await (
-      await handler(new Request('http://localhost' + PROFILE_BACKUP_PATH))
-    ).json();
-    if (change === 'source')
-      await core.channels.appendMessage(channel.id, {
-        id: 'new-human',
-        at: '2026-10-18T00:00:01Z',
-        body: 'Another request',
-        author: { kind: 'human' },
-      });
-    else if (change === 'memory') {
-      const file = join(core.registry.memoryDirFor('keeper')!, 'SOUL.md');
-      const before = readFileSync(file);
-      const after = Buffer.from(before);
-      after[0] = after[0] === 65 ? 66 : 65;
-      writeFileSync(file, after);
-      expect(after.length).toBe(before.length);
-    } else if (change === 'profile') core.registry.update('keeper', { displayName: 'Different' });
-    else
-      attachOperationalModule(core.operationalDatabase, 'workspace-grants').transaction((db) => {
+it.each([
+  'source',
+  'memory',
+  'profile',
+  'grant',
+  'approval-route',
+  'failure-alert',
+  'same-count-session',
+] as const)('refuses a scoped reviewed export after an actual %s change', async (change) => {
+  const core = mount();
+  expect(core.registry.create({ slug: 'keeper', displayName: 'Keeper', persona: 'AAAA' }).ok).toBe(
+    true,
+  );
+  const channel = core.channels.getOrCreateDm('keeper', 'Keeper')!;
+  if (change === 'same-count-session')
+    core.ownership.claim({
+      sessionId: 'same-count',
+      botSlug: 'keeper',
+      rootRole: 'orchestrator',
+      at: '2026-10-18T00:00:00Z',
+    });
+  const handler = createProfileBackupHttp(source(core), root(), core.profileRecovery, catalog);
+  const preview = await (
+    await handler(new Request('http://localhost' + PROFILE_BACKUP_PATH))
+  ).json();
+  if (change === 'source')
+    await core.channels.appendMessage(channel.id, {
+      id: 'new-human',
+      at: '2026-10-18T00:00:01Z',
+      body: 'Another request',
+      author: { kind: 'human' },
+    });
+  else if (change === 'memory') {
+    const file = join(core.registry.memoryDirFor('keeper')!, 'SOUL.md');
+    const before = readFileSync(file);
+    const after = Buffer.from(before);
+    after[0] = after[0] === 65 ? 66 : 65;
+    writeFileSync(file, after);
+    expect(after.length).toBe(before.length);
+  } else if (change === 'profile') core.registry.update('keeper', { displayName: 'Different' });
+  else if (change === 'approval-route' || change === 'failure-alert')
+    attachOperationalModule(core.operationalDatabase, 'messaging').transaction((db) => {
+      if (change === 'approval-route')
         db.prepare(
-          'INSERT INTO workspace_grants (id, bot_slug, workspace_id, workspace_path, workspace_title, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-        ).run('new-grant', 'keeper', 'workspace', root(), 'Workspace', '2026-10-18T00:00:01Z');
-      });
-    const response = await handler(
-      new Request('http://localhost' + PROFILE_BACKUP_PATH, {
-        method: 'POST',
-        body: JSON.stringify({ token: preview.token }),
-      }),
-    );
-    expect(await response.json()).toMatchObject({ error: { code: 'preview-stale' } });
-  },
-);
+          'INSERT INTO messaging_approval_routes (bot_slug, revision, body) VALUES (?, ?, ?)',
+        ).run('keeper', 1, '{}');
+      else
+        db.prepare(
+          'INSERT INTO messaging_failure_alert_settings (bot_slug, enabled, revision) VALUES (?, ?, ?)',
+        ).run('keeper', 1, 1);
+    });
+  else if (change === 'same-count-session')
+    attachOperationalModule(core.operationalDatabase, 'session-ownership').transaction((db) => {
+      db.prepare('UPDATE session_ownership SET created_at = ? WHERE session_id = ?').run(
+        '2026-10-18T00:00:02Z',
+        'same-count',
+      );
+    });
+  else
+    attachOperationalModule(core.operationalDatabase, 'workspace-grants').transaction((db) => {
+      db.prepare(
+        'INSERT INTO workspace_grants (id, bot_slug, workspace_id, workspace_path, workspace_title, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      ).run('new-grant', 'keeper', 'workspace', root(), 'Workspace', '2026-10-18T00:00:01Z');
+    });
+  const response = await handler(
+    new Request('http://localhost' + PROFILE_BACKUP_PATH, {
+      method: 'POST',
+      body: JSON.stringify({ token: preview.token }),
+    }),
+  );
+  expect(await response.json()).toMatchObject({ error: { code: 'preview-stale' } });
+});
+
+it('requires an explicit backup review classification for every future canonical schema table', async () => {
+  const core = mount();
+  attachOperationalModule(core.operationalDatabase, 'future-module').transaction((db) =>
+    db.exec('CREATE TABLE future_review_authority (id TEXT PRIMARY KEY)'),
+  );
+  const handler = createProfileBackupHttp(source(core), root(), core.profileRecovery, catalog);
+  const response = await handler(new Request('http://localhost' + PROFILE_BACKUP_PATH));
+  expect(await response.json()).toMatchObject({ error: { code: 'dependency-incompatible' } });
+});
+
+it('binds reviewed file bytes to the actual barrier capture instead of only a preflight observation', async () => {
+  const core = mount();
+  expect(core.registry.create({ slug: 'keeper', displayName: 'Keeper', persona: 'AAAA' }).ok).toBe(
+    true,
+  );
+  const reviewed = profileBackupReviewScope(source(core));
+  const file = join(core.registry.memoryDirFor('keeper')!, 'SOUL.md');
+  const before = readFileSync(file);
+  const after = Buffer.from(before);
+  after[0] = after[0] === 65 ? 66 : 65;
+  writeFileSync(file, after);
+  const destination = join(root(), 'reviewed.botharness-backup');
+  await expect(
+    exportProfileBackup(source(core), destination, { reviewedFiles: reviewed.files }),
+  ).rejects.toMatchObject({ code: 'preview-stale' });
+  expect(existsSync(destination)).toBe(false);
+});

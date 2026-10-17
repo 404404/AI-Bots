@@ -5,9 +5,11 @@ export interface ProfileBackupReviewContext {
   readonly sessionId: string;
   readonly sourceEventIds: readonly string[];
   readonly callIds?: readonly string[];
+  readonly exportPlanId?: string;
 }
 
 const authorityTables = [
+  'avatar_part_library',
   'persona_bots',
   'persona_bot_deletions',
   'persona_bot_memory_ownership',
@@ -48,13 +50,113 @@ const authorityTables = [
   'profile_recovery',
   'profile_recovery_bots',
   'tob_identity',
+  '_botharness_schema',
+  'persona_bots_import',
+  'model_presets_import',
+  'roster_arrangement_import',
+  'session_ownership',
+  'assignments',
+  'channel_reactions',
+  'group_send_review_drafts',
+  'memory_recovery_checkpoints',
+  'memory_repair_events',
+  'messaging_approval_routes',
+  'messaging_failure_alert_settings',
+  'messaging_outbox',
+  'messaging_purge_facts',
+  'messaging_purge_requirement',
 ] as const;
+
+const derivedTables = [
+  'bot_assignment_access_events',
+  'bot_creation_operations',
+  'bot_onboarding',
+  'bot_schedule_firings',
+  'bot_source_wake_attempts',
+  'channel_management_operations',
+  'channel_read_positions',
+  'group_wake_policy_audit',
+  'human_attention_decisions',
+  'human_inbox_dismissals',
+  'human_inbox_snoozes',
+  'inbox_admissions',
+  'inbox_history_fts',
+  'inbox_history_fts_config',
+  'inbox_history_fts_data',
+  'inbox_history_fts_docsize',
+  'inbox_history_fts_idx',
+  'memory_change_checkpoints',
+  'memory_commit_cursors',
+  'messaging_approval_deliveries',
+  'messaging_failure_alert_deliveries',
+  'messaging_outbox_attempts',
+  'messaging_pairing_cards',
+  'messaging_reception_history',
+  'push_sent',
+  'usage_daily',
+  'usage_legacy_baselines',
+  'usage_receipt_state',
+  'usage_receipts',
+  'usage_retired_roots',
+] as const;
+const projectedTables = [
+  'source_events',
+  'channel_records',
+  'channel_placements',
+  'channel_output_origins',
+] as const;
+const classifiedTables = new Set<string>([
+  ...authorityTables,
+  ...derivedTables,
+  ...projectedTables,
+]);
+
+function ownExportReview(raw: unknown, context: ProfileBackupReviewContext): boolean {
+  if (!raw || typeof raw !== 'object') return false;
+  const review = raw as Record<string, unknown>;
+  if (
+    review.sessionId !== context.sessionId ||
+    review.toolName !== 'deepseekbot profile-backup-export' ||
+    typeof review.input !== 'string' ||
+    typeof review.callId !== 'string'
+  )
+    return false;
+  try {
+    const input = JSON.parse(review.input);
+    const parent = input.parentShellCallId;
+    if (
+      typeof parent !== 'string' ||
+      !context.callIds?.includes(parent) ||
+      input.command !== 'profile-backup-export' ||
+      input.target !== 'Profile' ||
+      input.patch?.export !== true ||
+      input.patch?.planId !== context.exportPlanId ||
+      input.patch?.destination !== 'protected-host-file'
+    )
+      return false;
+    const prefix = parent + ':cli:';
+    return (
+      review.callId.startsWith(prefix) &&
+      /^[a-f0-9-]{36}$/u.test(review.callId.slice(prefix.length))
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function profileBackupReviewDatabase(
   database: OperationalDatabaseOwner,
   context?: ProfileBackupReviewContext,
 ) {
   return attachOperationalModule(database, 'profile-backup').read((db) => {
+    for (const row of db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()) {
+      const name = String(row.name);
+      if (!name.startsWith('sqlite_') && !classifiedTables.has(name))
+        throw new ProfileBackupError(
+          'dependency-incompatible',
+          'Backup review schema has an unclassified table',
+        );
+    }
     const excluded = new Set<string>();
     const exportReviews = new Set<string>();
     let reviewBot: string | undefined;
@@ -85,10 +187,8 @@ export function profileBackupReviewDatabase(
             'SELECT e.source_event_id, e.message_id, e.payload_json FROM channel_output_origins o JOIN source_events e ON e.source_event_id = o.source_event_id WHERE o.session_id = ? AND o.request_source_event_id = ? AND e.bot_slug = ?',
           )
           .all(context.sessionId, id, String(owner.bot_slug))) {
-          excluded.add(String(row.source_event_id));
           const payload = JSON.parse(String(row.payload_json));
-          if (payload.toolApprovalRequest?.toolName === 'deepseekbot profile-backup-export')
-            exportReviews.add(String(row.message_id));
+          if (!payload.toolApprovalRequest) excluded.add(String(row.source_event_id));
         }
       }
     }
@@ -105,9 +205,7 @@ export function profileBackupReviewDatabase(
         row.source_kind === 'bot-message' &&
         row.bot_slug === reviewBot &&
         row.channel_id === 'dm-' + reviewBot &&
-        review?.sessionId === context.sessionId &&
-        review.toolName === 'deepseekbot profile-backup-export' &&
-        context.callIds?.includes(review.callId)
+        ownExportReview(review, context)
       ) {
         excluded.add(String(row.source_event_id));
         exportReviews.add(String(row.message_id));
@@ -155,8 +253,15 @@ export function profileBackupReviewDatabase(
       .prepare('SELECT channel_id, revision, source_event_id, message_id FROM channel_placements')
       .all()
       .filter((row) => !excluded.has(String(row.source_event_id)));
+    const origins = db
+      .prepare(
+        'SELECT source_event_id, session_id, request_source_event_id FROM channel_output_origins',
+      )
+      .all()
+      .filter((row) => !excluded.has(String(row.source_event_id)));
     return {
       authorities,
+      origins: ordered(origins),
       sources: ordered(sources),
       channels: ordered(channels),
       placements: ordered(placements),
