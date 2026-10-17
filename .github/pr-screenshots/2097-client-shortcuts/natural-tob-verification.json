@@ -1,0 +1,114 @@
+{
+  "runtimeSource": "6eea6b76828c94c7a4dbcab00ff101a2cde16ca1",
+  "capturedAt": "2026-10-18",
+  "route": "deepseek-official/deepseek-flash",
+  "surface": "Web Client, 1440x1000, Chinese locale, macOS browser profile",
+  "entry": "Natural Chinese requests typed into Home; existing tool approval cards expanded and clicked by accessible name",
+  "origin": "Each canonical Human message ClientTarget matched the selected clientId and generation",
+  "selectedClient": {
+    "clientId": "06bd19cd-20eb-473b-a133-79e7e36c1217",
+    "generation": "b4456462-289a-4318-9358-8ff13f0c24cd",
+    "kind": "web",
+    "scope": "client"
+  },
+  "otherClientUnchanged": true,
+  "pageErrors": [],
+  "cases": [
+    {
+      "command": "client-layout-set",
+      "target": "06bd19cd-20eb-473b-a133-79e7e36c1217/b4456462-289a-4318-9358-8ff13f0c24cd",
+      "patch": {
+        "scope": "browser-origin",
+        "sharedWithSameOriginTabs": true,
+        "changes": {
+          "type": "gap",
+          "gap": 10
+        }
+      },
+      "parentShellCallId": "call_00_9xLbv5tK2GAhoHni7RVH5089",
+      "tool": "bash",
+      "toolOutcome": "ok",
+      "endReason": "completed",
+      "delivery": "handled",
+      "reply": "✅ 已生效并读回确认：当前这个客户端的面板间距 **4px → 10px**。\n\n**过程**\n1. 读取当前状态：gap = 4px，指纹 `10bd3db7…604451`（这次读取时 `bh:channels`、`bh:channel-body` 已经是 parked 收起状态）\n2. 提交审阅：补丁只有 `{\"type\":\"gap\",\"gap\":10}`，作用域 browser-origin，目标为当前这个客户端（多客户端场景下用 `current` 解析，未自行挑选）\n3. 结果：`applied`，`persisted: true`\n4. 读回：**gap = 10px**，新指纹 `26cec7b7…4ad3bd`\n\n**其余布局与提交前一致**：面板集合（bh:workspace-rail / bh:channels / bh:home / bh:channel-body）、activeGroup、order、members、hiddenControls、parked 状态都没有变化。\n\n唯一的联动是画布 1432×992 → 1420×980、列宽随之重算——这是间距变大后的确定性回流（和上一次 4→10 的结果数字完全相同，不是窗口变化，也不是额外改动）。\n\n只对这一个客户端提交了一次，没有触碰其它客户端，也没有重试、查源码或写记忆。",
+      "beforeGap": 4,
+      "gapAfter": 10
+    },
+    {
+      "command": "client-layout-set",
+      "target": "06bd19cd-20eb-473b-a133-79e7e36c1217/b4456462-289a-4318-9358-8ff13f0c24cd",
+      "patch": {
+        "scope": "browser-origin",
+        "sharedWithSameOriginTabs": true,
+        "changes": {
+          "type": "gap",
+          "gap": 12
+        }
+      },
+      "parentShellCallId": "call_00_D5ADd12PNXMqlTUxYpX16896",
+      "tool": "bash",
+      "toolOutcome": "ok",
+      "endReason": "completed",
+      "delivery": "handled",
+      "reply": "已按你的要求停止：这次修改**没有生效**，也没有重试。\n\n- **读取**：面板间距当前为 **10px**（是之前那次改的），指纹 `44c7df40…1c1d04`\n- **提交**：只含一个字段的编辑 `{\"type\":\"gap\",\"gap\":12}`，作用域 browser-origin，目标为当前这个客户端\n- **结果**：`approval-denied` —— 你拒绝了这次审阅\n- **确认**：读回一次，间距仍是 **10px**，指纹未变，没有任何改动落地\n\n到此停止，没有第二次提交、没有重试、也没有动其他布局或其他客户端。如果之后想再改成 12px（或别的值），跟我说一声，我再重新读取并提交给你审阅。",
+      "refusal": "approval-denied",
+      "gapAfter": 10
+    },
+    {
+      "command": "client-shortcuts-set",
+      "target": "06bd19cd-20eb-473b-a133-79e7e36c1217/b4456462-289a-4318-9358-8ff13f0c24cd",
+      "patch": {
+        "scope": "client-profile",
+        "profile": "web:macos",
+        "changes": {
+          "profile": "web:macos",
+          "id": "botharness.navigation.quick-switcher",
+          "type": "set",
+          "binding": {
+            "code": "KeyJ",
+            "modifiers": ["primary", "alt"]
+          }
+        }
+      },
+      "parentShellCallId": "call_00_K6BQ9HaVTKJQktLror5I0319",
+      "tool": "bash",
+      "toolOutcome": "ok",
+      "endReason": "completed",
+      "delivery": "handled",
+      "reply": "✅ 已生效并读回确认：「快速切换」在这个 macOS 浏览器客户端上已是 **⌘⌥J**。\n\n**过程**\n1. 读取当前状态：`profile = web:macos`，`botharness.navigation.quick-switcher` 原绑定为 ⌘K（`KeyK` + `primary`），指纹 `50479ab2…2fa6`，revision `737ac590…`\n2. 提交审阅：只提交一条编辑\n   `{profile:\"web:macos\", id:\"botharness.navigation.quick-switcher\", type:\"set\", binding:{code:\"KeyJ\", modifiers:[\"primary\",\"alt\"]}}`\n   作用域 `client-profile`\n3. 结果：`applied`，`persisted: true`\n4. 读回：\n   - 「快速切换」`binding = KeyJ + [primary, alt]`，显示为 **⌘⌥J**，`modified: true`，无冲突、无 issue；\n   - 另外 17 个可自定义命令的绑定全部未变（逐条比对过）；\n   - `fixedCommands`、`profile`、`revision` 均未变；`defaults` 仍为 ⌘K；\n   - 平台侧 legacy 镜像里只有 quick-switcher 这一条同步成 KeyJ + mod + alt，属于同一次修改的镜像，不是额外改动。\n\n只对当前这个客户端的当前平台配置提交了一次，没有触碰其它客户端；未重试、未查源码、未写记忆。\n\n补充一句：因为改成了自定义绑定（`modified: true`），默认的 ⌘K 仍保留在 `defaults` 里，日后想还原可以直接 reset，不必手动再改回来。",
+      "bindingAfter": {
+        "code": "KeyJ",
+        "modifiers": ["primary", "alt"]
+      }
+    },
+    {
+      "command": "client-layout-set",
+      "target": "06bd19cd-20eb-473b-a133-79e7e36c1217/b4456462-289a-4318-9358-8ff13f0c24cd",
+      "patch": {
+        "scope": "browser-origin",
+        "sharedWithSameOriginTabs": true,
+        "changes": {
+          "type": "gap",
+          "gap": 14
+        }
+      },
+      "parentShellCallId": "call_00_T4EBttnRo3B9joN68P0L6972",
+      "tool": "bash",
+      "toolOutcome": "ok",
+      "endReason": "completed",
+      "delivery": "handled",
+      "reply": "状态已过期，按你的要求停止，**没有重试**。\n\n- **提交前读取**：间距 gap = 10px，指纹 `44c7df40…1c1d04`\n- **提交**：单字段编辑 `{\"type\":\"gap\",\"gap\":14}`，作用域 browser-origin，目标为当前这个客户端\n- **结果**：`stale-client-layout` —— 客户端在\"读取 → 提交\"之间把布局改掉了，所以这次审阅被判定为过期并拒绝，没有落地\n- **读回（仅确认，不算重试）**：现在 gap = **9px**，指纹 `0a0098d0…6ffc312`，与提交前读取的 10px/`44c7df40…` 不一致\n\n也就是说，14px 这次修改完全没有生效；同时可以看到这个客户端的间距现在是 9px，不是我改的（我全程只提交了 14 这一条，且被拒）。\n\n到此停止：不重试、不重新提交。要不要我重新读取当前状态、再以 14px 提交一次给你审阅，由你决定。",
+      "refusal": "stale-client-layout",
+      "independentHumanGap": 9,
+      "gapAfter": 9
+    }
+  ],
+  "retainedFailures": [
+    "An earlier helper closed Home during review, changed the layout, and correctly received stale-client-layout; fixed only the helper.",
+    "An earlier trace assertion searched truncated command text; approval.parentShellCallId now correlates the exact Shell call."
+  ],
+  "limits": [
+    "Model approval exercised on Web only; native model approval not exercised.",
+    "Automated browser interaction; not Human QA or physical keyboard evidence."
+  ]
+}
