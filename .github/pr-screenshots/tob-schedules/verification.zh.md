@@ -18,3 +18,9 @@
 Generation 100 虽仅新增一张表，仍推进共享 operational database 的代次；旧版本会拒绝新代次。已升级 Profile 不能仅靠 Git revert 降级，恢复需兼容的新版本或升级前备份，恢复前先保全后续状态；不得删除回执或降低代次标记强行降级。
 
 原生续跑诊断：第一次复制 Profile 的尝试，在模型步骤和工具调用前即 `blocked`；其 Session cwd 仍指向原 Web home，而 Registry 按复制后的 Desktop home 计算路径。该次仍为失败，改为在最终绝对 home 新建 Profile，不修旧历史。新的第二次原生尝试已完成审核后的创建与改名；离线读取停机 Profile 的规范任务名称与已处理 Human Source Event，确认改名确已发生。验证器因 Shell 参数仅展示前 200 字符、隐藏了 update 命令而误报。修正版按审核命令及准确、新鲜的 `parentShellCallId` 匹配，保留完成轮次／已处理 delivery／真实回复／规范状态检查，提供只读 `change-read` 续跑。离线重放该截断调用通过新匹配，并拒绝错误和过期调用 ID。此诊断不代表后续原生触发、暂停、独立 CLI、重启验收已通过。
+
+
+原生续跑后的重启发现真实启动缺陷：前两次 planned firing 确实完成并发送合成标记，但后一个错过的 occurrence 在 Desktop 启动时、native credentials Service 尚未供给前被 admission。规范 Source Event 留在 retryable，未产生 Session、observation 或副作用；不是关机中断了运行中的模型。原驱动只要求历史中至少一条 handled，因此其 PASS 不足以证明启动补跑验收。[失败画面](native-startup-failure-before-fix.png) 与[脱敏规范关联](native-startup-failure.json) 已保留。候选修复让 core recovery／catch-up 在真实 credentials Service 依赖就绪后启动；此记录时源码回归与新的原生启动验证仍待执行。没有删除或改写失败历史。
+
+
+启动修复源码：`fb6cf4ff011594bcc80bdaa28e4b03136306dc94`。延后真实原生 Credential Provider 初始化的回归，在旧声明下复现竞态（2 项失败）；增加依赖后两项通过：补跑只有一个 handled Source Event，重复 tick 不新增；Provider 无 key 时 core／bridge 可用而模型仍安全拒绝。根 TypeScript 与一次构建通过。源码证明不能代替待执行的原生启动复验，原有 48 项管理回归仍对应此前产品版本。
