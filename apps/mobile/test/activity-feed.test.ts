@@ -82,6 +82,7 @@ async function feed(
   snapshot: InboxSnapshot,
   hostId = 'host-one',
   timeoutMs = 200,
+  onOpen: (item: HumanAttentionItem) => void = () => undefined,
 ): Promise<HTMLElement> {
   act(() => root?.unmount());
   container?.remove();
@@ -123,7 +124,7 @@ async function feed(
         botSlugs: [question.botSlug, 'other-bot'],
         channels: [{ id: 'other-channel', name: 'Other Channel' }],
         bot: () => undefined,
-        onOpen: () => undefined,
+        onOpen,
       }),
     ),
   );
@@ -143,7 +144,9 @@ async function press(target: HTMLElement): Promise<void> {
 }
 
 const post = (view: HTMLElement, item: HumanAttentionItem) =>
-  view.querySelector(`[data-testid="inbox-post-${item.id}"]`);
+  [...view.querySelectorAll(`[data-testid="inbox-post-${item.id}"]`)].find(
+    (node) => node.closest('[hidden]') === null,
+  ) ?? null;
 
 describe('Activity feed rows', () => {
   it('defaults to pending work and keeps questions and private inputs beside tool approvals', () => {
@@ -207,6 +210,32 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('bounds the native unread preview while opening the original full item', async () => {
+    const unread: HumanAttentionItem = {
+      ...reply,
+      id: 'long-unread',
+      category: 'unread',
+      kind: 'channel-unread',
+      summary: `${'正文'.repeat(10000)}FULL_END`,
+    };
+    const open = vi.fn();
+    const view = await feed(
+      host(),
+      { status: 'ready', sections: { action: [], replies: [], unread: [unread], handled: [] } },
+      'host-one',
+      200,
+      open,
+    );
+    await press(button(view, t.inboxSections.unread));
+    const row = view.querySelector<HTMLElement>('[data-testid="inbox-row-long-unread"]')!;
+    expect(row.textContent).not.toContain('FULL_END');
+    expect(row.textContent!.length).toBeLessThan(700);
+    expect(row.getAttribute('aria-label')!.length).toBeLessThan(700);
+    await press(row);
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({ id: unread.id, summary: unread.summary }),
+    );
+  });
   it('preserves the search when editing ends and options reset', async () => {
     const fake = host();
     const queries: Record<string, unknown>[] = [];
@@ -239,7 +268,7 @@ describe('Activity feed', () => {
     expect(queries.at(-1)?.search).toBe('budget');
     await press(button(view, t.activityOptions));
     await press(button(view, t.activityReset));
-    expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(queries.findLast((query) => query.category === 'action')?.sort).toBeUndefined();
     expect(queries.at(-1)?.search).toBe('budget');
     await press(button(view, t.cancel));
     await press(button(view, t.activitySearch));
@@ -295,7 +324,7 @@ describe('Activity feed', () => {
     await press(button(view, t.activityOptions));
     expect(button(view, t.activitySortNewest).getAttribute('aria-checked')).toBe('true');
     await press(button(view, t.activityReset));
-    expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(queries.findLast((query) => query.category === 'action')?.sort).toBeUndefined();
     expect(view.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
@@ -393,6 +422,21 @@ describe('Activity feed', () => {
     expect(sent).toHaveLength(1);
     expect(post(view, question)).toBeNull();
     expect(view.textContent).toContain(t.inboxEmpty);
+  });
+
+  it('keeps the loaded question and its draft mounted when paging away and back', async () => {
+    const fake = host();
+    const view = await feed(fake, ready([question]));
+    const initial = post(view, question);
+    await press(button(view, t.option('A', 'Teal')));
+    const loads = () => fake.calls.filter((call) => call.method === 'userQuestionStatus').length;
+    const loaded = loads();
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(post(view, question)).toBeNull();
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-previous"]')!);
+    expect(post(view, question)).toBe(initial);
+    expect(loads()).toBe(loaded);
+    expect(button(view, t.option('A', 'Teal')).getAttribute('aria-checked')).toBe('true');
   });
 
   it('filters the feed through its header panel', async () => {
@@ -508,8 +552,10 @@ describe('Activity feed', () => {
       sort: 'oldest',
       channelId: 'other-channel',
     });
+    const fetched = queries.length;
     await press(view.querySelector<HTMLElement>('[data-testid="pager-previous"]')!);
-    expect(queries.at(-1)).toMatchObject({
+    expect(queries.length).toBe(fetched);
+    expect(queries.findLast((query) => query.category === 'replies')).toMatchObject({
       category: 'replies',
       sort: 'oldest',
       channelId: 'other-channel',

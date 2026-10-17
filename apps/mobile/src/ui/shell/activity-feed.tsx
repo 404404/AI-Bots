@@ -61,6 +61,13 @@ import {
 const AVATAR = 32;
 const LOADING: InboxSnapshot = { status: 'loading' };
 const ACTIVITY_ROUTES = [...ACTIVITY_TABS];
+const SUMMARY_PREVIEW_LIMIT = 512;
+
+function summaryPreview(summary: string): string {
+  return summary.length <= SUMMARY_PREVIEW_LIMIT
+    ? summary
+    : `${summary.slice(0, SUMMARY_PREVIEW_LIMIT).replace(/[\uD800-\uDBFF]$/, '')}…`;
+}
 
 type FeedRow =
   | { kind: 'empty'; key: string }
@@ -151,6 +158,7 @@ function Row({
     item.kind === 'channel-unread'
       ? (item.channelName ?? t.otherKind)
       : (bot?.displayName ?? item.botSlug);
+  const summary = summaryPreview(item.summary);
   const size = settled ? theme.type.body.line : AVATAR;
   const metadata = (
     <View
@@ -171,7 +179,7 @@ function Row({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={t.openPost(kind, name, item.summary)}
+      accessibilityLabel={t.openPost(kind, name, summary)}
       testID={`inbox-row-${item.id}`}
       onPress={() => onOpen(item)}
       style={({ pressed }) => ({
@@ -211,15 +219,13 @@ function Row({
             style={{ flexShrink: 1 }}
           >
             {theme.largeText ? name : t.rowTitle(kind, name)}
-            {settled && item.summary.length > 0 ? (
-              <Text tone="muted">{` · ${item.summary}`}</Text>
-            ) : null}
+            {settled && summary.length > 0 ? <Text tone="muted">{` · ${summary}`}</Text> : null}
           </Text>
           {theme.largeText ? null : metadata}
         </View>
-        {!settled && item.summary.length > 0 ? (
+        {!settled && summary.length > 0 ? (
           <Text tone={theme.largeText ? 'fg' : 'muted'} numberOfLines={2}>
-            {item.summary}
+            {summary}
           </Text>
         ) : null}
         {theme.largeText ? metadata : null}
@@ -253,21 +259,22 @@ function Post({
     item.channelName !== undefined && !item.channelId?.startsWith('dm-')
       ? ` · ${t.inChannel(item.channelName)}`
       : '';
-  const ports = useMemo(
-    () => ({
+  const { channelId, messageId, botSlug } = ref;
+  const ports = useMemo(() => {
+    const stableRef = { channelId, messageId, botSlug };
+    return {
       approval: {
-        load: () => loadApproval(client, ref),
+        load: () => loadApproval(client, stableRef),
         decide: (outcome: Parameters<typeof decideApproval>[2]) =>
-          decideApproval(client, ref, outcome),
+          decideApproval(client, stableRef, outcome),
       },
       question: {
-        load: () => loadQuestion(client, ref),
+        load: () => loadQuestion(client, stableRef),
         answer: (answer: Parameters<typeof answerQuestion>[2]) =>
-          answerQuestion(client, ref, answer),
+          answerQuestion(client, stableRef, answer),
       },
-    }),
-    [client, ref],
-  );
+    };
+  }, [client, channelId, messageId, botSlug]);
   const settled = (result: DecisionResult) => {
     onSettled(item, result);
     void inbox?.refresh();
