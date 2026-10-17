@@ -163,7 +163,7 @@ function useEntryProps(entryId: string): ChannelSidebarEntryProps | undefined {
   if (dock.entryProps === undefined) return undefined;
   return {
     ...dock.entryProps,
-    flush: entryId === 'bot-inbox',
+    flush: entryId === 'bot-inbox' || entryId === 'sessions',
     refreshRevision: runtime.refreshRevision,
     requestRefresh: () =>
       dock.setRuntime(entryId, { refreshRevision: dock.runtime(entryId).refreshRevision + 1 }),

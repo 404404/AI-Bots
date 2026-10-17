@@ -15,11 +15,9 @@ import { useMountedResource } from './mounted-resource.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { GroupHeading } from './ds/group-heading.js';
 import { PanelEmptyState } from './ds/empty-state.js';
-import { color, space } from './ds/tokens.stylex.js';
+import { color } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
-  group: { marginBlock: space.x1 },
-  list: { marginTop: space.x1, marginBottom: space.x2 },
   summary: {
     display: '-webkit-box',
     overflow: 'hidden',
@@ -173,18 +171,16 @@ function GroupWorkPanel({
         const collapsible = group === 'done';
         const expanded = !collapsible || doneOpen;
         return (
-          <section key={group} data-group={group} {...stylex.props(styles.group)}>
+          <section key={group} data-group={group}>
             <GroupHeading
+              flush
               label={labels[group]}
               count={rows.length}
               expanded={expanded}
               onToggle={collapsible ? () => setDoneOpen((open) => !open) : undefined}
             />
             {expanded ? (
-              <SidebarCardList
-                label={labels[group]}
-                className={stylex.props(styles.list).className}
-              >
+              <SidebarCardList flush label={labels[group]}>
                 {rows.map(renderRow)}
               </SidebarCardList>
             ) : null}
