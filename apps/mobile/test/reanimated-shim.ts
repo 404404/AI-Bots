@@ -48,3 +48,9 @@ export class Keyframe {
     return this;
   }
 }
+
+export const useDerivedValue = <T>(worklet: () => T) => ({ value: worklet() });
+
+export const useAnimatedReaction = () => {};
+
+export const useAnimatedScrollHandler = (handlers: unknown) => handlers;

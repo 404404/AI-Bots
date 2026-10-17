@@ -1,6 +1,8 @@
 import { Redirect, Stack, useIsFocused, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useChromeScroll } from '../../../src/ui/shell/scroll-chrome';
+import { ActivityIndicator, RefreshControl, View } from 'react-native';
 
 import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
@@ -32,6 +34,7 @@ const NONE: HumanAttentionItem[] = [];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const onScroll = useChromeScroll(useIsFocused());
   const focused = useIsFocused();
   const bottom = useFloatingTabInset();
   const { saved, client, inbox } = useHostSession();
@@ -84,7 +87,9 @@ export default function HomeScreen() {
           look={look}
           actions={<SettingsButton onPress={() => router.push('/settings')} />}
         >
-          <FlatList
+          <Animated.FlatList
+            onScroll={onScroll}
+            scrollEventThrottle={1}
             contentContainerStyle={{ paddingBottom: bottom }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"

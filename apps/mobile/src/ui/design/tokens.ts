@@ -118,3 +118,5 @@ export const scrim = {
   light: 0.32,
   dark: 0.6,
 } as const;
+
+export const scrollChrome = { threshold: 12, top: 2, duration: 180 } as const;

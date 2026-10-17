@@ -38,6 +38,13 @@ label are centered together and its underline fills the entire block without gut
 Swipe left/right from the page content (including empty/loading states), not just the
 tab strip, to switch pages. The underline tracks the gesture; short/cancelled drags
 return to the same page. Confirm the incoming icon is already partially visible before the page settles.
+On a populated page, scroll down: the Activity title/filter/search row and global bottom
+navigation leave, while all three tabs remain pinned beneath the safe area. Rows have no
+top fade. Reverse direction and return to the top: controls return. Short/empty pages,
+pull-to-refresh and elastic bottom bounce must not flicker the controls. While search or
+filters are open, keep their controls reachable. Switch pages while collapsed, confirm
+chrome restores and visited lists retain position. In Chats, repeat down/up scrolling
+to hide/restore the same global navigation. Native iOS and Android need separate proof.
 Its fade/scale and label movement track the same drag as the underline; cancelling
 reverses them, with no late icon pop or layout jump. Then scroll vertically, switch away/back,
 and confirm its scroll position is retained. Vertical scrolling and pull-to-refresh
