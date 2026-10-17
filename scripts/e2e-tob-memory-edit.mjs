@@ -201,6 +201,19 @@ async function setHomeVisible(open) {
   );
 }
 
+async function setChannelsVisible(open) {
+  const selector = '.bh-workspace-rail [data-pinned-panel="bh:channels"]';
+  const button = await page.waitForSelector(selector);
+  if ((await button.evaluate((node) => node.getAttribute('aria-pressed') === 'true')) !== open)
+    await button.click();
+  await page.waitForFunction(
+    ({ selector, open }) =>
+      (document.querySelector(selector)?.getAttribute('aria-pressed') === 'true') === open,
+    {},
+    { selector, open },
+  );
+}
+
 async function humanCli(command, args = [], input, expectedFailure = false) {
   const manifest = process.env.BH_E2E_HUMAN_INSTANCE
     ? JSON.parse(readFileSync(process.env.BH_E2E_HUMAN_INSTANCE, 'utf8'))
@@ -368,20 +381,20 @@ async function verifyCliTrace(slug, previousIds, commands, refusal) {
   steps.push('native Shell CLI trace, no dedicated Tob tools' + (refusal ? '; ' + refusal : ''));
 }
 
-async function showApproval(message, settled = false) {
+async function showApproval(message) {
   await dismissBubble();
   await setHomeVisible(false);
+  await setChannelsVisible(false);
   mark('approval-current-card');
   await clickLatest();
   const selector = `[data-message-id=${JSON.stringify(message.id)}] .bh-tool-approval-card`;
   await page.waitForSelector(selector, { timeout: 10000 });
-  if (!settled)
-    await page.waitForFunction(
-      (s) =>
-        [...document.querySelectorAll(s + ' button.bh-request-primary')].some((n) => !n.disabled),
-      { timeout: 10000 },
-      selector,
-    );
+  await page.waitForFunction(
+    (s) =>
+      [...document.querySelectorAll(s + ' button.bh-request-primary')].some((n) => !n.disabled),
+    { timeout: 10000 },
+    selector,
+  );
   mark('approval-expand');
   const summarySelector = selector + ' .bh-request-summary';
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -651,15 +664,32 @@ try {
     assert.equal(other.file.body, fixture.unaffectedBody);
     writeFileSync(resolve(out, label + '-canonical.json'), JSON.stringify(current, null, 2));
     await setHomeVisible(false);
+    await setChannelsVisible(true);
     await (
       await visibleElement('button[data-channel-id=' + JSON.stringify(fixture.channelId) + ']')
     ).click();
     const messages = await page.$('[data-dock-header="bh:channel-body"]');
     if (!messages || !(await messages.isVisible()))
       await page.locator('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]').click();
+    await page.waitForFunction(
+      (name) =>
+        document.querySelector('[data-dock-header="bh:channel-body"]')?.textContent.includes(name),
+      {},
+      fixture.bot.name,
+    );
+    await setChannelsVisible(false);
     const selector = '[role="treeitem"][data-path="MEMORY.md"]';
     const file = await page.$(selector);
-    if (!file || !(await file.isVisible())) await click('Memory files');
+    if (!file || !(await file.isVisible())) {
+      for (const label of ['Memory files', '记忆文件']) {
+        const button = await page.$(`::-p-aria([name=${JSON.stringify(label)}][role="button"])`);
+        if (button && (await button.isVisible())) {
+          if ((await button.evaluate((node) => node.getAttribute('aria-pressed'))) !== 'true')
+            await button.click();
+          break;
+        }
+      }
+    }
     await page.waitForSelector(selector, { visible: true });
     const findMemory = (node) =>
       node.role === 'treeitem' && node.name.startsWith('MEMORY.md')
@@ -679,7 +709,7 @@ try {
     await shot(label);
     persist();
   }
-  async function reviewed(command, prompt, body, mode) {
+  async function reviewed(command, prompt, body, mode, captureOnly = false) {
     const before = await read();
     const context = await beginPrompt(home, prompt);
     const message = await waitForApproval(
@@ -741,17 +771,24 @@ try {
       fixture.expectedHead = current.head;
       fixture.expectedBody = body;
     }
-    await verify(mode || command);
+    if (captureOnly) {
+      const unchanged = await read();
+      assert.equal(unchanged.head, before.head);
+      assert.equal(unchanged.body, before.body);
+      await shot('review-capture-denied');
+    } else await verify(mode || command);
   }
   persist();
   if (runs('capture')) {
     await setHomeVisible(false);
+    await setChannelsVisible(true);
     await (
       await visibleElement('button[data-channel-id=' + JSON.stringify(home.channelId) + ']')
     ).click();
     const messages = await page.$('[data-dock-header="bh:channel-body"]');
     if (!messages || !(await messages.isVisible()))
       await page.locator('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]').click();
+    await setChannelsVisible(false);
     const cards = (await rpc('channelMessages', { channelId: home.channelId })).messages
       .filter((message) => {
         if (
@@ -774,10 +811,14 @@ try {
         resolve(out, 'settled-approval-' + card.id + '.json'),
         JSON.stringify({ status, proposal: JSON.parse(card.toolApprovalRequest.input) }, null, 2),
       );
-      await showApproval(card, true);
+      const rendered = await page.waitForSelector(
+        `[data-message-id=${JSON.stringify(card.id)}] .bh-tool-approval-card`,
+      );
+      await rendered.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+      await shot('settled-status-' + card.id);
     }
     steps.push(
-      'normal UI expansion and scrolling of four settled approvals, without new model requests or decisions',
+      'four settled status cards and exact canonical proposals; settled UI omits input details; no requests or decisions',
     );
   }
   if (runs('direct')) {
@@ -832,6 +873,14 @@ try {
   }
   const savePrompt = (body) =>
     `请将 ${fixture.bot.name}（${fixture.bot.id}）的 MEMORY.md 全文准确替换为此 JSON 字符串解码后的文本（含末尾换行）：${JSON.stringify(body)}。只改这个 Bot。准备差异供我审核，通过受支持的操作保存并报告真实 Git revision；不要新建任务或直接写仓库。`;
+  if (runs('review-capture'))
+    await reviewed(
+      'memory-save',
+      savePrompt('Review-only proposal; actual Memory stays unchanged.\n'),
+      'Review-only proposal; actual Memory stays unchanged.\n',
+      'deny',
+      true,
+    );
   if (runs('journey') || runs('edit'))
     await reviewed(
       'memory-save',

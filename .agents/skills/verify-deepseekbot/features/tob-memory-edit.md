@@ -37,6 +37,12 @@ four real Tob stages. `direct` is a separate Human CLI proof, not a Tob model jo
 actually restarting the same candidate Profile externally, run `restart-read` with its retained
 fixture. The runner records the source HEAD; retain build identity independently.
 
+`capture` saves the exact canonical proposal inputs and the rendered settled status cards without
+deciding pending operations. Settled cards do not expose their original input details. If a
+pending-review screenshot is missing, use `review-capture` with the retained fixture: it creates
+one additional proposal, captures its target and scrolled diff, denies it and verifies unchanged
+Memory. It does not repeat the four completed journey stages.
+
 The `stale` stage leaves an actual Tob approval pending, independently commits a different value
 through Human CLI, then accepts the old review. Require the real native Shell result
 `memory-conflict`, a completed Tob turn, handled Human delivery, real reply and unchanged
