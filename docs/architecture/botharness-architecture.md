@@ -821,6 +821,8 @@ PersonaBot Profile 展示最多 50 个 Inbox 锚定话题的收件方式、修�
 
 ### Human Inbox 详情与移除（#687 QA）
 
+手机 Activity 通过认证 Bridge 读取同一应用定义 Human Attention owner。查询版本 1 在分组分页前执行安全摘要搜索、未读消息筛选，个人消息默认提及优先或显式按时间排序，游标绑定当前筛选。消费者分别加载可见分组；已处理历史需显式筛选。没有 Activity 专用持久化或第二套请求生命周期。悬浮顶部栏仅持有临时筛选、搜索和排序状态，折叠偏好仍按设备与 Host 保存。旧 Host 明确拒绝，避免静默返回未筛选结果。
+
 消息窗口上下沿的等宽箭头分别增量读取历史／较新上下文；下沿到达此前末尾后仍能查询后来消息。Channel 沿用原时间线游标，Assignment 报告通过同一个有界查询继续读取边沿。每条消息在悬停或键盘聚焦时显示精确来源按钮，触屏保持可用；Assignment 原始报告则打开所属 DSH Session。常规手动刷新与底部来源按钮移除，失败可重试且保留回复草稿。
 
 Human Attention 在原 operational database 拥有 `human_inbox_dismissals`，只保存 Human、item、Source Event key、可选 unread placement revision 和时间，不保存另一份消息。Host 验证可见原来源后提交 Inbox-only Dismiss；它不答复、审批、授权或推进已读，不创建已处理记录。查询分页和待行动计数排除已移除项；入口未读总数仍由原已读位置决定。Channel 未读汇总只隐藏当时 revision 及之前的批次，之后的消息重新出现；新的 Assignment 报告也不被旧决定隐藏。多窗口与重启共享同一状态，原 Channel 卡片仍能处理，随后真正回应的已处理历史仍引用原权威。再次点击同一行只收起详情，不移除。

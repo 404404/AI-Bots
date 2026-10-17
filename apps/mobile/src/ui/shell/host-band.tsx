@@ -83,7 +83,7 @@ export function HostChipFace({
       <Text
         variant="title"
         strong
-        numberOfLines={1}
+        numberOfLines={theme.largeText ? 2 : 1}
         style={{
           flexShrink: 1,
           color: band.ink,

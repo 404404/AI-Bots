@@ -41,8 +41,8 @@ export function HomeHeader({
       header={
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
+            flexDirection: theme.largeText ? 'column' : 'row',
+            alignItems: theme.largeText ? 'stretch' : 'center',
             gap: space.x3,
             paddingTop: insets.top + space.x4,
             paddingBottom: space.x5,
@@ -57,7 +57,7 @@ export function HomeHeader({
             accessibilityLabel={t.switchComputer(hostName)}
             accessibilityState={{ expanded: drawerOpen }}
             style={({ pressed }) => ({
-              flex: 1,
+              ...(theme.largeText ? {} : { flex: 1 }),
               flexDirection: 'row',
               alignItems: 'center',
               gap: space.x4,

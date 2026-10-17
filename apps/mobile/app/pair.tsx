@@ -1,3 +1,4 @@
+import { Text, TextInput } from '../src/ui/primitives/system-text';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,8 +9,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Text,
-  TextInput,
   View,
   type ScrollViewInstance,
 } from 'react-native';

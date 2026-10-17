@@ -1,5 +1,6 @@
+import { TextInput } from '../primitives/system-text';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
 import {
@@ -23,7 +24,7 @@ import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { Notice } from '../request-parts';
 import { t } from '../strings';
-import { Chip } from './activity-filters';
+import { Chip } from '../primitives/chip';
 import { GradientFill } from './gradient-fill';
 import { HostBandLayer, HostChipFace, useHostBand } from './host-band';
 import { hostInitial, HostTile, presetAvatarSvg } from './host-tile';

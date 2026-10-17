@@ -1,5 +1,6 @@
+import { Text } from './primitives/system-text';
 import { useCallback, useRef, useState } from 'react';
-import { Platform, ScrollView, Text, View, type ViewInstance } from 'react-native';
+import { Platform, ScrollView, View, type ViewInstance } from 'react-native';
 
 import { readableInput, type ApprovalRequest, type DecisionResult } from '../host/requests';
 import {
