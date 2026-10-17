@@ -34,6 +34,8 @@ const styles = stylex.create({
     gap: space.x3,
     width: '100%',
   },
+  heading: { margin: 0, fontSize: text.titleSize, fontWeight: text.strong },
+  description: { margin: 0, color: color.muted },
   spacer: { flexGrow: 1 },
   scroll: { maxHeight: dialog.bodyMax, overflowY: 'auto', overscrollBehavior: 'contain' },
   danger: {
@@ -56,6 +58,7 @@ export interface DialogLabels {
 
 export function FormDialog({
   title,
+  presentation = 'dialog',
   description,
   size = 'small',
   labels,
@@ -74,6 +77,7 @@ export function FormDialog({
   children,
 }: {
   readonly title: string;
+  readonly presentation?: 'dialog' | 'embedded';
   readonly description?: string | undefined;
   readonly size?: DialogSize;
   readonly labels: DialogLabels;
@@ -97,6 +101,64 @@ export function FormDialog({
     event.preventDefault();
     if (!blocked) onSubmit?.();
   };
+  const footer = (
+    <div {...stylex.props(styles.footer)}>
+      {secondary === undefined ? null : (
+        <>
+          {secondary}
+          <span {...stylex.props(styles.spacer)} />
+        </>
+      )}
+      {showCancel ? (
+        <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
+          {labels.cancel}
+        </Button>
+      ) : null}
+      {onSubmit === undefined ? null : (
+        <Button
+          {...submitData}
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={blocked}
+          aria-busy={busy || undefined}
+          className={danger ? (stylex.props(styles.danger).className ?? '') : undefined}
+        >
+          {submitLabel}
+        </Button>
+      )}
+    </div>
+  );
+  const form = (
+    <form
+      id={formId}
+      noValidate
+      onSubmit={submit}
+      {...stylex.props(styles.form, presentation === 'dialog' && scroll && styles.scroll)}
+    >
+      {children}
+      {error === undefined || error === null || error === false ? null : (
+        <p role="alert" {...stylex.props(styles.error)}>
+          {error}
+        </p>
+      )}
+    </form>
+  );
+  if (presentation === 'embedded')
+    return (
+      <section
+        aria-labelledby={formId + '-heading'}
+        data-embedded-form=""
+        {...stylex.props(styles.form)}
+      >
+        <h2 id={formId + '-heading'} {...stylex.props(styles.heading)}>
+          {title}
+        </h2>
+        {description ? <p {...stylex.props(styles.description)}>{description}</p> : null}
+        {form}
+        {footer}
+      </section>
+    );
   return (
     <Modal
       open
@@ -105,48 +167,9 @@ export function FormDialog({
       title={title}
       {...(description === undefined ? {} : { description })}
       className={stylex.props(styles[size]).className ?? ''}
-      footer={
-        <div {...stylex.props(styles.footer)}>
-          {secondary === undefined ? null : (
-            <>
-              {secondary}
-              <span {...stylex.props(styles.spacer)} />
-            </>
-          )}
-          {showCancel ? (
-            <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
-              {labels.cancel}
-            </Button>
-          ) : null}
-          {onSubmit === undefined ? null : (
-            <Button
-              {...submitData}
-              type="submit"
-              form={formId}
-              variant="primary"
-              disabled={blocked}
-              aria-busy={busy || undefined}
-              className={danger ? (stylex.props(styles.danger).className ?? '') : undefined}
-            >
-              {submitLabel}
-            </Button>
-          )}
-        </div>
-      }
+      footer={footer}
     >
-      <form
-        id={formId}
-        noValidate
-        onSubmit={submit}
-        {...stylex.props(styles.form, scroll && styles.scroll)}
-      >
-        {children}
-        {error === undefined || error === null || error === false ? null : (
-          <p role="alert" {...stylex.props(styles.error)}>
-            {error}
-          </p>
-        )}
-      </form>
+      {form}
     </Modal>
   );
 }

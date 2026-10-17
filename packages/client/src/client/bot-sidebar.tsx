@@ -1,3 +1,4 @@
+import type { HomeCreationRequest } from './home-creation.js';
 import { PointerMenu } from './ds/pointer-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { ChannelHistory } from './channel-history.js';
@@ -392,6 +393,7 @@ interface SidebarProps {
   headerEnd?: ReactNode;
   headerTarget?: HTMLElement | null;
   onViewProfile?: ((slug: string) => void) | undefined;
+  onCreateBot?: ((request: HomeCreationRequest) => void) | undefined;
   companion?: WindowCompanions | undefined;
   wide: boolean;
   actions: BridgeActions;
@@ -938,6 +940,7 @@ export function BotSidebar({
   headerEnd,
   headerTarget,
   onViewProfile,
+  onCreateBot,
   companion,
   wide,
   actions,
@@ -1070,13 +1073,22 @@ export function BotSidebar({
   const [pinZoneHovered, setPinZoneHovered] = useState(false);
   const [unpinZoneArmed, setUnpinZoneArmed] = useState(false);
   const [unpinZoneHovered, setUnpinZoneHovered] = useState(false);
-  const [createRequest, setCreateRequest] = useState<CreateRequest | undefined>(undefined);
+  const [createRequest, updateCreateRequest] = useState<CreateRequest | undefined>(undefined);
+  const setCreateRequest = (request: CreateRequest | undefined): void => {
+    if (request?.kind === 'bot' && onCreateBot) {
+      const section = state.roster.sections.find((entry) => entry.id === request.sectionId);
+      onCreateBot({
+        source: request.source,
+        ...(section ? { sectionId: section.id, sectionName: section.name } : {}),
+      });
+    } else updateCreateRequest(request);
+  };
   const createFromWelcome = useMountedResource<HTMLSpanElement>(
     () =>
       onCreationRequest((intent) =>
-        setCreateRequest(intent === 'bot' ? { kind: 'bot', source: 'empty' } : { kind: 'channel' }),
+        setCreateRequest(intent === 'bot' ? { kind: 'bot', source: 'empty' } : { kind: intent }),
       ),
-    [],
+    [onCreateBot, state.roster.sections],
   );
   const [renameTarget, setRenameTarget] = useState<RosterSection | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<RosterSection | undefined>(undefined);
@@ -2079,7 +2091,8 @@ export function BotSidebar({
                 className="bh-icon-btn"
                 aria-label={t('roster.new.label')}
                 onClick={() => {
-                  setMenuOpen((value) => !value);
+                  if (onCreateBot) setCreateRequest({ kind: 'bot', source: 'empty' });
+                  else setMenuOpen((value) => !value);
                 }}
               >
                 <IconPlusOutlineRegular size={16} />
