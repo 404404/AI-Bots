@@ -1,0 +1,137 @@
+{
+  "issue": 2053,
+  "pr": 2066,
+  "base": "73056fc59dcac42c3fd7e6cb1586f6c1c4e37157",
+  "runtimeCandidate": "90749c1e13068ed9e8f57ab629146b5bac17468f",
+  "reviewHead": "8bd571dccfecb106c5be47b0da86889e5ef3d5bb",
+  "protocolHash": "b4fa86a7555e07a63546cb0e125774cd12ab6dcd14d80e02da05c46849ca83cf",
+  "pilotFinishedAt": "2026-10-17T10:43:50.105Z",
+  "judgeFinishedAt": "2026-10-17T10:50:00.231Z",
+  "pairs": 40,
+  "runs": 80,
+  "judgeCalls": 80,
+  "humanAcceptance": "pending",
+  "runtimeQualification": "Frozen pilot candidate retained. Later Host delta is one post-commit Human DM spoken marker; Group review and model runner unchanged. Final delta only permits insufficient Human judgments without invented numeric scores. Latest live integration used Node 24.21.0 / DSH 0.2.0-rc.2; original shell banner did not attest Node version.",
+  "sanitization": "Synthetic fixture histories only; no private credentials, hidden model reasoning or profile files exported; checked against actual machine key without printing it.",
+  "files": {
+    "assistant-review.json": {
+      "sha256": "0e9e1e72d6bdae4eed70a8d4b979a4654b78814c71837ab9db56c93d90408b4d",
+      "bytes": 63807
+    },
+    "cli-proof-merged.json": {
+      "sha256": "9eecc88a37e0247246c16975afa2e4dbbd40bd44b164d5ae2901f6decb0ba0d1",
+      "bytes": 5152
+    },
+    "cli-proof-pinned.json": {
+      "sha256": "438a6b3162bc79781d0a695b23c81a091d2f0edc32f31cd2a8df3486f28988c7",
+      "bytes": 5152
+    },
+    "cli-proof-post-ci.json": {
+      "sha256": "9f49f723394690134fd4c686cdc2aac55229f5a2b9945192f09660d9cee25e24",
+      "bytes": 5116
+    },
+    "cli-proof.json": {
+      "sha256": "19890d8be78cc62ed50175b8e13ed6683d9e716bb86688f578f124e732798bad",
+      "bytes": 5068
+    },
+    "cost-ledger.json": {
+      "sha256": "7c4467f935e6a6e76d5e9998059ed5f5cb483ed85ccb5cea35836fa9692e397f",
+      "bytes": 37280
+    },
+    "diagnostic-1.json": {
+      "sha256": "147d5bb2c2f07d352670bf74d7ee67d3a5747a639466f9fed2d9d42ce7e3c301",
+      "bytes": 338080
+    },
+    "diagnostic-judge.json": {
+      "sha256": "e2e06e4a6b55f9b9ac93739e97b937831089f73474b1fe8ce568351455a0ad85",
+      "bytes": 19774
+    },
+    "diagnostic-quiet.json": {
+      "sha256": "d643e0d3010be4ad6e823b530e2ee7a1186c022fe7b36e57b4cc416a6156e0e6",
+      "bytes": 270648
+    },
+    "environment-deviation.json": {
+      "sha256": "a89d6f4f4acaada5e0fa7767a844c57b8a37431d5d1c19c74f0e44acfccd3e1f",
+      "bytes": 834
+    },
+    "history-full.html": {
+      "sha256": "074170886a11fb67db1846ac0fc2b8edb8c7676f9e89859d20633c36d0764b8a",
+      "bytes": 9873199
+    },
+    "history.html": {
+      "sha256": "74d245e77ab0622d2a64fd9a69479c9f2f2be53f63831da5a4011edc6dea66d4",
+      "bytes": 1347758
+    },
+    "human-ui-qa-v2.json": {
+      "sha256": "c79e44b2ff5b8ff00bc089f0577d809909416951da67675c14704230331ee65a",
+      "bytes": 382
+    },
+    "late-usage-audit.json": {
+      "sha256": "21f6972836679d990b126abb820d964c7445da986c6570e99f113f63946614fe",
+      "bytes": 260617
+    },
+    "model-smoke-direct.json": {
+      "sha256": "c7cb51fccb3d6cde6f3039cc3a3f9948cd82eda4014ae68f3a626f2d0eef844b",
+      "bytes": 3395
+    },
+    "model-smoke.json": {
+      "sha256": "3ca1749363bfa369275808bc9b55fcbcd77aea6a352850955e46cecea96c40c5",
+      "bytes": 3664
+    },
+    "pilot-v1-analysis.json": {
+      "sha256": "a5aa53c0cc4ac30a0421d363a5795965c7cdb95c80c10fbfdc1419533ed8a35e",
+      "bytes": 91984
+    },
+    "pilot-v1-judge.json": {
+      "sha256": "4151c00bddcb2d4a9d9e80ffdbcaa02e619785dc6ee63c614d06f34020816846",
+      "bytes": 714523
+    },
+    "pilot-v1.json": {
+      "sha256": "474a18ffd1441e3ae690d22e00608872c4f3c1ef8febe4b497277050388fec15",
+      "bytes": 12262046
+    },
+    "pinned-cli-proof.aria.txt": {
+      "sha256": "89134e82a2ac3784e89e40324a320d39673da3f19d6023dde2d4ce4695f97d00",
+      "bytes": 17162
+    },
+    "pinned-cli-proof.png": {
+      "sha256": "20f57560ad426adf8de1ab1a52cab9c3a14db13708367b508c16e004f29e8091",
+      "bytes": 110064
+    },
+    "post-ci-proof.aria.txt": {
+      "sha256": "1a122c5cf7f65cd81ca62633334621f7867d2135822fa5b26f1a9c10b610366e",
+      "bytes": 17188
+    },
+    "post-ci-proof.console.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "post-ci-proof.png": {
+      "sha256": "af3d7bd87c1b7ecaccaea2cffa2e99bdd07a7a5e06a52c8c4311d123ec021719",
+      "bytes": 112342
+    },
+    "pr-explainer.html": {
+      "sha256": "60d6ac43a3b31c4fdfaead96e1eed0b1538d3a6cbc205a43341085dd6a394c75",
+      "bytes": 104067
+    },
+    "pr-explainer.md": {
+      "sha256": "dce784b0d6496dc06b0131715d4628465523aed67bf3bc2687fdbac266200221",
+      "bytes": 4289
+    },
+    "README.md": {
+      "sha256": "744c8c8ca869f00c8a5a4c60cf30a4dbf287d1793659497799f2ce6e0910a74e",
+      "bytes": 6753
+    },
+    "review-ui-qa.json": {
+      "sha256": "57e477a4166808f81a6a8858385c6645bf74bc983eb96d183fa54f40335d31f5",
+      "bytes": 1284
+    },
+    "validation-update.json": {
+      "sha256": "f009e8c744e9f37335000a29113f3120ae378c3e75383b6195236de6e490cb42",
+      "bytes": 852
+    }
+  },
+  "previousArchive": "275d3f7ee1b9a24109b516de44e3da220cdd651a",
+  "modelPilotRerun": false,
+  "runtimeIntegrationHead": "f80e14fac927e08046bf46e2c6a33ddb1eb25944"
+}
