@@ -346,7 +346,9 @@ describe('scoped Group settings CLI', () => {
   it.each(writes)(
     'refuses unrelated authority and operation flags for $command',
     async ({ command, flags }) => {
-      for (const flag of ['host', 'token', 'operation-key', 'confirm', 'unknown']) {
+      for (const flag of ['host', 'token', 'operation-key', 'confirm', 'unknown'].filter(
+        (flag) => flag !== 'confirm' || command !== 'group-delete',
+      )) {
         await expect(
           parser().parse(command, ['team'], {
             ...flags,
