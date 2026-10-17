@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "sourceHead": "20126473bd69c5404c720a19874f40b173817f3e",
+  "identicalCanonicalHome": true,
+  "actualProcessReplaced": true,
+  "completeRecoveryReadbackEqual": true,
+  "nativeTargetRead": true,
+  "nativeVisibleActivationAndOtherCold": true,
+  "nativeSourcePreview": true,
+  "previousPartialViewportPreservedPrivately": true,
+  "targetRuntimeLimitation": "Explicit activation is retained but restored opencode-go target model/local credential is unavailable in Native; execution remains blocked truthfully; no restored Native model reply claimed",
+  "sourceUiObservation": "Activity stream reconnect indicator visible while authenticated backup preview rendered",
+  "humanQa": "pending",
+  "merged": false
+}
