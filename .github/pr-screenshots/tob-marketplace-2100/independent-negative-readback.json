@@ -1,0 +1,7 @@
+{
+  "sourceHead": "19a6119fbf62904776c5d39a624b41fb93e033fe",
+  "changedArchive": "stale-import-source",
+  "receiptPayloadMismatch": "creation-key-conflict",
+  "corruptArchive": "bad-zip",
+  "firstFixtureFailure": "expected genericcodes operation-key-conflict/invalid-zip; existing owner returns creation-key-conflict/bad-zip; actualcodedrefusals preserved"
+}

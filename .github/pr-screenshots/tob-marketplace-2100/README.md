@@ -1,0 +1,1 @@
+Actual synthetic marketplace runtime captures. Product source19a6119fbf62904776c5d39a624b41fb93e033fe; see verification.md for exact checks, first failures, provenance and remaining gates. Public images contain no credentials, local login URLs or unrelated conversations.

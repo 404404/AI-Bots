@@ -1,0 +1,52 @@
+{
+  "productSource": "19a6119fbf62904776c5d39a624b41fb93e033fe",
+  "nativeRead": {
+    "ok": true,
+    "native": true,
+    "productSource": "19a6119fbf62904776c5d39a624b41fb93e033fe",
+    "proof": [
+      {
+        "kind": "Git",
+        "bot": "bot-d0f35ce551df4e0aac998b1000a888dd",
+        "channelId": "dm-bot-d0f35ce551df4e0aac998b1000a888dd",
+        "ordinaryIdentity": true,
+        "sourceFileRendered": "SOUL.md",
+        "markerVisible": true
+      },
+      {
+        "kind": "ZIP",
+        "bot": "bot-34fc04cc6b7e402c9d08c935738a08fc",
+        "channelId": "dm-bot-34fc04cc6b7e402c9d08c935738a08fc",
+        "ordinaryIdentity": true,
+        "sourceFileRendered": "MEMORY.md",
+        "markerVisible": true
+      }
+    ],
+    "errors": []
+  },
+  "sameCanonicalHomeRestart": {
+    "ok": true,
+    "sourceHead": "19a6119fbf62904776c5d39a624b41fb93e033fe",
+    "identicalCanonicalHome": true,
+    "actualProcessReplaced": true,
+    "completeRegistryReadbackEqual": true
+  },
+  "mainRestored": true,
+  "nativeModelSearch": {
+    "humanMessageId": "human-bb59d2f7-9497-4e1a-9ab8-fb6e00abb73f",
+    "endReason": "completed",
+    "delivery": "handled",
+    "actualShellCommands": [
+      "deepseekbot marketplace-list --query research 2>&1; echo \"[exit: $?]\"",
+      "deepseekbot marketplace-topics 2>&1; echo \"[exit: $?]\"",
+      "deepseekbot marketplace-detail R_kgDOVI_Fkw 2>&1; echo \"[exit: $?]\"",
+      "deepseekbot marketplace-detail R_kgDOVJBwKw 2>&1; echo \"[exit: $?]\""
+    ],
+    "customSoulAndMemoryProposal": true,
+    "approvalRequests": 0,
+    "createdBots": 0,
+    "mainRestored": true,
+    "screenshots": "Actual completed reply excerpts; long reply remains expandable in the Client"
+  },
+  "priorFailures": "Preserved closed Messages navigation, clipped viewport and second-row Channels navigation attempts; no product changes"
+}
