@@ -168,9 +168,9 @@ describe('Activity feed rows', () => {
       status: 'ready',
       sections: { action: [], replies: [], unread: [], handled: [done] },
     };
-    expect(feedRows(snapshot, new Set(), [], { section: 'handled', bot: undefined })).toEqual([
-      expect.objectContaining({ kind: 'row', item: done, settled: true }),
-    ]);
+    expect(
+      feedRows(snapshot, new Set([done.id]), [], { section: 'handled', bot: undefined }),
+    ).toEqual([expect.objectContaining({ kind: 'row', item: done, settled: true })]);
     expect(
       feedRows(snapshot, new Set(), [], { section: 'all', bot: undefined }).some(
         (row) => row.key === done.id,
