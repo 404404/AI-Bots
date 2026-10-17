@@ -120,6 +120,7 @@ export default function PairScreen() {
       ) : null}
       <Text style={{ color: theme.ink, fontWeight: '600' }}>{t.pasteLink}</Text>
       <TextInput
+        accessibilityLabel={t.pasteLink}
         value={link}
         onChangeText={(value) => {
           setLink(value);
