@@ -1,0 +1,91 @@
+{
+  "issue": 2093,
+  "productHead": "cc4f14d6db734830cba46dc8a5df2da5c014f5ba",
+  "base": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
+  "capturedAt": "2026-10-18 JST",
+  "scope": "synthetic isolated Profile only",
+  "screenshots": [
+    {
+      "file": "before-enabled-next-run.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 151742,
+      "sha256": "1f65a9fe5f6cd3bd41a27db2dcf80b8d6ab16e7fe5684c364e260ffd8e655f9c",
+      "editing": "none; original synthetic Web capture",
+      "locale": "zh",
+      "theme": "dark"
+    },
+    {
+      "file": "execution-history.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 149181,
+      "sha256": "5bf82d06146ec51c85f7ffe95914e28d50658057b8499a70e8794a3491e4d208",
+      "editing": "none; original synthetic Web capture",
+      "locale": "zh",
+      "theme": "dark"
+    },
+    {
+      "file": "after-paused-restart.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 121858,
+      "sha256": "1eb4d253d95a0a139622a74d09ec50802314eac78e9f70160f2924ae630bbfcd",
+      "editing": "none; original synthetic Web capture",
+      "locale": "zh",
+      "theme": "dark"
+    }
+  ],
+  "plannedExecution": {
+    "firing": {
+      "id": "32b44841-8199-4fa2-8b3c-e284974c9f9b",
+      "scheduleId": "5c8b116b-aa8e-42c3-b715-9051cb570183",
+      "trigger": "planned",
+      "occurrenceAt": "2026-10-17T21:12:03.245Z",
+      "firedAt": "2026-10-17T21:12:03.258Z",
+      "state": "handled",
+      "sourceEventId": "ce31c571-821f-41d7-9bd9-f95e75309a34",
+      "sessionId": "botharness-84cba7f8-1a79-4c0c-a667-2c43f415746e"
+    },
+    "reply": {
+      "id": "56d3383c-d1be-45f5-a642-eb79b134c231",
+      "at": "2026-10-17T21:12:14.126Z",
+      "author": {
+        "kind": "bot",
+        "slug": "bot-4eb4b622647e4317a6bc3ced8dc1f4c2"
+      },
+      "body": "SCHEDULE_OK_mvcvzoxt",
+      "channelRevision": 6
+    },
+    "traceSessionMatches": true,
+    "matchingSend": {
+      "callId": "call_00_ET_m7YMyyQImIkbAL06v0Pf1154",
+      "name": "channel_send",
+      "outcome": "ok",
+      "body": "SCHEDULE_OK_mvcvzoxt",
+      "channelId": "dm-bot-4eb4b622647e4317a6bc3ced8dc1f4c2",
+      "messageId": "56d3383c-d1be-45f5-a642-eb79b134c231",
+      "status": "committed"
+    }
+  },
+  "checks": {
+    "focused": {
+      "files": 3,
+      "tests": 48,
+      "status": "passed",
+      "workers": 1
+    },
+    "rootTypes": "passed",
+    "build": "passed",
+    "webNaturalManagement": "passed before final once-deadline replay hardening",
+    "webPlannedExecution": "passed; correlated Source Event, Session, send and message",
+    "webCommittedRestartRead": "passed on productHead",
+    "nativeMacOS": "pending parent",
+    "ci": "pending",
+    "humanQA": "pending",
+    "merge": "not authorized",
+    "release": "not authorized",
+    "localFullSuite": "interrupted for shared resource pressure; no passed claim"
+  },
+  "retention": "selected test-owned schedule disabled; direct-test schedule deleted; isolated Host stopped and Profile retained"
+}
