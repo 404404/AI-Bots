@@ -1,4 +1,5 @@
 import type { RollingUsageRange } from '../usage/usage.js';
+import type { TobContentPage } from '../tob/content-read.js';
 import type { ChannelPreferencesSnapshot } from '../channels/preferences.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
@@ -1205,6 +1206,27 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.channelPurgeConfirm({ channelId, sourceEventIds, token }));
   }
 
+  tobChannelContent(
+    target: string,
+    expectedTarget?: string,
+    cursor?: string,
+    limit?: number,
+    messageId?: string,
+  ): TobContentPage {
+    return unwrap(
+      this.methods.tobChannelContent({ target, expectedTarget, cursor, limit, messageId }),
+    );
+  }
+
+  tobBotProgress(
+    target: string,
+    expectedTarget?: string,
+    cursor?: string,
+    limit?: number,
+  ): TobContentPage {
+    return unwrap(this.methods.tobBotProgress({ target, expectedTarget, cursor, limit }));
+  }
+
   channelMessages(
     channelId: string,
     before?: string,
@@ -1983,6 +2005,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelHistorySources',
   'channelPurgePreview',
   'channelPurgeConfirm',
+  'tobChannelContent',
+  'tobBotProgress',
   'channelMessages',
   'channelTimeline',
   'channelReadPosition',

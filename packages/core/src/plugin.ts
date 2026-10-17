@@ -1,6 +1,10 @@
 import { createTobDeviceOperations, TOB_DEVICE_CAPABILITIES } from './tob/cli-device-operations.js';
 import type { PrepareTobOperation } from './tob/cli-operations.js';
 import {
+  createTobContentOperations,
+  TOB_CONTENT_CAPABILITIES,
+} from './tob/cli-content-operations.js';
+import {
   createTobScheduleOperations,
   TOB_SCHEDULE_CAPABILITIES,
 } from './tob/cli-schedule-operations.js';
@@ -1245,6 +1249,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                       : undefined,
                   )) ??
                   (await tobMarketplaceOperations(command, args)) ??
+                  (await tobContentOperations(command, args)) ??
                   (await tobModelOperations(command, args)) ??
                   (await tobMaintenanceOperations(command, args)) ??
                   (await tobDeviceOperations(command, args)) ??
@@ -1273,6 +1278,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobPolicyOperations(command, args)) ??
                   (await tobImSetup.prepare(command, args)),
                 capabilities: [
+                  ...TOB_CONTENT_CAPABILITIES,
                   ...TOB_MEMORY_CAPABILITIES,
                   ...TOB_MEMORY_EDIT_CAPABILITIES,
                   ...TOB_BACKUP_CAPABILITIES,
@@ -2331,6 +2337,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   });
   const botTransfer = createBotTransfer(core.registry);
   const tobBotTransferOperations = createTobBotTransferOperations(botTransfer);
+  const tobContentOperations = createTobContentOperations(bridgeMethods);
   const tobBotCreationOperations = createTobBotCreationOperations({
     registry: core.registry,
     creations: core.creations,
