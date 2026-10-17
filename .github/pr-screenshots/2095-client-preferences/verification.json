@@ -1,7 +1,6 @@
 {
   "issue": 2095,
-  "sourceHead": "eb0f85116d934d56d8c60b92e88117e6f2b18725",
-  "builtApplicationHead": "50d998e7c8104cb0b34c12e84787c8fcd8e10cd0",
+  "sourceHead": "5b4cc293fa2ab661543b0a464a1ada38268d3115",
   "base": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
   "environment": {
     "dsh": "0.2.0-rc.2",
@@ -147,5 +146,32 @@
       "sha256": "4b579c331ff896b8314c303773410aac0387e024b5adc52aa680964d41798752"
     }
   ],
-  "pullRequest": "https://github.com/BotHarness/DeepSeekBot/pull/2126"
+  "pullRequest": "https://github.com/BotHarness/DeepSeekBot/pull/2126",
+  "runtimeEvidenceSourceHead": "eb0f85116d934d56d8c60b92e88117e6f2b18725",
+  "runtimeBuiltApplicationHead": "50d998e7c8104cb0b34c12e84787c8fcd8e10cd0",
+  "ciFollowup": {
+    "failedHead": "a11d32279e8cb69d1556bf361b9388b0b2fcfe66",
+    "failedRun": "https://github.com/BotHarness/DeepSeekBot/actions/runs/39072815595",
+    "failures": {
+      "shard1": "plugin exact RPC fixture omitted clientControl",
+      "shard2": "settings read fixture omitted Host scope metadata",
+      "shard3": "six headless Client apply cases referenced absent window; browser bundle VM lacked event-listener APIs"
+    },
+    "resourceFailureEvidence": false,
+    "fixHead": "5b4cc293fa2ab661543b0a464a1ada38268d3115",
+    "productChange": "guard browser-only mounts when window/sessionStorage absent; actual browser still mounts and polls",
+    "fixtureChanges": "update exact RPC/settings expectations and VM window APIs",
+    "focusedFiveFiles": {
+      "passed": 48,
+      "total": 48
+    },
+    "finalAffectedBootstrapFiles": {
+      "passed": 14,
+      "total": 14
+    },
+    "typecheck": "root and mobile passed after required Cordis disposer return correction",
+    "build": "passed on identical source content before source-fix commit",
+    "runtimeAfterFix": "not rerun; historical Web/native captures remain bound to their original source",
+    "fullCI": "new exact-head full CI pending after push"
+  }
 }
