@@ -1795,7 +1795,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Tob-owned real Assignment reads two selected Memory repositories through immutable revision CLI pages; rendered review, denied write, resumed report, archived target and revoked scope. Web and macOS are independent runs. Valid write syntax remains refused by the broker after Memory edit parser expansion (#2092).",
       "task": 2091,
-      "sha256": "70ec70a26c8f45e9de1440f667ce469d551ee0dab6e3028a0e601fcc92c6ae10"
+      "sha256": "f0c8eacde72803834f6f9e167528a495144eef5113b08fba3f61c26afe5df511"
     },
     {
       "path": "scripts/e2e-tob-memory-edit.mjs",
@@ -1803,7 +1803,7 @@
       "behaviors": ["desktop.tob.memory-edit"],
       "reason": "Independent Human CLI edit/retry/stale refusal and real Tob edit/deny/stale/restore with rendered approval, canonical Memory and untouched second Bot; Web and macOS are separate runs.",
       "task": 2092,
-      "sha256": "748004f434d957714105fd00a592e75d6de90730dc203031e500985e63e836b2"
+      "sha256": "f1d293391f6375a5b2c5c6c3841e6208785d3f72b00b887853cd72be2975250e"
     }
   ],
   "native": [

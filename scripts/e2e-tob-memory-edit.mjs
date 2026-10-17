@@ -368,19 +368,20 @@ async function verifyCliTrace(slug, previousIds, commands, refusal) {
   steps.push('native Shell CLI trace, no dedicated Tob tools' + (refusal ? '; ' + refusal : ''));
 }
 
-async function showApproval(message) {
+async function showApproval(message, settled = false) {
   await dismissBubble();
   await setHomeVisible(false);
   mark('approval-current-card');
   await clickLatest();
   const selector = `[data-message-id=${JSON.stringify(message.id)}] .bh-tool-approval-card`;
   await page.waitForSelector(selector, { timeout: 10000 });
-  await page.waitForFunction(
-    (s) =>
-      [...document.querySelectorAll(s + ' button.bh-request-primary')].some((n) => !n.disabled),
-    { timeout: 10000 },
-    selector,
-  );
+  if (!settled)
+    await page.waitForFunction(
+      (s) =>
+        [...document.querySelectorAll(s + ' button.bh-request-primary')].some((n) => !n.disabled),
+      { timeout: 10000 },
+      selector,
+    );
   mark('approval-expand');
   const summarySelector = selector + ' .bh-request-summary';
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -743,6 +744,42 @@ try {
     await verify(mode || command);
   }
   persist();
+  if (runs('capture')) {
+    await setHomeVisible(false);
+    await (
+      await visibleElement('button[data-channel-id=' + JSON.stringify(home.channelId) + ']')
+    ).click();
+    const messages = await page.$('[data-dock-header="bh:channel-body"]');
+    if (!messages || !(await messages.isVisible()))
+      await page.locator('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]').click();
+    const cards = (await rpc('channelMessages', { channelId: home.channelId })).messages
+      .filter((message) => {
+        if (
+          !['deepseekbot memory-save', 'deepseekbot memory-restore-commit'].includes(
+            message.toolApprovalRequest?.toolName,
+          )
+        )
+          return false;
+        return JSON.parse(message.toolApprovalRequest.input).target === fixture.bot.id;
+      })
+      .slice(-4);
+    assert.equal(cards.length, 4, 'retain the completed four-stage journey first');
+    for (const card of cards) {
+      const status = await rpc('toolApprovalStatus', {
+        channelId: home.channelId,
+        messageId: card.id,
+      });
+      assert.notEqual(status.status, 'pending', 'capture does not decide pending operations');
+      writeFileSync(
+        resolve(out, 'settled-approval-' + card.id + '.json'),
+        JSON.stringify({ status, proposal: JSON.parse(card.toolApprovalRequest.input) }, null, 2),
+      );
+      await showApproval(card, true);
+    }
+    steps.push(
+      'normal UI expansion and scrolling of four settled approvals, without new model requests or decisions',
+    );
+  }
   if (runs('direct')) {
     const before = await read(),
       body = 'Direct CLI jasmine tea ' + suffix + '.\n';
