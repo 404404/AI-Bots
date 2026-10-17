@@ -60,9 +60,6 @@ export function ChatBackgroundEditor({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: space.x5, gap: space.x5 }}
       >
-        <Text variant="title" strong accessibilityRole="header">
-          {scoped ? t.chatBackground.title : t.chatBackground.global}
-        </Text>
         <Text variant="meta" tone="muted">
           {t.chatBackground.local}
         </Text>

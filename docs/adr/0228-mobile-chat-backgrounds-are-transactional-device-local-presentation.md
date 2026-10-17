@@ -20,6 +20,8 @@ Metadata uses monotonically numbered complete records. A partial newer record ca
 
 The conversation mounts one noninteractive canvas/image/veil sibling before its keyboard-responsive content. Neither the timeline nor individual messages own the image. Fade is the theme canvas veil's opacity: 0% preserves the image and 100% covers it. Ordinary content surfaces retain their opacity. Fill/Fit preserve aspect ratio; normalized alignment survives viewport changes. Only cropped preview axes accept drag/accessible position adjustments. Preview appearance is isolated from the app's system appearance.
 
+Each owning drawer keeps its background editor inside one native SheetStack. Android Bot and Group drawers use a full-height detent: native checking found that changing detents only after a child push left the partial sheet's editor footer outside the visible viewport. Settings was already full height. iOS keeps its existing drawer detents and requires separate native qualification.
+
 ## Alternatives and consequences
 
 - Reusing Host-look persistence would couple unrelated surfaces and its best-effort write behavior would violate transactional Done. A separate local owner makes failure and image lifetime explicit.
