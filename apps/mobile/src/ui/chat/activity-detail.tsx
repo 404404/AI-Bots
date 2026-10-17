@@ -1,5 +1,11 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 
 import {
   ACTIVITY_WINDOWS,
@@ -389,7 +395,7 @@ export function ActivityDetailView({
     },
     [load],
   );
-  const mount = useMounted<ScrollView>(() => read({ weeks: ACTIVITY_WINDOWS[0] }), [read]);
+  const mount = useMounted<ScrollViewInstance>(() => read({ weeks: ACTIVITY_WINDOWS[0] }), [read]);
   return (
     <AccentProvider accent={botColor(bot)}>
       <ScrollView

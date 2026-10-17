@@ -13,7 +13,7 @@ export const messageDisplayPreferences = createMessageDisplayPreferences({
   write(mode) {
     const stored = file();
     if (!stored.exists) stored.create();
-    stored.write(JSON.stringify(mode));
+    stored.writeSync(JSON.stringify(mode));
   },
 });
 

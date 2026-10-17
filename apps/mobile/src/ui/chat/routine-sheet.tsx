@@ -1,5 +1,12 @@
 import { useRef, useState, type ComponentType, type ReactNode } from 'react';
-import { ActivityIndicator, Keyboard, ScrollView, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  ScrollView,
+  TextInput,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 
 import { errorText, type Loadable } from '../../host/bot-settings';
 import {
@@ -311,7 +318,7 @@ export function RoutineSheet({
   const [notice, setNotice] = useState<string>();
   const debounce = useDebounced();
   const latest = useRef(form);
-  const scroller = useRef<ScrollView>(undefined);
+  const scroller = useRef<ScrollViewInstance>(undefined);
 
   const loadHistory = (id: string) =>
     void routines.history(id).then(
@@ -358,7 +365,7 @@ export function RoutineSheet({
     });
   };
 
-  const mount = useMounted<ScrollView>((node) => {
+  const mount = useMounted<ScrollViewInstance>((node) => {
     scroller.current = node;
     if (target.kind === 'open') loadHistory(target.routine.id);
     else refreshPreview(form, 0);

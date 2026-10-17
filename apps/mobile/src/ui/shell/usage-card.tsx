@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewInstance } from 'react-native';
 
 import { compactTokenCount, weekdayLabel } from '../../host/usage-days';
 import { usageWeek, type OverviewUsage } from '../../host/usage';
@@ -112,7 +112,7 @@ export function UsageCard({
   onOpen(): void;
 }) {
   const theme = useDesignTheme();
-  const { state, read, mount } = useLoaded<OverviewUsage, View>(load);
+  const { state, read, mount } = useLoaded<OverviewUsage, ViewInstance>(load);
   const week = state.value === undefined ? undefined : usageWeek(state.value);
   const amount = week === undefined ? undefined : tokenAmount(week.total, week.partial);
   return (

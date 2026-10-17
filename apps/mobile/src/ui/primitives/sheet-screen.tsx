@@ -1,6 +1,6 @@
 import type { ReactNode, RefCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, View, type ViewInstance } from 'react-native';
 
 import type { DesignTheme } from '../design/theme';
 import { useDesignTheme } from '../design/theme';
@@ -25,7 +25,7 @@ export function SheetScreen({
   onClose,
 }: {
   children: ReactNode;
-  onMount?: RefCallback<View>;
+  onMount?: RefCallback<ViewInstance>;
   onClose?: () => void;
 }) {
   const theme = useDesignTheme();

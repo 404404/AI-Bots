@@ -1,6 +1,6 @@
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, View, type ViewInstance } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import type { HostClient } from '../../host/client';
@@ -296,7 +296,7 @@ function ChatConversation({
     ]);
   }, [speakers, groups, shownDrafts]);
   const scroll = useScrollOffset(list);
-  const viewport = useAnimatedRef<View>();
+  const viewport = useAnimatedRef<ViewInstance>();
   const viewportLayout = useSharedValue(0);
   const stage = useMemo(
     () => ({
@@ -764,14 +764,14 @@ function ChatConversation({
                   >
                     {dm ? t.beginning : t.beginningChannel}
                   </Text>
-                ) : null
+                ) : undefined
               }
               ListEmptyComponent={
                 snapshot.status === 'opening' ? (
                   <View style={{ padding: space.x6, alignItems: 'center' }}>
                     <ActivityIndicator />
                   </View>
-                ) : null
+                ) : undefined
               }
             />
           </SpeakerStageContext.Provider>
