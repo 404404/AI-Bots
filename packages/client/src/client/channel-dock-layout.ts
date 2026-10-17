@@ -8,14 +8,20 @@ import type {
 import type { DockPanelPosition } from './dock-panels.js';
 
 export const CHANNEL_DOCK_STORAGE_KEY = 'botharness.bot-mode-layout';
-export const CHANNEL_DOCK_LAYOUT_VERSION = 5;
+export const CHANNEL_DOCK_LAYOUT_VERSION = 6;
 export const DEFAULT_WORKSPACE_GAP = 4;
 export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
 export const CHANNEL_BODY_COMPONENT = 'channel-body';
 export const CHANNEL_ENTRY_COMPONENT = 'channel-entry';
 export const DEFAULT_DOCK_PANELS = ['sessions'] as const;
-export const BOT_WORKSPACE_PANELS = ['memory-files', 'memory-evolution', 'schedules'] as const;
+export const BOT_WORKSPACE_PANELS = [
+  'memory-files',
+  'memory-evolution',
+  'schedules',
+  'botharness-browser',
+  'botharness-computer',
+] as const;
 export const CHANNEL_WORKSPACE_PANELS: readonly string[] = ['sessions', ...BOT_WORKSPACE_PANELS];
 export type BotWorkspaceStates = Readonly<Record<string, ChannelWorkspaceState>>;
 
@@ -24,6 +30,7 @@ export type DockDirection = 'left' | 'right' | 'above' | 'below';
 export interface DockPosition {
   readonly neighbor?: string | undefined;
   readonly direction: DockDirection;
+  readonly size?: { readonly width: number; readonly height: number } | undefined;
 }
 
 export interface ChannelWorkspaceState {
@@ -79,10 +86,22 @@ function isLayout(value: unknown): value is SerializedDockview {
 }
 
 function isPosition(value: unknown): value is DockPosition {
+  const size = isRecord(value) ? value['size'] : undefined;
   return (
     isRecord(value) &&
     (value['neighbor'] === undefined || typeof value['neighbor'] === 'string') &&
-    ['left', 'right', 'above', 'below'].includes(value['direction'] as string)
+    ['left', 'right', 'above', 'below'].includes(value['direction'] as string) &&
+    (size === undefined ||
+      (isRecord(size) &&
+        ['width', 'height'].every((axis) => {
+          const fraction = size[axis];
+          return (
+            typeof fraction === 'number' &&
+            Number.isFinite(fraction) &&
+            fraction > 0 &&
+            fraction <= 1
+          );
+        })))
   );
 }
 
@@ -95,7 +114,7 @@ export function readChannelDock(
     const value: unknown = JSON.parse(raw);
     if (
       !isRecord(value) ||
-      ![1, 2, 3, 4, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
+      ![1, 2, 3, 4, 5, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
     )
       return undefined;
     if (!isLayout(value['layout'])) return undefined;
@@ -152,7 +171,8 @@ export function readChannelDock(
       value['version'] === CHANNEL_DOCK_LAYOUT_VERSION ? sessions : migrateBotWorkspaces(sessions);
     if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
       try {
-        const backups = ['before-bot-workspace-v5'];
+        const backups = ['before-bot-workspace-v6'];
+        if (Number(value['version']) < 5) backups.push('before-bot-workspace-v5');
         if (Number(value['version']) < 4) backups.push('before-channel-workspace-v4');
         if (Number(value['version']) < 3) backups.push('before-sessions-v3');
         for (const suffix of backups) {
@@ -180,7 +200,7 @@ export function writeChannelDock(
         previous = JSON.parse(raw);
       } catch {}
       if (!isRecord(previous) || previous['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
-        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`;
+        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v6`;
         if (storage?.getItem(backupKey) == null) storage?.setItem(backupKey, raw);
       }
     }
@@ -215,6 +235,42 @@ function lastPanel(node: GridNode): string | undefined {
     if (id !== undefined) return id;
   }
   return undefined;
+}
+
+export function dockPanelGap(
+  layout: SerializedDockview,
+  panelId: string,
+  gap: number,
+): { width: number; height: number } {
+  const visit = (
+    node: GridNode,
+    horizontal: boolean,
+    width: number,
+    height: number,
+  ): { width: number; height: number } | undefined => {
+    if (node.type === 'leaf')
+      return (node.data as { views: string[] }).views.includes(panelId)
+        ? { width, height }
+        : undefined;
+    const children = node.data as GridNode[];
+    const offset = (gap * (children.length - 1)) / Math.max(1, children.length);
+    for (const child of children) {
+      const found = visit(
+        child,
+        !horizontal,
+        horizontal ? offset : width,
+        horizontal ? height : offset,
+      );
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return (
+    visit(layout.grid.root as GridNode, layout.grid.orientation === 'HORIZONTAL', 0, 0) ?? {
+      width: 0,
+      height: 0,
+    }
+  );
 }
 
 export function pruneChannelDock(

@@ -817,10 +817,10 @@ _避免使用_：widget、card、tab、destination、Channel section
 _避免使用_：view、page、rail item
 
 **Bot mode layout**：
-桌面端 Bot mode 的两层呈现布局：Global workspace，以及唯一消息面板内当前频道的 Channel workspace。Human 可以在所属工作区内移动面板、调整大小；面板不组成标签页，也不浮出所属工作区。符合条件的 Web/macOS shell 释放原生侧栏占位；窄屏和不符合条件的 shell 保留响应式回退。
+桌面端 Bot mode 的两层呈现布局：Global workspace，以及唯一消息面板内当前频道的 Channel workspace。关闭全局面板或频道子面板时，保留其已保存的尺寸比例；重新打开及刷新后，按当前工作区尺寸恢复。Human 可以在所属工作区内移动面板、调整大小；面板不组成标签页，也不浮出所属工作区。符合条件的 Web/macOS shell 释放原生侧栏占位；窄屏和不符合条件的 shell 保留响应式回退。
 _避免使用_：workbench、panel layout、dock
 
-以下布局术语描述 [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) 与 ADR-0221 中已确认的目标设计。[#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049) 已交付会话子面板，[#2067](https://github.com/BotHarness/DeepSeekBot/issues/2067) 迁入记忆文件、记忆演化和定时任务。其余 surface 继续分阶段迁移，尚未实现完整目标。
+以下布局术语描述 [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) 与 ADR-0221 中已确认的目标设计。[#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049) 已交付会话子面板，[#2067](https://github.com/BotHarness/DeepSeekBot/issues/2067) 迁入记忆文件、记忆演化和定时任务。[#2069](https://github.com/BotHarness/DeepSeekBot/issues/2069) 将浏览器控制与电脑控制迁入同一 Bot 专属频道工作区。临时文件、收件箱和成员区域尚未统一为持久化子面板布局。
 
 **Global workspace**：
 全局工作区。Bot mode 的外层呈现空间，包含 Workspace Control Rail、频道列表和活动中心等全局 Dock panel，以及唯一的消息面板。全局面板不依赖当前频道也具有独立用途。这是 UI 布局，不是 DSH Workspace、执行环境或权限边界。

@@ -77,7 +77,7 @@ try {
   await page.waitForSelector(parent);
   const ada = await select('Sessions QA Ada');
   const migrated = await state();
-  assert.equal(migrated.version, 5);
+  assert.equal(migrated.version, 6);
   assert.equal(
     await page.evaluate(() =>
       localStorage.getItem('botharness.bot-mode-layout.before-bot-workspace-v5'),

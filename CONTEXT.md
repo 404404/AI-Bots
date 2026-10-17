@@ -819,10 +819,10 @@ One icon tab of the desktop Channel sidebar, grouping one or more Channel sideba
 _Avoid_: view, page, rail item
 
 **Bot mode layout**:
-The desktop Bot mode arrangement of a Global workspace and the active Channel's workspace inside its unique Messages panel. The Human can move and resize panels within their owning workspace; panels do not form tabs or float outside it. Qualified Web/macOS shells release the native sidebar allocation; narrow layouts and unqualified shells retain their responsive fallback.
+The desktop Bot mode arrangement of a Global workspace and the active Channel's workspace inside its unique Messages panel. Closing a Global panel or Channel subpanel preserves its saved size proportions; reopening and refreshing restore them against the current workspace dimensions. The Human can move and resize panels within their owning workspace; panels do not form tabs or float outside it. Qualified Web/macOS shells release the native sidebar allocation; narrow layouts and unqualified shells retain their responsive fallback.
 _Avoid_: workbench, panel layout, dock
 
-The following layout terms describe the agreed target in [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) and ADR-0221. Sessions is delivered in [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049), with Memory files, Memory evolution and Schedules added in [#2067](https://github.com/BotHarness/DeepSeekBot/issues/2067). Remaining surfaces are staged; this is not yet the complete target.
+The following layout terms describe the agreed target in [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) and ADR-0221. Sessions is delivered in [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049), with Memory files, Memory evolution and Schedules added in [#2067](https://github.com/BotHarness/DeepSeekBot/issues/2067). Browser control and Computer control join the same Bot-only workspace in [#2069](https://github.com/BotHarness/DeepSeekBot/issues/2069). Transient files, Inbox and Members are not yet unified with persisted subpanel layout.
 
 **Global workspace**:
 The outer presentation space of Bot mode, containing the Workspace Control Rail, global Dock panels such as Channel list and Activity Center, and the unique Messages panel. Global panels remain meaningful independently of the active Channel. This is a UI arrangement, not a DSH Workspace, execution environment or permission boundary.

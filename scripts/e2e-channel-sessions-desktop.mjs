@@ -142,7 +142,7 @@ try {
   const state = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('botharness.bot-mode-layout')),
   );
-  assert.equal(state.version, 5);
+  assert.equal(state.version, 6);
   assert.equal(state.layout.panels.sessions, undefined);
   console.log('Settings click');
   await page.click(settings);
@@ -241,6 +241,8 @@ try {
     ['memory-files', '记忆文件', '6'],
     ['memory-evolution', '记忆演化', 'E'],
     ['schedules', '定时任务', '9'],
+    ['botharness-browser', '浏览器', 'B'],
+    ['botharness-computer', '电脑', '0'],
   ];
   for (const [id, label, code] of botPanels) {
     const button = `${parent} button[aria-label="${label}"]`;
@@ -293,7 +295,7 @@ try {
   );
   await page.waitForFunction(
     () =>
-      document.querySelector('[data-channel-subpanel="memory-files"] [data-path="SOUL.md"]') !==
+      document.querySelector('[data-channel-subpanel="memory-files"] [data-path="MEMORY.md"]') !==
       null,
   );
   await wait(1000);

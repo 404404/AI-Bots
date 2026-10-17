@@ -7,6 +7,7 @@ import {
   CHANNEL_BODY_PANEL,
   CHANNEL_DOCK_STORAGE_KEY,
   pruneChannelDock,
+  dockPanelGap,
   readChannelDock,
   writeChannelDock,
 } from '../src/client/channel-dock-layout.js';
@@ -54,9 +55,9 @@ describe('Bot mode layout persistence', () => {
   it('round-trips a versioned dockview serialization', () => {
     const storage = memoryStorage();
     writeChannelDock({ layout, parked: { schedules: { direction: 'below' } } }, storage);
-    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(5);
+    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(6);
     expect(readChannelDock(storage)).toEqual({
-      version: 5,
+      version: 6,
       gap: 4,
       order: [],
       hiddenControls: [],
@@ -159,7 +160,7 @@ describe('drops never tab two panels together', () => {
 
 describe('Work → Sessions upgrade', () => {
   const stored = (views: string[]) => ({
-    version: 5 as const,
+    version: 6 as const,
     layout: {
       ...layout,
       grid: {
@@ -313,8 +314,8 @@ it('recovers malformed storage without discarding the original backup', () => {
   storage.setItem(CHANNEL_DOCK_STORAGE_KEY, '{broken');
   expect(readChannelDock(storage)).toBeUndefined();
   writeChannelDock({ layout, parked: {} }, storage);
-  expect(readChannelDock(storage)?.version).toBe(5);
-  expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`)).toBe('{broken');
+  expect(readChannelDock(storage)?.version).toBe(6);
+  expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v6`)).toBe('{broken');
 });
 
 it('retains hidden Work intent when every legacy panel is closed', () => {
@@ -383,7 +384,7 @@ describe('Bot subpanel migration', () => {
       const raw = JSON.stringify(previous);
       storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
       const migrated = readChannelDock(storage)!;
-      expect(migrated.version).toBe(5);
+      expect(migrated.version).toBe(6);
       expect(migrated.layout.panels['memory-files']).toBeUndefined();
       expect(migrated.layout.panels['plugin-x']).toEqual({ id: 'plugin-x' });
       expect(migrated.layout.grid.root.data).toEqual([
@@ -434,4 +435,100 @@ describe('Bot subpanel migration', () => {
     expect(storage.getItem(CHANNEL_DOCK_STORAGE_KEY)).toBe(raw);
     expect(next.layout.grid.root.data).toEqual([]);
   });
+});
+
+it('upgrades v5 Browser/Computer without rewriting existing Channel workspaces or backups', () => {
+  const storage = memoryStorage();
+  const retained = { open: true, direction: 'above', ratio: 0.46, hiddenControl: false };
+  const previous = {
+    version: 5,
+    layout: {
+      ...layout,
+      panels: Object.fromEntries(
+        [CHANNEL_BODY_PANEL, 'botharness-browser', 'plugin-x'].map((id) => [id, { id }]),
+      ),
+      grid: {
+        ...layout.grid,
+        root: {
+          type: 'branch',
+          data: [
+            { ...leaf('browser', 'botharness-browser'), size: 200 },
+            { ...leaf('message', CHANNEL_BODY_PANEL), size: 600 },
+            { ...leaf('other', 'plugin-x'), size: 400 },
+          ],
+        },
+      },
+    },
+    order: ['botharness-browser', 'plugin-x', 'botharness-computer'],
+    hiddenControls: ['botharness-computer'],
+    parked: { 'botharness-computer': { direction: 'below' } },
+    botPanelSeeds: { 'memory-files': retained },
+    botWorkspaces: { ada: { schedules: retained } },
+    channelWorkspaces: { group: retained },
+    sessionSeed: retained,
+  };
+  const raw = JSON.stringify(previous);
+  storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
+  storage.setItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`, 'original-v4');
+  const next = readChannelDock(storage)!;
+  expect(next.version).toBe(6);
+  expect(next.layout.panels['botharness-browser']).toBeUndefined();
+  expect(next.layout.grid.root.data).toEqual([
+    { ...leaf('message', CHANNEL_BODY_PANEL), size: 800 },
+    { ...leaf('other', 'plugin-x'), size: 400 },
+  ]);
+  expect(next.botPanelSeeds?.['botharness-browser']).toEqual({
+    open: true,
+    direction: 'left',
+    ratio: 0.25,
+    hiddenControl: false,
+  });
+  expect(next.botPanelSeeds?.['botharness-computer']).toMatchObject({
+    open: false,
+    direction: 'below',
+    hiddenControl: true,
+  });
+  expect(next.botPanelSeeds?.['memory-files']).toEqual(retained);
+  expect(next.botWorkspaces).toEqual(previous.botWorkspaces);
+  expect(next.channelWorkspaces).toEqual(previous.channelWorkspaces);
+  expect(next.sessionSeed).toEqual(retained);
+  expect(next.order).toEqual(['plugin-x']);
+  expect(next.hiddenControls).toEqual([]);
+  expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`)).toBe(
+    'original-v4',
+  );
+  expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v6`)).toBe(raw);
+  expect(readChannelDock(storage)).toEqual(next);
+});
+
+it('persists closed panel proportions and rejects invalid saved dimensions', () => {
+  const storage = memoryStorage();
+  const parked = {
+    activity: {
+      direction: 'below' as const,
+      neighbor: CHANNEL_BODY_PANEL,
+      size: { width: 0.65, height: 0.27 },
+    },
+    channels: { direction: 'left' as const },
+  };
+  writeChannelDock({ layout, parked }, storage);
+  expect(readChannelDock(storage)?.parked).toEqual(parked);
+  for (const width of [0, -0.2, 1.2, '0.3', null]) {
+    storage.setItem(
+      CHANNEL_DOCK_STORAGE_KEY,
+      JSON.stringify({
+        version: 6,
+        layout,
+        parked: { ...parked, activity: { ...parked.activity, size: { width, height: 0.3 } } },
+      }),
+    );
+    expect(readChannelDock(storage)?.parked).toEqual({ channels: parked.channels });
+  }
+});
+
+it('converts rendered dimensions back to Dockview pre-gap sizes on both axes', () => {
+  expect(dockPanelGap(layout, 'sessions', 4)).toEqual({ width: 2, height: 8 / 3 });
+  expect(dockPanelGap(layout, CHANNEL_BODY_PANEL, 4)).toEqual({ width: 2, height: 0 });
+  expect(dockPanelGap(layout, 'sessions', 0)).toEqual({ width: 0, height: 0 });
+  expect(dockPanelGap(layout, 'missing', 4)).toEqual({ width: 0, height: 0 });
 });
