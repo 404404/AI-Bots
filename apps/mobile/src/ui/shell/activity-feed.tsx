@@ -7,13 +7,11 @@ import {
   useRef,
   useMemo,
   useState,
-  useSyncExternalStore,
   memo,
   type ReactElement,
 } from 'react';
-import { Platform, Pressable, RefreshControl, View, useWindowDimensions } from 'react-native';
+import { Animated as NativeAnimated, Platform, Pressable, RefreshControl, View, useWindowDimensions } from 'react-native';
 import { TabView } from 'react-native-tab-view';
-import { useIsFocused } from 'expo-router';
 import Animated, {
   FadeOut,
   LinearTransition,
@@ -39,6 +37,7 @@ import {
   type RequestRef,
 } from '../../host/requests';
 import type { HumanAttentionItem } from '../../host/wire';
+import { useFocusedSnapshot } from '../../host/use-focused-snapshot';
 import { BotAvatar } from '../bot-avatar';
 import { ApprovalCard } from '../chat/approval-card';
 import { QuestionCard } from '../chat/question-card';
@@ -46,9 +45,11 @@ import { useDesignTheme } from '../design/theme';
 import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { CountBadge } from '../primitives/count-badge';
-import { Loading, Notice } from '../request-parts';
+import { Notice } from '../request-parts';
 import { useChatHeaderHeight } from '../chat/header-chrome';
 import { Button } from '../primitives/button';
+import { DeferredContent } from '../primitives/deferred-content';
+import { ListSkeleton } from '../primitives/list-skeleton';
 import { ActivityToolbar, type ActivityToolbarHandle } from './activity-toolbar';
 import { ActivityTabs, ACTIVITY_TABS, type ActivityTab } from './activity-tabs';
 import { useFloatingTabInset } from './floating-tab-inset';
@@ -63,6 +64,7 @@ import {
 
 const AVATAR = 32;
 const LOADING: InboxSnapshot = { status: 'loading' };
+const EMPTY_SOURCE = { getSnapshot: () => LOADING, subscribe: () => () => {} };
 const ACTIVITY_ROUTES = [...ACTIVITY_TABS];
 const SUMMARY_PREVIEW_LIMIT = 512;
 
@@ -359,7 +361,7 @@ type ActivityFeedProps = {
   now?: number;
 };
 
-export function ActivityFeed(props: ActivityFeedProps) {
+export const ActivityFeed = memo(function ActivityFeed(props: ActivityFeedProps) {
   const { botSlugs, channels = [], bot } = props;
   const theme = useDesignTheme();
   const toolbar = useRef<ActivityToolbarHandle>(null);
@@ -375,10 +377,10 @@ export function ActivityFeed(props: ActivityFeedProps) {
   const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 0 : initialHeight);
   const width = useWindowDimensions().width;
   const reducedMotion = useReducedMotion();
-  const focused = useIsFocused();
   const progress = useChromeProgress();
   const selectedIndex = ACTIVITY_TABS.findIndex((tab) => tab.key === filter.section);
   const index = selectedIndex < 0 ? lastTab : selectedIndex;
+  const placeholderPosition = useMemo(() => new NativeAnimated.Value(index), [index]);
   const slugsWithSelection =
     filter.bot !== undefined && !botSlugs.includes(filter.bot)
       ? [...botSlugs, filter.bot]
@@ -401,6 +403,11 @@ export function ActivityFeed(props: ActivityFeedProps) {
       behavior="padding"
     >
       <Animated.View style={[{ flex: 1, marginTop: top, marginBottom: -travel }, pageStyle]}>
+        <DeferredContent fallback={<View style={{ flex: 1 }}>
+          <ActivityTabs selected={filter.section} position={placeholderPosition}
+            onSelect={(key) => selectIndex(ACTIVITY_TABS.findIndex((tab) => tab.key === key))} />
+          <ListSkeleton />
+        </View>}>
         <TabView
           style={{ backgroundColor: theme.color.base }}
           navigationState={{ index, routes: ACTIVITY_ROUTES }}
@@ -408,7 +415,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
           onIndexChange={selectIndex}
           animationEnabled={!reducedMotion}
           lazy
-          renderLazyPlaceholder={() => <Loading />}
+          renderLazyPlaceholder={() => <ListSkeleton />}
           renderTabBar={({ position, jumpTo }) => (
             <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
           )}
@@ -423,13 +430,14 @@ export function ActivityFeed(props: ActivityFeedProps) {
               sort={sort}
               active={route.key === ACTIVITY_TABS[index]?.key}
               searchFocused={searchFocused}
-              scrollActive={focused && route.key === ACTIVITY_TABS[index]?.key}
+              scrollActive={route.key === ACTIVITY_TABS[index]?.key}
               pinChrome={searchFocused || filtering}
               headerTravel={travel}
               dismissSearch={dismissSearch}
             />
           )}
         />
+        </DeferredContent>
       </Animated.View>
       <CollapsingToolbar travel={travel} height={top}>
         <ActivityToolbar
@@ -472,7 +480,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
       />
     </KeyboardAvoidingView>
   );
-}
+});
 
 const ActivityPage = memo(function ActivityPage({
   hostId,
@@ -551,10 +559,7 @@ const ActivityPage = memo(function ActivityPage({
       activeSettlementScope.current = undefined;
     };
   }, [settlementScope, active]);
-  const scopedSnapshot = useSyncExternalStore(
-    useCallback((listener: () => void) => scoped?.subscribe(listener) ?? (() => {}), [scoped]),
-    useCallback(() => scoped?.getSnapshot() ?? LOADING, [scoped]),
-  );
+  const scopedSnapshot = useFocusedSnapshot(scoped ?? EMPTY_SOURCE, scrollActive);
   const visible = scoped === undefined ? snapshot : scopedSnapshot;
   const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
   const rows = feedRows(visible, gone, held, filter, search);
@@ -616,7 +621,7 @@ const ActivityPage = memo(function ActivityPage({
                       <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
                     </View>
                   ) : null}
-                  {visible.status === 'loading' ? <Loading /> : null}
+                  {visible.status === 'loading' ? <ListSkeleton /> : null}
                   {visible.status === 'ready' &&
                   Object.values(visible.cursors ?? {}).some(Boolean) ? (
                     <Text variant="meta" tone="muted" style={{ paddingHorizontal: space.x5 }}>

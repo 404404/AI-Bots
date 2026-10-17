@@ -1,11 +1,12 @@
 import {
   createContext,
+  useCallback,
   useContext,
-  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   useAnimatedReaction,
   useAnimatedScrollHandler,
@@ -87,14 +88,17 @@ export function CollapsingToolbar({
 
 export function useChromeScroll(active = true, pin = false) {
   const { hidden, pinned } = useScrollChrome();
-  useLayoutEffect(() => {
+  const scrolling = useSharedValue(false);
+  useFocusEffect(useCallback(() => {
+    scrolling.value = active;
     if (!active) return;
     hidden.value = false;
     pinned.value = pin;
     return () => {
+      scrolling.value = false;
       pinned.value = false;
     };
-  }, [active, pin, hidden, pinned]);
+  }, [active, pin, hidden, pinned, scrolling]));
   return useAnimatedScrollHandler<ScrollChromeState>({
     onBeginDrag(event, context) {
       context.offset = Math.max(0, event.contentOffset.y);
@@ -107,7 +111,7 @@ export function useChromeScroll(active = true, pin = false) {
       context.travel = 0;
     },
     onScroll(event, context) {
-      if (!active || pinned.value) return;
+      if (!scrolling.value || pinned.value) return;
       const next = scrollChromeStep(
         { offset: context.offset ?? 0, travel: context.travel ?? 0, hidden: hidden.value },
         event.contentOffset.y,

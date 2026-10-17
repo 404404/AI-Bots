@@ -26,7 +26,6 @@ export function HomeHeader({
   children: ReactNode;
 }) {
   const theme = useDesignTheme();
-  const focused = useIsFocused();
   const drawerOpen = useHostDrawerOpen();
   const insets = useSafeAreaInsets();
   const band = useHostBand(look.banner);
@@ -78,7 +77,7 @@ export function HomeHeader({
         </View>
       }
     >
-      {focused ? <StatusBar style={band.lightInk ? 'light' : 'dark'} /> : null}
+      <HeaderStatus lightInk={band.lightInk} />
       <View
         style={{
           flex: 1,
@@ -93,4 +92,9 @@ export function HomeHeader({
       </View>
     </HostBandLayer>
   );
+}
+
+function HeaderStatus({ lightInk }: { lightInk: boolean }) {
+  const focused = useIsFocused();
+  return focused ? <StatusBar style={lightInk ? 'light' : 'dark'} /> : null;
 }

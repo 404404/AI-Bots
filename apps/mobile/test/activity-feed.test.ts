@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement } from 'react';
+import { act, createElement, useLayoutEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,6 +22,7 @@ vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
 vi.mock('expo-router', () => ({
   useRouter: () => ({ push: () => undefined }),
   useIsFocused: () => true,
+  useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]),
   Stack: { Screen: () => null },
 }));
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
@@ -560,7 +561,7 @@ describe('Activity feed', () => {
     });
     const fetched = queries.length;
     await press(view.querySelector<HTMLElement>('[data-testid="pager-previous"]')!);
-    expect(queries.length).toBe(fetched);
+    expect(queries.length).toBe(fetched + 1);
     expect(queries.findLast((query) => query.category === 'replies')).toMatchObject({
       category: 'replies',
       sort: 'oldest',

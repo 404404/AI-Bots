@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from 'react';
+import { act, useLayoutEffect, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,7 +40,7 @@ vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 vi.mock('expo-router', () => {
   const Stack = () => null;
   Stack.Screen = () => null;
-  return { Redirect: () => null, Stack, useIsFocused: () => true, useRouter: () => ({ push }) };
+  return { Redirect: () => null, Stack, useIsFocused: () => true, useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]), useRouter: () => ({ push, prefetch: () => undefined }) };
 });
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({

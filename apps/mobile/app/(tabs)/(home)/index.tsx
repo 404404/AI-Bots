@@ -1,11 +1,12 @@
 import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
-import { Redirect, Stack, useIsFocused, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-router';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import { prefetchInbox } from '../../../src/host/inbox';
 import { useHostLook } from '../../../src/host/native-host-look';
 import { shownHostName } from '../../../src/ui/design/host-look';
 import { sectionCollapse, useCollapsedSections } from '../../../src/host/native-section-collapse';
@@ -34,14 +35,32 @@ import type { HumanAttentionItem } from '../../../src/host/wire';
 const NONE: HumanAttentionItem[] = [];
 
 export default function HomeScreen() {
-  const router = useRouter();
   const focused = useIsFocused();
-  const onScroll = useChromeScroll(focused);
-  const bottom = useFloatingTabInset();
   const { saved, client, inbox } = useHostSession();
-  const look = useHostLook(saved?.hostId);
   const snapshot = useHostSnapshot(client, focused);
   const list = useInbox(inbox, focused);
+  return <HomeContent saved={saved} client={client} inbox={inbox} snapshot={snapshot} list={list} />;
+}
+
+const HomeContent = memo(function HomeContent({ saved, client, inbox, snapshot, list }: {
+  saved: ReturnType<typeof useHostSession>['saved'];
+  client: ReturnType<typeof useHostSession>['client'];
+  inbox: ReturnType<typeof useHostSession>['inbox'];
+  snapshot: ReturnType<typeof useHostSnapshot>;
+  list: ReturnType<typeof useInbox>;
+}) {
+  const router = useRouter();
+  useFocusEffect(useCallback(() => {
+    let stop: (() => void) | undefined;
+    const idle = requestIdleCallback(() => {
+      router.prefetch('/activity');
+      if (client !== undefined) stop = prefetchInbox(client, { activity: true, section: 'action' });
+    });
+    return () => { cancelIdleCallback(idle); stop?.(); };
+  }, [router, client]));
+  const onScroll = useChromeScroll();
+  const bottom = useFloatingTabInset();
+  const look = useHostLook(saved?.hostId);
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;
@@ -150,4 +169,4 @@ export default function HomeScreen() {
       </HostDrawerEdge>
     </>
   );
-}
+});
