@@ -257,6 +257,58 @@ describe('Tob policy operations reuse canonical owners', () => {
 });
 
 describe('connector concurrency at the owner boundary', () => {
+  it('pins pairing permissions while ignoring notification and private reply observations', () => {
+    const f = fixture();
+    const port = attachOperationalModule(f.core.operationalDatabase, 'messaging');
+    const body = {
+      id: 'pair-one',
+      botSlug: 'research',
+      bindingId: 'binding-one',
+      actorId: 'own-user',
+      status: 'pending',
+      revision: 1,
+      capabilities: ['approve'],
+      expiresAt: '2099-01-01T00:00:00Z',
+    };
+    port.transaction((db) => {
+      db.prepare(
+        'INSERT INTO messaging_bindings(id,bot_slug,provider_id,platform,account_ref,fingerprint,created_at) VALUES(?,?,?,?,?,?,?)',
+      ).run(
+        'binding-one',
+        'research',
+        'synthetic',
+        'synthetic',
+        'own-app',
+        'a'.repeat(64),
+        '2026-01-01T00:00:00Z',
+      );
+      db.prepare(
+        'INSERT INTO messaging_pairings(id,bot_slug,binding_id,actor_id,status,body) VALUES(?,?,?,?,?,?)',
+      ).run(body.id, body.botSlug, body.bindingId, body.actorId, body.status, JSON.stringify(body));
+    });
+    const before = f.core.externalMessaging.policyMutations.stamp('research');
+    port.transaction((db) =>
+      db
+        .prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?')
+        .run(
+          JSON.stringify({
+            ...body,
+            attempts: 3,
+            privateReply: { token: 'private-traffic' },
+            notifications: [{ key: 'notice', attempts: 1, outcome: 'accepted' }],
+          }),
+          body.id,
+        ),
+    );
+    expect(f.core.externalMessaging.policyMutations.stamp('research')).toBe(before);
+    port.transaction((db) =>
+      db
+        .prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?')
+        .run(JSON.stringify({ ...body, capabilities: ['reject'] }), body.id),
+    );
+    expect(f.core.externalMessaging.policyMutations.stamp('research')).not.toBe(before);
+  });
+
   it.each(['source', 'policy'] as const)(
     'rejects %s changes while the existing Provider inspection is suspended',
     async (change) => {
