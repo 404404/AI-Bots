@@ -9,7 +9,7 @@ At 961px and wider on a qualified rc.2 Web/macOS shell, the workspace contains a
 - `channel-list`: global panel retains Roster selection and actions; close/reopen remembers its neighbor.
 - `shortcuts`: native sidebar command toggles the Channel list while active, and resumes native behavior after exit. DSH keyboard settings customize each panel command; verify a changed binding after reload, then reset it in the isolated profile.
 - `spacing`: continuous 0–16px slider, default 4px; original dark background, slightly lighter panels, small round corners and a smaller header/body gap.
-- `persist`: version 2 of `botharness.bot-mode-layout` holds proportional geometry, parked panels, gap, switch order and member split preferences; v1 migrates without discarding custom layout.
+- `persist`: version 3 of `botharness.bot-mode-layout` holds proportional geometry, parked panels, gap, switch order and member split preferences; v1/v2 migrate without discarding custom layout.
 - `messages`: close/reopen and refresh preserve visibility; group header opens Members as an internal resizable split, absent in DMs.
 - `switch-order`: drag switches or use Alt+Up/Down; order survives refresh.
 - `live-content`: moving rail/panels or dragging the companion preserves mounted content and unsent drafts.
@@ -59,3 +59,12 @@ For native macOS, install the task Bundle into a separate rc.2 Desktop Profile a
 - `scrollbar-activity`: scroll Messages and another overflow area independently. The active thumb appears immediately, begins fading after 800ms and is hidden by 1000ms; hover alone does not reveal it. Verify no content-width shift, a second scroll cancels the previous fade, reduced motion skips interpolation, and native dragging still works. Check light/dark and leave Bot mode to verify cleanup. The workspace journey asserts numeric thumb visibility and DOM identity.
 
 For headless scrollbar evidence, launch Puppeteer with `ignoreDefaultArgs: ['--hide-scrollbars']`: its default flag suppresses painted native thumbs and native dragging even when computed thumb colors look correct. Compare actual scrolling/idle screenshots as well as computed alpha and geometry.
+
+- `unified-sessions`: only Sessions remains in the rail, header menus and shortcut settings. DM shows its Bot; Group defaults to Current channel. Select a named member Bot without changing Messages or its draft; switch back and open the same Assignment Session. Refresh retains the per-Channel selection; removing the selected member clears it. Historical Channel assignments still show their original Bot. The Channel query cap is 200 and does not claim unlimited history.
+- `sessions-migration`: inspect v1/v2 layouts with Work only, Sessions only, both and neither open. Keep Sessions geometry when present, otherwise replace Work in place; closed panels remain closed. Confirm parked neighbors, hidden switches and order survive and the pre-v3 backup is present. Migrate Work custom shortcuts only when Sessions has no override and no conflict. Check explicit unbinding, conflicting commands and failed persistence; the notice leads to Keyboard shortcuts. Work's old command must be absent from settings and its default must not fire. The dormant native override is intentionally retained for rollback.
+
+The unified Sessions journey uses `scripts/e2e-unified-sessions.mjs` with `BH_E2E_INSTANCE` and a task-owned `BH_SESSION_SCENE` JSON containing existing Group/Bot identifiers. It reads existing canonical assignments; prepare a real Assignment through a Group model request first. The native supplement `scripts/e2e-unified-sessions-desktop.mjs` connects only to the task's existing `dsh-app:` window and checks native key dispatch. It never treats mocked data or Web platform emulation as native evidence.
+
+Default-following Sessions headers omit a redundant scope label. Group scope choices live in the existing view-options menu; only an explicit member-Bot override shows `Bot · name` in the header.
+
+The rc.2 native navigator clears archived Sessions. If the real Orchestrator auto-archives the completed QA Assignment, use the existing explicit Restore action in Bot scope first, then assert the same native `session/follow` identity and report from both scopes. This is not evidence that direct archived navigation works.

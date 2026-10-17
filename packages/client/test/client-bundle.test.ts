@@ -104,6 +104,7 @@ beforeAll(async () => {
       },
     },
     fetch: globalThis.fetch,
+    queueMicrotask,
     TextEncoder,
     TextDecoder,
     AbortController,
@@ -196,7 +197,11 @@ describe('@botharness/ui browser bundle', () => {
     }[] = [];
     const sources: unknown[] = [];
     const scoped = {
-      shortcuts: { register: () => () => undefined },
+      shortcuts: {
+        register: () => () => undefined,
+        config: { getSnapshot: () => ({ status: 'loading' }), subscribe: () => () => undefined },
+        catalog: { getSnapshot: () => [], subscribe: () => () => undefined },
+      },
       slots: {
         inject: (_name: string, callback: () => unknown) => callback(),
         register: (spec: {

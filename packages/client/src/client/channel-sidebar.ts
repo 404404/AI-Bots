@@ -77,7 +77,7 @@ export interface ChannelSidebarEntry {
   icon?: string;
   settings?: ComponentType<ChannelSidebarSettingsProps>;
   order?: number;
-  scope: ChannelSidebarScope;
+  scope: ChannelSidebarScope | 'both';
   component: ComponentType<ChannelSidebarEntryProps>;
   headerAction?: ComponentType<ChannelSidebarEntryProps>;
   headerLabel?: string;
@@ -184,11 +184,11 @@ export function createChannelSidebarRegistry(dockPanels?: DockPanelHost): Channe
     const ordered = [...entries.values()].sort(compareEntries);
     scoped.set(
       'channel',
-      ordered.filter((entry) => entry.scope === 'channel'),
+      ordered.filter((entry) => entry.scope === 'channel' || entry.scope === 'both'),
     );
     scoped.set(
       'personabot',
-      ordered.filter((entry) => entry.scope === 'personabot'),
+      ordered.filter((entry) => entry.scope === 'personabot' || entry.scope === 'both'),
     );
     for (const scope of ['channel', 'personabot'] as const)
       scopedTabs.set(

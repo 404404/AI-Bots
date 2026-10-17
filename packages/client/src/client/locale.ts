@@ -2697,6 +2697,12 @@ export const zh = {
   'profile.avatar.crop.zoom': '缩放',
   'profile.avatar.crop.error': '图片无法使用；请选择不超过 5 MB 的 PNG、JPEG 或 WebP。',
   'sessions.view': '会话范围',
+  'sessions.shortcut.migration':
+    '工作已并入会话。原有会话快捷键已保留；未能自动迁移的工作快捷键请在此重新设置。',
+  'sessions.target.label': '会话范围',
+  'sessions.target.channel': '当前频道',
+  'sessions.target.bot': 'Bot · {name}',
+  'sessions.channel.limit': '最多显示最近更新的 200 个事项，较早记录可能未列出。',
   'sessions.menu': '会话视图选项',
   'sessions.limit.value': '同时最多 {count} 个…',
   'sessions.current': '当前',
@@ -6474,6 +6480,13 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'profile.avatar.crop.error':
     'The image could not be used; choose a PNG, JPEG, or WebP under 5 MB.',
   'sessions.view': 'Session view',
+  'sessions.shortcut.migration':
+    'Work is now part of Sessions. Your existing Sessions shortcut is preserved. Review the shortcut here if the Work binding could not be migrated.',
+  'sessions.target.label': 'Session scope',
+  'sessions.target.channel': 'Current channel',
+  'sessions.target.bot': 'Bot · {name}',
+  'sessions.channel.limit':
+    'Showing up to 200 recently updated assignments; older records may be omitted.',
   'sessions.menu': 'Session view options',
   'sessions.limit.value': 'Up to {count} at once…',
   'sessions.current': 'Current',

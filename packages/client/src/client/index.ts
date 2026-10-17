@@ -1,10 +1,10 @@
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client';
 import { AppearanceSection } from './appearance-settings.js';
-import { KeyboardSettings } from './keyboard-settings.js';
+import { KeyboardSettings, setWorkShortcutNotice } from './keyboard-settings.js';
 import { DesktopNotificationSetting } from './notification-settings.js';
 import { createElement } from 'react';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
-import { registerWorkspaceShortcuts } from './workspace-shortcuts.js';
+import { registerWorkspaceShortcuts, migrateWorkShortcut } from './workspace-shortcuts.js';
 import type {} from '@deepseek-ai/dsh-client-shortcuts/client';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-client-locale/client';
@@ -433,6 +433,12 @@ export function apply(ctx: ClientContext): void {
       () => document.querySelector('[data-workspace-enabled]') !== null,
       t,
     ),
+  );
+  ctx.effect(() =>
+    migrateWorkShortcut(ctx.shortcuts, () => {
+      setWorkShortcutNotice(true);
+      botSettings.open(BOT_SETTINGS_SECTIONS.shortcuts);
+    }),
   );
   ctx.provide('channelSidebar', channelSidebar);
   const profileCards = createProfileCardRegistry();

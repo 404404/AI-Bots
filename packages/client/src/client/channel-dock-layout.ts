@@ -8,7 +8,7 @@ import type {
 import type { DockPanelPosition } from './dock-panels.js';
 
 export const CHANNEL_DOCK_STORAGE_KEY = 'botharness.bot-mode-layout';
-export const CHANNEL_DOCK_LAYOUT_VERSION = 2;
+export const CHANNEL_DOCK_LAYOUT_VERSION = 3;
 export const DEFAULT_WORKSPACE_GAP = 4;
 export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
@@ -74,14 +74,14 @@ export function readChannelDock(
     const value: unknown = JSON.parse(raw);
     if (
       !isRecord(value) ||
-      (value['version'] !== 1 && value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION)
+      ![1, 2, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
     )
       return undefined;
     if (!isLayout(value['layout'])) return undefined;
     const parked = isRecord(value['parked'])
       ? Object.fromEntries(Object.entries(value['parked']).filter(([, entry]) => isPosition(entry)))
       : {};
-    return {
+    const restored: StoredChannelDock = {
       version: CHANNEL_DOCK_LAYOUT_VERSION,
       gap:
         typeof value['gap'] === 'number' && Number.isFinite(value['gap'])
@@ -106,6 +106,15 @@ export function readChannelDock(
       layout: value['layout'],
       parked: parked as Record<string, DockPosition>,
     };
+    const migrated = migrateWorkPanel(restored);
+    if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
+      try {
+        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-sessions-v3`;
+        if (storage?.getItem(backupKey) == null) storage?.setItem(backupKey, raw);
+        storage?.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify(migrated));
+      } catch {}
+    }
+    return migrated;
   } catch {
     return undefined;
   }
@@ -277,4 +286,80 @@ export function resolveDefaultPosition(
 export function allowsDockDrop(kind: string, position: string): boolean {
   if (kind === 'tab' || kind === 'header_space') return false;
   return position !== 'center';
+}
+
+export function migrateWorkPanel(stored: StoredChannelDock): StoredChannelDock {
+  const old = 'group-work';
+  const next = 'sessions';
+  const hasSessions = !!stored.layout.panels[next];
+  const hasWork = !!stored.layout.panels[old];
+  const mapId = (id: string) => (id === old ? next : id);
+  const panels = Object.fromEntries(
+    Object.entries(stored.layout.panels)
+      .filter(([id]) => id !== old || !hasSessions)
+      .map(([id, panel]) => [
+        mapId(id),
+        id === old
+          ? { ...panel, id: next, title: next, params: { ...panel.params, entryId: next } }
+          : panel,
+      ]),
+  );
+  const walk = (node: GridNode): GridNode | undefined => {
+    if (node.type === 'leaf') {
+      const data = node.data as { views: string[]; activeView?: string; id: string };
+      const views = [...new Set(data.views.filter((id) => id !== old || !hasSessions).map(mapId))];
+      if (!views.length) return undefined;
+      return {
+        ...node,
+        data: {
+          ...data,
+          views,
+          activeView: views.includes(mapId(data.activeView ?? ''))
+            ? mapId(data.activeView!)
+            : views[0]!,
+        },
+      };
+    }
+    const data = (node.data as GridNode[]).flatMap((child) => {
+      const result = walk(child);
+      return result ? [result] : [];
+    });
+    return data.length ? { ...node, data } : undefined;
+  };
+  const root = walk(stored.layout.grid.root as GridNode);
+  if (!root) return stored;
+  const order = stored.order ?? [];
+  const hidden = stored.hiddenControls ?? [];
+  const explicitSessions = order.includes(next) || hidden.includes(next) || hasSessions;
+  const hiddenControls = [
+    ...new Set(hidden.filter((id) => id !== old || !explicitSessions).map(mapId)),
+  ];
+  if (hasWork && !hasSessions) {
+    const index = hiddenControls.indexOf(next);
+    if (index >= 0) hiddenControls.splice(index, 1);
+  }
+  const parked = Object.fromEntries(
+    Object.entries(stored.parked)
+      .filter(([id]) => id !== old || !stored.parked[next])
+      .map(([id, position]) => [
+        mapId(id),
+        { ...position, ...(position.neighbor ? { neighbor: mapId(position.neighbor) } : {}) },
+      ]),
+  );
+  for (const [id, position] of Object.entries(parked))
+    if (position.neighbor === id) delete position.neighbor;
+  const groups = new Set(collectGroups(root));
+  const { activeGroup, ...layout } = stored.layout;
+  return {
+    ...stored,
+    order: [...new Set(order.filter((id) => id !== old || !order.includes(next)).map(mapId))],
+    hiddenControls,
+    parked,
+    layout: {
+      ...layout,
+      panels,
+      grid: { ...layout.grid, root },
+      ...(activeGroup && groups.has(activeGroup) ? { activeGroup } : {}),
+    },
+  };
 }

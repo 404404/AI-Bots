@@ -610,7 +610,7 @@ try {
   await assertLive();
   const reordered = await switchOrder();
   await proof('01b-switch-order');
-  assert.equal((await storage()).version, 2);
+  assert.equal((await storage()).version, 3);
   assert.equal((await storage()).gap, 4);
   assert.equal(
     await page.$eval(
