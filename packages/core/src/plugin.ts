@@ -1190,7 +1190,6 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobChannelOperations(command, args)) ??
                   (await tobChannelPreferencesOperations(command, args)) ??
                   (await tobScheduleOperations(command, args)) ??
-
                   (await createTobMemoryOperations(core.runtime, actor.session.id)(command, args)),
                 capabilities: [
                   ...TOB_MEMORY_CAPABILITIES,
