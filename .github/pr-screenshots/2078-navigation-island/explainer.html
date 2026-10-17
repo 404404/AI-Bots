@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Answer me with HTML 0.5.0">
-<title>Android 导航浮岛与预测返回</title>
+<title>Android 导航浮岛</title>
 <style>
 html[data-theme="blueprint"], html[data-theme="blueprint"][data-mode="light"] {
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -761,95 +761,53 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <button class="am-btn" type="button" data-am="copy" data-done="已复制 ✓">复制源稿</button>
 </div>
 <main class="am-sheet">
-<header class="am-head"><h1>Android 导航浮岛与预测返回</h1><p class="am-sub">PR2078 · 源码 75175fcb348aeafddbf8eacb1026aa392074eef4 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180 · 2026-10-17</p></header>
+<header class="am-head"><h1>Android 导航浮岛</h1><p class="am-sub">PR2078 · 源码 3cd35d2381265d2203882a4a2c251f914aaca312 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180</p></header>
 <div class="am-frame">
 <div class="am-ruler am-ruler--top" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--bottom" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--left" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div><div class="am-ruler am-ruler--right" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div>
 <div class="am-grid" style="--cols: 2">
 <section class="am-panel" id="panel-A">
-<header class="am-panel-head"><span class="am-panel-id">A</span><h2>底栏的变化</h2></header>
+<header class="am-panel-head"><span class="am-panel-id">A</span><h2>外观与状态</h2></header>
 <div class="am-panel-body"><div class="am-md"><div class="am-table-wrap"><table>
 <thead>
 <tr>
-<th>项目</th>
-<th>之前</th>
-<th>现在</th>
+<th>条件</th>
+<th>动态位置显示</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>外形</td>
-<td>接近全宽的胶囊</td>
-<td>居中的小圆角矩形</td>
+<td>聊天页，待办大于零</td>
+<td>等宽数字，最多99+</td>
 </tr>
 <tr>
-<td>默认尺寸</td>
-<td>屏幕左右各留24dp</td>
-<td>176×64dp，外圆角20dp</td>
+<td>动态页已选中</td>
+<td>铃铛图标</td>
 </tr>
 <tr>
-<td>选中图标</td>
-<td>中性色胶囊</td>
-<td>强调色矩形底块，40×32dp，圆角12dp</td>
-</tr>
-<tr>
-<td>大字号</td>
-<td>固定高度</td>
-<td>字号放大时扩宽并增高</td>
+<td>待办为零</td>
+<td>铃铛图标</td>
 </tr>
 </tbody></table></div>
-<p>保留聊天、动态两个入口及待处理角标。浮岛底色与页面底色有区别。</p>
+<p>默认176×64dp圆角矩形，选中图标底块40×32dp。系统elevation为零，仅保留一层轻淡阴影。默认仅计工具审批。全局设置可多选正式问答、私密输入、其他待办、未读提及回复、其他未读会话；选择保存在本机。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-B">
-<header class="am-panel-head"><span class="am-panel-id">B</span><h2>修正内部垂直布局</h2></header>
-<div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 302 261" width="302" height="261" role="img" aria-label="流程图：系统字号与安全区、浮岛尺寸、列表底部留白、列表滚动、UI线程隐藏进度、浮岛位移与淡出" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M80,49 L80,65 Q80,81 80,97 L80,113" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="48.1" y="72" width="63.8" height="18" rx="3"/><text x="80" y="81" text-anchor="middle" dominant-baseline="central">React布局</text></g></g><g data-step="1"><path class="am-edge" d="M80,148 L80,164 Q80,180 80,196 L80,212" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="52" y="171" width="56" height="18" rx="3"/><text x="80" y="180" text-anchor="middle" dominant-baseline="central">末行可达</text></g></g><g data-step="2"><path class="am-edge" d="M228.5,49 L228.5,65 Q228.5,81 228.5,97 L228.5,113" marker-end="url(#am1-arrow)"/></g><g data-step="3"><path class="am-edge" d="M228.5,148 L228.5,164 Q228.5,180 228.5,196 L228.5,212" marker-end="url(#am1-arrow)"/></g></g><g><g class="am-node am-node--rect" data-key="系统字号与安全区" data-step="0"><rect class="am-node-shape" x="14" y="14" width="132" height="35" rx="3"/><text x="80" y="31.5" text-anchor="middle" dominant-baseline="central">系统字号与安全区</text></g><g class="am-node am-node--rect" data-key="浮岛尺寸" data-step="0"><rect class="am-node-shape" x="40" y="113" width="80" height="35" rx="3"/><text x="80" y="130.5" text-anchor="middle" dominant-baseline="central">浮岛尺寸</text></g><g class="am-node am-node--rect" data-key="列表底部留白" data-step="1"><rect class="am-node-shape" x="27" y="212" width="106" height="35" rx="3"/><text x="80" y="229.5" text-anchor="middle" dominant-baseline="central">列表底部留白</text></g><g class="am-node am-node--rect" data-key="列表滚动" data-step="2"><rect class="am-node-shape" x="188.5" y="14" width="80" height="35" rx="3"/><text x="228.5" y="31.5" text-anchor="middle" dominant-baseline="central">列表滚动</text></g><g class="am-node am-node--rect" data-key="UI线程隐藏进度" data-step="2"><rect class="am-node-shape" x="169" y="113" width="119" height="35" rx="3"/><text x="228.5" y="130.5" text-anchor="middle" dominant-baseline="central">UI线程隐藏进度</text></g><g class="am-node am-node--rect" data-key="浮岛位移与淡出" data-step="3"><rect class="am-node-shape" x="169" y="212" width="119" height="35" rx="3"/><text x="228.5" y="229.5" text-anchor="middle" dominant-baseline="central">浮岛位移与淡出</text></g></g></svg></figure>
-<div class="am-md"><p>BottomTabItem内部原本使用顶部对齐和默认内边距，图标宿主也小于选中底块。现在由NavigationButton居中排列，图标宿主与底块都为40×32dp，角标落在宿主内。既有点击、长按与无障碍属性完整转发。</p>
-<p>实机可见内容偏移从上偏6.46dp降至1.54dp；高亮宽度从56dp收至40dp。iOS保留原有系统底栏。</p>
-</div>
-<figure class="am-codeblock" data-am-src="apps/mobile/src/ui/shell/navigation-button.android.tsx" data-am-lines="1-6"><figcaption class="am-code-head"><span class="am-code-title">apps/mobile/src/ui/shell/navigation-button.android.tsx:1-6</span><span class="am-code-lang">tsx</span><button class="am-code-copy" type="button" data-am="copy-code" data-done="已复制 ✓">复制</button></figcaption><pre class="am-code am-code--num"><code data-lang="tsx"><span class="am-ln" data-n="1">import { PlatformPressable } from &#39;expo-router/react-navigation&#39;;</span><span class="am-ln" data-n="2">import type { ComponentProps } from &#39;react&#39;;</span><span class="am-ln" data-n="3"></span><span class="am-ln" data-n="4">export function NavigationButton({ style, ...props }: ComponentProps&lt;typeof PlatformPressable&gt;) {</span><span class="am-ln" data-n="5">  return &lt;PlatformPressable {...props} style={[style, { justifyContent: &#39;center&#39;, padding: 0 }]} /&gt;;</span><span class="am-ln" data-n="6">}</span></code></pre></figure></div>
+<header class="am-panel-head"><span class="am-panel-id">B</span><h2>过渡如何运行</h2></header>
+<div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 354 306" width="354" height="306" role="img" aria-label="流程图：实际选中路由与待办、图标或数字状态、UI线程160ms过渡、固定位置的透明度与缩放、系统字号与安全区、浮岛扩宽增高" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M99.5,49 L99.5,60.5 Q99.5,72 99.5,83.5 L99.5,95" marker-end="url(#am1-arrow)"/></g><g data-step="1"><path class="am-edge" d="M99.5,130 L99.5,141.5 Q99.5,153 99.5,164.5 L99.5,176" marker-end="url(#am1-arrow)"/></g><g data-step="2"><path class="am-edge" d="M99.5,211 L99.5,222.5 Q99.5,234 99.5,245.5 L99.5,257" marker-end="url(#am1-arrow)"/></g><g data-step="3"><path class="am-edge" d="M274,49 L274,60.5 Q274,72 274,83.5 L274,95" marker-end="url(#am1-arrow)"/></g></g><g><g class="am-node am-node--rect" data-key="实际选中路由与待办" data-step="0"><rect class="am-node-shape" x="27" y="14" width="145" height="35" rx="3"/><text x="99.5" y="31.5" text-anchor="middle" dominant-baseline="central">实际选中路由与待办</text></g><g class="am-node am-node--rect" data-key="图标或数字状态" data-step="0"><rect class="am-node-shape" x="40" y="95" width="119" height="35" rx="3"/><text x="99.5" y="112.5" text-anchor="middle" dominant-baseline="central">图标或数字状态</text></g><g class="am-node am-node--rect" data-key="UI线程160ms过渡" data-step="1"><rect class="am-node-shape" x="32.8" y="176" width="133.3" height="35" rx="3"/><text x="99.5" y="193.5" text-anchor="middle" dominant-baseline="central">UI线程160ms过渡</text></g><g class="am-node am-node--rect" data-key="固定位置的透明度与缩放" data-step="2"><rect class="am-node-shape" x="14" y="257" width="171" height="35" rx="3"/><text x="99.5" y="274.5" text-anchor="middle" dominant-baseline="central">固定位置的透明度与缩放</text></g><g class="am-node am-node--rect" data-key="系统字号与安全区" data-step="3"><rect class="am-node-shape" x="208" y="14" width="132" height="35" rx="3"/><text x="274" y="31.5" text-anchor="middle" dominant-baseline="central">系统字号与安全区</text></g><g class="am-node am-node--rect" data-key="浮岛扩宽增高" data-step="3"><rect class="am-node-shape" x="221" y="95" width="106" height="35" rx="3"/><text x="274" y="112.5" text-anchor="middle" dominant-baseline="central">浮岛扩宽增高</text></g></g></svg></figure>
+<div class="am-md"><p>导航库会同时绘制选中和未选中的图标副本，因此过渡状态跟随实际路由。每帧只在UI线程更新透明度和缩放，不更改布局。数字使用tabular-nums；无障碍Tab名称使用相同的99+上限。</p>
+</div></div>
 </section>
 <section class="am-panel" id="panel-C">
-<header class="am-panel-head"><span class="am-panel-id">C</span><h2>图3能否直接启用</h2></header>
-<div class="am-panel-body"><div class="am-md"><p><a href="https://docs.expo.dev/versions/v58.0.0/sdk/router/experimental-stack/">Expo SDK58 官方说明</a>提供实验导航栈的预测返回。</p>
-<div class="am-table-wrap"><table>
-<thead>
-<tr>
-<th>必要能力</th>
-<th>ExperimentalStack现状</th>
-<th>本应用用途</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>手势进度与取消</td>
-<td>支持</td>
-<td>图3的效果</td>
-</tr>
-<tr>
-<td>formSheet与弹窗</td>
-<td>不支持</td>
-<td>设置、资料、远程视图</td>
-</tr>
-<tr>
-<td>自定义header</td>
-<td>不支持</td>
-<td>抽屉内的二级导航</td>
-</tr>
-<tr>
-<td>Android混用稳定Stack</td>
-<td>不支持</td>
-<td>不能只迁移一个页面</td>
-</tr>
-</tbody></table></div>
-<p>因此本次保留稳定Stack。不能把manifest开关或返回桌面动画，当成应用内页面预览。</p>
+<header class="am-panel-head"><span class="am-panel-id">C</span><h2>代码边界</h2></header>
+<div class="am-panel-body"><figure class="am-codeblock" data-am-src="apps/mobile/src/ui/shell/navigation-icon.android.tsx" data-am-lines="28-46"><figcaption class="am-code-head"><span class="am-code-title">apps/mobile/src/ui/shell/navigation-icon.android.tsx:28-46</span><span class="am-code-lang">tsx</span><button class="am-code-copy" type="button" data-am="copy-code" data-done="已复制 ✓">复制</button></figcaption><pre class="am-code am-code--num"><code data-lang="tsx"><span class="am-ln" data-n="28">  const iconStyle = useAnimatedStyle(() =&gt; ({</span><span class="am-ln" data-n="29">    opacity: 1 - progress.value,</span><span class="am-ln" data-n="30">    transform: [{ scale: 1 - (1 - tabMotion.inactiveIconScale) * progress.value }],</span><span class="am-ln" data-n="31">  }));</span><span class="am-ln" data-n="32">  const countStyle = useAnimatedStyle(() =&gt; ({</span><span class="am-ln" data-n="33">    opacity: progress.value,</span><span class="am-ln" data-n="34">    transform: [</span><span class="am-ln" data-n="35">      { scale: tabMotion.inactiveIconScale + (1 - tabMotion.inactiveIconScale) * progress.value },</span><span class="am-ln" data-n="36">    ],</span><span class="am-ln" data-n="37">  }));</span><span class="am-ln" data-n="38">  return (</span><span class="am-ln" data-n="39">    &lt;View</span><span class="am-ln" data-n="40">      accessibilityElementsHidden</span><span class="am-ln" data-n="41">      importantForAccessibility=&quot;no-hide-descendants&quot;</span><span class="am-ln" data-n="42">      style={{</span><span class="am-ln" data-n="43">        alignItems: &#39;center&#39;,</span><span class="am-ln" data-n="44">        justifyContent: &#39;center&#39;,</span><span class="am-ln" data-n="45">        width: &#39;100%&#39;,</span><span class="am-ln" data-n="46">        height: &#39;100%&#39;,</span></code></pre></figure>
+<div class="am-md"><p>NavigationButton保留原有点击和无障碍属性。新NavigationIcon仅负责装饰形态；底栏选择、滚动收起、安全区保持原来的职责。计数通过现有humanAttention接口按分类分页读取，去重后最多累积100项；同一选择保留缓存，切换选择与Host时丢弃旧请求结果。</p>
+<p>Host当前仅允许auto-rejection的kind参数，因此按动作类型在客户端过滤；不更改Host API或推送设置。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-D">
-<header class="am-panel-head"><span class="am-panel-id">D</span><h2>实现依据与验收边界</h2></header>
-<div class="am-panel-body"><div class="am-md"><p>源码：<a href="https://github.com/BotHarness/DeepSeekBot/commit/75175fcb348aeafddbf8eacb1026aa392074eef4">精确提交</a>。QA运行与截图另有完整提交记录。</p>
-</div>
-<figure class="am-codeblock" data-am-src="apps/mobile/app/(tabs)/_layout.android.tsx" data-am-lines="60-71"><figcaption class="am-code-head"><span class="am-code-title">apps/mobile/app/(tabs)/_layout.android.tsx:60-71</span><span class="am-code-lang">ts</span><button class="am-code-copy" type="button" data-am="copy-code" data-done="已复制 ✓">复制</button></figcaption><pre class="am-code am-code--num"><code data-lang="ts"><span class="am-ln" data-n="60">  const pending = actionCount(useInbox(inbox));</span><span class="am-ln" data-n="61">  const scale = Math.max(1, fontScale);</span><span class="am-ln" data-n="62">  const barWidth = Math.min(</span><span class="am-ln" data-n="63">    width - insets.left - insets.right - space.x6 * 2,</span><span class="am-ln" data-n="64">    navigationBar.itemWidth * 2 * scale + space.x3 * 2,</span><span class="am-ln" data-n="65">  );</span><span class="am-ln" data-n="66">  const height = navigationBar.height + theme.type.meta.line * (scale - 1);</span><span class="am-ln" data-n="67">  const bottom = Math.max(insets.bottom, space.x4);</span><span class="am-ln" data-n="68">  const reserved = height + bottom + space.x5;</span><span class="am-ln" data-n="69">  return (</span><span class="am-ln" data-n="70">    &lt;FloatingTabInset.Provider value={reserved}&gt;</span><span class="am-ln" data-n="71">      &lt;View style={{ flex: 1, backgroundColor: theme.color.base }}&gt;</span></code></pre></figure>
-<div class="am-md"><p>自动检查：541项移动端测试通过，8项跳过；类型、lint、格式、更新记录均通过。</p>
-<p>手机完成12组前后对照、选中状态与点击范围检查。本次短列表保留底栏、切换Tab通过；长列表收起与恢复也在当前版本补测通过，并另存原速录屏。</p>
-<p>此前稳定栈基线的ACTION_CANCEL保留聊天，完整边缘滑动返回列表；反向拖回边缘的注入异常，Human取消手势尚未认证。解释页不替代这些实机证据。120FPS与iOS实机尚未认证。PR2073及本PR均待Human验收。</p>
+<header class="am-panel-head"><span class="am-panel-id">D</span><h2>原生证据与边界</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>源码：<a href="https://github.com/BotHarness/DeepSeekBot/commit/3cd35d2381265d2203882a4a2c251f914aaca312">精确提交</a>。</p>
+<p>本次Android证据覆盖聊天与动态、浅深色和系统字号1/1.3/2；截图、原速及0.5倍录屏另存证据目录。549项移动端测试通过，8项跳过；类型、lint、格式和更新记录通过。</p>
+<p>当前QA有一条正式问答：默认工具审批数字为零；额外选择正式问答后为1。多选与冷启动保存、零状态图标在实机验证；99+原生状态未实测，分页、去重与100项饱和由测试覆盖。iOS原生、TalkBack和Release120FPS尚未认证。预测返回仍沿用前一轮记录：SDK58实验栈缺少当前弹窗与header所需能力，本PR保留稳定Stack。</p>
 </div></div>
 </section>
 </div>
@@ -870,71 +828,53 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-lightbox-canvas am-diagram"></div>
 </div>
 </div>
-<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-17 23:41 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-18 00:15 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
 template: sheet
 theme: paper
-title: Android 导航浮岛与预测返回
-subtitle: PR2078 · 源码 75175fcb348aeafddbf8eacb1026aa392074eef4 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180 · 2026-10-17
+title: Android 导航浮岛
+subtitle: PR2078 · 源码 3cd35d2381265d2203882a4a2c251f914aaca312 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180
 cols: 2
 lang: zh
 ---
 
-## A 底栏的变化
+## A 外观与状态
 
-| 项目 | 之前 | 现在 |
-|---|---|---|
-| 外形 | 接近全宽的胶囊 | 居中的小圆角矩形 |
-| 默认尺寸 | 屏幕左右各留24dp |176×64dp，外圆角20dp |
-| 选中图标 | 中性色胶囊 | 强调色矩形底块，40×32dp，圆角12dp |
-| 大字号 | 固定高度 | 字号放大时扩宽并增高 |
+| 条件 | 动态位置显示 |
+|---|---|
+| 聊天页，待办大于零 | 等宽数字，最多99+ |
+| 动态页已选中 | 铃铛图标 |
+| 待办为零 | 铃铛图标 |
 
-保留聊天、动态两个入口及待处理角标。浮岛底色与页面底色有区别。
+默认176×64dp圆角矩形，选中图标底块40×32dp。系统elevation为零，仅保留一层轻淡阴影。默认仅计工具审批。全局设置可多选正式问答、私密输入、其他待办、未读提及回复、其他未读会话；选择保存在本机。
 
-## B 修正内部垂直布局
+## B 过渡如何运行
 
 ```flow TB
-系统字号与安全区 -&gt; 浮岛尺寸: React布局
-浮岛尺寸 -&gt; 列表底部留白: 末行可达
-列表滚动 -&gt; UI线程隐藏进度
-UI线程隐藏进度 -&gt; 浮岛位移与淡出
+实际选中路由与待办 -&gt; 图标或数字状态
+图标或数字状态 -&gt; UI线程160ms过渡
+UI线程160ms过渡 -&gt; 固定位置的透明度与缩放
+系统字号与安全区 -&gt; 浮岛扩宽增高
 ```
 
-BottomTabItem内部原本使用顶部对齐和默认内边距，图标宿主也小于选中底块。现在由NavigationButton居中排列，图标宿主与底块都为40×32dp，角标落在宿主内。既有点击、长按与无障碍属性完整转发。
+导航库会同时绘制选中和未选中的图标副本，因此过渡状态跟随实际路由。每帧只在UI线程更新透明度和缩放，不更改布局。数字使用tabular-nums；无障碍Tab名称使用相同的99+上限。
 
-实机可见内容偏移从上偏6.46dp降至1.54dp；高亮宽度从56dp收至40dp。iOS保留原有系统底栏。
+## C 代码边界
 
-```tsx src=apps/mobile/src/ui/shell/navigation-button.android.tsx lines=1-6
+```tsx src=apps/mobile/src/ui/shell/navigation-icon.android.tsx lines=28-46
 ```
 
-## C 图3能否直接启用
+NavigationButton保留原有点击和无障碍属性。新NavigationIcon仅负责装饰形态；底栏选择、滚动收起、安全区保持原来的职责。计数通过现有humanAttention接口按分类分页读取，去重后最多累积100项；同一选择保留缓存，切换选择与Host时丢弃旧请求结果。
 
-[Expo SDK58 官方说明](https://docs.expo.dev/versions/v58.0.0/sdk/router/experimental-stack/)提供实验导航栈的预测返回。
+Host当前仅允许auto-rejection的kind参数，因此按动作类型在客户端过滤；不更改Host API或推送设置。
 
-| 必要能力 | ExperimentalStack现状 | 本应用用途 |
-|---|---|---|
-| 手势进度与取消 | 支持 | 图3的效果 |
-| formSheet与弹窗 | 不支持 | 设置、资料、远程视图 |
-| 自定义header | 不支持 | 抽屉内的二级导航 |
-| Android混用稳定Stack | 不支持 | 不能只迁移一个页面 |
+## D 原生证据与边界
 
-因此本次保留稳定Stack。不能把manifest开关或返回桌面动画，当成应用内页面预览。
+源码：[精确提交](https://github.com/BotHarness/DeepSeekBot/commit/3cd35d2381265d2203882a4a2c251f914aaca312)。
 
-## D 实现依据与验收边界
+本次Android证据覆盖聊天与动态、浅深色和系统字号1/1.3/2；截图、原速及0.5倍录屏另存证据目录。549项移动端测试通过，8项跳过；类型、lint、格式和更新记录通过。
 
-源码：[精确提交](https://github.com/BotHarness/DeepSeekBot/commit/75175fcb348aeafddbf8eacb1026aa392074eef4)。QA运行与截图另有完整提交记录。
-
-```ts src=apps/mobile/app/(tabs)/_layout.android.tsx lines=60-71
-```
-
-自动检查：541项移动端测试通过，8项跳过；类型、lint、格式、更新记录均通过。
-
-手机完成12组前后对照、选中状态与点击范围检查。本次短列表保留底栏、切换Tab通过；长列表收起与恢复也在当前版本补测通过，并另存原速录屏。
-
-此前稳定栈基线的ACTION_CANCEL保留聊天，完整边缘滑动返回列表；反向拖回边缘的注入异常，Human取消手势尚未认证。解释页不替代这些实机证据。120FPS与iOS实机尚未认证。PR2073及本PR均待Human验收。
-
-
-
+当前QA有一条正式问答：默认工具审批数字为零；额外选择正式问答后为1。多选与冷启动保存、零状态图标在实机验证；99+原生状态未实测，分页、去重与100项饱和由测试覆盖。iOS原生、TalkBack和Release120FPS尚未认证。预测返回仍沿用前一轮记录：SDK58实验栈缺少当前弹窗与header所需能力，本PR保留稳定Stack。
 </textarea>
 <script>
 (() => {
