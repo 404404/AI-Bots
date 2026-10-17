@@ -75,5 +75,6 @@ Creation with selected initial Bots follows the existing Human UI's direct-membe
 - The test service may return quota exhaustion even when readiness reports a valid route. Keep that first failure; changing to an authorized available provider is a new attempt.
 - Accessible labels are localized. Inspect the saved tree before treating a selector timeout as a product failure.
 - Management CLI requests refuse without original Human-DM provenance. Do not add a Human Host token, explicit Host override or direct-runner exception to make a Bot request pass.
+- A native turn may already be running when it receives a new Human message. Correlate completion using fresh tool-call IDs, command, handled Human delivery and a real reply; a turn start timestamp earlier than the prompt is not a failed operation.
 - Tool trace arguments/results are bounded summaries. Keep commands short and invoke the CLI directly so discovery, settings and coded refusal checks are visible; record full canonical Session evidence separately if a summary is truncated.
 - `accept` resumes an existing pending approval without sending a new Human message. A new prompt may supersede the original source, so use a fresh phase only after the prior operation settles.

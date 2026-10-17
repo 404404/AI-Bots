@@ -437,15 +437,13 @@ async function completeTurn(home, context, command, refusal) {
       'Human message delivery failed',
     );
     const evidence = await newToolCalls(home.botSlug, context.previousCalls);
-    const turn = evidence.trace.turns.find(
-      (item) =>
-        Date.parse(item.startedAt) >= context.started &&
-        item.calls.some(
-          (call) =>
-            !context.previousCalls.has(call.callId) &&
-            ['bash', 'pwsh'].includes(call.name) &&
-            JSON.stringify(call.args).includes('deepseekbot ' + command),
-        ),
+    const turn = evidence.trace.turns.find((item) =>
+      item.calls.some(
+        (call) =>
+          !context.previousCalls.has(call.callId) &&
+          ['bash', 'pwsh'].includes(call.name) &&
+          JSON.stringify(call.args).includes('deepseekbot ' + command),
+      ),
     );
     if (turn?.endReason !== undefined) assert.equal(turn.endReason, 'completed');
     const reply = fresh.find(
