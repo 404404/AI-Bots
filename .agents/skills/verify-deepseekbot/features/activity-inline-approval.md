@@ -3,7 +3,7 @@
 ## Sub-features
 
 - Full page and Dock open Human Inbox directly, without Overview or statistics.
-- Content fills the allocated Panel width in page and Dock, including after resizing; the workspace shell owns outer insets and gaps.
+- Content fills the allocated Panel width in page and Dock, including after resizing; the workspace shell owns outer insets and gaps. Rounded cards and toolbar share 16px horizontal content gutters.
 - Tool approval preview, single decision, below-card context and source navigation.
 - A failed submission remains pending and retryable; success removes the inert card with
   a 220ms exit. Removing a focused card cannot approve the next item.

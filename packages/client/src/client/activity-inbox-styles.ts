@@ -3,10 +3,11 @@ import { color, radius, space, text } from './ds/tokens.stylex.js';
 export const ACTIVITY_INBOX_CSS = `
 .bh-activity-triage { min-width: 0; }
 .bh-activity-triage > .bh-human-inbox { min-width: 0; padding: 0; }
-.bh-activity-triage .bh-activity-inbox { width: 100%; max-width: none; min-width: 0; margin: 0; }
+.bh-activity-triage .bh-activity-inbox { width: 100%; max-width: none; min-width: 0; margin: 0; padding-inline: ${space.x5}; box-sizing: border-box; }
+.bh-activity-triage .bh-activity-center-header { padding-inline: ${space.x5}; }
 .bh-activity-triage .bh-human-inbox-workspace { display: block; }
 .bh-activity-triage .bh-human-inbox-detail { grid-column: 1 / -1; min-width: 0; }
-.bh-activity-toolbar { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: ${space.x2}; padding: ${space.x4} 0; background: ${color.base}; }
+.bh-activity-toolbar { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: ${space.x2}; padding: ${space.x4} 0; background: ${color.base}; }
 .bh-activity-toolbar h2 { flex: 1; margin: 0; font-size: ${text.titleSize}; line-height: ${text.titleLine}; font-weight: ${text.strong}; }
 .bh-activity-approval { display: grid; grid-template-rows: 1fr; margin-bottom: ${space.x4}; min-width: 0; }
 .bh-activity-approval-clip { min-height: 0; min-width: 0; }
