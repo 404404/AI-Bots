@@ -841,7 +841,7 @@ The unique outer Dock panel that hosts the active Channel workspace. Its header 
 _Avoid_: Channel body, chat sidebar, message list (when referring to the whole panel)
 
 **Channel workspace**:
-The inner presentation space owned by Messages for the active Channel, containing message content and that Channel's available subpanels. Each Channel retains its own arrangement, size ratios and visibility preferences. This is the second and final layout level; its children cannot dock into the Global workspace. It does not create a second Channel selection or data authority.
+The inner presentation space owned by Messages for the active Channel, containing message content and that Channel's available subpanels. Each Channel retains its own arrangement, size ratios and visibility preferences. Subpanel placement is fixed by the Human: resizing Messages never changes a left/right split into an above/below split, or restricts its available docking sides. This is the second and final layout level; its children cannot dock into the Global workspace. It does not create a second Channel selection or data authority.
 _Avoid_: Channel sidebar, nested global workspace, DSH Workspace
 
 **Channel subpanel**:

@@ -85,6 +85,11 @@ const styles = stylex.create({
   actions: { display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: space.x1 },
 });
 
+const DOCK_DND_EDGES = {
+  size: { value: 24, type: 'pixels' },
+  activationSize: { value: 8, type: 'percentage' },
+} as const;
+
 const DOCK_THEME: DockviewTheme = {
   name: 'botharness',
   className: 'bh-dock-theme',
@@ -740,6 +745,11 @@ export function ChannelDock({
   sessionStateRef.current = sessionState;
   const [channelsHeader, setChannelsHeader] = useState<HTMLSpanElement | null>(null);
   const [gap, updateGap] = useState(() => readChannelDock(storage)?.gap ?? DEFAULT_WORKSPACE_GAP);
+  const workspaceMode = workspace !== undefined;
+  const theme = useMemo(
+    () => (workspaceMode ? { ...DOCK_THEME, gap } : DOCK_THEME),
+    [workspaceMode, gap],
+  );
   const gapRef = useRef(gap);
   const [order, updateOrder] = useState(() => readChannelDock(storage)?.order ?? []);
   const orderRef = useRef(order);
@@ -1360,11 +1370,8 @@ export function ChannelDock({
           disableFloatingGroups
           defaultRenderer="always"
           proportionalLayout
-          theme={workspace ? { ...DOCK_THEME, gap } : DOCK_THEME}
-          dndEdges={{
-            size: { value: 24, type: 'pixels' },
-            activationSize: { value: 8, type: 'percentage' },
-          }}
+          theme={theme}
+          dndEdges={DOCK_DND_EDGES}
           onReady={onReady}
         />
       </div>
