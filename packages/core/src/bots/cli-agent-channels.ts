@@ -1,11 +1,21 @@
 import type { AgentManagementInvocation } from './cli-agent-management.js';
 import { CliLiveError } from './cli-live-error.js';
+import { channelAvatarDataUrl } from './cli-channels.js';
 
 export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> = {
   channels:
     'deepseekbot channels [--limit <1..100>] [--cursor <last-channel-id>]; bounded Channel metadata, not messages',
   channel:
-    'deepseekbot channel <group-channel-id>; returns channelFingerprint for a reviewed invitation',
+    'deepseekbot channel <group-channel-id>; returns channelFingerprint for reviewed Group changes',
+  'channel-rename':
+    'deepseekbot channel-rename <group-channel-id> --name <name> --expected-channel <observed-fingerprint>',
+  'group-avatar-set':
+    'deepseekbot group-avatar-set <group-channel-id> (--avatar-file <PNG/JPEG/WebP-path> | --clear) --expected-channel <observed-fingerprint>',
+  'group-wake-policies': 'deepseekbot group-wake-policies <group-channel-id>',
+  'group-wake-set':
+    'deepseekbot group-wake-set <group-channel-id> --bot <bot-slug> (--mode <all|mentions|digest|silent> | --inherit) [--count <1..100>] [--interval <1..3600>] --expected-channel <observed-fingerprint>',
+  'group-member-remove':
+    'deepseekbot group-member-remove <group-channel-id> --bot <bot-slug> --expected-channel <observed-fingerprint>',
   'group-create':
     'deepseekbot group-create <name> --operation-key <stable-key> [--member <bot-slug> ...]; explicit initial members join directly, matching Human group creation',
   'group-invite':
@@ -15,6 +25,11 @@ export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> =
 const OPTIONS: Readonly<Record<string, readonly string[]>> = {
   channels: ['limit', 'cursor'],
   channel: [],
+  'channel-rename': ['name', 'expected-channel'],
+  'group-avatar-set': ['avatar-file', 'clear', 'expected-channel'],
+  'group-wake-policies': [],
+  'group-wake-set': ['bot', 'mode', 'count', 'interval', 'inherit', 'expected-channel'],
+  'group-member-remove': ['bot', 'expected-channel'],
   'group-create': ['member', 'operation-key'],
   'group-invite': ['bot', 'operation-key', 'expected-channel'],
 };
@@ -38,6 +53,21 @@ function operationKey(value: unknown): string {
       '--operation-key requires 8–128 letters, digits, dots, underscores, colons or hyphens, beginning with a letter or digit.',
     );
   return key;
+}
+function fingerprint(value: unknown): string {
+  const result = text(value, '--expected-channel');
+  if (!/^[a-f0-9]{64}$/u.test(result))
+    usage('--expected-channel must be the observed Channel fingerprint.');
+  return result;
+}
+function integer(value: unknown, flag: string, max: number, fallback: number): number {
+  if (value === undefined) return fallback;
+  if (typeof value !== 'string' || !/^\d+$/u.test(value.trim()))
+    usage(`${flag} must be an integer from 1 to ${String(max)}.`);
+  const result = Number(value);
+  if (!Number.isSafeInteger(result) || result < 1 || result > max)
+    usage(`${flag} must be an integer from 1 to ${String(max)}.`);
+  return result;
 }
 export function parseAgentChannels(
   command: string,
@@ -67,7 +97,44 @@ export function parseAgentChannels(
     return { command, args, write: false };
   }
   const target = text(rest[0], command === 'group-create' ? 'Group name' : 'Channel ID');
-  if (command === 'channel') return { command, args: { channelId: target }, write: false };
+  if (command === 'channel' || command === 'group-wake-policies')
+    return { command, args: { channelId: target }, write: false };
+  if (command !== 'group-create' && command !== 'group-invite') {
+    const args: Record<string, unknown> = {
+      channelId: target,
+      expectedChannel: fingerprint(values['expected-channel']),
+    };
+    switch (command) {
+      case 'channel-rename':
+        args.name = text(values.name, '--name');
+        break;
+      case 'group-avatar-set':
+        if ((values['avatar-file'] === undefined) === (values.clear !== true))
+          usage('group-avatar-set needs exactly one of --avatar-file <path> or --clear.');
+        args.avatar =
+          values.clear === true
+            ? null
+            : channelAvatarDataUrl(text(values['avatar-file'], '--avatar-file'));
+        break;
+      case 'group-member-remove':
+        args.botSlug = text(values.bot, '--bot');
+        break;
+      case 'group-wake-set': {
+        const mode = values.mode ?? (values.inherit === true ? 'digest' : undefined);
+        if (typeof mode !== 'string' || !['all', 'mentions', 'digest', 'silent'].includes(mode))
+          usage('--mode must be all, mentions, digest or silent, unless --inherit resets it.');
+        Object.assign(args, {
+          botSlug: text(values.bot, '--bot'),
+          mode,
+          count: integer(values.count, '--count', 100, 5),
+          intervalSeconds: integer(values.interval, '--interval', 3600, 30),
+          ...(values.inherit === true ? { inherit: true } : {}),
+        });
+        break;
+      }
+    }
+    return { command, args, write: true };
+  }
   const key = operationKey(values['operation-key']);
   if (command === 'group-create') {
     if (
@@ -80,9 +147,7 @@ export function parseAgentChannels(
       usage('--member must not contain duplicate Bot IDs.');
     return { command, args: { name: target, members, operationKey: key }, write: true };
   }
-  const expectedChannel = text(values['expected-channel'], '--expected-channel');
-  if (!/^[a-f0-9]{64}$/u.test(expectedChannel))
-    usage('--expected-channel must be the observed Channel fingerprint.');
+  const expectedChannel = fingerprint(values['expected-channel']);
   return {
     command,
     args: {

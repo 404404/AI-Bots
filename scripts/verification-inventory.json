@@ -1741,6 +1741,14 @@
       "reason": "Real two-Bot peer-answer triplets with accepted Bi and original B0, full histories and all-Bot usage; missed race windows and Human acceptance remain explicit.",
       "task": 2054,
       "sha256": "f39b2cdc6af7be38ee79867702c22a3947bb961a38346afdaf9ed3167f4719d7"
+    },
+    {
+      "path": "scripts/e2e-tob-group-settings.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Natural Tob Group rename, member attention and removal through rendered approval, denial and stale refusal; independent avatar clearing, canonical readback and actual settings/Members UI, plus same-Profile restart on Web/macOS.",
+      "task": 2090,
+      "sha256": "61d1770c1471e8a598df11d385585182082e1c8189b591d0814a15e658a543c0"
     }
   ],
   "native": [

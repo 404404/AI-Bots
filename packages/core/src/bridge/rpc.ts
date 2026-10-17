@@ -943,12 +943,29 @@ export class BotharnessBridgeService extends TypertRemoteService {
   channelRename(
     channelId: string,
     name: string,
+    expectedChannel?: string,
   ): { channel: ChannelRecord; bot?: PersonaBotDetail } {
-    return unwrap(this.methods.channelRename({ channelId, name }));
+    return unwrap(
+      this.methods.channelRename({
+        channelId,
+        name,
+        ...(expectedChannel === undefined ? {} : { expectedChannel }),
+      }),
+    );
   }
 
-  channelGroupAvatarSet(channelId: string, avatar: string | null): { channel: ChannelRecord } {
-    return unwrap(this.methods.channelGroupAvatarSet({ channelId, avatar }));
+  channelGroupAvatarSet(
+    channelId: string,
+    avatar: string | null,
+    expectedChannel?: string,
+  ): { channel: ChannelRecord } {
+    return unwrap(
+      this.methods.channelGroupAvatarSet({
+        channelId,
+        avatar,
+        ...(expectedChannel === undefined ? {} : { expectedChannel }),
+      }),
+    );
   }
 
   channelGroupInvite(
@@ -974,8 +991,18 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.channelGroupJoinDecide({ channelId, requestId, accept }));
   }
 
-  channelGroupMemberRemove(channelId: string, botSlug: string): { channel: ChannelRecord } {
-    return unwrap(this.methods.channelGroupMemberRemove({ channelId, botSlug }));
+  channelGroupMemberRemove(
+    channelId: string,
+    botSlug: string,
+    expectedChannel?: string,
+  ): { channel: ChannelRecord } {
+    return unwrap(
+      this.methods.channelGroupMemberRemove({
+        channelId,
+        botSlug,
+        ...(expectedChannel === undefined ? {} : { expectedChannel }),
+      }),
+    );
   }
 
   channelGroupSendReview(channelId: string, enabled?: boolean): { enabled: boolean } {
@@ -993,6 +1020,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     count: number,
     intervalSeconds: number,
     inherit?: boolean,
+    expectedChannel?: string,
   ): { channel: ChannelRecord } {
     return unwrap(
       this.methods.channelGroupWakeSet({
@@ -1002,6 +1030,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
         count,
         intervalSeconds,
         ...(inherit === undefined ? {} : { inherit }),
+        ...(expectedChannel === undefined ? {} : { expectedChannel }),
       }),
     );
   }

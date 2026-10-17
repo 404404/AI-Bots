@@ -101,6 +101,59 @@ describe('Tob scoped CLI broker', () => {
       expect(prepareOperation).toHaveBeenCalledOnce();
     },
   );
+  it('accepts the maximum Group avatar envelope while retaining a 256KiB transport limit', async () => {
+    const command = 'group-avatar-set';
+    const run = vi.fn(() => ({ accepted: true }));
+    const prepareOperation = vi.fn(() => ({
+      proposal: { command, target: 'group-1', previousValue: null, patch: { avatar: 'reviewed' } },
+      run,
+    }));
+    const f = await fixture({ prepareOperation });
+    const args = {
+      channelId: 'group-1',
+      expectedChannel: 'a'.repeat(64),
+      avatar: 'data:image/png;base64,' + Buffer.alloc(98_304).toString('base64'),
+    };
+    expect(await f.invoke(command, args, 'wrong-token')).toMatchObject({
+      status: 401,
+      error: { code: 'unauthorized' },
+    });
+    expect(prepareOperation).not.toHaveBeenCalled();
+    expect(await f.invoke(command, args)).toMatchObject({ ok: true, value: { accepted: true } });
+    expect(prepareOperation).toHaveBeenCalledWith(command, args);
+    expect(f.approve).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledOnce();
+    expect(await f.invoke(command, { ...args, avatar: 'x'.repeat(256 * 1024) })).toMatchObject({
+      status: 413,
+      error: { code: 'request-too-large' },
+    });
+    expect(prepareOperation).toHaveBeenCalledOnce();
+    prepareOperation.mockImplementationOnce(() => {
+      throw new TobError('invalid-input');
+    });
+    expect(await f.invoke(command, args)).toMatchObject({ error: { code: 'invalid-input' } });
+    expect(f.approve).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['group-member-remove', 'not-group-member'],
+    ['group-wake-policies', 'channel-access-denied'],
+  ])(
+    'preserves the %s authority refusal %s without exposing diagnostics',
+    async (command, code) => {
+      const f = await fixture({
+        prepareOperation: () => {
+          throw new TobError(code);
+        },
+      });
+      expect(await f.invoke(command, { channelId: 'group-1' })).toMatchObject({
+        ok: false,
+        error: { code, message: code },
+      });
+      expect(f.approve).not.toHaveBeenCalled();
+    },
+  );
+
   it('keeps other commands at 16KiB of received bytes including whitespace', async () => {
     const prepareOperation = vi.fn(() => ({ run: () => ({ accepted: true }) }));
     const f = await fixture({ prepareOperation });

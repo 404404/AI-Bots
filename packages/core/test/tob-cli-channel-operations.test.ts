@@ -259,3 +259,176 @@ describe('scoped Channel operations through the canonical owner', () => {
     });
   });
 });
+
+describe('reviewed Group settings and member removal', () => {
+  function groupFixture() {
+    const f = fixture();
+    f.setAutoAccept(true);
+    const group = f.core.channels.createGroup({ name: 'Project', members: ['research', 'writer'] });
+    const args = (patch: Record<string, unknown> = {}): Record<string, unknown> => ({
+      channelId: group.id,
+      expectedChannel: f.core.channelManagement.snapshot(group.id).channelFingerprint,
+      ...patch,
+    });
+    return { ...f, group, args };
+  }
+  it('reviews immutable before/after values, renames a Group, and reads back the canonical state', async () => {
+    const f = groupFixture();
+    const input = f.args({ name: 'Reviewed name' });
+    const prepared = (await f.prepare('channel-rename', input))!;
+    expect(prepared.proposal).toMatchObject({
+      target: f.group.id,
+      previousValue: { channel: { name: 'Project' } },
+      patch: { changes: { name: 'Reviewed name' } },
+    });
+    expect(Object.isFrozen(prepared.proposal!.patch)).toBe(true);
+    input.name = 'Unreviewed name';
+    const effect = vi.fn();
+    expect(await prepared.run(() => {}, effect)).toMatchObject({
+      channel: { name: 'Reviewed name' },
+    });
+    expect(effect).toHaveBeenCalledOnce();
+    expect(f.core.channels.get(f.group.id)?.name).toBe('Reviewed name');
+  });
+  it('denied review and revoked Human source cannot rename or remove a member', async () => {
+    const f = groupFixture();
+    const b = await broker(f, async () => {
+      throw new TobError('approval-denied');
+    });
+    for (const [command, changes] of [
+      ['channel-rename', { name: 'Denied' }],
+      ['group-member-remove', { botSlug: 'writer' }],
+    ] as const) {
+      const input = f.args(changes);
+      expect(await b.invoke(command, input)).toMatchObject({
+        ok: false,
+        error: { code: 'approval-denied' },
+      });
+      const prepared = (await f.prepare(command, input))!;
+      expect(() =>
+        prepared.run(() => {
+          throw new TobError('human-dm-required');
+        }),
+      ).toThrow('human-dm-required');
+    }
+    expect(b.effect).not.toHaveBeenCalled();
+    expect(f.core.channels.get(f.group.id)).toEqual(f.group);
+  });
+  it('rejects a Group changed during review without overwriting the independent edit', async () => {
+    const f = groupFixture();
+    const rename = (await f.prepare('channel-rename', f.args({ name: 'Stale name' })))!;
+    const remove = (await f.prepare('group-member-remove', f.args({ botSlug: 'writer' })))!;
+    f.core.channels.rename(f.group.id, 'Independent name');
+    const effect = vi.fn();
+    expect(() => rename.run(() => {}, effect)).toThrow('stale-channel');
+    expect(() => remove.run(() => {}, effect)).toThrow('stale-channel');
+    expect(effect).not.toHaveBeenCalled();
+    expect(f.core.channels.get(f.group.id)).toMatchObject({
+      name: 'Independent name',
+      members: ['research', 'writer'],
+    });
+  });
+  it('rejects a target profile changed during removal review', async () => {
+    const f = groupFixture();
+    const remove = (await f.prepare('group-member-remove', f.args({ botSlug: 'writer' })))!;
+    f.core.registry.update('writer', { displayName: 'Changed identity presentation' });
+    const effect = vi.fn();
+    expect(() => remove.run(() => {}, effect)).toThrow('stale-profile');
+    expect(effect).not.toHaveBeenCalled();
+    expect(f.core.channels.get(f.group.id)?.members).toContain('writer');
+  });
+  it('removes an archived member through the owner while keeping its Bot and the Group history', async () => {
+    const f = groupFixture();
+    f.core.registry.setPaused('writer', true);
+    await f.core.channels.appendMessage(f.group.id, {
+      id: 'preserved-message',
+      at: new Date().toISOString(),
+      author: { kind: 'human' },
+      body: 'Keep this history',
+    });
+    const input = f.args({ botSlug: 'writer' });
+    const b = await broker(f, async () => {});
+    expect(await b.invoke('group-member-remove', input)).toMatchObject({
+      ok: true,
+      value: { channel: { members: ['research'] } },
+    });
+    expect(f.core.registry.get('writer')).toMatchObject({ paused: true });
+    expect(
+      f.core.channels
+        .readMessages(f.group.id)
+        .some((message) => message.id === 'preserved-message'),
+    ).toBe(true);
+    expect(
+      f.core.channels
+        .readMessages(f.group.id)
+        .filter((message) => message.memberDeparture?.memberId === 'writer'),
+    ).toHaveLength(1);
+    expect(await b.invoke('group-member-remove', input)).toMatchObject({
+      ok: false,
+      error: { code: 'stale-channel' },
+    });
+    expect(b.effect).toHaveBeenCalledOnce();
+  });
+  it('reviews and applies a member wake override, then restores inheritance', async () => {
+    const f = groupFixture();
+    const input = f.args({ botSlug: 'research', mode: 'mentions', count: 5, intervalSeconds: 30 });
+    const prepared = (await f.prepare('group-wake-set', input))!;
+    expect(prepared.proposal).toMatchObject({
+      patch: { changes: { wake: { botSlug: 'research', mode: 'mentions' } } },
+    });
+    await prepared.run(() => {});
+    expect(f.core.channels.getGroupWakePolicy(f.group.id, 'research').mode).toBe('mentions');
+    expect(await f.run('group-wake-policies', { channelId: f.group.id })).toMatchObject({
+      wakePolicies: expect.arrayContaining([
+        {
+          botSlug: 'research',
+          inherited: false,
+          policy: expect.objectContaining({ mode: 'mentions' }),
+        },
+      ]),
+    });
+    await f.run(
+      'group-wake-set',
+      f.args({ botSlug: 'research', mode: 'digest', count: 5, intervalSeconds: 30, inherit: true }),
+    );
+    expect(f.core.channels.get(f.group.id)?.wakePolicies?.research).toBeUndefined();
+  });
+  it('hashes image bytes in approval/readback without leaking the full image payload', async () => {
+    const f = groupFixture();
+    const avatar = 'data:image/png;base64,iVBORw0KGgo=';
+    const prepared = (await f.prepare('group-avatar-set', f.args({ avatar })))!;
+    expect(JSON.stringify(prepared.proposal)).not.toContain(avatar);
+    expect(prepared.proposal).toMatchObject({
+      patch: { changes: { avatar: { present: true, sha256: expect.any(String) } } },
+    });
+    await prepared.run(() => {});
+    expect(f.core.channels.get(f.group.id)?.avatar).toBe(avatar);
+    await f.run('group-avatar-set', f.args({ avatar: null }));
+    expect(f.core.channels.get(f.group.id)?.avatar).toBeUndefined();
+  });
+  it('rejects malformed inputs before presenting a mutation', async () => {
+    const f = groupFixture();
+    for (const [command, input] of [
+      ['channel-rename', { channelId: f.group.id, name: 'Missing fingerprint' }],
+      ['channel-rename', f.args({ name: 'x'.repeat(121) })],
+      ['group-avatar-set', f.args({ avatar: 'https://untrusted.example/avatar.png' })],
+      [
+        'group-wake-set',
+        f.args({ botSlug: 'research', mode: 'mentions', count: 0, intervalSeconds: 30 }),
+      ],
+      ['group-member-remove', f.args({ botSlug: 'writer', ownerBotSlug: 'writer' })],
+    ] as const)
+      await expect(f.run(command, input)).rejects.toMatchObject({ code: 'invalid-input' });
+    await expect(
+      f.run('group-member-remove', f.args({ botSlug: 'missing' })),
+    ).rejects.toMatchObject({ code: 'not-group-member' });
+    const dm = f.core.channels.getOrCreateDm('research')!;
+    await expect(
+      f.run('channel-rename', {
+        channelId: dm.id,
+        name: 'Wrong scope',
+        expectedChannel: 'a'.repeat(64),
+      }),
+    ).rejects.toMatchObject({ code: 'not-group-channel' });
+  });
+});

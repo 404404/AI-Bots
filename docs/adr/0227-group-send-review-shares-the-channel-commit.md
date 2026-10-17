@@ -92,3 +92,5 @@ can still omit oversized messages, which never become observed.
 Successful submission deletes the pending draft inside the same Channel commit transaction;
 the canonical Channel message remains, and an explicit retry of the retired draft is refused.
 Unfinished and dropped intents retain the existing conservative inspection/purge behavior.
+
+Attachment comparisons use the Channel owner’s shared migration/current-file projection, matching the content actually returned by a read. Observations keep that returned snapshot; the commit check never refreshes the observed basis. A later visible file metadata change therefore holds the send, while a retained legacy payload does not cause a false recheck against its already migrated reference.

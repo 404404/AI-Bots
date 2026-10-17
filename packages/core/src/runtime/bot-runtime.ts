@@ -1356,6 +1356,7 @@ class BotRuntimeImplementation implements BotRuntime {
     this.groupSendReview = new GroupSendReview(
       attachOperationalModule(options.database, 'channel-send-review'),
       options.now,
+      options.channels.projectMessageAttachments,
     );
     this.#inboxHistory =
       options.inboxHistory ??

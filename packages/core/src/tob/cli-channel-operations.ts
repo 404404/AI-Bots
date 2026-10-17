@@ -1,7 +1,8 @@
+import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { PersonaBotRegistry } from '../bots/registry.js';
 import { botProfileFingerprint } from '../bots/profile-snapshot.js';
-import type { ChannelRecord } from '../channels/channel.js';
+import { isGroupAvatar, type ChannelRecord } from '../channels/channel.js';
 import type { ChannelStore } from '../channels/store.js';
 import { ChannelManagementError, type ChannelManagementService } from '../channels/management.js';
 import type { PrepareTobOperation, TobCliCapability } from './cli-operations.js';
@@ -29,6 +30,27 @@ export const TOB_CHANNEL_CAPABILITIES: readonly TobCliCapability[] = [
     command: 'group-invite',
     description:
       'Invite one active Bot under the reviewed Group invitation policy; preserve the canonical acceptance outcome',
+    write: true,
+  },
+  {
+    command: 'channel-rename',
+    description: 'Rename a reviewed Group, preserving other settings',
+    write: true,
+  },
+  { command: 'group-avatar-set', description: 'Set or clear a reviewed Group avatar', write: true },
+  {
+    command: 'group-wake-policies',
+    description: 'Read effective member wake policies and the current Group fingerprint',
+    write: false,
+  },
+  {
+    command: 'group-wake-set',
+    description: 'Set or inherit a reviewed Group member wake policy',
+    write: true,
+  },
+  {
+    command: 'group-member-remove',
+    description: 'Remove a reviewed Bot member from a Group, preserving its Bot and history',
     write: true,
   },
 ];
@@ -68,12 +90,21 @@ function freeze<T>(value: T): T {
   }
   return value;
 }
+function imageView(value: string) {
+  return {
+    present: true,
+    sha256: createHash('sha256').update(value).digest('hex'),
+    bytes: Buffer.byteLength(value),
+    type: value.split(';')[0],
+  };
+}
 function channelView(channel: ChannelRecord) {
   const invitations = channel.invitations ?? [];
   return {
     id: channel.id,
     type: channel.type,
     name: channel.name,
+    ...(channel.avatar ? { avatar: imageView(channel.avatar) } : {}),
     members: channel.members.slice(0, 100),
     memberCount: channel.members.length,
     ...(channel.members.length > 100 ? { membersOmitted: channel.members.length - 100 } : {}),
@@ -145,6 +176,139 @@ export function createTobChannelOperations(deps: {
         run(guard) {
           guard();
           return view(owner(() => deps.management.snapshot(channelId)));
+        },
+      };
+    }
+    if (
+      [
+        'channel-rename',
+        'group-avatar-set',
+        'group-wake-policies',
+        'group-wake-set',
+        'group-member-remove',
+      ].includes(command)
+    ) {
+      const fields: Record<string, string[]> = {
+        'channel-rename': ['name'],
+        'group-avatar-set': ['avatar'],
+        'group-wake-policies': [],
+        'group-wake-set': ['botSlug', 'mode', 'count', 'intervalSeconds', 'inherit'],
+        'group-member-remove': ['botSlug'],
+      };
+      keys(args, [
+        'channelId',
+        ...(command === 'group-wake-policies' ? [] : ['expectedChannel']),
+        ...fields[command]!,
+      ]);
+      const channelId = text(args.channelId);
+      if (command === 'group-wake-policies')
+        return {
+          run(guard) {
+            guard();
+            return view(owner(() => deps.management.wakePolicies(channelId)));
+          },
+        };
+      const expectedChannel = text(args.expectedChannel);
+      if (!/^[a-f0-9]{64}$/u.test(expectedChannel)) throw new TobError('invalid-input');
+      const previous = structuredClone(owner(() => deps.management.wakePolicies(channelId)));
+      if (previous.channelFingerprint !== expectedChannel) throw new TobError('stale-channel');
+      const member = (slug: string, allowPaused: boolean) => {
+        if (deps.isProtectedBot(slug)) throw new TobError('protected-bot');
+        if (!previous.channel.members.includes(slug)) throw new TobError('not-group-member');
+        const record = deps.registry.get(slug);
+        if (!record) throw new TobError('unknown-bot');
+        if (!allowPaused && record.paused) throw new TobError('archived-bot');
+        return {
+          slug,
+          displayName: record.displayName,
+          createdAt: record.createdAt,
+          profileFingerprint: botProfileFingerprint(record),
+        };
+      };
+      let targetBot: ReturnType<typeof member> | undefined;
+      let changes: unknown;
+      let apply: () => ReturnType<ChannelManagementService['snapshot']>;
+      switch (command) {
+        case 'channel-rename': {
+          const name = text(args.name);
+          if (name.length > 120) throw new TobError('invalid-input');
+          changes = { name };
+          apply = () => deps.management.rename({ channelId, name, expectedChannel });
+          break;
+        }
+        case 'group-avatar-set': {
+          const avatar = args.avatar;
+          if (avatar !== null && !isGroupAvatar(avatar)) throw new TobError('invalid-input');
+          changes = { avatar: avatar === null ? null : imageView(avatar) };
+          apply = () => deps.management.setAvatar({ channelId, avatar, expectedChannel });
+          break;
+        }
+        case 'group-member-remove': {
+          const botSlug = text(args.botSlug);
+          targetBot = member(botSlug, true);
+          changes = {
+            removeMember: {
+              ...targetBot,
+              clearsGroupOwner: previous.channel.ownerBotSlug === botSlug,
+            },
+            preservesBotAndHistory: true,
+          };
+          apply = () => deps.management.removeMember({ channelId, botSlug, expectedChannel });
+          break;
+        }
+        case 'group-wake-set': {
+          const botSlug = text(args.botSlug);
+          targetBot = member(botSlug, false);
+          const { mode, count, intervalSeconds, inherit } = args;
+          if (
+            typeof mode !== 'string' ||
+            !['all', 'mentions', 'digest', 'silent'].includes(mode) ||
+            typeof count !== 'number' ||
+            !Number.isInteger(count) ||
+            count < 1 ||
+            count > 100 ||
+            typeof intervalSeconds !== 'number' ||
+            !Number.isInteger(intervalSeconds) ||
+            intervalSeconds < 1 ||
+            intervalSeconds > 3600 ||
+            (inherit !== undefined && typeof inherit !== 'boolean')
+          )
+            throw new TobError('invalid-input');
+          const wake = {
+            botSlug,
+            mode: mode as 'all' | 'mentions' | 'digest' | 'silent',
+            count,
+            intervalSeconds,
+            ...(inherit === undefined ? {} : { inherit }),
+          };
+          changes = { wake, member: targetBot };
+          apply = () => deps.management.setWake({ channelId, ...wake, expectedChannel });
+          break;
+        }
+        default:
+          throw new TobError('unsupported-command');
+      }
+      return {
+        proposal: freeze({
+          command,
+          target: channelId,
+          previousValue: view(previous),
+          patch: { expectedChannel, changes },
+        }),
+        run(guard, beforeEffect) {
+          guard();
+          if (
+            owner(() => deps.management.wakePolicies(channelId)).channelFingerprint !==
+            expectedChannel
+          )
+            throw new TobError('stale-channel');
+          if (
+            targetBot &&
+            !isDeepStrictEqual(member(targetBot.slug, command === 'group-member-remove'), targetBot)
+          )
+            throw new TobError('stale-profile');
+          beforeEffect?.();
+          return view(owner(apply));
         },
       };
     }

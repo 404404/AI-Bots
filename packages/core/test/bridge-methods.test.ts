@@ -32,6 +32,19 @@ import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 const roots: string[] = [];
 const modelOwners: OperationalDatabaseOwner[] = [];
 
+it('reports unavailable Group review without blaming roster storage', () => {
+  const { registry, channels, methods } = setup();
+  registry.create({ slug: 'ada', displayName: 'Ada' });
+  const channel = channels.createGroup({ name: 'Review', members: ['ada'] });
+  vi.spyOn(channels, 'listHumanMembers').mockReturnValue([
+    { humanId: 'local-human', displayName: 'Human' },
+  ]);
+  expect(methods.channelGroupSendReview({ channelId: channel.id })).toEqual({
+    ok: false,
+    error: { code: 'unavailable', message: 'Group send review is unavailable on this Host' },
+  });
+});
+
 describe('composer recovery reference validation', () => {
   it('uses current Human-visible reply and attachment facts without accepting draft text', async () => {
     const { channels, attachments, methods } = setup();

@@ -61,6 +61,10 @@ export class GroupSendReview {
   constructor(
     readonly database: OperationalDatabaseModulePort,
     readonly now: () => Date = () => new Date(),
+    readonly projectMessageAttachments: (
+      sourceEventId: string,
+      message: ChannelMessage,
+    ) => ChannelMessage = (_sourceEventId, message) => message,
   ) {}
 
   enabled(channelId: string): boolean {
@@ -132,7 +136,7 @@ export class GroupSendReview {
             const seen = validObservation && observation.seen.find((item) => item.id === id);
             if (!seen) return false;
             const row = db
-              .prepare(`SELECT e.payload_json, e.body FROM channel_placements p
+              .prepare(`SELECT p.source_event_id, e.payload_json, e.body FROM channel_placements p
                 JOIN source_events e ON e.source_event_id = p.source_event_id
                 WHERE p.channel_id = ? AND p.message_id = ?
                 AND NOT EXISTS (SELECT 1 FROM messaging_purge_facts f
@@ -149,7 +153,8 @@ export class GroupSendReview {
               !isChannelNotice(message) &&
               !message.sessionFailure &&
               !!message.body.trim() &&
-              fingerprint(message) === seen.hash
+              fingerprint(this.projectMessageAttachments(String(row.source_event_id), message)) ===
+                seen.hash
             );
           });
         if (!validPeers)
@@ -271,7 +276,7 @@ export class GroupSendReview {
       .get(channelId, channelId, floor);
     if (purged) return fail('refused', 'observed-content-purged');
     const rows = db
-      .prepare(`SELECT p.message_id, p.revision, e.payload_json, e.body
+      .prepare(`SELECT p.message_id, p.revision, p.source_event_id, e.payload_json, e.body
       FROM channel_placements p JOIN source_events e ON e.source_event_id = p.source_event_id
       WHERE p.channel_id = ? AND p.revision >= ?
       ORDER BY p.revision DESC ${allBasis.length === 0 ? 'LIMIT 20' : ''}`)
@@ -288,7 +293,10 @@ export class GroupSendReview {
           (content.author?.kind !== 'human' && content.author?.kind !== 'bot')
         )
           return false;
-        return seen.get(String(row.message_id))?.hash !== fingerprint(content);
+        return (
+          seen.get(String(row.message_id))?.hash !==
+          fingerprint(this.projectMessageAttachments(String(row.source_event_id), content))
+        );
       })
       .map((row) => String(row.message_id));
     if (basis.length === 0 || changed.length > 0) {
