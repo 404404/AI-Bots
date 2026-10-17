@@ -2618,13 +2618,15 @@ export async function runBotCreateCli(
           'channel-hide',
           'channel-mute',
           'channel-human-name-set',
+          'profile-recovery-authorize',
+          'profile-recovery-activate',
           'client-preferences-set',
           'client-layout-set',
           'client-shortcuts-set',
         ].includes(command))
     )
       throw usageError(
-        '--expected-state is supported only for online Channel or Client preference changes.',
+        '--expected-state is supported only for online Channel, Client preference or Profile recovery changes.',
       );
     if (
       values['operation-key'] !== undefined &&

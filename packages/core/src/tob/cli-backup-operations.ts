@@ -1,16 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import {
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import {
   BACKUP_COMMANDS,
+  BACKUP_OWNER_CODES,
+  privateBackupOutput,
   backupInspectionView,
   backupJson,
   backupPreviewView,
@@ -20,6 +15,7 @@ import type { PersonaBotRegistry } from '../bots/registry.js';
 import { PROFILE_BACKUP_PATH } from '../portability/http.js';
 import { digest } from '../portability/files.js';
 import type { PrepareTobOperation } from './cli-operations.js';
+import { CliLiveError } from '../bots/cli-live-error.js';
 import { TobError } from './service.js';
 export const TOB_BACKUP_CAPABILITIES = BACKUP_COMMANDS.map((entry) => ({
   ...entry,
@@ -35,7 +31,7 @@ function id(raw: unknown): string {
   return raw;
 }
 export function createTobBackupOperations(deps: {
-  http(request: Request): Promise<Response>;
+  http(request: Request, authorize?: () => void): Promise<Response>;
   root: string;
   registry: Pick<PersonaBotRegistry, 'get'>;
 }): PrepareTobOperation {
@@ -44,7 +40,7 @@ export function createTobBackupOperations(deps: {
     string,
     { token: string; view: ReturnType<typeof backupPreviewView>; expires: number }
   >();
-  const request = (suffix: string, value?: Record<string, unknown>) =>
+  const request = (suffix: string, value?: Record<string, unknown>, authorize?: () => void) =>
     deps.http(
       new Request(
         'http://localhost' + PROFILE_BACKUP_PATH + suffix,
@@ -56,8 +52,24 @@ export function createTobBackupOperations(deps: {
               body: JSON.stringify(value),
             },
       ),
+      authorize,
     );
-  const status = async () => backupRecoveryView(await backupJson(await request('/recovery')));
+  const json = async (response: Response) => {
+    try {
+      return await backupJson(response);
+    } catch (error) {
+      if (error instanceof CliLiveError)
+        throw new TobError(
+          BACKUP_OWNER_CODES.has(error.code)
+            ? error.code
+            : error.code === 'host-unauthorized'
+              ? 'tob-authority-required'
+              : 'operation-failed',
+        );
+      throw error;
+    }
+  };
+  const status = async () => backupRecoveryView(await json(await request('/recovery')));
   const snapshot = async (slug: string) => ({
     recovery: await status(),
     plan: structuredClone(deps.registry.get(slug)?.modelPlan),
@@ -80,7 +92,7 @@ export function createTobBackupOperations(deps: {
       return {
         async run(guard) {
           guard();
-          const raw = (await backupJson(await request(''))) as Record<string, unknown>;
+          const raw = (await json(await request(''))) as Record<string, unknown>;
           guard();
           if (typeof raw.token !== 'string') throw new TobError('unavailable');
           for (const [key, plan] of plans) if (plan.expires < Date.now()) plans.delete(key);
@@ -108,6 +120,31 @@ export function createTobBackupOperations(deps: {
       if (args.confirm !== true) throw new TobError('confirmation-required');
       const planId = id(args.planId),
         plan = plans.get(planId);
+      const archiveFile = join(folder(), planId + '.botharness-backup');
+      const completed = () => {
+        const stat = lstatSync(archiveFile, { throwIfNoEntry: false });
+        if (!stat) return undefined;
+        if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 512 * 1024 * 1024)
+          throw new TobError('invalid-input');
+        const archive = readFileSync(archiveFile);
+        return {
+          receiptId: planId,
+          archiveFile,
+          bytes: archive.length,
+          sha256: digest(archive),
+          state: 'exported',
+          reconciled: true,
+        };
+      };
+      if (completed())
+        return {
+          run(guard) {
+            guard();
+            const receipt = completed();
+            if (!receipt) throw new TobError('preview-stale');
+            return receipt;
+          },
+        };
       if (!plan || plan.expires < Date.now()) throw new TobError('preview-stale');
       return {
         proposal: Object.freeze({
@@ -134,7 +171,7 @@ export function createTobBackupOperations(deps: {
             beforeEffect?.();
             plans.delete(planId);
             const response = await request('', { token: plan.token });
-            if (!response.ok) await backupJson(response);
+            if (!response.ok) await json(response);
             const archive = Buffer.from(await response.arrayBuffer());
             if (
               archive.byteLength +
@@ -145,9 +182,15 @@ export function createTobBackupOperations(deps: {
             const sha256 = digest(archive);
             if (sha256 !== response.headers.get('x-backup-sha256'))
               throw new TobError('package-invalid');
-            const receiptId = randomUUID(),
-              archiveFile = join(root, receiptId + '.botharness-backup');
-            writeFileSync(archiveFile, archive, { flag: 'wx', mode: 0o600 });
+            const receiptId = planId;
+            const output = privateBackupOutput(archiveFile);
+            try {
+              output.write(archive);
+              guard();
+              output.publish();
+            } finally {
+              output.close();
+            }
             try {
               guard();
             } catch {
@@ -177,7 +220,7 @@ export function createTobBackupOperations(deps: {
           } catch {
             throw new TobError('invalid-input');
           }
-          const value = await backupJson(
+          const value = await json(
             await deps.http(
               new Request('http://localhost' + PROFILE_BACKUP_PATH + '/inspect', {
                 method: 'POST',
@@ -214,11 +257,18 @@ export function createTobBackupOperations(deps: {
         if (!isDeepStrictEqual(await snapshot(slug), previous)) throw new TobError('stale-setting');
         guard();
         beforeEffect?.();
-        const raw = await backupJson(
-          await request(activate ? '/activate' : '/authorize', {
-            slug,
-            ...(activate ? { acknowledgeSplitBrain: true } : {}),
-          }),
+        const raw = await json(
+          await request(
+            activate ? '/activate' : '/authorize',
+            {
+              slug,
+              expectedRevision: previous.plan?.revision,
+              expectedState: previous.recovery.bots.find((bot) => bot.slug === slug)
+                ?.stateFingerprint,
+              ...(activate ? { acknowledgeSplitBrain: true } : {}),
+            },
+            guard,
+          ),
         );
         try {
           guard();

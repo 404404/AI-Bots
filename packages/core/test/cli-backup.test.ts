@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   statSync,
@@ -19,12 +20,15 @@ import { createCore, type BotHarnessCore } from '../src/plugin.js';
 import { createProfileBackupHttp } from '../src/portability/http.js';
 import { inspectProfileBackup, restoreProfileBackup } from '../src/portability/package.js';
 import { createTobBackupOperations } from '../src/tob/cli-backup-operations.js';
+import { startTobCliBroker } from '../src/tob/cli-broker.js';
+import { TobError } from '../src/tob/service.js';
 import { parseAgentBackup } from '../src/bots/cli-agent-backup.js';
 const roots: string[] = [],
   cores: BotHarnessCore[] = [],
   servers: ReturnType<typeof createServer>[] = [];
 const catalog = { list: async () => [], validate: async () => undefined };
 const logs: string[] = [];
+const brokerClosers: Array<() => Promise<void>> = [];
 const route = { provider: 'deepseek', model: 'deepseek-chat' };
 function root() {
   const path = realpathSync(mkdtempSync(join(tmpdir(), 'bh-cli-backup-')));
@@ -56,6 +60,7 @@ function handler(core: BotHarnessCore) {
 }
 afterEach(async () => {
   vi.useRealTimers();
+  for (const close of brokerClosers.splice(0)) await close();
   await Promise.all(
     servers.splice(0).map(
       (server) =>
@@ -270,9 +275,22 @@ it('keeps scoped preview tokens Host-local and exports/inspects only through pro
     sha256: receipt.sha256,
     counts: { bots: 1 },
   });
-  await expect(
-    prepare('profile-backup-export', { planId: view.planId, confirm: true }),
-  ).rejects.toMatchObject({ code: 'preview-stale' });
+  expect(receipt.receiptId).toBe(view.planId);
+  const replay = await prepare('profile-backup-export', { planId: view.planId, confirm: true });
+  expect(replay?.proposal).toBeUndefined();
+  expect(await replay!.run(guard)).toMatchObject({ ...receipt, reconciled: true });
+  const reconnected = createTobBackupOperations({
+    http,
+    root: join(files, 'protected'),
+    registry: core.registry,
+  });
+  const afterRestart = await reconnected('profile-backup-export', {
+    planId: view.planId,
+    confirm: true,
+  });
+  expect(afterRestart?.proposal).toBeUndefined();
+  expect(await afterRestart!.run(guard)).toMatchObject({ ...receipt, reconciled: true });
+  expect(readdirSync(join(files, 'protected'))).toEqual([view.planId + '.botharness-backup']);
   expect(JSON.stringify([view, operation?.proposal, receipt])).not.toContain(
     'PRIVATE_ARCHIVE_CONTENT',
   );
@@ -384,3 +402,188 @@ it('removes an interrupted or digest-mismatched download and sanitizes unknown o
     backupJson(new Response('expired authority', { status: 401 })),
   ).rejects.toMatchObject({ code: 'host-unauthorized' });
 });
+
+async function restoredSeed() {
+  const core = seed(),
+    http = handler(core);
+  const preview = await (
+    await http(new Request('http://host/api/botharness/profile-backup'))
+  ).json();
+  const response = await http(
+    new Request('http://host/api/botharness/profile-backup', {
+      method: 'POST',
+      body: JSON.stringify({ token: preview.token }),
+    }),
+  );
+  expect(response.ok).toBe(true);
+  const home = join(root(), 'restored');
+  await restoreProfileBackup(Buffer.from(await response.arrayBuffer()), home);
+  return mount(home);
+}
+it.each(['authorize', 'activate'] as const)(
+  'binds reviewed revision through the async HTTP boundary before %s owner capture',
+  async (action) => {
+    const restored = await restoredSeed();
+    if (action === 'activate') await restored.profileRecovery.authorizeModel('keeper', catalog);
+    const http = handler(restored);
+    const prepare = createTobBackupOperations({
+      root: root(),
+      registry: restored.registry,
+      http: async (request, guard) => {
+        if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/' + action)) {
+          const current = restored.registry.get('keeper')!.modelPlan!;
+          restored.registry.customizeModelPlan(
+            'keeper',
+            { ...route, model: 'independent-later-plan' },
+            current.revision,
+          );
+        }
+        return http(request, guard);
+      },
+    });
+    const operation = await prepare('profile-recovery-' + action, {
+      slug: 'keeper',
+      confirm: true,
+      ...(action === 'activate' ? { acknowledgeSplitBrain: true } : {}),
+    });
+    const sessions = restored.ownership.list();
+    await expect(operation!.run(() => {})).rejects.toMatchObject({ code: 'plan-changed' });
+    expect(restored.ownership.list()).toEqual(sessions);
+    expect((await restored.profileRecovery.status(catalog)).bots[0]?.reason).toBe(
+      'model-authorization-required',
+    );
+    expect(restored.registry.get('keeper')?.paused).toBe(true);
+  },
+);
+it('binds activation recovery state and current authority at the owner commit after model validation', async () => {
+  const restored = await restoredSeed();
+  await restored.profileRecovery.authorizeModel('keeper', catalog);
+  const observed = (await restored.profileRecovery.status(catalog)).bots[0]!;
+  const sessions = restored.ownership.list();
+  restored.registry.setPaused('keeper', false);
+  expect(() =>
+    restored.profileRecovery.activate('keeper', true, {
+      planRevision: observed.planRevision,
+      stateFingerprint: observed.stateFingerprint,
+    }),
+  ).toThrowError(expect.objectContaining({ code: 'plan-changed' }));
+  expect(restored.ownership.list()).toEqual(sessions);
+  let authorized = true;
+  const fresh = await restoredSeed();
+  const now = (await fresh.profileRecovery.status(catalog)).bots[0]!;
+  await expect(
+    fresh.profileRecovery.authorizeModel(
+      'keeper',
+      {
+        list: catalog.list,
+        validate: async () => {
+          authorized = false;
+        },
+      },
+      { planRevision: now.planRevision, stateFingerprint: now.stateFingerprint },
+      () => {
+        if (!authorized) throw new TobError('agent-context-expired');
+      },
+    ),
+  ).rejects.toMatchObject({ code: 'agent-context-expired' });
+  expect((await fresh.profileRecovery.status(catalog)).bots[0]?.reason).toBe(
+    'model-authorization-required',
+  );
+});
+it.each(['preview-stale', 'too-large', 'package-invalid', 'plan-changed'])(
+  'preserves scoped backup owner refusal %s through the actual broker and CLI',
+  async (code) => {
+    const core = seed();
+    const prepare = createTobBackupOperations({
+      root: root(),
+      registry: core.registry,
+      http: async (request) =>
+        request.method === 'POST'
+          ? Response.json({ error: { code } }, { status: 400 })
+          : Response.json({
+              token: '00000000-0000-0000-0000-000000000000',
+              bots: 1,
+              files: 1,
+              estimatedBytes: 10,
+              sessions: 'unsupported',
+            }),
+    });
+    const broker = await startTobCliBroker({
+      signal: new AbortController().signal,
+      authorize() {},
+      readSetting: () => ({ scope: 'global', value: 8, revision: 0 }),
+      writeSetting: async () => ({ scope: 'global', value: 8, revision: 0 }),
+      prepareOperation: prepare,
+      approve: async () => {},
+    });
+    brokerClosers.push(broker.close);
+    const invoke = async (argv: string[]) => {
+      const output: string[] = [];
+      await runBotCreateCli(argv, {
+        env: { DEEPSEEKBOT_AGENT_ENDPOINT: broker.endpoint, DEEPSEEKBOT_AGENT_TOKEN: broker.token },
+        stdout: (value) => output.push(value),
+        stderr() {},
+      });
+      expect(output).toHaveLength(1);
+      return JSON.parse(output[0]!);
+    };
+    const preview = await invoke(['profile-backup-preview']);
+    expect(
+      await invoke(['profile-backup-export', '--plan', preview.planId, '--confirm']),
+    ).toMatchObject({ error: { code } });
+  },
+);
+it.each([false, true])(
+  'publishes only fully hashed sibling staging bytes and preserves a concurrent destination (race=%s)',
+  async (race) => {
+    const files = root(),
+      plan = join(files, 'plan'),
+      out = join(files, 'archive');
+    writeFileSync(
+      plan,
+      JSON.stringify({
+        origin: 'http://127.0.0.1:1234',
+        token: '00000000-0000-0000-0000-000000000000',
+      }),
+      { mode: 0o600 },
+    );
+    let controller: ReadableStreamDefaultController<Uint8Array>;
+    const bytes = Buffer.from('first chunk followed by verified complete bytes');
+    const { createHash } = await import('node:crypto');
+    const running = runBackupCommand(
+      'profile-backup-export',
+      [],
+      { file: plan, out, confirm: true },
+      { env: { DEEPSEEKBOT_HOST: 'http://127.0.0.1:1234' }, stdout() {}, stderr() {} },
+      async () => ({
+        stream: async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(value) {
+                controller = value;
+                value.enqueue(bytes.subarray(0, 11));
+              },
+            }),
+            { headers: { 'x-backup-sha256': createHash('sha256').update(bytes).digest('hex') } },
+          ),
+      }),
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(existsSync(out)).toBe(false);
+    const stage = readdirSync(files).find((name) => name.endsWith('.part'))!;
+    expect(stage).toBeTruthy();
+    expect(statSync(join(files, stage)).mode & 0o777).toBe(0o600);
+    expect(readFileSync(join(files, stage))).toEqual(bytes.subarray(0, 11));
+    if (race) writeFileSync(out, 'independent verified file', { flag: 'wx' });
+    controller!.enqueue(bytes.subarray(11));
+    controller!.close();
+    if (race) {
+      await expect(running).rejects.toMatchObject({ code: 'destination-exists' });
+      expect(readFileSync(out, 'utf8')).toBe('independent verified file');
+    } else {
+      expect(await running).toMatchObject({ state: 'exported', bytes: bytes.length });
+      expect(readFileSync(out)).toEqual(bytes);
+    }
+    expect(readdirSync(files).some((name) => name.endsWith('.part'))).toBe(false);
+  },
+);

@@ -9,6 +9,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
@@ -31,6 +32,9 @@ import type { ModelCatalog } from '../src/models/catalog.js';
 import { selectAssignmentRoute, type ModelRoute } from '../src/models/presets.js';
 import { createModelRouteReadiness } from '../src/models/readiness.js';
 import type { MessagingProvider } from '../src/messaging/provider.js';
+import { createDevicePairing } from '../src/devices/pairing.js';
+import { createDeviceGateway, DEVICE_GATEWAY_PREFIX } from '../src/devices/gateway.js';
+import { createSecretMcpStore } from '../src/credentials/secret-mcp-store.js';
 import { createProfileBackupHttp, PROFILE_BACKUP_PATH } from '../src/portability/http.js';
 
 const roots: string[] = [];
@@ -681,4 +685,120 @@ it('rejects a self-consistent manifest whose database references omitted attachm
   expect(readFileSync(core.attachments.fileTarget(file.fileId!).path, 'utf8')).toBe(
     'current editable bytes',
   );
+});
+
+it('restores content without imported device, push, secret execution or protected steward authority', async () => {
+  const core = mount();
+  expect(
+    core.registry.create({
+      slug: 'keeper',
+      displayName: 'Keeper',
+      persona: 'Retain this personality',
+    }).ok,
+  ).toBe(true);
+  const steward = await core.tob.ensure();
+  const pair = createDevicePairing({
+    database: attachOperationalModule(core.operationalDatabase, 'device-pairing'),
+    hostName: 'source',
+  });
+  const sourceHost = pair.host();
+  const paired = pair.redeem({ offer: pair.createOffer().offer, name: 'Fixture phone' });
+  if (!paired.ok) throw new Error('pairing precondition');
+  const secrets = createSecretMcpStore(
+    attachOperationalModule(core.operationalDatabase, 'secret-mcp'),
+  );
+  secrets.put({
+    botSlug: 'keeper',
+    serverName: 'fixture-server',
+    account: 'fixture-account',
+    program: 'fixture-program',
+    args: [],
+    env: [],
+    references: ['fixture-ref'],
+  });
+  secrets.setEnabled('keeper', 'keeper', 'fixture-server', true);
+  attachOperationalModule(core.operationalDatabase, 'push').transaction((db) =>
+    db
+      .prepare(
+        'INSERT INTO push_devices (device_id,token,platform,preferences_json,registered_at) VALUES (?,?,?,?,?)',
+      )
+      .run(paired.device.id, 'synthetic-push-token', 'ios', '{}', new Date().toISOString()),
+  );
+  const archive = join(root(), 'source.botharness-backup');
+  await exportProfileBackup(source(core), archive);
+  const targetHome = join(root(), 'restored');
+  await restoreProfileBackup(readFileSync(archive), targetHome);
+  const target = mount(targetHome);
+  const targetPair = createDevicePairing({
+    database: attachOperationalModule(target.operationalDatabase, 'device-pairing'),
+    hostName: 'target',
+  });
+  expect(targetPair.host().id).not.toBe(sourceHost.id);
+  expect(targetPair.admit('Device ' + paired.credential)).toMatchObject({ ok: false });
+  expect(targetPair.list()).toEqual([
+    expect.objectContaining({ id: paired.device.id, revokedAt: expect.any(String) }),
+  ]);
+  expect(
+    createSecretMcpStore(
+      attachOperationalModule(target.operationalDatabase, 'secret-mcp'),
+    ).listAll(),
+  ).toEqual([]);
+  expect(
+    attachOperationalModule(target.operationalDatabase, 'push').read(
+      (db) => db.prepare('SELECT COUNT(*) AS n FROM push_devices').get()?.n,
+    ),
+  ).toBe(0);
+  expect(target.tob.isTob(steward.botSlug)).toBe(false);
+  expect(target.registry.get(steward.botSlug)?.paused).toBe(true);
+  const freshSteward = await target.tob.ensure();
+  expect(freshSteward.botSlug).not.toBe(steward.botSlug);
+  expect(target.tob.isTob(freshSteward.botSlug)).toBe(true);
+  expect(readFileSync(join(target.registry.memoryDirFor('keeper')!, 'SOUL.md'), 'utf8')).toContain(
+    'Retain this personality',
+  );
+  expect(pair.host()).toEqual(sourceHost);
+  expect(pair.admit('Device ' + paired.credential).ok).toBe(true);
+  expect(core.tob.isTob(steward.botSlug)).toBe(true);
+  expect(secrets.listAll()).toHaveLength(1);
+  let gateway: ReturnType<typeof createDeviceGateway>;
+  let cookieLookups = 0;
+  const server = createServer((request, response) => void gateway.handle(request, response));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('test address');
+  gateway = createDeviceGateway({
+    pairing: targetPair,
+    port: () => address.port,
+    authenticatedUrl: () => {
+      cookieLookups++;
+      return 'http://invalid';
+    },
+  });
+  try {
+    const response = await fetch(
+      'http://127.0.0.1:' +
+        address.port +
+        DEVICE_GATEWAY_PREFIX +
+        '/api/botharness/profile-backup/recovery',
+      { headers: { authorization: 'Device ' + paired.credential } },
+    );
+    expect(response.status).toBe(401);
+    expect(cookieLookups).toBe(0);
+    const http = createProfileBackupHttp(source(target), root(), target.profileRecovery, catalog);
+    expect(
+      (await http(new Request('http://operator' + PROFILE_BACKUP_PATH + '/recovery'))).status,
+    ).toBe(200);
+    const newPair = targetPair.redeem({
+      offer: targetPair.createOffer().offer,
+      name: 'Re-paired phone',
+    });
+    if (!newPair.ok) throw new Error('target pairing');
+    expect(targetPair.admit('Device ' + newPair.credential).ok).toBe(true);
+    expect(targetPair.admit('Device ' + paired.credential).ok).toBe(false);
+  } finally {
+    await new Promise<void>((resolve) => {
+      server.closeAllConnections();
+      server.close(() => resolve());
+    });
+  }
 });

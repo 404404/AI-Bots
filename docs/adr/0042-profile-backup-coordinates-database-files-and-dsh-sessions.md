@@ -52,6 +52,14 @@ Every backup must pass those structural and integrity checks, but v1 does not pe
 - **Apply a fixed default byte cap with automatic pruning** — rejected for v1: backup files are explicitly Human-managed, while disk-space preflight prevents an individual operation from exhausting the volume.
 - **Fully restore every backup as part of creation** — rejected for v1: structural validation catches incomplete packages without requiring nearly another profile's time and space on every manual operation.
 
+## Target-local authority and publication enforcement
+
+Disaster Restore invalidates copied management capabilities before publishing the staged destination. Paired-device records remain historical but are revoked with replaced credential hashes; the device Host identity is regenerated and push destinations are discarded. Remembered secret-MCP execution approvals and the protected local Tob identity are not portable authority. The imported steward's personality and Memory remain an ordinary paused Bot; target Home establishes a fresh protected singleton. Existing Workspace Grants, approval rules, broad Assignment access, messaging authority and scheduled/pending execution retain their cold-restore suspension. Creation/group receipts are coordination history, not an authorization credential; current target Source Event, approval and revision checks remain mandatory. The source Profile is never mutated by this normalization.
+
+Recovery authorization and activation can carry the reviewed Model Plan revision and opaque recovery-state fingerprint to the owning commit. The scoped adapter always does so, including across asynchronous HTTP parsing and model validation, and supplies current source-authority guards at commit. A changed plan or recovery state refuses rather than authorizing whichever plan happens to be current later.
+
+CLI preview/export writes an exclusive private sibling stage, verifies the complete response hash and publishes with an atomic no-overwrite link. Abrupt termination before publication leaves only a staging artifact; an existing final file is never replaced. A scoped export's known preview ID also names its completed artifact receipt, allowing read-only reconciliation after a lost reply or Host restart without another export. This artifact identity is not a general backup catalogue or a transferable management capability.
+
 ## Consequences
 
 - One-file cross-device migration is possible while DSH remains the Session-log authority.
