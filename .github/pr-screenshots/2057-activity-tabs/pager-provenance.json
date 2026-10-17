@@ -1,0 +1,119 @@
+{
+  "source": "fdca077473ad5838f65869449a5960cea2065dc2",
+  "integration": "b9754eba10035dce840a1afeff706a2ad58e143c",
+  "base": "37b2bc02eb47e76bc753d8c8a21e5c3590281fed",
+  "native": {
+    "expo": "58.0.14",
+    "reactNative": "0.88.0",
+    "pager": "9.0.7",
+    "tabView": "4.3.4",
+    "device": "Redmi Note 14 Pro; Android 16; arm64",
+    "build": "Android development build; 5m26s; native inputs included pager9.0.7; installed-r, pairing retained; JS-only follow-ups loaded through Metro"
+  },
+  "sourceSDK": {
+    "expo": "57.0.30",
+    "pager": "8.0.2",
+    "note": "Source stack remains on parent #1966; QA uses explicit SDK58 integration and floating-nav inset"
+  },
+  "matrix": [
+    {
+      "label": "activity-pager-final-dark-1",
+      "theme": "dark",
+      "font": "1"
+    },
+    {
+      "label": "activity-pager-final-dark-1.3",
+      "theme": "dark",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-pager-final-dark-2",
+      "theme": "dark",
+      "font": "2"
+    },
+    {
+      "label": "activity-pager-final-light-1",
+      "theme": "light",
+      "font": "1"
+    },
+    {
+      "label": "activity-pager-final-light-1.3",
+      "theme": "light",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-pager-final-light-2",
+      "theme": "light",
+      "font": "2"
+    }
+  ],
+  "verification": {
+    "sourceMobile": {
+      "passed": 443,
+      "skipped": 8
+    },
+    "focusedSource": 23,
+    "focusedIntegration": 23,
+    "types": true,
+    "bothHermesExports": true,
+    "pageGestures": [
+      {
+        "direction": "left",
+        "expected": "replies",
+        "actual": "replies",
+        "elapsedMs": 1422
+      },
+      {
+        "direction": "left",
+        "expected": "unread",
+        "actual": "unread",
+        "elapsedMs": 1449
+      },
+      {
+        "direction": "right",
+        "expected": "replies",
+        "actual": "replies",
+        "elapsedMs": 1451
+      },
+      {
+        "direction": "right",
+        "expected": "action",
+        "actual": "action",
+        "elapsedMs": 1342
+      },
+      {
+        "direction": "left",
+        "expected": "replies",
+        "actual": "replies",
+        "elapsedMs": 1323
+      },
+      {
+        "direction": "left",
+        "expected": "unread",
+        "actual": "unread",
+        "elapsedMs": 1535
+      },
+      {
+        "direction": "right",
+        "expected": "replies",
+        "actual": "replies",
+        "elapsedMs": 1409
+      },
+      {
+        "direction": "right",
+        "expected": "action",
+        "actual": "action",
+        "elapsedMs": 1366
+      }
+    ],
+    "nativeScrollRetention": "Two unread row bounds matched before/after switching away and back; vertical scrolling stayed on Other unread at initial pager layout eb7aa0d / integration5f85b47. Subsequent changes stabilize card ports and bound previews without changing pager layout.",
+    "shortDrag": "Cancelled on empty For you page; same selected tab after.",
+    "video": "Original-speed native recording; own QA app; per-step selected-page assertions; reviewed before publication.",
+    "limits": [
+      "iOS native and Human acceptance pending",
+      "No FPS/release/runtime reduced-motion/live font-theme lifecycle claim",
+      "No native approval/private-input submission claim"
+    ]
+  },
+  "date": "2026-10-17"
+}
