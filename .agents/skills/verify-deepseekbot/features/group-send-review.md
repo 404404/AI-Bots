@@ -58,7 +58,7 @@ marked in the exported JSON. Check undo, skipped pairs, full message bodies and 
 - A successful tool call returning `held` is not delivery. Missing usage remains unknown.
 - Draft previews are public temporary content; they are retained separately in reports.
 - Tool handles cannot cross owners or Groups. Source purge removes derived draft bodies.
-- After one failed recheck, automatic retries stop. This slice does not implement #2054–2056.
+- After one failed recheck, automatic retries stop. Busy-group policies and recovery (#2055–2056) remain separate.
 - Human acceptance requires independent review of full histories; no test or LLM signs it.
 
 ## Explicit completion and revoked-source regression
@@ -76,6 +76,26 @@ Verify the Bot handles completion in the current turn, rather than creating a se
 turn. Drop may omit channel_id only when an inbound Channel exists; the draft owner/channel
 checks remain unchanged.
 
+## Peer-answer yielding (#2054)
+
+Run two actual Bots on the same Group request. When B commits while A is generating, A's
+held result identifies fully returned committed peers in `review.peerMessageIds`. Read the
+content; A may drop silently with `yield_to_message_ids` and `observation_id`. Direct CLI uses
+the same `channel_send` tool. Verify `explicit-peer-yield`, durable evidence IDs and no public
+agreement bubble; Inbox work stays open unless explicitly resolved. An invented preview ID,
+Human/self message, missing observation or changed/purged peer cannot certify yielding.
+Verify independent evidence still commits and a repeated-word new Human question is answered.
+
+`node scripts/e2e-group-peer-review.mjs --baseline-instance <accepted-2053-json>
+--candidate-instance <candidate-json> --original-instance <B0-json> --report <json>` runs a
+diagnostic triplet. `--formal` freezes four families of ten triplets, including same-length
+FYI/explicit-request controls. Both Bots' real preparatory and target turns count in usage.
+Natural timing may miss the race: retain those attempts as incomparable, not replacement
+successes. Export the two pairwise comparisons without double-counting shared candidate cost.
+Capture full Group history in Messages and compare with direct CLI/trace evidence. The original
+cohort used dual-order external judges; future diagnostics follow the Human-directed direct
+assistant assessment below, with complete histories retained for optional Human inspection.
+
 ## Merge follow-through regressions
 
 Start from a fresh isolated Profile for schema generation 99; old unmerged generation 96/97/98
@@ -91,3 +111,13 @@ The current GPT-6 Astra assistant reads full Session, conversation and Tool reco
 correctness and interaction quality; no external model judge is invoked. Record reviewer and
 protocol provenance, retain original external-judge results, and never label assistant review
 as independent Human acceptance. Missing token/cost data remains unknown.
+
+Peer refinement also applies the relevance check before an ordinary Group send, not only after
+a hold. Conditional requests to check for additions do not require public acknowledgments;
+explicit Human corrections remain constraints rather than speculative confirmation questions.
+
+When a full peer answer has already been read and no held draft exists, verify that the Bot
+resolves completed Inbox work without creating a no-addition draft or reaction. Existing held
+drafts still use explicit drop with observed peer evidence. Useful replies contain the answer,
+not an explanation of task ownership or the yielding protocol. Inspect native Tool records
+as well as the final silence: a refused no-addition send followed by drop is not a clean path.
