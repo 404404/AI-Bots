@@ -10,7 +10,14 @@ import type {
 
 const NAMESPACE = 'botharness-client';
 const FIELD = 'assignmentConcurrencyLimit';
-const MAX_BODY_BYTES = 16 * 1024;
+const MAX_BODY_BYTES = 3 * 1024 * 1024;
+const SMALL_BODY_BYTES = 16 * 1024;
+const IMAGE_COMMANDS = new Set([
+  'create',
+  'bot-avatar-set',
+  'bot-banner-set',
+  'bot-appearance-set',
+]);
 const CODES = new Set([
   'tob-authority-required',
   'human-dm-required',
@@ -47,6 +54,20 @@ const CODES = new Set([
   'restart-not-pending',
   'operation-outcome-uncertain',
   'readback-mismatch',
+  'protected-bot',
+  'stale-profile',
+  'creation-key-conflict',
+  'invalid-operation-key',
+  'creation-identity-unavailable',
+  'creation-dm-unavailable',
+  'creation-memory-conflict',
+  'invalid-create-scope',
+  'creation-outcome-uncertain',
+  'creation-recovery-required',
+  'creation-target-unavailable',
+  'git-not-found',
+  'memory-unavailable',
+  'invalid-memory-dir',
 ]);
 
 export interface TobCliProposal {
@@ -121,7 +142,7 @@ function view(setting: TobSetting) {
     value: { assignmentConcurrencyLimit: setting.value },
   };
 }
-async function body(request: IncomingMessage): Promise<unknown> {
+async function body(request: IncomingMessage): Promise<{ value: unknown; bytes: number }> {
   let length = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
@@ -131,7 +152,7 @@ async function body(request: IncomingMessage): Promise<unknown> {
     chunks.push(bytes);
   }
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return { value: JSON.parse(Buffer.concat(chunks).toString('utf8')), bytes: length };
   } catch {
     return refuse('invalid-request');
   }
@@ -181,8 +202,11 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       if (request.headers['content-type']?.split(';')[0]?.trim() !== 'application/json')
         refuse('invalid-request');
       authorize();
-      const input = object(await body(request));
+      const received = await body(request);
+      const input = object(received.value);
       keys(input, ['command', 'args']);
+      if (!IMAGE_COMMANDS.has(String(input.command)) && received.bytes > SMALL_BODY_BYTES)
+        refuse('request-too-large');
       const args = object(input.args);
       authorize();
       let value: unknown;

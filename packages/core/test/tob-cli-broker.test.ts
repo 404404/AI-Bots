@@ -60,6 +60,60 @@ const update = () => ({
 });
 
 describe('Tob scoped CLI broker', () => {
+  it.each(['create', 'bot-avatar-set', 'bot-banner-set', 'bot-appearance-set'])(
+    'accepts a bounded large %s envelope and still delegates validation and approval',
+    async (command) => {
+      const run = vi.fn(() => ({ accepted: true }));
+      const prepareOperation = vi.fn(() => ({
+        proposal: { command, target: 'owned', previousValue: null, patch: { image: 'reviewed' } },
+        run,
+      }));
+      const f = await fixture({ prepareOperation });
+      expect(await f.invoke(command, { image: 'x'.repeat(32 * 1024) })).toMatchObject({
+        ok: true,
+        value: { accepted: true },
+      });
+      expect(prepareOperation).toHaveBeenCalledOnce();
+      expect(f.approve).toHaveBeenCalledOnce();
+      expect(run).toHaveBeenCalledOnce();
+      expect(await f.invoke(command, { image: 'x'.repeat(3 * 1024 * 1024) })).toMatchObject({
+        status: 413,
+        error: { code: 'request-too-large' },
+      });
+      expect(prepareOperation).toHaveBeenCalledOnce();
+    },
+  );
+  it('keeps other commands at 16KiB of received bytes including whitespace', async () => {
+    const prepareOperation = vi.fn(() => ({ run: () => ({ accepted: true }) }));
+    const f = await fixture({ prepareOperation });
+    expect(await f.invoke('settings', { ns: 'x'.repeat(16 * 1024) })).toMatchObject({
+      status: 413,
+      error: { code: 'request-too-large' },
+    });
+    const response = await fetch(f.broker.endpoint + '/invoke', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + f.broker.token, 'content-type': 'application/json' },
+      body: ' '.repeat(16 * 1024) + JSON.stringify({ command: 'settings', args: {} }),
+    });
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ error: { code: 'request-too-large' } });
+    expect(prepareOperation).not.toHaveBeenCalled();
+  });
+  it('large image requests cannot bypass authentication or operation validation', async () => {
+    const prepareOperation = vi.fn(() => {
+      throw new TobError('invalid-input');
+    });
+    const f = await fixture({ prepareOperation });
+    const args = { image: 'x'.repeat(32 * 1024) };
+    expect(await f.invoke('create', args, 'wrong-token')).toMatchObject({
+      status: 401,
+      error: { code: 'unauthorized' },
+    });
+    expect(prepareOperation).not.toHaveBeenCalled();
+    expect(await f.invoke('create', args)).toMatchObject({ error: { code: 'invalid-input' } });
+    expect(prepareOperation).toHaveBeenCalledOnce();
+    expect(f.approve).not.toHaveBeenCalled();
+  });
   it('marks side effects only when a prepared operation reaches its owning mutation', async () => {
     const beforeWrite = vi.fn();
     let stale = true;
@@ -238,7 +292,7 @@ describe('Tob scoped CLI broker', () => {
     const large = await fetch(f.broker.endpoint + '/invoke', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ huge: 'x'.repeat(17 * 1024) }),
+      body: JSON.stringify({ huge: 'x'.repeat(3 * 1024 * 1024) }),
     });
     expect(large.status).toBe(413);
   });

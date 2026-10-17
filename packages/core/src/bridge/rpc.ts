@@ -1,3 +1,4 @@
+import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
 import type { PartLibraryEntry } from '../bots/part-library.js';
 import type { OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
@@ -737,7 +738,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.activitySnapshot({}));
   }
 
-  get(slug: string): { bot: PersonaBotDetail } {
+  get(slug: string): { bot: PersonaBotDetail; profileFingerprint: string } {
     return unwrap(this.methods.get({ slug }));
   }
 
@@ -751,7 +752,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
     workspaces?: string[],
     avatar?: string,
     memoryLocation?: string,
-  ): { bot: PersonaBotDetail } {
+    coreMemory?: string,
+    operationKey?: string,
+  ): { bot: PersonaBotDetail; channelId?: string; receipt?: BotCreationReceipt } {
     return unwrap(
       this.methods.create({
         displayName,
@@ -763,6 +766,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
         workspaces,
         avatar,
         memoryLocation,
+        coreMemory,
+        operationKey,
       }),
     );
   }
@@ -776,8 +781,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrapAsync(this.methods.createFromGit({ displayName, gitUrl, roles, description }));
   }
 
-  update(slug: string, patch: PersonaBotPatch): { bot: PersonaBotDetail } {
-    return unwrap(this.methods.update({ slug, patch }));
+  update(
+    slug: string,
+    patch: PersonaBotPatch,
+    expectedProfile?: string,
+  ): { bot: PersonaBotDetail } {
+    return unwrap(this.methods.update({ slug, patch, expectedProfile }));
   }
 
   deletionPreview(slug: string): { preview: PersonaBotDeletionPreview } {

@@ -1800,6 +1800,41 @@ describe('bridge methods', () => {
     expect(second.ok && second.value.bot.slug).toBe('bot-two');
   });
 
+  it('guards explicit CLI profile updates with the observed fingerprint while keeping the existing UI update path', () => {
+    const { registry, methods } = setup();
+    registry.create({ slug: 'ada', displayName: 'Ada', description: 'Before', roles: ['old'] });
+    const before = methods.get({ slug: 'ada' });
+    if (!before.ok) throw new Error('missing Bot');
+    expect(before.value.profileFingerprint).toMatch(/^[a-f0-9]{64}$/u);
+    expect(
+      methods.update({
+        slug: 'ada',
+        expectedProfile: before.value.profileFingerprint,
+        patch: { description: '', roles: [] },
+      }).ok,
+    ).toBe(true);
+    const changed = registry.get('ada');
+    expect(changed?.description).toBeUndefined();
+    expect(changed?.roles).toBeUndefined();
+    expect(
+      methods.update({
+        slug: 'ada',
+        expectedProfile: before.value.profileFingerprint,
+        patch: { displayName: 'Stale overwrite' },
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'stale-profile' } });
+    expect(registry.get('ada')).toEqual(changed);
+    expect(
+      methods.update({
+        slug: 'ada',
+        expectedProfile: 42,
+        patch: { displayName: 'Bad fingerprint' },
+      }).ok,
+    ).toBe(false);
+    expect(methods.update({ slug: 'ada', patch: { displayName: 'UI update' } }).ok).toBe(true);
+    expect(registry.get('ada')?.displayName).toBe('UI update');
+  });
+
   it('updates editable fields and leaves persona untouched', () => {
     const { root, methods } = setup();
     methods.create({
