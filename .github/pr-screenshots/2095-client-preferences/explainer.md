@@ -110,5 +110,8 @@ CI 修复为 5b4cc293fa2ab661543b0a464a1ada38268d3115。
 该修复之后，父级补跑原生 direct 阶段并通过。
 实际通知控件、刷新持久化与旧 generation 拒绝已验证。
 它只覆盖一个原生 Client，page-error 为空。
-Web、模型与外部进程重启旅程仍使用原证据。
+同绝对 home 和 userdata 的新进程重启也通过。
+它先读后写，通知和主题与前次实际状态一致。
+
+Web 和模型旅程仍使用原证据。
 本页是 review 说明，不是 native 验收或 Human 批准。
