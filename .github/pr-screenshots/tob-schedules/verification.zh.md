@@ -24,3 +24,6 @@ Generation 100 虽仅新增一张表，仍推进共享 operational database 的�
 
 
 启动修复源码：`fb6cf4ff011594bcc80bdaa28e4b03136306dc94`。延后真实原生 Credential Provider 初始化的回归，在旧声明下复现竞态（2 项失败）；增加依赖后两项通过：补跑只有一个 handled Source Event，重复 tick 不新增；Provider 无 key 时 core／bridge 可用而模型仍安全拒绝。根 TypeScript 与一次构建通过。源码证明不能代替待执行的原生启动复验，原有 48 项管理回归仍对应此前产品版本。
+
+
+最终恢复源码：`5ae3ed1f8dd966a64756bfb93dede338ad668cf1`。旧 Runtime 在持久重启回归中未唤醒安全 pending／retryable 定时项；修复后 3 个文件 30 项检查通过，含两项凭据生命周期、一项混合状态／再次重启恢复以及既有 Schedule owner 测试，根 TypeScript 与一次构建通过。启动与 harvest 收集重复同一条件，不让安全项夹带不确定、已有副作用、悬空、已解决、未来 snooze 或已暂停 Bot 的任务。只有真正 handled 后才清除该定时 Admission 的旧规范错误；捕获的首次失败证据保留。禁用只停止未来 occurrence，不撤销已 admitted 工作。此 head 的原生 startup-arm／prove 仍待执行。
