@@ -1,0 +1,8 @@
+{
+  "phase": "preset setup before any pair or Subject Session",
+  "report": "new-question.json",
+  "error": "botharness/modelPresetCreate failed: HTTP 200, invalid-input",
+  "episodesStarted": 0,
+  "decision": "Retain original failed report/log. Resume the same two registered pairs after the parallel setup has completed, under new-question-resumed.json. No evaluated episode is replaced and the maximum remains 16.",
+  "possibleCause": "Concurrent preset creation; timestamp collision or settings revision not yet distinguished. No product fix claimed."
+}

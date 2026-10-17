@@ -1,0 +1,392 @@
+{
+  "protocol": {
+    "version": "2054-assistant-refinement-v1",
+    "subjectRuntime": "DSH 0.2.0-rc.2 native Sessions",
+    "candidate": "a14e21f1fb6f6378750bc8f8caf0e0802d6c2644",
+    "baseline": "78142090b5fd5fc3dd0bf78136356f41919d6dd2",
+    "baselineNote": "Current #2053 runtime; subsequent 6e727b9f4 changes only a migration test. This is not the original fixed Bi/B0 cohort.",
+    "families": [
+      "redundant",
+      "independent",
+      "new-question",
+      "fyi-control"
+    ],
+    "pairsPerFamily": 2,
+    "totalPairs": 8,
+    "maximumSubjectEpisodes": 16,
+    "maximumParallelPairs": 2,
+    "replacementRuns": 0,
+    "judge": "Current GPT-6 Astra assistant reads all full histories, native Session tool calls/results and usages; no external judge requests",
+    "blindness": "Unblinded diagnostic engineering assessment, not independent Human evaluation",
+    "runner": "Existing 2054-peer-v1 family fixtures and mechanical oracles retained, including their known semantic limitations. Separate manifest overrides legacy reviewer/baseline/comparison metadata for this diagnostic only.",
+    "route": "deepseek-official/deepseek-flash@off",
+    "pricing": "Use existing frozen 2026-10-17 price version; estimates not invoices; retain unknown billing",
+    "claims": "Per-case diagnosis only; no p95 or statistically established improvement from n=2 per family",
+    "priorData": "Original 120 episodes and 160 judge attempts remain immutable"
+  },
+  "reviewer": "Current GPT-6 Astra assistant in this thread",
+  "method": "Direct unblinded review of every complete Group/DM transcript, native Session tool arguments/results and per-call usage. No external LLM judge. This is not an independent Human vote or the prior double-order blinded protocol.",
+  "counts": {
+    "pairs": 8,
+    "subjectEpisodes": 16,
+    "validMatchedPairs": 5,
+    "candidate": 2,
+    "baseline": 0,
+    "tie": 3,
+    "inconclusive": 3
+  },
+  "reviews": [
+    {
+      "pairId": "redundant-1",
+      "winner": "candidate",
+      "reason": "Both preserve the facts. Baseline posts a long no-addition acknowledgment and needlessly mentions Atlas. Candidate holds its similarly unnecessary draft, reads the committed peer answer, and drops silently. Its draft still claimed Atlas had answered before that answer was observed; the Host prevented that claim from reaching the Group.",
+      "matchedWindowValid": true,
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792267114638",
+          "messageId": "04187cda-4431-45fe-b9c0-6c2e8592d592"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792267114638",
+          "messageId": "bot-535bfa932743582eac06e02995ea576cd5685f3bb2a1f6d9b52b5be991ec9929"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792267114638",
+          "messageId": "bot-d061aaffcd2f516bf68802ec526ed22616178f529ecc9feafaa92a4b439d6c96"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792267196339",
+          "messageId": "17bc1834-60a8-4cf7-ba2e-82d876c9c0f2"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792267196339",
+          "messageId": "bot-5b3db28be7cebfc7059a9ebc0db92f6aa96fb5a533611e388ac7abb9941a4ade"
+        }
+      ]
+    },
+    {
+      "pairId": "redundant-2",
+      "winner": "candidate",
+      "reason": "Candidate produces no redundant public reply. It first reads Atlas, then incorrectly supplies yield_to_message_ids on a non-drop send (rejected); after held it explicitly drops with valid peer evidence. Baseline publishes a no-addition acknowledgment. User-visible result improves but tool interaction still wastes steps.",
+      "matchedWindowValid": true,
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792267273957",
+          "messageId": "110d9a98-03ef-45ca-958c-34962dfd7dbf"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792267273957",
+          "messageId": "bot-a5348d5f1a39e637fd15d1a6fca778dd8d05e7409aa2ba50a3d11972b41630cb"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792267345600",
+          "messageId": "ac31f850-7239-48b3-b588-b0531d311a7a"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792267345600",
+          "messageId": "bot-ab91edb6d71b14d332ccc1b6abd4d5bb55fa98be51231877b2f7ed7474c285fe"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792267345600",
+          "messageId": "bot-8d477a219354f63f824f7538b9bc25705d40675a8199d1d1316908f4a14ecc1e"
+        }
+      ]
+    },
+    {
+      "pairId": "independent-1",
+      "winner": "tie",
+      "reason": "Both share QA-317 and preserve the firm requirement to switch R3 to R2. Neither suppresses independent evidence after the peer answer. Both add an extra R2 verification request not supplied by Human; candidate is longer. No material overall quality improvement established.",
+      "matchedWindowValid": true,
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-1-1792267114638",
+          "messageId": "03ad757f-7c85-41b1-b9e2-e32b6ba682b0"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-1-1792267114638",
+          "messageId": "bot-cc1f08b9cae2981278bdd9a2ae244d299600f81547f2e8cc3008088fcf331bb5"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-1-1792267114638",
+          "messageId": "bot-25cddfca8f6c09f0a655ad53a225db9a44a3945f8ac9f5c55b047921752636fb"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-1-1792267188031",
+          "messageId": "9f491ddc-ab6f-481f-9c8e-4b1a23a63011"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-1-1792267188031",
+          "messageId": "bot-85ce9cde48d4d9e64c3f0dc88dc9e4036e9e4152075e947ec95dd451d9e9aded"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-1-1792267188031",
+          "messageId": "bot-556b024d0c4458c0917def335377b66b3c1a3b8755f6835701b92720e05ecb48"
+        }
+      ]
+    },
+    {
+      "pairId": "independent-2",
+      "winner": "inconclusive",
+      "reason": "Candidate correctly sends QA-317 and mandatory R2 after the peer answer. In baseline the order reverses: Aura posts the correction first; Atlas reads it in held but nevertheless rechecks an obsolete R3 summary. This is a real observed baseline correctness defect, but the registered race window was missed, so it is not counted as a valid matched win.",
+      "matchedWindowValid": false,
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-2-1792267260697",
+          "messageId": "8c59e752-1b16-494c-ade6-1e97570a15ba"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-2-1792267260697",
+          "messageId": "bot-3157f21b844852e1725bcb19d6d628af6bae565a4db2994ae79718fbb9e781e4"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-2-1792267260697",
+          "messageId": "bot-49bc4ba812102dc2f38af6c647f4d2de1d9ae01f9b4f049375f7f82a0d685938"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-2-1792267330027",
+          "messageId": "d8827a7d-a050-46c5-a3b1-053f01fe4267"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-2-1792267330027",
+          "messageId": "bot-61e03809852971f008fc6751b531f45afdd27827a259bfcf957c0b2273f7f3cb"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-2-1792267330027",
+          "messageId": "bot-3c75b82ea61f7d339a512f5b35da8ebd0930ba52ab368e3cf7c5d4bd2acee182"
+        }
+      ]
+    },
+    {
+      "pairId": "new-question-1",
+      "winner": "inconclusive",
+      "reason": "Both answer the new direct question as October 20 18:00 JST. Candidate avoids the old no-addition public acknowledgment, but appends unnecessary explanation about why this is a separate responsibility. Baseline missed the registered peer-first window; its Host usage export is unknown.",
+      "matchedWindowValid": false,
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267524295",
+          "messageId": "b084634a-c30c-4ee3-8143-7d9170382f0e"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267524295",
+          "messageId": "bot-89d9778745c445681c80ed83897514c29f6e1856513ea77b95a2d2492d403baa"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267524295",
+          "messageId": "bot-5b09d134f44315adfa0ae8d37cf31868b4ad0c35c36bc76d091dce603eb64505"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267524295",
+          "messageId": "c89e94af-104f-4029-ba17-7f57c9520675"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267524295",
+          "messageId": "bot-0b64efca108bcd897085227b3416a842b971b702b7321917c6348fd84a318034"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267599873",
+          "messageId": "8d475ae9-c2a9-4b9f-a086-8b2c288ab971"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267599873",
+          "messageId": "bot-dc9213b90a67915c70382ac5628cec010311c4a1859f46f14b2c0ea7cdee8ece"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267599873",
+          "messageId": "15749bdb-5317-4589-8467-c797dbdbc645"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792267599873",
+          "messageId": "bot-608779862bbb62b60ce8d0fb266a8e81382e687fe2117b913b9eeaf591cd5575"
+        }
+      ]
+    },
+    {
+      "pairId": "new-question-2",
+      "winner": "inconclusive",
+      "reason": "Both answer 18:00 JST. Candidate revises the held draft to answer the new Human question and does not yield away the work; its final no-addition sentence is unnecessary. Baseline published a no-addition message before Atlas and referred to Atlas as if he had already answered. Race window missed, so no valid matched preference is counted.",
+      "matchedWindowValid": false,
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267676041",
+          "messageId": "533776f0-b0b7-4f8c-a3b2-01690fb22395"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267676041",
+          "messageId": "bot-83e710b47858bb196497fe051ece02d600e5b27714c92d0e944ec246163c1b99"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267676041",
+          "messageId": "7957b076-845a-4ffc-8468-33275ef0dcf0"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267676041",
+          "messageId": "bot-61ee193bc69f42cd310797df35e54c32b7b27b838067bbbedd11d55ea9f1fdfb"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267744770",
+          "messageId": "d4f56fc1-0d93-48fb-9677-72d6f853fa60"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267744770",
+          "messageId": "bot-565b5eb3100976c9db169851b362baa125cab84dd22a9303eb7616ae8e6318e8"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267744770",
+          "messageId": "bot-cf00949e765303faf375c9c930dff02f102ac25a1bf69b360de9569b76ad2c42"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267744770",
+          "messageId": "56e614a7-629f-41c1-9504-b2ccc5842d42"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-2-1792267744770",
+          "messageId": "bot-4f271fd2ba0b641991d64e6a0015a1ab118ba4b061bc0b502c5ec388a5380d14"
+        }
+      ]
+    },
+    {
+      "pairId": "fyi-control-1",
+      "winner": "tie",
+      "reason": "Both stay silent when Human explicitly asks Aura only to receive FYI; both answer correctly when Human later directly requests the same facts. Neither treats the later request as already completed. No material visible difference.",
+      "matchedWindowValid": true,
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267474432",
+          "messageId": "aec076a5-9dfb-492d-917c-c1a44d06e73a"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267474432",
+          "messageId": "bot-6d8a3827738c681fe822555c2d7f51f851547d44e741df97dff2dc93d9c29a5f"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267474432",
+          "messageId": "10a37898-1d0e-47ef-a077-ba62733f7676"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267474432",
+          "messageId": "bot-a61becef17dce108c5f22dc40c47b032731b6fdb1da7a4e5e955e9dee1500fb8"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267559254",
+          "messageId": "25654666-7190-4c6b-a667-7adcbfef9c60"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267559254",
+          "messageId": "bot-5315f1c8a54020621ed59f26dc6d02549fc6aff06df9a35ac0a341a8442d9bcf"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267559254",
+          "messageId": "eaec98af-c762-44d5-8faa-4bf26ad3ad82"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792267559254",
+          "messageId": "bot-f3a438a2134980afd5f0671865e554c387edc444cb767cd50119b96bc1e411a9"
+        }
+      ]
+    },
+    {
+      "pairId": "fyi-control-2",
+      "winner": "tie",
+      "reason": "Both stay silent for FYI and correctly answer the later direct request. Slight phrasing differences have no meaningful quality effect.",
+      "matchedWindowValid": true,
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267637565",
+          "messageId": "838cdea4-91cb-4d10-a587-c11ac108a858"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267637565",
+          "messageId": "bot-eb5b75d2daedcf0a6fa72d14f7aff1adb2e3f8a5afb29f4b99c0f33c18677a1c"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267637565",
+          "messageId": "52ce42e2-d5df-4c9f-9b17-674776a14446"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267637565",
+          "messageId": "bot-3c12df86eb9ab8b0ea9495a3c88a95a0154aac27442e1dfee0033ad419d96a38"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267715227",
+          "messageId": "3cc2598c-006d-40a2-a6cf-971942ad327f"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267715227",
+          "messageId": "bot-1d9f966b80012e7ab7430b5827506ebb8e31b950e3ede4c82c9e93381b1200e5"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267715227",
+          "messageId": "5bc7adda-8f43-4d36-8a96-b59600cee3fd"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792267715227",
+          "messageId": "bot-f3ca51298b5075ff72350de13f1f3aa2c30521737bb90fbc7936a9e044ad0f85"
+        }
+      ]
+    }
+  ],
+  "billing": {
+    "knownHostEstimateUSD": 0.141742368,
+    "unknownHostEpisodes": 1,
+    "unknownTitleCalls": 32,
+    "externalJudgeCalls": 0,
+    "providerRetries": "Unreported attempts remain unknown"
+  },
+  "acceptance": "Not a new acceptance or performance pass; formal original 40-triplet results remain immutable. No p95 inference from two pairs per family."
+}

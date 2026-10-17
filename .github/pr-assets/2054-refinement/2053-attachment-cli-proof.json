@@ -1,0 +1,245 @@
+{
+  "head": "f33c39dea1f208574c655a9f820f7332339c1554",
+  "group": "group-2053-attachment-projection-verification",
+  "source": {
+    "message": {
+      "id": "9c94ec5a-1d26-424b-8d4a-c1ab50337bb8",
+      "at": "2026-10-17T20:18:42.202Z",
+      "author": {
+        "kind": "human"
+      },
+      "body": "Read this agenda",
+      "attachments": [
+        {
+          "fileId": "file:bb65da21-d6e2-4043-899e-4f91efa67165",
+          "name": "agenda.txt",
+          "mime": "text/plain",
+          "size": 15
+        }
+      ],
+      "channelRevision": 1,
+      "deliveries": [
+        {
+          "botSlug": "bot-2bd45fec96e34217b30b038941e34fee",
+          "state": "pending"
+        }
+      ]
+    }
+  },
+  "attachment": {
+    "fileId": "file:bb65da21-d6e2-4043-899e-4f91efa67165",
+    "name": "agenda.txt",
+    "mime": "text/plain",
+    "size": 15
+  },
+  "enabled": {
+    "enabled": true
+  },
+  "read": {
+    "outputLimit": 12000,
+    "messages": [
+      {
+        "channelId": "group-2053-attachment-projection-verification",
+        "channelName": "2053 attachment projection verification",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {}
+        },
+        "message": {
+          "id": "9c94ec5a-1d26-424b-8d4a-c1ab50337bb8",
+          "at": "2026-10-17T20:18:42.202Z",
+          "author": {
+            "kind": "human"
+          },
+          "attachments": [
+            {
+              "fileId": "file:bb65da21-d6e2-4043-899e-4f91efa67165",
+              "name": "agenda.txt",
+              "mime": "text/plain",
+              "size": 45
+            }
+          ],
+          "body": "Read this agenda"
+        }
+      }
+    ],
+    "observationIds": {
+      "group-2053-attachment-projection-verification": "59b32089-f6e4-4b7c-b4a1-12c1ea933a56"
+    }
+  },
+  "committed": {
+    "channelId": "group-2053-attachment-projection-verification",
+    "messageId": "bot-bccb9159dc1ee2db70f8ea1ff302d370c28444a7bfd686e2438c988c81d0f0af",
+    "status": "committed",
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "beforeEdit": {
+    "outputLimit": 12000,
+    "messages": [
+      {
+        "channelId": "group-2053-attachment-projection-verification",
+        "channelName": "2053 attachment projection verification",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {
+            "bot-2bd45fec96e34217b30b038941e34fee": "Attachment review Ada"
+          }
+        },
+        "message": {
+          "id": "bot-bccb9159dc1ee2db70f8ea1ff302d370c28444a7bfd686e2438c988c81d0f0af",
+          "at": "2026-10-17T20:18:43.004Z",
+          "author": {
+            "kind": "bot",
+            "slug": "bot-2bd45fec96e34217b30b038941e34fee"
+          },
+          "botCausation": {
+            "rootSourceEventId": "4badbc7c-fc4e-4fd1-977b-dd7d46c2173d",
+            "parentSourceEventId": "4badbc7c-fc4e-4fd1-977b-dd7d46c2173d",
+            "hop": 1
+          },
+          "body": "Observed current agenda"
+        }
+      },
+      {
+        "channelId": "group-2053-attachment-projection-verification",
+        "channelName": "2053 attachment projection verification",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {}
+        },
+        "message": {
+          "id": "9c94ec5a-1d26-424b-8d4a-c1ab50337bb8",
+          "at": "2026-10-17T20:18:42.202Z",
+          "author": {
+            "kind": "human"
+          },
+          "attachments": [
+            {
+              "fileId": "file:bb65da21-d6e2-4043-899e-4f91efa67165",
+              "name": "agenda.txt",
+              "mime": "text/plain",
+              "size": 45
+            }
+          ],
+          "body": "Read this agenda"
+        }
+      }
+    ],
+    "observationIds": {
+      "group-2053-attachment-projection-verification": "c6ada459-ab75-4c74-b514-c2e6aa56d7c6"
+    }
+  },
+  "held": {
+    "status": "held",
+    "channelId": "group-2053-attachment-projection-verification",
+    "draftId": "bot-00f1d1b30fc16941b63188facf5dc77b0b68060db7a13305b81fb5c988a212e3",
+    "reason": "read-new-context-then-revise-or-drop",
+    "changedMessageIds": [
+      "9c94ec5a-1d26-424b-8d4a-c1ab50337bb8"
+    ],
+    "changedMessageCount": 1,
+    "read": {
+      "channel_id": "group-2053-attachment-projection-verification",
+      "limit": 20
+    },
+    "review": {
+      "observationId": "5fa72d50-6146-45c3-934d-8ba4f213277e",
+      "content": "{\"outputLimit\":12000,\"messages\":[{\"channelId\":\"group-2053-attachment-projection-verification\",\"channelName\":\"2053 attachment projection verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"9c94ec5a-1d26-424b-8d4a-c1ab50337bb8\",\"at\":\"2026-10-17T20:18:42.202Z\",\"author\":{\"kind\":\"human\"},\"attachments\":[{\"fileId\":\"file:bb65da21-d6e2-4043-899e-4f91efa67165\",\"name\":\"agenda.txt\",\"mime\":\"text/plain\",\"size\":77}],\"body\":\"Read this agenda\"}}]}",
+      "complete": true,
+      "observedMessageIds": [
+        "9c94ec5a-1d26-424b-8d4a-c1ab50337bb8"
+      ],
+      "responsibility": "These messages join this turn. On your recheck or drop, explicitly pass resolve_inbox_ids for these IDs and the original request if complete. They resolve only after a committed send or dropped draft; held/refused never resolve them. Unrelated FYI needs no reply or addition to the original draft. Cancelled work should be dropped silently. Keep unfinished work open."
+    }
+  },
+  "rechecked": {
+    "channelId": "group-2053-attachment-projection-verification",
+    "messageId": "bot-74368cdc444c958dfcfb0d71e2491742554eb090d81e4b8a93146f728e385498",
+    "status": "committed",
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "history": {
+    "messages": [
+      {
+        "id": "bot-74368cdc444c958dfcfb0d71e2491742554eb090d81e4b8a93146f728e385498",
+        "at": "2026-10-17T20:18:43.756Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-2bd45fec96e34217b30b038941e34fee"
+        },
+        "botCausation": {
+          "rootSourceEventId": "4badbc7c-fc4e-4fd1-977b-dd7d46c2173d",
+          "parentSourceEventId": "9500bfb6-b364-4487-8034-8c691e32b41d",
+          "hop": 2
+        },
+        "body": "Latest agenda acknowledged",
+        "channelRevision": 3,
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "bot-bccb9159dc1ee2db70f8ea1ff302d370c28444a7bfd686e2438c988c81d0f0af",
+        "at": "2026-10-17T20:18:43.004Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-2bd45fec96e34217b30b038941e34fee"
+        },
+        "botCausation": {
+          "rootSourceEventId": "4badbc7c-fc4e-4fd1-977b-dd7d46c2173d",
+          "parentSourceEventId": "4badbc7c-fc4e-4fd1-977b-dd7d46c2173d",
+          "hop": 1
+        },
+        "body": "Observed current agenda",
+        "channelRevision": 2,
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "9c94ec5a-1d26-424b-8d4a-c1ab50337bb8",
+        "at": "2026-10-17T20:18:42.202Z",
+        "author": {
+          "kind": "human"
+        },
+        "attachments": [
+          {
+            "fileId": "file:bb65da21-d6e2-4043-899e-4f91efa67165",
+            "name": "agenda.txt",
+            "mime": "text/plain",
+            "size": 77
+          }
+        ],
+        "body": "Read this agenda",
+        "channelRevision": 1,
+        "deliveries": [
+          {
+            "botSlug": "bot-2bd45fec96e34217b30b038941e34fee",
+            "state": "pending"
+          }
+        ]
+      }
+    ],
+    "revision": 3
+  }
+}

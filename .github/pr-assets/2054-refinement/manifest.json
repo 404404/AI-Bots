@@ -1,0 +1,21 @@
+{
+  "files": {
+    "README.md": "d2e25caae41be13cff7ae3e80d2e50f29129dae47eb51dad8d83627fd9b5cdc7",
+    "protocol.json": "d51c7d0ac2068855afe7cbbe20daf79ebe705b79cc12168f92fcf2f81a1dddd6",
+    "setup-failure.json": "c597caf0b143e228a5467f51a8058ef1d4129eba2e1e50e157f5fa1d3ee09711",
+    "assistant-assessment.json": "6feabdce4f12e5d7150eedee95e93272fff0013db0c8adf22bcf17b213f0c96e",
+    "session-review-public.json": "371c814dcd197665e6f6924677b09a1d99b4b597e040ad7f415af8d2876bdba0",
+    "attachment-cli-proof.json": "33a2f0ce1ab17e8f086b8291c3a0275b2845ed438d799c92e06230e786eeab3d",
+    "history.html": "6678f66d6b8d73f4c6cc82ababf5a806625dc4ee4f45f9f5eb30e4b6596fbc7e",
+    "explainer.html": "889b45257e674a46c8d06f9ed3d9c5267895cc66285c2d67a0dd1ad5ab9e8bdc",
+    "explainer.md": "eb00ea03207a666c7eb295a11bd59f423e8dd3aa1866a80b8d5393783a0ae5ad",
+    "2053-attachment-cli-proof.json": "2ae19ecc963d09f5dce7a33f25abe7b83e1be7d96b61738b5973802b29b5f7b6"
+  },
+  "rawInputs": {
+    "redundant.json": "d2aa68d992bc0d989e17244e1df82ef4d41cff3f29dab12ad6d905cfb1d68050",
+    "independent.json": "b6e1f42bbc1fb844a9b92ba82a4b51d21af9f582019bfe69dfa4001837d9721e",
+    "new-question.json": "e8433678ec1359a3e965b625f777742703ae6848db6ba87d651330de12e733cf",
+    "new-question-resumed.json": "de4a439fd8d52ebc64ebc7c6b5eaf77e716f168f3c001f1b7e15eaa7e516e7ab",
+    "fyi-control.json": "624cbd2e64ddb9bc3ec02db788d7135c8c58b9baa20bc6300603888c6593a026"
+  }
+}

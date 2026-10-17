@@ -1,0 +1,25 @@
+{
+  "version": "2054-assistant-refinement-v1",
+  "subjectRuntime": "DSH 0.2.0-rc.2 native Sessions",
+  "candidate": "a14e21f1fb6f6378750bc8f8caf0e0802d6c2644",
+  "baseline": "78142090b5fd5fc3dd0bf78136356f41919d6dd2",
+  "baselineNote": "Current #2053 runtime; subsequent 6e727b9f4 changes only a migration test. This is not the original fixed Bi/B0 cohort.",
+  "families": [
+    "redundant",
+    "independent",
+    "new-question",
+    "fyi-control"
+  ],
+  "pairsPerFamily": 2,
+  "totalPairs": 8,
+  "maximumSubjectEpisodes": 16,
+  "maximumParallelPairs": 2,
+  "replacementRuns": 0,
+  "judge": "Current GPT-6 Astra assistant reads all full histories, native Session tool calls/results and usages; no external judge requests",
+  "blindness": "Unblinded diagnostic engineering assessment, not independent Human evaluation",
+  "runner": "Existing 2054-peer-v1 family fixtures and mechanical oracles retained, including their known semantic limitations. Separate manifest overrides legacy reviewer/baseline/comparison metadata for this diagnostic only.",
+  "route": "deepseek-official/deepseek-flash@off",
+  "pricing": "Use existing frozen 2026-10-17 price version; estimates not invoices; retain unknown billing",
+  "claims": "Per-case diagnosis only; no p95 or statistically established improvement from n=2 per family",
+  "priorData": "Original 120 episodes and 160 judge attempts remain immutable"
+}

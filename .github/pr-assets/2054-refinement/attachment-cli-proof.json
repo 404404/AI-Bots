@@ -1,0 +1,188 @@
+{
+  "head": "c9a2f9d51e8196085b00049ef5675bc0ebc84cb4",
+  "group": "group-2054-peer-attachment-projection-verification",
+  "source": {
+    "message": {
+      "id": "59ab9105-d0f0-4544-af4f-1d09ff162872",
+      "at": "2026-10-17T20:22:06.294Z",
+      "author": {
+        "kind": "human"
+      },
+      "body": "Read this agenda",
+      "attachments": [
+        {
+          "fileId": "file:66efc373-897d-4c41-824a-864d8b0650ec",
+          "name": "agenda.txt",
+          "mime": "text/plain",
+          "size": 15
+        }
+      ],
+      "channelRevision": 1,
+      "deliveries": [
+        {
+          "botSlug": "bot-51a395d7e70843eeb67e3fe5cad00b52",
+          "state": "pending"
+        },
+        {
+          "botSlug": "bot-7d47ba4dd9e844ad80820277308f2ab4",
+          "state": "pending"
+        }
+      ]
+    }
+  },
+  "enabled": {
+    "enabled": true
+  },
+  "read": {
+    "outputLimit": 12000,
+    "messages": [
+      {
+        "channelId": "group-2054-peer-attachment-projection-verification",
+        "channelName": "2054 peer attachment projection verification",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {}
+        },
+        "message": {
+          "id": "59ab9105-d0f0-4544-af4f-1d09ff162872",
+          "at": "2026-10-17T20:22:06.294Z",
+          "author": {
+            "kind": "human"
+          },
+          "attachments": [
+            {
+              "fileId": "file:66efc373-897d-4c41-824a-864d8b0650ec",
+              "name": "agenda.txt",
+              "mime": "text/plain",
+              "size": 15
+            }
+          ],
+          "body": "Read this agenda"
+        }
+      }
+    ],
+    "observationIds": {
+      "group-2054-peer-attachment-projection-verification": "317a53cb-1b3c-47ec-ad41-02ca4d4f8f27"
+    }
+  },
+  "peer": {
+    "channelId": "group-2054-peer-attachment-projection-verification",
+    "messageId": "bot-27a2a14dd73dd00f95e13239b45a48a24901db6c62e3fe22ef3f87c62272500b",
+    "status": "committed",
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "held": {
+    "status": "held",
+    "channelId": "group-2054-peer-attachment-projection-verification",
+    "draftId": "bot-afa47e689ed41d6757ad2aa941913b292b16a23531160856bc5c3ed0996a16e0",
+    "reason": "read-new-context-then-revise-or-drop",
+    "changedMessageIds": [
+      "59ab9105-d0f0-4544-af4f-1d09ff162872",
+      "bot-27a2a14dd73dd00f95e13239b45a48a24901db6c62e3fe22ef3f87c62272500b"
+    ],
+    "changedMessageCount": 2,
+    "read": {
+      "channel_id": "group-2054-peer-attachment-projection-verification",
+      "limit": 20
+    },
+    "review": {
+      "observationId": "17de9f16-a44e-4f9f-b7bb-10cc81871834",
+      "content": "{\"outputLimit\":12000,\"messages\":[{\"channelId\":\"group-2054-peer-attachment-projection-verification\",\"channelName\":\"2054 peer attachment projection verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"59ab9105-d0f0-4544-af4f-1d09ff162872\",\"at\":\"2026-10-17T20:22:06.294Z\",\"author\":{\"kind\":\"human\"},\"attachments\":[{\"fileId\":\"file:66efc373-897d-4c41-824a-864d8b0650ec\",\"name\":\"agenda.txt\",\"mime\":\"text/plain\",\"size\":47}],\"body\":\"Read this agenda\"}},{\"channelId\":\"group-2054-peer-attachment-projection-verification\",\"channelName\":\"2054 peer attachment projection verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{\"bot-51a395d7e70843eeb67e3fe5cad00b52\":\"Peer attachment Bob\"}},\"message\":{\"id\":\"bot-27a2a14dd73dd00f95e13239b45a48a24901db6c62e3fe22ef3f87c62272500b\",\"at\":\"2026-10-17T20:22:07.244Z\",\"author\":{\"kind\":\"bot\",\"slug\":\"bot-51a395d7e70843eeb67e3fe5cad00b52\"},\"botCausation\":{\"rootSourceEventId\":\"75e6f3c6-1cc5-461d-b6d3-5d7357ad3150\",\"parentSourceEventId\":\"75e6f3c6-1cc5-461d-b6d3-5d7357ad3150\",\"hop\":1},\"attachments\":[{\"fileId\":\"file:66efc373-897d-4c41-824a-864d8b0650ec\",\"name\":\"agenda.txt\",\"mime\":\"text/plain\",\"size\":47}],\"body\":\"October 20. Full release notes attached.\"}}]}",
+      "complete": true,
+      "observedMessageIds": [
+        "59ab9105-d0f0-4544-af4f-1d09ff162872",
+        "bot-27a2a14dd73dd00f95e13239b45a48a24901db6c62e3fe22ef3f87c62272500b"
+      ],
+      "peerMessageIds": [
+        "bot-27a2a14dd73dd00f95e13239b45a48a24901db6c62e3fe22ef3f87c62272500b"
+      ],
+      "responsibility": "These messages join this turn. Compare committed peer replies with your remaining responsibility. If they fully answer it, drop silently with yield_to_message_ids and observation_id; no agreement message is needed. Otherwise send the missing fact, independent evidence or requested second opinion. A new Human question is separate work even with the same words. Peer IDs identify observed messages, not proof of semantic completion. Explicitly resolve_inbox_ids only for work you judge complete after send/drop. Held/refused never resolve work. Unrelated FYI needs no reply. Cancelled work should be dropped silently. Keep unfinished work open."
+    }
+  },
+  "drop": {
+    "status": "dropped",
+    "channelId": "group-2054-peer-attachment-projection-verification",
+    "draftId": "bot-afa47e689ed41d6757ad2aa941913b292b16a23531160856bc5c3ed0996a16e0",
+    "reason": "explicit-peer-yield",
+    "yieldedToMessageIds": [
+      "bot-27a2a14dd73dd00f95e13239b45a48a24901db6c62e3fe22ef3f87c62272500b"
+    ],
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "history": {
+    "messages": [
+      {
+        "id": "bot-27a2a14dd73dd00f95e13239b45a48a24901db6c62e3fe22ef3f87c62272500b",
+        "at": "2026-10-17T20:22:07.244Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-51a395d7e70843eeb67e3fe5cad00b52"
+        },
+        "botCausation": {
+          "rootSourceEventId": "75e6f3c6-1cc5-461d-b6d3-5d7357ad3150",
+          "parentSourceEventId": "75e6f3c6-1cc5-461d-b6d3-5d7357ad3150",
+          "hop": 1
+        },
+        "attachments": [
+          {
+            "fileId": "file:66efc373-897d-4c41-824a-864d8b0650ec",
+            "name": "agenda.txt",
+            "mime": "text/plain",
+            "size": 47
+          }
+        ],
+        "body": "October 20. Full release notes attached.",
+        "channelRevision": 2,
+        "deliveries": [
+          {
+            "botSlug": "bot-7d47ba4dd9e844ad80820277308f2ab4",
+            "state": "pending"
+          }
+        ],
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "59ab9105-d0f0-4544-af4f-1d09ff162872",
+        "at": "2026-10-17T20:22:06.294Z",
+        "author": {
+          "kind": "human"
+        },
+        "attachments": [
+          {
+            "fileId": "file:66efc373-897d-4c41-824a-864d8b0650ec",
+            "name": "agenda.txt",
+            "mime": "text/plain",
+            "size": 47
+          }
+        ],
+        "body": "Read this agenda",
+        "channelRevision": 1,
+        "deliveries": [
+          {
+            "botSlug": "bot-51a395d7e70843eeb67e3fe5cad00b52",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-7d47ba4dd9e844ad80820277308f2ab4",
+            "state": "pending"
+          }
+        ]
+      }
+    ],
+    "revision": 2
+  }
+}
