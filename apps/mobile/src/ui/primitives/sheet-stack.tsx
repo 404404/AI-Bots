@@ -4,7 +4,7 @@ import { Stack, useNavigation } from 'expo-router';
 import type { NativeStackHeaderProps } from 'expo-router/native-stack';
 import { Platform, Pressable, View } from 'react-native';
 import { space } from '../design/tokens';
-import { ChevronLeftIcon, CloseIcon } from '../shell/icons';
+import { ChevronLeftIcon } from '../shell/icons';
 import { t } from '../strings';
 import { Text } from './text';
 
@@ -76,26 +76,5 @@ export function SheetStack({
         </Stack>
       </SafeAreaInsetsContext>
     </SheetScreen>
-  );
-}
-
-export function SheetCloseButton({ onPress }: { onPress(): void }) {
-  const theme = useDesignTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.close}
-      onPress={onPress}
-      style={({ pressed }) => ({
-        minWidth: theme.touch,
-        minHeight: theme.touch,
-        paddingHorizontal: space.x3,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      <CloseIcon color={theme.color.fg} size={space.x5} />
-    </Pressable>
   );
 }

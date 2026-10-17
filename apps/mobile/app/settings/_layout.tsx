@@ -1,16 +1,14 @@
-import { Stack, useNavigation } from 'expo-router';
-import { SheetCloseButton, SheetStack } from '../../src/ui/primitives/sheet-stack';
+import { Stack } from 'expo-router';
+import { SheetStack } from '../../src/ui/primitives/sheet-stack';
 import { t } from '../../src/ui/strings';
 
 export default function SettingsLayout() {
-  const navigation = useNavigation('/');
   return (
     <SheetStack modalGrabber>
       <Stack.Screen
         name="index"
         options={{
           title: t.settings,
-          headerLeft: () => <SheetCloseButton onPress={() => navigation.goBack()} />,
         }}
       />
       <Stack.Screen name="usage" options={{ title: t.usage }} />
