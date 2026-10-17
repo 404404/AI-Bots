@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { PersonaBotRegistry } from '../bots/registry.js';
 import type { ChannelStore } from '../channels/store.js';
 import type { ContentPurge } from '../purge/contracts.js';
@@ -73,13 +73,20 @@ function offset(
   fingerprint: string,
   revision: string,
   kind: 'channel' | 'body' | 'progress',
+  secret: Buffer,
 ): number {
   if (args.expectedTarget !== undefined && args.expectedTarget !== fingerprint)
     throw new TobError('changed-read-target');
   if (args.cursor === undefined) return 0;
+  const [payload, signature, extra] = args.cursor.split('.');
+  if (!payload || !signature || extra !== undefined || !/^[a-f0-9]{64}$/u.test(signature))
+    throw new TobError('invalid-read-cursor');
+  const expected = createHmac('sha256', secret).update(payload).digest();
+  if (!timingSafeEqual(expected, Buffer.from(signature, 'hex')))
+    throw new TobError('invalid-read-cursor');
   let value: unknown;
   try {
-    value = JSON.parse(Buffer.from(args.cursor, 'base64url').toString('utf8'));
+    value = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
   } catch {
     throw new TobError('invalid-read-cursor');
   }
@@ -109,9 +116,10 @@ function cursor(
   fingerprint: string,
   revision: string,
   offset: number,
+  secret: Buffer,
   anchor?: string,
 ): string {
-  return Buffer.from(
+  const payload = Buffer.from(
     JSON.stringify({
       v: 1,
       target: args.target,
@@ -123,6 +131,7 @@ function cursor(
       ...(args.messageId === undefined ? {} : { messageId: args.messageId }),
     }),
   ).toString('base64url');
+  return payload + '.' + createHmac('sha256', secret).update(payload).digest('hex');
 }
 function bounded(value: string, maximum = 1000) {
   let text = '';
@@ -134,6 +143,13 @@ function bounded(value: string, maximum = 1000) {
     bytes += size;
   }
   return { text, truncated: text.length < value.length, characters: value.length };
+}
+export function readTobBodyChunk(body: string, start: number) {
+  const text = bounded(body.slice(start), Math.min(1000, 1_000_000 - start)).text;
+  const next = start + text.length;
+  const hasMore = next < body.length;
+  const limitReached = hasMore && (next >= 1_000_000 || text.length === 0);
+  return { text, next, hasMore, limitReached };
 }
 function checked(result: TobContentPage): TobContentPage {
   if (Buffer.byteLength(JSON.stringify(result)) > 8192) throw new TobError('read-result-too-large');
@@ -213,6 +229,7 @@ function assignmentView(assignment: AssignmentSummary) {
   };
 }
 export function createTobContentReader(deps: Dependencies) {
+  const secret = randomBytes(32);
   const bot = (slug: string) => {
     const record = deps.registry.get(slug);
     if (!record) throw new TobError('unknown-bot');
@@ -254,6 +271,7 @@ export function createTobContentReader(deps: Dependencies) {
         fingerprint,
         revision,
         args.messageId === undefined ? 'channel' : 'body',
+        secret,
       );
       if (args.messageId !== undefined) {
         const page = deps.channels.readHumanTimeline(channel.id, {
@@ -265,9 +283,8 @@ export function createTobContentReader(deps: Dependencies) {
         const message = page?.entries.find((entry) => entry.id === args.messageId);
         if (!message) throw new TobError('message-unavailable');
         if (start > message.body.length) throw new TobError('invalid-read-cursor');
-        const chunk = bounded(message.body.slice(start)).text;
-        const next = start + chunk.length;
-        const hasMore = next < message.body.length;
+        const chunk = readTobBodyChunk(message.body, start);
+        const { next, hasMore, limitReached } = chunk;
         return {
           target: channel.id,
           targetFingerprint: fingerprint,
@@ -279,7 +296,7 @@ export function createTobContentReader(deps: Dependencies) {
             {
               ...messageView(message, message.channelRevision ?? 0),
               body: {
-                text: chunk,
+                text: chunk.text,
                 offset: start,
                 characters: message.body.length,
                 truncated: hasMore || start > 0,
@@ -288,12 +305,11 @@ export function createTobContentReader(deps: Dependencies) {
           ],
           hasMore,
           nextCursor:
-            hasMore && next < 1_000_000 ? cursor(args, fingerprint, revision, next) : null,
+            hasMore && !limitReached ? cursor(args, fingerprint, revision, next, secret) : null,
           observedAt: new Date().toISOString(),
-          completeness:
-            hasMore && next >= 1_000_000
-              ? 'traversal-limit'
-              : 'bounded selected message body chunk; structured private/approval payloads omitted; attachments metadata only',
+          completeness: limitReached
+            ? 'traversal-limit'
+            : 'bounded selected message body chunk; structured private/approval payloads omitted; attachments metadata only',
         };
       }
       const request = {
@@ -303,7 +319,9 @@ export function createTobContentReader(deps: Dependencies) {
           : {
               direction: 'older' as const,
               cursor: (
-                JSON.parse(Buffer.from(args.cursor, 'base64url').toString('utf8')) as {
+                JSON.parse(
+                  Buffer.from(args.cursor.split('.')[0]!, 'base64url').toString('utf8'),
+                ) as {
                   anchor: string;
                 }
               ).anchor,
@@ -332,7 +350,7 @@ export function createTobContentReader(deps: Dependencies) {
         hasMore,
         nextCursor:
           hasMore && next < 1000
-            ? cursor(args, fingerprint, revision, next, page.olderCursor ?? undefined)
+            ? cursor(args, fingerprint, revision, next, secret, page.olderCursor ?? undefined)
             : null,
         observedAt: new Date().toISOString(),
         completeness:
@@ -357,7 +375,7 @@ export function createTobContentReader(deps: Dependencies) {
         state,
         generation: deps.states.version().generation,
       });
-      const start = offset(args, fingerprint, revision, 'progress');
+      const start = offset(args, fingerprint, revision, 'progress', secret);
       if (start > assignments.length) throw new TobError('invalid-read-cursor');
       const entries = fitPage(assignments.slice(start, Math.min(start + args.limit!, 1000)));
       if (entries.length === 0 && start < assignments.length)
@@ -375,7 +393,8 @@ export function createTobContentReader(deps: Dependencies) {
         state: state.state,
         ...(state.attention === undefined ? {} : { attention: state.attention }),
         hasMore,
-        nextCursor: hasMore && next < 1000 ? cursor(args, fingerprint, revision, next) : null,
+        nextCursor:
+          hasMore && next < 1000 ? cursor(args, fingerprint, revision, next, secret) : null,
         observedAt: new Date().toISOString(),
         completeness:
           hasMore && next >= 1000
