@@ -1732,7 +1732,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Natural Tob pending-invitation cancellation and join acceptance/decline through rendered approval, denial and concurrent stale refusal; actual ordinary-Bot selected-Group join preconditions, canonical decision history and Members UI, terminal refusal and Web/macOS restart.",
       "task": 2090,
-      "sha256": "5842bd4d9ec542a7b1428b39f26ac8c3aa356df5e131cd1502b964e40d149038"
+      "sha256": "6998a510585f53ccbe6210f73458fd8c666716df6dbb257c8388f1e345cf916e"
     }
   ],
   "native": [

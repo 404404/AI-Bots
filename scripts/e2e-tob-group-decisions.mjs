@@ -129,7 +129,6 @@ const click = async (name, scope = '') => {
   throw Error('visible accessible action not found: ' + name);
 };
 const shot = async (name) => {
-  // Observe finite transitions before capture; leave perpetual activity animations alone.
   await page.evaluate(async () => {
     const finite = document
       .getAnimations()
