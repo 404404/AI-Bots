@@ -126,13 +126,13 @@ try {
     );
     const top = imeTop();
     assert(Number.isFinite(top) && top < height * 0.8, 'REAL_SOFT_KEYBOARD_REQUIRED');
-    assert(input && bounds(input)[1] >= 0 && bounds(input)[3] <= top, 'INPUT_UNDER_KEYBOARD');
+    assert(input && bounds(input)[1] >= 0 && bounds(input)[3] <= top + 1, 'INPUT_UNDER_KEYBOARD');
     if (args.includes('--action')) {
       const action = shown.find(
         (node) => node.clickable === 'true' && node['content-desc'] === flag('--action'),
       );
       assert(
-        action && bounds(action)[1] >= 0 && bounds(action)[3] <= top,
+        action && bounds(action)[1] >= 0 && bounds(action)[3] <= top + 1,
         'FORM_ACTION_UNDER_KEYBOARD',
       );
     }
@@ -140,6 +140,7 @@ try {
       step: 'focused-form-clearance',
       keyboardTop: top,
       inputBounds: bounds(input),
+      roundingTolerancePx: 1,
       actionChecked: args.includes('--action'),
     });
   } else if (mode === 'profile' || mode === 'settings') {
