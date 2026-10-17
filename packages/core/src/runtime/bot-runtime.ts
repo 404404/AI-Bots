@@ -5973,6 +5973,7 @@ class BotRuntimeImplementation implements BotRuntime {
           sourceEventId,
         });
         if (appended === undefined) throw new Error(`Channel disappeared: ${channel.id}`);
+        if (steered?.sessionId === sessionId) steered.spokenChannelIds.add(channel.id);
         return appended;
       },
     };
