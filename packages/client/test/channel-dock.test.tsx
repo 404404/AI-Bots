@@ -728,3 +728,61 @@ it('opens Bot Inbox only inside DM Messages, supports registry navigation and sw
   await settle();
   expect(Object.keys(panels())).not.toContain('bot-inbox');
 });
+
+it('updates the Messages Channel title and trailing actions without replacing its draft', async () => {
+  const { WorkspaceContext } = await import('../src/client/workspace-context.js');
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  const settings = vi.fn();
+  const profile = vi.fn();
+  const view = (title: string) =>
+    createElement(
+      WorkspaceContext.Provider,
+      { value: { rail: () => createElement('nav') } },
+      createElement(ChannelDock, {
+        body: createElement('input', { 'data-message-draft': '' }),
+        header: {
+          title,
+          actions: createElement(
+            'span',
+            null,
+            createElement('button', { onClick: profile, 'aria-label': 'Profile' }, 'Profile'),
+            createElement(
+              'button',
+              { onClick: settings, 'aria-label': 'Channel settings' },
+              'Settings',
+            ),
+          ),
+        },
+        panels: registry.panels(),
+        registry,
+        channel: { id: 'dm', type: 'dm', botSlug: 'ada' },
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view('Ada')));
+  await settle();
+  const draft = host.querySelector<HTMLInputElement>('[data-message-draft]')!;
+  draft.value = 'Keep';
+  const header = host.querySelector('[data-dock-header="bh:channel-body"]')!;
+  expect(header.textContent).toContain('MessagesAda');
+  await act(async () =>
+    header.querySelector<HTMLButtonElement>('[aria-label="Channel settings"]')!.click(),
+  );
+  await act(async () => header.querySelector<HTMLButtonElement>('[aria-label="Profile"]')!.click());
+  expect(settings).toHaveBeenCalledOnce();
+  expect(profile).toHaveBeenCalledOnce();
+  act(() => root.render(view('Design group')));
+  await settle();
+  expect(header.textContent).toContain('Design group');
+  expect(host.querySelector('[data-message-draft]')).toBe(draft);
+  expect(draft.value).toBe('Keep');
+});

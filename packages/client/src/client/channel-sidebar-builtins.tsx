@@ -1,3 +1,4 @@
+import { ChannelNicknameEntry, ChannelTraceEntry } from './channel-personal-settings.js';
 import type { ExternalSource } from '../../../core/src/messaging/inbound.js';
 import { useCallback, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
@@ -71,7 +72,7 @@ import {
   type InboxSection,
 } from './inbox-sections.js';
 import type { BotHarnessTranslate } from './locale.js';
-import type { BotAttentionItem } from './store.js';
+import type { BotAttentionItem, ClientState } from './store.js';
 import { IconButton } from './ds/icon-button.js';
 import { GroupHeading } from './ds/group-heading.js';
 import { border, color, radius, space, text } from './ds/tokens.stylex.js';
@@ -1204,6 +1205,25 @@ export function createChannelSidebarBuiltins(
       scope: 'personabot',
       component: BotSchedulesEntry,
       headerAction: BotSchedulesHeaderAction,
+    },
+    ...(['personabot', 'channel'] as const).map((scope) => ({
+      id: scope === 'personabot' ? 'human-nickname' : 'group-human-nickname',
+      surface: 'settings' as const,
+      icon: 'user',
+      label: t('humanNickname.title'),
+      order: 1,
+      scope,
+      component: ChannelNicknameEntry,
+      visible: (state: ClientState) => state.conversation.channel?.humanNickname !== undefined,
+    })),
+    {
+      id: 'dm-trace',
+      surface: 'settings',
+      icon: 'eye',
+      label: t('dmTrace.menu'),
+      order: 2,
+      scope: 'personabot',
+      component: ChannelTraceEntry,
     },
     {
       id: 'workspace-grants',

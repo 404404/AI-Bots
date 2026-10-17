@@ -67,6 +67,9 @@ const styles = stylex.create({
   flushBody: { paddingTop: 0, paddingBottom: 0, paddingInline: 0 },
   workspaceBody: { paddingTop: space.x1, paddingBottom: space.x1, paddingInline: space.x1 },
   panel: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
+  breadcrumb: { display: 'flex', alignItems: 'center', gap: space.x2, minWidth: 0 },
+  channelName: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
+  messageLabel: { flexShrink: 0 },
   actions: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
 });
 
@@ -119,7 +122,13 @@ interface ChannelFilesView {
   content: ReactNode;
 }
 
+export interface ChannelHeaderView {
+  title: string;
+  actions: ReactNode;
+}
+
 interface DockContextValue {
+  header?: ChannelHeaderView | undefined;
   body: ReactNode;
   files?: ChannelFilesView | undefined;
   inbox?: ChannelInboxView | undefined;
@@ -331,7 +340,23 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
       {contextMenu.menu}
       <PanelHeader
         icon={<ChannelSidebarIcon name={panel.icon} />}
-        label={HeaderTabs === undefined ? panel.title : (entry?.headerLabel ?? panel.title)}
+        label={
+          entryId === CHANNEL_BODY_PANEL && dock.header ? (
+            <span {...stylex.props(styles.breadcrumb)}>
+              <span {...stylex.props(styles.messageLabel)}>{panel.title}</span>
+              <span {...stylex.props(styles.messageLabel)}>
+                <ChannelSidebarIcon name="chevron-right" />
+              </span>
+              <span title={dock.header.title} {...stylex.props(styles.channelName)}>
+                {dock.header.title}
+              </span>
+            </span>
+          ) : HeaderTabs === undefined ? (
+            panel.title
+          ) : (
+            (entry?.headerLabel ?? panel.title)
+          )
+        }
         badge={Badge === undefined || props === undefined ? undefined : <Badge {...props} />}
         tabs={
           HeaderTabs === undefined || props === undefined ? undefined : <HeaderTabs {...props} />
@@ -383,6 +408,7 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
                 <ChannelSidebarIcon name="users" />
               </IconButton>
             )}
+            {entryId === CHANNEL_BODY_PANEL && dock.header?.actions}
             {HeaderAction === undefined || props === undefined ? null : <HeaderAction {...props} />}
             {PanelAction && (
               <PanelAction channel={panel.scope === 'channel' ? dock.channel : undefined} />
@@ -487,6 +513,7 @@ function buildDefaultLayout(api: DockviewApi, entries: ReadonlyMap<string, DockP
 }
 
 export interface ChannelDockProps {
+  header?: ChannelHeaderView | undefined;
   body: ReactNode;
   files?: ChannelFilesView | undefined;
   inbox?: ChannelInboxView | undefined;
@@ -501,6 +528,7 @@ export interface ChannelDockProps {
 }
 
 export function ChannelDock({
+  header,
   body,
   files,
   inbox,
@@ -815,6 +843,7 @@ export function ChannelDock({
     save(api);
   };
   const value: DockContextValue = {
+    header,
     body,
     files,
     inbox,
