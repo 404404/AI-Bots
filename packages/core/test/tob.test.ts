@@ -28,9 +28,7 @@ function fixture(
   run: (input: OrchestratorAgentRun) => Promise<void> = async () => {},
   extra: Partial<Parameters<typeof createCore>[0]> = {},
   steerOrchestrator?: () => boolean,
-  runAssignment: NonNullable<
-    Parameters<typeof createCore>[0]['agents']
-  >['runAssignment'] = async () => {},
+  runAssignment: (input: AssignmentAgentRun) => Promise<void> = async () => {},
 ) {
   const native = settings();
   const home = createTempRoot('tob-');
