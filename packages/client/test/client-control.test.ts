@@ -2,6 +2,7 @@ import { expect, it, vi } from 'vitest';
 import {
   createClientPreferenceHandlers,
   createClientTarget,
+  mountClientControl,
 } from '../src/client/client-control.js';
 import {
   mountNotificationPreferenceSync,
@@ -211,4 +212,60 @@ it('keeps the visible owner value when local persistence refuses a write', async
   const notifications = new DesktopNotificationPrefs(storage, f.api, async (run) => await run());
   await expect(notifications.setEnabled(true)).rejects.toThrow('client-persistence-unavailable');
   expect(notifications.getSnapshot().enabled).toBe(false);
+});
+
+it('aborts queued application when its Client mount is disposed before replacement registration', async () => {
+  let release!: () => void;
+  let entered!: () => void;
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  let polled = false,
+    applied = false,
+    authorizations = 0;
+  const call: import('../src/client/bridge.js').BridgeCall = async (_method, args) => {
+    if (args.action === 'poll') {
+      const commands = polled
+        ? []
+        : [
+            {
+              id: 'test-command',
+              operation: 'blocked-set',
+              args: {},
+              expiresAt: Date.now() + 10_000,
+            },
+          ];
+      polled = true;
+      return { ok: true, value: { commands } };
+    }
+    if (args.action === 'authorize') authorizations++;
+    return { ok: true, value: { accepted: true } };
+  };
+  const stop = mountClientControl({
+    call,
+    kind: 'web',
+    target: { clientId: 'client-test', generation: 'generation-test' },
+    handlers: new Map([
+      [
+        'blocked-set',
+        async (_args, context) => {
+          entered();
+          await blocked;
+          await context!.authorize();
+          applied = true;
+        },
+      ],
+    ]),
+  });
+  await started;
+  stop();
+  release();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(applied).toBe(false);
+  expect(authorizations).toBe(1);
 });

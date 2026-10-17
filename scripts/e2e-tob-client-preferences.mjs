@@ -97,7 +97,7 @@ function mark(step) {
   writeFileSync(resolve(out, 'progress.json'), JSON.stringify(progress, null, 2));
   console.log(JSON.stringify(entry));
 }
-const click = async (name, scope = '') => {
+const click = async (name, scope = '', targetPage = page) => {
   const names = {
     Members: ['Members', '成员'],
     More: ['More', '更多'],
@@ -106,7 +106,8 @@ const click = async (name, scope = '') => {
     'Configure model': ['配置模型，开始与 Tob 对话', 'Configure a model to talk to Tob'],
     Close: ['关闭', 'Close'],
     'Bot mode': ['Bot 模式', 'Bot mode'],
-    'Bot settings': ['Bot 设置', 'Bot settings'],
+    'Bot settings': ['Bot 设置', 'Bot settings', '打开 Bot 设置', 'Open Bot settings'],
+    Notifications: ['通知', 'Notifications'],
     Advanced: ['高级', 'Advanced'],
     'Task model settings': ['任务模型设置…', 'Task model settings…'],
     Cancel: ['取消', 'Cancel'],
@@ -120,7 +121,7 @@ const click = async (name, scope = '') => {
   while (Date.now() < deadline) {
     for (const label of names) {
       const selector = `${scope} ::-p-aria([name=${JSON.stringify(label)}])`.trim();
-      for (const handle of await page.$$(selector)) {
+      for (const handle of await targetPage.$$(selector)) {
         if (await handle.isVisible()) {
           await handle.click();
           return;
@@ -185,6 +186,44 @@ async function setHomeVisible(open) {
       }) === open,
     {},
     open,
+  );
+}
+
+async function enterClient(tab) {
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    const state = await tab.evaluate(() => {
+      const visible = (node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const controls = [...document.querySelectorAll('button,[role="button"]')].filter(visible);
+      const overlay = controls.find((node) =>
+        ['Continue', '继续', 'Configure later', '稍后配置', 'Skip tutorial', '跳过教程'].includes(
+          node.textContent?.trim(),
+        ),
+      );
+      if (overlay) return { click: overlay.textContent.trim() };
+      if ([...document.querySelectorAll('.bh-workspace-rail')].some(visible))
+        return { ready: true };
+      const entry = controls.find((node) =>
+        /^(Bot mode|Bot 模式)/u.test(
+          node.getAttribute('aria-label') || node.textContent?.trim() || '',
+        ),
+      );
+      return entry ? { click: entry.getAttribute('aria-label') || entry.textContent.trim() } : {};
+    });
+    if (state.ready) return;
+    if (state.click) await click(state.click, '', tab);
+    await pause(200);
+  }
+  throw Error('second Client shell unavailable');
+}
+async function captureClient(tab, label) {
+  await tab.screenshot({ path: resolve(out, label + '.png') });
+  writeFileSync(
+    resolve(out, label + '.aria.json'),
+    JSON.stringify(await tab.accessibility.snapshot(), null, 2),
   );
 }
 
@@ -620,7 +659,7 @@ try {
       await page
         .browserContext()
         .overridePermissions(new URL(instance.url).origin, ['notifications']);
-    let otherContext, otherPage, otherTarget;
+    let otherContext, otherPage, otherTarget, peerPage;
     if (!native) {
       otherContext = await browser.createBrowserContext();
       otherPage = await otherContext.newPage();
@@ -636,6 +675,92 @@ try {
         (item) => item.clientId === otherId,
       );
       assert.ok(otherTarget);
+    }
+
+    if (!native) {
+      peerPage = await page.browserContext().newPage();
+      peerPage.on('pageerror', (error) => errors.push('same-origin-peer: ' + error.message));
+      await peerPage.setViewport({ width: 1440, height: 900 });
+      await peerPage.goto(instance.url, { waitUntil: 'domcontentloaded' });
+      await enterClient(peerPage);
+      await peerPage.waitForFunction(() =>
+        sessionStorage.getItem('botharness.client-control-id.v1'),
+      );
+      assert.notEqual(
+        await peerPage.evaluate(() => sessionStorage.getItem('botharness.client-control-id.v1')),
+        target.clientId,
+      );
+      await write({ notifications: false });
+      const staleOwnerState = await read();
+      await click('Bot settings', '', peerPage);
+      await click('Notifications', '', peerPage);
+      const switchSelector = '[data-bh-setting="desktop-notifications"] [role="switch"]';
+      await peerPage.waitForSelector(switchSelector, { visible: true });
+      await captureClient(peerPage, 'same-origin-ui-before');
+      await peerPage.click(switchSelector);
+      await peerPage.waitForFunction(
+        (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'true',
+        {},
+        switchSelector,
+      );
+      const stale = await write({ notifications: false }, staleOwnerState.stateFingerprint, true);
+      assert.equal(stale.error.code, 'stale-client-preferences');
+      assert.equal((await read()).value.notifications.enabled, true);
+      await click('Bot settings');
+      await click('Notifications');
+      await page.waitForFunction(
+        (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'true',
+        {},
+        switchSelector,
+      );
+      await shot('same-origin-ui-synchronized');
+      await captureClient(peerPage, 'same-origin-peer-ui-after');
+      await write({ notifications: false });
+      await peerPage.waitForFunction(
+        (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'false',
+        {},
+        switchSelector,
+      );
+      await page.waitForFunction(
+        (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'false',
+        {},
+        switchSelector,
+      );
+      await shot('same-origin-direct-cli-off');
+      await click('Close');
+      const theme = await humanCli('settings', ['ui-theme']);
+      const sharedTheme = theme.value.preference === 'dark' ? 'light' : 'dark';
+      await humanCli(
+        'settings-set',
+        [
+          'ui-theme',
+          '--scope',
+          'host',
+          '--expected-revision',
+          String(theme.revision),
+          '--previous-value',
+          JSON.stringify({ preference: theme.value.preference }),
+          '--patch-stdin',
+        ],
+        { preference: sharedTheme },
+      );
+      for (const tab of [page, peerPage, otherPage].filter(Boolean)) {
+        await tab.waitForFunction(
+          (dark) => document.body.hasAttribute('data-ds-dark-theme') === dark,
+          {},
+          sharedTheme === 'dark',
+        );
+      }
+      const themeSaved = await humanCli('settings', ['ui-theme']);
+      assert.equal(themeSaved.value.preference, sharedTheme);
+      assert.equal(themeSaved.value.fontSize, theme.value.fontSize);
+      await shot('host-theme-all-clients');
+      await captureClient(peerPage, 'host-theme-peer');
+      if (otherPage) await captureClient(otherPage, 'host-theme-independent-context');
+      writeFileSync(resolve(out, 'host-theme-readback.json'), JSON.stringify(themeSaved, null, 2));
+      steps.push(
+        'real same-origin peer UI edit; shared notification owner/storage-event synchronization; stale CLI rejection; direct CLI reflected in both tabs; explicit Host theme reflected in all contexts',
+      );
     }
     const baseline = await read();
     const changed = await write({
@@ -661,6 +786,7 @@ try {
     await click('Notifications');
     await shot('direct-notifications');
     await click('Close');
+    if (peerPage) await peerPage.close();
     const saved = await read();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!document.querySelector('.bh-workspace-rail'));
@@ -678,6 +804,24 @@ try {
     await shot('reload-persistence');
     steps.push(
       'direct CLI notification owner; second-context isolation; shared Host scope refusal; same-tab reload persistence and old generation refusal',
+    );
+  }
+
+  if (runs('restart-read')) {
+    assert.ok(
+      process.env.BH_E2E_CLIENT_PREFERENCE_FIXTURE,
+      'restart-read needs prior expected owner state',
+    );
+    const expected = JSON.parse(readFileSync(process.env.BH_E2E_CLIENT_PREFERENCE_FIXTURE, 'utf8'));
+    const actual = await read();
+    assert.equal(actual.value.notifications.enabled, expected.notifications);
+    assert.equal(actual.value.theme, expected.theme);
+    await click('Bot settings');
+    await click('Notifications');
+    await shot('host-and-browser-restart-readback');
+    await click('Close');
+    steps.push(
+      'externally restarted same Profile Host and retained browser profile readback; actual notification controls',
     );
   }
   if (runs('model') || runs('journey')) {
@@ -711,6 +855,42 @@ try {
       'real natural Tob request; canonical originating Client; rendered review; ordinary Shell CLI trace; canonical local owner result',
     );
   }
+
+  if (runs('model-theme')) {
+    const state = await humanCli('settings', ['ui-theme']);
+    const desired = state.value.preference === 'dark' ? 'light' : 'dark';
+    const context = await beginPrompt(
+      home,
+      '请把这个 Host 的主题设为' +
+        (desired === 'dark' ? '深色' : '浅色') +
+        '，应用到所有已连接客户端。',
+    );
+    await review(
+      home,
+      context,
+      'settings-set',
+      (input) =>
+        input.target === 'ui-theme' &&
+        input.patch?.scope === 'host' &&
+        input.patch?.affectsAllConnectedClients === true &&
+        input.patch?.changes?.preference === desired,
+    );
+    await completeTurn(home, context, 'settings-set');
+    assert.equal((await humanCli('settings', ['ui-theme'])).value.preference, desired);
+    await shot('tob-explicit-host-theme');
+    steps.push(
+      'real natural Tob Host theme request; explicit shared-scope rendered review and native Settings readback',
+    );
+  }
+  const finalOwner = await read();
+  writeFileSync(
+    resolve(out, 'preferences-fixture.json'),
+    JSON.stringify(
+      { notifications: finalOwner.value.notifications.enabled, theme: finalOwner.value.theme },
+      null,
+      2,
+    ),
+  );
   writeFileSync(
     resolve(out, 'result.json'),
     JSON.stringify({ steps, errors, final: await read() }, null, 2),
