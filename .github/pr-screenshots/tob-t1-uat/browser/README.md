@@ -4,13 +4,13 @@
 
 Product JS: `216963322c70c7ea009392da66e9a0e1f4327727`; retained iOS native source: `a0b2919072af8fee62d8bb5fbb402fc52fb0d852`; driver: `b341c6454`. The driver changes test tooling only. Simulator: iPhone 17 Pro / iOS 26, 402 × 874, light/default text. WorkOS Emulate **0.15.0**, bound to loopback; no real identity or cloud request in this layer.
 
-| Path | Observation |
-| --- | --- |
-| Normal login | Actual Expo system browser displayed WORKOS EMULATE, then returned to the same App. Normal CloudClient state check and code exchange succeeded using native Crypto's S256 verifier, without client secret. |
-| Replay | Immediate second exchange of the same authorization code returned HTTP 400 / invalid_grant. |
-| Wrong state | Native INVALID_CALLBACK, no token request and no session. |
-| Wrong verifier | Emulator rejected exchange with HTTP 400; native LOGIN_FAILED and no session. |
-| Isolation | Fixture visibly named LOCAL EMULATOR - not UAT; storage only in memory. Original runtime/config restored afterward, real UAT still signed out. |
+| Path           | Observation                                                                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Normal login   | Actual Expo system browser displayed WORKOS EMULATE, then returned to the same App. Normal CloudClient state check and code exchange succeeded using native Crypto's S256 verifier, without client secret. |
+| Replay         | Immediate second exchange of the same authorization code returned HTTP 400 / invalid_grant.                                                                                                                |
+| Wrong state    | Native INVALID_CALLBACK, no token request and no session.                                                                                                                                                  |
+| Wrong verifier | Emulator rejected exchange with HTTP 400; native LOGIN_FAILED and no session.                                                                                                                              |
+| Isolation      | Fixture visibly named LOCAL EMULATOR - not UAT; storage only in memory. Original runtime/config restored afterward, real UAT still signed out.                                                             |
 
 The 68-second recording includes keyboard occlusion, dismissal and successful return, followed by restoring/resetting the local fixture at the end; that last state is **not a logout proof**. Screenshots and the 24-cell contact sheet were inspected; all form data in this recording are fictional. No real authentication-form footage is published.
 
