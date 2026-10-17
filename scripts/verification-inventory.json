@@ -1705,9 +1705,9 @@
       "path": "scripts/e2e-tob-home.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Home model configuration, canonical identity, native Shell CLI discovery/read/write and structured approval/deny/stale through the shared Web/native UI.",
+      "reason": "Home model configuration, identity and scoped CLI approval journeys, plus model-free dashboard cards, exact 24h/7d/30d usage, source navigation and canonical no-background-report readback. Web/native remain independent runtime gates.",
       "task": 2087,
-      "sha256": "514e694627ffa1b018ddc0ab3eb236b54978965dcaa260a9e0924ab2c6e11c89"
+      "sha256": "f073ab0e0b8b0272a5899f8e265e22673c680588f478c04d1ff35120e1c48e3a"
     },
     {
       "path": "scripts/e2e-tob-model-runtime.mjs",

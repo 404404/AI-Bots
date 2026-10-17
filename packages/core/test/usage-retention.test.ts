@@ -92,7 +92,12 @@ it('retains missing histories across restarts and never recounts restored or lat
   );
   expect(receipts).toHaveLength(3);
   expect(JSON.stringify(receipts)).not.toContain('deleted-session');
-  expect(Object.keys(receipts[0]!)).toEqual(['fingerprint', 'bot_slug']);
+  expect(Object.keys(receipts[0]!)).toEqual([
+    'fingerprint',
+    'bot_slug',
+    'occurred_at_ms',
+    'total_tokens',
+  ]);
 });
 
 it('commits the receipt and counters together, allowing a failed write to be retried', () => {
