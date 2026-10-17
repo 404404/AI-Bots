@@ -263,8 +263,12 @@ async function modelUi(route) {
   mark('model-ui-verified');
 }
 
-async function newToolCalls(slug, previousIds) {
-  const trace = await rpc('botToolTrace', { slug, turns: 20 }).catch((error) => {
+async function newToolCalls(slug, previousIds, sessionId) {
+  const trace = await rpc('botToolTrace', {
+    slug,
+    turns: 20,
+    ...(sessionId ? { sessionId } : {}),
+  }).catch((error) => {
     if (/gateway\/internal: session "[^"\n]+" not found/u.test(error.message)) return { turns: [] };
     throw error;
   });
@@ -277,6 +281,66 @@ async function newToolCalls(slug, previousIds) {
     'legacy dedicated Tob management tool was invoked',
   );
   return { trace, calls };
+}
+
+async function waitForIntroCompletion(home, prompt, previousMessageIds, previousCalls, started) {
+  let sessionId, turnNumber, messageId;
+  for (let i = 0; i < 120; i++) {
+    const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    const fresh = messages.filter((message) => !previousMessageIds.has(message.id));
+    assert.ok(
+      !fresh.some((message) => message.toolApprovalRequest),
+      'introduction proposed approval',
+    );
+    assert.ok(!fresh.some((message) => message.sessionFailure), 'introduction Session failed');
+    const submitted = fresh.find(
+      (message) => message.author.kind === 'human' && message.body === prompt,
+    );
+    if (submitted) messageId ??= submitted.id;
+    const evidence = await newToolCalls(home.botSlug, previousCalls, sessionId);
+    if (turnNumber === undefined) {
+      const turn = evidence.trace.turns.find(
+        (entry) =>
+          Date.parse(entry.startedAt) >= started &&
+          entry.calls.some(
+            (call) =>
+              !previousCalls.has(call.callId) &&
+              ['bash', 'pwsh'].includes(call.name) &&
+              JSON.stringify(call.args).includes('deepseekbot capabilities'),
+          ),
+      );
+      if (turn) {
+        sessionId = evidence.trace.sessionId;
+        turnNumber = turn.turn;
+      }
+    }
+    const turn = evidence.trace.turns.find((entry) => entry.turn === turnNumber);
+    if (turn?.endReason !== undefined)
+      assert.equal(turn.endReason, 'completed', 'introduction turn did not complete successfully');
+    const delivery = messages
+      .find((message) => message.id === messageId)
+      ?.deliveries?.find((entry) => entry.botSlug === home.botSlug);
+    assert.ok(
+      !['retryable', 'needs-repair', 'ignored'].includes(delivery?.state),
+      'submitted introduction was not handled successfully',
+    );
+    if (messageId && turn?.endReason === 'completed' && delivery?.state === 'handled') {
+      const completion = {
+        messageId,
+        sessionId,
+        turn: turnNumber,
+        endReason: turn.endReason,
+        delivery: delivery.state,
+      };
+      writeFileSync(
+        resolve(out, 'intro-turn-completion.json'),
+        JSON.stringify(completion, null, 2),
+      );
+      return completion;
+    }
+    await pause(1000);
+  }
+  throw Error('submitted introduction did not reach a completed native turn and handled delivery');
 }
 
 async function verifyCliTrace(slug, previousIds, commands, refusal) {
@@ -510,10 +574,12 @@ try {
     const previousCalls = new Set(
       trace.turns.flatMap((turn) => turn.calls).map((call) => call.callId),
     );
+    const previousMessages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    const previousMessageIds = new Set(previousMessages.map((message) => message.id));
     const previousIds = new Set(
-      (await rpc('channelMessages', { channelId: home.channelId })).messages
-        .filter((m) => m.toolApprovalRequest)
-        .map((m) => m.id),
+      previousMessages
+        .filter((message) => message.toolApprovalRequest)
+        .map((message) => message.id),
     );
     const beforePlan = await rpc('modelPlan', { slug: target });
     const previousDeveloper = initial.value.developerMode === true;
@@ -586,6 +652,14 @@ try {
     mark('prompt-submitted');
     if (phase === 'intro') {
       await verifyCliTrace(home.botSlug, previousCalls, ['capabilities']);
+      const completion = await waitForIntroCompletion(
+        home,
+        prompt,
+        previousMessageIds,
+        previousCalls,
+        started,
+      );
+      mark('intro-turn-completed');
       let reply;
       for (let i = 0; i < 120; i++) {
         const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
@@ -602,7 +676,7 @@ try {
         await pause(1000);
       }
       assert.ok(reply, 'natural capability reply missing');
-      const calls = (await newToolCalls(home.botSlug, previousCalls)).calls;
+      const calls = (await newToolCalls(home.botSlug, previousCalls, completion.sessionId)).calls;
       const capabilityCall = calls.find(
         (call) =>
           ['bash', 'pwsh'].includes(call.name) &&
@@ -655,7 +729,7 @@ try {
       await pause(500);
       writeFileSync(
         resolve(out, 'natural-intro.json'),
-        JSON.stringify({ prompt, reply: reply.body, calls }, null, 2),
+        JSON.stringify({ prompt, completion, reply: reply.body, calls }, null, 2),
       );
       steps.push(
         'short natural question discovers installed CLI capabilities, explains models and asks a next step; no approval or mutation',
