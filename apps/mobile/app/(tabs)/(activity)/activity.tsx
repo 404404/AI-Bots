@@ -29,40 +29,49 @@ export default function ActivityScreen() {
     ],
     [roster],
   );
-  const bot = useCallback((slug: string) => roster?.bots.find((entry) => entry.slug === slug), [roster]);
+  const bot = useCallback(
+    (slug: string) => roster?.bots.find((entry) => entry.slug === slug),
+    [roster],
+  );
 
-  const open = useCallback((item: HumanAttentionItem) => {
-    const unread = unreadHref(
-      item,
-      (slug) => bot(slug)?.dmChannelId,
-      (channelId) => roster?.channels.some((channel) => channel.id === channelId) ?? false,
-    );
-    if (unread !== undefined) return router.push(unread);
-    const card = cardHref(
-      item,
-      (slug) => bot(slug)?.dmChannelId,
-      (channelId) => roster?.channels.some((channel) => channel.id === channelId) ?? false,
-    );
-    if (card !== undefined) return router.push(card);
-    router.push({
-      pathname: '/inbox/[id]',
-      params: {
-        id: item.id,
-        kind: item.kind,
-        botSlug: item.botSlug,
-        summary: item.summary,
-        ...(item.channelId === undefined ? {} : { channelId: item.channelId }),
-        ...(item.messageId === undefined ? {} : { messageId: item.messageId }),
-      },
-    });
-  }, [router, bot, roster]);
-  const header = useMemo(() => (
-    <ConnectionBanner
-      connection={snapshot.connection}
-      onRetry={() => client?.retryNow()}
-      onPairAgain={() => router.push('/pair')}
-    />
-  ), [snapshot.connection, client, router]);
+  const open = useCallback(
+    (item: HumanAttentionItem) => {
+      const unread = unreadHref(
+        item,
+        (slug) => bot(slug)?.dmChannelId,
+        (channelId) => roster?.channels.some((channel) => channel.id === channelId) ?? false,
+      );
+      if (unread !== undefined) return router.push(unread);
+      const card = cardHref(
+        item,
+        (slug) => bot(slug)?.dmChannelId,
+        (channelId) => roster?.channels.some((channel) => channel.id === channelId) ?? false,
+      );
+      if (card !== undefined) return router.push(card);
+      router.push({
+        pathname: '/inbox/[id]',
+        params: {
+          id: item.id,
+          kind: item.kind,
+          botSlug: item.botSlug,
+          summary: item.summary,
+          ...(item.channelId === undefined ? {} : { channelId: item.channelId }),
+          ...(item.messageId === undefined ? {} : { messageId: item.messageId }),
+        },
+      });
+    },
+    [router, bot, roster],
+  );
+  const header = useMemo(
+    () => (
+      <ConnectionBanner
+        connection={snapshot.connection}
+        onRetry={() => client?.retryNow()}
+        onPairAgain={() => router.push('/pair')}
+      />
+    ),
+    [snapshot.connection, client, router],
+  );
 
   return (
     <>

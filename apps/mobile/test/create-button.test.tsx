@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, useLayoutEffect, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { push, platform, showActionSheetWithOptions, alert } = vi.hoisted(() => ({
   push: vi.fn(),
@@ -24,7 +24,13 @@ vi.mock('expo-image', () => ({ Image: () => null }));
 vi.mock('expo-router', () => {
   const Stack = () => null;
   Stack.Screen = () => null;
-  return { Redirect: () => null, Stack, useIsFocused: () => true, useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]), useRouter: () => ({ push, prefetch: () => undefined }) };
+  return {
+    Redirect: () => null,
+    Stack,
+    useIsFocused: () => true,
+    useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]),
+    useRouter: () => ({ push, prefetch: () => undefined }),
+  };
 });
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({
@@ -65,9 +71,17 @@ import { t } from '../src/ui/strings';
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 let root: Root | undefined;
+beforeEach(() => {
+  vi.stubGlobal(
+    'requestIdleCallback',
+    vi.fn(() => 1),
+  );
+  vi.stubGlobal('cancelIdleCallback', vi.fn());
+});
 let host: HTMLElement | undefined;
 afterEach(() => {
   act(() => root?.unmount());
+  vi.unstubAllGlobals();
   host?.remove();
   root = undefined;
   push.mockReset();

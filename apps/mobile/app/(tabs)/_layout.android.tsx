@@ -136,7 +136,7 @@ function AndroidTabLayout() {
                   focused={focused}
                   color={color}
                   count={pending}
-                countVisible={!focused}
+                  countVisible={!focused}
                 >
                   <ActivityIcon color={color} size={theme.type.title.line} />
                 </NavigationIcon>

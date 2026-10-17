@@ -3,7 +3,13 @@ import { View } from 'react-native';
 
 import { useMounted } from '../mounted';
 
-export function DeferredContent({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
+export function DeferredContent({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback: ReactNode;
+}) {
   const [ready, setReady] = useState(false);
   const mounted = useMounted(() => {
     let frame = requestAnimationFrame(() => {
@@ -11,5 +17,9 @@ export function DeferredContent({ children, fallback }: { children: ReactNode; f
     });
     return () => cancelAnimationFrame(frame);
   }, []);
-  return <View ref={mounted} style={{ flex: 1 }}>{ready ? children : fallback}</View>;
+  return (
+    <View ref={mounted} style={{ flex: 1 }}>
+      {ready ? children : fallback}
+    </View>
+  );
 }

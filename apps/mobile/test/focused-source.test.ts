@@ -5,12 +5,20 @@ describe('focused snapshot source', () => {
   it('holds hidden data without notifications, catches up once and disposes subscriptions', () => {
     let value = 'cached';
     const live = new Set<() => void>();
-    const source = { getSnapshot: () => value, subscribe: (listener: () => void) => {
-      live.add(listener); return () => { live.delete(listener); };
-    } };
+    const source = {
+      getSnapshot: () => value,
+      subscribe: (listener: () => void) => {
+        live.add(listener);
+        return () => {
+          live.delete(listener);
+        };
+      },
+    };
     const focused = focusedSource(source);
     let updates = 0;
-    const off = focused.subscribe(() => { updates++; });
+    const off = focused.subscribe(() => {
+      updates++;
+    });
     expect(live.size).toBe(0);
     focused.focus(true);
     expect(live.size).toBe(1);

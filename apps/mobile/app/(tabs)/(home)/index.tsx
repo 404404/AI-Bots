@@ -39,10 +39,18 @@ export default function HomeScreen() {
   const { saved, client, inbox } = useHostSession();
   const snapshot = useHostSnapshot(client, focused);
   const list = useInbox(inbox, focused);
-  return <HomeContent saved={saved} client={client} inbox={inbox} snapshot={snapshot} list={list} />;
+  return (
+    <HomeContent saved={saved} client={client} inbox={inbox} snapshot={snapshot} list={list} />
+  );
 }
 
-const HomeContent = memo(function HomeContent({ saved, client, inbox, snapshot, list }: {
+const HomeContent = memo(function HomeContent({
+  saved,
+  client,
+  inbox,
+  snapshot,
+  list,
+}: {
   saved: ReturnType<typeof useHostSession>['saved'];
   client: ReturnType<typeof useHostSession>['client'];
   inbox: ReturnType<typeof useHostSession>['inbox'];
@@ -50,14 +58,20 @@ const HomeContent = memo(function HomeContent({ saved, client, inbox, snapshot, 
   list: ReturnType<typeof useInbox>;
 }) {
   const router = useRouter();
-  useFocusEffect(useCallback(() => {
-    let stop: (() => void) | undefined;
-    const idle = requestIdleCallback(() => {
-      router.prefetch('/activity');
-      if (client !== undefined) stop = prefetchInbox(client, { activity: true, section: 'action' });
-    });
-    return () => { cancelIdleCallback(idle); stop?.(); };
-  }, [router, client]));
+  useFocusEffect(
+    useCallback(() => {
+      let stop: (() => void) | undefined;
+      const idle = requestIdleCallback(() => {
+        router.prefetch('/activity');
+        if (client !== undefined)
+          stop = prefetchInbox(client, { activity: true, section: 'action' });
+      });
+      return () => {
+        cancelIdleCallback(idle);
+        stop?.();
+      };
+    }, [router, client]),
+  );
   const onScroll = useChromeScroll();
   const bottom = useFloatingTabInset();
   const look = useHostLook(saved?.hostId);

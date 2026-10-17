@@ -234,8 +234,13 @@ export function observeInbox(client: HostClient, query: InboxQuery): InboxObserv
     observations.set(client, cache);
   }
   const key = JSON.stringify([
-    query.activity ?? false, query.section ?? 'all', query.botSlug ?? '',
-    query.channelId ?? '', query.search ?? '', query.unreadOnly ?? false, query.sort ?? 'default',
+    query.activity ?? false,
+    query.section ?? 'all',
+    query.botSlug ?? '',
+    query.channelId ?? '',
+    query.search ?? '',
+    query.unreadOnly ?? false,
+    query.sort ?? 'default',
   ]);
   const existing = cache.get(key);
   if (existing !== undefined) {

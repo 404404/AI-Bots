@@ -10,7 +10,14 @@ import {
   memo,
   type ReactElement,
 } from 'react';
-import { Animated as NativeAnimated, Platform, Pressable, RefreshControl, View, useWindowDimensions } from 'react-native';
+import {
+  Animated as NativeAnimated,
+  Platform,
+  Pressable,
+  RefreshControl,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { TabView } from 'react-native-tab-view';
 import Animated, {
   FadeOut,
@@ -403,40 +410,47 @@ export const ActivityFeed = memo(function ActivityFeed(props: ActivityFeedProps)
       behavior="padding"
     >
       <Animated.View style={[{ flex: 1, marginTop: top, marginBottom: -travel }, pageStyle]}>
-        <DeferredContent fallback={<View style={{ flex: 1 }}>
-          <ActivityTabs selected={filter.section} position={placeholderPosition}
-            onSelect={(key) => selectIndex(ACTIVITY_TABS.findIndex((tab) => tab.key === key))} />
-          <ListSkeleton />
-        </View>}>
-        <TabView
-          style={{ backgroundColor: theme.color.base }}
-          navigationState={{ index, routes: ACTIVITY_ROUTES }}
-          initialLayout={{ width }}
-          onIndexChange={selectIndex}
-          animationEnabled={!reducedMotion}
-          lazy
-          renderLazyPlaceholder={() => <ListSkeleton />}
-          renderTabBar={({ position, jumpTo }) => (
-            <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
-          )}
-          renderScene={({ route }: { route: ActivityTab }) => (
-            <ActivityPage
-              {...props}
-              section={route.key === ACTIVITY_TABS[index]?.key ? filter.section : route.key}
-              filterBot={filter.bot}
-              filterChannel={filter.channel}
-              filterUnread={filter.unreadOnly}
-              search={search}
-              sort={sort}
-              active={route.key === ACTIVITY_TABS[index]?.key}
-              searchFocused={searchFocused}
-              scrollActive={route.key === ACTIVITY_TABS[index]?.key}
-              pinChrome={searchFocused || filtering}
-              headerTravel={travel}
-              dismissSearch={dismissSearch}
-            />
-          )}
-        />
+        <DeferredContent
+          fallback={
+            <View style={{ flex: 1 }}>
+              <ActivityTabs
+                selected={filter.section}
+                position={placeholderPosition}
+                onSelect={(key) => selectIndex(ACTIVITY_TABS.findIndex((tab) => tab.key === key))}
+              />
+              <ListSkeleton />
+            </View>
+          }
+        >
+          <TabView
+            style={{ backgroundColor: theme.color.base }}
+            navigationState={{ index, routes: ACTIVITY_ROUTES }}
+            initialLayout={{ width }}
+            onIndexChange={selectIndex}
+            animationEnabled={!reducedMotion}
+            lazy
+            renderLazyPlaceholder={() => <ListSkeleton />}
+            renderTabBar={({ position, jumpTo }) => (
+              <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
+            )}
+            renderScene={({ route }: { route: ActivityTab }) => (
+              <ActivityPage
+                {...props}
+                section={route.key === ACTIVITY_TABS[index]?.key ? filter.section : route.key}
+                filterBot={filter.bot}
+                filterChannel={filter.channel}
+                filterUnread={filter.unreadOnly}
+                search={search}
+                sort={sort}
+                active={route.key === ACTIVITY_TABS[index]?.key}
+                searchFocused={searchFocused}
+                scrollActive={route.key === ACTIVITY_TABS[index]?.key}
+                pinChrome={searchFocused || filtering}
+                headerTravel={travel}
+                dismissSearch={dismissSearch}
+              />
+            )}
+          />
         </DeferredContent>
       </Animated.View>
       <CollapsingToolbar travel={travel} height={top}>

@@ -26,8 +26,14 @@ export function focusedSource<Snapshot>(source: {
     subscribe(listener: () => void) {
       listeners.add(listener);
       sync();
-      return () => { listeners.delete(listener); sync(); };
+      return () => {
+        listeners.delete(listener);
+        sync();
+      };
     },
-    focus(next: boolean) { focused = next; sync(); },
+    focus(next: boolean) {
+      focused = next;
+      sync();
+    },
   };
 }

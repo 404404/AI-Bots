@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createHostClient, type HostClient } from '../src/host/client';
-import { observeInbox } from '../src/host/inbox';
+import { observeInbox, prefetchInbox } from '../src/host/inbox';
 import { FakeHost } from './fake-host';
 
 const clients: HostClient[] = [];
-afterEach(() => { for (const client of clients.splice(0)) client.stop(); });
+afterEach(() => {
+  for (const client of clients.splice(0)) client.stop();
+});
 
 function host() {
   const fake = new FakeHost();
@@ -17,15 +19,42 @@ function host() {
       ? { ok: false, error: { code: 'unavailable', message: 'offline', details: {} } }
       : { ok: true, value: { items: [], queryVersion: 1 } };
   });
-  const client = createHostClient({ routes: ['https://studio.example'], credential: fake.credential, carrier: fake.carrier });
+  const client = createHostClient({
+    routes: ['https://studio.example'],
+    credential: fake.credential,
+    carrier: fake.carrier,
+  });
   clients.push(client);
   client.start();
-  return { client, calls: () => calls, refuse: () => { refuse = true; } };
+  return {
+    client,
+    calls: () => calls,
+    refuse: () => {
+      refuse = true;
+    },
+  };
 }
 
-async function settle() { for (let i = 0; i < 15; i++) await new Promise(r => setTimeout(r, 5)); }
+async function settle() {
+  for (let i = 0; i < 15; i++) await new Promise((r) => setTimeout(r, 5));
+}
 
 describe('Activity query observation', () => {
+  it('prefetches without navigation, releases live observation and tolerates repeated cleanup', async () => {
+    const target = host();
+    const query = { activity: true, section: 'action' } as const;
+    const cancel = prefetchInbox(target.client, query);
+    await settle();
+    const observed = observeInbox(target.client, query);
+    expect(observed.getSnapshot().status).toBe('ready');
+    expect(observed.getInbox()).toBeUndefined();
+    cancel();
+    cancel();
+    const stop = observed.subscribe(() => {});
+    expect(observed.getInbox()).toBeDefined();
+    stop();
+    expect(observed.getInbox()).toBeUndefined();
+  });
   it('shows cached data immediately on return and refreshes without clearing it', async () => {
     const target = host();
     const query = { activity: true, section: 'action' } as const;
@@ -57,7 +86,9 @@ describe('Activity query observation', () => {
     const stop = returned.subscribe(() => {});
     await settle();
     expect(returned.getSnapshot()).toMatchObject({ status: 'ready', stale: 'offline' });
-    expect(observeInbox(first.client, { ...query, search: 'different' }).getSnapshot().status).toBe('loading');
+    expect(observeInbox(first.client, { ...query, search: 'different' }).getSnapshot().status).toBe(
+      'loading',
+    );
     expect(observeInbox(host().client, query).getSnapshot().status).toBe('loading');
     stop();
   });
