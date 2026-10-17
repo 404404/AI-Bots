@@ -113,68 +113,71 @@ it('preserves reconciliation/degraded quality independently of retained counters
   });
 });
 
-it('upgrades generation101 without attributing old day buckets to precise hours and enriches existing receipts through non-model reconciliation', async () => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(now);
-  const home = createTempRoot('bh-home-usage-upgrade-');
-  const old = trackTestOwner(
-    mountOperationalDatabase({
-      dshHome: home,
-      schemaPlan: defineSchemaPlan(
-        BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 101),
-      ),
-    }),
-  );
-  const ownership = createSessionOwnership(attachOperationalModule(old, 'session-ownership'));
-  ownership.claim({
-    sessionId: 'root',
-    botSlug: 'ada',
-    rootRole: 'orchestrator',
-    at: '2026-09-01T00:00:00Z',
-  });
-  const usageModule = attachOperationalModule(old, 'usage');
-  usageModule.transaction(
-    (connection) => {
-      connection
-        .prepare('INSERT INTO usage_receipts(fingerprint, bot_slug) VALUES (?, ?)')
-        .run('legacy', 'ada');
-      connection
-        .prepare(`INSERT INTO usage_daily(bot_slug,day,provider,model,purpose,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens)
+it.each(['owned-only', 'retained'] as const)(
+  'upgrades generation101 %s history without inventing precise coverage and enriches existing receipts through non-model reconciliation',
+  async (history) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(now);
+    const home = createTempRoot('bh-home-usage-upgrade-');
+    const old = trackTestOwner(
+      mountOperationalDatabase({
+        dshHome: home,
+        schemaPlan: defineSchemaPlan(
+          BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 101),
+        ),
+      }),
+    );
+    const ownership = createSessionOwnership(attachOperationalModule(old, 'session-ownership'));
+    ownership.claim({
+      sessionId: 'root',
+      botSlug: 'ada',
+      rootRole: 'orchestrator',
+      at: '2026-09-01T00:00:00Z',
+    });
+    const usageModule = attachOperationalModule(old, 'usage');
+    usageModule.transaction(
+      (connection) => {
+        connection
+          .prepare('INSERT INTO usage_receipts(fingerprint, bot_slug) VALUES (?, ?)')
+          .run('legacy', 'ada');
+        connection
+          .prepare(`INSERT INTO usage_daily(bot_slug,day,provider,model,purpose,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens)
       VALUES ('ada','2026-10-18','p','m','orchestrator',10,0,0,0)`)
-        .run();
-    },
-    ['usage'],
-  );
-  old.close();
-  const current = open(home);
-  expect(current.usage.rolling('24h')).toMatchObject({
-    totalTokens: null,
-    status: 'unknown',
-    coverageStart: now.toISOString(),
-  });
-  const sample = event(1, '2026-10-18T11:00:00Z', 7);
-  current.usage.handleSessionEvent('root', sample);
-  const before = current.usage.activity('ada', '2000-01-01T00:00:00Z');
-  current.port.transaction(
-    (connection) =>
-      connection
-        .prepare(
-          'UPDATE usage_receipts SET occurred_at_ms=NULL,total_tokens=NULL WHERE fingerprint != ?',
-        )
-        .run('legacy'),
-    ['usage'],
-  );
-  expect(
-    await current.usage.rebuild(['root'], async () => ({
-      events: [sample],
-      inheritedEventCount: 0,
-    })),
-  ).toMatchObject({ folded: 0, failed: 0 });
-  expect(current.usage.rolling('24h')).toMatchObject({ totalTokens: 7, status: 'partial' });
-  expect(current.usage.activity('ada', '2000-01-01T00:00:00Z')).toEqual(before);
-  current.database.close();
-  expect(open(home).usage.rolling('24h')).toMatchObject({ totalTokens: 7, status: 'partial' });
-});
+          .run();
+      },
+      ['usage'],
+    );
+    old.close();
+    const current = open(home);
+    expect(current.usage.rolling('24h')).toMatchObject({
+      totalTokens: null,
+      status: 'unknown',
+      coverageStart: now.toISOString(),
+    });
+    const sample = event(1, '2026-10-18T11:00:00Z', 7);
+    current.usage.handleSessionEvent('root', sample);
+    const before = current.usage.activity('ada', '2000-01-01T00:00:00Z');
+    current.port.transaction(
+      (connection) =>
+        connection
+          .prepare(
+            'UPDATE usage_receipts SET occurred_at_ms=NULL,total_tokens=NULL WHERE fingerprint != ?',
+          )
+          .run('legacy'),
+      ['usage'],
+    );
+    expect(
+      await current.usage.rebuild(['root'], async () => ({
+        events: [sample],
+        inheritedEventCount: 0,
+      })),
+    ).toMatchObject({ folded: 0, failed: 0 });
+    expect(current.usage.rolling('24h')).toMatchObject({ totalTokens: 7, status: 'partial' });
+    expect(current.usage.activity('ada', '2000-01-01T00:00:00Z')).toEqual(before);
+    current.database.close();
+    expect(open(home).usage.rolling('24h')).toMatchObject({ totalTokens: 7, status: 'partial' });
+  },
+);
 
 it('bounds indexed receipt work without materializing Session logs and marks the reported sum as a lower bound', () => {
   const { usage, port } = open();
