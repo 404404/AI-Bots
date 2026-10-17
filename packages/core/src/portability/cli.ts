@@ -55,7 +55,7 @@ export async function runProfileRestoreCli(argv: readonly string[]): Promise<voi
             home: receipt.destinationHome,
             state: 'stopped',
             mode: receipt.mode,
-            next: 'Launch this DSH_HOME with trusted pinned DSH 0.2.0-rc.1 and BotHarness. Open Bot-mode Settings to authorize the target model and explicitly activate one Bot.',
+            next: 'Launch only this new DSH_HOME with trusted pinned DSH 0.2.0-rc.2 and BotHarness. Run deepseekbot profile-recovery against that Host, then profile-recovery-authorize <slug> --confirm and profile-recovery-activate <slug> --confirm --acknowledge-split-brain. Review Bot-mode Settings recovery readiness. Keep the original Host stopped to avoid split brain.',
           },
           null,
           2,
