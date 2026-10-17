@@ -1810,9 +1810,9 @@
       "path": "scripts/e2e-tob-devices.mjs",
       "category": "mapped",
       "behaviors": ["phone.pairing"],
-      "reason": "Direct CLI and scoped Tob Shell management with Human Devices dialog handoff; authorized synthetic device pairing, list, revoke, stream close and denied access. Physical phone and native Desktop remain separate qualification.",
+      "reason": "Direct CLI and scoped Tob Shell management with Human Devices dialog handoff; authorized synthetic device pairing, list, revoke, stream close and denied access. Optional Desktop CDP uses the existing dsh-app page and disconnects without closing it; this adapter is prepared but unrun. Physical phone and native Desktop remain separate qualification.",
       "task": 2098,
-      "sha256": "c295845735d8327bfbc0f249d053b2a59f6d9db31139ed124a88209a6c5b63f4"
+      "sha256": "3a53148f783ef65fd8c2b4197154f5ee7efb263ff564929993f1a5c3f8fee922"
     }
   ],
   "native": [
