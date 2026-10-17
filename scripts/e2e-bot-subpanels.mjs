@@ -89,10 +89,10 @@ try {
     assert.equal(await page.$(`.bh-workspace-rail [data-pinned-panel="${id}"]`), null);
     await visible(id);
   }
-  await page.waitForFunction(() =>
-    document
-      .querySelector('[data-channel-subpanel="memory-files"]')
-      ?.textContent.includes('SOUL.md'),
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-channel-subpanel="memory-files"] [data-path="SOUL.md"]') !==
+      null,
   );
   await page.screenshot({ path: resolve(out, 'migrated.png') });
   await page.evaluate(() => {

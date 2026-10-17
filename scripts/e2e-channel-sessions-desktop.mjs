@@ -291,10 +291,10 @@ try {
       .querySelector('[data-dock-header="bh:channel-body"]')
       ?.textContent.includes('DeepSeek Bot'),
   );
-  await page.waitForFunction(() =>
-    document
-      .querySelector('[data-channel-subpanel="memory-files"]')
-      ?.textContent.includes('SOUL.md'),
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-channel-subpanel="memory-files"] [data-path="SOUL.md"]') !==
+      null,
   );
   await wait(1000);
   await page.screenshot({ path: resolve(out, 'native-bot-panels.png') });

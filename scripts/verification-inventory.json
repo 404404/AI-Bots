@@ -1636,7 +1636,7 @@
       "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
       "reason": "Task-owned macOS dsh-app window with Electron input dispatch for parent/child default and custom shortcuts, reload and Group exclusions.",
       "task": 2049,
-      "sha256": "2893edb69ae7cfdd9c8f446754a27140392b26944a8f0aa14e3856627c3459f6"
+      "sha256": "22cc1e44fabbc3fa6289c1facc76f3a9fc87c3d32cb379fa2b9ce96f44d0b438"
     },
     {
       "path": "scripts/e2e-bot-subpanels.mjs",
@@ -1644,7 +1644,7 @@
       "behaviors": ["desktop.bot-mode.dock"],
       "reason": "Real v4 upgrade, three Bot-specific nested panels, per-Channel persistence, stable resizing/drag, context menu and native shortcut catalog.",
       "task": 2067,
-      "sha256": "659e401344115b36d1ff88615212937bc73d83fb747119472661eb8d7d0d38df"
+      "sha256": "64e3d597707ab4f70df4a9400480bfbca3bcdf36d6f4b0738001a3050af6665f"
     }
   ],
   "native": [
