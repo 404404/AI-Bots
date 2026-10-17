@@ -91,6 +91,18 @@ try {
   const settings = `${rail} button[aria-label="Bot 设置"]`;
   const recorder = 'button[aria-label="修改“开关 会话 面板”的快捷键"]';
   console.log('Opening native settings');
+  await page.click('[data-dock-header="bh:channel-body"]', { button: 'right' });
+  await page.waitForSelector('[data-pointer-menu] [data-control-checked="true"]');
+  await page.click('[data-pointer-menu] [data-control-checked="true"]');
+  await visible(false);
+  assert.equal(await page.$(toggle), null);
+  await page.click('[data-dock-header="bh:channel-body"]', { button: 'right' });
+  await page.waitForSelector('[data-pointer-menu] [data-control-checked="false"]');
+  await page.click('[data-pointer-menu] [data-control-checked="false"]');
+  await page.waitForSelector(toggle);
+  await page.click(toggle);
+  await visible();
+  results.push({ headerContextSwitchVisibility: true });
   console.log('Settings click');
   await page.click(settings);
   console.log('Settings clicked');
@@ -205,12 +217,14 @@ try {
   await page.locator('::-p-aria(test 暂无消息)').click();
   await visible();
   assert.equal(await page.$(`${rail} [data-pinned-panel="botharness-browser"]`), null);
-  assert.equal(await page.$(`${rail} [data-pinned-panel="botharness-computer"]`), null);
+  for (const id of ['botharness-computer', 'memory-files', 'memory-evolution', 'schedules'])
+    assert.equal(await page.$(`${rail} [data-pinned-panel="${id}"]`), null);
   await page.waitForSelector(`${header} button[aria-label="会话视图选项"]`);
   await page.click(`${header} button[aria-label="会话视图选项"]`);
   await page.locator('::-p-aria(Bot · DeepSeek Bot)').click();
   await page.waitForSelector('[data-session-target]');
-  assert.equal(await page.$(`${rail} [data-pinned-panel="botharness-computer"]`), null);
+  for (const id of ['botharness-computer', 'memory-files', 'memory-evolution', 'schedules'])
+    assert.equal(await page.$(`${rail} [data-pinned-panel="${id}"]`), null);
   await page.screenshot({ path: resolve(out, 'native-group.png') });
   await page.click(`${header} button[aria-label="会话视图选项"]`);
   await page.locator('::-p-aria(当前频道)').click();

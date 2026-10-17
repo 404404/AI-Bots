@@ -96,6 +96,27 @@ try {
     await page.click('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]');
   if (!(await page.$eval(child, (e) => e.checkVisibility()))) await key();
   await visible();
+  assert.equal(await page.$(`${parent} button[aria-label="频道子面板"]`), null);
+  await page.click(parent, { button: 'right' });
+  await page.waitForSelector('[data-pointer-menu] [data-control-checked="true"]');
+  await screenshot('header-controls');
+  await page.click('[data-pointer-menu] [data-control-checked="true"]');
+  await visible(false);
+  assert.equal(await page.$(`${parent} button[aria-label="会话"]`), null);
+  assert.equal((await stored()).channelWorkspaces[scene.channel.id].hiddenControl, true);
+  await page.reload({ waitUntil: 'networkidle2' });
+  await page.waitForSelector(parent);
+  assert.equal(await page.$(`${parent} button[aria-label="会话"]`), null);
+  await page.focus(parent);
+  await page.keyboard.down('Shift');
+  await page.keyboard.press('F10');
+  await page.keyboard.up('Shift');
+  await page.waitForSelector('[data-pointer-menu] [data-control-checked="false"]');
+  await page.click('[data-pointer-menu] [data-control-checked="false"]');
+  await page.waitForSelector(`${parent} button[aria-label="会话"]`);
+  await page.click(`${parent} button[aria-label="会话"]`);
+  await visible();
+  results.push('header context menu hides child and switch, persists, keyboard recovers switch');
   const initial = await stored();
   assert.equal(initial.version, 4);
   assert.equal(initial.layout.panels.sessions, undefined);
@@ -237,7 +258,8 @@ try {
   await page.click(`[data-dock-panel="bh:channels"] [data-channel-id="${scene.channel.id}"]`);
   await visible();
   assert.equal(await page.$('.bh-workspace-rail [data-pinned-panel="botharness-browser"]'), null);
-  assert.equal(await page.$('.bh-workspace-rail [data-pinned-panel="botharness-computer"]'), null);
+  for (const id of ['botharness-computer', 'memory-files', 'memory-evolution', 'schedules'])
+    assert.equal(await page.$(`.bh-workspace-rail [data-pinned-panel="${id}"]`), null);
   await page.click(`[data-dock-panel="bh:channels"] [data-channel-id="${dmId}"]`);
   await visible(false);
   await page.reload({ waitUntil: 'networkidle2' });

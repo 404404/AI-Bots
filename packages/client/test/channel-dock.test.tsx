@@ -797,6 +797,8 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     component: () => null,
   });
   registry.registerEntry(entry('sessions'));
+  const botOnly = ['memory-files', 'memory-evolution', 'schedules'];
+  for (const id of botOnly) registry.registerEntry(entry(id));
   const workspace = { rail: () => createElement('nav') };
   const view = (id: string) =>
     createElement(
@@ -842,9 +844,19 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
   expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+  for (const id of botOnly) {
+    expect(registry.canOpen?.(id)).toBe(true);
+    act(() => registry.open(id));
+  }
+  await settle();
   act(() => root.render(view('group')));
   await settle();
   expect(registry.isOpen('sessions')).toBe(true);
+  for (const id of botOnly) {
+    expect(registry.canOpen?.(id)).toBe(false);
+    act(() => registry.open(id));
+    expect(registry.isOpen(id)).toBe(false);
+  }
   act(() => root.render(view('ada')));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
@@ -866,4 +878,36 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
   expect(registry.isOpen('sessions')).toBe(true);
+  const context = () => host.querySelector('[data-dock-header="bh:channel-body"]')!;
+  act(() =>
+    context().dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, clientX: 40, clientY: 30 }),
+    ),
+  );
+  await settle();
+  const item = document.querySelector<HTMLButtonElement>('[data-menu-item="session-control"]')!;
+  expect(item).not.toBeNull();
+  act(() => item.click());
+  await settle();
+  expect(registry.isOpen('sessions')).toBe(false);
+  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.hiddenControl).toBe(true);
+  expect(context().querySelector('button[aria-label="会话"]')).toBeNull();
+  act(() => root.render(null));
+  await settle();
+  act(() => root.render(view('ada')));
+  await settle();
+  expect(context().querySelector('button[aria-label="会话"]')).toBeNull();
+  act(() =>
+    context().dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true }),
+    ),
+  );
+  await settle();
+  act(() =>
+    document.querySelector<HTMLButtonElement>('[data-menu-item="session-control"]')!.click(),
+  );
+  await settle();
+  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.hiddenControl).toBe(false);
+  expect(context().querySelector('button[aria-label="会话"]')).not.toBeNull();
+  expect(registry.isOpen('sessions')).toBe(false);
 });

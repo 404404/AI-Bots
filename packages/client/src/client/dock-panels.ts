@@ -2,6 +2,14 @@ import type { ComponentType } from 'react';
 
 import type { ChannelSidebarEntry } from './channel-sidebar.js';
 
+export const BOT_ONLY_CHANNEL_PANELS: readonly string[] = [
+  'botharness-browser',
+  'botharness-computer',
+  'memory-files',
+  'memory-evolution',
+  'schedules',
+];
+
 export const ACTIVITY_CENTER_PANEL = 'activity-center';
 
 export type DockPanelScope = 'global' | 'channel';

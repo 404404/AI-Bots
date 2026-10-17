@@ -1,3 +1,4 @@
+import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
 import { resolveChannelSidebarContext } from './channel-sidebar.js';
 import { usePanelMenu, PanelVisibilityLabel } from './panel-menu.js';
 import type { Shortcuts } from '@deepseek-ai/dsh-client-shortcuts/client';
@@ -183,9 +184,7 @@ function WorkspaceRail({
     () => options.prefs.source.getSnapshot().botIcon,
   );
   const state = useClientState();
-  const botOnlyHidden = resolveChannelSidebarContext(state)?.botSlug
-    ? []
-    : ['botharness-browser', 'botharness-computer'];
+  const botOnlyHidden = resolveChannelSidebarContext(state)?.botSlug ? [] : BOT_ONLY_CHANNEL_PANELS;
   const shortcuts = useSyncExternalStore(
     options.shortcuts.catalog.subscribe,
     options.shortcuts.catalog.getSnapshot,
