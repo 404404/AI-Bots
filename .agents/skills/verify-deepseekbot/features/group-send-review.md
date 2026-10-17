@@ -117,8 +117,16 @@ pilot Profiles remain immutable evidence, not supported upgrade sources. In a Gr
 than 20 historical messages, send without an observation: the held delta must include the latest
 Human correction and permit a corrected recheck. With an existing observation and more than
 20 intervening changes, the delta is incomplete and a retry cannot silently skip omitted content.
-After successful submission, inspect returns no pending draft and explicit reuse is refused;
-the Channel retains exactly one committed reply.
+After successful submission, no pending draft remains. With #2056, explicit inspection returns
+the authorized commit receipt and identical replay returns its original message ID; changed
+content is refused. The Channel retains exactly one committed reply.
+
+`scripts/fixtures/group-recovery-fault.mjs` is an opt-in evaluation Plugin, installed only
+in a task's isolated Profile. Its native DSH `tools/execute` waterfall runs the real send,
+then loses one committed result or holds one result for an actual Host restart. It matches
+an explicitly armed Group, saves the real outcome separately, honors cancellation and
+bounds an abandoned hold at 20 seconds. It is absent from the product Bundle. A simulated
+Tool-result loss must be labelled separately from an actual HTTP transport loss.
 
 As directed by the Human on 2026-10-18, future cohorts use DSH to run actual Bot Sessions.
 The current GPT-6 Astra assistant reads full Session, conversation and Tool records to assess
