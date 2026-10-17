@@ -15,8 +15,8 @@ import {
   DEVICE_WEB_MUX_PATH,
 } from './gateway.js';
 import { createDevicesHttp, DEVICES_PATH } from './http.js';
-import { createDevicePairing, type DevicePairingEvent } from './pairing.js';
-import { detectPhoneRoutes } from './routes.js';
+import { createDevicePairing, type DevicePairing, type DevicePairingEvent } from './pairing.js';
+import { detectPhoneRoutes, type RouteStatus } from './routes.js';
 import {
   createPushDelivery,
   type ExpoSender,
@@ -79,7 +79,12 @@ export type DeviceWebUpgrade = (request: IncomingMessage, socket: Duplex, head: 
 
 export function mountDevicePairing(
   ctx: Context,
-  options: { database: OperationalDatabaseOwner; dshHome: string; push?: DevicePushOptions },
+  options: {
+    database: OperationalDatabaseOwner;
+    dshHome: string;
+    push?: DevicePushOptions;
+    ready?: (pairing: DevicePairing, routes: () => Promise<RouteStatus>) => void | (() => void);
+  },
 ): DeviceWebUpgrade | undefined {
   if (options.database.mode !== 'ready') return undefined;
   let live: DeviceGateway | undefined;
@@ -145,11 +150,18 @@ export function mountDevicePairing(
     const connection = (webCtx as unknown as { connection: ConnectionLike }).connection;
     const webServer = (webCtx as unknown as { webServer: WebServerLike }).webServer;
     const routes = () => detectPhoneRoutes({ port: webServer.port });
+    webCtx.effect(() => {
+      const dispose = options.ready?.(pairing, routes);
+      return () => {
+        if (typeof dispose === 'function') dispose();
+      };
+    }, 'botharness: device management consumer');
     const http = createDevicesHttp({ pairing, routes });
     for (const [path, methods] of [
       [DEVICES_PATH, ['GET']],
       [`${DEVICES_PATH}/offer`, ['POST']],
       [`${DEVICES_PATH}/revoke`, ['POST']],
+      [`${DEVICES_PATH}/offer-status`, ['GET']],
     ] as const)
       webCtx.effect(
         () => connection.fetch.register({ path, methods, requestBody: 'buffered', fetch: http }),

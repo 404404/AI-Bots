@@ -1757,6 +1757,14 @@
       "reason": "Natural Tob personal Group mute/pin/hide/restore and Bot DM nickname through rendered review; denied and concurrently stale approval, independent owner and preference readback, actual roster/hidden/nickname UI and separate Web/macOS restart.",
       "task": 2090,
       "sha256": "2386db6abbda35831190a0d668c619505d45c91b4778a0189869e279f6a7d035"
+    },
+    {
+      "path": "scripts/e2e-tob-devices.mjs",
+      "category": "mapped",
+      "behaviors": ["phone.pairing"],
+      "reason": "Direct CLI and scoped Tob Shell management with Human Devices dialog handoff; authorized synthetic device pairing, list, revoke, stream close and denied access. Physical phone and native Desktop remain separate qualification.",
+      "task": 2098,
+      "sha256": "101c4a788e76ce170c2cf9e4d939d8d3baec58cbf3cb243e9b46f119579eafe7"
     }
   ],
   "native": [

@@ -216,3 +216,65 @@ describe('paired devices management', () => {
     expect((await revoke('nope')).status).toBe(404);
   });
 });
+
+it('tracks receipt settlement and expiry without exposing the offer or surviving restart', () => {
+  const f = fixture();
+  const host = f.open();
+  const offer = host.pairing.createOffer();
+  expect(host.pairing.currentOffer()).toEqual(offer);
+  const pending = host.pairing.offerStatus(offer.receiptId);
+  expect(pending.status).toBe('pending');
+  expect(JSON.stringify(pending)).not.toContain(offer.offer);
+  const paired = host.pairing.redeem({ offer: offer.offer });
+  if (!paired.ok) throw new Error('pair failed');
+  expect(host.pairing.offerStatus(offer.receiptId)).toMatchObject({
+    status: 'redeemed',
+    deviceId: paired.device.id,
+  });
+  expect(host.pairing.currentOffer()).toBeUndefined();
+  const late = host.pairing.createOffer();
+  f.advance(PAIRING_OFFER_TTL_MS);
+  expect(host.pairing.offerStatus(late.receiptId).status).toBe('expired');
+  host.owner.close();
+  expect(f.open().pairing.offerStatus(offer.receiptId).status).toBe('unknown');
+});
+
+it('reuses a pending scoped offer in the Human dialog and refuses a stale reviewed identity', async () => {
+  const host = fixture().open();
+  const offered = host.pairing.createOffer();
+  const http = createDevicesHttp({
+    pairing: host.pairing,
+    routes: () =>
+      detectPhoneRoutes({
+        port: 4100,
+        run: async () => {
+          throw new Error('offline');
+        },
+      }),
+  });
+  const view = (await (
+    await http(
+      new Request('http://h/api/botharness/devices/offer', {
+        method: 'POST',
+        body: JSON.stringify({ reuse: true }),
+      }),
+    )
+  ).json()) as PairingOfferView;
+  expect(view.receiptId).toBe(offered.receiptId);
+  const status = await (
+    await http(
+      new Request('http://h/api/botharness/devices/offer-status?receiptId=' + offered.receiptId),
+    )
+  ).json();
+  expect(status.status).toBe('pending');
+  const paired = host.pairing.redeem({ offer: offered.offer });
+  if (!paired.ok) throw new Error('pair failed');
+  const refused = await http(
+    new Request('http://h/api/botharness/devices/revoke', {
+      method: 'POST',
+      body: JSON.stringify({ deviceId: paired.device.id, expectedDevice: 'stale' }),
+    }),
+  );
+  expect(refused.status).toBe(409);
+  expect(host.pairing.admit('Device ' + paired.credential).ok).toBe(true);
+});

@@ -22,7 +22,15 @@ export interface PairedDevice {
 
 export interface PairingOffer {
   offer: string;
+  receiptId: string;
   expiresAt: string;
+}
+
+export interface PairingOfferStatus {
+  receiptId: string;
+  status: 'pending' | 'redeemed' | 'expired' | 'unknown';
+  expiresAt?: string;
+  deviceId?: string;
 }
 
 export type OfferRefusal = 'offer-invalid' | 'offer-expired';
@@ -43,6 +51,8 @@ export type DevicePairingEvent =
 export interface DevicePairing {
   host(): HostIdentity;
   createOffer(): PairingOffer;
+  currentOffer(): PairingOffer | undefined;
+  offerStatus(receiptId: string): PairingOfferStatus;
   redeem(input: { offer: string; name?: string }): Redemption;
   admit(authorization: string | undefined): Admission;
   check(deviceId: string): Admission;
@@ -97,13 +107,19 @@ export function createDevicePairing(options: DevicePairingOptions): DevicePairin
   const record = options.record ?? (() => {});
   const iso = (ms: number): string => new Date(ms).toISOString();
 
-  const offers = new Map<string, number>();
+  const offers = new Map<string, PairingOffer>();
+  const receipts = new Map<string, PairingOfferStatus>();
   const streams = new Map<string, Set<() => void>>();
 
   const sweep = (): void => {
-    for (const [key, expiresAt] of offers)
-      if (expiresAt <= now()) {
+    for (const [key, offer] of offers)
+      if (Date.parse(offer.expiresAt) <= now()) {
         offers.delete(key);
+        receipts.set(offer.receiptId, {
+          receiptId: offer.receiptId,
+          status: 'expired',
+          expiresAt: offer.expiresAt,
+        });
         record({ phase: 'offer-expired' });
       }
   };
@@ -171,23 +187,47 @@ export function createDevicePairing(options: DevicePairingOptions): DevicePairin
 
     createOffer() {
       sweep();
-      while (offers.size >= MAX_OPEN_OFFERS) offers.delete(offers.keys().next().value!);
+      while (offers.size >= MAX_OPEN_OFFERS) {
+        const first = offers.keys().next().value!;
+        const evicted = offers.get(first)!;
+        receipts.delete(evicted.receiptId);
+        offers.delete(first);
+      }
+      while (receipts.size >= 64) receipts.delete(receipts.keys().next().value!);
       const offer = token(24);
       const expiresAt = now() + PAIRING_OFFER_TTL_MS;
-      offers.set(digest(offer).toString('hex'), expiresAt);
+      const receiptId = token(16);
+      const value = { offer, receiptId, expiresAt: iso(expiresAt) };
+      offers.set(digest(offer).toString('hex'), value);
+      receipts.set(receiptId, { receiptId, status: 'pending', expiresAt: value.expiresAt });
       record({ phase: 'offer-created' });
-      return { offer, expiresAt: iso(expiresAt) };
+      return value;
+    },
+
+    currentOffer() {
+      sweep();
+      return [...offers.values()].at(-1);
+    },
+
+    offerStatus(receiptId) {
+      sweep();
+      return { ...(receipts.get(receiptId) ?? { receiptId, status: 'unknown' as const }) };
     },
 
     redeem(input) {
       const key = digest(input.offer).toString('hex');
-      const expiresAt = offers.get(key);
+      const offered = offers.get(key);
       offers.delete(key);
-      if (expiresAt === undefined) {
+      if (offered === undefined) {
         record({ phase: 'offer-refused' });
         return { ok: false, code: 'offer-invalid' };
       }
-      if (expiresAt <= now()) {
+      if (Date.parse(offered.expiresAt) <= now()) {
+        receipts.set(offered.receiptId, {
+          receiptId: offered.receiptId,
+          status: 'expired',
+          expiresAt: offered.expiresAt,
+        });
         record({ phase: 'offer-expired' });
         return { ok: false, code: 'offer-expired' };
       }
@@ -204,6 +244,12 @@ export function createDevicePairing(options: DevicePairingOptions): DevicePairin
             .run(id, name, digest(secret).toString('hex'), pairedAt),
         ['paired-devices'],
       );
+      receipts.set(offered.receiptId, {
+        receiptId: offered.receiptId,
+        status: 'redeemed',
+        expiresAt: offered.expiresAt,
+        deviceId: id,
+      });
       record({ phase: 'offer-redeemed', deviceId: id });
       return {
         ok: true,

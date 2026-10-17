@@ -1,6 +1,7 @@
 import { encode } from 'uqr';
+import { deviceIdentity } from './views.js';
 
-import type { DevicePairing, HostIdentity, PairedDevice } from './pairing.js';
+import type { DevicePairing, HostIdentity, PairedDevice, PairingOfferStatus } from './pairing.js';
 import { phoneRoute, type PhoneRoute, type RouteStatus } from './routes.js';
 
 export const DEVICES_PATH = '/api/botharness/devices';
@@ -19,10 +20,12 @@ export interface PairingPayload {
 export interface DevicesSnapshot {
   host: HostIdentity;
   devices: PairedDevice[];
+  pendingOffer?: PairingOfferStatus;
   routes: RouteStatus;
 }
 
 export interface PairingOfferView {
+  receiptId: string;
   link: string;
   qr: { size: number; path: string };
   expiresAt: string;
@@ -85,18 +88,25 @@ export function createDevicesHttp(options: {
   return async (request) => {
     const path = new URL(request.url).pathname;
     if (request.method === 'GET' && path === DEVICES_PATH) {
+      const pending = pairing.currentOffer();
       const snapshot: DevicesSnapshot = {
+        ...(pending === undefined ? {} : { pendingOffer: pairing.offerStatus(pending.receiptId) }),
         host: pairing.host(),
         devices: pairing.list(),
         routes: await options.routes(),
       };
       return json(snapshot);
     }
+    if (request.method === 'GET' && path === `${DEVICES_PATH}/offer-status`) {
+      const receiptId = new URL(request.url).searchParams.get('receiptId') ?? '';
+      return json(pairing.offerStatus(receiptId));
+    }
     if (request.method === 'POST' && path === `${DEVICES_PATH}/offer`) {
       const input = await body(request);
       const origin = typeof input['origin'] === 'string' ? input['origin'] : undefined;
       const routes = offeredRoutes(await options.routes(), origin).map((route) => route.url);
-      const offer = pairing.createOffer();
+      const offer =
+        (input['reuse'] === true ? pairing.currentOffer() : undefined) ?? pairing.createOffer();
       const link = pairingLink({
         v: 1,
         host: pairing.host(),
@@ -105,6 +115,7 @@ export function createDevicesHttp(options: {
         expiresAt: offer.expiresAt,
       });
       const view: PairingOfferView = {
+        receiptId: offer.receiptId,
         link,
         qr: qrPath(link),
         expiresAt: offer.expiresAt,
@@ -116,6 +127,15 @@ export function createDevicesHttp(options: {
     if (request.method === 'POST' && path === `${DEVICES_PATH}/revoke`) {
       const input = await body(request);
       if (typeof input['deviceId'] !== 'string') return json({ code: 'device-unknown' }, 400);
+      const current = pairing.list().find((device) => device.id === input['deviceId']);
+      if (current === undefined) return json({ code: 'device-unknown' }, 404);
+      if (
+        input['expectedDevice'] !== undefined &&
+        deviceIdentity(current) !== input['expectedDevice']
+      )
+        return json({ code: 'stale-device' }, 409);
+      if (current.revokedAt !== undefined)
+        return json({ revoked: false, alreadyRevoked: true, closedStreams: 0 });
       const result = pairing.revoke(input['deviceId']);
       return result.revoked ? json(result) : json({ code: 'device-unknown' }, 404);
     }

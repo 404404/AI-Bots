@@ -1,3 +1,10 @@
+import {
+  PAIRED_DEVICE_COMMANDS,
+  PAIRED_DEVICE_OPTIONS,
+  isPairedDeviceCommand,
+  runPairedDeviceCommand,
+  type PairedDeviceValues,
+} from './cli-devices.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +102,7 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...PAIRED_DEVICE_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -183,6 +191,7 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...PAIRED_DEVICE_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -343,6 +352,7 @@ export const LIVE_COMMANDS = [
 
 interface LiveValues
   extends
+    PairedDeviceValues,
     ImValues,
     MessagingValues,
     ModelsUsageValues,
@@ -660,6 +670,10 @@ export async function runLiveCli(
   values: LiveValues,
   io: BotCreateCliIo,
 ): Promise<unknown> {
+  if (isPairedDeviceCommand(command))
+    return runPairedDeviceCommand(command, rest, values, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (IM_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareImAuthorization(command, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
