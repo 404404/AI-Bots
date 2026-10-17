@@ -352,3 +352,23 @@ describe('Usage and activity commands', () => {
     ]);
   });
 });
+
+it('configures the Home native default without overwriting an independent Bot plan', async () => {
+  const live = await host(() => ({ ok: true, value: { saved: true } }));
+  const result = await invoke(
+    ['home-model-set', '--provider', 'deepseek', '--model', 'test-model'],
+    live.url,
+  );
+  expect(result.code).toBe(0);
+  expect(live.calls).toEqual([
+    {
+      method: 'onboardingModel',
+      args: {
+        expectedRevision: 0,
+        route: { provider: 'deepseek', model: 'test-model' },
+        globalDefault: true,
+      },
+    },
+  ]);
+  expect((await invoke(['home-model-set'], live.url)).json.error.code).toBe('usage');
+});

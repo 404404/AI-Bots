@@ -29,6 +29,12 @@ export interface HostAdminValues {
 }
 
 export const HOST_ADMIN_COMMANDS = [
+  { command: 'pause', description: 'archive a Bot through the Host owner' },
+  { command: 'resume', description: 'restore an archived Bot through the Host owner' },
+  {
+    command: 'tob-home',
+    description: 'prepare/reuse protected Tob, its Memory/Workspace/DM and Home status',
+  },
   { command: 'marketplace-list', description: 'browse or search Bot Marketplace listings' },
   { command: 'marketplace-topics', description: 'list Bot Marketplace topics with counts' },
   { command: 'marketplace-detail', description: 'read one Bot Marketplace listing and README' },
@@ -73,6 +79,9 @@ export function isHostAdminCommand(command: string): command is HostAdminCommand
 }
 
 const POSITIONALS: Record<HostAdminCommand, number> = {
+  pause: 1,
+  resume: 1,
+  'tob-home': 0,
   'marketplace-list': 0,
   'marketplace-topics': 0,
   'marketplace-detail': 1,
@@ -208,6 +217,11 @@ export async function runHostAdminCommand(
   const target = rest[0]?.trim() ?? '';
   const rpc = await host.connect();
   switch (command) {
+    case 'pause':
+    case 'resume':
+      return rpc(command, { slug: rest[0]!.trim() });
+    case 'tob-home':
+      return rpc('tobHome', {});
     case 'marketplace-list':
       return rpc('marketplaceList', {
         query: {

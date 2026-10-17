@@ -16,6 +16,18 @@ _避免使用_：已安装发布版、latest 版本、0.0.0 发布版
 
 ### PersonaBot（持久机器人身份）
 
+**Steward Bot**：
+一种持久的本地 PersonaBot，拥有自己的 Memory，可读取 Human 的所有 Bot 与 Channel 内容，并沿用现有审批规则帮助 Human 管理这些身份与应用设置。总管身份本身不授予代批其他 Bot 操作的权限。
+_避免使用_：全局 Orchestrator、Home 面板、Dashboard
+
+**Tob**：
+为 Human 提供的内置本地总管 Bot，拥有独立于普通 DeepSeek Bot 的持久身份；名称是 Bot 的倒写，也寓意 Thousands of Bot。Tob 不可删除或归档，但其 Soul 与 Memory 可以编辑和迁移，且不携带本地管理权限。
+_避免使用_：Home 面板、全局 Orchestrator
+
+**Home**：
+一个全局 Dock panel，提供跨 Bot 概览、Bot 创建入口和面向 Tob 的消息输入。持续对话使用消息面板中的同一个 Tob DM；Home 保持为独立概览，不形成第二套聊天历史。
+_避免使用_：Tob、Bot Profile、Channel 子面板
+
 **PersonaBot**：
 由 Host 拥有的一等 bot 实体：一种带 Git-backed Memory Repository、跨越 Session、Chat 与 Workspace，并可同时持有多个 Session 的持久身份。它的 Soul 是 Memory 中的 optional 内容，而不是身份本身。
 _避免使用_：bot（单独使用）、agent、assistant、robot

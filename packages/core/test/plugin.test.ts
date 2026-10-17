@@ -407,6 +407,7 @@ describe('plugin entry', () => {
       'messagingRevoke',
       'messagingConversation',
       'messagingSend',
+      'tobHome',
       'onboarding',
       'onboardingModel',
       'modelPlanInherit',

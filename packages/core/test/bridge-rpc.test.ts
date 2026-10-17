@@ -150,6 +150,7 @@ describe('bridge typert service', () => {
       'messagingRevoke',
       'messagingConversation',
       'messagingSend',
+      'tobHome',
       'onboarding',
       'onboardingModel',
       'modelPlanInherit',

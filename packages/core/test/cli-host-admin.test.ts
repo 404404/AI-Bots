@@ -434,3 +434,26 @@ describe('pairing commands', () => {
     ]);
   });
 });
+
+it('prepares Home through the authenticated owner and returns one JSON result', async () => {
+  const live = await host(() => ok({ botSlug: 'tob-id', channelId: 'dm-tob-id' }));
+  const result = await invoke(['tob-home'], live.url);
+  expect(result.code).toBe(0);
+  expect(result.json).toEqual({ botSlug: 'tob-id', channelId: 'dm-tob-id' });
+  expect(live.calls).toEqual([{ method: 'tobHome', args: {} }]);
+  expect((await invoke(['tob-home', 'unexpected'], live.url)).json.error.code).toBe('usage');
+});
+
+it('routes archive and restore through the Host and retains protected Tob refusal', async () => {
+  const live = await host((method, args) =>
+    args.slug === 'tob'
+      ? { ok: false, error: { code: 'protected-bot', message: 'Tob cannot be archived' } }
+      : ok({ bot: { slug: args.slug, paused: method === 'pause' } }),
+  );
+  expect(await invoke(['pause', 'tob'], live.url)).toMatchObject({
+    code: 1,
+    json: { error: { code: 'protected-bot' } },
+  });
+  expect((await invoke(['pause', 'ordinary'], live.url)).json.bot.paused).toBe(true);
+  expect((await invoke(['resume', 'ordinary'], live.url)).json.bot.paused).toBe(false);
+});

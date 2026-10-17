@@ -1,4 +1,5 @@
 import { followCompanion } from './companions/live.js';
+import { createTobService, type TobService, type TobSettingsProvider } from './tob/service.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { credentialStoreDenial } from './credentials/store-guard.js';
@@ -296,6 +297,7 @@ export interface BotHarnessCore {
   profileRecovery: ProfileRecovery;
   rootDir: string;
   onboarding: BotOnboarding;
+  tob: TobService;
   partLibrary: PartLibrary;
   operationalDatabase: OperationalDatabaseOwner;
   registry: PersonaBotRegistry;
@@ -383,6 +385,8 @@ export function createCore(
       offset: number,
     ) => Promise<AssignmentReportPage>;
     workspaces?: () => DshWorkspaceLookup | undefined;
+    ensureTobWorkspace?: (path: string) => Promise<{ id: string }>;
+    tobSettings?: () => TobSettingsProvider | undefined;
     sessionArchive?: () => NativeSessionArchive | undefined;
     autoAcceptGroupInvitations?: () => boolean;
     triageContinuation?: boolean;
@@ -740,6 +744,15 @@ export function createCore(
   const assignmentAccess = createAssignmentAccessStore(
     attachOperationalModule(operationalDatabase, 'assignment-access'),
   );
+  const tob = createTobService({
+    database: attachOperationalModule(operationalDatabase, 'tob'),
+    registry,
+    channels,
+    grants,
+    workspaceRoot: join(dshHome, 'botharness', 'tob-workspaces'),
+    ...(options.ensureTobWorkspace ? { ensureWorkspace: options.ensureTobWorkspace } : {}),
+    ...(options.tobSettings ? { settings: options.tobSettings } : {}),
+  });
   const profileRecovery = createProfileRecovery(operationalDatabase, registry, ownership);
   const orchestratorCwd = (bot: { slug: string }): string | undefined =>
     registry.memoryDirFor(bot.slug);
@@ -770,6 +783,7 @@ export function createCore(
   });
   const messagePerf: MessagePerfTracker = createMessagePerfTracker();
   runtime = createBotRuntime({
+    tob,
     triageContinuation: options.triageContinuation === true,
     inboxHistory,
     messagePerf,
@@ -863,6 +877,7 @@ export function createCore(
   });
   const onboarding = createBotOnboarding({
     database: attachOperationalModule(operationalDatabase, 'bot-onboarding'),
+    tob,
     registry,
     channels,
   });
@@ -872,6 +887,7 @@ export function createCore(
     profileRecovery,
     contentPurge,
     onboarding,
+    tob,
     partLibrary,
     rootDir,
     operationalDatabase,
@@ -1108,6 +1124,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       if (query === undefined) throw new Error('DSH Session Query is unavailable');
       return readAssignmentReportPage(query, sessionId, acceptedSummary, offset);
     },
+    ensureTobWorkspace: async (path) => {
+      const owner = ctx.get('workspaceRegistry') as unknown as
+        | { create(path: string, title: string): Promise<{ id: string }> }
+        | undefined;
+      if (!owner) throw new Error('workspace-unavailable');
+      return owner.create(path, 'Tob');
+    },
+    tobSettings: () => ctx.get('settings') as unknown as TobSettingsProvider | undefined,
     workspaces: () => ctx.get('workspaceRegistry') as unknown as DshWorkspaceLookup | undefined,
     sessionArchive: () =>
       ctx.get('workspaceRegistry') as unknown as NativeSessionArchive | undefined,
@@ -1554,6 +1578,23 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           untrackBrowser();
         }
       }
+      if (
+        execution.name === 'tob_assignment_limit_set' ||
+        execution.name === 'tob_assignment_limit_read'
+      ) {
+        try {
+          if (!core.runtime.validateTobSetting) throw new Error('tob-unavailable');
+          core.runtime.validateTobSetting(
+            agent.session.id,
+            execution.name === 'tob_assignment_limit_set' ? execution.arguments : undefined,
+          );
+        } catch (error) {
+          return {
+            kind: 'deny',
+            reason: error instanceof Error ? error.message : 'tob-authority-required',
+          };
+        }
+      }
       const denial = permissionDenial(agent.session);
       if (denial !== undefined) return { kind: 'deny', reason: denial };
       if (!requiresHumanToolApproval(execution.name, execution.arguments, templateInUse))
@@ -1596,16 +1637,18 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               toolName: execution.name,
               callId: execution.callId,
               reason:
-                execution.name === 'channel_attachment_open'
-                  ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-                  : execution.name === 'bot_create'
-                    ? 'This PersonaBot wants to create a new PersonaBot with a new Memory folder. The new Bot gets no grants, accesses or secrets from it.'
-                    : changesApprovalPolicy(
-                          JSON.stringify(execution.arguments) ?? '',
-                          templateInUse,
-                        )
-                      ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
-                      : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
+                execution.name === 'tob_assignment_limit_set'
+                  ? 'Tob wants to change the GLOBAL Assignment concurrency limit. Review previous_value, value and expected_revision. Running Assignments will not be stopped.'
+                  : execution.name === 'channel_attachment_open'
+                    ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
+                    : execution.name === 'bot_create'
+                      ? 'This PersonaBot wants to create a new PersonaBot with a new Memory folder. The new Bot gets no grants, accesses or secrets from it.'
+                      : changesApprovalPolicy(
+                            JSON.stringify(execution.arguments) ?? '',
+                            templateInUse,
+                          )
+                        ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
+                        : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
             });
         if (outcome !== 'allowed-once') {
@@ -1773,6 +1816,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     modelCatalog,
     modelReadiness,
     onboarding: core.onboarding,
+    tob: core.tob,
     partLibrary: core.partLibrary,
     onboardingNews: (slug) =>
       onboardingNewsAvailable(

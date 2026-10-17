@@ -12,7 +12,12 @@ import { mountPanelScrollbars } from './ds/panel-scrollbars.js';
 import { usePanelMenu } from './panel-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { workspaceColumns, moveWorkspaceRail, isFullHeightRail } from './workspace-layout.js';
-import { WorkspaceContext, WORKSPACE_RAIL, WORKSPACE_CHANNELS } from './workspace-context.js';
+import {
+  WorkspaceContext,
+  WORKSPACE_RAIL,
+  WORKSPACE_CHANNELS,
+  WORKSPACE_HOME,
+} from './workspace-context.js';
 import {
   createContext,
   useContext,
@@ -67,9 +72,20 @@ import type { BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
 import { IconButton } from './ds/icon-button.js';
 import { PanelHeader } from './ds/panel-header.js';
-import { space } from './ds/tokens.stylex.js';
+import { space, color, radius } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
+  storageWarning: {
+    position: 'absolute',
+    bottom: space.x4,
+    insetInlineStart: space.x4,
+    insetInlineEnd: space.x4,
+    zIndex: 50,
+    padding: space.x3,
+    backgroundColor: color.surface,
+    color: color.fg,
+    borderRadius: radius.sm,
+  },
   body: {
     flexGrow: 1,
     flexShrink: 1,
@@ -735,6 +751,7 @@ export function ChannelDock({
 }: ChannelDockProps): ReactElement {
   const workspace = useContext(WorkspaceContext);
   const [initial] = useState(() => readChannelDock(storage));
+  const [storageFailed, setStorageFailed] = useState(false);
   const seed = useRef(initial?.sessionSeed ?? DEFAULT_CHANNEL_WORKSPACE);
   const [channelWorkspaces, updateChannelWorkspaces] = useState(initial?.channelWorkspaces ?? {});
   const channelWorkspacesRef = useRef(channelWorkspaces);
@@ -771,7 +788,7 @@ export function ChannelDock({
     [workspaceMode, gap],
   );
   const gapRef = useRef(gap);
-  const [order, updateOrder] = useState(() => readChannelDock(storage)?.order ?? []);
+  const [order, updateOrder] = useState(() => readChannelDock(storage)?.order ?? [WORKSPACE_HOME]);
   const orderRef = useRef(order);
   const [hiddenControls, updateHiddenControls] = useState(
     () => readChannelDock(storage)?.hiddenControls ?? [],
@@ -838,8 +855,8 @@ export function ChannelDock({
     const ids = target.panels.map((panel) => panel.id);
     setOpenIds(ids);
     reportOpen(target);
-    if (workspace || !readChannelDock(storage)?.layout.panels[WORKSPACE_RAIL])
-      writeChannelDock(
+    if (workspace || !readChannelDock(storage)?.layout.panels[WORKSPACE_RAIL]) {
+      const persisted = writeChannelDock(
         {
           layout: {
             ...target.toJSON(),
@@ -858,6 +875,8 @@ export function ChannelDock({
         },
         storage,
       );
+      setStorageFailed(!persisted);
+    }
   };
 
   const positionOf = (target: DockviewApi, panelId: string): DockPosition | undefined => {
@@ -955,6 +974,14 @@ export function ChannelDock({
         delete parked.current[CHANNEL_BODY_PANEL];
       }
       ready.getPanel(CHANNEL_BODY_PANEL)?.api.setActive();
+    }
+    if (workspace && stored === undefined) {
+      const home = known.current.get(WORKSPACE_HOME);
+      if (home && !ready.getPanel(WORKSPACE_HOME)) {
+        const messages = ready.getPanel(CHANNEL_BODY_PANEL);
+        if (messages) ready.removePanel(messages);
+        addEntryPanel(ready, home, { neighbor: WORKSPACE_CHANNELS, direction: 'right' });
+      }
     }
     hideBodyHeader(ready);
     if (newWorkspace && stored === undefined) {
@@ -1388,6 +1415,11 @@ export function ChannelDock({
         role="region"
         aria-label={t('dock.region')}
       >
+        {storageFailed && (
+          <div role="alert" {...stylex.props(styles.storageWarning)}>
+            {t('workspace.storageFailed')}
+          </div>
+        )}
         <span ref={inboxStateMount} hidden />
         <span ref={layoutMount} hidden />
         <span ref={scrollbarsMount} hidden />

@@ -497,6 +497,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/activity-inline-approval.md",
       "task": 2026,
       "gap": null
+    },
+    {
+      "id": "desktop.tob.home",
+      "label": "Home model setup and protected Tob DM with approved global concurrency change",
+      "source": "packages/client/src/client/home-panel.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/tob-home.md",
+      "task": 2082,
+      "gap": null
     }
   ],
   "scripts": [
@@ -1677,6 +1685,14 @@
       "reason": "Nested sibling drops, narrow headers, stable content, per-Channel topology, reload and shortcut recovery on Web and macOS.",
       "task": 2076,
       "sha256": "b4c12797d82402e181762bd864acfc4b35a927161f090c2b096af31f26f2d0b9"
+    },
+    {
+      "path": "scripts/e2e-tob-home.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Home model configuration, canonical identity, actual reply and approval through the shared Web/native UI.",
+      "task": 2082,
+      "sha256": "7e99a006c12f3fc1b67f07c7a3e7add5f6ec6e7b2dd90648318d0a6980417c5e"
     }
   ],
   "native": [

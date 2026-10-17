@@ -7,7 +7,6 @@
     "deletionMemoryFolder": "#1690",
     "messageAttachmentTarget": "UI-only: resolves a local file path so the Web UI can open or reveal an attachment in the OS",
     "onboarding": "UI-only: Web tutorial progress and steps",
-    "onboardingModel": "UI-only: the Web tutorial's model step; model-preset-apply and model-plan configure models from the CLI",
     "workspaceFileTarget": "UI-only: resolves a Workspace folder path so the Web UI can open it in the OS; grants lists the paths"
   },
   "routes": {

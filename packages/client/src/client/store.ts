@@ -178,7 +178,7 @@ export interface ChannelReaction {
 }
 
 export interface ChannelMessage {
-  onboardingWelcome?: { version: 1 };
+  onboardingWelcome?: { version: 1; kind?: 'tob' };
   contentPurged?: true;
   bridgeOrigin?: import('../../../core/src/channels/channel.js').ChannelMessage['bridgeOrigin'];
   bridgeMedia?: import('../../../core/src/channels/channel.js').ChannelMessage['bridgeMedia'];
