@@ -240,6 +240,8 @@ Usage:
   deepseekbot group-avatar-set <channel-id> (--avatar-file <path> | --clear) [--expected-channel <fingerprint>]
   deepseekbot group-wake-policies <channel-id>
   deepseekbot group-wake-set <channel-id> --bot <bot-id> (--mode all|mentions|digest|silent | --inherit) [--count <n>] [--interval <seconds>] [--expected-channel <fingerprint>]
+  deepseekbot attachment-upload --file <path> [--upload-id <UUID-v4>]
+  deepseekbot group-delete <channel-id> --confirm [--expected-channel <fingerprint>]
   deepseekbot group-member-remove <channel-id> --bot <bot-id> [--expected-channel <fingerprint>]
   deepseekbot im-app-add <discord|slack|qq|dingtalk|wecom|matrix> --credentials-stdin
   deepseekbot im-app-status <platform>
@@ -2645,6 +2647,7 @@ export async function runBotCreateCli(
         'group-avatar-set',
         'group-wake-set',
         'group-member-remove',
+        'group-delete',
       ].includes(command)
     )
       throw usageError('--expected-channel is supported only for reviewed group changes.');

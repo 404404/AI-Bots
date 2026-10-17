@@ -25,6 +25,7 @@ function fixture() {
     expect(core.registry.create({ slug, displayName: slug }).ok).toBe(true);
   const prepare = createTobChannelOperations({
     management: core.channelManagement,
+    attachments: core.attachments,
     channels: core.channels,
     registry: core.registry,
     isProtectedBot: (slug) => core.tob.isTob(slug),
@@ -626,5 +627,152 @@ describe('reviewed invitation cancellation and join decisions', () => {
     ] as const)
       await expect(f.run(command, f.args(patch))).rejects.toMatchObject({ code });
     expect(f.core.channels.get(f.group.id)?.joinRequests?.[0]?.status).toBe('pending');
+  });
+});
+
+describe('reviewed Group end and local attachment transfer', () => {
+  const uploadId = 'ac501275-f752-44d6-8d5f-82e7c8b50ab2';
+  const upload = () => ({
+    uploadId,
+    name: 'qa.txt',
+    data: Buffer.from('synthetic QA transfer').toString('base64'),
+  });
+  function group(f: ReturnType<typeof fixture>) {
+    const channel = f.core.channels.createGroup({ name: 'Synthetic group', members: ['research'] });
+    return {
+      channelId: channel.id,
+      expectedChannel: f.core.channelManagement.wakePolicies(channel.id).channelFingerprint,
+      confirm: true,
+    };
+  }
+  it('requires explicit confirmation, reviews all affected members and preserves Group history', async () => {
+    const f = fixture();
+    const args = group(f);
+    expect(() => f.prepare('group-delete', { ...args, confirm: false })).toThrow(
+      'confirmation-required',
+    );
+    const prepared = (await f.prepare('group-delete', args))!;
+    expect(prepared.proposal).toMatchObject({
+      previousValue: { channel: { members: ['research'] } },
+      patch: { endsGroupForAllMembers: true, preservesHistory: true },
+    });
+    await f.core.channels.appendMessage(args.channelId, {
+      id: 'kept-history',
+      at: new Date().toISOString(),
+      author: { kind: 'human' },
+      body: 'Synthetic retained history',
+    });
+    const deleted = vi.spyOn(f.core.externalMessaging.inbound, 'endChannel');
+    const b = await broker(f, async () => {});
+    expect(await b.invoke('group-delete', args)).toMatchObject({
+      ok: true,
+      value: { deleted: true, historyPreserved: true },
+    });
+    expect(f.core.channels.get(args.channelId)).toBeUndefined();
+    expect([
+      f.core.operationalDatabase.read((db) =>
+        JSON.parse(
+          (
+            db
+              .prepare('SELECT record_json FROM channel_records WHERE channel_id = ?')
+              .get(args.channelId) as { record_json: string }
+          ).record_json,
+        ),
+      ),
+    ]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: args.channelId, deletedAt: expect.any(String), members: [] }),
+      ]),
+    );
+    expect(f.core.contentPurge.sources(args.channelId).sources).toEqual(
+      expect.arrayContaining([expect.objectContaining({ body: 'Synthetic retained history' })]),
+    );
+    expect(f.core.registry.get('research')).toBeDefined();
+    expect(deleted).toHaveBeenCalledWith(args.channelId);
+  });
+  it.each(['deny', 'stale', 'access'] as const)(
+    'refuses %s after Group review without ending the Group',
+    async (kind) => {
+      const f = fixture();
+      const args = group(f);
+      const b = await broker(f, async () => {
+        if (kind === 'deny') throw new TobError('approval-denied');
+        if (kind === 'stale') f.core.channels.rename(args.channelId, 'Concurrent change');
+        else vi.spyOn(f.core.channels, 'listHumanMembers').mockReturnValue([]);
+      });
+      expect(await b.invoke('group-delete', args)).toMatchObject({
+        ok: false,
+        error: {
+          code:
+            kind === 'deny'
+              ? 'approval-denied'
+              : kind === 'stale'
+                ? 'stale-channel'
+                : 'channel-access-denied',
+        },
+      });
+      expect(f.core.channels.get(args.channelId)).toBeDefined();
+      expect(b.effect).not.toHaveBeenCalled();
+    },
+  );
+  it('uploads bounded bytes via the canonical owner and replays the same identity; conflicts preserve the original', async () => {
+    const f = fixture();
+    const args = upload();
+    const prepared = (await f.prepare('attachment-upload', args))!;
+    expect(prepared.proposal).toMatchObject({
+      patch: { name: 'qa.txt', bytes: 21, sendsMessage: false },
+    });
+    expect(JSON.stringify(prepared.proposal)).not.toContain(args.data);
+    const b = await broker(f, async () => {});
+    const result = await b.invoke('attachment-upload', args);
+    expect(result).toMatchObject({
+      ok: true,
+      value: { attachment: { fileId: 'file:' + uploadId, name: 'qa.txt', size: 21 } },
+    });
+    expect(await b.invoke('attachment-upload', args)).toEqual(result);
+    expect(
+      await b.invoke('attachment-upload', {
+        ...args,
+        data: Buffer.from('changed').toString('base64'),
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'invalid-ref' } });
+    expect(f.core.attachments.acquired(uploadId)).toMatchObject({ size: 21 });
+    expect(f.core.channels.list()).toHaveLength(0);
+  });
+  it('rejects content/path injection, malformed identities and byte overflow before requesting approval', async () => {
+    const f = fixture();
+    const b = await broker(f, async () => {
+      throw new Error('Should not approve');
+    });
+    for (const args of [
+      { ...upload(), path: '/private/secret' },
+      { ...upload(), data: 'invalid' },
+      { ...upload(), uploadId: '../escape' },
+      { ...upload(), data: Buffer.alloc(25 * 1024 * 1024 + 1).toString('base64') },
+    ]) {
+      expect(await b.invoke('attachment-upload', args)).toMatchObject({
+        ok: false,
+        error: { code: 'invalid-input' },
+      });
+    }
+    expect(f.core.attachments.acquired(uploadId)).toBeUndefined();
+  });
+  it('rejects denied and revoked upload authority before any retained transfer is published', async () => {
+    const f = fixture();
+    const b = await broker(f, async () => {
+      throw new TobError('approval-denied');
+    });
+    expect(await b.invoke('attachment-upload', upload())).toMatchObject({
+      error: { code: 'approval-denied' },
+    });
+    expect(b.effect).not.toHaveBeenCalled();
+    const prepared = (await f.prepare('attachment-upload', upload()))!;
+    let checks = 0;
+    await expect(
+      prepared.run(() => {
+        if (++checks === 4) throw new TobError('human-dm-required');
+      }),
+    ).rejects.toThrow('human-dm-required');
+    expect(f.core.attachments.acquired(uploadId)).toBeUndefined();
   });
 });

@@ -849,6 +849,7 @@ export function createCore(
     isProtectedBot: (slug) => tob.isTob(slug),
     autoAcceptGroupInvitations: () =>
       (groupInvitationPolicies.at(-1)?.policy ?? initialGroupInvitationPolicy)(),
+    onDeleted: (channelId) => externalMessaging.inbound.endChannel(channelId),
     onInvitation: (dmId, invitationId) => runtime?.admitGroupInvitation(dmId, invitationId),
     onJoinDecision: (dmId, requestId) => runtime?.admitGroupJoinDecision?.(dmId, requestId),
   });
@@ -2331,6 +2332,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   });
   const tobChannelOperations = createTobChannelOperations({
     management: core.channelManagement,
+    attachments: core.attachments,
     channels: core.channels,
     registry: core.registry,
     isProtectedBot: (slug) => core.tob.isTob(slug),

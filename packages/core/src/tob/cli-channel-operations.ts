@@ -1,3 +1,9 @@
+import {
+  ChannelAttachmentError,
+  MAX_ATTACHMENT_BYTES,
+  type AttachmentStore,
+} from '../attachments/store.js';
+import { ATTACHMENT_FILE_ID_PATTERN } from '../attachments/ref.js';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { PersonaBotRegistry } from '../bots/registry.js';
@@ -9,6 +15,18 @@ import type { PrepareTobOperation, TobCliCapability } from './cli-operations.js'
 import { TobError } from './service.js';
 
 export const TOB_CHANNEL_CAPABILITIES: readonly TobCliCapability[] = [
+  {
+    command: 'group-delete',
+    description:
+      'End a reviewed Group for every member while retaining history; requires --confirm',
+    write: true,
+  },
+  {
+    command: 'attachment-upload',
+    description:
+      'Upload a reviewed local file without sending a message; use a stable UUID upload ID',
+    write: true,
+  },
   {
     command: 'channels',
     description: 'List bounded Channel metadata without reading conversation content',
@@ -135,6 +153,7 @@ function view(value: ReturnType<ChannelManagementService['snapshot']>) {
 
 export function createTobChannelOperations(deps: {
   management: ChannelManagementService;
+  attachments?: AttachmentStore;
   channels: Pick<ChannelStore, 'list'>;
   registry: Pick<PersonaBotRegistry, 'get'>;
   isProtectedBot(slug: string): boolean;
@@ -154,6 +173,82 @@ export function createTobChannelOperations(deps: {
   return (command, raw) => {
     if (!TOB_CHANNEL_CAPABILITIES.some((item) => item.command === command)) return undefined;
     const args = structuredClone(raw);
+    if (command === 'attachment-upload') {
+      keys(args, ['name', 'data', 'uploadId']);
+      const name = text(args.name);
+      const uploadId = text(args.uploadId);
+      if (!ATTACHMENT_FILE_ID_PATTERN.test('file:' + uploadId)) throw new TobError('invalid-input');
+      if (
+        typeof args.data !== 'string' ||
+        args.data.length > Math.ceil(MAX_ATTACHMENT_BYTES / 3) * 4
+      )
+        throw new TobError('invalid-input');
+      const bytes = Buffer.from(args.data, 'base64');
+      if (bytes.length > MAX_ATTACHMENT_BYTES || bytes.toString('base64') !== args.data)
+        throw new TobError('invalid-input');
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      if (!deps.attachments) throw new TobError('attachments-unavailable');
+      const attachments = deps.attachments;
+      return {
+        proposal: freeze({
+          command,
+          target: uploadId,
+          previousValue: null,
+          patch: { name, bytes: bytes.length, sha256, sendsMessage: false },
+        }),
+        async run(guard, beforeEffect) {
+          guard();
+          async function* data() {
+            for (let offset = 0; offset < bytes.length; offset += 64 * 1024) {
+              guard();
+              yield bytes.subarray(offset, offset + 64 * 1024);
+            }
+            guard();
+          }
+          beforeEffect?.();
+          try {
+            const attachment = await attachments.upload({
+              name,
+              uploadId,
+              data: data(),
+              authorize: guard,
+            });
+            guard();
+            return { attachment, sha256 };
+          } catch (error) {
+            if (error instanceof ChannelAttachmentError) throw new TobError(error.code);
+            throw error;
+          }
+        },
+      };
+    }
+    if (command === 'group-delete') {
+      keys(args, ['channelId', 'expectedChannel', 'confirm']);
+      if (args.confirm !== true) throw new TobError('confirmation-required');
+      const channelId = text(args.channelId);
+      const expectedChannel = text(args.expectedChannel);
+      if (!/^[a-f0-9]{64}$/u.test(expectedChannel)) throw new TobError('invalid-input');
+      const previous = structuredClone(owner(() => deps.management.wakePolicies(channelId)));
+      if (previous.channelFingerprint !== expectedChannel) throw new TobError('stale-channel');
+      return {
+        proposal: freeze({
+          command,
+          target: channelId,
+          previousValue: view(previous),
+          patch: { expectedChannel, endsGroupForAllMembers: true, preservesHistory: true },
+        }),
+        run(guard, beforeEffect) {
+          guard();
+          if (
+            owner(() => deps.management.wakePolicies(channelId)).channelFingerprint !==
+            expectedChannel
+          )
+            throw new TobError('stale-channel');
+          beforeEffect?.();
+          return owner(() => deps.management.deleteGroup({ channelId, expectedChannel }));
+        },
+      };
+    }
     if (command === 'channels') {
       keys(args, ['limit', 'cursor']);
       const limit = args.limit === undefined ? 50 : args.limit;
