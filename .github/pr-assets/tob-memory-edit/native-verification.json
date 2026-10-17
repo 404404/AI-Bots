@@ -1,0 +1,50 @@
+{
+  "issue": 2092,
+  "platform": "native macOS Desktop, single client",
+  "runtimeBuild": "74c591117",
+  "runtimeQualifiedSource": "e3ed175ccd26de4ad980d1059ee7783db8f96bc4",
+  "journeyDriverSource": "db8073dab4bd56d48073b7e87eebf5bf3113eb55",
+  "restartDriverSource": "1da04d06abc85417e3c4708e401709db6dede977",
+  "directCli": {
+    "save": true,
+    "exactRetry": true,
+    "staleRefusal": true,
+    "supportedRestore": true
+  },
+  "realTob": {
+    "edit": true,
+    "deny": true,
+    "concurrentEditRefusal": true,
+    "separatelyReviewedRestore": true
+  },
+  "sameAbsoluteProfileRestart": true,
+  "sessionsCopied": false,
+  "pageErrors": [],
+  "secondBotUnchanged": true,
+  "rootInspectedPendingDiff": true,
+  "mainDesktopRestored": true,
+  "inheritedStartupIntegratedRuntimeQualified": false,
+  "humanQa": false,
+  "stages": {
+    "memory-save": {
+      "head": "fb7c6008d41f502188bb75e1dd560df6e74229b8",
+      "body": "Reviewed jasmine tea preference.\n"
+    },
+    "deny": {
+      "head": "fb7c6008d41f502188bb75e1dd560df6e74229b8",
+      "body": "Reviewed jasmine tea preference.\n"
+    },
+    "stale": {
+      "head": "e01345b1c92e5f1583d687959032f338c28f59e1",
+      "body": "Concurrent owner edit preserved.\n"
+    },
+    "memory-restore-commit": {
+      "head": "9432fc492a06e0136d3ff10a3a79a127d0493600",
+      "body": "Original green tea preference."
+    },
+    "restart": {
+      "head": "9432fc492a06e0136d3ff10a3a79a127d0493600",
+      "body": "Original green tea preference."
+    }
+  }
+}
