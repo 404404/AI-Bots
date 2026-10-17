@@ -41,32 +41,24 @@ export function ActivityTabs({
               minHeight: theme.touch,
               alignItems: 'center',
               justifyContent: 'center',
-              paddingHorizontal: iconSize + space.x2,
+              paddingHorizontal: space.x2,
               paddingVertical: space.x4,
               backgroundColor: pressed ? theme.layer.canvas.pressed : theme.color.base,
             })}
           >
-            <View>
-              {selected === section ? (
-                <View
-                  pointerEvents="none"
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                  style={{
-                    position: 'absolute',
-                    right: '100%',
-                    top: 0,
-                    bottom: 0,
-                    marginRight: space.x2,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon color={theme.color.fg} size={iconSize} />
-                </View>
-              ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x2 }}>
+              <View
+                pointerEvents="none"
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                style={{ width: iconSize, height: iconSize }}
+              >
+                {selected === section ? <Icon color={theme.color.fg} size={iconSize} /> : null}
+              </View>
               <Text tone={selected === section ? 'fg' : 'muted'} strong={selected === section}>
                 {t.inboxSections[section]}
               </Text>
+              <View style={{ width: iconSize }} />
             </View>
             <View
               style={{
