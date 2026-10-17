@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Fixed header and last row reachable",
+    "passed": true
+  },
+  {
+    "name": "Root handle drag closes sheet",
+    "passed": true
+  },
+  {
+    "name": "Immediate setting survives dismiss and reopen",
+    "passed": true
+  },
+  {
+    "name": "Close dismisses scrolled sheet",
+    "passed": true
+  },
+  {
+    "name": "Canonical preference survives cold restart",
+    "passed": true
+  },
+  {
+    "name": "Original Streaming restored",
+    "passed": true
+  },
+  {
+    "name": "Child handle drag closes sheet",
+    "passed": true
+  },
+  {
+    "name": "Reopen returns to Settings root",
+    "passed": true
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Intermediate text: fixed header and last row",
+    "passed": true
+  },
+  {
+    "name": "Intermediate text: handle drag dismisses",
+    "passed": true
+  },
+  {
+    "name": "Intermediate text: reopens at root",
+    "passed": true
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "textSize": "default",
+    "step": "changed-value",
+    "canonicalValue": "complete"
+  },
+  {
+    "textSize": "default",
+    "step": "reopened-value",
+    "canonicalValue": "complete"
+  },
+  {
+    "textSize": "default",
+    "step": "cold-value",
+    "canonicalValue": "complete"
+  },
+  {
+    "textSize": "default",
+    "step": "restored-value",
+    "canonicalValue": "streaming"
+  },
+  {
+    "textSize": "default",
+    "step": "cold-restart UI readback",
+    "selected": "Complete bubbles"
+  },
+  {
+    "textSize": "maximum",
+    "step": "changed-value",
+    "canonicalValue": "complete"
+  },
+  {
+    "textSize": "maximum",
+    "step": "reopened-value",
+    "canonicalValue": "complete"
+  },
+  {
+    "textSize": "maximum",
+    "step": "cold-value",
+    "canonicalValue": "complete"
+  },
+  {
+    "textSize": "maximum",
+    "step": "restored-value",
+    "canonicalValue": "streaming"
+  },
+  {
+    "textSize": "maximum",
+    "step": "cold-restart UI readback",
+    "selected": "Complete bubbles"
+  }
+]

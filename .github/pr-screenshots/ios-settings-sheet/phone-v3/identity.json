@@ -1,0 +1,20 @@
+{
+  "pr": 2112,
+  "head": "baa5777a86b46f39bb1232de214314c5d0ce288f",
+  "sourceBranch": "qa/batch-11-phone",
+  "deviceModel": "iPhone XS Max",
+  "os": "18.1.1",
+  "buildConfiguration": "Debug",
+  "locale": "English (United States)",
+  "appearance": "dark",
+  "viewportPoints": [
+    375,
+    812
+  ],
+  "screenshotPixels": [
+    1125,
+    2436
+  ],
+  "sameIdentityInstall": true,
+  "eraseOrUninstall": false
+}
