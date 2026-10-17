@@ -123,6 +123,13 @@ export function CloudOrganizationsScreen() {
                 />
               </View>
               <Button
+                label={t.cloudInvitations.inbox}
+                disabled={busy}
+                onPress={() =>
+                  router.push({ pathname: '/cloud-invitations', params: { instanceId } })
+                }
+              />
+              <Button
                 label={t.cloudOrganizations.list}
                 disabled={busy}
                 onPress={() => void run(() => reload())}
@@ -147,6 +154,18 @@ export function CloudOrganizationsScreen() {
                       })
                     }
                   />
+                  {selected.role === 'owner' && (
+                    <Button
+                      label={t.cloudInvitations.title}
+                      disabled={busy}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/cloud-invitations',
+                          params: { instanceId, organizationId: selected.organizationId },
+                        })
+                      }
+                    />
+                  )}
                   <TextInput
                     accessibilityLabel={t.cloudOrganizations.description}
                     placeholder={t.cloudOrganizations.description}

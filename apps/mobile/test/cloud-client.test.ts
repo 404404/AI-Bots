@@ -464,6 +464,112 @@ describe('cloud organizations', () => {
     expect(client.getSnapshot().rows[0]?.pendingChannelAction).toBeUndefined();
     expect(f.stored()).not.toContain('channel.create');
   });
+  it('persists invitation issuance before I/O, retries the same operation after restart and rejects another scope', async () => {
+    const f = organizationsFixture(),
+      original = f.rt.request;
+    const operations: string[] = [];
+    let lose = true;
+    const invitation = {
+      invitationId: 'invitation_test',
+      organizationId: 'org_a',
+      email: 'b@example.test',
+      role: 'member',
+      state: 'pending',
+      expiresAt: '2030-01-01T00:00:00Z',
+      token: 'provider-secret',
+    };
+    f.rt.request = async (url, init) => {
+      if (url.endsWith('/invitations')) {
+        if (init?.method === 'POST') {
+          operations.push(new Headers(init.headers).get('Idempotency-Key')!);
+          expect(f.stored()).toContain('pendingInvitation');
+          if (lose) {
+            lose = false;
+            throw Error('response lost');
+          }
+          return Response.json(invitation);
+        }
+        return Response.json({ invitations: [invitation], nextCursor: null });
+      }
+      return original(url, init);
+    };
+    let client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    await client.useOrganization(config.instanceId, 'org_a');
+    await expect(
+      client.sendInvitation(config.instanceId, 'org_a', 'b@example.test'),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    client = new CloudClient(f.rt);
+    await client.load();
+    await client.whoami(config.instanceId);
+    await expect(
+      client.sendInvitation(config.instanceId, 'org_a', 'other@example.test'),
+    ).rejects.toMatchObject({ code: 'PENDING_INVITATION' });
+    const sent = await client.sendInvitation(config.instanceId, 'org_a', 'b@example.test');
+    expect(sent.invitationId).toBe('invitation_test');
+    expect(sent).not.toHaveProperty('token');
+    expect(operations[0]).toBe(operations[1]);
+    expect(operations).toHaveLength(2);
+    expect(client.getSnapshot().rows[0]?.pendingInvitation).toBeUndefined();
+    const page = await client.listInvitations(config.instanceId, 'org_a');
+    expect(page.invitations[0]).not.toHaveProperty('token');
+    await expect(client.listInvitations(config.instanceId, 'org_other')).rejects.toMatchObject({
+      code: 'ORGANIZATION_TOKEN_REQUIRED',
+    });
+    lose = true;
+    await expect(
+      client.sendInvitation(config.instanceId, 'org_a', 'b@example.test'),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    await client.logout(config.instanceId);
+    expect(f.stored()).not.toContain('pendingInvitation');
+  });
+  it('recipient can read inbox/accept before organization selection and malformed acceptance never reports success', async () => {
+    const f = fixture(),
+      original = f.rt.request;
+    let accepted = false,
+      wrongId = false,
+      denied = false;
+    f.rt.request = async (url, init) => {
+      if (url.includes('/api/invitations')) {
+        if (denied)
+          return Response.json({ error: { code: 'INVITATION_ACCESS_DENIED' } }, { status: 403 });
+        const row = {
+          invitationId: wrongId ? 'invitation_other' : 'invitation_test',
+          organizationId: 'org_a',
+          organizationName: 'Shared project',
+          email: 'b@example.test',
+          role: 'member',
+          state: accepted ? 'accepted' : 'pending',
+          expiresAt: '2030-01-01T00:00:00Z',
+        };
+        if (init?.method === 'POST') {
+          accepted = true;
+          return Response.json({ ...row, state: 'accepted', accepted: true });
+        }
+        return Response.json({ invitations: [row], nextCursor: null });
+      }
+      return original(url, init);
+    };
+    await f.client.importConfig(JSON.stringify(config));
+    await f.client.login(config.instanceId);
+    expect(
+      (await f.client.listInvitations(config.instanceId)).invitations[0]?.organizationName,
+    ).toBe('Shared project');
+    expect(await f.client.acceptInvitation(config.instanceId, 'invitation_test')).toMatchObject({
+      state: 'accepted',
+      role: 'member',
+    });
+    expect(f.client.getSnapshot().rows[0]?.organization).toBeUndefined();
+    wrongId = true;
+    await expect(
+      f.client.acceptInvitation(config.instanceId, 'invitation_test'),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    denied = true;
+    await expect(
+      f.client.acceptInvitation(config.instanceId, 'invitation_test'),
+    ).rejects.toMatchObject({ code: 'INVITATION_ACCESS_DENIED' });
+  });
   it('never treats stale owner UI or a mismatched selection response as organization authorization', async () => {
     const f = organizationsFixture();
     const client = new CloudClient(f.rt);

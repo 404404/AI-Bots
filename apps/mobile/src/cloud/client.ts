@@ -1,4 +1,10 @@
 import {
+  parseInvitation,
+  parsePendingInvitation,
+  validInvitationId,
+  type PendingInvitation,
+} from './invitation-contract';
+import {
   parseChannel,
   parseMessage,
   parsePendingChannelAction,
@@ -32,6 +38,7 @@ type Entry = {
   session?: Session;
   pendingCreate?: { name: string; operation: string } | undefined;
   pendingChannelAction?: PendingChannelAction | undefined;
+  pendingInvitation?: PendingInvitation | undefined;
 };
 type Vault = { version: 1; entries: Entry[] };
 export type CloudRow = {
@@ -41,6 +48,7 @@ export type CloudRow = {
   organization?: Organization | undefined;
   pendingCreate?: { name: string; operation: string } | undefined;
   pendingChannelAction?: PendingChannelAction | undefined;
+  pendingInvitation?: PendingInvitation | undefined;
 };
 export type CloudSnapshot = {
   ready: boolean;
@@ -160,6 +168,7 @@ export class CloudClient {
         hasSession: !!e.session,
         pendingCreate: e.pendingCreate,
         pendingChannelAction: e.pendingChannelAction,
+        pendingInvitation: e.pendingInvitation,
         identity: this.identities.get(e.config.instanceId),
         organization: this.organizations.get(e.config.instanceId),
       })),
@@ -213,6 +222,7 @@ export class CloudClient {
               config,
               pendingCreate,
               pendingChannelAction: parsePendingChannelAction(e.pendingChannelAction),
+              pendingInvitation: parsePendingInvitation(e.pendingInvitation),
               session: {
                 ...session,
                 userId: saved.userId as string | undefined,
@@ -449,10 +459,15 @@ export class CloudClient {
       fail('INVALID_RESPONSE');
     return v as Organization;
   }
-  private async orgRequest(entry: Entry, path: string, init: RequestInit = {}) {
+  private async orgRequest(
+    entry: Entry,
+    path: string,
+    init: RequestInit = {},
+    prefix = '/api/organizations',
+  ) {
     await this.discovery(entry.config);
     if (!entry.session) return fail('NOT_LOGGED_IN');
-    const r = await this.json(entry.config.server + '/api/organizations' + path, {
+    const r = await this.json(entry.config.server + prefix + path, {
       ...init,
       headers: { ...init.headers, Authorization: 'Bearer ' + entry.session.accessToken },
     });
@@ -656,6 +671,104 @@ export class CloudClient {
     this.lock(async () =>
       parseMessage(await this.channelMutation(id, organizationId, 'message.send', text, channelId)),
     );
+  listInvitations = (id: string, organizationId?: string, after?: string) =>
+    this.lock(async () => {
+      const entry = organizationId
+        ? await this.channelEntry(id, organizationId)
+        : await this.current(this.entry(id));
+      if (after && !validInvitationId(after)) return fail('INVALID_CURSOR');
+      const prefix = organizationId
+        ? '/api/organizations/' + organizationId + '/invitations'
+        : '/api/invitations';
+      const value = await this.orgRequest(
+        entry,
+        after ? '?after=' + encodeURIComponent(after) : '',
+        {},
+        prefix,
+      );
+      if (
+        !Array.isArray(value.invitations) ||
+        value.invitations.length > 50 ||
+        (value.nextCursor !== null && !validInvitationId(value.nextCursor))
+      )
+        return fail('INVALID_RESPONSE');
+      const invitations = value.invitations.map(parseInvitation);
+      if (organizationId && invitations.some((v) => v.organizationId !== organizationId))
+        return fail('INVALID_RESPONSE');
+      return { invitations, nextCursor: value.nextCursor as string | null };
+    });
+  sendInvitation = (id: string, organizationId: string, email: string) =>
+    this.lock(async () => {
+      let entry = await this.channelEntry(id, organizationId);
+      email = email.trim().toLowerCase();
+      if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return fail('INVALID_INVITATION_INPUT');
+      const pending = entry.pendingInvitation;
+      if (
+        pending &&
+        (pending.userId !== entry.session!.userId ||
+          pending.organizationId !== organizationId ||
+          pending.email !== email)
+      )
+        return fail('PENDING_INVITATION');
+      const action = pending ?? {
+        organizationId,
+        userId: entry.session!.userId!,
+        email,
+        operation: this.rt.random(),
+      };
+      await this.save({ ...entry, pendingInvitation: action });
+      entry = this.entry(id);
+      const value = parseInvitation(
+        await this.orgRequest(entry, '/' + organizationId + '/invitations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': action.operation },
+          body: JSON.stringify({ email }),
+        }),
+      );
+      if (value.organizationId !== organizationId || value.email.toLowerCase() !== email)
+        return fail('INVALID_RESPONSE');
+      await this.save({ ...entry, pendingInvitation: undefined });
+      return value;
+    });
+  acceptInvitation = (id: string, invitationId: string) =>
+    this.lock(async () => {
+      if (!validInvitationId(invitationId)) return fail('INVALID_INVITATION');
+      const entry = await this.current(this.entry(id));
+      const raw = await this.orgRequest(
+        entry,
+        '/' + invitationId + '/accept',
+        { method: 'POST' },
+        '/api/invitations',
+      );
+      const value = parseInvitation(raw);
+      if (
+        value.invitationId !== invitationId ||
+        value.state !== 'accepted' ||
+        raw.accepted !== true
+      )
+        return fail('INVALID_RESPONSE');
+      return value;
+    });
+  revokeInvitation = (id: string, organizationId: string, invitationId: string) =>
+    this.lock(async () => {
+      if (!validInvitationId(invitationId)) return fail('INVALID_INVITATION');
+      const entry = await this.channelEntry(id, organizationId);
+      const value = parseInvitation(
+        await this.orgRequest(
+          entry,
+          '/' + organizationId + '/invitations/' + invitationId + '/revoke',
+          { method: 'POST' },
+        ),
+      );
+      if (
+        value.invitationId !== invitationId ||
+        value.organizationId !== organizationId ||
+        !['revoked', 'expired'].includes(value.state)
+      )
+        return fail('INVALID_RESPONSE');
+      return value;
+    });
   login = (id: string) =>
     this.lock(async () => {
       let entry = this.entry(id);
