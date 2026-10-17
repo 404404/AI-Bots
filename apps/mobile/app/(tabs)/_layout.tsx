@@ -7,15 +7,25 @@ import { actionCount } from '../../src/host/inbox';
 import { useHostSession, useInbox } from '../../src/host/host-session';
 import { useDesignTheme, type DesignTheme } from '../../src/ui/design/theme';
 import { HostDrawer } from '../../src/ui/shell/host-drawer';
+import { ScrollChromeProvider, useChromeHidden } from '../../src/ui/shell/scroll-chrome';
 import { t } from '../../src/ui/strings';
 
 export default function TabsLayout() {
+  return (
+    <ScrollChromeProvider>
+      <NativeTabLayout />
+    </ScrollChromeProvider>
+  );
+}
+
+function NativeTabLayout() {
   const theme = useDesignTheme();
   const { inbox } = useHostSession();
   const pending = actionCount(useInbox(inbox));
+  const hidden = useChromeHidden();
   return (
     <View style={{ flex: 1 }}>
-      <NativeTabs {...chrome(theme)}>
+      <NativeTabs {...chrome(theme)} hidden={hidden}>
         <NativeTabs.Trigger name="(home)">
           <NativeTabs.Trigger.Icon
             sf={{

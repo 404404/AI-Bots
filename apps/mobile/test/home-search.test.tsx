@@ -33,11 +33,13 @@ const roster: RosterView = {
 };
 
 vi.mock('react-native', () => import('./react-native-shim'));
+vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
 vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 vi.mock('expo-router', () => {
   const Stack = () => null;
   Stack.Screen = () => null;
-  return { Redirect: () => null, Stack, useRouter: () => ({ push }) };
+  return { Redirect: () => null, Stack, useIsFocused: () => true, useRouter: () => ({ push }) };
 });
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({
@@ -100,7 +102,9 @@ async function type(view: HTMLElement, text: string): Promise<void> {
 }
 
 const rows = (view: HTMLElement) =>
-  [...view.querySelectorAll('button')].map((node) => node.getAttribute('aria-label'));
+  [...view.querySelectorAll('button')]
+    .filter((node) => node.getAttribute('aria-label') !== t.create)
+    .map((node) => node.getAttribute('aria-label'));
 
 describe('Search at the top of Chats', () => {
   it('filters the list in place and opens the chat the Human taps', async () => {
@@ -109,14 +113,20 @@ describe('Search at the top of Chats', () => {
 
     await type(view, 'AD');
     expect(rows(view)).toEqual(['Ada, Done']);
-    await act(async () => view.querySelector('button')!.click());
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>('button[aria-label="Ada, Done"]')!.click(),
+    );
     expect(push).toHaveBeenLastCalledWith({ pathname: '/dm/[slug]', params: { slug: 'ada' } });
 
     await type(view, '小明');
     expect(rows(view)).toEqual(['小明']);
 
     await type(view, 'launch');
-    await act(async () => view.querySelector('button')!.click());
+    await act(async () =>
+      [...view.querySelectorAll('button')]
+        .find((node) => node.getAttribute('aria-label') !== t.create)!
+        .click(),
+    );
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/channel/[id]',
       params: { id: 'launch-team' },

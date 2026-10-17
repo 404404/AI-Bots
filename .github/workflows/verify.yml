@@ -69,6 +69,25 @@ jobs:
       - run: pnpm build
       - run: git diff --exit-code -- packages/computer/lib/client.js packages/computer/lib/client.js.map packages/browser/lib/client.js packages/browser/lib/client.js.map
 
+  mobile-export:
+    name: mobile bundles (iOS and Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @botharness/mobile export
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+
   test-full:
     name: test (shard ${{ matrix.shard }})
     needs: plan
@@ -154,7 +173,7 @@ jobs:
 
   verify:
     name: lint, format, typecheck, test, build, docs
-    needs: [plan, static, test-full, test-affected, docs-site, e2e-smoke]
+    needs: [plan, static, mobile-export, test-full, test-affected, docs-site, e2e-smoke]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -162,5 +181,5 @@ jobs:
       - env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
-          jq -e '.plan.result == "success" and .static.result == "success"' <<<"$NEEDS"
+          jq -e '.plan.result == "success" and .static.result == "success" and .["mobile-export"].result == "success"' <<<"$NEEDS"
           jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' <<<"$NEEDS"

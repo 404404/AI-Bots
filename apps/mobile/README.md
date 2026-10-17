@@ -20,7 +20,7 @@ Carrier decision and evidence: [ADR-0200](../../docs/adr/0200-the-mobile-app-rea
 
 ## Toolchain
 
-Expo SDK 57 (React Native 0.86, React 19.2) inside the pnpm workspace with pnpm's default isolated linker: no `node-linker=hoisted`, no `.npmrc` change. `metro.config.js` adds one resolver rule so Metro can follow the Host sources' `.js`-suffixed TypeScript imports. Having React Native in the workspace makes pnpm link it as an optional peer of a few web packages (`morphicons`, `@tanstack/charts`); those packages only load it from their explicit React Native entry points.
+Expo SDK 58 (React Native 0.88, React 19.3) inside the pnpm workspace with pnpm's default isolated linker: no `node-linker=hoisted`, no `.npmrc` change. `metro.config.js` adds one resolver rule so Metro can follow the Host sources' `.js`-suffixed TypeScript imports. Having React Native in the workspace makes pnpm link it as an optional peer of a few web packages (`morphicons`, `@tanstack/charts`); those packages only load it from their explicit React Native entry points.
 
 ```bash
 pnpm install
@@ -144,3 +144,15 @@ The web render is layout evidence, not native evidence: it shows the app's own v
 7. **Check a DM.** Tap a PersonaBot. Send a uniquely marked message: it shows "Sending…", then "Sent", then settles into the conversation; the reply streams in under "Replying…". Scroll up to page older history. Put the app in the background, send the Bot a message from the computer, return: the message is there once. Turn off Wi-Fi and send: the message shows "Not sent · Tap to retry"; tapping it after reconnecting delivers it once.
 
 The device credential is stored only in the platform's secure storage and never logged; the Host keeps only its hash. "Unpair" forgets it on the phone; revoking it in the Web Client cuts the phone off on the Host.
+
+## Optional statistics
+
+Phone statistics default on for new installs and preserve saved opt-outs, independently of Host telemetry. Settings places the switch last with collapsed details. A one-time informational notice follows the Web client; collection does not wait for dismissal. Public mobile privacy copy and device qualification remain release gates. See [privacy, configuration and device acceptance](../../docs/mobile-statistics.md). Builds send nothing unless explicitly configured for tagged QA or qualified production.
+
+## SDK 58 upgrade checks
+
+Use the repository's pinned Node and pnpm versions. SDK 58 targets React Native 0.88 and React 19.3; install native dependencies with Expo's SDK-aware installer. Existing SDK 57 development clients must be rebuilt through the shared device QA queue. Native projects remain generated.
+
+CI checks Expo Doctor, types and tests, and exports both iOS and Android bundles in a required `mobile-export` job. Exporting bundles does not compile native code: separately verify a fresh iOS build and Android Release build (including R8), then the native user journeys. Android compilation requires compile SDK 37. The web preview explicitly retains single-page output. The simulator cache uses the strict fingerprint preset so app-version changes invalidate a cached native binary; SDK 58's balanced default ignores those version fields.
+
+For retained-data acceptance, install over an existing build with the same app identity and verify paired Hosts, local appearance, collapsed sections, DM activity preferences and statistics settings after restart. The fresh-install simulator journey alone does not prove upgrade preservation. Record simulator, real-device and Human QA results separately; follow [shared device QA](../../docs/agents/device-qa.md) for scheduling and resource limits.

@@ -1,13 +1,14 @@
 import { useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AVATAR_EDGE } from '../chat/conversation-row';
 import { DEFAULT_HOST_LOOK, type HostLook } from '../design/host-look';
 import { useDesignTheme } from '../design/theme';
-import { radius, space } from '../design/tokens';
+import { edgeFade, radius, space } from '../design/tokens';
+import { EdgeFade } from '../chat/header-chrome';
 import { useMounted } from '../mounted';
 import { t } from '../strings';
 import { HostBandLayer, HostChipFace, useHostBand } from './host-band';
@@ -29,7 +30,7 @@ export function HomeHeader({
   const drawerOpen = useHostDrawerOpen();
   const insets = useSafeAreaInsets();
   const band = useHostBand(look.banner);
-  const chip = useMounted<View>((node) => {
+  const chip = useMounted<ViewInstance>((node) => {
     hostDrawer.setReturnFocus(() => focusOn(node));
     return () => hostDrawer.setReturnFocus(undefined);
   }, []);
@@ -84,6 +85,7 @@ export function HomeHeader({
         }}
       >
         {children}
+        <EdgeFade edge="top" height={edgeFade.top} />
       </View>
     </HostBandLayer>
   );

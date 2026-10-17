@@ -135,6 +135,8 @@ export interface ConversationDraft {
   body: string;
 }
 
+export type ConversationDraftReference = Pick<ConversationDraft, 'draftId' | 'botSlug'>;
+
 export type ConversationStatus = 'opening' | 'live' | 'interrupted' | 'refused';
 
 export interface ConversationSnapshot {
@@ -147,6 +149,40 @@ export interface ConversationSnapshot {
   fromCache: boolean;
 }
 
+export interface ConversationTimelineSnapshot extends Omit<ConversationSnapshot, 'drafts'> {
+  drafts: ConversationDraftReference[];
+}
+
+function timelineOf(
+  current: ConversationSnapshot,
+  previous?: ConversationTimelineSnapshot,
+): ConversationTimelineSnapshot {
+  const sameDrafts =
+    previous !== undefined &&
+    current.drafts.length === previous.drafts.length &&
+    current.drafts.every(
+      (draft, index) =>
+        draft.draftId === previous.drafts[index]?.draftId &&
+        draft.botSlug === previous.drafts[index]?.botSlug,
+    );
+  if (
+    sameDrafts &&
+    current.messages === previous.messages &&
+    current.status === previous.status &&
+    current.reason === previous.reason &&
+    current.hasOlder === previous.hasOlder &&
+    current.loadingOlder === previous.loadingOlder &&
+    current.fromCache === previous.fromCache
+  )
+    return previous;
+  return {
+    ...current,
+    drafts: sameDrafts
+      ? previous.drafts
+      : current.drafts.map(({ draftId, botSlug }) => ({ draftId, botSlug })),
+  };
+}
+
 export interface CachedConversation {
   entries: JournalEntry[];
   hasOlder: boolean;
@@ -157,8 +193,14 @@ export interface ConversationCache {
   write(key: string, value: CachedConversation): void;
 }
 
+export interface SendObservation {
+  accepted(): boolean;
+  observed(): void;
+}
 export interface Conversation {
+  setForeground?(visible: boolean): void;
   getSnapshot(): ConversationSnapshot;
+  getTimelineSnapshot(): ConversationTimelineSnapshot;
   subscribe(listener: () => void): () => void;
   start(): void;
   stop(): void;
@@ -169,6 +211,7 @@ export interface Conversation {
 }
 
 export interface ConversationOptions {
+  telemetry?: { send(): SendObservation };
   host: Pick<HostClient, 'call' | 'follow' | 'upload' | 'resource'>;
   botSlug?: string;
   displayName?: string;
@@ -201,6 +244,8 @@ export interface MessageTags {
 }
 
 interface Outgoing {
+  observation?: SendObservation;
+  acceptanceObserved?: boolean;
   id: string;
   at: string;
   body: string;
@@ -372,12 +417,15 @@ export function createConversation(options: ConversationOptions): Conversation {
   const outgoing = new Map<string, Outgoing>();
   const sentFiles = new Map<string, OutgoingFile[]>();
   let running = false;
+  let foreground = false;
+  let acceptedSend: SendObservation | undefined;
   let session = 0;
   let unfollow: (() => void) | undefined;
   let frames: Promise<void> = Promise.resolve();
   const presented = new WeakMap<JournalEntry, ConversationMessage>();
   let messages: ConversationMessage[] = [];
   let snapshot: ConversationSnapshot = build(true);
+  let timelineSnapshot = timelineOf(snapshot);
   let cacheTimer: ReturnType<typeof setTimeout> | undefined;
   let draftTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -431,6 +479,7 @@ export function createConversation(options: ConversationOptions): Conversation {
     clearTimeout(draftTimer);
     draftTimer = undefined;
     snapshot = build(withMessages);
+    timelineSnapshot = timelineOf(snapshot, timelineSnapshot);
     for (const listener of listeners) listener();
   };
 
@@ -441,8 +490,17 @@ export function createConversation(options: ConversationOptions): Conversation {
   const first = (): number => window[0]?.revision ?? 0;
   const last = (): number => window.at(-1)?.revision ?? 0;
 
+  const accepted = (item: Outgoing): void => {
+    if (item.acceptanceObserved) return;
+    item.acceptanceObserved = true;
+    if (item.observation?.accepted() && foreground) acceptedSend = item.observation;
+  };
   const settleOutgoing = (): void => {
-    for (const entry of window) outgoing.delete(entry.message.id);
+    for (const entry of window) {
+      const item = outgoing.get(entry.message.id);
+      if (item !== undefined) accepted(item);
+      outgoing.delete(entry.message.id);
+    }
   };
 
   const persist = (): void => {
@@ -565,6 +623,8 @@ export function createConversation(options: ConversationOptions): Conversation {
       reason = undefined;
     } else if (frame.type === 'entry') {
       const entry = frame.entry;
+      const newlyObserved =
+        foreground && status === 'live' && !fromCache && entry.revision > last();
       if (entry.revision <= last()) {
         if (entry.revision >= first()) merge([entry]);
       } else if (entry.revision === last() + 1) merge([entry]);
@@ -573,6 +633,7 @@ export function createConversation(options: ConversationOptions): Conversation {
         if (current !== session) return;
         await advance(entry.revision, repair);
       }
+      if (newlyObserved && entry.message.author.kind === 'bot') acceptedSend?.observed();
       if (entry.message.author.kind === 'bot')
         for (const [draftId, draft] of drafts)
           if (draft.botSlug === entry.message.author.slug) deleteDraft(draftId);
@@ -687,6 +748,7 @@ export function createConversation(options: ConversationOptions): Conversation {
           ? {}
           : { allBotMention: item.tags.allBotMention }),
       });
+      accepted(item);
       if (outgoing.get(item.id) !== item) return;
       item.delivery = 'committed';
       delete item.error;
@@ -699,7 +761,12 @@ export function createConversation(options: ConversationOptions): Conversation {
   };
 
   return {
+    setForeground(visible) {
+      foreground = visible;
+      if (!visible) acceptedSend = undefined;
+    },
     getSnapshot: () => snapshot,
+    getTimelineSnapshot: () => timelineSnapshot,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -729,6 +796,7 @@ export function createConversation(options: ConversationOptions): Conversation {
     },
     stop() {
       running = false;
+      acceptedSend = undefined;
       session += 1;
       unfollow?.();
       unfollow = undefined;
@@ -767,6 +835,9 @@ export function createConversation(options: ConversationOptions): Conversation {
         files,
         refs: files.map(() => undefined),
         delivery: 'pending',
+        ...(foreground && options.telemetry !== undefined
+          ? { observation: options.telemetry.send() }
+          : {}),
       };
       outgoing.set(item.id, item);
       if (files.some((file) => file.uri !== undefined)) sentFiles.set(item.id, files);

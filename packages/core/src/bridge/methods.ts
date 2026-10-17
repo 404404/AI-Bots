@@ -360,6 +360,7 @@ export interface ProfileActivityTokensDay extends ProfileTokenBuckets {
 }
 
 export interface ProfileModelUsageRow {
+  partial?: boolean;
   day: string;
   purpose: string;
   provider: string;
@@ -628,7 +629,10 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<{ memoryDir: string; moved: boolean; leftover?: string }>>;
   sessionOwner(payload: unknown): BridgeResult<{ owner: OwnedSessionBot | null }>;
-  botSessionIds(payload: unknown): BridgeResult<{ sessionIds: string[] }>;
+  botSessionIds(payload: unknown): BridgeResult<{
+    sessionIds: string[];
+    groups: { botSlug: string; displayName: string; sessionIds: string[] }[];
+  }>;
   messageAttachmentTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   channelMediaTarget(payload: unknown): Promise<BridgeResult<{ target: MemoryFileTarget }>>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
@@ -2117,8 +2121,16 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
       const bot = deps.registry.get(slug);
       if (bot === undefined) return unknownBot(slug);
-      if (bot.modelPlan === undefined) return invalidInput('Apply a Model Preset first');
-      const expectedRevision = bot.modelPlan.revision;
+      if (bot.model !== undefined)
+        return invalidInput('Repair the legacy model before customizing');
+      const expectedRevision =
+        source['expectedRevision'] ?? bot.modelPlan?.revision ?? bot.modelPlanRevision ?? 0;
+      if (
+        typeof expectedRevision !== 'number' ||
+        !Number.isSafeInteger(expectedRevision) ||
+        expectedRevision < 0
+      )
+        return invalidInput('A valid expected revision is required');
       try {
         await deps.modelCatalog.validate(orchestrator);
         const result = deps.registry.customizeModelPlan(slug, orchestrator, expectedRevision);
@@ -5181,10 +5193,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       };
     },
     botSessionIds() {
-      const sessionIds = deps.registry
-        .list()
-        .flatMap((bot) => deps.ownership.rootsFor(bot.slug).map((root) => root.sessionId));
-      return { ok: true, value: { sessionIds } };
+      const groups = deps.registry.list().map((bot) => ({
+        botSlug: bot.slug,
+        displayName: bot.displayName,
+        sessionIds: deps.ownership
+          .rootsFor(bot.slug)
+          .filter((root) => deps.ownership.contentAvailable(root.sessionId))
+          .map((root) => root.sessionId),
+      }));
+      return {
+        ok: true,
+        value: { sessionIds: groups.flatMap((group) => group.sessionIds), groups },
+      };
     },
     memoryFileTarget(payload) {
       const source = asObject(payload);
@@ -5612,10 +5632,15 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
               (row.unknownBuckets?.cacheReadTokens ?? 0) > 0 ? null : row.cacheReadTokens,
             cacheWriteTokens:
               (row.unknownBuckets?.cacheWriteTokens ?? 0) > 0 ? null : row.cacheWriteTokens,
+            ...(row.totalTokens === null ? { partial: true } : {}),
             totalTokens:
-              row.totalTokens === undefined
-                ? row.inputTokens + row.outputTokens + row.cacheReadTokens + row.cacheWriteTokens
-                : row.totalTokens,
+              row.totalTokens === null
+                ? (row.reportedTotalTokens ?? 0) > 0
+                  ? row.reportedTotalTokens!
+                  : null
+                : row.totalTokens === undefined
+                  ? row.inputTokens + row.outputTokens + row.cacheReadTokens + row.cacheWriteTokens
+                  : row.totalTokens,
           })),
           modelUsageStatus: deps.usage === undefined ? 'unavailable' : 'ready',
         },

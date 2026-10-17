@@ -65,10 +65,11 @@ import { mountDevicePairing, type DeviceWebUpgrade } from './devices/mount.js';
 import { humanInboxPushSource } from './push/source.js';
 import { createMarketplaceClient } from './marketplace/client.js';
 import {
-  createReleaseService,
+  createLoadingReleaseService,
   installedRelease,
   type ReleaseInstaller,
 } from './release/service.js';
+import { loadedReleaseComponents, stampReleaseComponent } from './release/component.js';
 import { createGitService } from './memory/managed-git.js';
 import { createProcessRestarter, type ReleaseRestarter } from './release/restart.js';
 import {
@@ -195,6 +196,7 @@ import { ActivityToolDetails, createToolDetailIndex } from './state/tool-details
 import { createDshActivityProjection } from './state/dsh-activity.js';
 import { readPublicToolDetail } from './state/tool-activity.js';
 import { createUsageProjection, type UsageProjection } from './usage/usage.js';
+import { createMessagePerfTracker, type MessagePerfTracker } from './usage/message-perf.js';
 import { installBotSubagentModelTools } from './runtime/subagent-model-tools.js';
 
 export const name = 'botharness-core';
@@ -208,6 +210,7 @@ const PUSH_TOPICS = new Set([
 ]);
 
 const installedPackage = installedRelease(import.meta.url);
+stampReleaseComponent(apply, import.meta.url);
 const runningRelease = {
   version: installedPackage.version(),
   ledgers: installedPackage.ledgers(),
@@ -317,6 +320,7 @@ export interface BotHarnessCore {
   memory: MemoryService;
 
   usage?: UsageProjection;
+  messagePerf: MessagePerfTracker;
   channels: ChannelStore;
   attachments: AttachmentStore;
   live: ChannelLiveHub;
@@ -511,6 +515,10 @@ export function createCore(
     attachOperationalModule(operationalDatabase, 'bot-inbox'),
   );
   const externalMessaging = createOutboundMessaging({
+    channels: {
+      get: (id) => channels.get(id),
+      getOrCreateDm: (slug) => channels.getOrCreateDm(slug),
+    },
     ownsFailure: (slug, sessionId, role) => {
       const owner = ownership.resolve(sessionId);
       return owner?.botSlug === slug && owner.rootRole === role;
@@ -577,6 +585,7 @@ export function createCore(
       } catch {
         publicationFailed = true;
       }
+      void externalMessaging.forwardWebDm(commit);
       if (commit.message.memberDeparture !== undefined) {
         try {
           runtime?.admitGroupMessage(commit.channelId, commit.message.id);
@@ -759,9 +768,11 @@ export function createCore(
     onAdmitted: (slug) => runtime?.admitScheduleFiring?.(slug),
     ...(options.warn === undefined ? {} : { warn: options.warn }),
   });
+  const messagePerf: MessagePerfTracker = createMessagePerfTracker();
   runtime = createBotRuntime({
     triageContinuation: options.triageContinuation === true,
     inboxHistory,
+    messagePerf,
     requireExecution: (slug) => profileRecovery.requireExecution(slug),
     schedules,
     assignmentConcurrencyLimit: () =>
@@ -890,6 +901,7 @@ export function createCore(
     ownership,
     memory,
     ...(usage === undefined ? {} : { usage }),
+    messagePerf,
     grants,
     toolRules,
     assignmentAccess,
@@ -910,6 +922,10 @@ export function createCore(
 
 export function apply(ctx: Context, config: BotHarnessConfig): void {
   if (!config.enabled) return;
+  const profile = ctx.get('profileContext') as { installAnchor: string; dir: string } | undefined;
+  const releaseAnchors =
+    profile === undefined ? [] : [profile.installAnchor, join(profile.dir, 'package.json')];
+  installedPackage.identity(releaseAnchors);
   const dshHome = resolveDshHome();
   mountClientDiagnostics(ctx, dshHome);
   const release = installedRelease(import.meta.url);
@@ -1809,8 +1825,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     marketplace: createMarketplaceClient({
       baseUrl: config.marketplaceUrl ?? DEFAULT_MARKETPLACE_URL,
     }),
-    release: createReleaseService({
+    release: createLoadingReleaseService({
       version: () => runningRelease.version,
+      identity: () =>
+        installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
       ledgers: () => runningRelease.ledgers,
       installer: () => releaseInstaller.current,
       restarter: () => releaseRestarter.current,
@@ -2163,6 +2181,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         ctx.logger.warn('approval-result-publication-failed');
       }
       core.usage?.handleSessionEvent(session.id, event);
+      core.messagePerf.observeSessionEvent(session.id, event);
       handleCompactionEvent(
         {
           ownership: core.ownership,
@@ -2203,6 +2222,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     ({ agent }) => {
       userQuestions.cancelSession(agent.session.id);
       activity.handleSessionDisposed(agent.session.id);
+      core.messagePerf.clear(agent.session.id);
     },
     { global: true },
   );

@@ -1,6 +1,12 @@
 import { TextInput } from '../primitives/system-text';
-import { useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Keyboard, ScrollView, View } from 'react-native';
+import { useRef, useState, type ComponentType, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Keyboard,
+  ScrollView,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 
 import { errorText, type Loadable } from '../../host/bot-settings';
 import {
@@ -23,10 +29,11 @@ import { Text } from '../primitives/text';
 import { Chip } from '../primitives/chip';
 import { ChevronRightIcon } from '../shell/icons';
 import { t } from '../strings';
-import type { RoutineTarget } from './bot-profile';
+import type { RoutineTarget } from '../../host/routines';
 import { firingText, routineDetail, when } from './routine-text';
 import {
   Sheet,
+  type SheetPageProps,
   SheetActions,
   SheetCallout,
   SheetFooter,
@@ -274,6 +281,9 @@ function RoutineEditor({
 }
 
 export function RoutineSheet({
+  page,
+  initialMode,
+  onEdit,
   botName,
   target,
   routines,
@@ -281,6 +291,9 @@ export function RoutineSheet({
   onClose,
   onOpenFullClient,
 }: {
+  page?: ComponentType<SheetPageProps> | undefined;
+  initialMode?: 'detail' | 'edit';
+  onEdit?: () => void;
   botName: string;
   target: RoutineTarget;
   routines: Routines;
@@ -292,7 +305,9 @@ export function RoutineSheet({
   const [routine, setRoutine] = useState<BotScheduleSummary | undefined>(
     target.kind === 'open' ? target.routine : undefined,
   );
-  const [mode, setMode] = useState<Mode>(target.kind === 'new' ? 'edit' : 'detail');
+  const [mode, setMode] = useState<Mode>(
+    initialMode ?? (target.kind === 'new' ? 'edit' : 'detail'),
+  );
   const [form, setForm] = useState<RoutineForm>(() =>
     target.kind === 'open' ? (routineFormOf(target.routine) ?? newRoutineForm()) : newRoutineForm(),
   );
@@ -303,7 +318,7 @@ export function RoutineSheet({
   const [notice, setNotice] = useState<string>();
   const debounce = useDebounced();
   const latest = useRef(form);
-  const scroller = useRef<ScrollView>(undefined);
+  const scroller = useRef<ScrollViewInstance>(undefined);
 
   const loadHistory = (id: string) =>
     void routines.history(id).then(
@@ -350,7 +365,7 @@ export function RoutineSheet({
     });
   };
 
-  const mount = useMounted<ScrollView>((node) => {
+  const mount = useMounted<ScrollViewInstance>((node) => {
     scroller.current = node;
     if (target.kind === 'open') loadHistory(target.routine.id);
     else refreshPreview(form, 0);
@@ -398,12 +413,14 @@ export function RoutineSheet({
           onClose();
           return;
         }
-        setMode('detail');
+        if (initialMode === 'edit') onClose();
+        else setMode('detail');
       });
     const title = routine === undefined ? t.routineNew : t.routineEditTitle;
     return (
-      <Sheet visible label={title} title={title} subtitle={botName} onClose={close}>
+      <Sheet page={page} visible label={title} title={title} subtitle={botName} onClose={close}>
         <ScrollView
+          nestedScrollEnabled
           ref={mount}
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
@@ -424,6 +441,10 @@ export function RoutineSheet({
               disabled={busy !== undefined}
               onPress={() => {
                 if (routine === undefined) {
+                  onClose();
+                  return;
+                }
+                if (initialMode === 'edit') {
                   onClose();
                   return;
                 }
@@ -450,6 +471,7 @@ export function RoutineSheet({
   if (mode === 'delete')
     return (
       <Sheet
+        page={page}
         visible
         label={t.routineDeleteConfirm(routine.title)}
         title={t.routineDeleteConfirm(routine.title)}
@@ -486,13 +508,18 @@ export function RoutineSheet({
   const chevron = <ChevronRightIcon color={theme.color.muted} size={theme.type.title.line} />;
   return (
     <Sheet
+      page={page}
       visible
       label={routine.title}
       title={routine.title}
       subtitle={routineDetail(routine)}
       onClose={close}
     >
-      <ScrollView ref={mount} contentContainerStyle={{ paddingBottom: space.x3 }}>
+      <ScrollView
+        nestedScrollEnabled
+        ref={mount}
+        contentContainerStyle={{ paddingBottom: space.x3 }}
+      >
         {status}
         <View style={{ flexDirection: 'row', gap: space.x3, paddingHorizontal: space.x5 }}>
           <View style={{ flex: 1 }}>
@@ -559,6 +586,10 @@ export function RoutineSheet({
                 ? undefined
                 : editable
                   ? () => {
+                      if (onEdit !== undefined) {
+                        onEdit();
+                        return;
+                      }
                       const next = routineFormOf(routine)!;
                       latest.current = next;
                       setForm(next);

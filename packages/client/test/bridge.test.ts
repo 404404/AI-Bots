@@ -9,7 +9,6 @@ import {
   loadMemoryGitGraph,
   loadMemoryGitCommitDiff,
   loadSessionBotOwner,
-  loadActivityOverview,
   loadProfileSessionUsage,
   botExists,
   parseBotSummary,
@@ -611,6 +610,26 @@ describe('bridge actions', () => {
       status: 'ready',
       items: [{ sessionId: 'latest' }],
     });
+  });
+
+  it('reopens the same Bot Inbox on each explicit navigation request', async () => {
+    const { clientStore, actions } = setup();
+    await actions.load();
+    await actions.openBot('ada', 'inbox');
+    expect(clientStore.getSnapshot().selection).toEqual({
+      kind: 'bot',
+      slug: 'ada',
+      inboxRequest: 1,
+    });
+    await actions.openBot('ada', 'inbox');
+    expect(clientStore.getSnapshot().selection).toEqual({
+      kind: 'bot',
+      slug: 'ada',
+      inboxRequest: 2,
+    });
+    expect(clientStore.getSnapshot().conversation.status).toBe('ready');
+    await actions.openBot('ada');
+    expect(clientStore.getSnapshot().selection).toEqual({ kind: 'bot', slug: 'ada' });
   });
 
   it('loads the roster and opens a DM with its history in chronological order', async () => {
@@ -2644,33 +2663,6 @@ it('rejects incomplete external source responses before the source modal can ren
     { ...EXTERNAL_SOURCE.event, attachments: 'file.zip' },
   ])
     await expect(read({ ...EXTERNAL_SOURCE, event })).rejects.toBeInstanceOf(BridgeCallError);
-});
-
-it('admits only a bounded safe Tool summary into Overview and rejects malformed or idle detail', async () => {
-  const activity = {
-    toolKind: 'execute',
-    effect: 'executing',
-    toolName: 'bash',
-    startedAt: 1,
-    activeToolCount: 1,
-    sources: [{ role: 'orchestrator', count: 1 }],
-  };
-  const row = {
-    slug: 'ada',
-    displayName: 'Ada',
-    paused: false,
-    hasAction: true,
-    state: 'working',
-    sessions: [],
-    activity: { ...activity, arguments: 'private', detailRefs: ['private locator'] },
-  };
-  const call = bridgeCall({ activityOverview: () => ({ actionCount: 1, bots: [row] }) });
-  expect((await loadActivityOverview(call)).bots[0]?.activity).toEqual(activity);
-  row.activity.toolName = 'unsafe\nname';
-  await expect(loadActivityOverview(call)).rejects.toThrow('Invalid Overview activity');
-  row.activity.toolName = 'bash';
-  row.state = 'idle';
-  await expect(loadActivityOverview(call)).rejects.toThrow('Invalid Overview activity');
 });
 
 it('reads retained WeChat context audits through the actual Client bridge before rendering', async () => {

@@ -23,6 +23,7 @@ import {
   SettingsSection,
 } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
+import { SheetScreen } from '../primitives/sheet-screen';
 import { ChevronRightIcon, MoreIcon, PlusIcon } from '../shell/icons';
 import { t } from '../strings';
 import { GroupMark } from './group-mark';
@@ -122,7 +123,7 @@ function MenuButton({ label, onPress }: { label: string; onPress(): void }) {
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: radius.round,
-        backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
       })}
     >
       <MoreIcon color={theme.color.muted} size={ICON} />
@@ -381,41 +382,44 @@ export function GroupInfoSheet({
 
   return (
     <>
-      <SectionList
-        sections={groupRows(info)}
-        keyExtractor={(row) => row.key}
-        stickySectionHeadersEnabled={false}
-        style={{ flex: 1, backgroundColor: theme.color.surface }}
-        contentContainerStyle={{ paddingTop: space.x6, paddingBottom: space.x5 }}
-        ListHeaderComponent={header}
-        ListFooterComponent={footer}
-        renderSectionHeader={({ section }) => (
-          <View
-            style={{ paddingTop: space.x5, paddingBottom: space.x2, paddingHorizontal: space.x5 }}
-          >
-            <SettingsHeading>
-              {section.section === 'joins' ? t.groupJoinsSection : t.groupMembersSection}
-            </SettingsHeading>
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <SettingsGroupItem first={item.first} last={item.last}>
-            <GroupRow
-              row={item}
-              busy={busy}
-              onInvite={() => setSheet('invite')}
-              onOpenBot={onOpenBot}
-              onMenu={memberMenu}
-              onCancelInvite={(pending) =>
-                void run(`invite:${pending.id}`, () => actions.cancelInvite(pending.id))
-              }
-              onDecide={(pending, accept) =>
-                void run(`join:${pending.id}`, () => actions.decideJoin(pending.id, accept))
-              }
-            />
-          </SettingsGroupItem>
-        )}
-      />
+      <SheetScreen>
+        <SectionList
+          sections={groupRows(info)}
+          keyExtractor={(row) => row.key}
+          stickySectionHeadersEnabled={false}
+          nestedScrollEnabled
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingTop: space.x6, paddingBottom: space.x5 }}
+          ListHeaderComponent={header}
+          ListFooterComponent={footer}
+          renderSectionHeader={({ section }) => (
+            <View
+              style={{ paddingTop: space.x5, paddingBottom: space.x2, paddingHorizontal: space.x5 }}
+            >
+              <SettingsHeading>
+                {section.section === 'joins' ? t.groupJoinsSection : t.groupMembersSection}
+              </SettingsHeading>
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <SettingsGroupItem first={item.first} last={item.last}>
+              <GroupRow
+                row={item}
+                busy={busy}
+                onInvite={() => setSheet('invite')}
+                onOpenBot={onOpenBot}
+                onMenu={memberMenu}
+                onCancelInvite={(pending) =>
+                  void run(`invite:${pending.id}`, () => actions.cancelInvite(pending.id))
+                }
+                onDecide={(pending, accept) =>
+                  void run(`join:${pending.id}`, () => actions.decideJoin(pending.id, accept))
+                }
+              />
+            </SettingsGroupItem>
+          )}
+        />
+      </SheetScreen>
       <InviteSheet
         visible={sheet === 'invite'}
         candidates={info.candidates}
@@ -443,7 +447,7 @@ function Divider() {
       style={{
         height: 0,
         borderTopWidth: edge.hairline,
-        borderTopColor: theme.layer.sheet.divider,
+        borderTopColor: theme.layer.raised.divider,
       }}
     />
   );

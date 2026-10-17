@@ -1,4 +1,5 @@
 import { BROWSER_TOOLS, browserToolName } from './tool/catalog.js';
+import { stampReleaseComponent } from '../../core/src/release/component.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -47,6 +48,7 @@ import {
 } from './tool/provider.js';
 
 export const name = 'botharness-browser';
+stampReleaseComponent(apply, import.meta.url);
 
 export interface BrowserConfig {
   target?: 'local' | 'container' | 'extension' | 'daily-control' | 'profile-control';
@@ -864,7 +866,9 @@ export function apply(
           target: target(),
           viewerUrl:
             runtime.viewerUrl?.() ??
-            (target() === 'local' && runtime.isRunning() ? localViewerUrl(slug) : null),
+            (target() === 'local' && runtime.isRunning() && tabId !== undefined
+              ? localViewerUrl(slug)
+              : null),
           provisioning: runtimes.installProgress(slug) ?? null,
         });
       },

@@ -16,8 +16,14 @@ vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+vi.mock('react-native-tab-view', () => import('./tab-view-shim'));
 vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
-vi.mock('expo-router', () => ({ useRouter: () => ({ push: () => undefined }) }));
+vi.mock('expo-router', () => ({
+  useRouter: () => ({ push: () => undefined }),
+  useIsFocused: () => true,
+  Stack: { Screen: () => null },
+}));
+vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
 vi.mock('../src/ui/bot-avatar', () => ({
   BotAvatar: ({ bot }: { bot: { slug: string } }) =>
     createElement('span', { 'data-testid': `avatar-${bot.slug}` }),
@@ -25,9 +31,8 @@ vi.mock('../src/ui/bot-avatar', () => ({
 
 import { createHostClient, type HostClient } from '../src/host/client';
 import type { InboxSnapshot } from '../src/host/inbox';
-import { createSectionCollapse, type SectionCollapse } from '../src/host/section-collapse';
 import type { HumanAttentionItem } from '../src/host/wire';
-import { ActivityFeed, activityCounts, feedRows } from '../src/ui/shell/activity-feed';
+import { ActivityFeed, feedRows } from '../src/ui/shell/activity-feed';
 import { t } from '../src/ui/strings';
 import { FakeHost } from './fake-host';
 import inboxWire from './fixtures/inbox-wire.json';
@@ -80,9 +85,9 @@ async function settle(): Promise<void> {
 async function feed(
   fake: FakeHost,
   snapshot: InboxSnapshot,
-  collapse = createSectionCollapse({ read: async () => undefined, write() {} }),
   hostId = 'host-one',
   timeoutMs = 200,
+  onOpen: (item: HumanAttentionItem) => void = () => undefined,
 ): Promise<HTMLElement> {
   act(() => root?.unmount());
   container?.remove();
@@ -118,14 +123,13 @@ async function feed(
     root!.render(
       createElement(ActivityFeed, {
         hostId,
-        collapse,
         client,
         inbox: undefined,
         snapshot,
         botSlugs: [question.botSlug, 'other-bot'],
         channels: [{ id: 'other-channel', name: 'Other Channel' }],
         bot: () => undefined,
-        onOpen: () => undefined,
+        onOpen,
       }),
     ),
   );
@@ -145,88 +149,98 @@ async function press(target: HTMLElement): Promise<void> {
 }
 
 const post = (view: HTMLElement, item: HumanAttentionItem) =>
-  view.querySelector(`[data-testid="inbox-post-${item.id}"]`);
+  [...view.querySelectorAll(`[data-testid="inbox-post-${item.id}"]`)].find(
+    (node) => node.closest('[hidden]') === null,
+  ) ?? null;
 
 describe('Activity feed rows', () => {
-  it('turns decidable actions into posts and keeps other items as rows', () => {
-    const rows = feedRows(ready([question, approval, privateInput]), new Set(), []);
-    expect(rows.map((row) => `${row.kind}:${row.key}`)).toEqual([
-      'header:header-action',
-      `post:${question.id}`,
-      `post:${approval.id}`,
-      'row:private-1',
-      'header:header-replies',
-      'row:reply-1',
-      'header:header-unread',
-      'empty:empty-unread',
-    ]);
-  });
-
-  it('drops an answered post at once and keeps a refused one after the Host drops it', () => {
-    const answered = feedRows(ready([question, approval]), new Set([question.id]), []);
-    expect(answered.some((row) => row.key === question.id)).toBe(false);
-    const kept = feedRows(ready([]), new Set(), [approval]);
-    expect(kept.map((row) => row.key)).toContain(approval.id);
-    expect(kept.some((row) => row.key === 'empty-action')).toBe(false);
-  });
-
-  it('filters to one section and keeps its header when it is empty', () => {
-    const snapshot = ready([question, approval]);
+  it('defaults to pending work and keeps questions and private inputs beside tool approvals', () => {
     expect(
-      feedRows(snapshot, new Set(), [], { section: 'replies', bot: undefined }).map(
+      feedRows(ready([question, approval, privateInput]), new Set(), []).map((row) => row.key),
+    ).toEqual([question.id, approval.id, privateInput.id]);
+  });
+  it('keeps settlement, Bot filtering and handled state in the flat feed', () => {
+    expect(
+      feedRows(ready([question]), new Set([question.id]), []).some(
+        (row) => row.key === question.id,
+      ),
+    ).toBe(false);
+    expect(feedRows(ready([]), new Set(), [approval]).map((row) => row.key)).toContain(approval.id);
+    const other = { ...approval, id: 'other-1', botSlug: 'other-bot' };
+    expect(
+      feedRows(ready([question, other]), new Set(), [], { section: 'all', bot: 'other-bot' }).map(
         (row) => row.key,
       ),
-    ).toEqual(['header-replies', 'reply-1']);
+    ).toEqual(['other-1']);
+    const done = { ...question, id: 'done-1', category: 'handled' as const };
+    const snapshot: InboxSnapshot = {
+      status: 'ready',
+      sections: { action: [], replies: [], unread: [], handled: [done] },
+    };
     expect(
-      feedRows(snapshot, new Set(), [], { section: 'handled', bot: undefined }).map(
-        (row) => row.key,
+      feedRows(snapshot, new Set([done.id]), [], { section: 'handled', bot: undefined }),
+    ).toEqual([expect.objectContaining({ kind: 'row', item: done, settled: true })]);
+    expect(
+      feedRows(snapshot, new Set(), [], { section: 'all', bot: undefined }).some(
+        (row) => row.key === done.id,
       ),
-    ).toEqual(['header-handled', 'empty-handled']);
+    ).toBe(false);
   });
-
-  it('filters by Bot and counts what each section would show', () => {
-    const other: HumanAttentionItem = { ...approval, id: 'other-1', botSlug: 'other-bot' };
-    const snapshot = ready([question, other]);
-    const rows = feedRows(snapshot, new Set(), [], { section: 'all', bot: 'other-bot' });
-    expect(rows.map((row) => row.key)).toEqual([
-      'header-action',
-      'other-1',
-      'header-replies',
-      'empty-replies',
-      'header-unread',
-      'empty-unread',
-    ]);
-    expect(activityCounts(snapshot, new Set([question.id]), [], undefined)).toEqual({
-      all: 2,
-      action: 1,
-      replies: 1,
-      unread: 0,
-      handled: 0,
-    });
-  });
-
-  it('hides empty search sections while keeping matching collapsed sections and pagination reachable', () => {
+  it('uses one empty state and keeps pagination reachable without section headers', () => {
     const snapshot: InboxSnapshot = {
       status: 'ready',
       sections: { action: [], replies: [reply], unread: [], handled: [] },
       cursors: { unread: 'next-unread' },
     };
     expect(
-      feedRows(snapshot, new Set(), [], undefined, new Set(['replies']), 'budget').map(
+      feedRows(snapshot, new Set(), [], { section: 'all', bot: undefined }, 'budget').map(
         (row) => row.key,
       ),
-    ).toEqual(['header-replies', 'header-unread', 'empty-unread', 'more-unread']);
+    ).toEqual(['reply-1', 'more-unread']);
+    expect(feedRows(ready([]), new Set(), []).map((row) => row.key)).toEqual(['empty-action']);
     expect(
-      feedRows(ready([]), new Set(), [], undefined, undefined, '  ').map((row) => row.key),
-    ).toContain('header-action');
-  });
-
-  it('says nothing needs you when the action section is empty', () => {
-    expect(feedRows(ready([]), new Set(), []).map((row) => row.kind)).toContain('empty');
+      feedRows(
+        {
+          ...snapshot,
+          sections: { action: [], replies: [], unread: [], handled: [] },
+          cursors: {},
+        },
+        new Set(),
+        [],
+        undefined,
+        'no-match',
+      ),
+    ).toEqual([]);
   });
 });
 
 describe('Activity feed', () => {
+  it('bounds the native unread preview while opening the original full item', async () => {
+    const unread: HumanAttentionItem = {
+      ...reply,
+      id: 'long-unread',
+      category: 'unread',
+      kind: 'channel-unread',
+      summary: `${'正文'.repeat(10000)}FULL_END`,
+    };
+    const open = vi.fn();
+    const view = await feed(
+      host(),
+      { status: 'ready', sections: { action: [], replies: [], unread: [unread], handled: [] } },
+      'host-one',
+      200,
+      open,
+    );
+    await press(button(view, t.inboxSections.unread));
+    const row = view.querySelector<HTMLElement>('[data-testid="inbox-row-long-unread"]')!;
+    expect(row.textContent).not.toContain('FULL_END');
+    expect(row.textContent!.length).toBeLessThan(700);
+    expect(row.getAttribute('aria-label')!.length).toBeLessThan(700);
+    await press(row);
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({ id: unread.id, summary: unread.summary }),
+    );
+  });
   it('preserves the search when editing ends and options reset', async () => {
     const fake = host();
     const queries: Record<string, unknown>[] = [];
@@ -252,15 +266,14 @@ describe('Activity feed', () => {
     });
     await settle();
     expect(queries.at(-1)?.search).toBe('budget');
-    expect(view.textContent).not.toContain(t.inboxSections.action);
-    expect(view.textContent).not.toContain(t.inboxSections.unread);
-    expect(view.textContent).toContain(t.inboxSections.replies);
+    expect(view.querySelectorAll('[role=tab]')).toHaveLength(3);
+    expect(queries.at(-1)?.category).toBe('action');
     expect(view.querySelector(`button[aria-label="${t.close}"]`)).toBeNull();
     await act(async () => field.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
     expect(queries.at(-1)?.search).toBe('budget');
     await press(button(view, t.activityOptions));
     await press(button(view, t.activityReset));
-    expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(queries.findLast((query) => query.category === 'action')?.sort).toBeUndefined();
     expect(queries.at(-1)?.search).toBe('budget');
     await press(button(view, t.cancel));
     await press(button(view, t.activitySearch));
@@ -289,8 +302,7 @@ describe('Activity feed', () => {
     });
     await settle();
     expect(view.textContent).toContain(t.activityNoResults);
-    for (const section of ['action', 'replies', 'unread'] as const)
-      expect(view.textContent).not.toContain(t.inboxSections[section]);
+    expect(view.querySelectorAll('[role=tab]')).toHaveLength(3);
     await press(button(view, t.activityClearSearch));
     expect(view.textContent).not.toContain(t.activityNoResults);
     expect(view.textContent).toContain(t.inboxSections.action);
@@ -317,7 +329,7 @@ describe('Activity feed', () => {
     await press(button(view, t.activityOptions));
     expect(button(view, t.activitySortNewest).getAttribute('aria-checked')).toBe('true');
     await press(button(view, t.activityReset));
-    expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(queries.findLast((query) => query.category === 'action')?.sort).toBeUndefined();
     expect(view.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
@@ -327,49 +339,6 @@ describe('Activity feed', () => {
     await press(button(view, t.activityOptions));
     expect(button(view, t.inboxSections.handled)).not.toBeNull();
   });
-  it('preserves other sections and Hosts when toggled before preferences finish loading', async () => {
-    const original = { 'host-one': ['replies'], 'host-two': ['unread'] };
-    let saved: Record<string, string[]> = original;
-    let loaded!: (value: unknown) => void;
-    const collapse = createSectionCollapse({
-      read: () =>
-        new Promise((resolve) => {
-          loaded = resolve;
-        }),
-      write: (value) => {
-        saved = value;
-      },
-    });
-    const view = await feed(host(), ready([question]), collapse);
-    await press(button(view, t.sectionCount(t.inboxSections.action, 1)));
-    expect(saved['host-two']).toEqual(['unread']);
-    await act(async () => loaded(original));
-    expect(post(view, question)).toBeNull();
-    expect(view.querySelector('[data-testid="inbox-row-reply-1"]')).toBeNull();
-    expect(saved['host-one']).toEqual(expect.arrayContaining(['action', 'replies']));
-    expect(saved['host-two']).toEqual(['unread']);
-  });
-
-  it('restores collapsed sections on reopen without carrying them to another Host', async () => {
-    let saved: Record<string, string[]> = {};
-    const persistence = (): SectionCollapse =>
-      createSectionCollapse({
-        read: async () => saved,
-        write: (next) => {
-          saved = next;
-        },
-      });
-    const view = await feed(host(), ready([question]), persistence());
-    await press(button(view, t.sectionCount(t.inboxSections.action, 1)));
-    expect(post(view, question)).toBeNull();
-    const reopened = await feed(host(), ready([question, approval]), persistence());
-    expect(post(reopened, question)).toBeNull();
-    expect(post(reopened, approval)).toBeNull();
-    expect(button(reopened, t.sectionCount(t.inboxSections.action, 2))).not.toBeNull();
-    const otherHost = await feed(host(), ready([question]), persistence(), 'host-two');
-    expect(post(otherHost, question)).not.toBeNull();
-  });
-
   it('uses the Host scoped unread summary instead of filtering its last author', async () => {
     const fake = host();
     const unread: HumanAttentionItem = {
@@ -399,15 +368,16 @@ describe('Activity feed', () => {
     await press(button(view, t.activityOptions));
     await press(button(view, question.botSlug));
     await press(button(view, t.cancel));
-    expect(button(view, t.sectionCount(t.inboxSections.unread, 2))).not.toBeNull();
+    await press(button(view, t.inboxSections.unread));
+    expect(view.textContent).toContain('2');
     expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).not.toBeNull();
     await press(button(view, t.activityOptions));
     await press(button(view, t.filterAllBots));
     await press(button(view, t.cancel));
-    expect(button(view, t.sectionCount(t.inboxSections.unread, 10))).not.toBeNull();
+    expect(view.textContent).toContain('10');
   });
 
-  it('shows three collapsible triage sections and keeps handled history behind its filter', async () => {
+  it('switches three tabs immediately and keeps All and handled history in filters', async () => {
     const unread: HumanAttentionItem = {
       ...reply,
       id: 'unread:team',
@@ -423,13 +393,17 @@ describe('Activity feed', () => {
       sections: { action: [question], replies: [reply], unread: [unread], handled: [done] },
     });
     expect(view.querySelector('[data-testid="inbox-row-done-1"]')).toBeNull();
-    const actions = button(view, t.sectionCount(t.inboxSections.action, 1));
-    await press(actions);
+    expect(view.querySelectorAll('[role=tab]')).toHaveLength(3);
+    expect(button(view, t.inboxSections.action).getAttribute('aria-selected')).toBe('true');
+    expect(post(view, question)).not.toBeNull();
+    expect(view.querySelector('[data-testid="inbox-row-reply-1"]')).toBeNull();
+    await press(button(view, t.inboxSections.replies));
     expect(post(view, question)).toBeNull();
+    expect(button(view, t.inboxSections.replies).getAttribute('aria-selected')).toBe('true');
     expect(view.querySelector('[data-testid="inbox-row-reply-1"]')).not.toBeNull();
-    await press(button(view, t.sectionCount(t.inboxSections.unread, 10)));
-    expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).toBeNull();
-    await press(actions);
+    await press(button(view, t.inboxSections.unread));
+    expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).not.toBeNull();
+    await press(button(view, t.inboxSections.action));
     expect(post(view, question)).not.toBeNull();
     await press(button(view, t.activityOptions));
     await press(button(view, t.inboxSections.handled));
@@ -455,6 +429,21 @@ describe('Activity feed', () => {
     expect(view.textContent).toContain(t.inboxEmpty);
   });
 
+  it('keeps the loaded question and its draft mounted when paging away and back', async () => {
+    const fake = host();
+    const view = await feed(fake, ready([question]));
+    const initial = post(view, question);
+    await press(button(view, t.option('A', 'Teal')));
+    const loads = () => fake.calls.filter((call) => call.method === 'userQuestionStatus').length;
+    const loaded = loads();
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(post(view, question)).toBeNull();
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-previous"]')!);
+    expect(post(view, question)).toBe(initial);
+    expect(loads()).toBe(loaded);
+    expect(button(view, t.option('A', 'Teal')).getAttribute('aria-checked')).toBe('true');
+  });
+
   it('filters the feed through its header panel', async () => {
     const view = await feed(host(), ready([question]));
     expect(post(view, question)).not.toBeNull();
@@ -462,19 +451,20 @@ describe('Activity feed', () => {
     await press(button(view, t.inboxSections.replies));
     await press(button(view, t.cancel));
     expect(post(view, question)).toBeNull();
-    expect(button(view, t.sectionCount(t.inboxSections.replies, 1))).not.toBeNull();
+    expect(button(view, t.inboxSections.replies).getAttribute('aria-selected')).toBe('true');
     await press(button(view, t.activityOptions));
     await press(button(view, t.filterAll));
     await press(button(view, t.cancel));
     expect(post(view, question)).not.toBeNull();
   });
 
-  it('shows handled history only when selected and keeps personal messages in the default view', async () => {
+  it('shows personal messages in For you and handled history only through filters', async () => {
     const done: HumanAttentionItem = { ...question, id: 'done-1', category: 'handled' };
     const view = await feed(host(), {
       status: 'ready',
       sections: { action: [], replies: [reply], unread: [], handled: [done] },
     });
+    await press(button(view, t.inboxSections.replies));
     const replied = view.querySelector('[data-testid="inbox-row-reply-1"]')!;
     expect(replied.textContent).toContain(`${t.kind.reply ?? t.otherKind} · ${reply.botSlug}`);
     expect(replied.textContent?.split(reply.summary).length).toBe(2);
@@ -487,7 +477,7 @@ describe('Activity feed', () => {
     );
   });
 
-  it.each(['search', 'channel'] as const)(
+  it.each(['search', 'channel', 'tab', 'swipe'] as const)(
     'does not restore a late refused question after the %s changes',
     async (change) => {
       const fake = host();
@@ -506,7 +496,7 @@ describe('Activity feed', () => {
         await response;
         throw new Error('Already answered elsewhere');
       });
-      const view = await feed(fake, ready([question]), undefined, 'host-one', 5000);
+      const view = await feed(fake, ready([question]), 'host-one', 5000);
       await press(button(view, t.option('A', 'Teal')));
       await press(button(view, t.option('B', 'Biscuits')));
       await press(button(view, t.submitChoice));
@@ -523,6 +513,10 @@ describe('Activity feed', () => {
           );
           field.dispatchEvent(new Event('input', { bubbles: true }));
         });
+      } else if (change === 'tab') {
+        await press(button(view, t.inboxSections.replies));
+      } else if (change === 'swipe') {
+        await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
       } else {
         await press(button(view, t.activityOptions));
         await press(button(view, 'Other Channel'));
@@ -538,6 +532,41 @@ describe('Activity feed', () => {
       if (change === 'search') expect(view.textContent).toContain(t.activityNoResults);
     },
   );
+
+  it('applies a pager selection to the Host query while retaining other filters in both directions', async () => {
+    const fake = host();
+    const queries: Record<string, unknown>[] = [];
+    fake.answers.set('humanAttention', (args) => {
+      queries.push(args);
+      return { ok: true, value: { items: [] } };
+    });
+    const view = await feed(fake, ready([]));
+    await press(button(view, t.activityOptions));
+    await press(button(view, t.activitySortOldest));
+    await press(button(view, 'Other Channel'));
+    await press(button(view, t.cancel));
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(queries.at(-1)).toMatchObject({
+      category: 'replies',
+      sort: 'oldest',
+      channelId: 'other-channel',
+    });
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(queries.at(-1)).toMatchObject({
+      category: 'unread',
+      sort: 'oldest',
+      channelId: 'other-channel',
+    });
+    const fetched = queries.length;
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-previous"]')!);
+    expect(queries.length).toBe(fetched);
+    expect(queries.findLast((query) => query.category === 'replies')).toMatchObject({
+      category: 'replies',
+      sort: 'oldest',
+      channelId: 'other-channel',
+    });
+    expect(button(view, t.inboxSections.replies).getAttribute('aria-selected')).toBe('true');
+  });
 
   it('keeps a post that lost to another device and says so', async () => {
     const fake = host();

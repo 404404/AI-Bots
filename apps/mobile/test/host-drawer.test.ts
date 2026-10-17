@@ -145,6 +145,7 @@ describe('Host drawer', () => {
 
   it('covers about 85% of the screen', () => {
     expect(drawerWidth(390)).toBe(332);
+    expect(drawerWidth(900)).toBe(360);
   });
 });
 

@@ -223,6 +223,7 @@ export interface ProfileActivityTokensDay extends ProfileTokenBuckets {
 }
 
 export interface ProfileModelUsageRow {
+  partial?: boolean;
   day: string;
   purpose: string;
   provider: string;

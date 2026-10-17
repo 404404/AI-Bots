@@ -16,6 +16,7 @@ import {
   type RequestRef,
 } from '../src/host/requests';
 import type { HumanAttentionItem, QuestionItem } from '../src/host/wire';
+import { t } from '../src/ui/strings';
 import { FakeHost } from './fake-host';
 import { unreadHref } from '../src/host/push';
 import hostWire from './fixtures/host-wire.json';
@@ -142,7 +143,7 @@ describe('Human Inbox', () => {
     );
     expect(error).toMatchObject({
       status: 'error',
-      error: expect.stringContaining('Update this Host'),
+      error: t.activityUpdateHost,
     });
     fake.answers.set('humanAttention', () => ({ ok: true, value: { queryVersion: 1, items: [] } }));
     await inbox.refresh();

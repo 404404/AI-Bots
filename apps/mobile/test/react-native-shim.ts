@@ -19,6 +19,8 @@ export const View = (props: Props) =>
   createElement('div', { ...a11y(props), ref: props['ref'] }, props.children);
 export const Text = (props: Props) => createElement('span', a11y(props), props.children);
 export const ScrollView = View;
+export const Animated = { View };
+export const I18nManager = { isRTL: false };
 export const KeyboardAvoidingView = View;
 export const Modal = (props: Props) =>
   props['visible'] === true ? createElement('div', { role: 'dialog' }, props.children) : null;

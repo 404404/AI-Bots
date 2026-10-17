@@ -1,6 +1,6 @@
-import { TextInput } from './system-text';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import { TextInput } from './system-text';
 
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
@@ -28,11 +28,10 @@ export function SearchField({
       style={{
         flexDirection: 'row',
         alignItems: 'center',
+        gap: space.x3,
         marginHorizontal: inset,
-        marginTop: inset,
+        marginTop: space.x5,
         marginBottom: space.x3,
-        borderRadius: radius.md,
-        backgroundColor: theme.layer.raised.fill,
       }}
     >
       <TextInput
