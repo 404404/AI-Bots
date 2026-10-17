@@ -255,7 +255,13 @@ describe('Tob scoped CLI broker', () => {
     const f = await fixture();
     expect(await f.invoke('capabilities')).toMatchObject({
       ok: true,
-      value: { commands: ['capabilities', 'settings', 'settings-set'], ns: 'botharness-client' },
+      value: {
+        commands: ['capabilities', 'settings', 'settings-set'],
+        ns: 'botharness-client',
+        write: {
+          reporting: expect.stringContaining('requested, pending, approved or denied'),
+        },
+      },
     });
     expect(await f.invoke('settings', { ns: 'botharness-client' })).toEqual({
       status: 200,
