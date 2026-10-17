@@ -17,6 +17,10 @@ Captured on 2026-10-18 (JST), existing iPhone 17 Pro / iOS 26 Simulator, English
 | Trust review displays the verified UAT server/instance before import      | Pass                                                                                                                                             |
 | Explicit import reaches Configuration imported / Signed out               | Pass                                                                                                                                             |
 | System WorkOS sign-in browser opens                                       | Pass; recording stopped before sign-in                                                                                                           |
-| User authentication, callback, refresh, cold restart and logout isolation | Pending Human authentication                                                                                                                     |
+| User authentication, callback, refresh, cold restart and logout isolation | Pending at initial capture; see subsequent unattended session report below                                                                       |
 
 The screenshots compare states within the same revision, not an older-code baseline. `02-trusted-import.mp4` records the trust confirmation → imported result. Authentication forms, account details, codes and tokens are excluded. These assets do not qualify physical QR scanning, Android, dark/large-text/VoiceOver, or the rest of T1. The existing Simulator system CJK-font failure is a separate known environment limitation; no system font repair was attempted.
+
+## Subsequent unattended session run
+
+[Native session report and recording](unattended/README.md): real API authentication, native identity check, refresh rotation, cold restart and own-session logout/CLI isolation passed without Human login. Successful Hosted AuthKit/PKCE browser return remains unqualified.
