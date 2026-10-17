@@ -65,8 +65,10 @@ export interface RollingUsageResult {
   totalTokens: number | null;
   status: 'ready' | 'partial' | 'unknown';
   freshness: 'ready' | 'reconciling' | 'degraded';
-  sessionsRead: number;
-  sessionsTotal: number;
+  records: number;
+  recordLimit: number;
+  truncated: boolean;
+  coverageStart: string | null;
   readAt: string;
   reconciledAt: string | null;
 }
@@ -94,7 +96,7 @@ export interface UsageProjection {
 
   overview(period: UsageOverviewPeriod, after?: string): UsageOverviewResult;
 
-  rolling(range: RollingUsageRange, readLog: DshUsageSessionLogReader): Promise<RollingUsageResult>;
+  rolling(range: RollingUsageRange): RollingUsageResult;
 
   purgeBot(botSlug: string, removeFiles?: () => void): void;
 }
@@ -338,10 +340,27 @@ export function createUsageProjection(options: {
     const fingerprint = createHmac('sha256', fingerprintKey.fingerprint_key)
       .update(JSON.stringify([sessionId, event.seq]))
       .digest('hex');
+    const usage = reportedBuckets(event);
+    const time = Number.isSafeInteger(event.time) && event.time >= 0 ? event.time : null;
     const receipt = connection
-      .prepare('INSERT OR IGNORE INTO usage_receipts (fingerprint, bot_slug) VALUES (?, ?)')
-      .run(fingerprint, owner.botSlug);
-    if (receipt.changes === 0) return false;
+      .prepare(`INSERT OR IGNORE INTO usage_receipts
+      (fingerprint, bot_slug, occurred_at_ms, total_tokens) VALUES (?, ?, ?, ?)`)
+      .run(fingerprint, owner.botSlug, time, usage.totalTokens ?? null);
+    if (time === null)
+      connection
+        .prepare(`UPDATE usage_receipt_state
+      SET rolling_coverage_start_ms = MAX(rolling_coverage_start_ms, ?)
+      WHERE singleton = 1`)
+        .run((options.now?.() ?? new Date()).getTime());
+    if (receipt.changes === 0) {
+      if (time !== null)
+        connection
+          .prepare(`UPDATE usage_receipts SET occurred_at_ms = ?, total_tokens = ?
+        WHERE fingerprint = ? AND occurred_at_ms IS NULL`)
+          .run(time, usage.totalTokens ?? null, fingerprint);
+      return false;
+    }
+    if (time === null) return false;
     const baseline = baselineByBot.get(owner.botSlug);
     if (baseline !== undefined && event.time <= baseline) return false;
     const source = routeOf(recordOf(recordOf(event.data)?.['message'])?.['source']);
@@ -353,7 +372,7 @@ export function createUsageProjection(options: {
       purposeOf(owner),
       actual.provider,
       actual.model,
-      reportedBuckets(event),
+      usage,
     );
     return true;
   };
@@ -482,126 +501,52 @@ export function createUsageProjection(options: {
         return { totalTokens: null, status: incomplete ? 'unavailable' : 'unknown' };
       return { totalTokens, status: unknown || incomplete ? 'partial' : 'ready' };
     },
-    async rolling(range, readLog) {
+    rolling(range) {
       const now = options.now?.() ?? new Date();
       const to = now.getTime();
       const from = to - rollingUsageHours[range] * 3_600_000;
-      const sessions = ownership
-        .list()
-        .sort(
-          (a, b) =>
-            b.createdAt.localeCompare(a.createdAt) || a.sessionId.localeCompare(b.sessionId),
-        );
-      let incomplete =
-        sessions.length > 200 || [...baselineByBot.values()].some((time) => time >= from);
-      let unknown = false;
-      let known = false;
-      let totalTokens = 0;
-      let sessionsRead = 0;
-      const validations: Array<() => boolean> = [];
-      for (const session of sessions.slice(0, 200)) {
-        const active = () => {
-          const current = ownership.resolve(session.sessionId);
-          if (
-            !ownership.contentAvailable(session.sessionId) ||
-            current?.botSlug !== session.botSlug ||
-            current.createdAt !== session.createdAt
-          )
-            return false;
-          let root = current;
-          const seen = new Set<string>();
-          while (root.parentSessionId !== undefined) {
-            if (seen.has(root.sessionId)) return false;
-            seen.add(root.sessionId);
-            const parent = ownership.resolve(root.parentSessionId);
-            if (!parent || parent.botSlug !== session.botSlug) return false;
-            root = parent;
-          }
-          const createdAt = options.botCreatedAt?.(session.botSlug);
-          if (
-            options.botCreatedAt &&
-            (!createdAt || Date.parse(root.createdAt) < Date.parse(createdAt))
-          )
-            return false;
-          const fingerprint = createHmac('sha256', fingerprintKey.fingerprint_key)
-            .update(JSON.stringify([root.sessionId]))
-            .digest('hex');
-          return database.read(
-            (connection) =>
-              connection
-                .prepare('SELECT 1 FROM usage_retired_roots WHERE fingerprint = ?')
-                .get(fingerprint) === undefined,
-          );
+      const limit = 50_000;
+      return database.read((connection) => {
+        const state = connection
+          .prepare(`SELECT rolling_coverage_start_ms AS start
+          FROM usage_receipt_state WHERE singleton = 1`)
+          .get() as { start: number };
+        const row = connection
+          .prepare(`SELECT COUNT(*) AS records, COUNT(total_tokens) AS known,
+          COALESCE(SUM(total_tokens * 1.0), 0) AS total FROM (
+            SELECT total_tokens FROM usage_receipts
+            WHERE occurred_at_ms >= ? AND occurred_at_ms < ?
+            ORDER BY occurred_at_ms, fingerprint LIMIT ?
+          )`)
+          .get(from, to, limit + 1) as { records: number; known: number; total: number };
+        const truncated = row.records > limit;
+        const legacy =
+          connection
+            .prepare('SELECT 1 FROM usage_legacy_baselines WHERE through_ms >= ? LIMIT 1')
+            .get(from) !== undefined;
+        const missing =
+          truncated ||
+          from < state.start ||
+          legacy ||
+          row.known !== row.records ||
+          rebuilding ||
+          reconciliationFailed;
+        const unknown = !Number.isSafeInteger(row.total) || (missing && row.known === 0);
+        return {
+          range,
+          from: new Date(from).toISOString(),
+          to: now.toISOString(),
+          totalTokens: unknown ? null : row.total,
+          status: unknown ? 'unknown' : missing ? 'partial' : 'ready',
+          freshness: rebuilding ? 'reconciling' : reconciliationFailed ? 'degraded' : 'ready',
+          records: row.records,
+          recordLimit: limit,
+          truncated,
+          coverageStart: state.start === 0 ? null : new Date(state.start).toISOString(),
+          readAt: now.toISOString(),
+          reconciledAt,
         };
-        if (!active()) {
-          incomplete = true;
-          continue;
-        }
-        let log: DshUsageSessionLog | undefined;
-        try {
-          log = await readLog(session.sessionId);
-        } catch {
-          incomplete = true;
-        }
-        if (
-          !log ||
-          !active() ||
-          !Number.isSafeInteger(log.inheritedEventCount) ||
-          log.inheritedEventCount < 0 ||
-          log.inheritedEventCount > log.events.length
-        ) {
-          incomplete = true;
-          continue;
-        }
-        sessionsRead += 1;
-        validations.push(active);
-        const seen = new Set<number>();
-        for (const event of log.events.slice(log.inheritedEventCount)) {
-          if (event.type !== 'assistant/message' && event.type !== 'assistant/attempt') continue;
-          if (event.surfaceOp !== undefined && event.surfaceOp !== 'append') continue;
-          if (!Number.isFinite(event.time)) {
-            incomplete = true;
-            continue;
-          }
-          if (event.time < from || event.time >= to) continue;
-          if (event.seq === undefined || !Number.isSafeInteger(event.seq) || event.seq < 0) {
-            incomplete = true;
-            continue;
-          }
-          if (seen.has(event.seq)) continue;
-          seen.add(event.seq);
-          const baseline = baselineByBot.get(session.botSlug);
-          if (baseline !== undefined && event.time <= baseline) {
-            incomplete = true;
-            continue;
-          }
-          const total = reportedBuckets(event).totalTokens;
-          if (total === undefined) unknown = true;
-          else {
-            known = true;
-            totalTokens += total;
-          }
-        }
-      }
-      if (validations.some((available) => !available())) {
-        incomplete = true;
-        known = false;
-        totalTokens = 0;
-      }
-      const overflow = !Number.isSafeInteger(totalTokens);
-      const missing = incomplete || unknown || rebuilding || reconciliationFailed;
-      return {
-        range,
-        from: new Date(from).toISOString(),
-        to: now.toISOString(),
-        totalTokens: overflow || (missing && !known) ? null : totalTokens,
-        status: overflow || (missing && !known) ? 'unknown' : missing ? 'partial' : 'ready',
-        freshness: rebuilding ? 'reconciling' : reconciliationFailed ? 'degraded' : 'ready',
-        sessionsRead,
-        sessionsTotal: sessions.length,
-        readAt: now.toISOString(),
-        reconciledAt,
-      };
+      });
     },
     primeSession(sessionId, events) {
       for (const event of events) observe(sessionId, event);

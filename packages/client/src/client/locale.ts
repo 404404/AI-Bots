@@ -3,6 +3,8 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots';
 export const LOCALE_NS = 'botharness';
 
 export const zh = {
+  'home.usageCoverage': '精确用量覆盖从 {time} 开始。',
+  'home.usageTruncated': '此快照只包含这段繁忙时段的部分记录。',
   'home.dashboard': 'Home 概览',
   'home.asOf': '截至 {time}',
   'home.refresh': '刷新 Home',
@@ -3706,6 +3708,8 @@ export function zhTranslate(key: BotHarnessKey | string, params?: Record<string,
 }
 
 export const en = {
+  'home.usageCoverage': 'Precise usage coverage begins at {time}.',
+  'home.usageTruncated': 'This snapshot includes only part of this busy period.',
   'home.dashboard': 'Home overview',
   'home.asOf': 'As of {time}',
   'home.refresh': 'Refresh Home',

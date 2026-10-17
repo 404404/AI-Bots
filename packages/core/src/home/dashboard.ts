@@ -123,9 +123,9 @@ export async function queryHomeDashboard(
       .slice(0, 8);
   });
   let usage: HomeDashboard['usage'] = { status: 'unavailable' };
-  if (deps.usage && deps.readUsageSessionLog) {
+  if (deps.usage) {
     try {
-      usage = { status: 'ready', value: await deps.usage.rolling(range, deps.readUsageSessionLog) };
+      usage = { status: 'ready', value: deps.usage.rolling(range) };
     } catch {
       usage = { status: 'unavailable' };
     }

@@ -686,7 +686,7 @@ deepseekbot memory-move <bot-id> --default-location
 
 `deepseekbot home-dashboard [--period 24h|7d|30d]` 不依赖模型，与已认证 Client 读取相同的 Home 卡片，不创建 Bot 或发送消息。默认范围为精确的过去 24 小时，`from` 包含、`to` 不包含，均为 ISO 时间戳。Attention、正在工作的 Bot、用量、最近活动分别保留不可用状态；待处理请求与未读消息分别计数。正在工作要求真实执行中的会话；最近频道按已提交消息时间排序，任务按其 Assignment owner 的更新时间排序，访问页面或修改频道资料不会改变排序。
 
-滚动用量由既有 usage owner 读取规范 Session 日志，排除继承和重复事件，最多读取 200 个 Session。日志缺失、已清除、仅剩旧基线或超过读取上限时显示部分数据／未知，不能算成零；部分数据的数字只是已上报下限，`null` 表示未知，`freshness` 另行保留重建／降级状态。原 `overview-usage` 仍按日统计，此 Human 命令也不会自动授予 Tob 的受限 Shell 权限。Home 在进入或显式刷新时读取快照，不生成后台模型报告。
+滚动用量读取既有 Usage owner 的匿名回执，回执新增精确事件时间和可空的已上报总量。索引查询最多处理 50,001 条标量回执（50,000 条加截断探测），不读取 Session 日志；部分数据的数字只是已上报下限，`null` 表示未知。Generation 102 在已有历史统计时记录升级覆盖边界，不能把旧日桶当作精确小时统计。既有非模型核对可根据实际可信事件补全回执，不重复增加日统计；历史缺失仍为未知。普通历史丢失保留统计，显式清除 Bot 用量继续由原 owner 删除。`freshness` 单独保留重建／降级状态；Host 原有启动核对有自己的生命周期，不属于 Home 查询。`overview-usage` 的按日语义不变，此 Human 命令不会自动授予 Tob 受限 Shell 权限。Home 在进入或显式刷新时读取快照，不生成后台模型报告。
 
 `deepseekbot tob-home` 幂等准备受保护的本地 Tob、Memory、管理 Workspace 与 DM，返回标识及权威 Attention 摘要，不发送消息。`deepseekbot home-model-set --provider <id> --model <id>` 修改原生 Host 默认模型，保留其他 Bot 的独立计划。
 
