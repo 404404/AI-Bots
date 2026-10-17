@@ -605,7 +605,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     ownerProof?: string,
   ): Promise<unknown> {
     const peerId = this.ctx.invocation?.peer.id;
-    if (['register', 'poll', 'complete'].includes(action) && !peerId)
+    if (['register', 'poll', 'authorize', 'complete'].includes(action) && !peerId)
       throw toRemoteError({
         code: 'client-proof-required',
         message: 'Authenticated Client Peer required',

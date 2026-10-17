@@ -86,6 +86,7 @@ import { webShortcutBlocked, webModalOpen, webShortcutHelpQuestion } from './cha
 import { ShortcutBindings } from './shortcut-bindings.js';
 import {
   browserNotificationApi,
+  mountNotificationPreferenceSync,
   DesktopNotificationPrefs,
   mountDesktopNotifications,
 } from './desktop-notifications.js';
@@ -296,6 +297,10 @@ export function apply(ctx: ClientContext): void {
   );
   const botSettings = new BotSettings();
   const desktopNotifications = new DesktopNotificationPrefs(storage, browserNotificationApi());
+  ctx.effect(
+    () => mountNotificationPreferenceSync(desktopNotifications, window),
+    'botharness: shared notification preference sync',
+  );
   ctx.effect(
     () =>
       mountClientControl({

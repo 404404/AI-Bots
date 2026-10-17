@@ -1895,6 +1895,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         } else if (input['action'] === 'poll') {
           deps.clientControl.requireOrigin(input['target'], input['proof'], clientPeer);
           value = deps.clientControl.poll(input['target']);
+        } else if (input['action'] === 'authorize') {
+          deps.clientControl.requireOrigin(input['target'], input['proof'], clientPeer);
+          value = deps.clientControl.authorize(input['target'], input['id']);
         } else if (input['action'] === 'complete') {
           deps.clientControl.requireOrigin(input['target'], input['proof'], clientPeer);
           value = deps.clientControl.complete(input['target'], input['id'], input['result']);
