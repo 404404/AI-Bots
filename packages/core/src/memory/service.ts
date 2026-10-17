@@ -149,8 +149,14 @@ export function createMemoryService(options: MemoryServiceOptions): MemoryServic
     workingDiff: (botSlug, path, kind) => requireAcceptance().workingDiff(botSlug, path, kind),
     recoveryHistory: (botSlug) => requireAcceptance().recoveryHistory(botSlug),
     restoreHuman: (input) => requireAcceptance().restoreHuman(input),
-    saveHuman: (input) => requireAcceptance().saveHuman(input),
-    restoreCommitHuman: (input) => requireAcceptance().restoreCommitHuman(input),
+    reviewHumanSave: (input, reviewingSessionId) =>
+      requireAcceptance().reviewHumanSave(input, reviewingSessionId),
+    reviewHumanRestore: (input, reviewingSessionId) =>
+      requireAcceptance().reviewHumanRestore(input, reviewingSessionId),
+    saveHuman: (input, reviewingSessionId) =>
+      requireAcceptance().saveHuman(input, reviewingSessionId),
+    restoreCommitHuman: (input, reviewingSessionId) =>
+      requireAcceptance().restoreCommitHuman(input, reviewingSessionId),
     nameVersionHuman: (input) => requireAcceptance().nameVersionHuman(input),
     versions: (botSlug) => requireAcceptance().versions(botSlug),
     removeVersionNameHuman: (input) => requireAcceptance().removeVersionNameHuman(input),

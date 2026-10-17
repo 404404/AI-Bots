@@ -245,9 +245,11 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       const commandBodyLimit =
         input.command === 'group-avatar-set'
           ? GROUP_AVATAR_BODY_BYTES
-          : IMAGE_COMMANDS.has(String(input.command))
-            ? MAX_BODY_BYTES
-            : SMALL_BODY_BYTES;
+          : input.command === 'memory-save'
+            ? GROUP_AVATAR_BODY_BYTES
+            : IMAGE_COMMANDS.has(String(input.command))
+              ? MAX_BODY_BYTES
+              : SMALL_BODY_BYTES;
       if (received.bytes > commandBodyLimit) refuse('request-too-large');
       const args = object(input.args);
       authorize();
