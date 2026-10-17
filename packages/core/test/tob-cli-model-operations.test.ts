@@ -70,6 +70,68 @@ const fullPlan = {
 };
 
 describe('Tob scoped model and runtime operations', () => {
+  it('preserves native appearance owners and requires explicit shared Host scope', async () => {
+    const f = fixture();
+    f.rows.push(
+      { ns: 'ui-theme', revision: 3, value: { preference: 'light', fontSize: 16 } },
+      { ns: 'locale', revision: 2, value: { preference: 'en' } },
+    );
+    const args = {
+      ns: 'ui-theme',
+      patch: { preference: 'dark' },
+      expectedRevision: 3,
+      previousValue: { preference: 'light' },
+    };
+    await expect(f.prepare('settings-set', args)).rejects.toThrow('host-scope-required');
+    await expect(f.prepare('settings-set', { ...args, scope: 'current-client' })).rejects.toThrow(
+      'host-scope-required',
+    );
+    const operation = (await f.prepare('settings-set', { ...args, scope: 'host' }))!;
+    expect(operation.proposal).toMatchObject({
+      patch: { scope: 'host', affectsAllConnectedClients: true, changes: { preference: 'dark' } },
+    });
+    await operation.run(() => {});
+    expect(f.rows.find((row) => row.ns === 'ui-theme')?.value).toEqual({
+      preference: 'dark',
+      fontSize: 16,
+    });
+    await expect(
+      f.prepare('settings-set', {
+        ns: 'locale',
+        scope: 'host',
+        patch: { preference: 'xx' },
+        expectedRevision: 2,
+        previousValue: { preference: 'en' },
+      }),
+    ).rejects.toThrow('invalid-setting');
+    await expect(
+      f.run('settings-set', {
+        ns: 'botharness-client',
+        scope: 'host',
+        patch: {
+          motionPreference: 'reduce',
+          botIcon: 'simple',
+          sendKey: 'mod-enter',
+          autoAcceptGroupInvites: false,
+        },
+        previousValue: {
+          motionPreference: 'system',
+          botIcon: 'mascot',
+          sendKey: 'enter',
+          autoAcceptGroupInvites: true,
+        },
+        expectedRevision: 0,
+      }),
+    ).resolves.toMatchObject({
+      value: {
+        motionPreference: 'reduce',
+        botIcon: 'simple',
+        sendKey: 'mod-enter',
+        autoAcceptGroupInvites: false,
+      },
+    });
+  });
+
   it('discovers only supported live settings and bounded Bot identity', async () => {
     const f = fixture();
     expect(await f.run('list')).toEqual({

@@ -1757,6 +1757,14 @@
       "reason": "Natural Tob personal Group mute/pin/hide/restore and Bot DM nickname through rendered review; denied and concurrently stale approval, independent owner and preference readback, actual roster/hidden/nickname UI and separate Web/macOS restart.",
       "task": 2090,
       "sha256": "2386db6abbda35831190a0d668c619505d45c91b4778a0189869e279f6a7d035"
+    },
+    {
+      "path": "scripts/e2e-tob-client-preferences.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Targeted notification preference CLI and natural Tob review; actual owner, permission status, second browser context, reload generation and canonical originating Client; Web/macOS checks remain separate.",
+      "task": 2095,
+      "sha256": "745368a593f972ccd38ee99917dbb70866cb3d8377300c7a359bfa0b641411e2"
     }
   ],
   "native": [

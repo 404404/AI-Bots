@@ -50,7 +50,8 @@ export async function runAgentCli(
   if (!managed) {
     const allowed = new Set(['compact', 'help', 'timeout']);
     if (operation === 'settings-set')
-      for (const key of ['patch-stdin', 'expected-revision', 'previous-value']) allowed.add(key);
+      for (const key of ['patch-stdin', 'expected-revision', 'previous-value', 'scope'])
+        allowed.add(key);
     if (Object.entries(values).some(([key, value]) => value !== undefined && !allowed.has(key)))
       refuse('agent-scope-denied', 'This option is not available in the scoped CLI context.');
     if (!['capabilities', 'settings', 'settings-set'].includes(operation!))
@@ -61,7 +62,7 @@ export async function runAgentCli(
       if (rest.length > 1 || (operation === 'settings-set' && rest.length !== 1))
         refuse('usage', 'settings takes an optional namespace; settings-set requires a namespace.');
       if (rest.length) {
-        if (!['botharness-client', 'agent-default-model'].includes(rest[0]!))
+        if (!['botharness-client', 'agent-default-model', 'ui-theme', 'locale'].includes(rest[0]!))
           refuse(
             'agent-scope-denied',
             'This namespace is not available in the scoped CLI context.',
@@ -86,8 +87,14 @@ export async function runAgentCli(
               'developerMode',
               'showBotSessions',
               'showApprovalReviewSessions',
+              'motionPreference',
+              'botIcon',
+              'sendKey',
+              'autoAcceptGroupInvites',
             ]
-          : ['provider', 'model', 'reasoningEffort'];
+          : ['ui-theme', 'locale'].includes(String(args['ns']))
+            ? ['preference']
+            : ['provider', 'model', 'reasoningEffort'];
       if (
         !Object.keys(patch).length ||
         Object.keys(patch).some((key) => !allowedFields.includes(key))
@@ -113,7 +120,11 @@ export async function runAgentCli(
           'usage',
           'Scoped settings-set requires --expected-revision and --previous-value from the reviewed read.',
         );
-      Object.assign(args, { patch: typedPatch, ...reviewed });
+      Object.assign(args, {
+        patch: typedPatch,
+        ...reviewed,
+        ...(values.scope === undefined ? {} : { scope: values.scope }),
+      });
     }
   }
   const seconds = values['timeout'] === undefined ? 120 : Number(values['timeout']);

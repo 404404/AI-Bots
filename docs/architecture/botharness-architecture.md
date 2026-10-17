@@ -65,6 +65,8 @@ Home/Tob（#2082，[ADR-0223](../adr/0223-tob-is-a-protected-local-personabot.md
 
 #2090 的个人偏好切片复用同一受限 Shell CLI 与审核入口，以 `channel-preferences` 读取当前 Host Profile 内稳定 Human 身份对准确 Channel 的个人状态，免打扰／置顶／显隐由既有 `RosterStore` 持久保存，Human Channel nickname 由既有 `ChannelStore` 保存，不增加第二份偏好库。写入携带观察到的 `expectedState`，审核绑定旧值、目标和新值，执行前重验当前 Human 的频道权限与快照，成功后从规范 owner 读回。Human 在线命令可选该指纹，受限 Tob 必需；不能按显示名选择身份或把它当作设备本地布局。单频道更新保留其他频道偏好，隐藏不删除频道或成员关系，仍可按 ID 读回并恢复；昵称只改 Human 在该频道的称呼，不改 Bot 或 Channel 名称。结果不确定先读回，剩余修改按新快照重新审核。
 
+#2095（[ADR-0229](../adr/0229-client-control-dispatch-keeps-existing-preference-owners.md)）加入 application-defined `ClientControlService`，通过既有 Typert/API Gateway 为准确 Client id／generation 派发有界、进程内命令。Client Plugin 保持租约并调用原偏好 owner；Host 不保存第二份浏览器偏好或可重放队列。已认证 `channelSend` 在 Admission 前把验证过的 Client target 留在规范 Human Source Event，Tob 的 `current` 仅从当前回合全部已接受的 Human 私聊来源解析，缺失／混合／过期／替换均拒绝；审批绑定准确实例与旧状态，派发和应用前再次校验来源、租约、有效期与 owner 状态。已派发写入丢失完成结果返回不确定，先读回、不盲重试。主题／语言保持原生 Host 用户设置，motion／Bot icon／发送键／自动接受群邀请保持 `botharness-client` Host 设置，明确 `--scope host` 与对所有 Client 的影响；当前 Client 入口拒绝伪造本地覆盖。通知沿用浏览器同源 localStorage，权限归 Human／OS，同源标签页共享、独立浏览器上下文隔离。Human 默认名称与 IM 默认设置沿用既有 owner、revision 或状态指纹，不新增模型 Tool。
+
 ## 原生 Human 等待的验证边界
 
 [#1036 的有界实验](../research/1036-native-wait-experiment.md) 在固定 DSH

@@ -158,6 +158,12 @@ export const inject = [
   'remote.session',
 ];
 
+import {
+  mountClientControl,
+  createClientPreferenceHandlers,
+  createClientTarget,
+} from './client-control.js';
+
 export const PANEL_ID = 'botharness' as MainPanelId;
 
 interface PanelInfoLike {
@@ -290,6 +296,20 @@ export function apply(ctx: ClientContext): void {
   );
   const botSettings = new BotSettings();
   const desktopNotifications = new DesktopNotificationPrefs(storage, browserNotificationApi());
+  ctx.effect(
+    () =>
+      mountClientControl({
+        call,
+        kind: 'web',
+        target: createClientTarget(sessionStorage),
+        handlers: createClientPreferenceHandlers({
+          readTheme: () => ctx.theme.getTheme().preference,
+          readLocale: () => ctx.locale.getSnapshot().active,
+          notifications: desktopNotifications,
+        }),
+      }),
+    'botharness: client control',
+  );
   const shortcutBindings = new ShortcutBindings(storage);
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
