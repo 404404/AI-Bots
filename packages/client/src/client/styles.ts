@@ -1593,15 +1593,6 @@ html[data-botharness-motion='reduce'] .bh-section-chevron {
   transition: none;
 }
 
-/* 右键「移动到」菜单的锚点：JsonTree 的 proxy-rect 方案 —— fixed 定位的
-   0 尺寸代理，Menu 用 getAnchorRect 读它的 rect 并把列表 portal 到 body，
-   从而跟随光标且不被侧栏的 overflow 裁切（Menu 自身再钳制到视口边距）。 */
-.bh-menu-anchor {
-  position: fixed;
-  z-index: 3;
-  display: inline-flex;
-}
-
 /* 子菜单当前 scope 的尾部对勾：primitives 的 Menu 只为主行渲染 check，
    子菜单的选中标记因此放在 label 内（菜单 portal 到 body，类不依赖 .bh-root）。 */
 .bh-move-checked {

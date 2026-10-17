@@ -58,10 +58,24 @@ describe('Bot mode layout persistence', () => {
       version: 2,
       gap: 4,
       order: [],
+      hiddenControls: [],
       members: { open: false, ratio: 0.3 },
       layout,
       parked: { schedules: { direction: 'below' } },
     });
+  });
+
+  it('validates and preserves rail visibility preferences', () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      CHANNEL_DOCK_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        layout,
+        hiddenControls: ['sessions', 42, 'sessions', 'bot-inbox'],
+      }),
+    );
+    expect(readChannelDock(storage)?.hiddenControls).toEqual(['sessions', 'bot-inbox']);
   });
 
   it('ignores a layout from another version or a damaged value', () => {

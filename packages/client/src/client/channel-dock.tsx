@@ -1,3 +1,4 @@
+import { usePanelMenu } from './panel-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { workspaceColumns, moveWorkspaceRail, isFullHeightRail } from './workspace-layout.js';
 import { WorkspaceContext, WORKSPACE_RAIL, WORKSPACE_CHANNELS } from './workspace-context.js';
@@ -270,6 +271,18 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
   const panel = entryId === undefined ? undefined : dock.panels.get(entryId);
   const entry = panel?.entry;
   const props = useEntryProps(entryId ?? '');
+  const contextMenu = usePanelMenu({
+    items: panel
+      ? [
+          {
+            id: 'close',
+            label: dock.t('dock.close', { label: panel.title }),
+            icon: <ChannelSidebarIcon name="x" />,
+          },
+        ]
+      : [],
+    onSelect: () => dock.close(api.id),
+  });
   if (entryId === undefined || panel === undefined) return null;
   const shown = entry !== undefined && props !== undefined && dock.shows(entry);
   const Badge = shown ? entry.badge : undefined;
@@ -277,7 +290,8 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
   const HeaderTabs = shown ? entry.headerTabs : undefined;
   const closeLabel = dock.t('dock.close', { label: panel.title });
   return (
-    <div className="bh-dock-header" data-dock-header={entryId}>
+    <div className="bh-dock-header" data-dock-header={entryId} {...contextMenu.triggerProps}>
+      {contextMenu.menu}
       <PanelHeader
         icon={<ChannelSidebarIcon name={panel.icon} />}
         label={HeaderTabs === undefined ? panel.title : (entry?.headerLabel ?? panel.title)}
@@ -430,6 +444,10 @@ export function ChannelDock({
   const gapRef = useRef(gap);
   const [order, updateOrder] = useState(() => readChannelDock(storage)?.order ?? []);
   const orderRef = useRef(order);
+  const [hiddenControls, updateHiddenControls] = useState(
+    () => readChannelDock(storage)?.hiddenControls ?? [],
+  );
+  const hiddenControlsRef = useRef(hiddenControls);
   const [members, updateMembers] = useState(
     () => readChannelDock(storage)?.members ?? { open: false, ratio: 0.3 },
   );
@@ -474,6 +492,7 @@ export function ChannelDock({
           parked: parked.current,
           gap: gapRef.current,
           order: orderRef.current,
+          hiddenControls: hiddenControlsRef.current,
           members: membersRef.current,
         },
         storage,
@@ -665,6 +684,8 @@ export function ChannelDock({
     updateGap(DEFAULT_WORKSPACE_GAP);
     orderRef.current = [];
     updateOrder([]);
+    hiddenControlsRef.current = [];
+    updateHiddenControls([]);
     membersRef.current = { open: false, ratio: 0.3 };
     updateMembers(membersRef.current);
     buildDefaultLayout(api, byId);
@@ -712,6 +733,15 @@ export function ChannelDock({
         (ids) => {
           orderRef.current = ids;
           updateOrder(ids);
+          save(api);
+        },
+        hiddenControls,
+        (id, visible) => {
+          hiddenControlsRef.current = visible
+            ? hiddenControlsRef.current.filter((item) => item !== id)
+            : [...new Set([...hiddenControlsRef.current, id])];
+          updateHiddenControls(hiddenControlsRef.current);
+          if (!visible) close(id);
           save(api);
         },
       ),

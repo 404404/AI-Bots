@@ -175,6 +175,65 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForSelector('[data-message-id]', { timeout: 20000 });
   await proof('01-default');
+  step = 'pointer-menu-position';
+  const pointerPositions = [];
+  for (const zoom of [1, 1.25]) {
+    await page.evaluate((value) => {
+      document.body.style.zoom = String(value);
+    }, zoom);
+    await sleep(200);
+    for (const selector of [
+      '[data-dock-header="bh:channels"]',
+      `${channels} .bh-contact[data-channel-id]`,
+    ]) {
+      const point = await page.$eval(selector, (node) => {
+        const box = node.getBoundingClientRect();
+        return { x: box.left + 60, y: box.top + 15 };
+      });
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+      await sleep(100);
+      const box = await page.$eval('[data-pointer-menu] [role="menu"]', (node) => {
+        const r = node.getBoundingClientRect();
+        return { x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+      });
+      assert.ok(
+        Math.abs(box.x - point.x) <= 1,
+        `pointer menu x: ${JSON.stringify({ zoom, point, box })}`,
+      );
+      assert.ok(
+        Math.abs(box.y - point.y) <= 1,
+        `pointer menu y: ${JSON.stringify({ zoom, point, box })}`,
+      );
+      pointerPositions.push({ zoom, selector, point, box });
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+    }
+    await page.$eval('[data-dock-header="bh:channels"]', (node) =>
+      node.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          clientX: innerWidth - 2,
+          clientY: innerHeight - 2,
+        }),
+      ),
+    );
+    await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+    const edges = await page.$eval('[data-pointer-menu] [role="menu"]', (node) => {
+      const r = node.getBoundingClientRect();
+      return { right: r.right <= innerWidth, bottom: r.bottom <= innerHeight };
+    });
+    assert.deepEqual(edges, { right: true, bottom: true });
+    await page.keyboard.press('Escape');
+  }
+  await page.evaluate(() => {
+    document.body.style.zoom = '';
+  });
+  writeFileSync(
+    resolve(out, 'pointer-menu-positions.json'),
+    JSON.stringify(pointerPositions, null, 2),
+  );
+  await proof('01b-pointer-menus');
   step = 'channel-search-alignment';
   await page.click('[data-dock-header="bh:channels"] .bh-search-btn');
   await sleep(250);

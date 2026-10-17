@@ -1,3 +1,4 @@
+import { PointerMenu } from './ds/pointer-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { ChannelHistory } from './channel-history.js';
 import { attachmentReferenceLabels } from './attachment-refs.js';
@@ -3136,14 +3137,12 @@ export function SectionContextMenu({
 }): ReactElement {
   const proxy = useRef<HTMLSpanElement | null>(null);
   return (
-    <span className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
-      <Menu
-        open
-        portal
+    <span hidden>
+      <PointerMenu
+        point={menu}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => new DOMRect(menu.x, menu.y, 0, 0)}
         items={sectionMenuItems(t, {
           canMoveUp: index > 0,
           canMoveDown: index >= 0 && index < count - 1,
@@ -3215,14 +3214,12 @@ export function BulkChannelMenu({
     },
   ];
   return (
-    <span ref={menuMount} className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
-      <Menu
-        open
-        portal
+    <span ref={menuMount} hidden>
+      <PointerMenu
+        point={menu}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => new DOMRect(menu.x, menu.y, 0, 0)}
         items={items}
         onSelect={(id) => {
           if (id === 'pin' || id === 'unpin') onPin(id === 'pin');
@@ -3501,14 +3498,12 @@ export function ChannelMoveMenu({
         ]),
   ];
   return (
-    <span ref={menuMount} className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
-      <Menu
-        open
-        portal
+    <span ref={menuMount} hidden>
+      <PointerMenu
+        point={menu}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => new DOMRect(menu.x, menu.y, 0, 0)}
         items={items}
         onSelect={(id) => {
           if (id === 'profile') {

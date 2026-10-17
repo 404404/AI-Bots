@@ -1,3 +1,4 @@
+import { usePanelMenu, PanelVisibilityLabel } from './panel-menu.js';
 import type { Shortcuts } from '@deepseek-ai/dsh-client-shortcuts/client';
 import { workspaceShortcutId } from './workspace-shortcuts.js';
 import { createPortal } from 'react-dom';
@@ -119,7 +120,16 @@ export function Workspace({
         value={
           enabled && options
             ? {
-                rail: (api, gap, setGap, reset, order, setOrder) => (
+                rail: (
+                  api,
+                  gap,
+                  setGap,
+                  reset,
+                  order,
+                  setOrder,
+                  hiddenControls,
+                  setControlVisible,
+                ) => (
                   <WorkspaceRail
                     options={options}
                     api={api}
@@ -128,6 +138,8 @@ export function Workspace({
                     reset={reset}
                     order={order}
                     setOrder={setOrder}
+                    hiddenControls={hiddenControls}
+                    setControlVisible={setControlVisible}
                     t={t}
                   />
                 ),
@@ -149,6 +161,8 @@ function WorkspaceRail({
   reset,
   order,
   setOrder,
+  hiddenControls,
+  setControlVisible,
   t,
 }: {
   options: WorkspaceOptions;
@@ -158,6 +172,8 @@ function WorkspaceRail({
   reset(): void;
   order: readonly string[];
   setOrder(ids: readonly string[]): void;
+  hiddenControls: readonly string[];
+  setControlVisible(id: string, visible: boolean): void;
   t: BotHarnessTranslate;
 }): ReactElement {
   const icon = useSyncExternalStore(
@@ -169,6 +185,27 @@ function WorkspaceRail({
     options.shortcuts.catalog.subscribe,
     options.shortcuts.catalog.getSnapshot,
   );
+  const panels = useSyncExternalStore(options.dockPanels!.subscribe, options.dockPanels!.panels);
+  const controlMenu = usePanelMenu({
+    items: [
+      { type: 'label', id: 'controls', text: t('workspace.visibleControls') },
+      ...panels
+        .filter((panel) => panel.id !== 'members')
+        .map((panel) => ({
+          id: panel.id,
+          icon: <ChannelSidebarIcon name={panel.icon} />,
+          label: (
+            <PanelVisibilityLabel
+              label={panel.title}
+              checked={!hiddenControls.includes(panel.id)}
+              t={t}
+            />
+          ),
+        })),
+    ],
+    keepOpen: true,
+    onSelect: (id) => setControlVisible(id, hiddenControls.includes(id)),
+  });
   const [menu, setMenu] = useState(false);
   const [settingsTarget, setSettingsTarget] = useState<HTMLDivElement | null>(null);
   const settingsMount = useMountedResource<HTMLSpanElement>(
@@ -179,7 +216,12 @@ function WorkspaceRail({
     moveWorkspaceRail(api, target);
   };
   return (
-    <nav className="bh-workspace-rail" aria-label={t('workspace.controls')}>
+    <nav
+      className="bh-workspace-rail"
+      aria-label={t('workspace.controls')}
+      {...controlMenu.triggerProps}
+    >
+      {controlMenu.menu}
       <Tooltip label={t('panel.exit')} side="right">
         <button
           className="bh-workspace-exit"
@@ -200,10 +242,8 @@ function WorkspaceRail({
             registry={options.dockPanels}
             order={order}
             onOrderChange={setOrder}
-            hiddenIds={['members']}
-            shortcut={(id) =>
-              shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys.join(' ')
-            }
+            hiddenIds={['members', ...hiddenControls]}
+            shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
             collapsed
             t={t}
             badge={(id) =>

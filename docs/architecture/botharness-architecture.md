@@ -477,6 +477,10 @@ Channel sidebar 的编辑模式只折叠当前呈现而不改写展开偏好，�
 
 #2017 首片在符合 rc.2 AppFrame 结构的 Web/macOS 宽屏中启用工作区：一个不可关闭、可移到左／右／任意整列之间的 Workspace Control Rail（工作区控制列），以及独立的全局 Channel 列表面板（`bh:channels`）。列表沿用现有 Roster 与选中 Channel 的唯一状态。没有选中 Channel 时，控制列和全局面板仍可操作。`workspace-shell` 只对当前 AppFrame 标记后释放原生侧栏占位，临时将公开 `layout.toggleSidebar()` 命令接到 Channel 列表开关，退出、卸载或收窄时恢复原方法描述符并移除标记；不改原生 Store、宽度或折叠偏好。结构不匹配、命令无法接管或 Windows 标题栏布局使用旧侧栏回退。macOS 仅在红黄绿按钮覆盖的左上角避让，其他面板利用顶部空间，全屏取消避让。窗口拖拽与面板拖拽保持各自区域。
 
+Control Rail switch visibility is a workspace preference (`hiddenControls`) in the existing versioned layout record. The rail context menu updates that preference and closes a hidden Panel through the existing Dock owner; checking it again restores the entry without opening content. A Panel header's Close action changes only open layout state. Explicit shortcuts can still toggle Panels independently of rail visibility. Tooltip keycaps project the effective native shortcut catalog, including customized bindings, and render outside the rail's clipping boundary.
+
+Application-defined pointer context menus share `ds/PointerMenu`: callers supply viewport coordinates, while the design-system component owns the body portal, measured coordinate conversion under CSS zoom, native frame clearance and viewport edge avoidance. Regular control-anchored dropdowns keep the native DSH Menu. This ownership prevents each Panel or Channel surface from inventing a separate offset.
+
 频道导航不会重建工作区和 Dock（ADR-0203）。`scoped-state.ts` 按选中频道及视图代次重置聊天临时状态和资源引用，并拒绝上一代次的异步回写；各频道草稿仍由现有草稿模块保存，Host 持久化不变。
 
 布局版本 2 在同一浏览器记录中保存按容器尺寸恢复的比例几何、关闭面板的位置、开关顺序、群成员分割比例与开关，以及 0–16px 连续间距（默认 4px）；版本 1 保留现有相对布局迁移。背景恢复原生 base 深色，面板采用 85% base／15% surface 混色和小圆角，仅略亮于背景；macOS 红黄绿区域同背景色，header/body 间隙为 `min(4, gap / 2)`。退回旧布局不会覆盖已有新工作区记录。消息正文在工作区中是可关闭的唯一「消息」面板；群成员从消息 header 展开为内部左右分割（20–60%），不再占全局开关。控制列按钮支持拖拽及 Alt+上下排序；选中时仅保留蓝色图标和底色，不显示边框。底部把手在悬停或键盘聚焦时出现，位于齿轮之上；工作区布局通过既有 Bot Settings section Slot 提供，Portal 保留当前 Dock 的设置动作，不创建第二份偏好存储。面板快捷键注册到 DSH Shortcuts Service，由原生键盘设置自定义，离开工作区或弹窗内不触发；不另建配置存储。Dockview 保持 Portal 内容常驻，控制列移动用 reuseExistingPanels 恢复布局，避免重新挂载；Bot 小人拖拽后的 click 被消费，不再误导航。完整平台矩阵及 Windows 原生 caption 留待后续验收。

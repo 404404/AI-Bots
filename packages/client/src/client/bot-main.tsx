@@ -1,3 +1,4 @@
+import { PointerMenu } from './ds/pointer-menu.js';
 import { useScopedRef, useScopedState } from './scoped-state.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { Workspace, type WorkspaceOptions } from './workspace.js';
@@ -39,7 +40,6 @@ import {
   IconNewChatOutlineRegular,
   IconPanelLeftOutlineRegular,
   IconUserOutlineRegular,
-  Menu,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -866,14 +866,12 @@ function MessageActionMenu({
     };
   }, []);
   return (
-    <span ref={menuMount} className="bh-menu-anchor" style={{ left: request.x, top: request.y }}>
-      <Menu
-        open
-        portal
+    <span ref={menuMount} hidden>
+      <PointerMenu
+        point={request}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
         items={[
           ...(request.message.pending === true || request.message.streaming === true
             ? []
@@ -933,14 +931,12 @@ export function BotAvatarMenu({
 }): ReactElement {
   const proxy = useRef<HTMLSpanElement | null>(null);
   return (
-    <span className="bh-menu-anchor" style={{ left: request.x, top: request.y }}>
-      <Menu
-        open
-        portal
+    <span hidden>
+      <PointerMenu
+        point={request}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
         items={[
           {
             id: 'message',

@@ -27,6 +27,7 @@ export interface StoredChannelDock {
   readonly version: typeof CHANNEL_DOCK_LAYOUT_VERSION;
   readonly gap?: number | undefined;
   readonly order?: readonly string[] | undefined;
+  readonly hiddenControls?: readonly string[] | undefined;
   readonly members?: { open: boolean; ratio: number } | undefined;
   readonly layout: SerializedDockview;
   readonly parked: Readonly<Record<string, DockPosition>>;
@@ -88,6 +89,9 @@ export function readChannelDock(
           : DEFAULT_WORKSPACE_GAP,
       order: Array.isArray(value['order'])
         ? [...new Set(value['order'].filter((id): id is string => typeof id === 'string'))]
+        : [],
+      hiddenControls: Array.isArray(value['hiddenControls'])
+        ? [...new Set(value['hiddenControls'].filter((id): id is string => typeof id === 'string'))]
         : [],
       members: isRecord(value['members'])
         ? {

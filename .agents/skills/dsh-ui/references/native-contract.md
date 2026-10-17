@@ -59,3 +59,11 @@ console.log([...new Set(rules.filter((r) => r.includes('listArea')))].join('\n')
 ## Measure the running shell
 
 Use the Puppeteer install from `node_modules/.pnpm/puppeteer@*/node_modules/puppeteer` with a `createRequire` shim, load the DSH web URL, then read `getBoundingClientRect()` + `getComputedStyle()` for the native rows (`新会话`, `设置`) and our elements in one table. The token URL is one-shot per browser: reuse the curl cookie jar or restart `dsh web` for a fresh token before the headless run.
+
+## Pointer-anchored context menus
+
+Application-defined context menus use `packages/client/src/client/ds/pointer-menu.tsx`. A mouse caller supplies raw viewport `clientX/clientY`; a keyboard caller supplies the trigger's `getBoundingClientRect()` left/bottom. Do not use page/offset coordinates, feature-local nudges, or a transformed panel as a positioning container. Ordinary button-anchored dropdowns keep the native `Menu`.
+
+`PointerMenu` portals to `document.body`, measures its rendered coordinate scale and the actual native menu rectangle, and positions the menu at the requested viewport point. It alone owns window-edge clamping, native traffic-light clearance, available menu size and resize/scroll repositioning. A menu moves away from the pointer only to remain inside the safe viewport; native scrolling and submenu behavior remain intact. This keeps panel transforms, clipping ancestors and CSS zoom out of feature code.
+
+Regression: run `scripts/e2e-panel-workspace.mjs` against an isolated Host. It checks both a Panel-header menu and a Channel-row menu at 100% and 125% CSS zoom, verifies alignment within one rendered pixel away from edges, tests bottom/right clamping and keyboard dismissal, and saves numeric evidence. CSS zoom stress is Web evidence, not qualification of native macOS window behavior.

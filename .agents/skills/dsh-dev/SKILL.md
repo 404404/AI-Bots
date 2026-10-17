@@ -219,3 +219,7 @@ Direct Controller and Runtime tests do not qualify the application-defined Provi
 ## Additional verified pitfall — #1988
 
 The pinned dsh-im Provider (`beaed4a6`, DSH `0.2.0-rc.2`) exports checked WeChat proactive text, receipt and final-send fence capabilities per account, but no global `postFenceVersion`. Requiring that field hides a real paired-owner forwarding target even though reception is ready. Qualify the account capabilities and receipt contract, pass `beforeSend`, and reject any missing capability before an external effect. The real Host reproduced `canPost: false`; the contract regression omits the legacy field and retains missing-capability/final-revocation cases. Actual phone delivery remains a separate E2E check.
+
+## Additional verified pitfall — #2017 pointer menus
+
+In the pinned DSH `0.2.0-rc.2` Web Client, native `Menu` with a viewport `getAnchorRect` and a body portal uses CSS positioning coordinates that diverge under body CSS zoom. At 125%, a click at `(136.25, 20)` rendered the popup at `(170, 30)`; 100% retained only the native dropdown gap. The application `ds/PointerMenu` now measures the rendered scale and native popup rectangle, owns the body portal and viewport/traffic-light clamping, and leaves ordinary anchored dropdowns native. Callers pass raw viewport points, without local correction constants. The isolated Web regression covers normal/zoomed placement and edge avoidance; native macOS remains a separate check.

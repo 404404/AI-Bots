@@ -12,6 +12,8 @@ export const WorkspaceContext = createContext<
         reset: () => void,
         order: readonly string[],
         setOrder: (ids: readonly string[]) => void,
+        hiddenControls: readonly string[],
+        setControlVisible: (id: string, visible: boolean) => void,
       ): ReactNode;
     }
   | undefined

@@ -18,7 +18,7 @@ export interface PinnedPanelCardsProps {
   registry: DockPanelRegistry;
   collapsed: boolean;
   order?: readonly string[] | undefined;
-  shortcut?: ((id: string) => string | undefined) | undefined;
+  shortcut?: ((id: string) => readonly string[] | undefined) | undefined;
   onOrderChange?: ((ids: readonly string[]) => void) | undefined;
   hiddenIds?: readonly string[] | undefined;
   current?: string | undefined;
@@ -124,14 +124,22 @@ export function PinnedPanelCards({
         const open = openIds.includes(panel.id) || current === panel.id;
         const run = available ? () => registry.toggle(panel.id) : fallback?.(panel.id);
         const mark = badge?.(panel.id);
-        const label = [
+        const keys = shortcut?.(panel.id);
+        const tooltipLabel = [
           panel.title,
-          ...(shortcut?.(panel.id) ? [shortcut(panel.id)!] : []),
           ...(mark?.label === undefined ? [] : [mark.label]),
           ...(run === undefined ? [t('dock.cardUnavailable')] : []),
         ].join(' · ');
+        const label = [tooltipLabel, ...(keys?.length ? [keys.join(' ')] : [])].join(' · ');
         return (
-          <Tooltip key={panel.id} label={label} side={collapsed ? 'right' : 'bottom'} delayMs={400}>
+          <Tooltip
+            key={panel.id}
+            label={tooltipLabel}
+            shortcutKeys={keys}
+            portal
+            side={collapsed ? 'right' : 'bottom'}
+            delayMs={400}
+          >
             <button
               type="button"
               {...hooked(

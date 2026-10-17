@@ -10,8 +10,19 @@ const captured = vi.hoisted(() => ({
     items: readonly Record<string, unknown>[];
     selectedId?: string | undefined;
     onSelect?: (id: string) => void;
-    getAnchorRect?: () => DOMRect;
+    point?: { x: number; y: number };
   }>,
+}));
+
+vi.mock('../src/client/ds/pointer-menu.js', () => ({
+  PointerMenu: (props: {
+    point: { x: number; y: number };
+    items: readonly Record<string, unknown>[];
+    onSelect?: (id: string) => void;
+  }) => {
+    captured.menus.push({ ...props, open: true });
+    return null;
+  },
 }));
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
@@ -1567,7 +1578,7 @@ describe('bot sidebar rows', () => {
       }),
     );
     const menu = captured.menus.at(-1)!;
-    expect(menu.getAnchorRect?.().toJSON()).toMatchObject({ x: 140, y: 180, width: 0, height: 0 });
+    expect(menu.point).toMatchObject({ x: 140, y: 180 });
     expect(menu.items[0]).toMatchObject({ id: 'profile', label: '查看资料' });
     menu.onSelect?.('profile');
     expect(profileAction).toHaveBeenCalledOnce();
