@@ -1,0 +1,90 @@
+{
+  "issue": 2095,
+  "sourceHead": "eb0f85116d934d56d8c60b92e88117e6f2b18725",
+  "builtApplicationHead": "50d998e7c8104cb0b34c12e84787c8fcd8e10cd0",
+  "base": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
+  "environment": {
+    "dsh": "0.2.0-rc.2",
+    "surface": "Web Chromium",
+    "locale": "zh",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "capturedOn": "2026-10-18",
+    "timezone": "Asia/Tokyo"
+  },
+  "checks": {
+    "focused": {
+      "initialExpanded": {
+        "passed": 187,
+        "total": 188,
+        "remaining": "RPC method inventory expected list omitted clientControl; fixture corrected"
+      },
+      "subsequentRelevant": {
+        "passed": 33,
+        "total": 33,
+        "includes": "bridge RPC reflection and Client disposal behind owner lock"
+      }
+    },
+    "typecheck": "passed root and mobile",
+    "lint": "passed with existing warnings",
+    "build": "passed once; no app source changes afterwards",
+    "web": {
+      "direct": "passed actual same-origin two-tab owner/UI synchronization, stale CLI refusal, fresh CLI reflected in both tabs, independent-context isolation, explicit Host theme visible in three contexts, reload generation refusal",
+      "naturalNotification": "passed canonical source, rendered review, ordinary Shell CLI trace, completed turn, handled Human delivery, actual owner readback",
+      "naturalHostTheme": "passed explicit Host/all-connected-clients review, normal Shell CLI trace and native Settings readback",
+      "hostAndBrowserRestart": "passed same absolute home/Profile and retained browser profile; compared saved owner values before writes",
+      "successfulPageErrors": []
+    },
+    "modelFailure": {
+      "provider": "opencode-go",
+      "status": 429,
+      "type": "GoUsageLimitError",
+      "stage": "before approval",
+      "handling": "original failed turn retained; authorized official fallback used fresh Human prompts",
+      "fallback": "deepseek-official/deepseek-flash high"
+    },
+    "unrun": [
+      "native macOS Desktop",
+      "real Human OS permission prompt and notification delivery",
+      "CI",
+      "Human QA",
+      "merge",
+      "deployment"
+    ]
+  },
+  "scope": {
+    "themeAndLocale": "native Host user settings, affects all connected Clients",
+    "notifications": "existing browser-origin localStorage shared among same-origin tabs",
+    "nativeHarness": "single selected Client only; multiwindow/multicontext checks explicitly omitted"
+  },
+  "imageComparison": "candidate before/after action states; base-revision capture not run",
+  "publication": "local committed review assets; parent owns PR and rendering verification",
+  "images": [
+    {
+      "file": "explicit-host-theme-review.png",
+      "sha256": "794b8ef3a48f0c24d22ab71f2add0778c4a19660032ca8562671a0551e0b7364"
+    },
+    {
+      "file": "notifications-after-peer-action.png",
+      "sha256": "a82cb3a34a0ed3b19ba2a6395e05cc336c706043b3a792f508153efd273ba4d7"
+    },
+    {
+      "file": "notifications-before-action.png",
+      "sha256": "60350ea096b5d624562a5ff58a940d29500799d050a0b9dd5d14132e088ba299"
+    },
+    {
+      "file": "restart-notification-readback.png",
+      "sha256": "d2f02002d91d2bca29bc86529cdaf301717b0aa8dc13defb9d1902baf4d2a61d"
+    },
+    {
+      "file": "tob-host-theme-result.png",
+      "sha256": "c6089056e3935cb088c1c643dd746fbed10ebbf8f9e90026e61beba4f183128c"
+    },
+    {
+      "file": "tob-notification-result.png",
+      "sha256": "4b579c331ff896b8314c303773410aac0387e024b5adc52aa680964d41798752"
+    }
+  ]
+}
