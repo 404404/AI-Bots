@@ -119,6 +119,11 @@ const REPLY_DELIVERY_PROMPT = `## Before ending this Orchestrator turn
 MUST deliver any intended Human-facing answer with channel_send({body: your actual answer}). Final assistant text is NOT sent to the Channel. This includes "only reply", "no tools", greetings and image answers: channel_send is the required reply transport, not optional extra work. Do not follow earlier assistant-only examples. Omit channel_id for the inbound Channel. Each turn names its source and Channel in a leading bracketed header such as [Human DM] or [Bot Inbox: ...]; that Channel is this turn's inbound Channel, and requests from earlier turns belong to the Channel named in their own header. When a message from another Channel joins a running turn, address every channel_send in that turn: pass channel_id, or reply_to with the message ID you are answering. What a Human says in your DM, and your answer to it, stays in that DM: post it in a Group only when the Human asked for it to be shared there. A [Host: ...] line reports Host state such as an interrupted turn; it is not a request.
 中文：要回答用户，就必须调用 channel_send，body 填实际答复；纯文本 final 不会发送给用户。“只回复”“不要调用工具”指不要额外工作，仍须用 channel_send 送达答复。读完图片后也必须发送回答。
 If no reply is wanted, remain silent. A cancellation ends the task: drop a held draft silently, without an acknowledgement unless requested. A refused Group send or revoked membership does not authorize a DM fallback, a copied draft or an unsolicited explanation elsewhere. Stop that task. For completed work, pass resolve_inbox_ids on channel_send to explicitly resolve those Inbox items only after a successful send or drop, avoiding a separate cleanup call. If omitted, Inbox work remains open: explicitly inbox_resolve completed items before ending this turn. Do not include unfinished work. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. All authorization checks still apply.`;
+const PEER_REVIEW_PROMPT = `## Group peer replies
+Before any Group reply, compare the fully observed committed peer answers with the Human's actual request and your remaining responsibility. A preview is not an answer; never claim a peer answered before reading their committed answer. If the request is fully answered and you have nothing useful to add:
+- No held draft: do not call channel_send, create a draft or react just to acknowledge. Use inbox_resolve for observed work that is complete, then finish silently.
+- Existing held draft: call channel_send with body empty, drop:true, the returned draft_id, observation_id and yield_to_message_ids for the peer answers you read. Include resolve_inbox_ids only for completed work.
+These are internal decisions. Do not publish "nothing to add", an agreement, recap, promise, or an explanation of yielding or task ownership. 中文：没有新增内容就不发消息；无 held 草稿时直接结清已完成的 Inbox，有 held 草稿时才 drop。If a missing fact, independent evidence, correction, requested second opinion or new direct Human question still needs your answer, send that useful content without narrating this decision process. Repeated words do not make a new question already answered. A conditional "add anything missing" asks you to check, not acknowledge. Preserve explicit Human corrections and required constraints; do not turn them into speculative alternatives or confirmation questions unless supplied facts conflict. FYI needs no acknowledgment unless asked. Keep unfinished Inbox work open.`;
 const REPLY_DELIVERY_REMINDER =
   '[Host reply transport reminder] If you answer this message, put the actual answer in channel_send, not assistant final text. "No tools" means no extra work, not skipping reply transport. If no reply is wanted, stay silent. External replies keep their trusted bridge route. Do not repeat a successful send or retry an uncertain outcome. 要回答就用发送工具送达；纯文本不会发给用户。';
 const NATIVE_SCHEDULE_TOOLS = new Set([
@@ -730,7 +735,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       const disposeReplyPrompt = agentCtx.systemPrompt.section({
         name: 'botharness:reply-delivery',
         order: 10_450,
-        text: REPLY_DELIVERY_PROMPT,
+        text: `${REPLY_DELIVERY_PROMPT}\n\n${PEER_REVIEW_PROMPT}`,
       });
       if (borrowed) borrowedDisposers.push(disposeReplyPrompt);
       this.#orchestratorTools(run, agentCtx, registerTool, registerBridgeTool);
@@ -3455,7 +3460,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'channel_send',
         description:
-          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: use this Tool even for a short acknowledgment, greeting, clarification or image answer. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent. Read review.content when present: it contains newly observed messages. If review.complete is true, use review.observationId as observation_id with draft_id to revise, keep the same body for unrelated changes, or drop a cancelled task; no extra channel_read is needed. If context is incomplete or absent, use channel_read for missing content first. A second change returns requires-review: stop this automatic attempt and keep unfinished Inbox responsibility open. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
+          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: when a reply is needed, use this Tool for the actual answer, including a requested acknowledgment, greeting, clarification or image answer. A Group mention or fully answered request does not itself require a reply. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent. Read review.content when present: it contains newly observed messages. If review.complete is true, use review.observationId as observation_id with draft_id to revise, keep the same body for unrelated changes, or drop a cancelled/redundant reply; no extra channel_read is needed. If committed peer answers fully cover the request and you have no useful addition, remain silent: with no held draft, only inbox_resolve completed work; with an existing held draft, use body empty, drop:true, draft_id, observation_id and yield_to_message_ids. Never create a draft merely to drop it. Preserve independent evidence and new direct questions. If context is incomplete or absent, use channel_read for missing content first. A second change returns requires-review: stop this automatic attempt and keep unfinished Inbox responsibility open. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
         parameters: {
           resolve_inbox_ids: {
             type: 'array',
@@ -3478,11 +3483,17 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             description:
               'Drop draft_id without sending. channel_id defaults to the inbound Channel. Keep unresolved Inbox work open unless explicitly selected in resolve_inbox_ids.',
           },
+          yield_to_message_ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Only when dropping an existing held draft with draft_id and drop:true: 1–20 committed peer Message IDs whose observed answers fully cover your pending reply. Read their full content first; pass observation_id from that read or held review. Records deliberate yielding without an agreement message. Not for previews, your own messages, unfinished work, independent evidence or a new direct question. Inbox completion remains explicit.',
+          },
           body: {
             type: 'string',
             required: true,
             description:
-              'The actual Human-facing answer to deliver, not a plan to send later. May be empty when dropping a draft, attachments are present or when only reacting.',
+              'The actual Human-facing answer to deliver, not a plan to send later or an internal explanation of yielding/task ownership. May be empty when dropping a draft, attachments are present or when only reacting.',
           },
           attachments: {
             type: 'array',
@@ -3546,6 +3557,18 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             throw new Error('channel_send: Orchestrator run is unavailable');
           }
           if (
+            args.yield_to_message_ids !== undefined &&
+            (args.drop !== true ||
+              !args.observation_id ||
+              args.react_to !== undefined ||
+              args.yield_to_message_ids.length < 1 ||
+              args.yield_to_message_ids.length > 20 ||
+              args.yield_to_message_ids.some((id) => !id.trim()))
+          )
+            throw new Error(
+              'channel_send: yield_to_message_ids requires drop, observation_id and 1–20 peer Message IDs',
+            );
+          if (
             args.resolve_inbox_ids !== undefined &&
             (!Array.isArray(args.resolve_inbox_ids) ||
               args.resolve_inbox_ids.length < 1 ||
@@ -3603,6 +3626,10 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             const outcome = active.run.channels.dropDraft({
               channelId: dropChannelId,
               draftId: args.draft_id,
+              ...(args.observation_id === undefined ? {} : { observationId: args.observation_id }),
+              ...(args.yield_to_message_ids === undefined
+                ? {}
+                : { yieldToMessageIds: args.yield_to_message_ids }),
             });
             this.#drafts.discard(run.sessionId, dropChannelId);
             return JSON.stringify({
