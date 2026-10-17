@@ -1,0 +1,72 @@
+{
+  "issue": 2091,
+  "pr": 2128,
+  "productionRuntimeSource": "3f29dd4ae36db6fa89e72705d4cba8cf0cb33bd1",
+  "reviewedIntegratedSource": "417c6fc509a1cfdb5730bb068308cc788add82cc",
+  "base": "6a6cc80b8f8c06c3327e79df025e1be954e50eb0",
+  "integratedSourceChecks": {
+    "typescript": "passed",
+    "focusedFiles": 10,
+    "focusedTestsPassed": 155,
+    "maxWorkers": 1,
+    "build": "passed",
+    "newIntegratedRuntime": "pending"
+  },
+  "nativeJourney": {
+    "assignmentId": "botharness-ff810811-f821-44e3-a9d4-f5a865ced457",
+    "originalSourceEventId": "59e1cfe5-959c-40f5-8ad6-adfebf5aa592",
+    "creationPhase": "desktop-1792274182304",
+    "continuationPhase": "desktop-1792274476986",
+    "stableCapturePhase": "desktop-1792275521094",
+    "sameAbsoluteHome": true,
+    "copiedSessionsOrDatabase": false,
+    "newModelRequestsInCapture": false,
+    "checks": [
+      "fresh reviewed comparison",
+      "actual raw cat refused memory-cli-command-required without canary content",
+      "actual memory-save refused agent-scope-denied",
+      "same Assignment continuation",
+      "paused selected target refused memory-target-unavailable",
+      "scope revoked then normal continuation refused memory-scope-unavailable",
+      "actual completed turn and handled Human delivery",
+      "idle Bot and Assignment",
+      "exact Assignment Session view inspected"
+    ],
+    "closing": {
+      "checkedAt": "2026-10-17T22:18:44.066Z",
+      "humanMessageId": "human-56b1fae0-4bed-42bd-a61d-3af64240f1dd",
+      "humanDelivery": "handled",
+      "revokeTurn": 14,
+      "revokeTurnEnd": "completed",
+      "latestTurn": 14,
+      "latestTurnEnd": "completed",
+      "revoked": true,
+      "continuationRefused": true,
+      "botState": "idle",
+      "assignmentActivity": "idle",
+      "stable": true
+    },
+    "pageErrors": [],
+    "browserConsole": []
+  },
+  "preservedDriverFailures": [
+    {
+      "phase": "desktop-1792274182304",
+      "kind": "driver-only canonical selection wait",
+      "productOutcome": "actual Assignment completed; resumed same canonical ID"
+    },
+    {
+      "phase": "desktop-1792274476986",
+      "kind": "premature screenshot before Human handled and UI settled",
+      "productOutcome": "actual completed turn plus later handled state independently verified; closing wait added"
+    },
+    {
+      "phase": "desktop-1792275015864",
+      "kind": "capture-only obsolete wrapper selector",
+      "productOutcome": "closing gate stable; corrected observed workspace selector and recaptured"
+    }
+  ],
+  "humanQa": "pending",
+  "merge": "not authorized",
+  "deployment": "not performed"
+}

@@ -127,7 +127,7 @@ describe('Agent memory commands against a live Host', () => {
       ['memorySnapshot', { channelId: DM }],
       ['memoryFile', { channelId: DM, path: 'PERSONA.md' }],
       ['memoryHistory', { channelId: DM }],
-      ['memoryDiff', { channelId: DM, sha: 'a'.repeat(40) }],
+      ['memoryRevisionQuery', { channelId: DM, query: { kind: 'diff', sha: 'a'.repeat(40) } }],
       ['memoryFileTarget', { slug: 'ada', path: 'notes/x.md' }],
       ['memoryGitGraph', { channelId: DM, offset: 20 }],
       ['memoryGitCommitDiff', { channelId: DM, sha: 'b'.repeat(40) }],
@@ -135,6 +135,32 @@ describe('Agent memory commands against a live Host', () => {
       ['memoryWorkingDiff', { channelId: DM, path: 'notes/x.md', kind: 'unstaged' }],
       ['memoryRecoveryHistory', { channelId: DM }],
       ['memoryVersions', { channelId: DM }],
+    ]);
+  });
+
+  it('routes explicit revisions and bounded reads through the immutable query owner', async () => {
+    const live = await host(() => ({ json: { ok: true, value: { read: true } } }));
+    const sha = 'a'.repeat(40);
+    const commands = ['memory-snapshot', 'memory-file', 'memory-history', 'memory-diff'];
+    for (const command of commands) {
+      const argv = [command, 'ada', '--sha', sha, '--offset', '2', '--limit', '8'];
+      if (command === 'memory-file') argv.push('--path', 'MEMORY.md');
+      expect((await invoke(argv, live.url)).json).toEqual({ read: true });
+    }
+    expect(live.calls.map((call) => [call.path, call.body])).toEqual([
+      [
+        'memoryRevisionQuery',
+        { channelId: DM, query: { kind: 'snapshot', sha, offset: 2, limit: 8 } },
+      ],
+      [
+        'memoryRevisionQuery',
+        { channelId: DM, query: { kind: 'file', sha, path: 'MEMORY.md', offset: 2, limit: 8 } },
+      ],
+      [
+        'memoryRevisionQuery',
+        { channelId: DM, query: { kind: 'history', sha, offset: 2, limit: 8 } },
+      ],
+      ['memoryRevisionQuery', { channelId: DM, query: { kind: 'diff', sha, offset: 2, limit: 8 } }],
     ]);
   });
 
@@ -221,6 +247,11 @@ describe('Agent memory commands against a live Host', () => {
     for (const argv of [
       ['memory-file', 'ada'],
       ['memory-diff', 'ada'],
+      ['memory-snapshot', 'ada', '--sha', 'HEAD'],
+      ['memory-file', 'ada', '--sha', 'a'.repeat(40)],
+      ['memory-file', 'ada', '--sha', 'A'.repeat(40), '--path', 'MEMORY.md'],
+      ['memory-history', 'ada', '--sha', 'a'.repeat(40), '--offset', '-1'],
+      ['memory-diff', 'ada', '--sha', 'a'.repeat(40), '--limit', '1.5'],
       ['memory-working-diff', 'ada', '--path', 'x', '--kind', 'everything'],
       ['memory-graph', 'ada', '--offset', '-1'],
       ['memory-save', 'ada', '--path', 'x', '--body', 'y'],

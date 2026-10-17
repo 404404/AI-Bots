@@ -548,6 +548,7 @@ describe('plugin entry', () => {
       'sessionOwner',
       'botSessionIds',
       'memoryFileTarget',
+      'memoryRevisionQuery',
       'memorySnapshot',
       'memoryFile',
       'memoryHistory',
