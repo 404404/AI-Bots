@@ -1,0 +1,15 @@
+{
+  "testedExtractedZip": true,
+  "initialChoices": 0,
+  "reloadPreservesChoices": true,
+  "closeReopenPreservesChoices": true,
+  "undoPreservesHistory": true,
+  "completedPairs": 40,
+  "realDownloadedFileMatchesBackupText": true,
+  "selectAllBackupText": true,
+  "originalFrozenPayloadUnchanged": true,
+  "mobileNoOverflow": true,
+  "networkRequests": [],
+  "pageErrors": [],
+  "syntheticVotesPackaged": false
+}
