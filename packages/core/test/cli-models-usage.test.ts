@@ -210,6 +210,52 @@ describe('Model commands', () => {
     ]);
   });
 
+  it('creates a complete preset through the online command without discarding Assignment choices', async () => {
+    const live = await host((_method, args) => ({
+      ok: true,
+      value: { preset: { id: 'p', ...args } },
+    }));
+    const choices = [
+      {
+        provider: 'deepseek',
+        model: 'flash',
+        allowedEfforts: ['', 'high'],
+        defaultEffort: '',
+        note: 'Keep this note',
+      },
+    ];
+    const result = await invoke(
+      [
+        'model-preset-create',
+        '--name',
+        'Daily',
+        '--orchestrator-provider',
+        'deepseek',
+        '--orchestrator-model',
+        'reasoner',
+        '--assignment-provider',
+        'deepseek',
+        '--assignment-model',
+        'flash',
+        '--plan-stdin',
+      ],
+      live.url,
+      JSON.stringify({ assignmentModels: choices }),
+    );
+    expect(result.code).toBe(0);
+    expect(live.calls).toEqual([
+      {
+        method: 'modelPresetCreate',
+        args: {
+          name: 'Daily',
+          orchestrator: { provider: 'deepseek', model: 'reasoner' },
+          assignmentDefault: { provider: 'deepseek', model: 'flash' },
+          assignmentModels: choices,
+        },
+      },
+    ]);
+  });
+
   it('updates a preset over its current values and revision', async () => {
     const preset = {
       id: 'p1',

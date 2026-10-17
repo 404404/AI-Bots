@@ -1,3 +1,4 @@
+import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
 import { Redirect, Stack, useIsFocused, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
@@ -88,6 +89,7 @@ export default function HomeScreen() {
           actions={<SettingsButton onPress={() => router.push('/settings')} />}
         >
           <Animated.FlatList
+            renderScrollComponent={renderKeyboardFormScroll}
             onScroll={onScroll}
             scrollEventThrottle={1}
             contentContainerStyle={{ paddingBottom: bottom + space.x6 }}

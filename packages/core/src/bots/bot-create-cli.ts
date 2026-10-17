@@ -136,6 +136,7 @@ Usage:
   deepseekbot model-preset-create --name <preset> --orchestrator-provider <p> --orchestrator-model <m>
                                   [--orchestrator-effort <e>] --assignment-provider <p>
                                   --assignment-model <m> [--assignment-effort <e>] [--home <dsh-home>]
+                                  [--plan-stdin (online Host only)]
   deepseekbot model-preset-apply <id> --preset <preset-id> [--home <dsh-home>]
   deepseekbot model-plan <id> [--home <dsh-home>]
   deepseekbot pause <id> [--home <dsh-home>]
@@ -1255,6 +1256,8 @@ function parseRoute(values: CreateValues, prefix: 'orchestrator' | 'assignment')
 }
 
 function runModelPresetCreate(values: CreateValues, io: BotCreateCliIo): { preset: ModelPreset } {
+  if (values['plan-stdin'])
+    throw usageError('Model Preset plan stdin requires an online Host target.');
   const name = trimmed(values.name);
   if (name === undefined) throw usageError('--name is required for a model preset.');
   const orchestrator = parseRoute(values, 'orchestrator');

@@ -632,8 +632,16 @@ export class BotharnessBridgeService extends TypertRemoteService {
     name: string,
     orchestrator: ModelRoute,
     assignmentDefault: ModelRoute,
+    assignmentModels?: AssignmentModelOption[],
   ): Promise<{ preset: ModelPreset }> {
-    return unwrapAsync(this.methods.modelPresetCreate({ name, orchestrator, assignmentDefault }));
+    return unwrapAsync(
+      this.methods.modelPresetCreate({
+        name,
+        orchestrator,
+        assignmentDefault,
+        ...(assignmentModels === undefined ? {} : { assignmentModels }),
+      }),
+    );
   }
 
   modelPresetUpdate(
@@ -642,6 +650,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     name: string,
     orchestrator: ModelRoute,
     assignmentDefault: ModelRoute,
+    assignmentModels?: AssignmentModelOption[],
   ): Promise<{ preset: ModelPreset }> {
     return unwrapAsync(
       this.methods.modelPresetUpdate({
@@ -650,6 +659,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
         name,
         orchestrator,
         assignmentDefault,
+        ...(assignmentModels === undefined ? {} : { assignmentModels }),
       }),
     );
   }

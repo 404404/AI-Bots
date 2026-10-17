@@ -23,6 +23,7 @@ import { haptic } from '../haptics';
 import { t } from '../strings';
 import { ActionCard, CardButtons, CardLine, type CardLineTone } from './action-card';
 import type { BubbleGroup } from './bubble-shape';
+import { DraftEditor } from './draft-editor';
 
 export interface QuestionCardPort {
   load(): Promise<QuestionRequest>;
@@ -144,6 +145,7 @@ function QuestionFields({
   heading,
   disabled,
   inChat,
+  expandInput,
   onChange,
   onPick,
 }: {
@@ -152,11 +154,15 @@ function QuestionFields({
   heading: boolean;
   disabled: boolean;
   inChat: boolean;
+  expandInput: boolean;
   onChange(next: QuestionDraft): void;
   onPick?(label: string): void;
 }) {
   const theme = useDesignTheme();
   const multiple = question.multiSelect === true;
+  const [editing, setEditing] = useState(false);
+  const inputLabel = `${t.otherAnswer}: ${question.question}`;
+  const placeholder = question.options?.length ? t.otherAnswer : t.typeAnswer;
   return (
     <View style={{ gap: space.x3 }}>
       {heading ? (
@@ -210,6 +216,38 @@ function QuestionFields({
         <Text variant="meta" tone="muted">
           {t.replyInChat}
         </Text>
+      ) : expandInput ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={inputLabel}
+            disabled={disabled}
+            onPress={() => setEditing(true)}
+            style={{
+              minHeight: theme.touch,
+              paddingHorizontal: space.x4,
+              paddingVertical: space.x3,
+              backgroundColor: theme.layer.field.fill,
+              borderColor: theme.layer.field.edge,
+              borderWidth: edge.hairline,
+              borderRadius: radius.md,
+            }}
+          >
+            <Text tone={draft.custom === '' ? 'muted' : 'fg'}>
+              {draft.custom === '' ? placeholder : draft.custom}
+            </Text>
+          </Pressable>
+          {editing ? (
+            <DraftEditor
+              value={draft.custom}
+              placeholder={placeholder}
+              canSend={false}
+              onChange={(text) => onChange(typeCustom(question, draft, text))}
+              onSend={() => setEditing(false)}
+              onClose={() => setEditing(false)}
+            />
+          ) : null}
+        </>
       ) : (
         <TextInput
           accessibilityLabel={`${t.otherAnswer}: ${question.question}`}
@@ -245,6 +283,7 @@ export function QuestionCard({
   group,
   wide = false,
   replyInChat = false,
+  expandInput = false,
   answeredHere = false,
   onSettled,
 }: {
@@ -256,6 +295,7 @@ export function QuestionCard({
   group?: BubbleGroup;
   wide?: boolean;
   replyInChat?: boolean;
+  expandInput?: boolean;
   answeredHere?: boolean;
   onSettled?(result: DecisionResult): void;
 }) {
@@ -366,6 +406,7 @@ export function QuestionCard({
                 heading={single === undefined}
                 disabled={phase.busy === true}
                 inChat={replyInChat && single !== undefined}
+                expandInput={expandInput}
                 {...(instant
                   ? {
                       onPick: (label: string) =>

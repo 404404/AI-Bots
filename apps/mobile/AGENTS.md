@@ -23,6 +23,8 @@ Screens follow [DESIGN.md](./DESIGN.md): the Host-as-workspace structure, the sc
 
 ## Hard rules
 
+- **Keyboard visibility is required for every text input on iOS and Android.** Follow [Keyboard and text entry](./DESIGN.md#keyboard-and-text-entry) for chat, search, pairing, answers, sheets and forms. Verify a real keyboard, focus changes, multiline growth and reachable submission; a covered caret or required action fails acceptance.
+
 - **Native projects are generated.** `ios/` and `android/` are not committed (CNG). Change native configuration through `app.json` and config plugins, never by editing generated native files.
 - **Keep packages on the SDK's versions.** Add Expo and React Native packages with `npx expo install <pkg>`. Where the Expo API is unreachable (cloud sessions block `expo.dev`), take the range from `node_modules/expo/bundledNativeModules.json` and add it with `pnpm --filter @botharness/mobile add <pkg>@<range>`. Never hand-bump `expo`, `react`, `react-native` or `expo-*` versions; that is an `expo-upgrade` task.
 - **Use the SDK 58 dependency matrix.** Keep Hermes on the SDK default. SDK upgrades require native rebuilds; do not load this JavaScript into an SDK 57 development client.

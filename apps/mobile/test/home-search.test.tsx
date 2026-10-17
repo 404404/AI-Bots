@@ -32,6 +32,7 @@ const roster: RosterView = {
   channels: [{ id: 'launch-team', name: 'Launch team', memberCount: 3, members: [] }],
 };
 
+vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
 vi.mock('react-native', () => import('./react-native-shim'));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));

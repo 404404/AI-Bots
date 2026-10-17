@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, View, type ColorValue, type LayoutChangeEvent } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 export interface KeyboardChatFrameProps {
   children: ReactNode;
@@ -10,7 +11,7 @@ export interface KeyboardChatFrameProps {
 }
 
 export function KeyboardRoot({ children }: { children: ReactNode }) {
-  return children;
+  return <KeyboardProvider>{children}</KeyboardProvider>;
 }
 
 export function KeyboardChatFrame({

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 import { Context } from '@deepseek-ai/cordis';
 import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createBridgeMethods, type BridgeMethods } from '../src/bridge/methods.js';
 import { BRIDGE_NAMESPACE, BRIDGE_SERVICE_KEY, registerBridge } from '../src/bridge/rpc.js';
@@ -65,6 +65,58 @@ function parameterNames(method: (...args: never[]) => unknown): string[] {
 }
 
 describe('bridge typert service', () => {
+  it('exposes and forwards complete Assignment choices through preset creation and updates', async () => {
+    const { service, methods } = setup();
+    const route = { provider: 'test', model: 'model' };
+    const assignmentModels = [
+      { ...route, allowedEfforts: ['', 'high'], defaultEffort: '', note: 'Preserve this note' },
+    ];
+    const preset = {
+      id: 'p',
+      name: 'Daily',
+      revision: 1,
+      orchestrator: route,
+      assignmentDefault: route,
+      assignmentModels,
+      createdAt: '2026-10-18T00:00:00Z',
+    };
+    const create = vi
+      .spyOn(methods, 'modelPresetCreate')
+      .mockResolvedValue({ ok: true, value: { preset } });
+    const update = vi
+      .spyOn(methods, 'modelPresetUpdate')
+      .mockResolvedValue({ ok: true, value: { preset } });
+    expect(parameterNames(service.modelPresetCreate)).toEqual([
+      'name',
+      'orchestrator',
+      'assignmentDefault',
+      'assignmentModels',
+    ]);
+    expect(parameterNames(service.modelPresetUpdate)).toEqual([
+      'id',
+      'expectedRevision',
+      'name',
+      'orchestrator',
+      'assignmentDefault',
+      'assignmentModels',
+    ]);
+    await service.modelPresetCreate('Daily', route, route, assignmentModels);
+    expect(create).toHaveBeenCalledWith({
+      name: 'Daily',
+      orchestrator: route,
+      assignmentDefault: route,
+      assignmentModels,
+    });
+    await service.modelPresetUpdate('p', 1, 'Daily', route, route, assignmentModels);
+    expect(update).toHaveBeenCalledWith({
+      id: 'p',
+      expectedRevision: 1,
+      name: 'Daily',
+      orchestrator: route,
+      assignmentDefault: route,
+      assignmentModels,
+    });
+  });
   it('exposes Activity query arguments through the gateway service and refuses an unavailable owner', () => {
     const { service } = setup();
     expect(parameterNames(service.humanAttention)).toEqual([

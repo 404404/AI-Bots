@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, Switch, View, type ScrollViewInstance } from 'react-native';
+import { Platform, ScrollView, Switch, View, type ScrollViewInstance } from 'react-native';
 
 import {
   PUSH_KINDS,
@@ -14,6 +14,7 @@ import { useDesignTheme } from './design/theme';
 import { useMounted } from './mounted';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
+import { Toggle } from './primitives/toggle';
 import { ActionButton, Loading, Notice, errorText } from './request-parts';
 import { t } from './strings';
 
@@ -125,13 +126,23 @@ export function NotificationSettings({
                 key={kind}
                 title={t.pushKind[kind]}
                 trailing={
-                  <Switch
-                    accessibilityLabel={t.pushKind[kind]}
-                    value={settings.preferences[kind]}
-                    onValueChange={(value) => toggle(kind, value)}
-                    disabled={!settings.registered}
-                    trackColor={{ true: theme.color.accent, false: theme.color.borderStrong }}
-                  />
+                  Platform.OS === 'android' ? (
+                    <Toggle
+                      on="raised"
+                      label={t.pushKind[kind]}
+                      value={settings.preferences[kind]}
+                      onChange={(value) => toggle(kind, value)}
+                      disabled={!settings.registered}
+                    />
+                  ) : (
+                    <Switch
+                      accessibilityLabel={t.pushKind[kind]}
+                      value={settings.preferences[kind]}
+                      onValueChange={(value) => toggle(kind, value)}
+                      disabled={!settings.registered}
+                      trackColor={{ true: theme.color.accent, false: theme.color.borderStrong }}
+                    />
+                  )
                 }
               />
             ))}

@@ -1,6 +1,7 @@
 import { TextInput } from '../primitives/system-text';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { SvgXml } from 'react-native-svg';
 
 import {
@@ -266,7 +267,7 @@ export function HostLookEditor({
   };
 
   return (
-    <ScrollView
+    <KeyboardFormScroll
       nestedScrollEnabled
       style={{ flex: 1 }}
       keyboardShouldPersistTaps="handled"
@@ -454,6 +455,6 @@ export function HostLookEditor({
           actions.onChange(DEFAULT_HOST_LOOK);
         }}
       />
-    </ScrollView>
+    </KeyboardFormScroll>
   );
 }

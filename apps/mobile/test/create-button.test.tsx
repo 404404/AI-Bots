@@ -10,6 +10,7 @@ const { push, platform, showActionSheetWithOptions, alert } = vi.hoisted(() => (
   alert: vi.fn(),
 }));
 
+vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
 vi.mock('react-native', async () => ({
   ...(await import('./react-native-shim')),
   Platform: platform,
