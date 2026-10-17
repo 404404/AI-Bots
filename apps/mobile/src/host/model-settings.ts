@@ -99,7 +99,7 @@ export function searchModels(
         `${entry.provider} ${entry.providerName} ${entry.model} ${entry.modelName}`.toLocaleLowerCase();
       return terms.every((term) => text.includes(term));
     })
-    .toSorted((a, b) => Number(a.credential !== undefined) - Number(b.credential !== undefined));
+    .sort((a, b) => Number(a.credential !== undefined) - Number(b.credential !== undefined));
 }
 
 function requireRoute(route: ModelRoute | undefined): ModelRoute {

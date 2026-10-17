@@ -320,68 +320,70 @@ function ModelsView({
       </SheetNote>
       {banner}
       {models.busy ? <ActivityIndicator /> : null}
-      <SettingsSection
-        title={scope.kind === 'global' ? t.modelSettings.global : t.modelSettings.title}
-        on={SHEET_GROUP}
-      >
-        <PickerLink
-          label={scope.kind === 'global' ? t.modelSettings.global : t.modelSettings.orchestrator}
-          detail={routeLabel(value, routes.orchestrator)}
-          onPress={models.busy ? undefined : () => openPicker('orchestrator')}
-        />
-        {value.models.find((entry) => sameModel(entry, routes.orchestrator))?.efforts?.length ? (
+      <View style={{ paddingHorizontal: space.x5 }}>
+        <SettingsSection
+          title={scope.kind === 'global' ? t.modelSettings.global : t.modelSettings.title}
+          on={SHEET_GROUP}
+        >
           <PickerLink
-            label={t.modelSettings.effort}
-            detail={routes.orchestrator?.reasoningEffort ?? t.modelSettings.providerDefault}
-            onPress={models.busy ? undefined : () => openPicker('orchestrator-effort')}
+            label={scope.kind === 'global' ? t.modelSettings.global : t.modelSettings.orchestrator}
+            detail={routeLabel(value, routes.orchestrator)}
+            onPress={models.busy ? undefined : () => openPicker('orchestrator')}
           />
-        ) : null}
-        {scope.kind === 'global' ? null : (
-          <>
+          {value.models.find((entry) => sameModel(entry, routes.orchestrator))?.efforts?.length ? (
             <PickerLink
-              label={t.modelSettings.assignment}
-              detail={routeLabel(value, routes.assignmentDefault)}
-              onPress={models.busy ? undefined : () => openPicker('assignment')}
+              label={t.modelSettings.effort}
+              detail={routes.orchestrator?.reasoningEffort ?? t.modelSettings.providerDefault}
+              onPress={models.busy ? undefined : () => openPicker('orchestrator-effort')}
             />
-            {value.models.find((entry) => sameModel(entry, routes.assignmentDefault))?.efforts
-              ?.length ? (
+          ) : null}
+          {scope.kind === 'global' ? null : (
+            <>
               <PickerLink
-                label={t.modelSettings.effort}
-                detail={
-                  routes.assignmentDefault?.reasoningEffort ?? t.modelSettings.providerDefault
-                }
-                onPress={models.busy ? undefined : () => openPicker('assignment-effort')}
+                label={t.modelSettings.assignment}
+                detail={routeLabel(value, routes.assignmentDefault)}
+                onPress={models.busy ? undefined : () => openPicker('assignment')}
               />
-            ) : null}
-            <PickerLink
-              label={t.modelSettings.allowed}
-              detail={
-                routes.assignmentDefault === undefined
-                  ? t.modelSettings.inherited
-                  : t.modelSettings.count(routes.assignmentModels.length)
-              }
+              {value.models.find((entry) => sameModel(entry, routes.assignmentDefault))?.efforts
+                ?.length ? (
+                <PickerLink
+                  label={t.modelSettings.effort}
+                  detail={
+                    routes.assignmentDefault?.reasoningEffort ?? t.modelSettings.providerDefault
+                  }
+                  onPress={models.busy ? undefined : () => openPicker('assignment-effort')}
+                />
+              ) : null}
+              <PickerLink
+                label={t.modelSettings.allowed}
+                detail={
+                  routes.assignmentDefault === undefined
+                    ? t.modelSettings.inherited
+                    : t.modelSettings.count(routes.assignmentModels.length)
+                }
+                onPress={
+                  models.busy || routes.assignmentDefault === undefined
+                    ? undefined
+                    : () => openPicker('allowed')
+                }
+              />
+            </>
+          )}
+          {scope.kind === 'bot' ? (
+            <SettingsRow
+              on={SHEET_GROUP}
+              title={value.plan === undefined ? t.modelSettings.inherited : t.modelSettings.inherit}
+              {...(value.plan?.sourcePresetName ? { detail: value.plan.sourcePresetName } : {})}
+              tone="accent"
               onPress={
-                models.busy || routes.assignmentDefault === undefined
+                models.busy || value.plan === undefined
                   ? undefined
-                  : () => openPicker('allowed')
+                  : () => models.run(() => inheritModel(client, scope.slug, value))
               }
             />
-          </>
-        )}
-        {scope.kind === 'bot' ? (
-          <SettingsRow
-            on={SHEET_GROUP}
-            title={value.plan === undefined ? t.modelSettings.inherited : t.modelSettings.inherit}
-            {...(value.plan?.sourcePresetName ? { detail: value.plan.sourcePresetName } : {})}
-            tone="accent"
-            onPress={
-              models.busy || value.plan === undefined
-                ? undefined
-                : () => models.run(() => inheritModel(client, scope.slug, value))
-            }
-          />
-        ) : null}
-      </SettingsSection>
+          ) : null}
+        </SettingsSection>
+      </View>
       <View style={{ paddingHorizontal: space.x5, gap: space.x3 }}>
         <TextInput
           value={name ?? value.preset?.name ?? ''}
