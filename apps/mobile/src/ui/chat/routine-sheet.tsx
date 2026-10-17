@@ -1,13 +1,9 @@
 import { TextInput } from '../primitives/system-text';
 import { useRef, useState, type ComponentType, type ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  ScrollView,
-  View,
-  type ScrollViewInstance,
-} from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
+import { KeyboardFormScroll } from '../primitives/keyboard-form';
+import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { errorText, type Loadable } from '../../host/bot-settings';
 import {
   newRoutineForm,
@@ -55,7 +51,6 @@ function Field({
   placeholder,
   multiline = false,
   keyboard = 'default',
-  onFocus,
   onChange,
 }: {
   label: string;
@@ -63,7 +58,6 @@ function Field({
   placeholder?: string;
   multiline?: boolean;
   keyboard?: 'default' | 'number-pad' | 'numbers-and-punctuation';
-  onFocus?: () => void;
   onChange(text: string): void;
 }) {
   const theme = useDesignTheme();
@@ -77,7 +71,6 @@ function Field({
       keyboardType={keyboard}
       autoCorrect={!multiline ? false : undefined}
       onChangeText={onChange}
-      onFocus={onFocus}
       style={{
         marginHorizontal: space.x5,
         minHeight: multiline ? theme.touch * 2 : theme.touch,
@@ -171,12 +164,10 @@ function useDebounced() {
 function RoutineEditor({
   form,
   preview,
-  onScheduleFocus,
   onChange,
 }: {
   form: RoutineForm;
   preview: Loadable<string[]> | undefined;
-  onScheduleFocus(): void;
   onChange(patch: Partial<RoutineForm>): void;
 }) {
   const problem = routineProblem(form);
@@ -215,7 +206,6 @@ function RoutineEditor({
             label={t.routineHours}
             value={form.hours}
             keyboard="number-pad"
-            onFocus={onScheduleFocus}
             onChange={(hours) => onChange({ hours })}
           />
         </>
@@ -227,7 +217,6 @@ function RoutineEditor({
             value={form.time}
             placeholder="09:00"
             keyboard="numbers-and-punctuation"
-            onFocus={onScheduleFocus}
             onChange={(time) => onChange({ time })}
           />
         </>
@@ -318,7 +307,6 @@ export function RoutineSheet({
   const [notice, setNotice] = useState<string>();
   const debounce = useDebounced();
   const latest = useRef(form);
-  const scroller = useRef<ScrollViewInstance>(undefined);
 
   const loadHistory = (id: string) =>
     void routines.history(id).then(
@@ -356,17 +344,7 @@ export function RoutineSheet({
     }, delay);
   };
 
-  const showPreview = () => {
-    scroller.current?.scrollToEnd();
-    if (Keyboard.isVisible()) return;
-    const shown = Keyboard.addListener('keyboardDidShow', () => {
-      shown.remove();
-      scroller.current?.scrollToEnd();
-    });
-  };
-
-  const mount = useMounted<ScrollViewInstance>((node) => {
-    scroller.current = node;
+  const mount = useMounted<KeyboardAwareScrollViewRef>(() => {
     if (target.kind === 'open') loadHistory(target.routine.id);
     else refreshPreview(form, 0);
   }, []);
@@ -419,21 +397,15 @@ export function RoutineSheet({
     const title = routine === undefined ? t.routineNew : t.routineEditTitle;
     return (
       <Sheet page={page} visible label={title} title={title} subtitle={botName} onClose={close}>
-        <ScrollView
+        <KeyboardFormScroll
           nestedScrollEnabled
           ref={mount}
-          automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           contentContainerStyle={{ paddingBottom: space.x3 }}
         >
           {status}
-          <RoutineEditor
-            form={form}
-            preview={preview}
-            onScheduleFocus={showPreview}
-            onChange={change}
-          />
+          <RoutineEditor form={form} preview={preview} onChange={change} />
           <SheetActions>
             <Button
               label={t.cancel}
@@ -461,7 +433,7 @@ export function RoutineSheet({
               onPress={save}
             />
           </SheetActions>
-        </ScrollView>
+        </KeyboardFormScroll>
       </Sheet>
     );
   }
@@ -515,7 +487,7 @@ export function RoutineSheet({
       subtitle={routineDetail(routine)}
       onClose={close}
     >
-      <ScrollView
+      <KeyboardFormScroll
         nestedScrollEnabled
         ref={mount}
         contentContainerStyle={{ paddingBottom: space.x3 }}
@@ -616,7 +588,7 @@ export function RoutineSheet({
           />
         </SettingsGroupItem>
         {editable ? null : <SheetFooter>{t.routineAdvanced}</SheetFooter>}
-      </ScrollView>
+      </KeyboardFormScroll>
     </Sheet>
   );
 }

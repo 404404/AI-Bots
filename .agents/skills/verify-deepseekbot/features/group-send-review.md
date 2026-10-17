@@ -75,3 +75,19 @@ A send without explicit completion IDs returns `inboxResolution.outcome: not-req
 Verify the Bot handles completion in the current turn, rather than creating a second cleanup
 turn. Drop may omit channel_id only when an inbound Channel exists; the draft owner/channel
 checks remain unchanged.
+
+## Merge follow-through regressions
+
+Start from a fresh isolated Profile for schema generation 98; old unmerged generation 96/97
+pilot Profiles remain immutable evidence, not supported upgrade sources. In a Group with more
+than 20 historical messages, send without an observation: the held delta must include the latest
+Human correction and permit a corrected recheck. With an existing observation and more than
+20 intervening changes, the delta is incomplete and a retry cannot silently skip omitted content.
+After successful submission, inspect returns no pending draft and explicit reuse is refused;
+the Channel retains exactly one committed reply.
+
+As directed by the Human on 2026-10-18, future cohorts use DSH to run actual Bot Sessions.
+The current GPT-6 Astra assistant reads full Session, conversation and Tool records to assess
+correctness and interaction quality; no external model judge is invoked. Record reviewer and
+protocol provenance, retain original external-judge results, and never label assistant review
+as independent Human acceptance. Missing token/cost data remains unknown.

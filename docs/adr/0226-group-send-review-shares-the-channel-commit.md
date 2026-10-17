@@ -1,6 +1,6 @@
-# ADR-0224: Group send review shares the Channel commit transaction
+# ADR-0226: Group send review shares the Channel commit transaction
 
-- Status: Proposed; opt-in pilot, Human history feedback received; quantitative acceptance unresolved
+- Status: Accepted for opt-in slice #2053; Human accepted the quiet-latency exception on 2026-10-18
 - Date: 2026-10-17
 - Issue: [#2053](https://github.com/BotHarness/DeepSeekBot/issues/2053)
 - Specification: [#2051](https://github.com/BotHarness/DeepSeekBot/issues/2051)
@@ -43,15 +43,15 @@ decision adds neither a Session manager nor a wake scheduler. Review evidence co
 canonical history and usage; exported pilot files are process evidence, not message authority.
 
 The durable draft shape and purge integration make this more than a prompt experiment.
-Schema generation 97 is additive, following main's generation 96 Tob identity reservation;
+Schema generation 98 is additive, following main's generation 97 Bot creation receipts;
 roll back behavior by disabling the opt-in before reverting code.
 The database generation still requires a compatible binary. Acceptance remains separate from
 mechanical regression, real-model outcomes and Human evaluation.
 
-Earlier unmerged pilot Profiles used generation 96 for the review tables. Those private QA
+Earlier unmerged pilot Profiles used generations 96 or 97 for the review tables. Those private QA
 Profiles remain historical QA evidence and must not be opened by the new binary; they are not
 a supported upgrade source for the merged migration order. Integration verification uses a fresh Profile
-and separately checks the canonical main generation 96 to 97 migration without changing Tob.
+and separately checks the canonical main generation 97 to 98 migration without changing Tob or Bot creation receipts.
 
 The model can explicitly select `resolve_inbox_ids` on the send/drop Tool. The Consumer
 first awaits a committed send or successful drop, then calls the existing Inbox triage
@@ -70,3 +70,12 @@ all Group/DM outputs so destination changes cannot masquerade as successful sile
 Omitting explicit completion returns `inboxResolution.outcome: not-requested`, so the
 Consumer does not imply sending completed Inbox work. Drop shares the send Tool's inbound
 Channel default; the existing draft owner/channel check still decides whether it can drop.
+
+Merge follow-through: when no valid observation exists, the held result starts from the latest
+20 Channel placements, matching a bounded recent read rather than scanning all history. It is
+not evidence of reading earlier history. Existing observations retain their original floor;
+more than 20 changed messages remain incomplete and cannot be silently skipped. Latest
+messages are offered first so a recent Human correction is not hidden behind older changes.
+Successful submission deletes the pending draft inside the same Channel commit transaction;
+the canonical Channel message remains, and an explicit retry of the retired draft is refused.
+Unfinished and dropped intents retain the existing conservative inspection/purge behavior.

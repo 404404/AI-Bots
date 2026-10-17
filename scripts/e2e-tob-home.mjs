@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
@@ -7,7 +8,7 @@ import { tmpdir } from 'node:os';
 const native = !!process.env.BH_DESKTOP_CDP;
 const instance = native ? undefined : JSON.parse(readFileSync(process.env.BH_E2E_INSTANCE));
 const out = resolve(
-  process.env.BH_E2E_EVIDENCE || '.humanlayer/verify/tob-2082/journey',
+  process.env.BH_E2E_EVIDENCE || '.humanlayer/verify/tob-cli/journey',
   `${native ? 'desktop' : 'web'}-${Date.now()}`,
 );
 mkdirSync(out, { recursive: true });
@@ -87,6 +88,9 @@ const click = async (name) => {
     'Configure model': ['配置模型，开始与 Tob 对话', 'Configure a model to talk to Tob'],
     Close: ['关闭', 'Close'],
     'Bot mode': ['Bot 模式', 'Bot mode'],
+    'Approve once': ['仅批准这一次', 'Allow once'],
+    Deny: ['拒绝', 'Deny'],
+    'Review CLI change': ['使用 deepseekbot settings-set', 'Use deepseekbot settings-set'],
   }[name] ?? [name];
   for (const label of names) {
     const handles = await page.$$(`::-p-aria(${JSON.stringify(label)})`);
@@ -149,6 +153,198 @@ async function key(code, modifiers = []) {
     ws.close();
   }
   await pause(500);
+}
+
+async function humanSettingsSet(settings, value) {
+  const manifest = process.env.BH_E2E_HUMAN_INSTANCE
+    ? JSON.parse(readFileSync(process.env.BH_E2E_HUMAN_INSTANCE, 'utf8'))
+    : instance;
+  assert.ok(manifest?.url, 'native stale phase requires BH_E2E_HUMAN_INSTANCE');
+  const url = new URL(manifest.url);
+  const token = url.searchParams.get('token');
+  assert.ok(token, 'Human fixture manifest needs a local login token');
+  const env = { ...process.env };
+  delete env.DEEPSEEKBOT_AGENT_ENDPOINT;
+  delete env.DEEPSEEKBOT_AGENT_TOKEN;
+  env.DEEPSEEKBOT_HOST = url.origin;
+  env.DEEPSEEKBOT_HOST_TOKEN = token;
+  const result = await new Promise((done, reject) => {
+    const child = spawn(
+      process.execPath,
+      [
+        resolve('packages/deepseekbot/dist/deepseekbot.mjs'),
+        'settings-set',
+        'botharness-client',
+        '--patch-stdin',
+        '--expected-revision',
+        String(settings.revision),
+        '--previous-value',
+        JSON.stringify({
+          assignmentConcurrencyLimit: settings.value.assignmentConcurrencyLimit ?? 8,
+        }),
+      ],
+      { env, stdio: ['pipe', 'pipe', 'pipe'] },
+    );
+    let stdout = '';
+    const timer = setTimeout(() => child.kill('SIGTERM'), 30000);
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.resume();
+    child.on('error', reject);
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code !== 0) reject(Error('Human settings CLI fixture failed with exit ' + code));
+      else done(JSON.parse(stdout));
+    });
+    child.stdin.end(JSON.stringify({ assignmentConcurrencyLimit: value }));
+  });
+  return result;
+}
+
+async function newToolCalls(slug, previousIds) {
+  const trace = await rpc('botToolTrace', { slug, turns: 20 });
+  const calls = trace.turns
+    .flatMap((turn) => turn.calls)
+    .filter((call) => !previousIds.has(call.callId));
+  assert.equal(
+    calls.some((call) => /^tob_assignment_limit_(read|set)$/u.test(call.name)),
+    false,
+    'legacy dedicated Tob management tool was invoked',
+  );
+  return { trace, calls };
+}
+
+async function verifyCliTrace(slug, previousIds, commands, refusal) {
+  let evidence;
+  for (let i = 0; i < 120; i++) {
+    evidence = await newToolCalls(slug, previousIds);
+    const shells = evidence.calls.filter((call) => ['bash', 'pwsh'].includes(call.name));
+    const hasCommands = commands.every((command) =>
+      shells.some((call) => JSON.stringify(call.args).includes('deepseekbot ' + command)),
+    );
+    const complete = shells.length > 0 && shells.every((call) => call.outcome !== 'pending');
+    const hasRefusal = !refusal || shells.some((call) => call.result.includes(refusal));
+    if (hasCommands && complete && hasRefusal) break;
+    await pause(1000);
+  }
+  writeFileSync(resolve(out, 'cli-tool-trace.json'), JSON.stringify(evidence, null, 2));
+  const shells = evidence.calls.filter((call) => ['bash', 'pwsh'].includes(call.name));
+  for (const command of commands)
+    assert.ok(
+      shells.some((call) => JSON.stringify(call.args).includes('deepseekbot ' + command)),
+      'missing native Shell CLI call: ' + command,
+    );
+  assert.ok(
+    shells.every((call) => call.outcome !== 'pending'),
+    'CLI Shell call is still pending',
+  );
+  if (refusal)
+    assert.ok(
+      shells.some((call) => call.result.includes(refusal)),
+      'native Shell result missing coded refusal: ' + refusal,
+    );
+  steps.push('native Shell CLI trace, no dedicated Tob tools' + (refusal ? '; ' + refusal : ''));
+}
+
+async function waitForApproval(channelId, previousApprovalIds, previousCalls, requestedLimit) {
+  for (let i = 0; i < 120; i++) {
+    const messages = (await rpc('channelMessages', { channelId })).messages;
+    for (const message of [...messages].reverse()) {
+      const request = message.toolApprovalRequest;
+      if (request?.toolName !== 'deepseekbot settings-set' || previousApprovalIds.has(message.id))
+        continue;
+      const input = JSON.parse(request.input);
+      if (previousCalls.has(input.parentShellCallId)) continue;
+      if (
+        requestedLimit !== undefined &&
+        input.patch?.assignmentConcurrencyLimit !== requestedLimit
+      )
+        continue;
+      const status = await rpc('toolApprovalStatus', { channelId, messageId: message.id });
+      if (status.status === 'pending') return message;
+    }
+    await pause(1000);
+  }
+  throw Error('new pending canonical CLI approval did not arrive');
+}
+
+async function showApproval(message) {
+  if (await page.$('[data-home-panel]')) {
+    await page.click('.bh-workspace-rail [data-pinned-panel="bh:home"]');
+    await page.waitForFunction(() => !document.querySelector('[data-home-panel]'));
+  }
+  const latest = '.bh-timeline-new';
+  if (await page.$(latest)) await page.locator(latest).click();
+  const selector = `[data-message-id=${JSON.stringify(message.id)}] .bh-tool-approval-card`;
+  await page.waitForSelector(selector);
+  await page.waitForFunction(
+    (s) =>
+      [...document.querySelectorAll(s + ' button')].some(
+        (n) => ['仅批准这一次', 'Allow once'].includes(n.textContent?.trim()) && !n.disabled,
+      ),
+    {},
+    selector,
+  );
+  const summarySelector = selector + ' .bh-request-summary';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const expanded = await page.$eval(summarySelector, (n) => n.getAttribute('aria-expanded'));
+    if (expanded === 'true') break;
+    if (await page.$(latest)) await page.locator(latest).click();
+    await page.locator(summarySelector).click();
+    try {
+      await page.waitForFunction(
+        (s) => document.querySelector(s)?.getAttribute('aria-expanded') === 'true',
+        { timeout: 5000 },
+        summarySelector,
+      );
+      break;
+    } catch (error) {
+      if (attempt === 2) throw error;
+    }
+  }
+  await page.waitForFunction(
+    (s) => document.querySelector(s)?.getAttribute('aria-expanded') === 'true',
+    {},
+    summarySelector,
+  );
+  const foldSelector = selector + ' .bh-tool-approval-fold[aria-expanded="false"]';
+  if (await page.$(foldSelector)) await page.locator(foldSelector).click();
+  const payload = await page.waitForSelector(selector + ' .bh-tool-approval-input');
+  await payload.evaluate((n) => n.scrollIntoView({ block: 'start', inline: 'nearest' }));
+  assert.deepEqual(
+    JSON.parse(await payload.evaluate((n) => n.textContent)),
+    JSON.parse(message.toolApprovalRequest.input),
+  );
+  await pause(300);
+  const crop = await page.$eval(selector, (card) => {
+    const input = card.querySelector('.bh-tool-approval-input').getBoundingClientRect();
+    const actions = card.querySelector('.bh-tool-approval-actions').getBoundingClientRect();
+    if (input.top < 0 || actions.bottom > window.innerHeight)
+      throw Error('approval payload and decision controls must both be visible');
+    return {
+      x: Math.max(0, Math.min(input.left, actions.left)),
+      y: Math.max(0, input.top),
+      width: Math.max(input.right, actions.right) - Math.max(0, Math.min(input.left, actions.left)),
+      height: Math.min(window.innerHeight, actions.bottom) - Math.max(0, input.top),
+    };
+  });
+  assert.ok(crop.width > 0 && crop.height > 0, 'approval operation is outside viewport');
+  await page.screenshot({ path: resolve(out, 'approval-operation.png'), clip: crop });
+  return selector;
+}
+
+async function decideApproval(selector, deny) {
+  const labels = deny ? ['拒绝', 'Deny'] : ['仅批准这一次', 'Allow once'];
+  const buttons = await page.$$(selector + ' button');
+  for (const button of buttons) {
+    if (labels.includes(await button.evaluate((n) => n.textContent?.trim()))) {
+      const label = await button.evaluate((n) => n.textContent?.trim());
+      await page.locator(selector + ' ::-p-aria(' + JSON.stringify(label) + ')').click();
+      return;
+    }
+  }
+  throw Error('decision button missing from selected approval');
 }
 
 const phase = process.argv[2] || 'inspect';
@@ -330,6 +526,17 @@ try {
       'shared Messages composer; draft survives setup; attachment survives reload; Enter newline / Shift+Enter sends once',
     );
   }
+  const cliPhases = ['read', 'approve', 'accept', 'deny', 'stale'];
+  const beforeTrace = cliPhases.includes(phase)
+    ? await rpc('botToolTrace', { slug: home.botSlug, turns: 20 }).catch(() => ({ turns: [] }))
+    : { turns: [] };
+  const previousCalls = new Set(
+    beforeTrace.turns.flatMap((turn) => turn.calls).map((call) => call.callId),
+  );
+  if (phase === 'accept') {
+    for (const call of beforeTrace.turns.flatMap((turn) => turn.calls))
+      if (call.outcome === 'pending') previousCalls.delete(call.callId);
+  }
   if (phase === 'read') {
     const started = Date.now();
     const limit =
@@ -337,18 +544,19 @@ try {
         .value.assignmentConcurrencyLimit ?? 8;
     const input = await page.waitForSelector('[data-home-panel] textarea');
     await input.type(
-      'Call tob_assignment_limit_read and report the exact global Assignment concurrency limit. Do not change it.',
+      'Use your native bash Shell to run deepseekbot capabilities, then run deepseekbot settings botharness-client. Report the exact global Assignment concurrency limit and revision. Do not change settings, delegate, or search for credentials.',
     );
     await input.press('Enter');
     await page.waitForSelector('[data-dock-header="bh:channel-body"]');
     let response;
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 120; i++) {
       const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
       response = messages.find(
         (m) =>
           m.author.kind === 'bot' &&
           !m.sessionFailure &&
           !m.onboardingWelcome &&
+          !m.toolApprovalRequest &&
           Date.parse(m.at) >= started &&
           m.body.includes(String(limit)),
       );
@@ -358,55 +566,100 @@ try {
       await pause(1000);
     }
     assert.ok(response, 'real model reply missing');
+    await verifyCliTrace(home.botSlug, previousCalls, ['capabilities', 'settings']);
     await shot('read-reply');
-    steps.push('Home submission and actual tool-backed reply');
+    steps.push('Home submission and actual CLI-backed reply');
   }
+  const previousApprovalIds = new Set(
+    phase === 'accept'
+      ? []
+      : (await rpc('channelMessages', { channelId: home.channelId })).messages
+          .filter((m) => m.toolApprovalRequest)
+          .map((m) => m.id),
+  );
+  let requestedLimit;
   if (['approve', 'deny', 'stale'].includes(phase)) {
+    const initial = (await rpc('describe', {}, 'settings')).namespaces.find(
+      (x) => x.ns === 'botharness-client',
+    );
+    const preferred = phase === 'approve' ? 3 : 5;
+    requestedLimit =
+      initial.value.assignmentConcurrencyLimit === preferred ? preferred + 1 : preferred;
     const input = await page.waitForSelector('[data-home-panel] textarea');
     await input.type(
-      `Read the global Assignment concurrency limit and use tob_assignment_limit_set to change it to ${phase === 'approve' ? 3 : 5}. Request my approval. If denied or stale, report the refusal and do not retry. Do not use shell or delegate.`,
+      `Use native bash to run deepseekbot settings botharness-client. Then change assignmentConcurrencyLimit to ${requestedLimit} using deepseekbot settings-set botharness-client --patch-stdin --expected-revision with the revision you just read and --previous-value with the old setting JSON. Pipe only the patch JSON to stdin. Request my approval. If denied or stale, report the exact refusal code and do not retry. Use separate Shell calls for reading and writing. Do not delegate or search for credentials.`,
     );
     await input.press('Enter');
   }
   if (['approve', 'accept', 'deny', 'stale'].includes(phase)) {
-    await page.waitForSelector('::-p-aria(仅批准这一次)', { timeout: 120000 });
-    await click('使用 tob_assignment_limit_set');
-    await shot('approval-review');
+    const message = await waitForApproval(
+      home.channelId,
+      previousApprovalIds,
+      previousCalls,
+      requestedLimit,
+    );
+    const request = message.toolApprovalRequest;
+    const approvalSelector = await showApproval(message);
+    const reviewed = JSON.parse(request.input);
+    assert.equal(reviewed.ns, 'botharness-client');
+    assert.equal(reviewed.scope, 'global');
+    if (phase !== 'accept') assert.equal(reviewed.patch.assignmentConcurrencyLimit, requestedLimit);
     const before = (await rpc('describe', {}, 'settings')).namespaces.find(
       (x) => x.ns === 'botharness-client',
     );
-    if (phase === 'stale')
-      await rpc(
-        'update',
-        {
-          ns: before.ns,
-          patch: { assignmentConcurrencyLimit: 7 },
-          expectedRevision: before.revision,
-        },
-        'settings',
+    assert.equal(reviewed.expectedRevision, before.revision);
+    assert.equal(
+      reviewed.previousValue.assignmentConcurrencyLimit,
+      before.value.assignmentConcurrencyLimit ?? 8,
+    );
+    await shot('approval-review');
+    const concurrentLimit = before.value.assignmentConcurrencyLimit === 7 ? 6 : 7;
+    if (phase === 'stale') {
+      await humanSettingsSet(before, concurrentLimit);
+      assert.equal(
+        (await rpc('describe', {}, 'settings')).namespaces.find((x) => x.ns === 'botharness-client')
+          .value.assignmentConcurrencyLimit,
+        concurrentLimit,
       );
-    await click(phase === 'deny' ? '拒绝' : '仅批准这一次');
-    const expected =
-      phase === 'stale' ? 7 : phase === 'deny' ? before.value.assignmentConcurrencyLimit : 3;
-    for (let i = 0; i < 45; i++) {
-      const actual = (await rpc('describe', {}, 'settings')).namespaces.find(
-        (x) => x.ns === 'botharness-client',
-      );
-      if (actual.value.assignmentConcurrencyLimit === expected) break;
-      await pause(1000);
+      steps.push('Human CLI changes canonical setting while original approval is pending');
     }
+    await decideApproval(approvalSelector, phase === 'deny');
+    const expected =
+      phase === 'stale'
+        ? concurrentLimit
+        : phase === 'deny'
+          ? (before.value.assignmentConcurrencyLimit ?? 8)
+          : reviewed.patch.assignmentConcurrencyLimit;
+    await verifyCliTrace(
+      home.botSlug,
+      previousCalls,
+      ['settings-set'],
+      phase === 'deny' ? 'approval-denied' : phase === 'stale' ? 'stale-setting' : undefined,
+    );
     await page.waitForFunction(
-      () =>
-        ![...document.querySelectorAll('button')].some(
-          (n) => n.textContent?.trim() === '仅批准这一次',
+      (s) =>
+        ![...document.querySelectorAll(s + ' button')].some((n) =>
+          ['仅批准这一次', 'Allow once'].includes(n.textContent?.trim()),
         ),
       { timeout: 30000 },
+      approvalSelector,
     );
-    await pause(6000);
     const actual = (await rpc('describe', {}, 'settings')).namespaces.find(
       (x) => x.ns === 'botharness-client',
     );
     assert.equal(actual.value.assignmentConcurrencyLimit, expected);
+    writeFileSync(
+      resolve(out, 'setting-readback.json'),
+      JSON.stringify(
+        {
+          reviewed,
+          expected,
+          actual: { value: actual.value.assignmentConcurrencyLimit, revision: actual.revision },
+        },
+        null,
+        2,
+      ),
+    );
     steps.push(phase + ': canonical setting read-back ' + expected);
   }
 

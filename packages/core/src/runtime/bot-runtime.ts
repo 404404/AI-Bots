@@ -3,7 +3,7 @@ import {
   GroupSendReview,
   SendReviewRequired,
 } from '../channels/send-review.js';
-import { TobError, type TobService, type TobSetting } from '../tob/service.js';
+import { TobError, type TobService } from '../tob/service.js';
 import { AssignmentInboxAcceptanceUncertainError } from './assignment-delivery.js';
 import {
   AssignmentApprovalCapacity,
@@ -295,6 +295,7 @@ export interface OrchestratorAssignmentAccess {
 }
 
 export interface OrchestratorAgentRun {
+  tobCli?: boolean;
   inboxHistory?(input?: InboxHistoryInput): InboxHistoryPage;
   triage?: OrchestratorInboxTriage;
   acceptNativeInput?: () => boolean;
@@ -552,11 +553,6 @@ export interface OrchestratorChannelAccess {
     replyTo?: string;
     deliveryKey?: string;
   }): Promise<{ channelId: string; message: ChannelMessage }>;
-  tobSetting?(input?: {
-    value: number;
-    previousValue: number;
-    expectedRevision: number;
-  }): Promise<TobSetting>;
   createBot?(input: BotCreateInput): BotCreateOutcome;
   dropDraft?(input: {
     channelId: string;
@@ -666,10 +662,16 @@ export type DmMessageAdmission =
   | { admitted: true; settled: Promise<void> }
   | { admitted: false; reason: DmAdmissionFailure };
 
+export interface TobCliAuthority {
+  (): void;
+
+  markSideEffect(): void;
+}
+
 export interface BotRuntime {
   groupSendReview?: GroupSendReview;
   botCreatePreview?(botSlug: string, args: unknown): BotCreatePreview | undefined;
-  validateTobSetting?(sessionId: string, args: unknown): void;
+  captureTobCliAuthority?(sessionId: string): TobCliAuthority;
   canRequestPrivateInput?(sessionId: string, sourceEventId?: string): boolean;
   askChannel?(sessionId: string): string | undefined;
   askNotice?(sessionId: string, toolName: string): string | undefined;
@@ -3313,10 +3315,11 @@ class BotRuntimeImplementation implements BotRuntime {
     };
   }
 
-  validateTobSetting(sessionId: string, args: unknown): void {
+  captureTobCliAuthority(sessionId: string): TobCliAuthority {
     const owner = this.#ownership.resolve(sessionId);
     if (
       this.#closed ||
+      !this.#ownership.contentAvailable(sessionId) ||
       owner?.rootRole !== 'orchestrator' ||
       owner.parentSessionId !== undefined ||
       !this.#tob?.isTob(owner.botSlug)
@@ -3325,25 +3328,44 @@ class BotRuntimeImplementation implements BotRuntime {
     const turn = this.#turnSources.get(owner.botSlug);
     if (turn?.sessionId !== sessionId || turn.acceptedEventIds.size === 0)
       throw new TobError('human-dm-required');
+    const accepted = new Set(turn.acceptedEventIds);
     const dm = dmChannelId(owner.botSlug);
-    this.#database.read((db) => {
-      for (const id of turn.acceptedEventIds) {
-        const event = db
-          .prepare('SELECT source_kind, channel_id FROM source_events WHERE source_event_id = ?')
-          .get(id);
-        if (event?.source_kind !== 'human-message' || event.channel_id !== dm)
-          throw new TobError('human-dm-required');
-        requireSourceEffects(db, id, owner.botSlug);
-      }
+    const authorize = () => {
+      const currentOwner = this.#ownership.resolve(sessionId);
+      if (
+        this.#closed ||
+        !this.#ownership.contentAvailable(sessionId) ||
+        currentOwner?.botSlug !== owner.botSlug ||
+        currentOwner.rootRole !== 'orchestrator' ||
+        currentOwner.parentSessionId !== undefined ||
+        !this.#tob?.isTob(owner.botSlug)
+      )
+        throw new TobError('tob-authority-required');
+
+      if (
+        this.#turnSources.get(owner.botSlug) !== turn ||
+        turn.acceptedEventIds.size !== accepted.size ||
+        [...accepted].some((id) => !turn.acceptedEventIds.has(id))
+      )
+        throw new TobError('human-dm-required');
+      this.#database.read((db) => {
+        for (const id of accepted) {
+          const event = db
+            .prepare('SELECT source_kind, channel_id FROM source_events WHERE source_event_id = ?')
+            .get(id);
+          if (event?.source_kind !== 'human-message' || event.channel_id !== dm)
+            throw new TobError('human-dm-required');
+          requireSourceEffects(db, id, owner.botSlug);
+        }
+      });
+    };
+    authorize();
+    return Object.assign(authorize, {
+      markSideEffect: () => {
+        authorize();
+        this.#markAdmissionsSideEffect(owner.botSlug, [...accepted]);
+      },
     });
-    if (args !== undefined) {
-      const a = args as { value?: number; previous_value?: number; expected_revision?: number };
-      const current = this.#tob.readSetting();
-      if (!Number.isInteger(a.value) || a.value! < 1 || a.value! > 32)
-        throw new TobError('invalid-setting');
-      if (a.expected_revision !== current.revision || a.previous_value !== current.value)
-        throw new TobError('stale-setting');
-    }
   }
 
   askNotice(sessionId: string, toolName: string): string | undefined {
@@ -4334,6 +4356,7 @@ class BotRuntimeImplementation implements BotRuntime {
     'sessionId' | 'resume' | 'bot' | 'message' | 'inbox' | 'inboundChannelId'
   > {
     return {
+      ...(this.#tob?.isTob(bot.slug) ? { tobCli: true } : {}),
       ...(this.#externalMessaging === undefined
         ? {}
         : {
@@ -5601,25 +5624,6 @@ class BotRuntimeImplementation implements BotRuntime {
         beforeSend();
         this.#channels.removeGroupMember(channel.id, botSlug, 'left');
         return { channelId: channel.id, left: true };
-      },
-      tobSetting: async (input) => {
-        if (!this.#tob?.isTob(botSlug)) throw new TobError('tob-authority-required');
-        if (input === undefined && sessionId.startsWith('direct-')) return this.#tob.readSetting();
-        const authorize = () =>
-          this.validateTobSetting(
-            sessionId,
-            input === undefined
-              ? undefined
-              : {
-                  value: input.value,
-                  previous_value: input.previousValue,
-                  expected_revision: input.expectedRevision,
-                },
-          );
-        authorize();
-        if (input === undefined) return this.#tob.readSetting();
-        beforeSend();
-        return this.#tob.writeSetting(input.value, input.expectedRevision, authorize);
       },
       createBot: (input) => this.#createBot(botSlug, sourceEventId, beforeSend, input),
       sendToBot: async (input) => {

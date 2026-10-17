@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, View } from 'react-native';
+import { Modal, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDesignTheme } from '../design/theme';
@@ -43,7 +44,7 @@ export function DraftEditor({
       <KeyboardAvoidingView
         accessibilityViewIsModal
         onAccessibilityEscape={onClose}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={{ flex: 1, backgroundColor: theme.color.base }}
       >
         <View

@@ -1,3 +1,4 @@
+import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
 import type { PartLibraryEntry } from '../bots/part-library.js';
 import type { OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
@@ -600,9 +601,16 @@ export class BotharnessBridgeService extends TypertRemoteService {
     expectedRevision: number,
     route: ModelRoute,
     globalDefault: boolean,
+    expectedDefaultRevision?: number,
   ): Promise<{ revision: number }> {
     return unwrapAsync(
-      this.methods.onboardingModel({ slug, expectedRevision, route, globalDefault }),
+      this.methods.onboardingModel({
+        slug,
+        expectedRevision,
+        route,
+        globalDefault,
+        expectedDefaultRevision,
+      }),
     );
   }
   modelPlanInherit(slug: string, expectedRevision: number): { revision: number } {
@@ -620,6 +628,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
   modelCatalog(): Promise<{
     models: ModelCatalogEntry[];
     default?: ModelRoute;
+    defaultRevision?: number;
   }> {
     return unwrapAsync(this.methods.modelCatalog({}));
   }
@@ -632,8 +641,16 @@ export class BotharnessBridgeService extends TypertRemoteService {
     name: string,
     orchestrator: ModelRoute,
     assignmentDefault: ModelRoute,
+    assignmentModels?: AssignmentModelOption[],
   ): Promise<{ preset: ModelPreset }> {
-    return unwrapAsync(this.methods.modelPresetCreate({ name, orchestrator, assignmentDefault }));
+    return unwrapAsync(
+      this.methods.modelPresetCreate({
+        name,
+        orchestrator,
+        assignmentDefault,
+        ...(assignmentModels === undefined ? {} : { assignmentModels }),
+      }),
+    );
   }
 
   modelPresetUpdate(
@@ -642,6 +659,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     name: string,
     orchestrator: ModelRoute,
     assignmentDefault: ModelRoute,
+    assignmentModels?: AssignmentModelOption[],
   ): Promise<{ preset: ModelPreset }> {
     return unwrapAsync(
       this.methods.modelPresetUpdate({
@@ -650,12 +668,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
         name,
         orchestrator,
         assignmentDefault,
+        ...(assignmentModels === undefined ? {} : { assignmentModels }),
       }),
     );
   }
 
-  modelPresetApply(slug: string, presetId: string): Promise<{ plan: PersonaBotModelPlan }> {
-    return unwrapAsync(this.methods.modelPresetApply({ slug, presetId }));
+  modelPresetApply(
+    slug: string,
+    presetId: string,
+    expectedRevision?: number,
+    expectedPresetRevision?: number,
+  ): Promise<{ plan: PersonaBotModelPlan }> {
+    return unwrapAsync(
+      this.methods.modelPresetApply({ slug, presetId, expectedRevision, expectedPresetRevision }),
+    );
   }
 
   modelPlan(slug: string): Promise<ModelPlanState> {
@@ -712,7 +738,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.activitySnapshot({}));
   }
 
-  get(slug: string): { bot: PersonaBotDetail } {
+  get(slug: string): { bot: PersonaBotDetail; profileFingerprint: string } {
     return unwrap(this.methods.get({ slug }));
   }
 
@@ -726,7 +752,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
     workspaces?: string[],
     avatar?: string,
     memoryLocation?: string,
-  ): { bot: PersonaBotDetail } {
+    coreMemory?: string,
+    operationKey?: string,
+  ): { bot: PersonaBotDetail; channelId?: string; receipt?: BotCreationReceipt } {
     return unwrap(
       this.methods.create({
         displayName,
@@ -738,6 +766,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
         workspaces,
         avatar,
         memoryLocation,
+        coreMemory,
+        operationKey,
       }),
     );
   }
@@ -751,8 +781,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrapAsync(this.methods.createFromGit({ displayName, gitUrl, roles, description }));
   }
 
-  update(slug: string, patch: PersonaBotPatch): { bot: PersonaBotDetail } {
-    return unwrap(this.methods.update({ slug, patch }));
+  update(
+    slug: string,
+    patch: PersonaBotPatch,
+    expectedProfile?: string,
+  ): { bot: PersonaBotDetail } {
+    return unwrap(this.methods.update({ slug, patch, expectedProfile }));
   }
 
   deletionPreview(slug: string): { preview: PersonaBotDeletionPreview } {

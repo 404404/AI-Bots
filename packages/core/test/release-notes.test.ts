@@ -556,6 +556,35 @@ describe('release service', () => {
     expect(await first).toEqual(await second);
   });
 
+  it('does not let a guarded or different-version install join an ongoing Human install', async () => {
+    let finish: (value: ReleaseInstallerResult) => void = () => undefined;
+    const manager = {
+      listBundles: vi.fn(async () => [{ name: 'deepseekbot', installed: true }]),
+      installBundle: vi.fn(
+        () =>
+          new Promise<ReleaseInstallerResult>((resolve) => {
+            finish = resolve;
+          }),
+      ),
+    };
+    const service = installable(manager);
+    const human = service.install('1.1.0');
+    await vi.waitFor(() => expect(manager.installBundle).toHaveBeenCalledTimes(1));
+    const guard = vi.fn();
+    expect(await service.install('1.1.0', guard)).toEqual({
+      status: 'failed',
+      reason: 'unavailable',
+    });
+    expect(await service.install('1.2.0', guard)).toEqual({
+      status: 'failed',
+      reason: 'unavailable',
+    });
+    expect(await service.install('1.2.0')).toEqual({ status: 'failed', reason: 'unavailable' });
+    expect(manager.installBundle).toHaveBeenCalledTimes(1);
+    finish({ application: 'restart-required' });
+    expect(await human).toMatchObject({ status: 'installed', installed: '1.1.0' });
+  });
+
   it('reads the installed version and ledgers next to the module', () => {
     const release = installedRelease(new URL('../src/plugin.ts', import.meta.url).href);
     expect(release.version()).toBe('0.0.0');

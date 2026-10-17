@@ -2304,8 +2304,20 @@ const TOB_IDENTITY_MIGRATION: SchemaMigration = {
   },
 };
 
-const GROUP_SEND_REVIEW_MIGRATION: SchemaMigration = {
+const BOT_CREATION_OPERATION_MIGRATION: SchemaMigration = {
   generation: 97,
+  module: 'bot-creation',
+  description: 'Reserve stable Bot creation identities for idempotent live CLI retries',
+  migrate(database) {
+    database.exec(`CREATE TABLE bot_creation_operations (
+      operation_key TEXT PRIMARY KEY, payload_hash TEXT NOT NULL,
+      bot_slug TEXT NOT NULL UNIQUE, status TEXT NOT NULL CHECK(status IN ('reserved','created'))
+    );`);
+  },
+};
+
+const GROUP_SEND_REVIEW_MIGRATION: SchemaMigration = {
+  generation: 98,
   module: 'channel-send-review',
   description: 'Opt-in local Group send review and bounded durable draft intents',
   migrate(database) {
@@ -2416,5 +2428,6 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   CHANNEL_REACTION_MIGRATION,
   SECRET_CLI_TOOL_RULE_MIGRATION,
   TOB_IDENTITY_MIGRATION,
+  BOT_CREATION_OPERATION_MIGRATION,
   GROUP_SEND_REVIEW_MIGRATION,
 ]);

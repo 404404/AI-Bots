@@ -19,6 +19,7 @@ export interface SettingsActions {
   onComputers(): void;
   onAppIcon(): void;
   onNotifications(): void;
+  onModels(): void;
   onUnpair(): Promise<void>;
   onCopyVersion(text: string): void;
 }
@@ -40,6 +41,7 @@ export function SettingsView({
   actions,
   statistics,
   messageDisplay,
+  activityCount,
 }: {
   hostName: string | undefined;
   connection: ConnectionState;
@@ -48,6 +50,7 @@ export function SettingsView({
   actions: SettingsActions;
   statistics?: ReactNode;
   messageDisplay?: ReactNode;
+  activityCount?: ReactNode;
 }) {
   const theme = useDesignTheme();
   const [unpairError, setUnpairError] = useState<string>();
@@ -95,15 +98,30 @@ export function SettingsView({
           </Pressable>
         </View>
         <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
+        <SettingsSection title={t.modelSettings.title} on={SHEET_GROUP}>
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.modelSettings.title}
+            detail={t.modelSettings.global}
+            disclosure
+            onPress={actions.onModels}
+          />
+        </SettingsSection>
         <SettingsSection title={t.connections} on={SHEET_GROUP}>
           <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
           <SettingsRow
             on={SHEET_GROUP}
             title={t.computers}
             detail={t.computersHint}
+            disclosure
             onPress={actions.onComputers}
           />
-          <SettingsRow on={SHEET_GROUP} title={t.notifications} onPress={actions.onNotifications} />
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.notifications}
+            disclosure
+            onPress={actions.onNotifications}
+          />
           <SettingsRow
             on={SHEET_GROUP}
             title={t.openFullClient}
@@ -128,8 +146,10 @@ export function SettingsView({
             on={SHEET_GROUP}
             title={t.appIcon}
             detail={t.appIconHint}
+            disclosure
             onPress={actions.onAppIcon}
           />
+          {activityCount}
         </SettingsSection>
         {messageDisplay}
         <SettingsSection title={t.about} on={SHEET_GROUP}>

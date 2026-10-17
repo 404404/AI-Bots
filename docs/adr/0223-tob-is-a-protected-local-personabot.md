@@ -16,7 +16,7 @@ Schema Generation 96 reserves one local Tob identity before provisioning its can
 
 The first capability reads and changes only `botharness-client.assignmentConcurrencyLimit` (integer 1–32, global to the current Profile). Native Settings owns values, revisions and persistence. Existing approval owns review and execution guards. Tob's root Orchestrator must carry an accepted canonical Human message from its private DM; Group, external IM, Bot sources, Assignment Sessions and fabricated identities do not grant management authority. Read and write recheck provenance, and writes bind the reviewed previous value, target and revision. A stale or uncertain write refuses; reconciliation reads the authority. The existing live scheduler continues to enforce new admissions without stopping active work.
 
-The direct CLI tool path runs the same tool code. Protected Tob reads are explicitly diagnostic. Direct writes cannot fabricate Human-DM authority; human settings administration retains its existing separate CLI contract.
+The initial dedicated management Tool path is replaced by the scoped native Shell → DeepSeekBot CLI path in [ADR-0224](0224-tob-management-uses-scoped-native-shell-cli.md). The protected identity, accepted Human DM, native Settings owner and approval boundaries above remain. Human settings administration retains its separate authenticated CLI contract.
 
 Home model setup writes the native Host default. Tob inherits it unless explicitly customized; other independent Bot plans remain unchanged. Drafts and a submission ID stay Client-local; retries reuse the ID and reload never sends automatically. Home uses one canonical Human Attention query, not a new inbox or model-generated dashboard.
 
