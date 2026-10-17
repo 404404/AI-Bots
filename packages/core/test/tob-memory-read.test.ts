@@ -1,4 +1,5 @@
-import { writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { writeFileSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { attachOperationalModule } from '../src/database/owner.js';
@@ -278,6 +279,29 @@ describe('Tob-owned delegated Memory reading', () => {
       ok: false,
       error: { code: 'memory-invalid' },
     });
+  });
+
+  it('reads a committed symlink as Git data without following it to another credential file', async () => {
+    const f = await fixture();
+    const id = await f.create();
+    const b = await scoped(f, id);
+    const outside = join(createTempRoot('unselected-memory-canary-'), 'credentials.txt');
+    writeFileSync(outside, 'PRIVATE-CREDENTIAL-CANARY');
+    const memory = f.core.registry.memoryDirFor('alpha')!;
+    symlinkSync(outside, join(memory, 'link.md'));
+    execFileSync('git', ['add', '--', 'link.md'], { cwd: memory });
+    execFileSync('git', ['commit', '--no-gpg-sign', '-m', 'Synthetic linked Memory'], {
+      cwd: memory,
+      stdio: 'ignore',
+    });
+    const snapshot = await b.invoke('memory-snapshot', { slug: 'alpha' });
+    const file = await b.invoke('memory-file', {
+      slug: 'alpha',
+      sha: snapshot.value.sha,
+      path: 'link.md',
+    });
+    expect(file).toMatchObject({ ok: true, value: { body: outside, readOnly: true } });
+    expect(JSON.stringify(file)).not.toContain('PRIVATE-CREDENTIAL-CANARY');
   });
 
   it('rechecks archived targets, source authority, explicit revocation and Workspace Grant lifetime', async () => {
