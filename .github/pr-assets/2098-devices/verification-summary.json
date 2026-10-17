@@ -1,0 +1,46 @@
+{
+  "issue": 2098,
+  "pr": 2129,
+  "base": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
+  "testedProductSource": "8bde3340afb8ba4a23f3f715851f83da188168d2",
+  "captureCommit": "e734b55dc6b74fa07ec9b0e8d1a9e6b762b67f51",
+  "productionIdenticalAfterTestedSource": true,
+  "checks": {
+    "direct-final": {
+      "revokedAccessDenied": true,
+      "streamClosed": true,
+      "syntheticClientOnly": true,
+      "noPageErrors": true,
+      "noSecretInEvidenceOrHostLog": true
+    },
+    "model-final": {
+      "modelShell": true,
+      "revokedAccessDenied": true,
+      "streamClosed": true,
+      "modelOfferHumanHandoff": true,
+      "syntheticClientOnly": true,
+      "noPageErrors": true,
+      "noSecretInEvidenceOrHostLog": true
+    }
+  },
+  "canonicalModelEvidence": {
+    "shellTracePresent": true,
+    "canonicalReplyPresent": true
+  },
+  "sourceChecks": {
+    "focusedTests": 25,
+    "earlierRelatedTests": 97,
+    "typecheck": "passed",
+    "build": "passed",
+    "fullLocalSuite": "not-run"
+  },
+  "gates": {
+    "CI": "requested-ci:full",
+    "nativeDesktop": "pending-parent-serialized-run",
+    "physicalPhone": "unverified",
+    "HumanQA": "pending",
+    "merge": "not-authorized",
+    "deployment": "not-authorized"
+  },
+  "publicationCheck": "No tests, product builds, Host or native Desktop launches were run during artifact publication."
+}
