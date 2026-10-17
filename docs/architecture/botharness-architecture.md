@@ -1075,3 +1075,7 @@ Request 生命周期与撤销检查。续接保留原目标，每次读取重新
 目标生命周期；读取内容不会扩大权限。结果标明 Bot/文件/完整 SHA、修订状态与 partial/
 unavailable。见 [ADR-0228](../adr/0228-tob-assignments-read-selected-memory-through-scoped-cli.md)
 与 [CLI 指南](../bot-cli.zh.md#tob-assignment-memory-只读查询)。
+
+委托 Memory Assignment 的每次 Shell 调用只接受一条字面的 `deepseekbot` 命令。受限 Consumer
+仅携带 broker 上下文，在进程内调用随产品交付的 CLI，不执行操作系统 Shell。原始命令、解释器、
+命令替换、重定向、文件工具与 Subagent 均不可用。目标身份在审核前固定，创建时再次比对。

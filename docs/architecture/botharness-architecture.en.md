@@ -734,3 +734,8 @@ revocation checks. Resuming retains the original targets. Every read rechecks so
 Grant and target lifecycle; retrieved text never expands authority. Results name Bot/file/full SHA,
 revision status and partial/unavailable state. See [ADR-0228](../adr/0228-tob-assignments-read-selected-memory-through-scoped-cli.md)
 and the [CLI guide](../bot-cli.md#tob-assignment-memory-reading).
+
+Delegated Memory Assignments accept one literal `deepseekbot` command per Shell call. This restricted
+Consumer invokes the shipped CLI in-process with only its broker context; it never executes OS Shell
+syntax. Raw commands, interpreters, substitutions, redirects, file tools and Subagents are unavailable.
+Target incarnation timestamps are captured before review and rechecked at creation.

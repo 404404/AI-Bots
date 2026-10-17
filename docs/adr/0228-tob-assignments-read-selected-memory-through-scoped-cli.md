@@ -11,7 +11,7 @@ Tob-owned Workspace Grant. A grant spanning the Bot data root or a Memory Reposi
 
 Tob creates this Assignment through `assignment-memory-create` in the existing invocation-scoped
 native Shell CLI. The Host requires the protected Tob root Orchestrator and one accepted canonical
-Human private-DM Source Event. Creation uses existing review policy and a stable operation key.
+Human private-DM Source Event. Creation snapshots selected Bot incarnations before Human review, rechecks them at creation, and uses existing review policy plus a stable operation key.
 The same key, payload and original source return the canonical Assignment receipt after a lost
 response; changed inputs refuse. Creating against an occupied Continuity Key refuses: continue
 the existing Session through its normal Assignment Request instead.
@@ -23,7 +23,7 @@ contain credentials. The Assignment uses `workspace-write` and `ask` even if Tob
 full access. Native reporting, pending acceptance, continuation, stopping and archiving retain
 their existing owners.
 
-Its native Shell gets a fresh invocation lease from the same broker used by Tob. That broker
+Its native Shell is a restricted CLI Consumer: it accepts one literal `deepseekbot` invocation, invokes the shipped CLI in-process with only its broker context, and never starts an OS Shell. Operators, substitutions, redirects, environment assignments and alternate executables refuse. Native file tools, Subagents and other execution tools are unavailable in this Assignment. Each call gets a fresh invocation lease from the same broker used by Tob. That broker
 admits only `memory-snapshot`, `memory-file`, `memory-history` and `memory-diff`. It removes
 administrative Host credentials and refuses management commands and writes. Each request checks
 original Human provenance and source availability, Tob ownership, Assignment lifetime/archive,
