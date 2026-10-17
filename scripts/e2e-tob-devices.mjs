@@ -4,7 +4,9 @@ import { createRequire } from 'node:module';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
-const instance = JSON.parse(readFileSync(process.env.BH_E2E_INSTANCE, 'utf8'));
+const instance = JSON.parse(
+  readFileSync(process.env.BH_E2E_INSTANCE || process.env.BH_E2E_HUMAN_INSTANCE, 'utf8'),
+);
 const out = resolve(process.env.BH_E2E_EVIDENCE || '.humanlayer/verify/tob-devices/journey');
 mkdirSync(out, { recursive: true, mode: 0o700 });
 const login = new URL(instance.url),
@@ -75,9 +77,15 @@ const puppeteer = createRequire(
     'node_modules/',
   ),
 )('puppeteer');
-const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--lang=en-US'] });
-const page = await browser.newPage();
-await page.setViewport({ width: 1440, height: 1000 });
+const native = process.env.BH_DESKTOP_CDP;
+const browser = native
+  ? await puppeteer.connect({ browserURL: native, defaultViewport: null })
+  : await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--lang=en-US'] });
+const page = native
+  ? (await browser.pages()).find((entry) => entry.url().startsWith('dsh-app://app/'))
+  : await browser.newPage();
+assert.ok(page, 'candidate Desktop page for the authenticated Host is missing');
+if (!native) await page.setViewport({ width: 1440, height: 1000 });
 const errors = [],
   consoleLines = [];
 page.on('pageerror', (e) => errors.push(e.message));
@@ -111,6 +119,10 @@ async function capture(label) {
     JSON.stringify(await page.accessibility.snapshot(), null, 2),
   );
 }
+async function resetClient() {
+  if (native) await page.reload({ waitUntil: 'domcontentloaded' });
+  else await page.goto(instance.url, { waitUntil: 'networkidle2' });
+}
 async function showDevices() {
   await click('Bot settings', 'Bot 设置');
   await click('Devices', '设备');
@@ -118,7 +130,7 @@ async function showDevices() {
 }
 async function model(prompt, commands) {
   const home = await rpc('tobHome');
-  await page.goto(instance.url, { waitUntil: 'networkidle2' });
+  await resetClient();
   await page.waitForSelector('.bh-workspace-rail');
   if (!(await page.$('[data-home-panel]')))
     await page.click('.bh-workspace-rail [data-pinned-panel="bh:home"]');
@@ -199,7 +211,7 @@ async function model(prompt, commands) {
   checks.modelShell = true;
 }
 try {
-  await page.goto(instance.url, { waitUntil: 'networkidle2' });
+  await resetClient();
   for (let i = 0; i < 5; i++) {
     const visible = await page.evaluate(() =>
       [...document.querySelectorAll('button')]
@@ -314,7 +326,7 @@ try {
   assert.equal((await denied.json()).code, 'device-revoked');
   checks.revokedAccessDenied = true;
   checks.streamClosed = true;
-  await page.goto(instance.url, { waitUntil: 'networkidle2' });
+  await resetClient();
   await page.waitForSelector('.bh-workspace-rail');
   await showDevices();
   await page.waitForSelector('[data-paired-device][data-revoked]');
@@ -346,6 +358,7 @@ try {
     checks.modelOfferHumanHandoff = true;
   }
   checks.syntheticClientOnly = true;
+  checks.nativeDesktop = Boolean(native);
   checks.noPageErrors = errors.length === 0;
   assert.equal(errors.length, 0, 'browser page errors');
   const safe = JSON.stringify({ checks, outputs, errors, consoleLines }, null, 2);
@@ -365,5 +378,6 @@ try {
   if (!(await page.$('[data-pair-qr]'))) await page.screenshot({ path: join(out, 'failure.png') });
   throw error;
 } finally {
-  await browser.close();
+  if (native) browser.disconnect();
+  else await browser.close();
 }
