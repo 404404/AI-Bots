@@ -3,7 +3,7 @@ lang: zh
 template: doc
 theme: paper
 title: Tob 偏好控制：目标、范围与现有 owner
-subtitle: Issue 2095 · 待父级发布 PR · 2026-10-18
+subtitle: Draft PR 2126 · Issue 2095 · 2026-10-18
 source: 应用源码 eb0f85116d934d56d8c60b92e88117e6f2b18725
 ---
 
@@ -80,7 +80,8 @@ owner 先刷新真实存储，再比较 expectedState。
 
 ## E 仍需验证与回退
 
-原生 Desktop、真实 OS 权限和通知投递尚未验证。
+父级正在验证原生 Desktop，当前尚未验收。
+真实 OS 权限和通知投递仍未验证。
 原生脚本只覆盖选定的一个 Client。
 它不证明双窗口、独立 context 或三个 Client 的行为。
 CI、Human QA、合并与部署也不属于本地通过项。

@@ -52,7 +52,8 @@
       "Human QA",
       "merge",
       "deployment"
-    ]
+    ],
+    "native": "parent serialized run in progress; no result claimed"
   },
   "scope": {
     "themeAndLocale": "native Host user settings, affects all connected Clients",
@@ -60,7 +61,7 @@
     "nativeHarness": "single selected Client only; multiwindow/multicontext checks explicitly omitted"
   },
   "imageComparison": "candidate before/after action states; base-revision capture not run",
-  "publication": "local committed review assets; parent owns PR and rendering verification",
+  "publication": "Draft PR 2126; GitHub raw screenshot responses checked; native parent run in progress and unqualified",
   "images": [
     {
       "file": "explicit-host-theme-review.png",
@@ -86,5 +87,6 @@
       "file": "tob-notification-result.png",
       "sha256": "4b579c331ff896b8314c303773410aac0387e024b5adc52aa680964d41798752"
     }
-  ]
+  ],
+  "pullRequest": "https://github.com/BotHarness/DeepSeekBot/pull/2126"
 }
