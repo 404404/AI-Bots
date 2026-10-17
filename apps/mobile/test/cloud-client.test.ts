@@ -314,7 +314,9 @@ describe('cloud organizations', () => {
     await client.importConfig(JSON.stringify(config));
     await client.login(config.instanceId);
     expect(await client.createOrganization(config.instanceId, 'Mobile project')).toBe('org_a');
-    expect((await client.listOrganizations(config.instanceId)).organizations[0].role).toBe('owner');
+    expect((await client.listOrganizations(config.instanceId)).organizations[0]?.role).toBe(
+      'owner',
+    );
     await client.useOrganization(config.instanceId, 'org_a');
     expect(f.state.selected).toBe('org_a');
     await client.updateOrganization(config.instanceId, 'Shared note', 1);
@@ -323,15 +325,15 @@ describe('cloud organizations', () => {
     });
     const restarted = new CloudClient(f.rt);
     await restarted.load();
-    expect(restarted.getSnapshot().rows[0].organization).toBeUndefined();
+    expect(restarted.getSnapshot().rows[0]?.organization).toBeUndefined();
     await restarted.whoami(config.instanceId);
-    expect(restarted.getSnapshot().rows[0].organization).toMatchObject({
+    expect(restarted.getSnapshot().rows[0]?.organization).toMatchObject({
       organizationId: 'org_a',
       description: 'Shared note',
       version: 2,
     });
     await restarted.logout(config.instanceId);
-    expect(restarted.getSnapshot().rows[0].organization).toBeUndefined();
+    expect(restarted.getSnapshot().rows[0]?.organization).toBeUndefined();
   });
   it('retains the original creation operation across response loss and app restart', async () => {
     const f = organizationsFixture();
@@ -344,14 +346,14 @@ describe('cloud organizations', () => {
     ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
     const restarted = new CloudClient(f.rt);
     await restarted.load();
-    expect(restarted.getSnapshot().rows[0].pendingCreate?.name).toBe('Mobile project');
+    expect(restarted.getSnapshot().rows[0]?.pendingCreate?.name).toBe('Mobile project');
     await expect(restarted.createOrganization(config.instanceId, 'Other')).rejects.toMatchObject({
       code: 'PENDING_ORGANIZATION_CREATE',
     });
     await restarted.createOrganization(config.instanceId, 'Mobile project');
     expect(f.operations).toHaveLength(2);
     expect(f.operations[0]).toBe(f.operations[1]);
-    expect(restarted.getSnapshot().rows[0].pendingCreate).toBeUndefined();
+    expect(restarted.getSnapshot().rows[0]?.pendingCreate).toBeUndefined();
   });
   it('never treats stale owner UI or a mismatched selection response as organization authorization', async () => {
     const f = organizationsFixture();
@@ -365,12 +367,12 @@ describe('cloud organizations', () => {
     });
     expect(f.state.description).toBe('');
     await client.whoami(config.instanceId);
-    expect(client.getSnapshot().rows[0].organization?.role).toBe('member');
+    expect(client.getSnapshot().rows[0]?.organization?.role).toBe('member');
     f.state.denied = true;
     await expect(client.useOrganization(config.instanceId, 'org_a')).rejects.toMatchObject({
       code: 'ORGANIZATION_ACCESS_DENIED',
     });
-    expect(client.getSnapshot().rows[0].organization).toBeUndefined();
+    expect(client.getSnapshot().rows[0]?.organization).toBeUndefined();
     f.state.denied = false;
     f.state.mismatch = true;
     await expect(client.useOrganization(config.instanceId, 'org_a')).rejects.toMatchObject({
