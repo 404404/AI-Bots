@@ -3442,9 +3442,8 @@ class BotRuntimeImplementation implements BotRuntime {
     const authority = this.captureTobCliAuthority(sessionId);
     authority();
     const owner = this.#ownership.resolve(sessionId)!;
-    const turn = this.#turnSources.get(owner.botSlug)!;
-    if (turn.acceptedEventIds.size !== 1) throw new TobError('human-dm-required');
-    const sourceEventId = [...turn.acceptedEventIds][0]!;
+    if (authority.humanSourceEventIds.length !== 1) throw new TobError('human-dm-required');
+    const sourceEventId = authority.humanSourceEventIds[0]!;
     if (
       !Array.isArray(input.targets) ||
       input.targets.length < 1 ||
@@ -3643,7 +3642,7 @@ class BotRuntimeImplementation implements BotRuntime {
       currentClientTarget: () => {
         authorize();
         const targets = this.#database.read((db) =>
-          [...accepted].map((id) => {
+          [input.sourceEventId].map((id) => {
             const row = db
               .prepare('SELECT payload_json FROM source_events WHERE source_event_id = ?')
               .get(id);

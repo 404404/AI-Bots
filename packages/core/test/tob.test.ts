@@ -394,6 +394,11 @@ describe('Tob canonical identity and settings', () => {
     >;
     let automationAnswerChecked = false;
     const steer = vi.fn(() => true);
+    let workspace: DshWorkspace | undefined;
+    const clients = new ClientControlService();
+    const target = { clientId: 'triage-client', generation: 'triage-generation' };
+    const proof = 'triage-client-proof';
+    clients.register(target, 'web', proof);
     const f = fixture(
       async (run) => {
         if (run.acceptNativeInput) {
@@ -425,12 +430,22 @@ describe('Tob canonical identity and settings', () => {
         started();
         await released;
       },
-      { triageContinuation: true },
+      {
+        triageContinuation: true,
+        ensureTobWorkspace: async (path) => {
+          workspace = { id: 'triage-workspace', path, title: 'Tob', status: async () => 'ok' };
+          return workspace;
+        },
+        workspaces: () => ({
+          get: () => workspace,
+          list: () => (workspace ? [workspace] : []),
+        }),
+      },
       steer,
     );
     try {
       const home = await f.core.tob.ensure();
-      const bridge = createBridgeMethods({ ...f.core });
+      const bridge = createBridgeMethods({ ...f.core, clientControl: clients });
       expect(
         await bridge.channelSend({
           channelId: home.channelId,
@@ -467,6 +482,8 @@ describe('Tob canonical identity and settings', () => {
         channelId: home.channelId,
         messageId: 'human-' + crypto.randomUUID(),
         body: 'Create an offer now',
+        clientTarget: target,
+        clientProof: proof,
       });
       expect(steer).toHaveBeenCalled();
       const authority = f.core.runtime.captureTobCliAuthority!(triage.sessionId);
@@ -475,6 +492,29 @@ describe('Tob canonical identity and settings', () => {
       expect(authority.acceptedSourceEventIds.length).toBeGreaterThan(
         authority.humanSourceEventIds.length,
       );
+      expect(authority.currentClientTarget!()).toEqual(target);
+      const input = {
+        purpose: 'Read selected Memory from the fresh Human request',
+        grantId: f.core.grants.list(home.botSlug)[0]!.id,
+        targets: [home.botSlug],
+        operationKey: 'triage-memory-read-0001',
+        expectedTargets: f.core.runtime.prepareMemoryReadTargets!(triage.sessionId, [home.botSlug]),
+      };
+      const assignment = f.core.runtime.createMemoryReadAssignment!(triage.sessionId, input);
+      expect(assignment.outcome).toBe('created');
+      const reused = f.core.runtime.createMemoryReadAssignment!(triage.sessionId, input);
+      expect(reused).toMatchObject({ outcome: 'reused' });
+      if (assignment.outcome !== 'created') throw new Error('Expected read-only Assignment');
+      const scope = f.core.runtime.assignmentMemoryScope!(assignment.assignment.sessionId)!;
+      expect(scope.sourceEventId).toBe(authority.humanSourceEventIds[0]);
+      expect(scope.sourceEventId).not.toBe(triage.triage!.current()[0]);
+      expect(scope.targets).toEqual([home.botSlug]);
+      expect(() =>
+        f.core.runtime.createMemoryReadAssignment!(triage.sessionId, {
+          ...input,
+          purpose: 'Changed',
+        }),
+      ).toThrow('operation-key-conflict');
       authority.markSideEffect();
       expect(await f.core.tob.writeSetting(3, 0, authority)).toMatchObject({
         value: 3,
@@ -508,6 +548,13 @@ describe('Tob canonical identity and settings', () => {
           .run(anchor),
       );
       expect(authority).toThrow('Source Channel has ended');
+      expect(() => authority.currentClientTarget!()).toThrow('Source Channel has ended');
+      expect(() =>
+        f.core.runtime.createMemoryReadAssignment!(triage.sessionId, {
+          ...input,
+          operationKey: 'triage-memory-refused-0002',
+        }),
+      ).toThrow('Source Channel has ended');
       probe.transaction((db) =>
         db
           .prepare('UPDATE inbox_admissions SET last_error = NULL WHERE source_event_id = ?')
@@ -530,6 +577,7 @@ describe('Tob canonical identity and settings', () => {
       }
       release();
       await f.core.runtime.whenIdle();
+      clients.dispose();
       await f.close();
     }
   }, 30000);
