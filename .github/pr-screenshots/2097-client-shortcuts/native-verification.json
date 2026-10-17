@@ -1,0 +1,83 @@
+{
+  "runtimeSource": "6eea6b76828c94c7a4dbcab00ff101a2cde16ca1",
+  "execution": "root-owned serialized native queue",
+  "before": {
+    "profile": "desktop:macos",
+    "revision": "cb569023-f62a-44c5-b056-78ebc68c052c",
+    "commands": [
+      {
+        "id": "botharness.panel.p62-68-3a-68-6f-6d-65",
+        "binding": {
+          "code": "KeyH",
+          "modifiers": [
+            "alt",
+            "shift",
+            "meta"
+          ]
+        },
+        "modified": false,
+        "keys": [
+          "⌥",
+          "⇧",
+          "⌘",
+          "H"
+        ]
+      },
+      {
+        "id": "botharness.navigation.quick-switcher",
+        "binding": {
+          "code": "KeyK",
+          "modifiers": [
+            "primary"
+          ]
+        },
+        "modified": false,
+        "keys": "⌘K"
+      }
+    ]
+  },
+  "after": {
+    "profile": "desktop:macos",
+    "revision": "cbff4d51-8ac2-49ce-9914-a65f2a116832",
+    "commands": [
+      {
+        "id": "botharness.panel.p62-68-3a-68-6f-6d-65",
+        "binding": {
+          "code": "KeyU",
+          "modifiers": [
+            "alt",
+            "shift",
+            "meta"
+          ]
+        },
+        "modified": true,
+        "keys": [
+          "⌥",
+          "⇧",
+          "⌘",
+          "U"
+        ]
+      },
+      {
+        "id": "botharness.navigation.quick-switcher",
+        "binding": null,
+        "modified": true,
+        "keys": ""
+      }
+    ]
+  },
+  "keyDelivery": "Electron BrowserWindow.webContents.sendInputEvent keyDown/keyUp U with meta+alt+shift; Home then visibly opens",
+  "restart": {
+    "exitCode": 0,
+    "assertions": [
+      "Home binding remains KeyU",
+      "quick-switcher binding remains null",
+      "Client generation changes"
+    ],
+    "pageErrors": []
+  },
+  "directPageErrors": [],
+  "physicalKeys": false,
+  "coverage": "single desktop:macos Client; not IME/modal/editable edge cases or Tob model approval",
+  "mainDesktopRestored": true
+}
