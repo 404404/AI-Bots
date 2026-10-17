@@ -1,6 +1,6 @@
 # ADR-0221: Global and Channel workspaces own panel placement
 
-- Status: Accepted (Sessions, Memory and Schedules slices; remaining subpanels staged)
+- Status: Accepted (Sessions, Memory, Schedules, Browser and Computer slices)
 - Date: 2026-10-17
 - Spec: [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048)
 - First runnable slice: [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049)
@@ -75,4 +75,10 @@ The existing layout record advances to v5 with `botPanelSeeds` and `botWorkspace
 
 Messages header switches and its shared context menu operate the same layout owner. Hiding a switch closes that child; restoring a switch does not silently reopen it. Child header menus close or reposition only that child. Group contexts cannot open these Bot-only panels, including through existing shortcuts; switching to a Group preserves each Bot DM's saved state. Their existing command identities, Primary+Alt+Shift+6 / E / 9 defaults, custom overrides and explicit unbinding are unchanged. Each command uses the same parent restoration state machine as Sessions. Layout actions do not create, cancel or edit schedules or Memory.
 
-The native bridge and Host APIs do not change. Browser/Computer layout migration and transient Members/files/Inbox unification remain separate work.
+The native bridge and Host APIs do not change. Transient Members/files/Inbox unification remains separate work.
+
+## Browser and Computer slice (#2069)
+
+Browser and Computer reuse the same stable Bot Channel split containers, header switches and shared context menu. The global rail no longer exposes either entry. v6 backs up the original record at `.before-bot-workspace-v6`, migrates both outer nodes into lazy seeds, and preserves v5 Memory/Schedules seeds and per-Channel states. Older version backup keys remain intact. Existing Browser/Computer Consumers retain their access, observation and execution owners; visibility does not grant access, open tabs, start a Computer or stop resources.
+
+Existing command IDs and Primary+Alt+Shift+B / 0 defaults remain unchanged, including customization and explicit unbinding. Group and unresolved Bot contexts cannot execute either child action. Disabled access uses the shared centered panel icon/description with the existing explicit power action in the child header. Layout moves preserve mounted content; changing Bot scope follows the existing keyed Consumer lifecycle.

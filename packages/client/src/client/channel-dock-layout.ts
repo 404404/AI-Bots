@@ -8,14 +8,20 @@ import type {
 import type { DockPanelPosition } from './dock-panels.js';
 
 export const CHANNEL_DOCK_STORAGE_KEY = 'botharness.bot-mode-layout';
-export const CHANNEL_DOCK_LAYOUT_VERSION = 5;
+export const CHANNEL_DOCK_LAYOUT_VERSION = 6;
 export const DEFAULT_WORKSPACE_GAP = 4;
 export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
 export const CHANNEL_BODY_COMPONENT = 'channel-body';
 export const CHANNEL_ENTRY_COMPONENT = 'channel-entry';
 export const DEFAULT_DOCK_PANELS = ['sessions'] as const;
-export const BOT_WORKSPACE_PANELS = ['memory-files', 'memory-evolution', 'schedules'] as const;
+export const BOT_WORKSPACE_PANELS = [
+  'memory-files',
+  'memory-evolution',
+  'schedules',
+  'botharness-browser',
+  'botharness-computer',
+] as const;
 export const CHANNEL_WORKSPACE_PANELS: readonly string[] = ['sessions', ...BOT_WORKSPACE_PANELS];
 export type BotWorkspaceStates = Readonly<Record<string, ChannelWorkspaceState>>;
 
@@ -95,7 +101,7 @@ export function readChannelDock(
     const value: unknown = JSON.parse(raw);
     if (
       !isRecord(value) ||
-      ![1, 2, 3, 4, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
+      ![1, 2, 3, 4, 5, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
     )
       return undefined;
     if (!isLayout(value['layout'])) return undefined;
@@ -152,7 +158,8 @@ export function readChannelDock(
       value['version'] === CHANNEL_DOCK_LAYOUT_VERSION ? sessions : migrateBotWorkspaces(sessions);
     if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
       try {
-        const backups = ['before-bot-workspace-v5'];
+        const backups = ['before-bot-workspace-v6'];
+        if (Number(value['version']) < 5) backups.push('before-bot-workspace-v5');
         if (Number(value['version']) < 4) backups.push('before-channel-workspace-v4');
         if (Number(value['version']) < 3) backups.push('before-sessions-v3');
         for (const suffix of backups) {
@@ -180,7 +187,7 @@ export function writeChannelDock(
         previous = JSON.parse(raw);
       } catch {}
       if (!isRecord(previous) || previous['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
-        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`;
+        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v6`;
         if (storage?.getItem(backupKey) == null) storage?.setItem(backupKey, raw);
       }
     }

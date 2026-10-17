@@ -797,7 +797,13 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     component: () => null,
   });
   registry.registerEntry({ ...entry('sessions'), label: '会话' });
-  const botOnly = ['memory-files', 'memory-evolution', 'schedules'];
+  const botOnly = [
+    'memory-files',
+    'memory-evolution',
+    'schedules',
+    'botharness-browser',
+    'botharness-computer',
+  ];
   for (const id of botOnly) registry.registerEntry(entry(id));
   const workspace = { rail: () => createElement('nav') };
   const view = (id: string) =>
