@@ -5,7 +5,7 @@ export const TOB_AGENT_BACKUP_USAGE: Readonly<Record<string, string>> = {
   'profile-backup-preview':
     'deepseekbot profile-backup-preview; returns a safe planId, never the private export token',
   'profile-backup-export':
-    'deepseekbot profile-backup-export --plan <reviewed-planId> --confirm; protected Host output only',
+    'deepseekbot profile-backup-export --plan <reviewed-planId> --confirm; protected Host output only; receiptId equals planId, and completed same-plan replay only reads the original artifact',
   'profile-backup-inspect':
     'deepseekbot profile-backup-inspect --receipt <export-receiptId>; bounded manifest metadata only',
   'profile-recovery': 'deepseekbot profile-recovery',

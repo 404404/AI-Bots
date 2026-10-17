@@ -1,3 +1,4 @@
+import { BACKUP_OWNER_CODES } from '../bots/cli-backup.js';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage } from 'node:http';
 import { TOB_AGENT_COMMAND_USAGE } from '../bots/cli-agent-management.js';
@@ -21,6 +22,7 @@ const IMAGE_COMMANDS = new Set([
   'group-avatar-set',
 ]);
 const CODES = new Set([
+  ...BACKUP_OWNER_CODES,
   'tob-authority-required',
   'human-dm-required',
   'stale-setting',

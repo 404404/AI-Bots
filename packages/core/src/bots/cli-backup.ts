@@ -1,14 +1,17 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   closeSync,
   constants,
   fstatSync,
+  fsyncSync,
+  linkSync,
+  lstatSync,
   openSync,
   readFileSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { isAbsolute } from 'node:path';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 
@@ -48,6 +51,8 @@ export interface BackupValues {
   host?: string;
   plan?: string;
   receipt?: string;
+  'expected-revision'?: string;
+  'expected-state'?: string;
 }
 export type BackupTransport = (path: string, init?: RequestInit) => Promise<Response>;
 const ROUTES = {
@@ -58,7 +63,7 @@ const ROUTES = {
   authorize: '/api/botharness/profile-backup/authorize',
   activate: '/api/botharness/profile-backup/activate',
 };
-const OWNER_CODES = new Set([
+export const BACKUP_OWNER_CODES = new Set([
   'preview-stale',
   'activation-required',
   'invalid-input',
@@ -143,6 +148,8 @@ export function backupRecoveryView(raw: unknown) {
           return {
             slug: bot.slug,
             activated: bot.activated,
+            planRevision: bot.planRevision,
+            stateFingerprint: bot.stateFingerprint,
             readiness: bot.readiness,
             reason: bot.reason,
             route: bot.route,
@@ -169,12 +176,61 @@ export async function backupJson(response: Response): Promise<unknown> {
   if (!response.ok) {
     const error = object(object(value).error);
     throw new CliLiveError(
-      typeof error.code === 'string' && OWNER_CODES.has(error.code) ? error.code : 'host-refused',
+      typeof error.code === 'string' && BACKUP_OWNER_CODES.has(error.code)
+        ? error.code
+        : 'host-refused',
       'The backup owner refused the operation; inspect current readiness before retrying.',
     );
   }
   return value;
 }
+export function privateBackupOutput(destination: string) {
+  let stage: string | undefined;
+  let fd: number | undefined;
+  try {
+    if (lstatSync(destination, { throwIfNoEntry: false })) throw new Error('destination-exists');
+    stage = join(dirname(destination), '.' + basename(destination) + '.' + randomUUID() + '.part');
+    fd = openSync(stage, 'wx', 0o600);
+  } catch {
+    throw new CliLiveError(
+      'destination-exists',
+      'Choose a new output file in an existing directory.',
+    );
+  }
+  return {
+    write(bytes: string | Uint8Array) {
+      writeFileSync(fd!, bytes);
+    },
+    publish() {
+      fsyncSync(fd!);
+      closeSync(fd!);
+      fd = undefined;
+      try {
+        linkSync(stage!, destination);
+      } catch {
+        throw new CliLiveError(
+          'destination-exists',
+          'The output path is occupied; verified bytes were not published.',
+        );
+      }
+      unlinkSync(stage!);
+      stage = undefined;
+    },
+    close() {
+      if (fd !== undefined) {
+        closeSync(fd);
+        fd = undefined;
+      }
+      if (stage !== undefined) {
+        try {
+          unlinkSync(stage);
+        } catch {}
+        stage = undefined;
+      }
+    },
+  };
+}
+
 export async function runBackupCommand(
   command: string,
   rest: string[],
@@ -199,7 +255,9 @@ export async function runBackupCommand(
     (values.file !== undefined && !exportFile && !inspect) ||
     (values.out !== undefined && !preview && !exportFile) ||
     (values.confirm !== undefined && !target && !exportFile) ||
-    (values['acknowledge-split-brain'] !== undefined && command !== 'profile-recovery-activate')
+    (values['acknowledge-split-brain'] !== undefined && command !== 'profile-recovery-activate') ||
+    ((values['expected-revision'] !== undefined || values['expected-state'] !== undefined) &&
+      !target)
   )
     usage('Unsupported option for this backup command.');
   if ((target || exportFile) && values.confirm !== true)
@@ -208,6 +266,15 @@ export async function runBackupCommand(
     usage(
       'Activation requires --acknowledge-split-brain; prevent duplicate execution on the original Host.',
     );
+  const expectedRevision = values['expected-revision'];
+  if (
+    expectedRevision !== undefined &&
+    (!/^\d+$/u.test(expectedRevision) || !Number.isSafeInteger(Number(expectedRevision)))
+  )
+    usage('--expected-revision must be a nonnegative integer.');
+  const expectedState = values['expected-state'];
+  if (expectedState !== undefined && !/^[a-f0-9]{64}$/u.test(expectedState))
+    usage('--expected-state must be an observed recovery fingerprint.');
   const out = preview || exportFile ? absolute(values.out, '--out') : undefined;
   const file = exportFile || inspect ? absolute(values.file, '--file') : undefined;
   const origin = new URL(values.host ?? io.env['DEEPSEEKBOT_HOST'] ?? 'http://invalid').origin;
@@ -233,29 +300,15 @@ export async function runBackupCommand(
       );
   }
   if (inspect) archive = readProtected(file!, MAX_BYTES, false);
-  let fd: number | undefined,
-    completed = false;
+  const output = out === undefined ? undefined : privateBackupOutput(out);
   try {
-    if (out) {
-      try {
-        fd = openSync(out, 'wx', 0o600);
-      } catch {
-        throw new CliLiveError(
-          'destination-exists',
-          'Choose a new output file in an existing directory.',
-        );
-      }
-    }
     const { stream } = await connect();
     if (preview) {
       const value = object(await backupJson(await stream(ROUTES.preview)));
       if (typeof value.token !== 'string')
         throw new CliLiveError('host-protocol-error', 'The Host returned no private review plan.');
-      writeFileSync(
-        fd!,
-        JSON.stringify({ ...backupPreviewView(value), token: value.token, origin }),
-      );
-      completed = true;
+      output!.write(JSON.stringify({ ...backupPreviewView(value), token: value.token, origin }));
+      output!.publish();
       return { ...backupPreviewView(value), planFile: out };
     }
     if (exportFile) {
@@ -274,7 +327,7 @@ export async function runBackupCommand(
         if (bytes > MAX_BYTES)
           throw new CliLiveError('too-large', 'Backup exceeds the documented archive bound.');
         hash.update(chunk);
-        writeFileSync(fd!, chunk);
+        output!.write(chunk);
       }
       const sha256 = hash.digest('hex');
       if (sha256 !== response.headers.get('x-backup-sha256'))
@@ -282,7 +335,7 @@ export async function runBackupCommand(
           'package-invalid',
           'Downloaded archive digest does not match the Host receipt.',
         );
-      completed = true;
+      output!.publish();
       return { path: out, bytes, sha256, state: 'exported' };
     }
     if (inspect)
@@ -305,15 +358,16 @@ export async function runBackupCommand(
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             slug: rest[0],
+            ...(expectedRevision === undefined
+              ? {}
+              : { expectedRevision: Number(expectedRevision) }),
+            ...(expectedState === undefined ? {} : { expectedState }),
             ...(action === ROUTES.activate ? { acknowledgeSplitBrain: true } : {}),
           }),
         }),
       ),
     );
   } finally {
-    if (fd !== undefined) {
-      closeSync(fd);
-      if (!completed) unlinkSync(out!);
-    }
+    output?.close();
   }
 }

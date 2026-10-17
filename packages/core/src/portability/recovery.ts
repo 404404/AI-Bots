@@ -1,9 +1,14 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { attachOperationalModule, type OperationalDatabaseOwner } from '../database/owner.js';
 import type { PersonaBotRegistry } from '../bots/registry.js';
 import type { ModelCatalog } from '../models/catalog.js';
 import type { SessionOwnership } from '../sessions/ownership.js';
 import { ProfileBackupError } from './files.js';
+
+export interface ProfileRecoveryExpectation {
+  planRevision?: number;
+  stateFingerprint?: string;
+}
 
 export function createProfileRecovery(
   database: OperationalDatabaseOwner,
@@ -22,6 +27,32 @@ export function createProfileRecovery(
           return result === undefined ? undefined : JSON.parse(String(result.body));
         })
       : undefined;
+  const stateFingerprint = (slug: string): string => {
+    const recovery = row(slug);
+    const bot = registry.get(slug);
+    return createHash('sha256')
+      .update(
+        JSON.stringify({
+          plan: bot?.modelPlan ?? null,
+          paused: bot?.paused === true,
+          authorizedRevision: recovery?.authorized_plan_revision ?? null,
+          activatedSessionId: recovery?.activated_session_id ?? null,
+        }),
+      )
+      .digest('hex');
+  };
+  const assertExpected = (slug: string, expected: ProfileRecoveryExpectation = {}) => {
+    if (
+      (expected.planRevision !== undefined &&
+        registry.get(slug)?.modelPlan?.revision !== expected.planRevision) ||
+      (expected.stateFingerprint !== undefined &&
+        stateFingerprint(slug) !== expected.stateFingerprint)
+    )
+      throw new ProfileBackupError(
+        'plan-changed',
+        'Reviewed Model Plan or recovery state changed; review again',
+      );
+  };
   return {
     receipt,
     recordRestore(backupId: string) {
@@ -68,6 +99,7 @@ export function createProfileRecovery(
           .filter((bot) => row(bot.slug) !== undefined)
           .map(async (bot) => {
             const recovery = row(bot.slug);
+            const observedState = stateFingerprint(bot.slug);
             let reason: string | undefined;
             if (!bot.modelPlan) reason = 'model-plan-required';
             else if (!catalog) reason = 'model-unavailable';
@@ -81,6 +113,8 @@ export function createProfileRecovery(
               reason = 'model-authorization-required';
             return {
               slug: bot.slug,
+              stateFingerprint: observedState,
+              planRevision: bot.modelPlan?.revision,
               displayName: bot.displayName,
               route: bot.modelPlan?.orchestrator,
               activated: !!recovery?.activated_session_id,
@@ -92,7 +126,14 @@ export function createProfileRecovery(
       );
       return { restored: true as const, receipt: saved, bots };
     },
-    async authorizeModel(slug: string, catalog: ModelCatalog) {
+    async authorizeModel(
+      slug: string,
+      catalog: ModelCatalog,
+      expected: ProfileRecoveryExpectation = {},
+      authorize?: () => void,
+    ) {
+      authorize?.();
+      assertExpected(slug, expected);
       if (!row(slug)) throw new ProfileBackupError('invalid-input', 'Bot was not restored');
       const plan = registry.get(slug)?.modelPlan;
       if (!plan)
@@ -103,15 +144,22 @@ export function createProfileRecovery(
       await catalog.validate(plan.orchestrator);
       if (registry.get(slug)?.modelPlan?.revision !== plan.revision)
         throw new ProfileBackupError('plan-changed', 'Model Plan changed; review again');
-      port.transaction((db) =>
-        db
-          .prepare(
-            'UPDATE profile_recovery_bots SET authorized_plan_revision = ? WHERE bot_slug = ?',
-          )
-          .run(plan.revision, slug),
-      );
+      port.transaction((db) => {
+        authorize?.();
+        assertExpected(slug, { ...expected, planRevision: plan.revision });
+        db.prepare(
+          'UPDATE profile_recovery_bots SET authorized_plan_revision = ? WHERE bot_slug = ?',
+        ).run(plan.revision, slug);
+      });
     },
-    activate(slug: string, acknowledgeSplitBrain: boolean) {
+    activate(
+      slug: string,
+      acknowledgeSplitBrain: boolean,
+      expected: ProfileRecoveryExpectation = {},
+      authorize?: () => void,
+    ) {
+      authorize?.();
+      assertExpected(slug, expected);
       const recovery = row(slug);
       const bot = registry.get(slug);
       if (
@@ -126,12 +174,16 @@ export function createProfileRecovery(
           'Disaster Restore acknowledgement and target-local model authorization are required',
         );
       if (recovery.activated_session_id) {
+        authorize?.();
+        assertExpected(slug, expected);
         registry.setPaused(slug, false);
         return String(recovery.activated_session_id);
       }
       const sessionId = 'botharness-' + randomUUID();
       const cwdReference = registry.memoryDirFor(slug);
       port.transaction((db) => {
+        authorize?.();
+        assertExpected(slug, expected);
         ownership.claimWithin(db, {
           botSlug: slug,
           sessionId,

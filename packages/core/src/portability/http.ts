@@ -11,7 +11,7 @@ import {
   PROFILE_BACKUP_LIMITS,
   type ProfileBackupSource,
 } from './package.js';
-import type { ProfileRecovery } from './recovery.js';
+import type { ProfileRecovery, ProfileRecoveryExpectation } from './recovery.js';
 
 export const PROFILE_BACKUP_PATH = '/api/botharness/profile-backup';
 const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' };
@@ -46,7 +46,16 @@ export function createProfileBackupHttp(
   let exporting = false;
   const plans = new Map<string, { signature: string; expires: number }>();
   const preview = () => profileBackupPreview(source);
-  return async (request: Request): Promise<Response> => {
+  return async (request: Request, authorize?: () => void): Promise<Response> => {
+    let authorityError: unknown;
+    const checkAuthority = () => {
+      try {
+        authorize?.();
+      } catch (error) {
+        authorityError = error;
+        throw error;
+      }
+    };
     let stage: string | undefined;
     try {
       const url = new URL(request.url);
@@ -66,13 +75,39 @@ export function createProfileBackupHttp(
         const value = JSON.parse((await body(request, 4096)).toString('utf8'));
         if (typeof value.slug !== 'string')
           throw new ProfileBackupError('invalid-input', 'Bot identity is required');
-        if (action === '/authorize') await recovery.authorizeModel(value.slug, catalog);
+        const expected: ProfileRecoveryExpectation = {};
+        if (value.expectedRevision !== undefined) {
+          if (!Number.isSafeInteger(value.expectedRevision) || value.expectedRevision < 0)
+            throw new ProfileBackupError(
+              'invalid-input',
+              'Expected revision must be a nonnegative integer',
+            );
+          expected.planRevision = value.expectedRevision;
+        }
+        if (value.expectedState !== undefined) {
+          if (
+            typeof value.expectedState !== 'string' ||
+            !/^[a-f0-9]{64}$/u.test(value.expectedState)
+          )
+            throw new ProfileBackupError(
+              'invalid-input',
+              'Expected recovery state must be an observed fingerprint',
+            );
+          expected.stateFingerprint = value.expectedState;
+        }
+        if (action === '/authorize')
+          await recovery.authorizeModel(value.slug, catalog, expected, checkAuthority);
         else {
           const bot = source.registry.get(value.slug);
           if (!bot?.modelPlan)
             throw new ProfileBackupError('model-plan-required', 'Select an explicit Model Plan');
           await catalog.validate(bot.modelPlan.orchestrator);
-          recovery.activate(value.slug, value.acknowledgeSplitBrain === true);
+          recovery.activate(
+            value.slug,
+            value.acknowledgeSplitBrain === true,
+            { ...expected, planRevision: expected.planRevision ?? bot.modelPlan.revision },
+            checkAuthority,
+          );
         }
         return Response.json(await recovery.status(catalog), { headers });
       }
@@ -129,6 +164,7 @@ export function createProfileBackupHttp(
         exporting = false;
       }
     } catch (error) {
+      if (authorityError !== undefined) throw authorityError;
       const code = request.signal.aborted
         ? 'cancelled'
         : error instanceof ProfileBackupError
