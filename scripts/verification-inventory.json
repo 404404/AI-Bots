@@ -1719,20 +1719,28 @@
       "sha256": "4940ba3a8c8e3892b11e01c959efc874a3e12b16527e076db62345f87b4508d6"
     },
     {
-      "path": "scripts/e2e-group-send-review.mjs",
-      "category": "mapped",
-      "behaviors": ["desktop.group.send-review"],
-      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate.",
-      "task": 2053,
-      "sha256": "44bd60a1a1e4138f5002ad4dc6ae4b5929e62ca8559eabeaa080f6d4b183a013"
-    },
-    {
       "path": "scripts/e2e-tob-channel-management.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
       "reason": "Natural Tob Group creation and invitation through rendered approval, default automatic acceptance and visible Members; optional invitee-decision opt-out, denial, protected identity and receipt replay/conflict, plus separate same-Profile restart on Web/macOS.",
       "task": 2090,
       "sha256": "bef6529005d394eba0f34a2c6e4e5be9d61891501c44b14140ba49fa2c1ec907"
+    },
+    {
+      "path": "scripts/e2e-group-send-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate.",
+      "task": 2053,
+      "sha256": "67c155764229bafca82518fa77d2fc314b5ca98197fd30efdd095f90400e8562"
+    },
+    {
+      "path": "scripts/e2e-group-peer-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Real two-Bot peer-answer triplets with accepted Bi and original B0, full histories and all-Bot usage; missed race windows and Human acceptance remain explicit.",
+      "task": 2054,
+      "sha256": "f39b2cdc6af7be38ee79867702c22a3947bb961a38346afdaf9ed3167f4719d7"
     },
     {
       "path": "scripts/e2e-tob-group-settings.mjs",
