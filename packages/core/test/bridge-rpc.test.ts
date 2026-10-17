@@ -822,6 +822,18 @@ describe('bridge typert service', () => {
       'olderLimit',
       'newerLimit',
     ]);
+    expect(parameterNames(service.clientControl)).toEqual([
+      'action',
+      'target',
+      'kind',
+      'id',
+      'result',
+      'scope',
+      'patch',
+      'expectedState',
+      'proof',
+      'ownerProof',
+    ]);
     expect(parameterNames(service.channelSend)).toEqual([
       'channelId',
       'body',
@@ -834,6 +846,8 @@ describe('bridge typert service', () => {
       'grantRequestResolution',
       'assignmentReply',
       'allBotMention',
+      'clientTarget',
+      'clientProof',
     ]);
     expect(parameterNames(service.botAttention)).toEqual(['slug', 'limit', 'cursor', 'state']);
     expect(parameterNames(service.humanAssignmentContext)).toEqual([

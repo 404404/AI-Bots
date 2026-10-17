@@ -11,7 +11,16 @@ type Pending = {
   reject(error: unknown): void;
   timer: ReturnType<typeof setTimeout>;
 };
-type Client = { target: ClientTarget; kind: string; seen: number; pending: Map<string, Pending> };
+type Client = {
+  target: ClientTarget;
+  proof: string;
+  peerId: string | undefined;
+  ownerProof: string;
+  retired: Set<string>;
+  kind: string;
+  seen: number;
+  pending: Map<string, Pending>;
+};
 export class ClientControlService {
   readonly #clients = new Map<string, Client>();
   constructor(
@@ -37,14 +46,39 @@ export class ClientControlService {
   require(target: unknown): ClientTarget {
     return { ...this.#target(target).target };
   }
-  register(target: unknown, kind: unknown) {
-    if (!isClientTarget(target) || !['web', 'desktop'].includes(String(kind)))
+  requireOrigin(target: unknown, proof: unknown, peerId?: string): ClientTarget {
+    const client = this.#target(target);
+    if (typeof proof !== 'string' || proof !== client.proof || client.peerId !== peerId)
+      throw new TobError('client-proof-required');
+    return { ...client.target };
+  }
+  register(
+    target: unknown,
+    kind: unknown,
+    proof: unknown = randomUUID(),
+    ownerProof: unknown = proof,
+    peerId?: string,
+  ) {
+    if (
+      !isClientTarget(target) ||
+      !['web', 'desktop'].includes(String(kind)) ||
+      typeof proof !== 'string' ||
+      !/^[a-zA-Z0-9-]{16,80}$/u.test(proof) ||
+      typeof ownerProof !== 'string' ||
+      !/^[a-zA-Z0-9-]{16,80}$/u.test(ownerProof)
+    )
       throw new TobError('invalid-input');
     const previous = this.#clients.get(target.clientId);
+    if (previous && previous.ownerProof !== ownerProof) throw new TobError('client-proof-required');
+    if (previous?.retired.has(target.generation)) throw new TobError('client-target-replaced');
     if (previous?.target.generation === target.generation) {
+      if (previous.proof !== proof || previous.peerId !== peerId)
+        throw new TobError('client-proof-required');
       previous.seen = Date.now();
       return { ...target };
     }
+    if (previous && previous.retired.size >= 128) throw new TobError('client-capacity');
+    if (!previous && this.#clients.size >= 256) throw new TobError('client-capacity');
     if (previous)
       for (const pending of previous.pending.values()) {
         clearTimeout(pending.timer);
@@ -52,9 +86,15 @@ export class ClientControlService {
           new TobError(pending.delivered ? 'client-outcome-uncertain' : 'client-target-replaced'),
         );
       }
-    if (!previous && this.#clients.size >= 256) throw new TobError('client-capacity');
     this.#clients.set(target.clientId, {
       target: { ...target },
+      proof,
+      peerId,
+      ownerProof,
+      retired: new Set([
+        ...(previous?.retired ?? []),
+        ...(previous ? [previous.target.generation] : []),
+      ]),
       kind: String(kind),
       seen: Date.now(),
       pending: new Map(),

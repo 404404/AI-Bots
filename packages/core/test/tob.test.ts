@@ -175,7 +175,8 @@ describe('Tob canonical identity and settings', () => {
   it('derives current Client only from canonical admitted Human source metadata', async () => {
     const target = { clientId: 'client-source', generation: 'generation-source' };
     const clients = new ClientControlService();
-    clients.register(target, 'web');
+    const proof = 'private-client-proof';
+    clients.register(target, 'web', proof);
     const results: unknown[] = [];
     const f = fixture(async (run) => {
       const authority = f.core.runtime.captureTobCliAuthority!(run.sessionId);
@@ -192,6 +193,7 @@ describe('Tob canonical identity and settings', () => {
         channelId: home.channelId,
         body: 'Use this Client',
         clientTarget: target,
+        clientProof: proof,
       });
       await f.core.runtime.whenIdle();
       expect(results).toEqual([target]);
