@@ -1836,7 +1836,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Reviewed Group deletion with denial/stale refusal, retained history and independent Human CLI readback; selected local attachment upload without send, stable-ID replay/conflict and separate Web/macOS restart reads.",
       "task": 2090,
-      "sha256": "0d9e60c070838f63cdc2310b42f6c98abcc09aa80a6e9c291bb5a714bca73f38"
+      "sha256": "c02e0b2e18f2c295ab13a8d5dcfc8731b66ff387a885c0ec9f3d3fb194a7c20c"
     }
   ],
   "native": [
