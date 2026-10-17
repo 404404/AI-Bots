@@ -371,8 +371,16 @@ async function tob() {
       has('profile-backup-preview') &&
       has('profile-backup-export') &&
       has('profile-backup-inspect') &&
-      trace.turns.some(turn => turn.endReason === 'completed' && turn.calls.some(call => !old.has(call.callId) && JSON.stringify(call.args).includes('deepseekbot profile-backup-export'))) &&
-      fresh.some(message => message.author.kind === 'bot' && message.body?.trim()) &&
+      trace.turns.some(
+        (turn) =>
+          turn.endReason === 'completed' &&
+          turn.calls.some(
+            (call) =>
+              !old.has(call.callId) &&
+              JSON.stringify(call.args).includes('deepseekbot profile-backup-export'),
+          ),
+      ) &&
+      fresh.some((message) => message.author.kind === 'bot' && message.body?.trim()) &&
       handled
     ) {
       assert.ok(shells.every((c) => !c.result?.includes('"token"')));
