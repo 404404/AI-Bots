@@ -18,7 +18,9 @@ function ChannelFormScroll(props: ScrollViewProps) {
   return (
     <KeyboardFormScroll
       {...props}
-      bottomOffset={Math.max(theme.touch, theme.type.body.line * theme.fontScale * 2) + space.x6 * 2}
+      bottomOffset={
+        Math.max(theme.touch, theme.type.body.line * theme.fontScale * 2) + space.x6 * 2
+      }
     />
   );
 }
