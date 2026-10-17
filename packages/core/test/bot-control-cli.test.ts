@@ -171,6 +171,8 @@ describe('Agent control commands', () => {
     );
     expect((await invoke(['settings', 'botharness-client'], live.url)).json).toEqual({
       ns: 'botharness-client',
+      scope: 'host',
+      affectsAllConnectedClients: true,
       revision: 7,
       value: { assignmentConcurrencyLimit: 3 },
     });
