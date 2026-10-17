@@ -1749,6 +1749,14 @@
       "reason": "Natural Tob pending-invitation cancellation and join acceptance/decline through rendered approval, denial and concurrent stale refusal; actual ordinary-Bot selected-Group join preconditions, canonical decision history and Members UI, terminal refusal and Web/macOS restart.",
       "task": 2090,
       "sha256": "6998a510585f53ccbe6210f73458fd8c666716df6dbb257c8388f1e345cf916e"
+    },
+    {
+      "path": "scripts/e2e-tob-channel-preferences.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Natural Tob personal Group mute/pin/hide/restore and Bot DM nickname through rendered review; denied and concurrently stale approval, independent owner and preference readback, actual roster/hidden/nickname UI and separate Web/macOS restart.",
+      "task": 2090,
+      "sha256": "3eeeabbdf6f0cf9a23962aa1574ad44fd6f2d2fa597043a5089a0e33cfb7c331"
     }
   ],
   "native": [

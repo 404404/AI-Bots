@@ -280,7 +280,7 @@ export interface ChannelStore {
   humanIdentity(): LocalHumanIdentity;
   setHumanDefaultName(displayName: string | null): LocalHumanIdentity;
   humanNickname(id: string): string | null | undefined;
-  setHumanNickname(id: string, nickname: string | null): void;
+  setHumanNickname(id: string, nickname: string | null, beforeWrite?: () => void): void;
   list(): ChannelRecord[];
   get(id: string): ChannelRecord | undefined;
   listHumanMembers(id: string): Array<{ humanId: string; displayName: string }>;

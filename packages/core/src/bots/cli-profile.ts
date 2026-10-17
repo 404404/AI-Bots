@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
+import { channelExpectedState } from './cli-channels.js';
 
 export const PROFILE_OPTIONS = {
   file: { type: 'string' },
@@ -87,6 +88,7 @@ export const PROFILE_COMMANDS = [
 export const PROFILE_ONLINE_COMMANDS = ['human-name-set', 'channel-human-name-set'] as const;
 
 export interface ProfileValues {
+  'expected-state'?: string;
   host?: string;
   timeout?: string;
   out?: string;
@@ -359,7 +361,13 @@ export async function profileCall(
         usage('channel-human-name-set needs --nickname or --clear, not both or neither.');
       return [
         'channelHumanNameSet',
-        { channelId: rest[0].trim(), nickname: values.clear ? null : nickname },
+        {
+          channelId: rest[0].trim(),
+          nickname: values.clear ? null : nickname,
+          ...(values['expected-state'] === undefined
+            ? {}
+            : { expectedState: channelExpectedState(values['expected-state']) }),
+        },
       ];
     }
     case 'part-library':

@@ -146,7 +146,11 @@ deepseekbot channel-mark-all-read
 deepseekbot channel-react <channel> --message-id <message-id> --emoji 👍 [--remove]
 deepseekbot channel-search <channel> --query <text> [--cursor <cursor>] [--limit <n>]
 deepseekbot channel-unread
-deepseekbot channel-mute <channel> [--off]
+deepseekbot channel-preferences <channel>
+deepseekbot channel-mute <channel> [--off] [--expected-state <stateFingerprint>]
+deepseekbot channel-pin <channel> [--off] [--expected-state <stateFingerprint>]
+deepseekbot channel-hide <channel> [--off] [--expected-state <stateFingerprint>]
+deepseekbot channel-human-name-set <channel> (--nickname <text> | --clear) [--expected-state <stateFingerprint>]
 deepseekbot channel-retry <dm-channel> --message-id <human-message-id>
 deepseekbot channel-bot-stop <channel> --bot <id>
 deepseekbot channel-history
@@ -657,7 +661,7 @@ deepseekbot memory-move <bot-id> --default-location
 
 `deepseekbot tob-home` 幂等准备受保护的本地 Tob、Memory、管理 Workspace 与 DM，返回标识及权威 Attention 摘要，不发送消息。`deepseekbot home-model-set --provider <id> --model <id>` 修改原生 Host 默认模型，保留其他 Bot 的独立计划。
 
-Tob 通过普通原生 bash／pwsh Tool 调用 `deepseekbot`；专用的 `tob_assignment_limit_read`、`tob_assignment_limit_set` Tool 及直接运行入口已移除。既有 Assignment Tools 不变。受限 CLI 流程支持下方列出的 Bot 创建／资料／生命周期、建群／邀请、群设置／成员移除、取消邀请／入群决定、模型、运行、隐私、Git 和更新操作；这是明确的允许清单，不代表开放全部 Human CLI 命令或其他 Bot 的数据。
+Tob 通过普通原生 bash／pwsh Tool 调用 `deepseekbot`；专用的 `tob_assignment_limit_read`、`tob_assignment_limit_set` Tool 及直接运行入口已移除。既有 Assignment Tools 不变。受限 CLI 流程支持下方列出的 Bot 创建／资料／生命周期、建群／邀请、群设置／成员移除、取消邀请／入群决定、频道个人偏好、模型、运行、隐私、Git 和更新操作；这是明确的允许清单，不代表开放全部 Human CLI 命令或其他 Bot 的数据。
 
 在具备权限的 Tob Shell 执行中：
 
@@ -735,7 +739,7 @@ deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-resea
 
 已认证 Human 的在线 `group-create` 和 `group-invite` 也支持稳定 operation key；邀请支持 `--expected-channel` 绑定已读取状态。这些审核／重试参数对 Human 命令可选，对受限 Tob 必需。原有不带 key 的 Human 操作保持既有 owner 行为。
 
-后续切片加入下节所述的群名称／头像、成员唤醒设置、移除成员、取消待处理邀请和决定待处理入群申请；个人免打扰／置顶／昵称／显隐、删除群、附件和外部成员管理仍不在受限允许清单内。部分已有上文的 Human CLI 命令，不等于已向 Tob 开放。#2090 保留未完成范围，不因本切片关闭。详见 [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) 和[覆盖清单](agents/cli-ui-coverage.md#2090-group-management-scope)。直接 CLI、真实 Tob 审批／读回、Web 成员／历史和 macOS Desktop 分别验收。
+后续切片加入下节所述的群名称／头像、成员唤醒设置、移除成员、取消待处理邀请和决定待处理入群申请；个人免打扰／置顶／昵称／显隐见下方个人偏好切片；删除群、附件和外部成员管理仍不在受限允许清单内。部分已有上文的 Human CLI 命令，不等于已向 Tob 开放。#2090 保留未完成范围，不因本切片关闭。详见 [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) 和[覆盖清单](agents/cli-ui-coverage.md#2090-group-management-scope)。直接 CLI、真实 Tob 审批／读回、Web 成员／历史和 macOS Desktop 分别验收。
 
 ### Tob 群设置与成员移除
 
@@ -778,7 +782,35 @@ deepseekbot group-join-decide <channel-id> --request <request-id> --decline --ex
 
 接受申请由原 Channel owner 持久保存成员关系与接受状态，拒绝则不增加成员；既有决定通知只记录一次。Tob 不加入群，也不把群内容当作管理授权来源。此切片复用原状态与通知流程，不增加模型 Tool、数据库迁移或操作回执。
 
-已认证 Human 的同名在线命令可选 `--expected-channel`；`group-join-decide` 省略时保留既有的同向已完成决定幂等读回。Tob 的受限入口仅接受待处理记录，不能通过省略指纹或重复终态决定绕过新审核。结果不确定时先读回准确记录的状态与成员关系；若仍待处理且需要继续，再基于新快照提案，不盲目重试。其他个人展示、整群删除与外部成员能力仍另行交付，#2090 不因本片关闭。
+已认证 Human 的同名在线命令可选 `--expected-channel`；`group-join-decide` 省略时保留既有的同向已完成决定幂等读回。Tob 的受限入口仅接受待处理记录，不能通过省略指纹或重复终态决定绕过新审核。结果不确定时先读回准确记录的状态与成员关系；若仍待处理且需要继续，再基于新快照提案，不盲目重试。个人偏好见下一节；整群删除与外部成员能力仍另行交付，#2090 不因本片关闭。
+
+### Tob 频道个人偏好
+
+Tob 可从已准入的 Human DM，经现有审批修改当前 Human 对某个频道的免打扰、置顶、隐藏状态或 **Human Channel nickname（频道内我的昵称）**。先读取个人偏好快照，再把返回的 `stateFingerprint` 作为 `--expected-state` 传给对应写入：
+
+```bash
+deepseekbot channel-preferences <channel-id>
+deepseekbot channel-mute <channel-id> --expected-state <stateFingerprint>
+deepseekbot channel-mute <channel-id> --off --expected-state <stateFingerprint>
+deepseekbot channel-pin <channel-id> --expected-state <stateFingerprint>
+deepseekbot channel-pin <channel-id> --off --expected-state <stateFingerprint>
+deepseekbot channel-hide <channel-id> --expected-state <stateFingerprint>
+deepseekbot channel-hide <channel-id> --off --expected-state <stateFingerprint>
+deepseekbot channel-human-name-set <channel-id> --nickname "老板" --expected-state <stateFingerprint>
+deepseekbot channel-human-name-set <channel-id> --clear --expected-state <stateFingerprint>
+```
+
+`channel-preferences` 返回 `{channel:{id,type,name,botSlug?}, scope:"human-channel", humanId, muted, pinned, hidden, nickname, stateFingerprint}`。目标必须是当前本地 Human 参与的普通 Bot DM 或 Group Channel；没有昵称覆盖时 `nickname` 为 `null`。
+
+这是当前 Host Profile 内稳定 Human 身份与准确频道的偏好，不是按显示名匹配用户，也不是某个浏览器标签页或设备的本地布局。连接同一 Host Profile 的客户端读取同一份规范偏好。昵称改变的是 Human 在该频道的称呼，不改 Bot 名称、频道名称或 Human ID。昵称会去除首尾空白，最多 128 个字符，不能包含控制字符或换行；`--clear` 恢复继承 Human 默认显示名。
+
+不带 `--off` 的免打扰／置顶／隐藏命令设为开启，带 `--off` 则关闭。隐藏只影响频道列表展示，不删除频道、消息或成员关系；仍可用准确 ID 读取 `channel-preferences` 并执行 `channel-hide --off` 恢复。单频道置顶／隐藏操作保留其他频道的已有偏好，不用整体替换列表的命令代替。免打扰不等于停止 Bot 或更改群成员唤醒策略。
+
+指纹绑定目标频道身份代次、本地 Human 身份、该频道四项个人偏好，以及 Bot DM 的 Bot 身份代次。其他频道的修改不会使本快照过期，也不会被本次单频道操作覆盖。
+
+受限写入必须携带观察到的 `--expected-state`；`stale-channel-preferences` 要求重新读取并审核。审批绑定旧值、目标和新值；执行时重验当前 Human 的频道权限与快照。并发修改、权限撤销或过期／拒绝审批不得被静默覆盖。成功后返回规范读回状态；继续修改前重新读取，结果不确定时先核对实际状态，不盲目重试。Tob 仍通过现有受限 Shell CLI 与审批路径执行，不新增专用 Tool。
+
+免打扰、置顶、显隐沿用 `RosterStore`，频道内 Human 昵称沿用 `ChannelStore`；没有第二份偏好库。已认证 Human 的在线写入可选 `--expected-state`，Tob 必需；已有离线昵称命令不是受限 Tob 的绕过路径。这些命令只扩展个人偏好范围，不授予整体布局、所有设置或删除群能力。直接 CLI、真实 Tob 审批／读回、Web 和 macOS Desktop 仍需分别验收。
 
 ### Tob 模型与运行设置
 

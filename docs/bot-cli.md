@@ -151,7 +151,11 @@ deepseekbot channel-mark-all-read
 deepseekbot channel-react <channel> --message-id <message-id> --emoji 👍 [--remove]
 deepseekbot channel-search <channel> --query <text> [--cursor <cursor>] [--limit <n>]
 deepseekbot channel-unread
-deepseekbot channel-mute <channel> [--off]
+deepseekbot channel-preferences <channel>
+deepseekbot channel-mute <channel> [--off] [--expected-state <stateFingerprint>]
+deepseekbot channel-pin <channel> [--off] [--expected-state <stateFingerprint>]
+deepseekbot channel-hide <channel> [--off] [--expected-state <stateFingerprint>]
+deepseekbot channel-human-name-set <channel> (--nickname <text> | --clear) [--expected-state <stateFingerprint>]
 deepseekbot channel-retry <dm-channel> --message-id <human-message-id>
 deepseekbot channel-bot-stop <channel> --bot <id>
 deepseekbot channel-history
@@ -664,7 +668,7 @@ The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist
 
 `deepseekbot tob-home` prepares/reuses the protected local Tob identity, Memory, managed Workspace and DM, returning their IDs and the canonical attention summary. It does not send a message. `deepseekbot home-model-set --provider <id> --model <id>` updates the native Host default; independent Bot plans remain unchanged.
 
-Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the Bot creation/profile/lifecycle, group creation/invitation, group settings/member removal, invitation cancellation/join decisions, model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
+Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the Bot creation/profile/lifecycle, group creation/invitation, group settings/member removal, invitation cancellation/join decisions, Channel personal preferences, model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
 
 Tob's Host-supplied system guidance is bundled with the plugin and is installed only for the protected Tob Orchestrator; upgrades do not overwrite the Human's editable personality or Memory. A simple question such as “What can you do?” first discovers the installed CLI capabilities, then describes practical outcomes in the Human's language and offers a concrete next step. Capability questions are read-only: they do not propose a mutation or approval. A later specific change request still goes through the existing authority and approval checks.
 
@@ -742,7 +746,7 @@ The keyed result includes a `receipt` with `operationKey`, `kind`, `channelId`, 
 
 Authenticated Human online `group-create` and `group-invite` also support stable operation keys; the invitation command accepts `--expected-channel` for the observed state. These review/retry inputs are optional for Human commands and mandatory for scoped Tob. Existing unkeyed Human operations retain their owner behavior.
 
-The following slices add group rename/avatar, member wake settings, member removal, cancellation of pending invitations and decisions on pending join requests. Personal mute/pin/nickname/visibility, group deletion, attachments and external membership remain outside the scoped allowlist. Some already have Human CLI commands above; that does not grant Tob access. #2090 remains open for its remaining scope. See [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) and the [coverage inventory](agents/cli-ui-coverage.md#2090-group-management-scope). Direct CLI, real Tob approval/readback, Web membership/history and macOS Desktop are separate verification gates.
+The following slices add group rename/avatar, member wake settings, member removal, cancellation of pending invitations and decisions on pending join requests. Personal mute/pin/nickname/visibility is covered by the preferences slice below; group deletion, attachments and external membership remain outside the scoped allowlist. Some already have Human CLI commands above; that does not grant Tob access. #2090 remains open for its remaining scope. See [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) and the [coverage inventory](agents/cli-ui-coverage.md#2090-group-management-scope). Direct CLI, real Tob approval/readback, Web membership/history and macOS Desktop are separate verification gates.
 
 ### Tob group settings and member removal
 
@@ -785,7 +789,35 @@ The default `autoAcceptGroupInvites=true` is unchanged: invited Bots normally jo
 
 The existing Channel owner persists membership and accepted status together for acceptance; decline does not add membership. It records the existing decision notification once. Tob does not join the group or accept its content as management authority. This slice reuses canonical status and notification handling without another model Tool, schema migration or operation receipt.
 
-Authenticated Human online equivalents may provide `--expected-channel`; `group-join-decide` without it retains existing same-decision idempotent readback of a completed result. Scoped Tob entry points accept pending records only and cannot bypass fresh review by omitting the fingerprint or repeating a terminal decision. After an uncertain response, read the exact record's status and membership first. If it remains pending and action is still needed, propose against a fresh snapshot instead of blindly retrying. Personal presentation, group deletion and external membership remain separate delivery; this slice does not close #2090.
+Authenticated Human online equivalents may provide `--expected-channel`; `group-join-decide` without it retains existing same-decision idempotent readback of a completed result. Scoped Tob entry points accept pending records only and cannot bypass fresh review by omitting the fingerprint or repeating a terminal decision. After an uncertain response, read the exact record's status and membership first. If it remains pending and action is still needed, propose against a fresh snapshot instead of blindly retrying. Personal preferences are covered next; group deletion and external membership remain separate delivery, and this slice does not close #2090.
+
+### Tob Channel personal preferences
+
+From its accepted Human DM, Tob can use existing approval to change the current Human's mute, pin or hidden preference for a Channel, or their **Human Channel nickname**. Read the preference snapshot first, then pass its returned `stateFingerprint` as `--expected-state` to the corresponding write:
+
+```bash
+deepseekbot channel-preferences <channel-id>
+deepseekbot channel-mute <channel-id> --expected-state <stateFingerprint>
+deepseekbot channel-mute <channel-id> --off --expected-state <stateFingerprint>
+deepseekbot channel-pin <channel-id> --expected-state <stateFingerprint>
+deepseekbot channel-pin <channel-id> --off --expected-state <stateFingerprint>
+deepseekbot channel-hide <channel-id> --expected-state <stateFingerprint>
+deepseekbot channel-hide <channel-id> --off --expected-state <stateFingerprint>
+deepseekbot channel-human-name-set <channel-id> --nickname "Boss" --expected-state <stateFingerprint>
+deepseekbot channel-human-name-set <channel-id> --clear --expected-state <stateFingerprint>
+```
+
+`channel-preferences` returns `{channel:{id,type,name,botSlug?}, scope:"human-channel", humanId, muted, pinned, hidden, nickname, stateFingerprint}`. The target must be an ordinary Bot DM or Group Channel that the current local Human participates in; `nickname` is `null` when no override is set.
+
+The scope is the stable Human identity in the current Host Profile and the exact Channel. It is not a display-name match or a browser-tab/device-local layout: clients connected to the same Host Profile read the same canonical preference. A nickname changes the Human's label in that Channel, not the Bot name, Channel name or Human ID. Nicknames are trimmed, at most 128 characters and cannot contain control characters or newlines; `--clear` restores inheritance from the Human's default display name.
+
+Mute/pin/hide enables the preference unless `--off` is supplied. Hiding affects roster presentation; it does not delete the Channel, messages or membership. A hidden Channel remains addressable by its exact ID through `channel-preferences` and can be restored with `channel-hide --off`. Single-Channel pin/hide operations preserve other Channels' preferences instead of replacing entire lists. Muting does not stop a Bot or change a group member's wake policy.
+
+The fingerprint binds the target Channel incarnation, local Human identity, its four personal preferences and, for a Bot DM, the Bot incarnation. Editing another Channel does not stale this snapshot or get overwritten by the target edit.
+
+Scoped writes require the observed `--expected-state`. `stale-channel-preferences` requires a fresh read and review. Approval binds previous values, target and proposed values; execution rechecks current Human Channel access and the snapshot. Concurrent edits, revoked access or expired/denied approval cannot be silently overwritten. Successful writes return canonical readback. Read again before another edit; after an uncertain result, inspect current state instead of blindly retrying. Tob continues to use the existing scoped Shell CLI and approval path, without a dedicated Tool.
+
+Mute, pin and hidden state remain owned by `RosterStore`; the Human Channel nickname remains owned by `ChannelStore`. There is no second preference store. Authenticated Human online writes may supply `--expected-state`, while Tob requires it; the existing offline nickname command is not a scoped Tob bypass. These commands cover personal preferences without granting whole-layout, all-settings or group-deletion authority. Direct CLI, real Tob approval/readback, Web and macOS Desktop remain separate verification gates.
 
 ### Tob model and runtime management
 

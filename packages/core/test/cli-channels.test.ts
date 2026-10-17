@@ -202,6 +202,51 @@ describe('Channel and group CLI commands', () => {
     expect(live.calls).toHaveLength(count);
   });
 
+  it('reads and updates one personal Channel preference without replacing the roster', async () => {
+    const live = await host(ok);
+    const expectedState = 'c'.repeat(64);
+    expect((await invoke(['channel-preferences', 'dm-ada'], live.url)).code).toBe(0);
+    expect(live.calls.at(-1)).toEqual({
+      method: 'channelPreferences',
+      args: { channelId: 'dm-ada' },
+    });
+    for (const [command, method, field] of [
+      ['channel-pin', 'channelPinSet', 'pinned'],
+      ['channel-hide', 'channelHiddenSet', 'hidden'],
+      ['channel-mute', 'channelMuteSet', 'muted'],
+    ]) {
+      for (const off of [false, true]) {
+        const argv = [command!, 'dm-ada', ...(off ? ['--off'] : [])];
+        expect((await invoke(argv, live.url)).code).toBe(0);
+        expect(live.calls.at(-1)).toEqual({
+          method,
+          args: { channelId: 'dm-ada', [field!]: !off },
+        });
+        expect((await invoke([...argv, '--expected-state', expectedState], live.url)).code).toBe(0);
+        expect(live.calls.at(-1)).toEqual({
+          method,
+          args: { channelId: 'dm-ada', [field!]: !off, expectedState },
+        });
+      }
+      const count = live.calls.length;
+      for (const value of ['', 'old', 'A'.repeat(64), ' ' + expectedState])
+        expect(
+          (await invoke([command!, 'dm-ada', '--expected-state', value], live.url)).json.error.code,
+        ).toBe('usage');
+      expect(live.calls).toHaveLength(count);
+    }
+    const count = live.calls.length;
+    for (const argv of [
+      ['channel-preferences', 'dm-ada'],
+      ['roster-pins-set', 'dm-ada'],
+      ['roster-hidden-set', 'dm-ada'],
+    ])
+      expect(
+        (await invoke([...argv, '--expected-state', expectedState], live.url)).json.error.code,
+      ).toBe('usage');
+    expect(live.calls).toHaveLength(count);
+  });
+
   it('downloads exact original bytes with owner authorization without overwriting an existing file', async () => {
     const bytes = Buffer.from('name,quantity\nalpha,17\n');
     const live = await host(ok, { status: 200, body: bytes });
