@@ -9,10 +9,7 @@
   },
   "restart": {
     "exitCode": 0,
-    "assertions": [
-      "layout gap remains 8",
-      "Client generation changes"
-    ],
+    "assertions": ["layout gap remains 8", "Client generation changes"],
     "pageErrors": []
   },
   "coverage": "single Client; layout gap only; not nested native layout or physical input",
