@@ -53,6 +53,7 @@ afterEach(() => {
   act(() => root?.unmount());
   host?.remove();
   root = undefined;
+  vi.useRealTimers();
 });
 
 async function render(element: ReactElement, opened = true): Promise<HTMLElement> {
@@ -251,6 +252,17 @@ describe('Bot profile sheet', () => {
     );
     await act(async () => button(withBrowser, t.profileBrowser)!.click());
     expect(onBrowser).toHaveBeenCalled();
+  });
+
+  it('reveals cached sections when an initial entry has no opening transition event', async () => {
+    vi.useFakeTimers();
+    const view = await render(
+      <BotProfileSheet bot={bot} channels={[]} load={async () => full} actions={actions()} />,
+      false,
+    );
+    expect(view.textContent).not.toContain('Morning digest');
+    await act(async () => vi.advanceTimersByTime(600));
+    expect(view.textContent).toContain('Morning digest');
   });
 
   it('closes back to the DM, opens notifications and retries a failed section', async () => {
