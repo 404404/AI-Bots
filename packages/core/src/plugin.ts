@@ -1,5 +1,12 @@
 import { followCompanion } from './companions/live.js';
-import { createTobService, type TobService, type TobSettingsProvider } from './tob/service.js';
+import {
+  createTobService,
+  TobError,
+  type TobService,
+  type TobSettingsProvider,
+} from './tob/service.js';
+import { installTobCliShell } from './tob/cli-shell.js';
+import { approveTobCliOperation } from './tob/cli-approval.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { credentialStoreDenial } from './credentials/store-guard.js';
@@ -1063,6 +1070,73 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         agent,
         ctx.get('agentPresets') as DshAgentPresetHost | undefined,
         (name, args) => nativeExecutionRoot(core, agent.session, name, args),
+        (shellCtx, shell) =>
+          installTobCliShell(shellCtx, shell, {
+            capture: (execution) => {
+              const actor = execution.agent;
+              if (
+                !actor ||
+                !core.tob.isTob(core.ownership.resolve(actor.session.id)?.botSlug ?? '')
+              )
+                return undefined;
+
+              let source: (() => void) & { markSideEffect?: () => void };
+              try {
+                source =
+                  core.runtime.captureTobCliAuthority?.(actor.session.id) ??
+                  (() => {
+                    throw new TobError('tob-authority-required');
+                  });
+              } catch (error) {
+                source = () => {
+                  throw error;
+                };
+              }
+              const authorize = () => {
+                if (execution.signal.aborted) throw new TobError('agent-context-expired');
+                source();
+                const denial = grantExecutionDenial(
+                  core,
+                  actor.session,
+                  ctx.get('sandboxPolicy'),
+                  ctx.get('approval'),
+                );
+                if (denial) throw new TobError('tob-authority-required');
+              };
+              const started = Date.now();
+              return {
+                signal: execution.signal,
+                authorize,
+                readSetting: () => core.tob.readSetting(),
+                writeSetting: (value, revision, guard) =>
+                  core.tob.writeSetting(value, revision, () => {
+                    guard();
+                    source.markSideEffect?.();
+                  }),
+                approve: async (operation, signal) => {
+                  source();
+                  return approveTobCliOperation({
+                    execution,
+                    operation,
+                    signal,
+                    authorize: source,
+                    approval: ctx.get('approval') as ApprovalService | undefined,
+                    channelApproval: toolApproval,
+                    fullAccess: () => sessionHasFullAccess(core, actor.session.id),
+                  });
+                },
+                log: (phase, details) =>
+                  ctx.logger.info('tob-cli %j', {
+                    phase,
+                    sessionId: actor.session.id,
+                    callId: execution.callId,
+                    initiator: 'tob-native-shell',
+                    durationMs: Date.now() - started,
+                    ...details,
+                  }),
+              };
+            },
+          }),
       ),
     authorizeBorrow: (agent, role) => {
       const owner = core.ownership.resolve(agent.session.id);
@@ -1578,23 +1652,6 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           untrackBrowser();
         }
       }
-      if (
-        execution.name === 'tob_assignment_limit_set' ||
-        execution.name === 'tob_assignment_limit_read'
-      ) {
-        try {
-          if (!core.runtime.validateTobSetting) throw new Error('tob-unavailable');
-          core.runtime.validateTobSetting(
-            agent.session.id,
-            execution.name === 'tob_assignment_limit_set' ? execution.arguments : undefined,
-          );
-        } catch (error) {
-          return {
-            kind: 'deny',
-            reason: error instanceof Error ? error.message : 'tob-authority-required',
-          };
-        }
-      }
       const denial = permissionDenial(agent.session);
       if (denial !== undefined) return { kind: 'deny', reason: denial };
       if (!requiresHumanToolApproval(execution.name, execution.arguments, templateInUse))
@@ -1637,18 +1694,16 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               toolName: execution.name,
               callId: execution.callId,
               reason:
-                execution.name === 'tob_assignment_limit_set'
-                  ? 'Tob wants to change the GLOBAL Assignment concurrency limit. Review previous_value, value and expected_revision. Running Assignments will not be stopped.'
-                  : execution.name === 'channel_attachment_open'
-                    ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-                    : execution.name === 'bot_create'
-                      ? 'This PersonaBot wants to create a new PersonaBot with a new Memory folder. The new Bot gets no grants, accesses or secrets from it.'
-                      : changesApprovalPolicy(
-                            JSON.stringify(execution.arguments) ?? '',
-                            templateInUse,
-                          )
-                        ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
-                        : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
+                execution.name === 'channel_attachment_open'
+                  ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
+                  : execution.name === 'bot_create'
+                    ? 'This PersonaBot wants to create a new PersonaBot with a new Memory folder. The new Bot gets no grants, accesses or secrets from it.'
+                    : changesApprovalPolicy(
+                          JSON.stringify(execution.arguments) ?? '',
+                          templateInUse,
+                        )
+                      ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
+                      : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
             });
         if (outcome !== 'allowed-once') {

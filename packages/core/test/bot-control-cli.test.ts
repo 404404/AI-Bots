@@ -205,6 +205,43 @@ describe('Agent control commands', () => {
     expect(live.calls).toHaveLength(before);
   });
 
+  it('preserves the explicitly reviewed revision and refuses changed values without updating', async () => {
+    let revision = 7;
+    let value = 3;
+    const live = await host((method, args) => ({
+      ok: true,
+      value:
+        method === 'settings/describe'
+          ? {
+              namespaces: [
+                { ns: 'botharness-client', revision, value: { assignmentConcurrencyLimit: value } },
+              ],
+            }
+          : { revision: revision + 1, value: args['patch'] },
+    }));
+    const args = [
+      'settings-set',
+      'botharness-client',
+      '--patch-stdin',
+      '--expected-revision',
+      '7',
+      '--previous-value',
+      '{"assignmentConcurrencyLimit":3}',
+    ];
+    expect((await invoke(args, live.url, '{"assignmentConcurrencyLimit":4}')).code).toBe(0);
+    expect(live.calls.at(-1)?.args['expectedRevision']).toBe(7);
+    revision = 8;
+    expect((await invoke(args, live.url, '{"assignmentConcurrencyLimit":4}')).json.error.code).toBe(
+      'stale-setting',
+    );
+    revision = 7;
+    value = 6;
+    expect((await invoke(args, live.url, '{"assignmentConcurrencyLimit":4}')).json.error.code).toBe(
+      'stale-setting',
+    );
+    expect(live.calls.filter((call) => call.method === 'settings/update')).toHaveLength(1);
+  });
+
   it('creates a native workspace from an absolute path and a group with members', async () => {
     const live = await host((method, args) => ({ ok: true, value: { method, args } }));
     await invoke(['workspace-create', '/srv/bots/workspace'], live.url);

@@ -570,13 +570,7 @@ describe('Workspace Grant execution boundary', () => {
   });
 });
 
-it('keeps Tob reads internal and puts management writes through existing approval', () => {
-  expect(requiresHumanToolApproval('tob_assignment_limit_read', {})).toBe(false);
-  expect(
-    requiresHumanToolApproval('tob_assignment_limit_set', {
-      value: 3,
-      previous_value: 8,
-      expected_revision: 0,
-    }),
-  ).toBe(true);
+it('does not keep retired Tob management tools in the Bot tool policy', () => {
+  expect(isDshGovernedTool('tob_assignment_limit_read')).toBe(true);
+  expect(isDshGovernedTool('tob_assignment_limit_set')).toBe(true);
 });
