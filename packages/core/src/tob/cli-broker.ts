@@ -1,4 +1,5 @@
 import { BACKUP_OWNER_CODES } from '../bots/cli-backup.js';
+import { BOT_ZIP_MAX_BYTES } from '../bots/bot-zip.js';
 import { TobCliDownload } from './cli-operations.js';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage } from 'node:http';
@@ -185,6 +186,17 @@ const CODES = new Set([
   'stale-bot-files',
   'too-large',
   'unsafe-path',
+  'invalid-zip',
+  'empty',
+  'unsupported-source',
+  'import-unavailable',
+  'stale-import-source',
+  'git-source-changed',
+  'invalid-git-url',
+  'git-clone-failed',
+  'git-clone-timeout',
+  'marketplace-unavailable',
+  'not-found',
 ]);
 
 export interface TobCliProposal {
@@ -260,15 +272,20 @@ function view(setting: TobSetting) {
     value: { assignmentConcurrencyLimit: setting.value },
   };
 }
-async function body(request: IncomingMessage): Promise<{ value: unknown; bytes: number }> {
+async function body(
+  request: IncomingMessage,
+  limit = MAX_BODY_BYTES,
+  binary = false,
+): Promise<{ value: unknown; bytes: number }> {
   let length = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     length += bytes.length;
-    if (length > UPLOAD_BODY_BYTES) refuse('request-too-large');
+    if (length > limit) refuse('request-too-large');
     chunks.push(bytes);
   }
+  if (binary) return { value: Buffer.concat(chunks), bytes: length };
   try {
     return { value: JSON.parse(Buffer.concat(chunks).toString('utf8')), bytes: length };
   } catch {
@@ -316,12 +333,36 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       const actualAuth = Buffer.from(request.headers.authorization ?? '');
       if (actualAuth.length !== expectedAuth.length || !timingSafeEqual(actualAuth, expectedAuth))
         refuse('unauthorized');
-      if (request.method !== 'POST' || request.url !== '/invoke') refuse('invalid-request');
-      if (request.headers['content-type']?.split(';')[0]?.trim() !== 'application/json')
+      const upload = request.url === '/invoke-upload';
+      if (request.method !== 'POST' || (!upload && request.url !== '/invoke'))
+        refuse('invalid-request');
+      if (
+        request.headers['content-type']?.split(';')[0]?.trim() !==
+        (upload ? 'application/zip' : 'application/json')
+      )
         refuse('invalid-request');
       authorize();
-      const received = await body(request);
-      const input = object(received.value);
+      let metadata: Record<string, unknown> | undefined;
+      if (upload) {
+        const encoded = request.headers['x-botharness-invocation'];
+        if (typeof encoded !== 'string' || encoded.length > 8192) refuse('invalid-request');
+        try {
+          metadata = object(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
+        } catch {
+          refuse('invalid-request');
+        }
+        keys(metadata!, ['command', 'args']);
+        if (!['bot-import-preview', 'create'].includes(String(metadata!.command)))
+          refuse('unsupported-command');
+        const inputArgs = object(metadata!.args);
+        if (inputArgs.sourceKind !== 'archive' || Object.hasOwn(inputArgs, 'archive'))
+          refuse('invalid-request');
+        const length = Number(request.headers['content-length']);
+        if (Number.isFinite(length) && length > BOT_ZIP_MAX_BYTES) refuse('request-too-large');
+      }
+      const received = await body(request, upload ? BOT_ZIP_MAX_BYTES : UPLOAD_BODY_BYTES, upload);
+      const input = metadata ?? object(received.value);
+      keys(input, ['command', 'args']);
       const commandBodyLimit =
         input.command === 'attachment-upload'
           ? UPLOAD_BODY_BYTES
@@ -334,9 +375,8 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                 : IMAGE_COMMANDS.has(String(input.command))
                   ? MAX_BODY_BYTES
                   : SMALL_BODY_BYTES;
-      if (received.bytes > commandBodyLimit) refuse('request-too-large');
-      keys(input, ['command', 'args']);
-      const args = object(input.args);
+      if (!upload && received.bytes > commandBodyLimit) refuse('request-too-large');
+      const args = { ...object(input.args), ...(upload ? { archive: received.value } : {}) };
       authorize();
       let value: unknown;
       if (input.command === 'capabilities') {

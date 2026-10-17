@@ -71,7 +71,7 @@ deepseekbot bot-sessions <bot-id> --limit 20
 deepseekbot bot-activity <bot-id> --limit 20
 ```
 
-Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `steps` and `next`. The model preset is applied through its owner, never forwarded as a native Agent preset. A missing specified preset is rejected before creation; other model failures after creation preserve the Bot and return its known identity and steps with `outcome: created`. A lost creation/import response without a stable operation key can return `outcome: unknown`: inspect the Host before creating again; no automatic mutation retry is provided. For blank online creation, use the [receipt-backed operation key](#tob-bot-creation-profiles-and-lifecycle) to reconcile the same identity. A created Bot alone does not prove model usability: use `send` and its exact correlated committed reply.
+Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `steps` and `next`. The model preset is applied through its owner, never forwarded as a native Agent preset. A missing specified preset is rejected before creation; other model failures after creation preserve the Bot and return its known identity and steps with `outcome: created`. A lost creation/import response without a stable operation key can return `outcome: unknown`: inspect the Host before creating again; no automatic mutation retry is provided. For online creation and inspected imports, use the [receipt-backed operation key](#tob-bot-creation-profiles-and-lifecycle) to reconcile the same identity. A created Bot alone does not prove model usability: use `send` and its exact correlated committed reply.
 
 `bot-attention` supports `--cursor` and the Host's pending/processing/observed/deferred/needs-repair/handled states; it limits pages to 1–100. Session summaries are newest-first and limited to 1–100 (default 50), with `total`; activity limits its session details and reports `sessionCount`. These are bounded summaries, not full tool-call logs or streaming drafts.
 
@@ -736,11 +736,34 @@ These online commands reuse the existing Bot ZIP owner. Listing returns Git-elig
 
 `--out` must name a new file. The CLI creates it exclusively with mode `0600`; an existing path refuses `output-exists` without overwrite. Stdout contains only download path, byte count, SHA-256 and related metadata; binary archive data and file bodies never enter the conversation result. A changed content/identity snapshot refuses `stale-bot-files`; read again and review the exact new scope instead of blindly replaying.
 
-Tob invokes the same commands through native Shell from its authenticated Human DM, without a Human Host token, arbitrary Host override or offline directory fallback. Export follows the existing approval policy, showing the target Bot, exact selected/required files and history choice. Denial or revoked authority prevents archive delivery. Exporting Tob personality/Memory does not transfer its protected local identity: existing ZIP import still creates an ordinary Bot. This grants no Marketplace import or cross-Bot Memory editing authority.
+Tob invokes the same commands through native Shell from its authenticated Human DM, without a Human Host token, arbitrary Host override or offline directory fallback. Export follows the existing approval policy, showing the target Bot, exact selected/required files and history choice. Denial or revoked authority prevents archive delivery. Exporting Tob personality/Memory does not transfer its protected local identity: existing ZIP import still creates an ordinary Bot. Marketplace selection/import has its own reviewed flow below; transfer grants no cross-Bot Memory editing authority.
 
 ### Tob Bot creation, profiles and lifecycle
 
-`create` in scoped Tob execution makes a blank Bot in managed Memory storage. A name is the only required user choice; Tob supplies a stable `--operation-key` for the operation. Optional `--description`, repeated `--role` tags, `--avatar-file`, `--persona` / `--persona-stdin`, and `--core-memory` / `--core-memory-stdin` reuse the existing creation validation. Only one content option may consume stdin. Initial personality and Memory become `SOUL.md` and `MEMORY.md`; no unrelated Workspace Grants or credentials are copied.
+### Tob Marketplace proposal and selected import
+
+For a requested Bot, Tob prepares a custom SOUL and initial Core Memory proposal and actually searches the Marketplace unless the Human explicitly skips search. `marketplace-list` returns `status: matches` or `no-matches` after a successful query; `marketplace-unavailable` is a service failure, not evidence that no candidate exists. `marketplace-topics` and `marketplace-detail` use the existing catalogue owner. Listing text and the bounded README are marked untrusted data. Search and inspection create no Bot and do not publish, install dependencies or run repository scripts.
+
+```bash
+deepseekbot marketplace-list --query 'research assistant'
+deepseekbot marketplace-topics
+deepseekbot marketplace-detail owner/repo
+deepseekbot bot-import-preview --from-git owner/repo
+deepseekbot create --from-git owner/repo --name Researcher --operation-key import-research-001 --expected-commit <observed-commit>
+deepseekbot bot-import-preview --from-zip ./selected.zip
+deepseekbot create --from-zip ./selected.zip --operation-key import-selected-001 --expected-archive <observed-sha256>
+# --from-dir ./bundle uses the same archive preview/import contract.
+```
+
+After the Human chooses an import, Tob reviews its source, name/tags/bio overrides and preservation of imported personality. Git/GitHub inspection observes the immutable HEAD commit; cloning must still produce that exact commit before a Bot identity is registered (`git-source-changed` otherwise). The existing SSH-to-HTTPS fallback is visible in the inspected source. ZIP/directory preview returns the hash of the actual archive bytes, eligible file paths/sizes, descriptor and history presence, without file bodies. A changed archive returns `stale-import-source`.
+
+ZIP/directory inputs are read by the CLI in its native Shell environment and uploaded privately as bounded binary bytes (100 MiB maximum), never as model-facing base64 JSON or a caller-selected Host directory read. Scoped writes still require the accepted Human DM Source Event and current native ToolExecution; the broker checks authority before buffering and after approval. Do not use unrelated Host paths as a workaround for a missing source file.
+
+Both authenticated Human online imports and scoped Tob imports reuse the existing Registry, Memory and Channel owners and the creation receipt table. Replay the **same key and exact payload** to reconcile the original Bot and DM after an uncertain response. Completed replay does not clone, unpack or overwrite later Memory edits. Different payloads return `creation-key-conflict`; archived/deleted identities cannot be recreated, and a reserved folder without an identity requires repair. Imported `SOUL.md`, `MEMORY.md`, presentation and optional history are preserved; imports create ordinary Bots without privileged Tob identity, credentials or Workspace Grants. No custom proposal is silently written over an imported personality.
+
+These are command contracts. Direct CLI, actual Tob model/approval, Web navigation, restart persistence and macOS Desktop qualification are separate evidence gates.
+
+`create` without an import source in scoped Tob execution makes a blank Bot in managed Memory storage. A name is the only required user choice; Tob supplies a stable `--operation-key` for the operation. Optional `--description`, repeated `--role` tags, `--avatar-file`, `--persona` / `--persona-stdin`, and `--core-memory` / `--core-memory-stdin` reuse the existing creation validation. Only one content option may consume stdin. Initial personality and Memory become `SOUL.md` and `MEMORY.md`; no unrelated Workspace Grants or credentials are copied.
 
 ```bash
 deepseekbot create --name Translator --operation-key create-translator-001 --persona 'Translate clearly.' --core-memory 'Prefer concise explanations.'
@@ -752,7 +775,7 @@ deepseekbot resume <bot-id> --expected-profile <profileFingerprint>
 
 The Host reserves one identity in its durable creation receipt before creating the Memory Repository and DM. After a lost response, repeat the **same operation key and same payload**: an existing completed receipt returns that Bot and DM, while a partially completed operation reconciles the reserved identity. A completed scoped retry performs a checked read instead of another creation approval. A changed payload refuses with `creation-key-conflict`; an archived or deleted identity refuses with `creation-identity-unavailable` and is never recreated by replay. `creation-memory-conflict` means the reserved folder exists without its Registry identity: preserve it for repair rather than deleting it or trying a new key. Receipt-backed creation is not a filesystem/database transaction and does not promise automatic repair of that interrupted state.
 
-The authenticated Human online `create` also accepts `--operation-key`. It is limited to blank creation with managed Memory, without `--preset` or a custom Memory location; apply a model plan or move Memory separately. Calls without a key keep their existing behavior, including import behavior. Scoped Tob does not gain Git/Zip/directory import, Marketplace search or edits to another Bot's existing Memory from this slice.
+The authenticated Human online `create` also accepts `--operation-key`. It uses managed Memory without `--preset` or a custom Memory location; apply a model plan or move Memory separately. Selected Git/Zip/directory imports also accept a key with the inspected source fingerprint as described below. Calls without a key keep their existing behavior. Editing another Bot's existing Memory is a separate capability.
 
 Scoped `show` returns `{bot, profileFingerprint}`. Before every `update`, `pause`, `resume`, `bot-avatar-set`, `bot-banner-set`, `bot-appearance-set` or `bot-primary-color-set`, read the target and pass that fingerprint using `--expected-profile`. Presentation commands retain their existing file/recipe/clear/color options. The fingerprint covers the complete Registry record, so a concurrent change to any recorded profile field invalidates the reviewed snapshot. The Host rechecks it after approval and before applying the existing owner operation, then returns the canonical profile and new fingerprint. Re-read after `stale-setting`; do not silently overwrite. Profile metadata updates are limited to name, description and tags, not Workspace Grants, credentials or model configuration. Human online `update` also requires `--expected-profile` from `show` and uses the same Host owner; a stale fingerprint is not silently refreshed. Use `--description ''` to clear the bio and `--role ''` to clear all tags.
 

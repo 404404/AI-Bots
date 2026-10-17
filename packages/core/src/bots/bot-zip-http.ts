@@ -1,3 +1,5 @@
+import { BotCreationError } from './creation.js';
+import type { BotImportsService } from './imports.js';
 import { createBotTransfer, BotTransferError, type BotTransferService } from './transfer.js';
 import { randomUUID } from 'node:crypto';
 
@@ -20,6 +22,7 @@ type DetailResult =
 export interface BotZipHttpDeps {
   registry: PersonaBotRegistry;
   transfer?: BotTransferService;
+  imports?: BotImportsService;
   detail: (slug: string) => DetailResult;
   log?: (message: string) => void;
   createBotId?: () => string;
@@ -249,6 +252,69 @@ export function createBotZipHttp(deps: BotZipHttpDeps): (request: Request) => Pr
         return zipFailure(error);
       }
       throw error;
+    }
+    if (params.get('preview') === '1') {
+      if (!deps.imports)
+        return failure(503, 'import-unavailable', 'Source inspection is unavailable on this Host');
+      try {
+        return Response.json(deps.imports.previewArchive(archive), { headers: NO_STORE });
+      } catch (error) {
+        if (error instanceof ZipArchiveError) return zipFailure(error);
+        return failure(400, 'invalid-zip', 'The archive could not be inspected');
+      }
+    }
+    const operationKey = params.get('operationKey');
+    if (operationKey !== null) {
+      const expectedArchive = params.get('expectedArchive');
+      if (!deps.imports || !expectedArchive)
+        return failure(
+          400,
+          'invalid-input',
+          'Stable import needs operationKey and expectedArchive',
+        );
+      try {
+        const input = deps.imports.archiveInput(archive, {
+          expectedArchive,
+          displayName:
+            overrides.name ?? contents.descriptor?.name ?? fileStem(params.get('name')) ?? 'Bot',
+          ...(overrides.bio === undefined ? {} : { description: overrides.bio }),
+          ...(overrides.tags === undefined ? {} : { roles: overrides.tags }),
+        });
+        const created = await deps.imports.create(operationKey, input);
+        const detail = deps.detail(created.record.slug);
+        if (!detail.ok)
+          return Response.json(
+            {
+              error: detail.error,
+              bot: { id: created.record.slug, name: created.record.displayName },
+              receipt: created.receipt,
+              outcome: 'created',
+            },
+            { status: 500, headers: NO_STORE },
+          );
+        const body = typeof detail.value === 'object' && detail.value !== null ? detail.value : {};
+        return Response.json(
+          {
+            ...body,
+            receipt: created.receipt,
+            channelId: created.channelId,
+            source: {
+              kind: 'archive',
+              sha256: input.source.kind === 'archive' ? input.source.sha256 : expectedArchive,
+            },
+          },
+          { headers: NO_STORE },
+        );
+      } catch (error) {
+        if (error instanceof BotCreationError)
+          return failure(
+            error.code === 'stale-import-source' ? 409 : 400,
+            error.code,
+            error.message,
+          );
+        if (error instanceof ZipArchiveError) return zipFailure(error);
+        return failure(500, 'memory-unavailable', 'The selected Bot could not be imported');
+      }
     }
     const slug = deps.createBotId?.() ?? 'bot-' + randomUUID().replaceAll('-', '');
     const displayName =

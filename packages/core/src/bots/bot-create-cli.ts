@@ -105,6 +105,7 @@ export interface BotCreateStep {
 }
 
 export interface BotCreateResult {
+  source?: unknown;
   bot: { id: string; name: string };
   dm: { channelId: string };
   dataDir: string;
@@ -127,7 +128,7 @@ Usage:
                     [--core-memory <text> | --core-memory-stdin]
                     [--description <text>] [--role <tag> ...] [--avatar-file <image>]
                     [--preset <model-preset-id>] [--memory-location <absolute-dir>]
-                    [--home <dsh-home>] [--operation-key <stable-key> (online blank creation)]
+                    [--home <dsh-home>] [--operation-key <stable-key> (online creation/import; imports also require their source fingerprint)]
   deepseekbot create --name <name> --from-git <url | owner/repo> [...]
   deepseekbot create [--name <name>] --from-zip <file> [...]
   deepseekbot create [--name <name>] --from-dir <directory> [...]
@@ -319,6 +320,7 @@ Usage:
   deepseekbot private-mcp-set <id> --server <name> (--enabled | --disabled)
   deepseekbot private-mcp-remove <id> --server <name> --confirm
   deepseekbot bot-delete-preview <id>
+  deepseekbot bot-import-preview (--from-git <url> | --from-zip <file> | --from-dir <directory>) --host <url>
   deepseekbot bot-zip-files <id> --host <url>
   deepseekbot bot-zip-export <id> --out <new-path> (--all | --include <path> ...) [--history] --expected-state <fingerprint> --host <url>
   deepseekbot bot-delete-memory-folder <id>
@@ -516,6 +518,8 @@ const CREATE_OPTIONS = {
   preset: { type: 'string' },
   'preset-revision': { type: 'string' },
   'operation-key': { type: 'string' },
+  'expected-commit': { type: 'string' },
+  'expected-archive': { type: 'string' },
   'expected-profile': { type: 'string' },
   'erase-memory': { type: 'boolean' },
   'from-zip': { type: 'string' },
@@ -621,7 +625,7 @@ function mintSlug(): string {
   return `bot-${randomUUID().replaceAll('-', '')}`;
 }
 
-function expandGitHubRef(value: string): string | undefined {
+export function expandGitHubRef(value: string): string | undefined {
   const raw = value.trim();
   if (raw.length === 0) return undefined;
   const shorthand = raw.replace(/^github\.com\//iu, '').replace(/\.git$/iu, '');
@@ -1173,6 +1177,38 @@ function readDirBundle(path: string): {
     history: bundle.history,
     historySkipped: bundle.historySkipped,
   };
+}
+
+export function readBotImportArchive(source: { zip?: string; directory?: string }): {
+  archive: Buffer;
+  name?: string;
+  historySkipped: boolean;
+} {
+  if ((source.zip === undefined) === (source.directory === undefined))
+    throw usageError('Choose one local archive or directory.');
+  if (source.zip !== undefined) {
+    const contents = readZipBundle(source.zip);
+    return { archive: contents.archive, name: basename(source.zip), historySkipped: false };
+  }
+  const contents = readDirBundle(source.directory!);
+  const archive = writeZip([
+    ...contents.files.map((file) => ({
+      ...file,
+      path: 'bot-bundle/' + file.path,
+      modifiedAt: new Date('1980-01-01T00:00:00Z'),
+    })),
+    ...(contents.history === undefined
+      ? []
+      : [
+          {
+            path: 'bot-bundle/' + BOT_ZIP_HISTORY_PATH,
+            data: contents.history,
+            modifiedAt: new Date('1980-01-01T00:00:00Z'),
+          },
+        ]),
+  ]);
+  readBotZip(archive);
+  return { archive, historySkipped: contents.historySkipped };
 }
 
 async function finishCreate(
@@ -2671,15 +2707,7 @@ export async function runBotCreateCli(
           historySkipped: contents.historySkipped,
         };
       } else if (input?.source.kind === 'dir') {
-        const contents = readDirBundle(input.source.path);
-        const archive = writeZip([
-          ...contents.files.map((file) => ({ ...file, path: `bot-bundle/${file.path}` })),
-          ...(contents.history === undefined
-            ? []
-            : [{ path: `bot-bundle/${BOT_ZIP_HISTORY_PATH}`, data: contents.history }]),
-        ]);
-        readBotZip(archive);
-        bundle = { archive, historySkipped: contents.historySkipped };
+        bundle = readBotImportArchive({ directory: input.source.path });
       }
       out.stdout(
         JSON.stringify(
