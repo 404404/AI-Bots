@@ -11,6 +11,7 @@ import {
   ConversationTitle,
   GroupChannelHeader,
 } from './group-channel-header.js';
+import { GroupChannelIcon } from './group-avatar-stack.js';
 import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { useDmComposerContext } from './dm-composer-context.js';
 import { useGroupComposerContext } from './group-composer-context.js';
@@ -169,7 +170,7 @@ import {
 import { useMountedResource } from './mounted-resource.js';
 import * as stylex from '@stylexjs/stylex';
 import { IconButton } from './ds/icon-button.js';
-import { color, text } from './ds/tokens.stylex.js';
+import { color, radius, text } from './ds/tokens.stylex.js';
 import type { ReleaseNotesController } from './release-notes.js';
 import { ReleaseNotesAnnouncement } from './release-notes-view.js';
 import type { TelemetryNoticeController } from './telemetry-notice.js';
@@ -268,6 +269,15 @@ function fullTime(at: string, t: BotHarnessTranslate): string {
 }
 
 const messageStyles = stylex.create({
+  channelIcon: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: text.titleLine,
+    height: text.titleLine,
+    overflow: 'hidden',
+    borderRadius: radius.xs,
+  },
   emptyContainer: { display: 'flex', flexDirection: 'column', flexGrow: 1 },
   metaTime: {
     color: color.subtle,
@@ -3175,6 +3185,32 @@ function ConversationView({
                 workspaceEnabled && channel !== undefined
                   ? {
                       title,
+                      icon:
+                        channel.type === 'group' || botDm ? (
+                          <GroupChannelIcon
+                            channel={channel}
+                            bots={new Map(state.bots.map((member) => [member.slug, member]))}
+                            className={stylex.props(messageStyles.channelIcon).className ?? ''}
+                            groupClassName=""
+                            size={20}
+                            hashSize={16}
+                            t={t}
+                          />
+                        ) : dmBot !== undefined ? (
+                          <PersonaBotAvatar
+                            t={t}
+                            personaBotId={dmBot.slug}
+                            name={dmBot.displayName}
+                            src={dmBot.avatar}
+                            appearance={dmBot.appearance}
+                            avatarSeed={dmBot.avatarSeed}
+                            size={20}
+                            indicator={false}
+                            still
+                          />
+                        ) : (
+                          <ChannelSidebarIcon name="user" size={20} />
+                        ),
                       actions: (
                         <>
                           {(profileBot !== undefined || channel.type === 'group') && (

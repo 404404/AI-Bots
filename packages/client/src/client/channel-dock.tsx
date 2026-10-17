@@ -70,6 +70,7 @@ const styles = stylex.create({
   breadcrumb: { display: 'flex', alignItems: 'center', gap: space.x2, minWidth: 0 },
   channelName: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
   messageLabel: { flexShrink: 0 },
+  breadcrumbIcon: { display: 'inline-flex', alignItems: 'center', flexShrink: 0 },
   actions: { display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: space.x1 },
 });
 
@@ -124,6 +125,7 @@ interface ChannelFilesView {
 
 export interface ChannelHeaderView {
   title: string;
+  icon?: ReactNode;
   actions: ReactNode;
 }
 
@@ -344,9 +346,18 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
           entryId === CHANNEL_BODY_PANEL && dock.header ? (
             <span {...stylex.props(styles.breadcrumb)}>
               <span {...stylex.props(styles.messageLabel)}>{panel.title}</span>
-              <span {...stylex.props(styles.messageLabel)}>
+              <span aria-hidden="true" {...stylex.props(styles.breadcrumbIcon)}>
                 <ChannelSidebarIcon name="chevron-right" />
               </span>
+              {dock.header.icon !== undefined && (
+                <span
+                  aria-hidden="true"
+                  data-channel-header-icon=""
+                  {...stylex.props(styles.breadcrumbIcon)}
+                >
+                  {dock.header.icon}
+                </span>
+              )}
               <span title={dock.header.title} {...stylex.props(styles.channelName)}>
                 {dock.header.title}
               </span>
