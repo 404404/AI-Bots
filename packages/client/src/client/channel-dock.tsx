@@ -895,8 +895,11 @@ export function ChannelDock({
       );
       persisted.current = saved;
       if (saved) {
-        try { persistedRaw.current = (storage ?? localStorage).getItem(CHANNEL_DOCK_STORAGE_KEY); }
-        catch { persisted.current = false; }
+        try {
+          persistedRaw.current = (storage ?? localStorage).getItem(CHANNEL_DOCK_STORAGE_KEY);
+        } catch {
+          persisted.current = false;
+        }
       }
       setStorageFailed(!persisted.current);
     }
@@ -1218,20 +1221,39 @@ export function ChannelDock({
   const readLayout = () => {
     if (!api || !workspace) throw new Error('client-layout-unavailable');
     let raw: string | null;
-    try { raw = (storage ?? localStorage).getItem(CHANNEL_DOCK_STORAGE_KEY); }
-    catch { throw new Error('client-layout-storage-unavailable'); }
-    if (raw !== null && !readChannelDock(storage)) throw new Error('client-layout-recovery-required');
-    if (persistedRaw.current !== undefined && raw !== persistedRaw.current) throw new Error('stale-client-layout');
+    try {
+      raw = (storage ?? localStorage).getItem(CHANNEL_DOCK_STORAGE_KEY);
+    } catch {
+      throw new Error('client-layout-storage-unavailable');
+    }
+    if (raw !== null && !readChannelDock(storage))
+      throw new Error('client-layout-recovery-required');
+    if (persistedRaw.current !== undefined && raw !== persistedRaw.current)
+      throw new Error('stale-client-layout');
     return {
       channelId: channelRef.current?.id ?? null,
-      panels: [...known.current.values()].map(({ id, scope }) => ({ id, scope, eligible: canOpen(id) })),
-      layout: api.toJSON(), parked: parked.current, gap: gapRef.current,
-      order: orderRef.current, hiddenControls: hiddenControlsRef.current,
-      members: membersRef.current, botPanelSeeds: botSeeds.current,
-      botWorkspaces: botWorkspacesRef.current, sessionSeed: seed.current,
-      channelWorkspaces: channelWorkspacesRef.current, channelSplits: channelSplitsRef.current,
-      childTree: channelRef.current ? (channelSplitsRef.current[channelRef.current.id] ?? legacyChannelSplit({ ...botStatesRef.current, sessions: sessionStateRef.current })) : null,
-      persisted: persisted.current, storage: raw,
+      panels: [...known.current.values()].map(({ id, scope }) => ({
+        id,
+        scope,
+        eligible: canOpen(id),
+      })),
+      layout: api.toJSON(),
+      parked: parked.current,
+      gap: gapRef.current,
+      order: orderRef.current,
+      hiddenControls: hiddenControlsRef.current,
+      members: membersRef.current,
+      botPanelSeeds: botSeeds.current,
+      botWorkspaces: botWorkspacesRef.current,
+      sessionSeed: seed.current,
+      channelWorkspaces: channelWorkspacesRef.current,
+      channelSplits: channelSplitsRef.current,
+      childTree: channelRef.current
+        ? (channelSplitsRef.current[channelRef.current.id] ??
+          legacyChannelSplit({ ...botStatesRef.current, sessions: sessionStateRef.current }))
+        : null,
+      persisted: persisted.current,
+      storage: raw,
     };
   };
   const editLayout = (patch: ClientLayoutEdit, expected: string) => {
@@ -1241,8 +1263,14 @@ export function ChannelDock({
     const current = channelRef.current;
     const child = 'panel' in patch && CHANNEL_WORKSPACE_PANELS.includes(patch.panel);
     const channelScoped = 'panel' in patch && known.current.get(patch.panel)?.scope === 'channel';
-    if (('channelId' in patch && patch.channelId !== undefined) || child || channelScoped || patch.type.startsWith('child-')) {
-      if (!current || !('channelId' in patch) || patch.channelId !== current.id) throw new Error('client-layout-channel-mismatch');
+    if (
+      ('channelId' in patch && patch.channelId !== undefined) ||
+      child ||
+      channelScoped ||
+      patch.type.startsWith('child-')
+    ) {
+      if (!current || !('channelId' in patch) || patch.channelId !== current.id)
+        throw new Error('client-layout-channel-mismatch');
     }
     const knownPanel = (id: string) => {
       if (!known.current.has(id) || id === WORKSPACE_RAIL) throw new Error('unknown-layout-panel');
@@ -1253,46 +1281,85 @@ export function ChannelDock({
       channelSplitsRef.current = { ...channelSplitsRef.current, [current.id]: tree };
       updateChannelSplits(channelSplitsRef.current);
     };
-    const tree = () => current && (channelSplitsRef.current[current.id] ?? legacyChannelSplit({ ...botStatesRef.current, sessions: sessionStateRef.current }));
+    const tree = () =>
+      current &&
+      (channelSplitsRef.current[current.id] ??
+        legacyChannelSplit({ ...botStatesRef.current, sessions: sessionStateRef.current }));
     if ('panel' in patch) knownPanel(patch.panel);
-    if (patch.type === 'gap') { gapRef.current = patch.gap; updateGap(patch.gap); }
-    else if (patch.type === 'rail-order') {
+    if (patch.type === 'gap') {
+      gapRef.current = patch.gap;
+      updateGap(patch.gap);
+    } else if (patch.type === 'rail-order') {
       for (const id of patch.order) knownPanel(id);
-      orderRef.current = patch.order; updateOrder(patch.order);
+      orderRef.current = patch.order;
+      updateOrder(patch.order);
     } else if (patch.type === 'rail-location') {
-      if (!['left', 'right', ...workspaceColumns(api).map(column => column.id)].includes(patch.before)) throw new Error('invalid-layout-target');
+      if (
+        !['left', 'right', ...workspaceColumns(api).map((column) => column.id)].includes(
+          patch.before,
+        )
+      )
+        throw new Error('invalid-layout-target');
       moveWorkspaceRail(api, patch.before);
     } else if (patch.type === 'control') {
-      if (child) setSubpanelState(patch.panel, { ...subpanelState(patch.panel), hiddenControl: !patch.visible });
+      if (child)
+        setSubpanelState(patch.panel, {
+          ...subpanelState(patch.panel),
+          hiddenControl: !patch.visible,
+        });
       else {
-        hiddenControlsRef.current = patch.visible ? hiddenControlsRef.current.filter(id => id !== patch.panel) : [...new Set([...hiddenControlsRef.current, patch.panel])];
+        hiddenControlsRef.current = patch.visible
+          ? hiddenControlsRef.current.filter((id) => id !== patch.panel)
+          : [...new Set([...hiddenControlsRef.current, patch.panel])];
         updateHiddenControls(hiddenControlsRef.current);
       }
       if (!patch.visible) close(patch.panel);
     } else if (patch.type === 'visibility') {
-      if (patch.panel === 'bot-inbox' || patch.panel === 'members') throw new Error('unsupported-layout-panel');
-      if (patch.open) open(patch.panel); else close(patch.panel);
+      if (patch.panel === 'bot-inbox' || patch.panel === 'members')
+        throw new Error('unsupported-layout-panel');
+      if (patch.open) open(patch.panel);
+      else close(patch.panel);
     } else if (patch.type === 'move') {
       if (child) {
         const next = tree();
-        if (!next || !splitPanels(next).includes(patch.target) || patch.panel === MESSAGE_LEAF) throw new Error('invalid-layout-target');
+        if (!next || !splitPanels(next).includes(patch.target) || patch.panel === MESSAGE_LEAF)
+          throw new Error('invalid-layout-target');
         setTree(moveChannelSplit(next, patch.panel, patch.target, patch.direction));
       } else {
         knownPanel(patch.target);
-        if (CHANNEL_WORKSPACE_PANELS.includes(patch.target)) throw new Error('invalid-layout-target');
-        const panel = api.getPanel(patch.panel), target = api.getPanel(patch.target);
+        if (CHANNEL_WORKSPACE_PANELS.includes(patch.target))
+          throw new Error('invalid-layout-target');
+        const panel = api.getPanel(patch.panel),
+          target = api.getPanel(patch.target);
         if (!panel || !target) throw new Error('layout-panel-hidden');
-        if (panel.group === target.group || panel.group.panels.length !== 1) throw new Error('layout-topology-constrained');
+        if (panel.group === target.group || panel.group.panels.length !== 1)
+          throw new Error('layout-topology-constrained');
         for (const visible of api.panels) delete parked.current[visible.id];
-        panel.api.moveTo({ group: target.group, position: patch.direction === 'above' ? 'top' : patch.direction === 'below' ? 'bottom' : patch.direction, skipSetActive: true });
+        panel.api.moveTo({
+          group: target.group,
+          position:
+            patch.direction === 'above'
+              ? 'top'
+              : patch.direction === 'below'
+                ? 'bottom'
+                : patch.direction,
+          skipSetActive: true,
+        });
       }
     } else if (patch.type === 'size') {
       if (child) throw new Error('invalid-layout-edit');
       const panel = api.getPanel(patch.panel);
       if (!panel || api.width <= 0 || api.height <= 0) throw new Error('layout-panel-hidden');
       for (const visible of api.panels) delete parked.current[visible.id];
-      panel.group.api.setSize({ width: api.width * patch.width, height: api.height * patch.height });
-      if (Math.abs(panel.group.api.width / api.width - patch.width) > 0.01 || Math.abs(panel.group.api.height / api.height - patch.height) > 0.01) outcome = 'constrained';
+      panel.group.api.setSize({
+        width: api.width * patch.width,
+        height: api.height * patch.height,
+      });
+      if (
+        Math.abs(panel.group.api.width / api.width - patch.width) > 0.01 ||
+        Math.abs(panel.group.api.height / api.height - patch.height) > 0.01
+      )
+        outcome = 'constrained';
     } else {
       const next = tree();
       if (!next) throw new Error('client-layout-channel-mismatch');
@@ -1307,7 +1374,9 @@ export function ChannelDock({
         const axis = (branch: ChannelSplit, path: string): ChannelSplit => {
           if ('panel' in branch) throw new Error('invalid-layout-target');
           if (!path) return { ...branch, axis: patch.axis };
-          return path[0] === '0' ? { ...branch, first: axis(branch.first, path.slice(1)) } : { ...branch, second: axis(branch.second, path.slice(1)) };
+          return path[0] === '0'
+            ? { ...branch, first: axis(branch.first, path.slice(1)) }
+            : { ...branch, second: axis(branch.second, path.slice(1)) };
         };
         setTree(axis(next, patch.path));
       }
