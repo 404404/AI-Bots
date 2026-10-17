@@ -242,6 +242,81 @@ async function developerUi(expected) {
   mark('settings-verified');
   steps.push('real Settings UI developer mode matches canonical value ' + expected);
 }
+async function telemetryUi(expected) {
+  await dismissBubble();
+  if (await page.$('[role="dialog"]')) await click('Close', '[role="dialog"]');
+  await click('Bot settings', '.bh-workspace-rail');
+  await page.waitForSelector('[role="dialog"]', { visible: true });
+  await click('Advanced', '[role="dialog"]');
+  const selector = '[data-telemetry-setting] [role="switch"]';
+  await page.waitForSelector(selector);
+  await page.waitForFunction(
+    ({ selector, expected }) => {
+      const control = document.querySelector(selector);
+      return (
+        control &&
+        control.getAttribute('aria-checked') === String(expected) &&
+        control.getAttribute('aria-disabled') !== 'true' &&
+        !control.disabled
+      );
+    },
+    {},
+    { selector, expected },
+  );
+  await page.$eval(selector, (node) => node.scrollIntoView({ block: 'center' }));
+  await shot('telemetry-setting');
+  await click('Close', '[role="dialog"]');
+  steps.push('real unlocked privacy switch matches canonical telemetry ' + expected);
+}
+
+async function waitForCommandCompletion(home, prompt, previousMessageIds, previousCalls, command) {
+  for (let i = 0; i < 180; i++) {
+    const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    const fresh = messages.filter((message) => !previousMessageIds.has(message.id));
+    assert.ok(!fresh.some((message) => message.sessionFailure), 'management Session failed');
+    const submitted = fresh.find(
+      (message) => message.author.kind === 'human' && message.body === prompt,
+    );
+    const delivery = submitted?.deliveries?.find((entry) => entry.botSlug === home.botSlug);
+    assert.ok(!['retryable', 'needs-repair', 'ignored'].includes(delivery?.state));
+    const evidence = await newToolCalls(home.botSlug, previousCalls);
+    const turn = evidence.trace.turns.find((entry) =>
+      entry.calls.some(
+        (call) =>
+          !previousCalls.has(call.callId) &&
+          ['bash', 'pwsh'].includes(call.name) &&
+          JSON.stringify(call.args).includes('deepseekbot ' + command),
+      ),
+    );
+    if (turn?.endReason !== undefined) assert.equal(turn.endReason, 'completed');
+    const reply = fresh.find(
+      (message) =>
+        message.author.kind === 'bot' &&
+        message.body &&
+        !message.toolApprovalRequest &&
+        !message.onboardingWelcome &&
+        !message.sessionFailure,
+    );
+    if (submitted && delivery?.state === 'handled' && turn?.endReason === 'completed' && reply) {
+      const completion = {
+        messageId: submitted.id,
+        sessionId: evidence.trace.sessionId,
+        turn: turn.turn,
+        endReason: turn.endReason,
+        delivery: delivery.state,
+        reply: reply.body,
+      };
+      writeFileSync(
+        resolve(out, 'management-turn-completion.json'),
+        JSON.stringify(completion, null, 2),
+      );
+      return completion;
+    }
+    await pause(1000);
+  }
+  throw Error('management request did not reach completed turn, handled delivery and actual reply');
+}
+
 async function modelUi(route) {
   mark('model-ui-open');
   await page.locator('[data-composer-chip="model"]').click();
@@ -547,12 +622,40 @@ try {
       'runtime-stale',
       'model-approve',
       'restart-read',
+      'telemetry-direct',
+      'telemetry-approve',
+      'telemetry-deny',
+      'telemetry-restart-read',
     ].includes(phase),
     'unknown phase',
   );
   const target = process.env.BH_E2E_TARGET_BOT || home.botSlug;
   const initial = await settings();
-  if (phase === 'restart-read') {
+  if (phase === 'telemetry-direct' || phase === 'telemetry-restart-read') {
+    const before = await humanCli('telemetry-status');
+    assert.equal(before.lockedBy, undefined, 'privacy journey requires unlocked telemetry');
+    if (phase === 'telemetry-direct') {
+      for (const enabled of [false, true, before.preference]) {
+        const changed = await humanCli('telemetry-set', [enabled ? '--enabled' : '--disabled']);
+        assert.equal(changed.preference, enabled);
+        assert.equal(changed.enabled, enabled);
+        await telemetryUi(enabled);
+      }
+    }
+    const current = await humanCli('telemetry-status');
+    if (process.env.BH_E2E_EXPECT_TELEMETRY !== undefined)
+      assert.equal(current.preference, process.env.BH_E2E_EXPECT_TELEMETRY === 'true');
+    await telemetryUi(current.enabled);
+    writeFileSync(
+      resolve(out, 'telemetry-readback.json'),
+      JSON.stringify({ before, current }, null, 2),
+    );
+    steps.push(
+      phase === 'telemetry-direct'
+        ? 'independent Human CLI privacy off/on/restore'
+        : 'same Profile telemetry survives actual external Host restart',
+    );
+  } else if (phase === 'restart-read') {
     if (process.env.BH_E2E_EXPECT_DEVELOPER !== undefined)
       assert.equal(
         initial.value.developerMode === true,
@@ -629,6 +732,16 @@ try {
       );
       prompt =
         'This isolated development-profile test has telemetry disabled by an environment lock and no installable release or pending restart. Use native bash and deepseekbot to exercise exactly these three expected refusals, each in its own short Shell call: deepseekbot telemetry-set --enabled; deepseekbot release-install 999.0.0 --confirm; deepseekbot release-restart --confirm. Run each once and continue to the next after its expected refusal; do not retry any command. Report each exact CLI refusal code. Do not install another version, change environment/config files, seek credentials, delegate, or work around the refusals.';
+    } else if (phase.startsWith('telemetry-')) {
+      command = 'telemetry-set';
+      maintenanceBefore = { telemetry: await humanCli('telemetry-status') };
+      assert.equal(
+        maintenanceBefore.telemetry.lockedBy,
+        undefined,
+        'privacy journey requires unlocked telemetry',
+      );
+      const desired = !maintenanceBefore.telemetry.enabled;
+      prompt = desired ? '帮我开启匿名使用统计。' : '帮我关闭匿名使用统计。';
     } else if (phase === 'model-approve') {
       command = 'model-plan-customize';
       const defaultSetting = (await rpc('describe', {}, 'settings')).namespaces.find(
@@ -806,6 +919,45 @@ try {
       );
       steps.push(
         'actual CLI refusal codes for environment-locked telemetry, unavailable release install and no pending restart; no side effects',
+      );
+    } else if (phase.startsWith('telemetry-')) {
+      const desired = !maintenanceBefore.telemetry.enabled;
+      const message = await waitForApproval(
+        home.channelId,
+        previousIds,
+        previousCalls,
+        command,
+        (proposal) => proposal.target === 'telemetry' && proposal.patch?.enabled === desired,
+      );
+      const reviewed = JSON.parse(message.toolApprovalRequest.input);
+      assert.deepEqual(reviewed.previousValue, maintenanceBefore.telemetry);
+      const selector = await showApproval(message);
+      await decideApproval(selector, phase === 'telemetry-deny');
+      await verifyCliTrace(
+        home.botSlug,
+        previousCalls,
+        [command],
+        phase === 'telemetry-deny' ? 'approval-denied' : undefined,
+      );
+      const completion = await waitForCommandCompletion(
+        home,
+        prompt,
+        previousMessageIds,
+        previousCalls,
+        command,
+      );
+      const current = await humanCli('telemetry-status');
+      const expected = phase === 'telemetry-deny' ? maintenanceBefore.telemetry.enabled : desired;
+      assert.equal(current.enabled, expected);
+      assert.equal(current.preference, expected);
+      assert.equal(current.lockedBy, undefined);
+      writeFileSync(
+        resolve(out, 'telemetry-readback.json'),
+        JSON.stringify({ reviewed, current, completion }, null, 2),
+      );
+      await telemetryUi(expected);
+      steps.push(
+        'natural Tob privacy request with rendered review, decision, completed native Shell and independent CLI/UI readback',
       );
     } else {
       mark('approval-wait');
