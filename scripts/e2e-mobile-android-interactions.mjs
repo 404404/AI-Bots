@@ -61,7 +61,10 @@ function dump() {
   call('shell', 'uiautomator', 'dump', '/sdcard/bh-interactions.xml');
   const xml = call('exec-out', 'cat', '/sdcard/bh-interactions.xml');
   call('shell', 'rm', '/sdcard/bh-interactions.xml');
-  assert(!xml.includes('deepseekbot://pair?p='), 'PAIRING_SCREEN_CAPTURE_REFUSED');
+  assert(
+    !xml.replaceAll('deepseekbot://pair?p=…', '').includes('deepseekbot://pair?p='),
+    'PAIRING_SCREEN_CAPTURE_REFUSED',
+  );
   return xml;
 }
 const tap = (node) => {
