@@ -1,0 +1,20 @@
+{
+  "runtimeSource": "6eea6b76828c94c7a4dbcab00ff101a2cde16ca1",
+  "execution": "root-owned serialized native queue",
+  "profile": "desktop:macos",
+  "direct": {
+    "beforeGap": 4,
+    "afterGap": 8,
+    "pageErrors": []
+  },
+  "restart": {
+    "exitCode": 0,
+    "assertions": [
+      "layout gap remains 8",
+      "Client generation changes"
+    ],
+    "pageErrors": []
+  },
+  "coverage": "single Client; layout gap only; not nested native layout or physical input",
+  "mainDesktopRestored": true
+}

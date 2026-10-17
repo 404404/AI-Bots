@@ -10,7 +10,7 @@ Captured on 2026-10-18 at combined runtime source `6eea6b76828c94c7a4dbcab00ff10
 
 Focused source coverage: the 19-file selection had 165 cases; 17 files initially passed, and the two failing files passed all 26 cases after fixes. The initial failures were preserved. Root TypeScript, lint, format and build passed. The descendant shortcut reset fix separately passed 7 cases, TypeScript, lint, scoped format and build.
 
-No full suite, real Tob model approval journey, native restart, physical keyboard or Human QA is claimed here. Native runtime remains a separate parent-owned queue gate. The source test and browser evidence do not authorize merge.
+No full suite, real Tob model approval journey, physical keyboard or Human QA is claimed here. The root-owned native queue separately passed a single-Client gap change (4 to 8) and restart readback with a new generation. Nested native layout, old native migration and physical geometry remain unverified. See native-verification.json. The source test and browser evidence do not authorize merge.
 
 Private reconstruction: `.humanlayer/verify/tob-layout-shortcuts/journey/web-1792276104850/` contains JSON readbacks, screenshots and ARIA snapshots; `.humanlayer/tasks/2097-client-shortcuts/web-control-journey.mjs` contains the replay harness. Local Host manifests, tokens and profiles are not published.
 
