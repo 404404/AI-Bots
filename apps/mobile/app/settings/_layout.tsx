@@ -5,6 +5,7 @@ import { t } from '../../src/ui/strings';
 export default function SettingsLayout() {
   return (
     <SheetStack>
+      <Stack.Screen name="chat-background" options={{ title: t.chatBackground.global }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="usage" options={{ title: t.usage }} />
       <Stack.Screen name="app-icon" options={{ title: t.appIcon }} />

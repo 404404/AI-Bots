@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -41,14 +41,14 @@ export default function RootLayout() {
                 name="bot/[slug]"
                 options={{
                   title: t.profile,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, Platform.OS === 'android'),
                 }}
               />
               <Stack.Screen
                 name="group/[id]"
                 options={{
                   title: t.groupInfo,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, Platform.OS === 'android'),
                 }}
               />
               <Stack.Screen

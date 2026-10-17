@@ -10,6 +10,9 @@ import { currentAppBuild } from '../../src/ui/native-app-build';
 import { StatisticsSettings } from '../../src/ui/shell/statistics-settings';
 import { MessageDisplaySettings } from '../../src/ui/shell/message-display-settings';
 import { ActivityCountLink } from '../../src/ui/shell/activity-count-settings';
+import { SHEET_GROUP } from '../../src/ui/chat/sheet';
+import { SettingsRow } from '../../src/ui/primitives/settings-row';
+import { t } from '../../src/ui/strings';
 import { SettingsView } from '../../src/ui/settings-view';
 import { openHostDrawer } from '../../src/ui/shell/host-drawer';
 
@@ -26,6 +29,14 @@ export default function SettingsScreen() {
       statistics={<StatisticsSettings />}
       messageDisplay={<MessageDisplaySettings />}
       activityCount={<ActivityCountLink />}
+      chatBackground={
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.chatBackground.global}
+          disclosure
+          onPress={() => router.push('/settings/chat-background')}
+        />
+      }
       key={saved?.hostId}
       hostName={saved?.hostName}
       connection={connection}

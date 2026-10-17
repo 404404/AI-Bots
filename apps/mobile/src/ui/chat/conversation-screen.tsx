@@ -3,6 +3,12 @@ import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'r
 import { ActivityIndicator, FlatList, Pressable, View, type ViewInstance } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
+import {
+  chatBackgrounds,
+  useChatBackgrounds,
+  backgroundImageUri,
+} from '../../host/native-chat-background';
+import { ChatBackground } from './chat-background';
 import type { HostClient } from '../../host/client';
 import { visibleDmActivity } from '../../host/dm-activity';
 import { useHiddenDmActivity } from '../../host/native-dm-activity';
@@ -236,6 +242,10 @@ function ChatConversation({
   );
   const working = dm ? (bot !== undefined && botBusy(bot) ? [bot] : []) : members.filter(botBusy);
   const activeChannel = dm ? bot?.dmChannelId : channelId;
+  useChatBackgrounds();
+  const background = chatBackgrounds.resolve(
+    saved && activeChannel ? { hostId: saved.hostId, channelId: activeChannel } : undefined,
+  );
   const display = useMessageDisplay();
   const playback = useStreamPlayback(conversation, display.loaded && display.mode === 'streaming');
   const snapshot = useConversationTimelineSnapshot(conversation, playback);
@@ -609,6 +619,7 @@ function ChatConversation({
       <KeyboardChatFrame
         onMount={screenRef}
         backgroundColor={theme.color.base}
+        background={<ChatBackground choice={background} imageUri={backgroundImageUri} />}
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
           <View>
