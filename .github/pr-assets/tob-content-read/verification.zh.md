@@ -4,7 +4,7 @@
 
 ## 源码与检查
 
-五个受影响文件共170个不同 focused case 通过：初次未受失败影响134项，最终内容/RPC36项。根类型检查、lint、定向格式、十项源码/变更/ADR/CLI/feature map 等规则和一次产品构建通过。独立 Spec 与 Standards 审查发现的未签名游标位置篡改、Unicode 总遍历边界问题已在895修复并复审关闭。初次错误测试假设和类型错误保留，修正后重跑通过；不声称本地全套测试。
+五个受影响文件共170个不同 focused case 通过：初次未受失败影响134项，最终内容/RPC36项。根类型检查、lint、定向格式、十项源码/变更/ADR/CLI/feature map 等规则和一次产品构建通过。独立 Spec 与 Standards 审查发现的未签名游标位置篡改、Unicode 总遍历边界问题已在895修复并复审关闭。初次错误测试假设和类型错误保留，修正后重跑通过；初次19faf全套CI仅 plugin 注册名清单失败；测试修正 `b60b246767cfe59fa59d4e66262075838b70c906` 补两个实际方法，单项回归先红后绿（其余16项未选）。累计六个文件171个不同 focused case，不声称本地全套测试。
 
 ## 真实隔离 Web
 
@@ -14,10 +14,18 @@ Turn1 completed；Source Event `c6016320-078c-44c7-9efa-af649cd66cca` handled；
 
 三张截图为当前产品1440×1000深色中文界面的请求前、真实回复后、重启后只读展开状态。不是基线/新版布局比较，也不声称 UI 改版。继承的 Home 配置提示及默认 composer 模型标签不代表 Bot 的实际计划；官方路由由规范计划和真实执行确认。
 
+## 真实 macOS Native 与重启
+
+root 使用真实 Desktop renderer、同一 canonical home 和产品895完成新的 Human 请求。保留的 Tob Session 中 Turn2 completed，八个原生 Shell 调用成功，包含四块多字节正文读取；回复 `50722715-ebf8-4c86-9cc2-4576a50b72dc` 已提交，Source Event `24fa2493-5cfb-4f6a-bf1f-b737bdd3e75f` resolved/handled，随后 idle。选定 Bot 身份/模型计划及三个 Channel 成员前后相同，console/error 为空。
+
+第二个真实 Desktop 进程启动后，同 home 新内容/正文/进度读取通过。初次完成截图停留在旧消息和“跳到最新”按钮，保留在私有证据，不当作可见回复证明。第三次只读截图使用真实“跳到最新”控件并展开保留回复，没有新请求或模型执行。已检查截图显示第二轮对应的来源修订及 DM marker。
+
+Native 图片为2522×1640物理像素，深色中文界面；Web仍为1440×1000。这些是交互状态证据，不是响应式布局比较。root 每次精确停止候选并恢复主应用。Desktop Profile 仅使用明确配置/包链接白名单，不复制 Session 或凭据。
+
 ## 首次失败与未验证项
 
 保留了中文界面导致英文 stock selector 超时、无可信 Source Event 的直接 Bot DM seed 正常拒绝、首次验证器在 Tob Session 创建前查询而失败（尚未发请求）、两个可选截图 selector 超时。之后通过可见行成功打开原回复，没有重复发模型请求。原始失败截图/日志保留在私有任务证据，不冒充功能通过。
 
-首次 Draft 时 Native、当前 head CI、最终集成栈和 Human QA 尚待完成。清除、可见性、身份代次、普通 Bot 成员限制及 Memory Assignment 拒绝有源码回归，不声称 Web 逐一重演。未读取真实私人会话、下载附件或发送外部消息，没有成员扩权、管理委托、合并或发布。
+Native 模型、重启和保留回复截图已完成；最终 head CI、集成栈和 Human QA 仍是独立待办。清除、可见性、身份代次、普通 Bot 成员限制及 Memory Assignment 拒绝有源码回归，不声称 Web 逐一重演。未读取真实私人会话、下载附件或发送外部消息，没有成员扩权、管理委托、合并或发布。
 
 现有脚本支持 direct/model/restart-read/capture。Native 由 root 独占启动真实 Desktop，使用同一 canonical home、新的 Profile 配置和当前登录清单；不复制 Session 或凭据。脚本只连接候选实例，不启动/停止 Host、不改变模型配置。

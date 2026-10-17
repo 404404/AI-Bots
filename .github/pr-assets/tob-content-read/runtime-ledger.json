@@ -1,0 +1,59 @@
+{
+  "issue": 2134,
+  "pr": 2143,
+  "base": "5d44b7a6507d661415881808ab67e74275d54182",
+  "product": "895efde6aa3aa616d3f0968f23d4363477fbf2c7",
+  "checkedSource": "850996f987b43244575af4f97467f29bd29e57b9",
+  "source": {
+    "distinctFocusedCases": 171,
+    "types": true,
+    "policies": true,
+    "build": true,
+    "fullLocalSuite": false,
+    "independentReview": "Spec and Standards findings closed at product895",
+    "finalFixtureCorrection": "b60b246767cfe59fa59d4e66262075838b70c906",
+    "firstFullCiFailure": "19faf: plugin exact registration inventory missing the two new read methods; reproduced red, corrected, one selected case green"
+  },
+  "web": {
+    "officialProvider": "deepseek-official",
+    "officialModel": "deepseek-flash",
+    "completedTurn": 1,
+    "humanMessageId": "human-b01d8a65-fe64-4962-a40c-16087f2ad262",
+    "sourceEventId": "c6016320-078c-44c7-9efa-af649cd66cca",
+    "replyMessageId": "2ea05c62-95b3-4e9a-b53d-9266ae79219a",
+    "handled": true,
+    "idle": true,
+    "markerAnswersAbsentFromRequest": true,
+    "channelTypes": ["Human DM", "Bot-to-Bot DM", "Human-visible Group without Tob"],
+    "selectedIdentityAndMembershipUnchanged": true,
+    "consoleErrors": [],
+    "sameCanonicalHomeRestartFreshReads": true
+  },
+  "directGuards": {
+    "priorProcessCursor": "invalid-read-cursor",
+    "editedSignedOffset": "invalid-read-cursor",
+    "appendInvalidatesPage": "stale-read-revision",
+    "unicodeChunks": 4,
+    "maxResponseBytes": 2223,
+    "exactReconstruction": true
+  },
+  "native": {
+    "renderer": "macOS Desktop",
+    "completedTurn": 2,
+    "humanMessageId": "human-16269fed-a71d-4793-8eb9-0661ddb496c7",
+    "sourceEventId": "24fa2493-5cfb-4f6a-bf1f-b737bdd3e75f",
+    "replyMessageId": "50722715-ebf8-4c86-9cc2-4576a50b72dc",
+    "completedNativeShellCalls": 8,
+    "handled": true,
+    "idle": true,
+    "selectedIdentityAndMembershipUnchanged": true,
+    "consoleErrors": [],
+    "sameCanonicalHomeRestartFreshReads": true,
+    "originalViewport": "Older messages plus new-message affordance; not visible latest reply proof",
+    "retainedLatestReplyCapture": "PASS: real latest-message affordance and last reply expansion, no new prompt/model turn",
+    "physicalCapturePixels": [2522, 1640]
+  },
+  "pending": ["Current final-head CI", "combined-stack qualification", "Human QA"],
+  "merged": false,
+  "released": false
+}
