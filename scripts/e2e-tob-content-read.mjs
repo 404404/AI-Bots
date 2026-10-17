@@ -390,18 +390,20 @@ try {
     let selected = false;
     for (const button of buttons) {
       const label = await button.evaluate((node) => node.textContent || '');
-      if (
-        (await button.isVisible()) &&
-        /^Tob/u.test(label.trim()) &&
-        label.includes('Read-only inspection')
-      ) {
+      if ((await button.isVisible()) && /^Tob/u.test(label.trim()) && label.includes('Read-only')) {
         await button.click();
         selected = true;
         break;
       }
     }
     assert.ok(selected, 'Visible Tob row with existing synthetic reply');
-    await click('消息 · ⌥ ⇧ ⌘ 2');
+    for (const button of await page.$$('button')) {
+      const label = await button.evaluate((node) => node.textContent || '');
+      if ((await button.isVisible()) && /跳到最新|Jump to latest/iu.test(label)) {
+        await button.click();
+        break;
+      }
+    }
     const expand = await page.$('::-p-aria([name="展开全部"])');
     if (expand && (await expand.isVisible())) await expand.click();
     await shot('expanded-selected-read');
