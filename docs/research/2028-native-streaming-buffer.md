@@ -50,9 +50,9 @@ RN documents that `removeClippedSubviews` defaults to true on Android and detach
 
 A JS row-render counter answers whether historical rows re-render. It cannot prove that a native text subtree remains visible during measurement or clipping. Conversely, unchanged React rows can still move and be redrawn when the active draft's measured height changes. Inspect the native frame and pixels independently of React commits.
 
-## Minimal presentation policy for this app
+## Earlier presentation proposal (superseded after Human QA)
 
-The following values are proposed initial tuning values to validate on the physical Android device, not reference-project guarantees:
+The paragraph batching and settlement flush proposed below were rejected during Human QA. The current policy is a reserved, grapheme-paced conversation playback owner that drains through commitment; see [the follow-up investigation](2028-stream-playback-followup.md) and ADR-0218. This historical proposal is retained to explain the failed approach.
 
 1. Store the latest received draft text immediately. Keep a separate visible prefix for the same draft identity. Do not enqueue one closure/timer per incoming token or duplicate transport state into a second persistent message authority.
 2. In streaming mode, publish at most once per approximately 80 ms. Prefer a complete paragraph boundary within the pending suffix, but give an unterminated paragraph a maximum wait of approximately 160 ms. A long single paragraph, code fence, or table must not stall indefinitely. Publish a code-point-safe prefix; if using a typewriter cursor, use grapheme boundaries for emoji/combining marks.

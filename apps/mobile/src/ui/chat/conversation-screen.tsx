@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
@@ -23,6 +23,7 @@ import {
   useChannelConversation,
   useConversation,
   useConversationTimelineSnapshot,
+  useStreamPlayback,
   useHostSession,
   useHostSnapshot,
 } from '../../host/host-session';
@@ -60,7 +61,7 @@ import {
   type SelectedMention,
 } from './mention-draft';
 import { MentionSuggestions } from './mention-suggestions';
-import { LiveDraftBubble, MessageBubble, type Speaker } from './message-bubble';
+import { PlaybackBubble, type Speaker } from './message-bubble';
 import { copyMessage, shareText } from './message-menu';
 import type { Rect } from './menu-placement';
 import { chatRows, messageGroups, type ChatRow } from './message-groups';
@@ -93,12 +94,18 @@ export function ConversationScreen({
   latestWindowOnly?: boolean;
 }) {
   const { client } = useHostSession();
-  const roster = useHostSnapshot(client).roster;
+  const focused = useIsFocused();
+  const roster = useHostSnapshot(client, focused).roster;
   const bot =
     place.kind === 'dm' ? roster?.bots.find((entry) => entry.slug === place.slug) : undefined;
   return (
     <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
-      <ChatConversation place={place} focus={focus} latestWindowOnly={latestWindowOnly} />
+      <ChatConversation
+        place={place}
+        focus={focus}
+        latestWindowOnly={latestWindowOnly}
+        focused={focused}
+      />
     </AccentProvider>
   );
 }
@@ -183,7 +190,9 @@ function ChatConversation({
   place,
   focus,
   latestWindowOnly,
+  focused,
 }: {
+  focused: boolean;
   place: ChatPlace;
   focus: string | undefined;
   latestWindowOnly: boolean;
@@ -192,7 +201,7 @@ function ChatConversation({
   const router = useRouter();
   const headerHeight = useChatHeaderHeight();
   const { client, inbox, saved } = useHostSession();
-  const host = useHostSnapshot(client);
+  const host = useHostSnapshot(client, focused);
   const dm = place.kind === 'dm';
   const slug = dm ? place.slug : undefined;
   const hiddenActivity = useHiddenDmActivity(saved?.hostId, slug);
@@ -226,8 +235,9 @@ function ChatConversation({
   );
   const working = dm ? (bot !== undefined && botBusy(bot) ? [bot] : []) : members.filter(botBusy);
   const activeChannel = dm ? bot?.dmChannelId : channelId;
-  const snapshot = useConversationTimelineSnapshot(conversation);
   const display = useMessageDisplay();
+  const playback = useStreamPlayback(conversation, display.loaded && display.mode === 'streaming');
+  const snapshot = useConversationTimelineSnapshot(conversation, playback);
   const shownDrafts = display.loaded && display.mode === 'streaming' ? snapshot.drafts : NO_DRAFTS;
   const [draft, setDraft] = useState('');
   const [mentions, setMentions] = useState<SelectedMention[]>([]);
@@ -267,8 +277,10 @@ function ChatConversation({
       chatRows(
         visible,
         (message) => message.card !== undefined && (!dm || !resolutions.has(message.id)),
+      ).map((row) =>
+        row.kind === 'message' ? { ...row, key: playback?.rowKey(row.message.id) ?? row.key } : row,
       ),
-    [visible, resolutions, dm],
+    [visible, resolutions, dm, playback],
   );
   const history = useMemo(() => [...chronological].reverse(), [chronological]);
   const [speakers] = useState(createSpeakerRegistry);
@@ -296,7 +308,7 @@ function ChatConversation({
     }),
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
-  const latest = useFollowLatest(list, visible);
+  const latest = useFollowLatest(list, visible, playback?.setFollowing);
   const readMount = useMarkRead(client, inbox, conversation, activeChannel, !latest.away);
   const mountRef = dictation.mountRef;
   const screenRef = useCallback(
@@ -448,9 +460,9 @@ function ChatConversation({
     ({ item }: { item: Row }) => {
       if (item.kind === 'draft')
         return conversation === undefined ? null : (
-          <LiveDraftBubble
-            conversation={conversation}
-            reference={item.draft}
+          <PlaybackBubble
+            playback={playback}
+            queueKey={item.key}
             speaker={
               dm
                 ? undefined
@@ -511,7 +523,9 @@ function ChatConversation({
           />
         );
       return (
-        <MessageBubble
+        <PlaybackBubble
+          playback={playback}
+          queueKey={item.key}
           message={item.message}
           first={item.first}
           last={item.last}
@@ -530,6 +544,8 @@ function ChatConversation({
     },
     [
       dm,
+      playback,
+      conversation,
       client,
       slug,
       inbox,

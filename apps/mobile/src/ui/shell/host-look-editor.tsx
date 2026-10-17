@@ -266,7 +266,8 @@ export function HostLookEditor({
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: theme.color.base }}
+      nestedScrollEnabled
+      style={{ flex: 1 }}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
     >

@@ -90,7 +90,7 @@ const scroll = (list) => {
     .filter((node) => node.scrollable === 'true' && bounds(node)[1] >= handleBottom)
     .at(-1);
 };
-const handle = (list) => list.find((node) => node['resource-id'] === 'profile-sheet-handle');
+const handle = (list) => list.find((node) => node['resource-id'] === 'sheet-screen-handle');
 const proof = [];
 try {
   if (Number.isFinite(imeTop())) {

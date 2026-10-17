@@ -22,7 +22,7 @@ import {
   SettingsSection,
 } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
-import { ProfileSheet } from '../primitives/profile-sheet';
+import { SheetScreen } from '../primitives/sheet-screen';
 import { ChevronRightIcon, MoreIcon, PlusIcon } from '../shell/icons';
 import { t } from '../strings';
 import { GroupMark } from './group-mark';
@@ -122,7 +122,7 @@ function MenuButton({ label, onPress }: { label: string; onPress(): void }) {
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: radius.round,
-        backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
       })}
     >
       <MoreIcon color={theme.color.muted} size={ICON} />
@@ -381,13 +381,13 @@ export function GroupInfoSheet({
 
   return (
     <>
-      <ProfileSheet>
+      <SheetScreen>
         <SectionList
           sections={groupRows(info)}
           keyExtractor={(row) => row.key}
           stickySectionHeadersEnabled={false}
           nestedScrollEnabled
-          style={{ flex: 1, backgroundColor: theme.color.surface }}
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingTop: space.x6, paddingBottom: space.x5 }}
           ListHeaderComponent={header}
           ListFooterComponent={footer}
@@ -418,7 +418,7 @@ export function GroupInfoSheet({
             </SettingsGroupItem>
           )}
         />
-      </ProfileSheet>
+      </SheetScreen>
       <InviteSheet
         visible={sheet === 'invite'}
         candidates={info.candidates}
@@ -446,7 +446,7 @@ function Divider() {
       style={{
         height: 0,
         borderTopWidth: edge.hairline,
-        borderTopColor: theme.layer.sheet.divider,
+        borderTopColor: theme.layer.raised.divider,
       }}
     />
   );

@@ -1,13 +1,14 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { usePushRouting } from '../src/host/push-routing';
 import { StatisticsNotice } from '../src/ui/shell/statistics-notice';
 import { KeyboardRoot } from '../src/ui/primitives/keyboard-frame';
-import { radius } from '../src/ui/design/tokens';
+import { sheetScreenOptions } from '../src/ui/primitives/sheet-screen';
+import { useDesignTheme } from '../src/ui/design/theme';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
 
@@ -15,6 +16,7 @@ export const unstable_settings = { initialRouteName: '(tabs)' };
 
 export default function RootLayout() {
   const theme = useTheme();
+  const design = useDesignTheme();
   const routing = usePushRouting();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -39,33 +41,21 @@ export default function RootLayout() {
                 name="bot/[slug]"
                 options={{
                   title: t.profile,
-                  headerShown: false,
-                  presentation: 'formSheet',
-                  sheetAllowedDetents: [0.75, 1],
-                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.xl } : {}),
-                  sheetGrabberVisible: true,
+                  ...sheetScreenOptions(design),
                 }}
               />
               <Stack.Screen
                 name="group/[id]"
                 options={{
                   title: t.groupInfo,
-                  headerShown: false,
-                  presentation: 'formSheet',
-                  sheetAllowedDetents: [0.75, 1],
-                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.xl } : {}),
-                  sheetGrabberVisible: true,
+                  ...sheetScreenOptions(design),
                 }}
               />
               <Stack.Screen
                 name="settings"
                 options={{
                   title: t.settings,
-                  headerShown: false,
-                  presentation: 'formSheet',
-                  sheetAllowedDetents: [1],
-                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.xl } : {}),
-                  sheetGrabberVisible: true,
+                  ...sheetScreenOptions(design, true),
                 }}
               />
               <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
@@ -95,10 +85,7 @@ export default function RootLayout() {
                 name="host-look"
                 options={{
                   title: t.hostLook,
-                  headerShown: false,
-                  presentation: 'formSheet',
-                  sheetAllowedDetents: [1],
-                  sheetGrabberVisible: true,
+                  ...sheetScreenOptions(design, true),
                 }}
               />
               <Stack.Screen

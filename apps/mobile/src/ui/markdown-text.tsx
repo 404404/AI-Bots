@@ -16,14 +16,21 @@ export function MarkdownText({
   tokens,
   color,
   selectable,
+  reveal = false,
 }: {
   tokens: Token[];
   color: string;
   selectable: boolean;
+  reveal?: boolean;
 }) {
   const theme = useDesignTheme();
-  const inline = (entries: Token[]): ReactNode[] => renderMarkdownInline(entries, theme);
-  const block = (token: Token, index: number): ReactNode => {
+  const visible = (entries: Token[]) =>
+    entries.filter((token) => !['space', 'def', 'checkbox'].includes(token.type));
+  const blocks = (entries: Token[], animate: boolean): ReactNode[] => {
+    const shown = visible(entries);
+    return shown.map((token, index) => block(token, index, animate && index === shown.length - 1));
+  };
+  const block = (token: Token, index: number, animate: boolean): ReactNode => {
     if (token.type === 'space' || token.type === 'def' || token.type === 'checkbox') return null;
     if (isMarkdownTable(token)) return <MarkdownTable key={index} table={token} color={color} />;
     if (token.type === 'hr')
@@ -44,7 +51,7 @@ export function MarkdownText({
             gap: space.x3,
           }}
         >
-          {(token.tokens ?? []).map(block)}
+          {blocks(token.tokens ?? [], animate)}
         </View>
       );
     if (token.type === 'code')
@@ -108,7 +115,7 @@ export function MarkdownText({
                       : '•'}
                 </Text>
                 <View style={{ flex: 1, gap: token.loose ? space.x3 : 0 }}>
-                  {item.tokens.map(block)}
+                  {blocks(item.tokens, animate && itemIndex === token.items.length - 1)}
                 </View>
               </View>
             ),
@@ -124,9 +131,9 @@ export function MarkdownText({
         variant={token.type === 'heading' ? 'title' : 'body'}
         style={{ color }}
       >
-        {children === undefined ? decodeHTML(text) : inline(children)}
+        {children === undefined ? decodeHTML(text) : renderMarkdownInline(children, theme, animate)}
       </Text>
     );
   };
-  return <View style={{ gap: space.x3 }}>{tokens.map(block)}</View>;
+  return <View style={{ gap: space.x3 }}>{blocks(tokens, reveal)}</View>;
 }

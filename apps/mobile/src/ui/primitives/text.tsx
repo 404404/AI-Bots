@@ -1,3 +1,4 @@
+import type { RefAttributes } from 'react';
 import { Text as NativeText, type TextProps } from 'react-native';
 
 import type { ColorRole } from '../design/resolve-theme';
@@ -5,7 +6,7 @@ import { useDesignTheme } from '../design/theme';
 
 export type TextVariant = 'meta' | 'body' | 'title' | 'display';
 
-export function InlineText(props: TextProps) {
+export function InlineText(props: TextProps & RefAttributes<NativeText>) {
   return <NativeText {...props} />;
 }
 

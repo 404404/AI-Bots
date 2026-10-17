@@ -33,7 +33,7 @@ const MarkdownBlockView = memo(function MarkdownBlockView({
   if (textMarkdownSupported(tokens))
     return (
       <View style={{ marginBottom: trailing ? space.x3 : 0 }}>
-        <MarkdownText tokens={tokens} color={color} selectable={selectable} />
+        <MarkdownText tokens={tokens} color={color} selectable={selectable} reveal={streaming} />
       </View>
     );
   return (

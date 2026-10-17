@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Answer me with HTML 0.5.0">
-<title>Android 实机验收与剩余问题</title>
+<title>Android 流式播放与历史阅读</title>
 <style>
 html[data-theme="blueprint"], html[data-theme="blueprint"][data-mode="light"] {
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -761,133 +761,138 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <button class="am-btn" type="button" data-am="copy" data-done="已复制 ✓">复制源稿</button>
 </div>
 <main class="am-sheet">
-<header class="am-head"><h1>Android 实机验收与剩余问题</h1><p class="am-sub">PR 2031 · 2026-10-17 · 代码 2648266f9c6b</p></header>
+<header class="am-head"><h1>Android 流式播放与历史阅读</h1><p class="am-sub">PR 2031 · 2026-10-17 · HEAD d41221c7777c33d5e19b201b6fa2559fc46bd4ee</p></header>
 <div class="am-frame">
 <div class="am-ruler am-ruler--top" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--bottom" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--left" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div><div class="am-ruler am-ruler--right" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div>
 <div class="am-grid" style="--cols: 1">
 <section class="am-panel" id="panel-A">
-<header class="am-panel-head"><span class="am-panel-id">A</span><h2>当前可以验收什么</h2></header>
-<div class="am-panel-body"><div class="am-md"><p>手机和 scrcpy 已恢复，屏幕运行修复版。
-长文本、代码和表格不再出现整片文字消失。
-设置支持本机“流式 / 完整气泡”两种方式。</p>
-<p>资料页先打开，再加载或刷新数据。
-资料页和设置页都通过内容优先滚动、把手关闭检查。
-本次仍未达到 120FPS，键盘速度曲线仍需处理。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/pull/2031">草稿 PR 2031</a></p>
+<header class="am-panel-head"><span class="am-panel-id">A</span><h2>这一轮改变了什么</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>文字先留出储备，再按独立时钟播放。
+Host 提交后沿用当前速度收尾，保留同一个气泡。
+拖动查看历史时，画面停止增长，后台继续接收消息。
+回到底部后再恢复播放。</p>
+<p>人工已认可预留缓冲的方向，随后要求速度与收尾打磨。
+两万字气泡的原生布局成本仍未解决，尚未达到 120FPS。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-B">
-<header class="am-panel-head"><span class="am-panel-id">B</span><h2>数据与界面如何分开</h2></header>
-<div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 276 261" width="276" height="261" role="img" aria-label="流程图：Host 消息、稳定列表引用、活动草稿订阅、缓冲后显示" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M163.1,49 L186.1,65 Q209,81 209,97 L209,113" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="181" y="72" width="56" height="18" rx="3"/><text x="209" y="81" text-anchor="middle" dominant-baseline="central">结构变化</text></g></g><g data-step="1"><path class="am-edge" d="M112.9,49 L89.9,65 Q67,81 67,97 L67,113" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="39" y="72" width="56" height="18" rx="3"/><text x="67" y="81" text-anchor="middle" dominant-baseline="central">正文追加</text></g></g><g data-step="2"><path class="am-edge" d="M67,148 L67,164 Q67,180 67,196 L67,212" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="39.9" y="171" width="54.2" height="18" rx="3"/><text x="67" y="180" text-anchor="middle" dominant-baseline="central">约 80ms</text></g></g></g><g><g class="am-node am-node--rect" data-key="Host 消息" data-step="0"><rect class="am-node-shape" x="95.3" y="14" width="85.5" height="35" rx="3"/><text x="138" y="31.5" text-anchor="middle" dominant-baseline="central">Host 消息</text></g><g class="am-node am-node--rect" data-key="稳定列表引用" data-step="0"><rect class="am-node-shape" x="156" y="113" width="106" height="35" rx="3"/><text x="209" y="130.5" text-anchor="middle" dominant-baseline="central">稳定列表引用</text></g><g class="am-node am-node--rect" data-key="活动草稿订阅" data-step="1"><rect class="am-node-shape" x="14" y="113" width="106" height="35" rx="3"/><text x="67" y="130.5" text-anchor="middle" dominant-baseline="central">活动草稿订阅</text></g><g class="am-node am-node--rect" data-key="缓冲后显示" data-step="2"><rect class="am-node-shape" x="20.5" y="212" width="93" height="35" rx="3"/><text x="67" y="229.5" text-anchor="middle" dominant-baseline="central">缓冲后显示</text></g></g></svg></figure>
-<div class="am-md"><p>缓存、缓冲和显示偏好均属于手机界面。
-它们不改写 Host 消息、模型调用或执行策略。
-已经完成的文本块保留身份，仅更新变化的尾部。
-图片和原生扩展语法仍使用已有渲染器。</p>
+<header class="am-panel-head"><span class="am-panel-id">B</span><h2>谁拥有数据与播放进度</h2></header>
+<div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 312 360" width="312" height="360" role="img" aria-label="流程图：Host 消息与草稿、手机接收目标、储备与字符游标、当前气泡、Host 提交、沿用原行继续播完" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M76.2,49 L76.2,65 Q76.2,81 76.2,97 L76.2,113" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="48.2" y="72" width="56" height="18" rx="3"/><text x="76.2" y="81" text-anchor="middle" dominant-baseline="central">权威正文</text></g></g><g data-step="1"><path class="am-edge" d="M76.2,148 L76.2,164 Q76.2,180 76.2,196 L76.2,212" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="36.7" y="171" width="79" height="18" rx="3"/><text x="76.2" y="180" text-anchor="middle" dominant-baseline="central">本机临时状态</text></g></g><g data-step="2"><path class="am-edge" d="M76.2,247 L76.2,263 Q76.2,279 76.2,295 L76.2,311" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="36.7" y="270" width="79" height="18" rx="3"/><text x="76.2" y="279" text-anchor="middle" dominant-baseline="central">仅通知这一行</text></g></g><g data-step="3"><path class="am-edge" d="M231.2,49 L231.2,65 Q231.2,81 231.2,97 L231.2,113" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="186" y="72" width="90.5" height="18" rx="3"/><text x="231.2" y="81" text-anchor="middle" dominant-baseline="central">不直接跳到结尾</text></g></g></g><g><g class="am-node am-node--rect" data-key="Host 消息与草稿" data-step="0"><rect class="am-node-shape" x="14" y="14" width="124.5" height="35" rx="3"/><text x="76.2" y="31.5" text-anchor="middle" dominant-baseline="central">Host 消息与草稿</text></g><g class="am-node am-node--rect" data-key="手机接收目标" data-step="0"><rect class="am-node-shape" x="23.2" y="113" width="106" height="35" rx="3"/><text x="76.2" y="130.5" text-anchor="middle" dominant-baseline="central">手机接收目标</text></g><g class="am-node am-node--rect" data-key="储备与字符游标" data-step="1"><rect class="am-node-shape" x="16.7" y="212" width="119" height="35" rx="3"/><text x="76.2" y="229.5" text-anchor="middle" dominant-baseline="central">储备与字符游标</text></g><g class="am-node am-node--rect" data-key="当前气泡" data-step="2"><rect class="am-node-shape" x="36.2" y="311" width="80" height="35" rx="3"/><text x="76.2" y="328.5" text-anchor="middle" dominant-baseline="central">当前气泡</text></g><g class="am-node am-node--rect" data-key="Host 提交" data-step="3"><rect class="am-node-shape" x="188.5" y="14" width="85.5" height="35" rx="3"/><text x="231.2" y="31.5" text-anchor="middle" dominant-baseline="central">Host 提交</text></g><g class="am-node am-node--rect" data-key="沿用原行继续播完" data-step="3"><rect class="am-node-shape" x="165.2" y="113" width="132" height="35" rx="3"/><text x="231.2" y="130.5" text-anchor="middle" dominant-baseline="central">沿用原行继续播完</text></g></g></svg></figure>
+<div class="am-md"><p>已保存、已收到与已显示是不同进度。
+缓存、显示偏好与播放游标均不改写 Host 消息。
+历史记录直接显示，不重新播放。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-C">
-<header class="am-panel-head"><span class="am-panel-id">C</span><h2>实机稳定性证据</h2></header>
+<header class="am-panel-head"><span class="am-panel-id">C</span><h2>拖动与离屏页面怎样处理</h2></header>
 <div class="am-panel-body"><div class="am-md"><div class="am-table-wrap"><table>
 <thead>
 <tr>
-<th>相同回放条件</th>
-<th>结果</th>
+<th>情况</th>
+<th>界面行为</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>旧版，保留灰色气泡</td>
-<td>180 个采样帧中，128 帧几乎没有文字</td>
+<td>开始拖动查看历史</td>
+<td>立即保持当前前缀，停止视觉调度</td>
 </tr>
 <tr>
-<td>修复版，21,492 字符正文</td>
-<td>180 个采样帧中，0 帧文字消失</td>
+<td>阅读期间收到或提交新文字</td>
+<td>继续接收，保持内容锚点</td>
 </tr>
 <tr>
-<td>连续长段落</td>
-<td>180 个采样帧中，0 帧文字消失</td>
+<td>滚动布局回调靠近底部</td>
+<td>不自动恢复播放</td>
 </tr>
 <tr>
-<td>120 行代码与 40 行表格</td>
-<td>180 个采样帧中，0 帧文字消失</td>
+<td>完成返回手势或点击回到底部</td>
+<td>重置时钟并继续播放</td>
 </tr>
 <tr>
-<td>完整气泡模式</td>
-<td>等待时不显示草稿，提交后完整显示</td>
+<td>频道列表或旧聊天被另一页遮住</td>
+<td>暂停其 Host 视图订阅</td>
+</tr>
+<tr>
+<td>返回可见页面</td>
+<td>同步读取最新快照</td>
+</tr>
+<tr>
+<td>切换 Host</td>
+<td>直接使用该 Host 的独立快照</td>
 </tr>
 </tbody></table></div>
-<p>这些是每秒 30 次的视频采样，不是显示帧率。
-每次回放都经过真实 Host 与消息工具。
-最终正文另由 CLI 核对。</p>
+<p>Host 与 Inbox 的共享接收流程持续运行。
+进入后台会清除动画欠账，查看历史则保留播放游标。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-D">
-<header class="am-panel-head"><span class="am-panel-id">D</span><h2>旧消息为什么还会更新</h2></header>
-<div class="am-panel-body"><div class="am-md"><p>Bot 状态变化曾重建显示名称查询回调。
-这会让已经显示的普通气泡也重新渲染。</p>
-<p>现在只有 Bot ID 或名称变化才更新该回调。
-单次实机跟踪记录普通气泡重渲染 <strong>0 次</strong>。
-流式草稿仍单独更新，改名和换 Host 的测试也通过。
-这项记录不能代替完整帧率对比。</p>
+<header class="am-panel-head"><span class="am-panel-id">D</span><h2>样式与字形如何保持一致</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>资料、设置与电脑外观复用 SheetScreen 和原生选项。
+拖拽条、头部与正文使用同一个浮层底色。
+内容分组使用抬高一层的背景。</p>
+<p>Android 新增正文淡入 180ms，最多错开 72ms。
+低速逐字淡入，同一帧的快速追加共用少量动画节点。
+字素分段保留 emoji 与重音组合。
+代码和表格沿用原生文字布局，不附加逐字动画。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-E">
-<header class="am-panel-head"><span class="am-panel-id">E</span><h2>仍未解决的性能问题</h2></header>
-<div class="am-panel-body"><div class="am-md"><p>六轮交替测试显示父级更新减少。
-原生采样帧的 p95 降低，但 React 总工作量增加。
-超长气泡在提交时仍有多秒 JS 停顿。
-下一步需减少长气泡节点与提交时的重复布局。</p>
-<p>键盘事件申报 285ms，开始到结束回调约 1.36 秒。
-改用位移以及冻结离屏页均没有明显改善。
-相关尝试已经撤回，也没有修改系统动画倍率。
-Telegram 的 250ms 常量不是通用的键盘弹出时长。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/2648266f9c6bcb881f47383cb3eae69b67bc68c2/docs/research/2028-android-streaming-measurements.md">性能记录</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/2648266f9c6bcb881f47383cb3eae69b67bc68c2/docs/research/2028-telegram-android-keyboard-motion.md">Telegram 源码调查</a></p>
-</div></div>
-</section>
-<section class="am-panel" id="panel-F">
-<header class="am-panel-head"><span class="am-panel-id">F</span><h2>检查范围与版本</h2></header>
+<header class="am-panel-head"><span class="am-panel-id">E</span><h2>哪些检查已经执行</h2></header>
 <div class="am-panel-body"><div class="am-md"><div class="am-table-wrap"><table>
 <thead>
 <tr>
 <th>检查</th>
-<th>状态</th>
+<th>结果</th>
 </tr>
 </thead>
 <tbody><tr>
 <td>移动端测试</td>
-<td>483 通过，8 跳过</td>
+<td>498 通过，8 跳过</td>
 </tr>
 <tr>
-<td>移动端类型、lint、格式、变更记录</td>
+<td>根类型、lint、格式与变更记录</td>
 <td>通过</td>
 </tr>
 <tr>
-<td>Android 资料、设置、键盘位置与两种消息模式</td>
-<td>通过所列检查</td>
+<td>突发与停顿文章</td>
+<td>储备继续播放，提交后播完 306 个字素</td>
 </tr>
 <tr>
-<td>最终根项目类型检查</td>
-<td>依赖重链接后通过</td>
+<td>120 行代码与 40 行表格</td>
+<td>播放完成；有效窗口 180 帧无文字消失</td>
 </tr>
 <tr>
-<td>GitHub CI</td>
-<td>三个全量测试分片、构建和检查均通过</td>
+<td>历史阅读</td>
+<td>惯性结束后锚点稳定，点击后恢复</td>
 </tr>
 <tr>
-<td>Windows 全仓测试尝试</td>
-<td>出现 Host 失败与超时，CI 完成后停止</td>
+<td>完整气泡与偏好保存</td>
+<td>实机通过，重启后选择保持</td>
 </tr>
 <tr>
-<td>iOS 原生、120FPS、键盘速度曲线</td>
-<td>未通过本轮资格验证</td>
+<td>资料与设置拖拽</td>
+<td>内容优先滚动与把手关闭通过</td>
+</tr>
+<tr>
+<td>当前提交 CI</td>
+<td>待结果；旧提交通过不代表本提交</td>
 </tr>
 </tbody></table></div>
-<p>本机初次类型检查在两边都有 26 项 links 错误。
-重链接缓存依赖后，最终根类型检查通过。</p>
-<p>代码：<code>2648266f9c6bcb881f47383cb3eae69b67bc68c2</code></p>
+<p>原始 5–11 秒检测窗口因启动阶段覆盖不足而失败。
+另行校准的 8–14 秒有效窗口通过，失败记录仍保留。
+这些视频采样是文字可见性证据，不是显示帧率。</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-F">
+<header class="am-panel-head"><span class="am-panel-id">F</span><h2>评审边界与剩余工作</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>预留缓冲会带来有意的本机显示延迟。
+超长文章的原生播放显著慢于纯时钟模型。
+还需针对长气泡布局做生产或性能构建的测量。
+键盘速度曲线与 iOS 原生回归仍待验证。</p>
 <p>基线：<code>cba13535e02edfb36f1d46d3afd9d556faf7696c</code></p>
-<p>页面是评审说明，不是运行时证据或验收批准。
-合并与视觉体验仍待人工验收。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/2648266f9c6bcb881f47383cb3eae69b67bc68c2/docs/research/2028-android17-mobile-surfaces.md">Android 17 官方设计调查</a></p>
+<p>代码：<code>d41221c7777c33d5e19b201b6fa2559fc46bd4ee</code></p>
+<p>本页解释评审范围，不替代运行证据或人工验收。</p>
+<p><a href="https://github.com/BotHarness/DeepSeekBot/pull/2031">草稿 PR</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/d41221c7777c33d5e19b201b6fa2559fc46bd4ee/docs/research/2028-android-streaming-measurements.md">完整测量记录</a></p>
 </div></div>
 </section>
 </div>
@@ -908,100 +913,94 @@ Telegram 的 250ms 常量不是通用的键盘弹出时长。</p>
 <div class="am-lightbox-canvas am-diagram"></div>
 </div>
 </div>
-<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-17 14:15 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-17 15:51 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
 lang: zh
-title: Android 实机验收与剩余问题
-subtitle: PR 2031 · 2026-10-17 · 代码 2648266f9c6b
+title: Android 流式播放与历史阅读
+subtitle: PR 2031 · 2026-10-17 · HEAD d41221c7777c33d5e19b201b6fa2559fc46bd4ee
 cols: 1
 ---
 
-## A 当前可以验收什么
+## A 这一轮改变了什么
 
-手机和 scrcpy 已恢复，屏幕运行修复版。
-长文本、代码和表格不再出现整片文字消失。
-设置支持本机“流式 / 完整气泡”两种方式。
+文字先留出储备，再按独立时钟播放。
+Host 提交后沿用当前速度收尾，保留同一个气泡。
+拖动查看历史时，画面停止增长，后台继续接收消息。
+回到底部后再恢复播放。
 
-资料页先打开，再加载或刷新数据。
-资料页和设置页都通过内容优先滚动、把手关闭检查。
-本次仍未达到 120FPS，键盘速度曲线仍需处理。
+人工已认可预留缓冲的方向，随后要求速度与收尾打磨。
+两万字气泡的原生布局成本仍未解决，尚未达到 120FPS。
 
-[草稿 PR 2031](https://github.com/BotHarness/DeepSeekBot/pull/2031)
-
-## B 数据与界面如何分开
+## B 谁拥有数据与播放进度
 
 ```flow TB
-[Host 消息] -&gt; [稳定列表引用]: 结构变化
-[Host 消息] -&gt; [活动草稿订阅]: 正文追加
-[活动草稿订阅] -&gt; [缓冲后显示]: 约 80ms
+[Host 消息与草稿] -&gt; [手机接收目标]: 权威正文
+[手机接收目标] -&gt; [储备与字符游标]: 本机临时状态
+[储备与字符游标] -&gt; [当前气泡]: 仅通知这一行
+[Host 提交] -&gt; [沿用原行继续播完]: 不直接跳到结尾
 ```
 
-缓存、缓冲和显示偏好均属于手机界面。
-它们不改写 Host 消息、模型调用或执行策略。
-已经完成的文本块保留身份，仅更新变化的尾部。
-图片和原生扩展语法仍使用已有渲染器。
+已保存、已收到与已显示是不同进度。
+缓存、显示偏好与播放游标均不改写 Host 消息。
+历史记录直接显示，不重新播放。
 
-## C 实机稳定性证据
+## C 拖动与离屏页面怎样处理
 
-| 相同回放条件 | 结果 |
+| 情况 | 界面行为 |
 |---|---|
-| 旧版，保留灰色气泡 | 180 个采样帧中，128 帧几乎没有文字 |
-| 修复版，21,492 字符正文 | 180 个采样帧中，0 帧文字消失 |
-| 连续长段落 | 180 个采样帧中，0 帧文字消失 |
-| 120 行代码与 40 行表格 | 180 个采样帧中，0 帧文字消失 |
-| 完整气泡模式 | 等待时不显示草稿，提交后完整显示 |
+| 开始拖动查看历史 | 立即保持当前前缀，停止视觉调度 |
+| 阅读期间收到或提交新文字 | 继续接收，保持内容锚点 |
+| 滚动布局回调靠近底部 | 不自动恢复播放 |
+| 完成返回手势或点击回到底部 | 重置时钟并继续播放 |
+| 频道列表或旧聊天被另一页遮住 | 暂停其 Host 视图订阅 |
+| 返回可见页面 | 同步读取最新快照 |
+| 切换 Host | 直接使用该 Host 的独立快照 |
 
-这些是每秒 30 次的视频采样，不是显示帧率。
-每次回放都经过真实 Host 与消息工具。
-最终正文另由 CLI 核对。
+Host 与 Inbox 的共享接收流程持续运行。
+进入后台会清除动画欠账，查看历史则保留播放游标。
 
-## D 旧消息为什么还会更新
+## D 样式与字形如何保持一致
 
-Bot 状态变化曾重建显示名称查询回调。
-这会让已经显示的普通气泡也重新渲染。
+资料、设置与电脑外观复用 SheetScreen 和原生选项。
+拖拽条、头部与正文使用同一个浮层底色。
+内容分组使用抬高一层的背景。
 
-现在只有 Bot ID 或名称变化才更新该回调。
-单次实机跟踪记录普通气泡重渲染 **0 次**。
-流式草稿仍单独更新，改名和换 Host 的测试也通过。
-这项记录不能代替完整帧率对比。
+Android 新增正文淡入 180ms，最多错开 72ms。
+低速逐字淡入，同一帧的快速追加共用少量动画节点。
+字素分段保留 emoji 与重音组合。
+代码和表格沿用原生文字布局，不附加逐字动画。
 
-## E 仍未解决的性能问题
+## E 哪些检查已经执行
 
-六轮交替测试显示父级更新减少。
-原生采样帧的 p95 降低，但 React 总工作量增加。
-超长气泡在提交时仍有多秒 JS 停顿。
-下一步需减少长气泡节点与提交时的重复布局。
-
-键盘事件申报 285ms，开始到结束回调约 1.36 秒。
-改用位移以及冻结离屏页均没有明显改善。
-相关尝试已经撤回，也没有修改系统动画倍率。
-Telegram 的 250ms 常量不是通用的键盘弹出时长。
-
-[性能记录](https://github.com/BotHarness/DeepSeekBot/blob/2648266f9c6bcb881f47383cb3eae69b67bc68c2/docs/research/2028-android-streaming-measurements.md) · [Telegram 源码调查](https://github.com/BotHarness/DeepSeekBot/blob/2648266f9c6bcb881f47383cb3eae69b67bc68c2/docs/research/2028-telegram-android-keyboard-motion.md)
-
-## F 检查范围与版本
-
-| 检查 | 状态 |
+| 检查 | 结果 |
 |---|---|
-| 移动端测试 | 483 通过，8 跳过 |
-| 移动端类型、lint、格式、变更记录 | 通过 |
-| Android 资料、设置、键盘位置与两种消息模式 | 通过所列检查 |
-| 最终根项目类型检查 | 依赖重链接后通过 |
-| GitHub CI | 三个全量测试分片、构建和检查均通过 |
-| Windows 全仓测试尝试 | 出现 Host 失败与超时，CI 完成后停止 |
-| iOS 原生、120FPS、键盘速度曲线 | 未通过本轮资格验证 |
+| 移动端测试 | 498 通过，8 跳过 |
+| 根类型、lint、格式与变更记录 | 通过 |
+| 突发与停顿文章 | 储备继续播放，提交后播完 306 个字素 |
+| 120 行代码与 40 行表格 | 播放完成；有效窗口 180 帧无文字消失 |
+| 历史阅读 | 惯性结束后锚点稳定，点击后恢复 |
+| 完整气泡与偏好保存 | 实机通过，重启后选择保持 |
+| 资料与设置拖拽 | 内容优先滚动与把手关闭通过 |
+| 当前提交 CI | 待结果；旧提交通过不代表本提交 |
 
-本机初次类型检查在两边都有 26 项 links 错误。
-重链接缓存依赖后，最终根类型检查通过。
+原始 5–11 秒检测窗口因启动阶段覆盖不足而失败。
+另行校准的 8–14 秒有效窗口通过，失败记录仍保留。
+这些视频采样是文字可见性证据，不是显示帧率。
 
-代码：`2648266f9c6bcb881f47383cb3eae69b67bc68c2`
+## F 评审边界与剩余工作
+
+预留缓冲会带来有意的本机显示延迟。
+超长文章的原生播放显著慢于纯时钟模型。
+还需针对长气泡布局做生产或性能构建的测量。
+键盘速度曲线与 iOS 原生回归仍待验证。
 
 基线：`cba13535e02edfb36f1d46d3afd9d556faf7696c`
 
-页面是评审说明，不是运行时证据或验收批准。
-合并与视觉体验仍待人工验收。
+代码：`d41221c7777c33d5e19b201b6fa2559fc46bd4ee`
 
-[Android 17 官方设计调查](https://github.com/BotHarness/DeepSeekBot/blob/2648266f9c6bcb881f47383cb3eae69b67bc68c2/docs/research/2028-android17-mobile-surfaces.md)
+本页解释评审范围，不替代运行证据或人工验收。
+
+[草稿 PR](https://github.com/BotHarness/DeepSeekBot/pull/2031) · [完整测量记录](https://github.com/BotHarness/DeepSeekBot/blob/d41221c7777c33d5e19b201b6fa2559fc46bd4ee/docs/research/2028-android-streaming-measurements.md)
 </textarea>
 <script>
 (() => {

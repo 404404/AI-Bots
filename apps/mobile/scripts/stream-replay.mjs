@@ -23,6 +23,13 @@ const paragraph =
   '我们用固定内容测试流式消息的渲染。每次回放的字符、分块和时间间隔保持一致，滚动时应保持阅读位置，回到底部后继续跟随。**强调文字**与列表用于覆盖 Markdown。\n\n';
 const fixtures = {
   smoke: 'AX_REPLAY_OK\n\n中文👨‍👩‍👧‍👦 **完整**。\n',
+  gentle:
+    '逐字淡入验收：新增的文字应该柔和地浮现，已经读到的内容保持稳定。我们放慢回放速度，观察每个字从浅到清晰的变化，而不是整段消失再出现。中文、emoji 👨‍👩‍👧‍👦 和重音 é 都应保持完整。最后确认消息正常提交。',
+  rhythm:
+    '阅读不应该追着网络分块跑。新的内容可以先进入缓冲区，画面再沿着自己的节奏向前走。这样，文字出现得更均匀，读者也有时间理解一句话。\n\n' +
+    '开始时先留一点余量。当内容快速到达，播放会平缓地加速；当上游突然放慢，储备里的文字仍然可以继续出现。速度的变化应该柔和，不能刚冲出一大段，又停在半句话中间。\n\n' +
+    '标点也是阅读的一部分。逗号留下短暂的呼吸，句号结束一个意思，段落之间再稍作停留。已经出现的文字保持稳定，新字逐渐清晰，emoji 👨‍👩‍👧‍👦 和重音 é 也不会被拆开。\n\n' +
+    '最后，收到完整答案不代表屏幕必须马上跳到结尾。接收进度和阅读进度可以不同：消息已经保存，气泡仍按原有节奏播完剩余内容。等最后一个字出现，这次播放才真正完成。',
   prose: Array.from(
     { length: 100 },
     (_, i) =>
@@ -54,6 +61,10 @@ const server = createServer(async (req, res) => {
           ok: true,
           intervalMs: 32,
           chunkGraphemes: 80,
+          profiles: {
+            gentle: { intervalMs: 100, chunkGraphemes: 3 },
+            rhythm: { intervalMs: 100, chunkGraphemes: [140, 18, 3, 8], pausesMs: [800, 600] },
+          },
           fixtures: Object.fromEntries(
             Object.entries(fixtures).map(([name, body]) => [name, body.length]),
           ),
@@ -85,6 +96,8 @@ const server = createServer(async (req, res) => {
     )
       throw new Error('INVALID_REPLAY_CONTROL');
     const fixture = config.fixture ?? 'prose';
+    const intervalMs = ['gentle', 'rhythm'].includes(fixture) ? 100 : 32;
+    const chunkGraphemes = fixture === 'gentle' ? 3 : 80;
     const tool = (request.tools ?? []).find((entry) => entry.function?.name === 'channel_send');
     const done =
       !config.runId ||
@@ -127,7 +140,15 @@ const server = createServer(async (req, res) => {
     const started = performance.now();
     let chunks = 0,
       maxLagMs = 0;
-    record({ event: 'start', id, fixture, reply: !done });
+    const chunkTimesMs = [];
+    record({
+      event: 'start',
+      id,
+      fixture,
+      reply: !done,
+      intervalMs,
+      chunkGraphemes: fixture === 'rhythm' ? null : chunkGraphemes,
+    });
     res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
     res.flushHeaders();
     const send = (delta, finish_reason = null) =>
@@ -156,17 +177,35 @@ const server = createServer(async (req, res) => {
         new Intl.Segmenter('und', { granularity: 'grapheme' }).segment(argumentsText),
         (entry) => entry.segment,
       );
-      for (let offset = 0; offset < graphemes.length; offset += 80) {
-        const due = started + chunks * 32;
+      let due = started;
+      for (let offset = 0; offset < graphemes.length;) {
+        if (fixture === 'rhythm' && (chunks === 4 || chunks === 12))
+          due += chunks === 4 ? 800 : 600;
+        const count =
+          fixture === 'rhythm'
+            ? chunks === 0
+              ? 140
+              : chunks < 4
+                ? 18
+                : chunks < 12
+                  ? 3
+                  : 8
+            : chunkGraphemes;
         await delay(Math.max(0, due - performance.now()));
         if (res.destroyed) break;
         maxLagMs = Math.max(maxLagMs, performance.now() - due);
+        if (chunkTimesMs.length < 64) chunkTimesMs.push(Math.round(performance.now() - started));
         send({
           tool_calls: [
-            { index: 0, function: { arguments: graphemes.slice(offset, offset + 80).join('') } },
+            {
+              index: 0,
+              function: { arguments: graphemes.slice(offset, offset + count).join('') },
+            },
           ],
         });
         chunks++;
+        offset += count;
+        due += intervalMs;
       }
       if (!res.destroyed) send({}, 'tool_calls');
     }
@@ -183,6 +222,7 @@ const server = createServer(async (req, res) => {
       chunks,
       elapsedMs: performance.now() - started,
       maxLagMs,
+      chunkTimesMs,
     });
   } catch {
     if (!res.headersSent) res.writeHead(400, { 'content-type': 'application/json' });
