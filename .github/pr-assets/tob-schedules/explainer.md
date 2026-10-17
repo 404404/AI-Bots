@@ -7,7 +7,7 @@ theme: blueprint
 cols: 2
 pr: Draft 2123，关联 Issue 2093
 base: a3e2c4e64d131191e686e33cb207d3db9b3a0937
-product-head: fb6cf4ff011594bcc80bdaa28e4b03136306dc94
+product-head: 5ae3ed1f8dd966a64756bfb93dede338ad668cf1
 generated: 2026-10-18 JST
 ---
 
@@ -52,7 +52,7 @@ ScheduleOwner -> 数据库: 同事务写入任务与回执
 
 原任务删除后保留回执，重放会拒绝。一次性任务过期后仍先核对原回执，再验证新建时刻。
 
-[查看准确版本的重放分支](https://github.com/BotHarness/DeepSeekBot/blob/fb6cf4ff011594bcc80bdaa28e4b03136306dc94/packages/core/src/tob/cli-schedule-operations.ts#L239-L262)。
+[查看准确版本的重放分支](https://github.com/BotHarness/DeepSeekBot/blob/5ae3ed1f8dd966a64756bfb93dede338ad668cf1/packages/core/src/tob/cli-schedule-operations.ts#L239-L262)。
 
 ## D Schema 100 与恢复边界
 
@@ -70,7 +70,8 @@ ScheduleOwner -> 数据库: 同事务写入任务与回执
 
 | 证据                      | 状态              | 边界                                      |
 | ------------------------- | ----------------- | ----------------------------------------- |
-| 48 个管理回归及 2 个启动回归 | ok 通过 | 管理回归在原产品版本；启动回归在当前版本 |
+| 原管理回归 | ok 48 项 | 原产品版本 |
+| 启动、恢复与既有调度 | ok 30 项 | 当前版本，含 3 项新增回归 |
 | 根类型检查与构建          | ok 通过           | 最终代码                                  |
 | 自然 Tob 创建、改名、暂停 | ok 通过           | 早于最后的过期重放修正                    |
 | 真实 planned firing       | ok 通过           | Source Event、Session、发送与消息 ID 对应 |
@@ -91,7 +92,7 @@ RuntimeRecovery -> ScheduleOwner: 既有补跑
 ScheduleOwner -> 模型路由检查: 缺key仍拒绝
 ```
 
-源码回归已验证延迟初始化与缺 key 两条路径。新的原生补跑仍待父任务验证。
+源码回归覆盖延迟初始化、缺 key、安全旧事件恢复及再次重启去重。恢复与收集共用检查，拒绝有副作用、不确定、已删、已解决、暂缓及已暂停 Bot 的任务。新的原生补跑仍待父任务验证。
 
 ## G 交互截图与后续审核
 
