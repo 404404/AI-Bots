@@ -1,0 +1,185 @@
+{
+  "group": "group-2053-post-ci-correction-proof",
+  "enable": {
+    "enabled": true
+  },
+  "read": {
+    "slug": "bot-4e4bc4b53213408890138eb763efc9b1",
+    "tool": "channel_read",
+    "sessionId": "direct",
+    "result": {
+      "outputLimit": 12000,
+      "messages": [
+        {
+          "channelId": "group-2053-post-ci-correction-proof",
+          "channelName": "2053 post CI correction proof",
+          "actorNames": {
+            "humans": {
+              "local-human": "Human"
+            },
+            "bots": {}
+          },
+          "message": {
+            "id": "10a2718c-2fbe-4273-92ad-1e2380aeb9a2",
+            "at": "2026-10-17T11:13:09.532Z",
+            "author": {
+              "kind": "human"
+            },
+            "body": "会议时间 14:00"
+          }
+        }
+      ],
+      "observationIds": {
+        "group-2053-post-ci-correction-proof": "3532eeb8-5b8d-48b9-a940-13a8c5adbfcc"
+      }
+    }
+  },
+  "held": {
+    "slug": "bot-4e4bc4b53213408890138eb763efc9b1",
+    "tool": "channel_send",
+    "sessionId": "direct",
+    "result": {
+      "status": "held",
+      "channelId": "group-2053-post-ci-correction-proof",
+      "draftId": "bot-9a07a6bc30d747335b84e423053bdfcc57a86924eacca0f5d7eb5269fc683356",
+      "reason": "read-new-context-then-revise-or-drop",
+      "changedMessageIds": [
+        "d9ace0f7-e2ab-4fe4-bc72-4657c0fb6563"
+      ],
+      "read": {
+        "channel_id": "group-2053-post-ci-correction-proof",
+        "limit": 20
+      }
+    }
+  },
+  "fresh": {
+    "slug": "bot-4e4bc4b53213408890138eb763efc9b1",
+    "tool": "channel_read",
+    "sessionId": "direct",
+    "result": {
+      "outputLimit": 12000,
+      "messages": [
+        {
+          "channelId": "group-2053-post-ci-correction-proof",
+          "channelName": "2053 post CI correction proof",
+          "actorNames": {
+            "humans": {
+              "local-human": "Human"
+            },
+            "bots": {}
+          },
+          "message": {
+            "id": "d9ace0f7-e2ab-4fe4-bc72-4657c0fb6563",
+            "at": "2026-10-17T11:13:09.785Z",
+            "author": {
+              "kind": "human"
+            },
+            "body": "纠正：15:00"
+          }
+        },
+        {
+          "channelId": "group-2053-post-ci-correction-proof",
+          "channelName": "2053 post CI correction proof",
+          "actorNames": {
+            "humans": {
+              "local-human": "Human"
+            },
+            "bots": {}
+          },
+          "message": {
+            "id": "10a2718c-2fbe-4273-92ad-1e2380aeb9a2",
+            "at": "2026-10-17T11:13:09.532Z",
+            "author": {
+              "kind": "human"
+            },
+            "body": "会议时间 14:00"
+          }
+        }
+      ],
+      "observationIds": {
+        "group-2053-post-ci-correction-proof": "173a5973-367c-4fae-baed-042bb69511cc"
+      }
+    }
+  },
+  "sent": {
+    "slug": "bot-4e4bc4b53213408890138eb763efc9b1",
+    "tool": "channel_send",
+    "sessionId": "direct",
+    "result": {
+      "channelId": "group-2053-post-ci-correction-proof",
+      "messageId": "bot-ecf594e65047c853f42fdab26f502f8cde489a55762103d754a9fc35fb7b10d9",
+      "status": "committed"
+    }
+  },
+  "history": {
+    "messages": [
+      {
+        "id": "bot-ecf594e65047c853f42fdab26f502f8cde489a55762103d754a9fc35fb7b10d9",
+        "at": "2026-10-17T11:13:10.430Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-4e4bc4b53213408890138eb763efc9b1"
+        },
+        "botCausation": {
+          "rootSourceEventId": "38ad9b11-c64a-481e-b82f-c21f01ce2ab7",
+          "parentSourceEventId": "38ad9b11-c64a-481e-b82f-c21f01ce2ab7",
+          "hop": 1
+        },
+        "body": "确认 15:00",
+        "channelRevision": 3,
+        "deliveries": [
+          {
+            "botSlug": "bot-45cec9c90668420183aa6b8ec152b6c9",
+            "state": "pending"
+          }
+        ],
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "d9ace0f7-e2ab-4fe4-bc72-4657c0fb6563",
+        "at": "2026-10-17T11:13:09.785Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "纠正：15:00",
+        "channelRevision": 2,
+        "deliveries": [
+          {
+            "botSlug": "bot-45cec9c90668420183aa6b8ec152b6c9",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-4e4bc4b53213408890138eb763efc9b1",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "10a2718c-2fbe-4273-92ad-1e2380aeb9a2",
+        "at": "2026-10-17T11:13:09.532Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "会议时间 14:00",
+        "channelRevision": 1,
+        "deliveries": [
+          {
+            "botSlug": "bot-45cec9c90668420183aa6b8ec152b6c9",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-4e4bc4b53213408890138eb763efc9b1",
+            "state": "pending"
+          }
+        ]
+      }
+    ],
+    "revision": 3
+  }
+}
