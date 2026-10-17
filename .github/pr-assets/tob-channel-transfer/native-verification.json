@@ -1,0 +1,43 @@
+{
+  "pr": 2127,
+  "reviewedRevision": "6396cbd26d98042898443dda7333781b5f2e7a79",
+  "builtProductSource": "c125e70593f0d75fcc4d6517cbbc4bfcbbe919e5",
+  "capturedAtUTC": "2026-10-17",
+  "platform": "macOS Desktop Client",
+  "syntheticDataOnly": true,
+  "fullRunErrors": [],
+  "restartErrors": [],
+  "denial": {
+    "result": "approval-denied",
+    "groupPreserved": true
+  },
+  "concurrentRename": {
+    "result": "stale-channel",
+    "renamedGroupPreserved": true
+  },
+  "approvedDelete": {
+    "deleted": true,
+    "historyPreserved": true
+  },
+  "attachmentUpload": {
+    "fileId": "file:9d6e2060-6ee0-4cd3-88e0-a241a70e2697",
+    "name": "tob-transfer-mvcxnulu.txt",
+    "size": 38,
+    "sha256": "35a63d467cd05bdd842b4e0eac5ac9e0cacce486ed23359e8cde521e8d34eb71",
+    "sendsMessage": false,
+    "fileSendsInCompletedTurn": 0
+  },
+  "directCLI": [
+    "raw upload",
+    "stable-ID replay",
+    "changed-content conflict",
+    "CAS Group ending",
+    "retained source history"
+  ],
+  "nativeShellCLI": true,
+  "dedicatedTobManagementTool": false,
+  "independentHumanCLIReadback": true,
+  "restartFixtureMatchesNativeRun": true,
+  "humanQA": "pending",
+  "merge": "not authorized"
+}
