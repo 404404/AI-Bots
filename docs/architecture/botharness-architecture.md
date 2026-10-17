@@ -1070,7 +1070,6 @@ The application-defined ClientControlService forwards `client-layout` reads and 
 
 A layout owner whose same-origin storage was replaced by another tab refuses `stale-client-layout` and stops saving until reload, preserving the other tab's accepted state.
 
-
 ### Explicit Client shortcut control (#2097)
 
 `client-shortcuts` projects the selected Client's native panel command catalog plus existing Bot navigation bindings. A single edit carries the exact Client generation, state fingerprint, profile and stable command ID. Native edits reuse `Shortcuts.edit` with the reviewed configuration revision, including explicit null disables and one-command reset; reserved keys and cross-owner conflicts refuse without replacing another binding. The existing navigation owner retains its key, migrates legacy shared overrides into profile records, preserves dormant overrides/other profiles and persists before publishing accepted bindings. Settings, effective tooltip text and actual matching subscribe to the same owners. Channel digits remain fixed. Native persistence, Web browser-origin storage, modal/IME arbitration and physical input retain their existing authorities and qualification requirements.

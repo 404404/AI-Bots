@@ -31,6 +31,16 @@ const t = ((key: keyof typeof en, values: Record<string, string> = {}) =>
     (_, name: string) => values[name] ?? '',
   )) as unknown as BotHarnessTranslate;
 
+function shortcutStorage() {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+}
+
 describe('shortcut list', () => {
   it('lists every shortcut once with its keys', () => {
     const ids = SHORTCUT_HELP_GROUPS.flatMap((group) => group.entries.map((entry) => entry.id));
@@ -77,7 +87,7 @@ describe('shortcut list', () => {
   });
 
   it('records, refuses and resets a changed shortcut', () => {
-    const bindings = new ShortcutBindings(undefined, () => false);
+    const bindings = new ShortcutBindings(shortcutStorage(), () => false);
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
@@ -182,7 +192,7 @@ it('waits for native recording acknowledgement and releases interception after s
     acknowledge = resolve;
   });
   const recording = vi.fn((active: boolean) => (active ? pending : Promise.resolve()));
-  const bindings = new ShortcutBindings(undefined, () => false);
+  const bindings = new ShortcutBindings(shortcutStorage(), () => false);
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
@@ -226,7 +236,7 @@ it('refuses recording when the native shell cannot acknowledge interception', as
   const recording = vi.fn(async (active: boolean) => {
     if (active) throw new Error('unavailable');
   });
-  const bindings = new ShortcutBindings(undefined, () => false);
+  const bindings = new ShortcutBindings(shortcutStorage(), () => false);
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);

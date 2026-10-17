@@ -1903,7 +1903,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           value = await deps.clientControl.request(input['target'], 'shortcuts', {});
         else if (input['action'] === 'shortcuts-set')
           value = await deps.clientControl.request(input['target'], 'shortcuts-set', {
-            scope: input['scope'], patch: input['patch'], expectedState: input['expectedState'],
+            scope: input['scope'],
+            patch: input['patch'],
+            expectedState: input['expectedState'],
           });
         else if (input['action'] === 'layout')
           value = await deps.clientControl.request(input['target'], 'layout', {});

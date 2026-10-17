@@ -195,7 +195,10 @@ describe('stored bindings', () => {
     expect(bindings.set('bot-mode', next)).toBeUndefined();
     expect(notified).toBe(1);
     expect(bindings.isCustom('bot-mode')).toBe(true);
-    expect(JSON.parse(storage.values.get(SHORTCUT_BINDINGS_KEY)!)).toMatchObject({ version: 2, profiles: { 'web:windows': { 'bot-mode': next } } });
+    expect(JSON.parse(storage.values.get(SHORTCUT_BINDINGS_KEY)!)).toMatchObject({
+      version: 2,
+      profiles: { 'web:windows': { 'bot-mode': next } },
+    });
     expect(bindings.matches('bot-mode', key('B', 'KeyB', { ctrlKey: true, shiftKey: true }))).toBe(
       true,
     );
@@ -205,7 +208,10 @@ describe('stored bindings', () => {
     expect(reloaded.binding('bot-mode')).toEqual(next);
     expect(reloaded.reset('bot-mode')).toBeUndefined();
     expect(reloaded.isCustom('bot-mode')).toBe(false);
-    expect(JSON.parse(storage.values.get(SHORTCUT_BINDINGS_KEY)!)).toMatchObject({ version: 2, profiles: { 'web:windows': {} } });
+    expect(JSON.parse(storage.values.get(SHORTCUT_BINDINGS_KEY)!)).toMatchObject({
+      version: 2,
+      profiles: { 'web:windows': {} },
+    });
   });
 
   it('keeps the old binding when a change is refused', () => {
@@ -241,10 +247,11 @@ describe('stored bindings', () => {
   });
 });
 
-
 it('keeps explicit disables and profile-local resets through legacy migration and reload', () => {
   const custom = { code: 'KeyB', mod: true, alt: false, shift: true };
-  const storage = memoryStorage({ [SHORTCUT_BINDINGS_KEY]: JSON.stringify({ 'bot-mode': custom }) });
+  const storage = memoryStorage({
+    [SHORTCUT_BINDINGS_KEY]: JSON.stringify({ 'bot-mode': custom }),
+  });
   const bindings = new ShortcutBindings(storage, () => false, 'web:windows');
   expect(bindings.disable('quick-switcher')).toBeUndefined();
   expect(bindings.disable('help')).toBeUndefined();
@@ -254,11 +261,18 @@ it('keeps explicit disables and profile-local resets through legacy migration an
   expect(reloaded.matches('quick-switcher', key('k', 'KeyK', { ctrlKey: true }))).toBe(false);
   expect(reloaded.reset('quick-switcher')).toBeUndefined();
   expect(reloaded.isDisabled('help')).toBe(true);
-  expect(new ShortcutBindings(storage, () => true, 'desktop:macos').binding('bot-mode')).toEqual(custom);
+  expect(new ShortcutBindings(storage, () => true, 'desktop:macos').binding('bot-mode')).toEqual(
+    custom,
+  );
   expect(new ShortcutBindings(storage, () => true, 'desktop:macos').isDisabled('help')).toBe(false);
 });
 it('retains accepted bindings on storage failure and refuses malformed/newer storage', () => {
-  const storage = { getItem: () => null, setItem: () => { throw new Error('full'); } };
+  const storage = {
+    getItem: () => null,
+    setItem: () => {
+      throw new Error('full');
+    },
+  };
   const bindings = new ShortcutBindings(storage, () => false);
   expect(bindings.disable('help')).toEqual({ kind: 'storage' });
   expect(bindings.isDisabled('help')).toBe(false);

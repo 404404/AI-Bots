@@ -299,12 +299,18 @@ export function apply(ctx: ClientContext): void {
   );
   const botSettings = new BotSettings();
   const dockPanels = createDockPanelRegistry();
-  const shortcutBindings = new ShortcutBindings(storage, () => ctx.shortcuts.platform === 'macos', `${ctx.shortcuts.runtime}:${ctx.shortcuts.platform}`);
+  const shortcutBindings = new ShortcutBindings(
+    storage,
+    () => ctx.shortcuts.platform === 'macos',
+    `${ctx.shortcuts.runtime}:${ctx.shortcuts.platform}`,
+  );
   ctx.effect(() => {
     if (typeof window === 'undefined') return () => {};
     const refresh = (event: StorageEvent) => {
       if (event.key !== SHORTCUT_BINDINGS_KEY) return;
-      try { shortcutBindings.refresh(); } catch {}
+      try {
+        shortcutBindings.refresh();
+      } catch {}
     };
     window.addEventListener('storage', refresh);
     return () => window.removeEventListener('storage', refresh);

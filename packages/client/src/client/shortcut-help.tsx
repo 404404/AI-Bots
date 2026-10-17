@@ -243,7 +243,12 @@ function problemText(
     );
     return t('shortcuts.problem.conflict', { action: owner === undefined ? '' : t(owner.label) });
   }
-  if (problem.kind === 'storage' || problem.kind === 'storage-uncertain' || problem.kind === 'stale') return t('settings.shortcuts.saveFailed');
+  if (
+    problem.kind === 'storage' ||
+    problem.kind === 'storage-uncertain' ||
+    problem.kind === 'stale'
+  )
+    return t('settings.shortcuts.saveFailed');
   if (problem.kind === 'reserved') return t('shortcuts.problem.reserved');
   return t('shortcuts.problem.needs-modifier', {
     mod: shortcutKeyLabel('Mod', apple),
