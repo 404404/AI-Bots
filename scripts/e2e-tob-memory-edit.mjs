@@ -418,6 +418,11 @@ async function showApproval(message) {
   mark('approval-capture');
   await payload.screenshot({ path: resolve(out, 'approval-operation-' + message.id + '.png') });
   await shot('approval-expanded-' + message.id);
+  await payload.evaluate((node) => {
+    node.scrollTop = node.scrollHeight;
+  });
+  await payload.screenshot({ path: resolve(out, 'approval-diff-' + message.id + '.png') });
+  await shot('approval-diff-expanded-' + message.id);
   return selector;
 }
 
