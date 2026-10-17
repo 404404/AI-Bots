@@ -11,7 +11,9 @@ export function KeyboardFormScroll(props: ComponentPropsWithRef<typeof KeyboardA
     <KeyboardAwareScrollView
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      bottomOffset={theme.touch + space.x3}
+      bottomOffset={
+        Math.max(theme.touch, theme.type.body.line * theme.fontScale + space.x6) + space.x6
+      }
       {...props}
       automaticallyAdjustKeyboardInsets={false}
     />
