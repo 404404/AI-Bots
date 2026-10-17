@@ -14,6 +14,16 @@ import {
 import { sumHostRows } from '../e2e-llm-scenarios.mjs';
 
 describe('send review evaluation evidence', () => {
+  it('accepts one-click preferences without inventing legacy rubric ratings', () => {
+    expect(humanReviewComplete({ reviewMode: 'pairwise-preference-v1', winner: 'Left' })).toBe(
+      true,
+    );
+    expect(humanReviewComplete({ reviewMode: 'pairwise-preference-v1', winner: 'Right' })).toBe(
+      true,
+    );
+    expect(humanReviewComplete({ reviewMode: 'pairwise-preference-v1', winner: null })).toBe(false);
+    expect(humanReviewComplete({ winner: 'Left' })).toBe(false);
+  });
   it('records insufficient Human evidence without forcing fabricated scores', () => {
     expect(humanReviewComplete({ winner: 'insufficient', reason: 'Left history is missing' })).toBe(
       true,

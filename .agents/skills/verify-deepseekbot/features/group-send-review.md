@@ -11,6 +11,9 @@ observed basis. The Human sees only committed replies in canonical history.
 - Drop: `drop: true` abandons the draft independently of Inbox resolution.
 - Refuse: revoked membership, purged source, expired draft or restarted Host cannot auto-send.
 - Review: the pilot retains complete paired histories and separate runtime/judge usage.
+- Human preference: two full-history cards accept one Left/Right choice, save it and advance;
+  dimensions and reasons are not required. Skip leaves the pair unreviewed; undo and changes
+  preserve previous choices. Legacy rubric scores retain their original review mode.
 
 ## How to get to it (user POV)
 
@@ -33,6 +36,11 @@ the draft frames and `botToolTrace`: a held draft must have no canonical placeme
 Use `bot-tool <bot> channel_read --args-stdin`, then `channel_send` with the returned
 `observationIds[channel]`; append a Human correction between those CLI calls to deterministically
 exercise the same production guard without the model. Read again before rechecking.
+
+Render the saved pilot with `scripts/group-send-review-report.mjs render` and open the HTML.
+Choose one card: progress advances by one, the choice survives reload, and judge/cost evidence
+stays hidden. Return to the chosen pair before revealing; a post-reveal change must remain
+marked in the exported JSON. Check undo, skipped pairs, full message bodies and narrow layouts.
 
 ## Gotchas
 
