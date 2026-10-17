@@ -46,3 +46,26 @@ node apps/mobile/scripts/tob-mobile-driver.mjs inject --session "$NEW_PRIVATE_RU
 7. On interruption, run operator `cleanup` to revoke only the fixture's session; clear it through App Sign out before retrying. Retain private records only until revocation is confirmed, then remove the task-owned run file. Do not delete other sessions or shared app data. Restore any temporarily enabled Magic Auth setting even if testing fails.
 
 Capture only post-login UI states; stop recording during preparation/injection. Screenshots and recordings must omit identities, tokens and debugger payloads. Record source checks, API authentication, native lifecycle, hosted browser flow and Human acceptance separately.
+
+## Native browser callback regression (local emulator)
+
+`apps/mobile/scripts/tob-authkit-browser.mjs` exercises the existing `CloudClient.login`, Expo Crypto and `WebBrowser.openAuthSessionAsync` in the assigned development Simulator. It replaces only that process's runtime adapters through its privileged loopback debugger; all session writes stay in memory. The screen is explicitly named **LOCAL EMULATOR - not UAT**. No fixture endpoint, switch or test identity ships in the app, and no emulator token is sent to WorkOS or TOB UAT.
+
+Install the pinned official emulator outside the repository, then start the local fixture:
+
+```bash
+npm install --prefix /tmp/tob-authkit-tools --no-audit --no-fund @workos/emulate@0.15.0
+node apps/mobile/scripts/tob-authkit-browser.mjs serve \
+  --emulator /tmp/tob-authkit-tools/node_modules/@workos/emulate/dist/index.js \
+  --info /tmp/tob-browser-fixture-info.json
+```
+
+After receiving the shared Simulator window, open Cloud services with no active cloud session. Discover the exact **Simulator** inspector target after each reload; a phone may appear on the same Metro. Use the existing driver flags `--simulator`, `--metro` and `--target`:
+
+1. Run `install --info /tmp/tob-browser-fixture-info.json` with those flags. Installation refuses release builds, busy clients, existing sessions and non-UAT saved configs. No SecureStore write occurs.
+2. Press **Sign in**. The real iOS system browser displays **WORKOS EMULATE** with the fictional email prefilled. Dismiss the keyboard before pressing **Continue** if it covers the button. The browser returns via the app's existing custom scheme; the normal client validates state and exchanges the code with its real native S256 verifier. The local fixture validates the emulator signature before returning a fictional administrator identity.
+3. `status` returns only bounded booleans/error codes. GET the info file's loopback `url` + `/__fixture/status` for exchange status, S256 match, absence of client secret and rejected authorization-code replay. Never print a browser callback URL or token response.
+4. `restore` returns the original runtime, vault and identities without writing storage. POST the literal `wrong-state` or `wrong-verifier` to the loopback `/__fixture/scenario`, reinstall and repeat. Wrong state must fail with `INVALID_CALLBACK` before any token request; a changed verifier must yield HTTP 400 and native `LOGIN_FAILED`, with no local session.
+5. Restore after every scenario, close the recorder/driver and stop only the task-owned fixture process. Cold reload is the fallback if interrupted: adapters and fixture storage exist only in memory. Verify the real UAT configuration is retained and signed out before releasing the window.
+
+The fixture's successful state is not evidence of real TOB admission. WorkOS Emulate 0.15.0 refuses the hostless RFC 8252 callback spelling used by this app, so the loopback adapter gives it an HTTP callback and translates the returned Location to the unchanged native callback. Therefore this regression proves native browser handoff, client state checks and S256 exchange against the emulator; it does **not** prove WorkOS's registered redirect enforcement, live Radar/IdP behavior, or real hosted authentication. The existing real-UAT session tests remain a separate layer. See [WorkOS testing guidance](https://workos.com/docs/authkit/testing) and the emulator's [redirect policy](https://github.com/workos/emulate/blob/main/src/workos/helpers.ts).
