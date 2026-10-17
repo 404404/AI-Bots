@@ -5,6 +5,10 @@ import { useDesignTheme } from '../design/theme';
 
 export type TextVariant = 'meta' | 'body' | 'title' | 'display';
 
+export function InlineText(props: TextProps) {
+  return <NativeText {...props} />;
+}
+
 export function Text({
   variant = 'body',
   tone = 'fg',

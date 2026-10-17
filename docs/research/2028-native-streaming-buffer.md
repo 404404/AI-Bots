@@ -1,7 +1,7 @@
 # Native streaming text buffering and Android rendering
 
 Date: 2026-10-17  
-Status: source research and implementation recommendations; runtime cause remains subject to the Android recording and profiler evidence for #2028.  
+Status: source research plus a passing Android visibility regression; frame-rate qualification is separate.
 Scope: Expo 57 / React Native 0.86.3 / `react-native-enriched-markdown` 1.1.1. This note does not claim that buffering alone fixes the reported disappearance of previously displayed text.
 
 ## Findings to apply first
@@ -73,6 +73,27 @@ The following values are proposed initial tuning values to validate on the physi
 
 The task-local replay sent a fixed 21,492-character Chinese Markdown response through a real isolated Host and its `channel_send` tool to the Android development app. A video pixel check sampled a fixed body region for six seconds, counting bright text only while the gray bubble remained present. The first recording had 116 nearly blank frames out of 184 sampled frames; disabling `removeClippedSubviews` still had 122 out of 180. Both checks failed. These are diagnostic recordings, not a completed performance comparison or evidence that buffering fixes the bug.
 
-This rules out list clipping as a sufficient fix for this fixture. It does not yet distinguish text selection, asynchronous native render/height reconciliation, or the inverted growing row. The next isolated probe disables text selection for the streaming draft, matching settled bubbles. USB disconnected before that recording could run. The initial recordings and detector JSON remain in the task's private evidence directory; they contain QA conversations only. A matching passing native replay is still required before marking the disappearance fixed.
+Subsequent isolated probes also failed with selection disabled and with native CommonMark. Replacing only the Android body with synchronous React Native text removed the disappearance. This locates the practical fix at the Markdown renderer/layout boundary; it does not prove a particular executor or native measurement race inside the dependency. An initial code/table implementation still produced empty gray regions until its horizontal ScrollViews used `flexGrow: 0`; this was a second, separately reproduced layout defect.
 
 The source investigation itself changed no application code. The subsequent implementation keeps buffering and display preference local and adds no Host route, persistence owner, or model behavior.
+
+## Passing native replay, 2026-10-17
+
+The Android-specific renderer uses `marked` for parsing, `entities` for decoded text and React Native text/layout for supported Markdown. It preserves stable source-offset block keys; completed blocks are memoized while only the growing tail is repaired with `remend`. Both draft and settled bodies use that renderer. Images, HTML, spoilers and admonitions retain the native enriched path. Document-wide references stay in one source block to retain link definitions. iOS is unchanged.
+
+The public replay is `apps/mobile/scripts/stream-replay.mjs`. It serves a loopback-only OpenAI-compatible endpoint, splits tool arguments at 80-grapheme boundaries on a drift-compensated 32 ms clock, and consumes each explicitly armed `runId` once. Follow-up model requests return `Done` without another Channel Message. Early diagnostic recordings used an older mock that could emit a second reply; the following accepted cases use the single-reply budget and verify the committed body through the real Host CLI.
+
+The public pixel checker is `apps/mobile/scripts/check-stream-video.mjs`. Its fixed dark portrait region detects a large retained gray bubble with nearly absent bright text; it is deliberately a narrow regression detector, not a general visual-quality metric. The `rich` case uses a separate sparse-glyph threshold calibrated against a failing all-gray code/table recording. All windows below decode exactly 30 frames per second.
+
+| Recording | Fixture and window                                                              | Result                                     |
+| --------- | ------------------------------------------------------------------------------- | ------------------------------------------ |
+| f8        | 21,492-character Chinese Markdown; 4–10 s                                       | 180 sampled frames, 0 blank frames; pass   |
+| f9        | Long continuous paragraph, inline formatting, entities and family emoji; 4–10 s | 180 sampled frames, 0 blank frames; pass   |
+| f10       | Rich formatting before horizontal-scroll layout fix; 5–11 s                     | 180 sampled frames, 180 blank frames; fail |
+| f12       | Code (120 lines), table (40 rows), lists, quotes, links and emoji; 5–11 s       | 180 sampled frames, 0 blank frames; pass   |
+| f13       | Complete bubbles, 3–8 s while receiving                                         | 150 frames, no large draft body; pass      |
+| f13       | Complete bubbles, 13–17 s after commitment                                      | 120 frames, 0 blank frames; pass           |
+
+The Complete bubbles setting was also checked after a force-stop/reopen without setting it again, then returned to Streaming. Static native capture confirms the rich replay's final table and `REPLAY_COMPLETE` marker. Component coverage checks exact code-copy text, reference links, entities, task lists and that appending to the tail does not render an already completed text block again.
+
+These recordings qualify the reported disappearance for these fixtures on the Android 16 QA phone. They do not establish 120 FPS, all enriched-only extensions, image loading, or iOS rendering. Keep the native frame comparison separate from these visibility results.

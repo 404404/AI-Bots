@@ -95,6 +95,8 @@ export const motion = {
   menu: 160,
 } as const;
 
+export const markdownTable = { minColumnWidth: 96, maxColumnWidth: 280 } as const;
+
 export const drawerSpring = { duration: 280, dampingRatio: 1 } as const;
 
 export const lift = 0.96;

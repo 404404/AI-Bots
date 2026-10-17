@@ -12,6 +12,7 @@ The Android development app uses native form sheets for Bot and group profiles, 
 - `chat-keyboard` moves the composer through intermediate positions during the native keyboard animation and keeps it above the final IME bounds.
 - `chat-fades` keeps the lower fade attached to the composer as the keyboard moves, with unobscured final content above the floating navigation on Chats and Activity.
 - `message-display` offers Streaming and Complete bubbles in Settings. Streaming updates only the changing draft's buffered presentation; Complete bubbles keeps the working indicator and reveals each committed message. The choice is device-local and survives reopening the app.
+- `stream-text-stability` keeps previously displayed Android prose, code and table text visible while a draft grows. Completed Markdown blocks do not rerender on a pure tail append. Draft and settled content use the same Android renderer.
 
 ## How to get to it (user POV)
 
@@ -39,6 +40,8 @@ The settings journey starts on Chats with its gear visible. Use the localized Se
 For profile loading, hold one section request pending and observe the shell/loading state. Repeat with cached data and a refused refresh, checking that earlier successful values remain alongside a retry notice. Unit tests cover pending/cache reconciliation; a native motion recording qualifies opening latency.
 
 For streaming, replay identical content/chunks/timing from an isolated local model through the real Host. Include Chinese paragraphs, a long paragraph, emoji, unfinished code and tables, interruption, and multiple bubbles. Save a native recording and inspect text persistence during appends, not just the final screenshot. Count historical and draft row renders separately. Alternate at least three runs per version when reporting profiler comparisons; a 120 Hz display or an 80 ms text buffer alone does not prove 120 FPS.
+
+Use the loopback [fixed-replay and video-check instructions](../../../../apps/mobile/scripts/stream-replay.md) for the deterministic fixture. Pair each visibility check with the designated chat, native recording, and exact committed reply from `deepseekbot send`. A second unsolicited reply invalidates the run. In Complete bubbles mode, check both the waiting window and the completed window, then force-stop/reopen and inspect the selected setting without setting it again. A blank-screen waiting check alone is insufficient.
 
 The keyboard journey requires `ffmpeg` on PATH and the dark portrait QA theme. It captures a five-second native screen recording, focuses the empty composer, checks the final input bounds against the real Android IME, and tracks the composer fill at 30 fps. It fails `COMPOSER_JUMPS` when the movement has fewer than four intermediate positions or one frame contains at least half the travel. Keep the theme, IME, viewport, draft and frame rate fixed across A/B runs. Read the MP4 too: the bounded pixel check detects a jump and final overlap, not every possible timing defect.
 

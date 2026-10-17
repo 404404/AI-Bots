@@ -19,6 +19,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~57.0.17",
     "@tanstack/react-query": "^5.104.3",
+    "entities": "^8.1.0",
     "expo": "57.0.30",
     "expo-alternate-app-icons": "8.0.0",
     "expo-application": "~57.0.3",
@@ -43,6 +44,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
+    "marked": "^18.1.1",
     "posthog-react-native": "4.81.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
