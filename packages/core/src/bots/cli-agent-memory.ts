@@ -54,7 +54,7 @@ export async function parseAgentMemory(
     if (!/^[0-9a-f]{40}$/u.test(expectedHead))
       throw new CliLiveError('usage', 'Use an exact --expected-head revision.');
     const id = text(values[command === 'memory-save' ? 'edit-id' : 'restore-id']);
-    if (id.length > 100 || /[\x00-\x20]/u.test(id))
+    if (id.length > 100 || [...id].some((char) => char.charCodeAt(0) <= 32))
       throw new CliLiveError('usage', 'Use a stable operation identity of at most 100 characters.');
     if (command === 'memory-restore-commit') {
       const sha = text(values.sha);

@@ -1168,13 +1168,9 @@ export function createMemoryAcceptance(options: {
     return rowToCommit(prior);
   };
 
-  // Scoped reviews deliberately require a clean current branch. Human restore keeps its
-  // existing checkpoint/dirty-work backup path; no review is allowed to discard that work.
   const requireWritableTurn = (root: string, botSlug: string, reviewingSessionId?: string) => {
     const flight = inFlight.get(botSlug);
     if (!flight) return;
-    // Only the same prepared owning Orchestrator may apply its reviewed Human edit.
-    // This is an internal owner argument, never a caller-supplied RPC/CLI identity.
     if (
       !reviewingSessionId ||
       flight.sessionId !== reviewingSessionId ||

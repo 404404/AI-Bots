@@ -55,7 +55,6 @@ function freeze<T>(value: T): T {
   return value;
 }
 
-/** Tob Orchestrator Consumer of the existing application-defined Memory owner. */
 export function createTobMemoryEditOperations(
   runtime: BotRuntime,
   memory: MemoryAcceptance,
@@ -120,7 +119,7 @@ export function createTobMemoryEditOperations(
         typeof value !== 'string' ||
         !value.trim() ||
         value.length > 100 ||
-        /[\x00-\x20]/u.test(value)
+        [...value].some((char) => char.charCodeAt(0) <= 32)
       )
         throw new TobError('invalid-input');
       return value;

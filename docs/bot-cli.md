@@ -947,6 +947,11 @@ Read canonical files and the resulting Git revision before reporting success. Ch
 and `MEMORY.md` reach new Sessions and the next compaction; an already running Session keeps its
 frozen prefix. Direct CLI, real Tob, rendered Web and macOS Desktop require separate verification.
 
+A Tob self edit during its own prepared turn additionally requires that turn's exact owning
+Orchestrator, clean branch and an already accepted HEAD. A first turn over pending initialization
+commits may therefore refuse safely; let the normal turn settle and read the baseline again.
+Assignments and another active Orchestrator cannot borrow this internal owner context.
+
 ## Tob Assignment Memory reading
 
 For an explicit Human request in Tob's private DM, Tob can use the invocation-scoped CLI to
