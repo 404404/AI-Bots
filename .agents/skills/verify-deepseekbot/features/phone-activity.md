@@ -40,6 +40,9 @@ tab strip, to switch pages. The underline tracks the gesture; short/cancelled dr
 return to the same page. Scroll a populated page vertically, switch away and back,
 and confirm its scroll position is retained. Vertical scrolling and pull-to-refresh
 must not switch pages. Check repeated fast direction changes and tap-to-third-tab.
+Return to a loaded question and confirm it does not flash a loading card or lose
+its unsent choices. Include very long unread summaries: previews remain bounded
+while opening the row still reaches its full conversation.
 All and handled history remain available through the filter. The header contains
 sorting, filtering and Activity search; no permanent chips appear above the feed.
 Open Filters, combine Bot/Channel/unread/category, switch tabs and confirm those

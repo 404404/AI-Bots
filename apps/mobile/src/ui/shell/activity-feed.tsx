@@ -60,6 +60,13 @@ import {
 const AVATAR = 32;
 const LOADING: InboxSnapshot = { status: 'loading' };
 const ACTIVITY_ROUTES = [...ACTIVITY_TABS];
+const SUMMARY_PREVIEW_LIMIT = 512;
+
+function summaryPreview(summary: string): string {
+  return summary.length <= SUMMARY_PREVIEW_LIMIT
+    ? summary
+    : `${summary.slice(0, SUMMARY_PREVIEW_LIMIT).replace(/[\uD800-\uDBFF]$/, '')}…`;
+}
 
 type FeedRow =
   | { kind: 'empty'; key: string }
@@ -150,6 +157,7 @@ function Row({
     item.kind === 'channel-unread'
       ? (item.channelName ?? t.otherKind)
       : (bot?.displayName ?? item.botSlug);
+  const summary = summaryPreview(item.summary);
   const size = settled ? theme.type.body.line : AVATAR;
   const metadata = (
     <View
@@ -170,7 +178,7 @@ function Row({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={t.openPost(kind, name, item.summary)}
+      accessibilityLabel={t.openPost(kind, name, summary)}
       testID={`inbox-row-${item.id}`}
       onPress={() => onOpen(item)}
       style={({ pressed }) => ({
@@ -210,15 +218,13 @@ function Row({
             style={{ flexShrink: 1 }}
           >
             {theme.largeText ? name : t.rowTitle(kind, name)}
-            {settled && item.summary.length > 0 ? (
-              <Text tone="muted">{` · ${item.summary}`}</Text>
-            ) : null}
+            {settled && summary.length > 0 ? <Text tone="muted">{` · ${summary}`}</Text> : null}
           </Text>
           {theme.largeText ? null : metadata}
         </View>
-        {!settled && item.summary.length > 0 ? (
+        {!settled && summary.length > 0 ? (
           <Text tone={theme.largeText ? 'fg' : 'muted'} numberOfLines={2}>
-            {item.summary}
+            {summary}
           </Text>
         ) : null}
         {theme.largeText ? metadata : null}

@@ -82,6 +82,7 @@ async function feed(
   snapshot: InboxSnapshot,
   hostId = 'host-one',
   timeoutMs = 200,
+  onOpen: (item: HumanAttentionItem) => void = () => undefined,
 ): Promise<HTMLElement> {
   act(() => root?.unmount());
   container?.remove();
@@ -123,7 +124,7 @@ async function feed(
         botSlugs: [question.botSlug, 'other-bot'],
         channels: [{ id: 'other-channel', name: 'Other Channel' }],
         bot: () => undefined,
-        onOpen: () => undefined,
+        onOpen,
       }),
     ),
   );
@@ -209,6 +210,32 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('bounds the native unread preview while opening the original full item', async () => {
+    const unread: HumanAttentionItem = {
+      ...reply,
+      id: 'long-unread',
+      category: 'unread',
+      kind: 'channel-unread',
+      summary: `${'正文'.repeat(10000)}FULL_END`,
+    };
+    const open = vi.fn();
+    const view = await feed(
+      host(),
+      { status: 'ready', sections: { action: [], replies: [], unread: [unread], handled: [] } },
+      'host-one',
+      200,
+      open,
+    );
+    await press(button(view, t.inboxSections.unread));
+    const row = view.querySelector<HTMLElement>('[data-testid="inbox-row-long-unread"]')!;
+    expect(row.textContent).not.toContain('FULL_END');
+    expect(row.textContent!.length).toBeLessThan(700);
+    expect(row.getAttribute('aria-label')!.length).toBeLessThan(700);
+    await press(row);
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({ id: unread.id, summary: unread.summary }),
+    );
+  });
   it('preserves the search when editing ends and options reset', async () => {
     const fake = host();
     const queries: Record<string, unknown>[] = [];
