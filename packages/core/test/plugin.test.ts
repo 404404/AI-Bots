@@ -73,6 +73,7 @@ describe('plugin entry', () => {
       'agents',
       'agentDefaultModel',
       'llm',
+      'credentials',
     ]);
   });
 
