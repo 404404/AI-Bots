@@ -13,6 +13,7 @@ import {
   View,
   type AccessibilityRole,
   type DimensionValue,
+  type ViewInstance,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -136,7 +137,7 @@ function PressableBubble({
 }) {
   const theme = useDesignTheme();
   const reduced = useReducedMotion();
-  const ref = useRef<View>(null);
+  const ref = useRef<ViewInstance>(null);
   const anchor = useRef<Rect | undefined>(undefined);
   const scale = useSharedValue(1);
   const held = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));

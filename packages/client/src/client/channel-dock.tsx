@@ -1,3 +1,7 @@
+import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
+import { ChannelWorkspace } from './channel-workspace.js';
+import { workspaceShortcutId } from './workspace-shortcuts.js';
+import { PanelVisibilityLabel } from './panel-menu.js';
 import { mountPanelScrollbars } from './ds/panel-scrollbars.js';
 import { usePanelMenu } from './panel-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
@@ -41,6 +45,8 @@ import {
   resolveDefaultPosition,
   resolveDockPosition,
   writeChannelDock,
+  DEFAULT_CHANNEL_WORKSPACE,
+  type ChannelWorkspaceState,
   type ChannelDockStorage,
   type DockPosition,
 } from './channel-dock-layout.js';
@@ -130,6 +136,9 @@ export interface ChannelHeaderView {
 }
 
 interface DockContextValue {
+  sessionWorkspace?:
+    | { state: ChannelWorkspaceState; setState(next: ChannelWorkspaceState): void; toggle(): void }
+    | undefined;
   header?: ChannelHeaderView | undefined;
   body: ReactNode;
   files?: ChannelFilesView | undefined;
@@ -176,6 +185,22 @@ function useEntryProps(entryId: string): ChannelSidebarEntryProps | undefined {
 }
 
 function ChannelBodyPanel(): ReactElement {
+  const dock = useDock();
+  if (!dock.sessionWorkspace || !dock.panels.has('sessions')) return <ChannelMessageContent />;
+  return (
+    <ChannelWorkspace
+      channelId={dock.channel?.id}
+      state={dock.sessionWorkspace.state}
+      setState={dock.sessionWorkspace.setState}
+      label={dock.t('entry.sessions')}
+      content={<ChannelMessageContent />}
+      header={<DockPanelHeader entryId="sessions" panelId="sessions" />}
+      sessions={<ChannelEntryContent entryId="sessions" />}
+    />
+  );
+}
+
+function ChannelMessageContent(): ReactElement {
   const dock = useDock();
   const members = dock.members;
   const filesOpen = dock.channel !== undefined && dock.files?.open === true;
@@ -312,8 +337,11 @@ function ChannelEntryContent({ entryId }: { entryId: string }): ReactElement {
 }
 
 function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: string }>) {
+  return <DockPanelHeader entryId={params.entryId} panelId={api.id} />;
+}
+
+function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; panelId: string }) {
   const dock = useDock();
-  const entryId = params.entryId;
   const panel = entryId === undefined ? undefined : dock.panels.get(entryId);
   const entry = panel?.entry;
   const props = useEntryProps(entryId ?? '');
@@ -325,9 +353,53 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
             label: dock.t('dock.close', { label: panel.title }),
             icon: <ChannelSidebarIcon name="x" />,
           },
+          ...(entryId === CHANNEL_BODY_PANEL &&
+          dock.channel &&
+          dock.sessionWorkspace &&
+          dock.panels.has('sessions')
+            ? [
+                { type: 'separator' as const, id: 'channel-controls-separator' },
+                {
+                  type: 'label' as const,
+                  id: 'channel-controls',
+                  text: dock.t('workspace.channelPanels'),
+                },
+                {
+                  id: 'session-control',
+                  icon: <ChannelSidebarIcon name="text-quote" />,
+                  label: (
+                    <PanelVisibilityLabel
+                      label={dock.t('entry.sessions')}
+                      checked={!dock.sessionWorkspace.state.hiddenControl}
+                      t={dock.t}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(entryId === 'sessions' && dock.sessionWorkspace
+            ? (['left', 'right', 'above', 'below'] as const).map((direction) => ({
+                id: direction,
+                label: dock.t(`workspace.session.${direction}`),
+              }))
+            : []),
         ]
       : [],
-    onSelect: () => dock.close(api.id),
+    onSelect: (id) => {
+      if (id === 'close') dock.close(panelId);
+      else if (id === 'session-control' && dock.sessionWorkspace) {
+        const state = dock.sessionWorkspace.state;
+        dock.sessionWorkspace.setState({
+          ...state,
+          hiddenControl: !state.hiddenControl,
+          open: state.hiddenControl ? state.open : false,
+        });
+      } else if (dock.sessionWorkspace)
+        dock.sessionWorkspace.setState({
+          ...dock.sessionWorkspace.state,
+          direction: id as DockPosition['direction'],
+        });
+    },
   });
   if (entryId === undefined || panel === undefined) return null;
   const shown = entry !== undefined && props !== undefined && dock.shows(entry);
@@ -379,6 +451,9 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
             onPointerDown={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
           >
+            {entryId === CHANNEL_BODY_PANEL &&
+              dock.sessionWorkspace &&
+              dock.panels.has('sessions') && <SessionsControl />}
             {entryId === CHANNEL_BODY_PANEL && dock.channel && dock.files && (
               <Tooltip label={dock.t('generatedFiles.title')} side="bottom" delayMs={500}>
                 <IconButton
@@ -433,7 +508,7 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
                   tone="subtle"
                   aria-label={closeLabel}
                   data-dock-close={entryId}
-                  onClick={() => dock.close(api.id)}
+                  onClick={() => dock.close(panelId)}
                 >
                   <ChannelSidebarIcon name="x" />
                 </IconButton>
@@ -445,6 +520,38 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
     </div>
   );
 }
+
+function SessionsControl() {
+  const dock = useDock();
+  const workspace = useContext(WorkspaceContext);
+  const source = workspace?.shortcuts?.catalog;
+  const catalog = useSyncExternalStore(
+    source?.subscribe ?? EMPTY_SUBSCRIBE,
+    source?.getSnapshot ?? EMPTY_CATALOG,
+  );
+  const state = dock.sessionWorkspace!;
+  const label = dock.t('entry.sessions');
+  const keys = catalog.find((row) => row.id === workspaceShortcutId('sessions'))?.keys;
+  return (
+    <>
+      {!state.state.hiddenControl && (
+        <Tooltip label={label} shortcutKeys={keys} side="bottom" delayMs={500}>
+          <IconButton
+            aria-label={label}
+            aria-pressed={state.state.open}
+            disabled={!dock.channel}
+            onClick={state.toggle}
+          >
+            <ChannelSidebarIcon name="text-quote" />
+          </IconButton>
+        </Tooltip>
+      )}
+    </>
+  );
+}
+const EMPTY_SUBSCRIBE = () => () => {};
+const EMPTY_CATALOG = () => NO_SHORTCUTS;
+const NO_SHORTCUTS: readonly { id: string; keys?: readonly string[] }[] = [];
 
 export function useChannelsHeader(): HTMLSpanElement | null {
   return useDock().channelsHeader;
@@ -553,6 +660,18 @@ export function ChannelDock({
   storage,
 }: ChannelDockProps): ReactElement {
   const workspace = useContext(WorkspaceContext);
+  const [initial] = useState(() => readChannelDock(storage));
+  const seed = useRef(initial?.sessionSeed ?? DEFAULT_CHANNEL_WORKSPACE);
+  const [channelWorkspaces, updateChannelWorkspaces] = useState(initial?.channelWorkspaces ?? {});
+  const channelWorkspacesRef = useRef(channelWorkspaces);
+  const sessionState =
+    channel && Object.hasOwn(channelWorkspaces, channel.id)
+      ? channelWorkspaces[channel.id]!
+      : seed.current;
+  const channelRef = useRef(channel);
+  channelRef.current = channel;
+  const sessionStateRef = useRef(sessionState);
+  sessionStateRef.current = sessionState;
   const [channelsHeader, setChannelsHeader] = useState<HTMLSpanElement | null>(null);
   const [gap, updateGap] = useState(() => readChannelDock(storage)?.gap ?? DEFAULT_WORKSPACE_GAP);
   const gapRef = useRef(gap);
@@ -570,6 +689,7 @@ export function ChannelDock({
   const [api, setApi] = useState<DockviewApi>();
   const [openIds, setOpenIds] = useState<readonly string[]>([]);
   const [runtimes, setRuntimes] = useState<ReadonlyMap<string, EntryRuntime>>(new Map());
+  const unregistered = useRef<import('dockview-react').SerializedDockview['panels']>({});
   const parked = useRef<Record<string, DockPosition & { missing?: boolean }>>({});
   const byId = useMemo(() => new Map(panels.map((panel) => [panel.id, panel])), [panels]);
   const known = useRef(byId);
@@ -579,6 +699,13 @@ export function ChannelDock({
     const ids = target.panels.map((panel) => panel.id);
     registry?.reportOpen([
       ...ids.filter((id) => id !== WORKSPACE_RAIL && (workspace || id !== CHANNEL_BODY_PANEL)),
+      ...(workspace &&
+      channelRef.current &&
+      known.current.has('sessions') &&
+      sessionStateRef.current.open &&
+      ids.includes(CHANNEL_BODY_PANEL)
+        ? ['sessions']
+        : []),
       ...(workspace &&
       channel?.type === 'group' &&
       membersRef.current.open &&
@@ -610,12 +737,17 @@ export function ChannelDock({
     if (workspace || !readChannelDock(storage)?.layout.panels[WORKSPACE_RAIL])
       writeChannelDock(
         {
-          layout: target.toJSON(),
+          layout: {
+            ...target.toJSON(),
+            panels: { ...unregistered.current, ...target.toJSON().panels },
+          },
           parked: parked.current,
           gap: gapRef.current,
           order: orderRef.current,
           hiddenControls: hiddenControlsRef.current,
           members: membersRef.current,
+          sessionSeed: seed.current,
+          channelWorkspaces: channelWorkspacesRef.current,
         },
         storage,
       );
@@ -627,6 +759,20 @@ export function ChannelDock({
   const onReady = ({ api: ready }: DockviewReadyEvent): void => {
     const stored = readChannelDock(storage);
     parked.current = { ...stored?.parked };
+    unregistered.current = Object.fromEntries(
+      Object.entries(stored?.layout.panels ?? {}).filter(
+        ([id]) =>
+          !known.current.has(id) &&
+          ![
+            CHANNEL_BODY_PANEL,
+            WORKSPACE_RAIL,
+            'sessions',
+            'group-work',
+            'bot-inbox',
+            'members',
+          ].includes(id),
+      ),
+    );
     let restored = false;
     if (stored !== undefined) {
       const validRail = isFullHeightRail(stored.layout);
@@ -637,14 +783,18 @@ export function ChannelDock({
             (workspace !== undefined && validRail && id === WORKSPACE_RAIL) ||
             known.current.has(id)) &&
           id !== 'bot-inbox' &&
+          !(workspace && id === 'sessions') &&
           !(workspace && id === 'members'),
+        !workspace,
       );
       for (const [id, position] of Object.entries(pruned.parked))
-        parked.current[id] = { ...position, missing: true };
+        parked.current[id] = { ...(parked.current[id] ?? position), missing: true };
+      if (workspace && pruned.layout === undefined) restored = true;
       if (pruned.layout !== undefined) {
         try {
           ready.fromJSON(pruned.layout);
           restored =
+            !!workspace ||
             ready.getPanel(CHANNEL_BODY_PANEL) !== undefined ||
             !!(workspace && ready.getPanel(WORKSPACE_RAIL));
         } catch {
@@ -652,7 +802,11 @@ export function ChannelDock({
         }
       }
     }
-    if (!restored) buildDefaultLayout(ready, known.current);
+    if (!restored)
+      buildDefaultLayout(
+        ready,
+        new Map([...known.current].filter(([id]) => !workspace || id !== 'sessions')),
+      );
     const newWorkspace = workspace && !stored?.layout.panels[WORKSPACE_RAIL];
     if (workspace) {
       if (!ready.getPanel(WORKSPACE_CHANNELS) && !stored?.layout.panels[WORKSPACE_RAIL]) {
@@ -719,7 +873,7 @@ export function ChannelDock({
       if (
         panel.id === CHANNEL_BODY_PANEL ||
         (workspace && panel.id === WORKSPACE_RAIL) ||
-        (byId.has(panel.id) && panel.id !== 'bot-inbox')
+        (byId.has(panel.id) && panel.id !== 'bot-inbox' && !(workspace && panel.id === 'sessions'))
       )
         continue;
       const position = positionOf(api, panel.id);
@@ -732,20 +886,38 @@ export function ChannelDock({
         position.missing !== true ||
         panel === undefined ||
         id === 'bot-inbox' ||
+        (workspace && id === 'sessions') ||
         (workspace && id === 'members')
       )
         continue;
       delete parked.current[id];
+      delete unregistered.current[id];
       addEntryPanel(api, panel, position);
     }
     save(api);
   }, [api, byId]);
 
   const inboxStateMount = useMountedResource<HTMLSpanElement>(() => {
-    if (api) reportOpen(api);
-  }, [api, channel?.id, inbox?.open]);
+    if (api) {
+      if (workspace && (channel?.type !== 'dm' || !channel.botSlug))
+        for (const id of BOT_ONLY_CHANNEL_PANELS) layout.current.close(id);
+      reportOpen(api);
+    }
+  }, [api, channel?.id, inbox?.open, sessionState.open]);
+
+  const setSessionState = (next: ChannelWorkspaceState): void => {
+    if (!channel) return;
+    channelWorkspacesRef.current = { ...channelWorkspacesRef.current, [channel.id]: next };
+    sessionStateRef.current = next;
+    updateChannelWorkspaces(channelWorkspacesRef.current);
+    if (api) save(api);
+  };
 
   const close = (panelId: string): void => {
+    if (workspace && panelId === 'sessions') {
+      setSessionState({ ...sessionStateRef.current, open: false });
+      return;
+    }
     if (panelId === 'bot-inbox') {
       inbox?.setOpen(false);
       return;
@@ -769,7 +941,25 @@ export function ChannelDock({
     panel.api.close();
   };
 
+  const canOpen = (panelId: string): boolean => {
+    if (!workspace) return true;
+    if (panelId === 'sessions') return channel !== undefined;
+    if (BOT_ONLY_CHANNEL_PANELS.includes(panelId))
+      return channel?.type === 'dm' && !!channel.botSlug;
+    return true;
+  };
   const open = (panelId: string): void => {
+    if (!canOpen(panelId)) return;
+    if (workspace && panelId === 'sessions') {
+      if (!channel || !api) return;
+      setSessionState({ ...sessionStateRef.current, open: true });
+      const message = byId.get(CHANNEL_BODY_PANEL);
+      if (message && !api.getPanel(CHANNEL_BODY_PANEL))
+        addEntryPanel(api, message, parked.current[CHANNEL_BODY_PANEL]);
+      api.getPanel(CHANNEL_BODY_PANEL)?.api.setActive();
+      save(api);
+      return;
+    }
     if (panelId === 'bot-inbox') {
       if (channel?.type !== 'dm' || !inbox || !api) return;
       files?.setOpen(false);
@@ -803,11 +993,12 @@ export function ChannelDock({
     addEntryPanel(api, panel, remembered);
   };
 
-  const layout = useRef({ open, close });
-  layout.current = { open, close };
+  const layout = useRef({ open, close, canOpen });
+  layout.current = { open, close, canOpen };
   const layoutMount = useMountedResource<HTMLSpanElement>(() => {
     if (api === undefined || registry === undefined) return;
     return registry.attach({
+      canOpen: (id) => layout.current.canOpen(id),
       open: (id) => layout.current.open(id),
       close: (id) => layout.current.close(id),
     });
@@ -823,7 +1014,10 @@ export function ChannelDock({
         if (api === undefined) return;
         clearChannelDock(storage);
         parked.current = {};
-        buildDefaultLayout(api, byId);
+        buildDefaultLayout(
+          api,
+          new Map([...byId].filter(([id]) => !workspace || id !== 'sessions')),
+        );
         save(api);
       }}
     />
@@ -832,6 +1026,11 @@ export function ChannelDock({
   const reset = () => {
     if (!api) return;
     parked.current = {};
+    unregistered.current = {};
+    seed.current = DEFAULT_CHANNEL_WORKSPACE;
+    channelWorkspacesRef.current = {};
+    updateChannelWorkspaces({});
+    sessionStateRef.current = DEFAULT_CHANNEL_WORKSPACE;
     files?.setOpen(false);
     inbox?.setOpen(false);
     gapRef.current = DEFAULT_WORKSPACE_GAP;
@@ -842,7 +1041,7 @@ export function ChannelDock({
     updateHiddenControls([]);
     membersRef.current = { open: false, ratio: 0.3 };
     updateMembers(membersRef.current);
-    buildDefaultLayout(api, byId);
+    buildDefaultLayout(api, new Map([...byId].filter(([id]) => !workspace || id !== 'sessions')));
     const channels = byId.get(WORKSPACE_CHANNELS);
     if (workspace && channels) addEntryPanel(api, channels, undefined);
     if (workspace)
@@ -854,6 +1053,16 @@ export function ChannelDock({
     save(api);
   };
   const value: DockContextValue = {
+    sessionWorkspace: workspace
+      ? {
+          state: sessionState,
+          setState: setSessionState,
+          toggle: () =>
+            sessionState.open && api?.getPanel(CHANNEL_BODY_PANEL)
+              ? close('sessions')
+              : open('sessions'),
+        }
+      : undefined,
     header,
     body,
     files,

@@ -835,7 +835,7 @@ _避免使用_：panel control、panel control sidebar、App Sidebar、频道列
 _避免使用_：widget、view、pane、DSH main panel
 
 **Messages panel**：
-消息面板。承载当前 Channel workspace 的唯一外层 Dock panel。header 标识当前频道并控制可用的频道子面板。隐藏消息面板会隐藏整个频道工作区，同时保留子面板的开关和几何偏好；不停止执行，也不撤销访问权限。
+消息面板。承载当前 Channel workspace 的唯一外层 Dock panel。header 标识当前频道并控制可用的频道子面板。右键 header 通过图标、名称与右侧复选框管理子面板开关的显隐；隐藏开关也会关闭对应子面板，不另设管理按钮。隐藏消息面板会隐藏整个频道工作区，同时保留子面板的开关和几何偏好；不停止执行，也不撤销访问权限。
 _避免使用_：Channel body、聊天侧栏、消息列表（指整个面板时）
 
 **Channel workspace**：
@@ -843,7 +843,7 @@ _避免使用_：Channel body、聊天侧栏、消息列表（指整个面板时
 _避免使用_：Channel sidebar、嵌套全局工作区、DSH Workspace
 
 **Channel subpanel**：
-频道子面板。Channel workspace 内的 Dock panel，从消息 header 打开，仅在父面板可见时显示。可用性跟随当前频道及现有访问检查。会话适用于 PersonaBot 私聊和群聊；成员适用于群聊。浏览器控制、电脑控制和 PersonaBot Profile 是 Bot 专属 surface，群聊不提供这些入口，即使会话正在显式查看某个群成员 Bot 也不例外。群资料仍可使用。子面板开关只改变呈现，不改变执行或权限。
+频道子面板。Channel workspace 内的 Dock panel，从消息 header 打开，仅在父面板可见时显示。可用性跟随当前频道及现有访问检查。会话适用于 PersonaBot 私聊和群聊；成员适用于群聊。记忆文件、记忆演化、定时任务、浏览器控制、电脑控制和 PersonaBot Profile 是 Bot 专属 surface，群聊不提供这些入口，即使会话正在显式查看某个群成员 Bot 也不例外。群资料仍可使用。子面板开关只改变呈现，不改变执行或权限。
 _避免使用_：Channel sidebar entry、全局面板（指频道内容时）、tab
 
 **Channel settings**：

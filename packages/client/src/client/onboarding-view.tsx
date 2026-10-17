@@ -367,7 +367,8 @@ function onboardingTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
         description: t('onboarding.tour.panels.hint'),
       },
       {
-        selector: '.bh-workspace-rail [data-pinned-panel="sessions"]',
+        selector: '[data-channel-subpanel="sessions"]',
+        fallback: '[data-dock-header="bh:channel-body"]',
         title: t('onboarding.tour.tools.title'),
         description: t('onboarding.tour.tools.hint'),
       },

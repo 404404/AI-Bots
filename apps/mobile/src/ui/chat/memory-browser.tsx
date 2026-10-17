@@ -1,5 +1,12 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  ScrollView,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 
 import { memoryEntries, type MemoryEntry } from '../../host/bot-profile';
 import type { MemoryFile } from '../../host/wire';
@@ -159,7 +166,7 @@ export function MemoryFolderView({
 
 export function MemoryFileView({ load }: { load: () => Promise<MemoryFile | undefined> }) {
   const theme = useDesignTheme();
-  const { state, read, mount } = useLoad<MemoryFile | undefined, ScrollView>(load);
+  const { state, read, mount } = useLoad<MemoryFile | undefined, ScrollViewInstance>(load);
   return (
     <ScrollView
       ref={mount}

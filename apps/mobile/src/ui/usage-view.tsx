@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
+import { ActivityIndicator, Pressable, SectionList, View, type ViewInstance } from 'react-native';
 
 import type { RosterBot } from '../host/client';
 import { MethodRefused } from '../host/client';
@@ -338,8 +338,8 @@ export function UsageView({
     [sources, selectedPeriod],
   );
   const loadMemory = useMemo(() => () => sources.loadMemory(), [sources]);
-  const usage = useLoaded<OverviewUsage, View>(loadUsage);
-  const memory = useLoaded<OverviewMemory, View>(loadMemory);
+  const usage = useLoaded<OverviewUsage, ViewInstance>(loadUsage);
+  const memory = useLoaded<OverviewMemory, ViewInstance>(loadMemory);
   const current = forPeriod(usage.state, selectedPeriod);
 
   const sections = [

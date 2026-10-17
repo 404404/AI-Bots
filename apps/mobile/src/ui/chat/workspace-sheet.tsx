@@ -464,7 +464,10 @@ export function WorkspaceSheet({
             onOpen={(path) => browse(path)}
           />
         ) : null}
-        <SectionList<BrowseRow, { key: string; title: string; footer?: string | undefined }>
+        <SectionList<
+          BrowseRow,
+          { key: string; title: string; footer?: string | undefined; data: readonly BrowseRow[] }
+        >
           style={page !== undefined ? { flex: 1 } : { flexShrink: 1 }}
           sections={sections}
           keyExtractor={(row) => row.key}
