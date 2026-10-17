@@ -18,6 +18,7 @@ import { basename, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { verifyPaths } from './verify-app.mjs';
+import { pnpmCommand } from './dev-package-manager.mjs';
 
 const root = resolve(fileURLToPath(import.meta.url), '../..');
 const args = process.argv.slice(2);
@@ -183,14 +184,21 @@ async function main() {
   mkdirSync(paths.evidence, { recursive: true });
 
   if (!skipExport || !existsSync(join(dist, 'index.html'))) {
-    const exported = spawnSync('pnpm', ['--filter', '@botharness/mobile', 'export:web'], {
+    const [exportCommand, exportArgs] = pnpmCommand([
+      '--filter',
+      '@botharness/mobile',
+      'export:web',
+    ]);
+    const exported = spawnSync(exportCommand, exportArgs, {
       cwd: root,
       encoding: 'utf8',
       env: { ...process.env, EXPO_OFFLINE: '1' },
       timeout: 600_000,
       maxBuffer: 16 * 1024 * 1024,
     });
-    if (exported.status !== 0) throw new Error(`export:web failed: ${exported.stderr.slice(-800)}`);
+    if (exported.error !== undefined) throw exported.error;
+    if (exported.status !== 0)
+      throw new Error(`export:web failed: ${(exported.stderr ?? '').slice(-800)}`);
     steps.push('exported the app for web');
   }
 
@@ -323,7 +331,9 @@ async function main() {
     await text('Recent runs');
     await text('Not run yet.');
     await shot('2-routine-detail');
-    steps.push('tapping the routine opened its sheet with its trigger, next run and empty history');
+    steps.push(
+      'tapping the routine pushed its page inside the profile drawer with its trigger, next run and empty history',
+    );
 
     await tap('Pause');
     await text('Resume');
@@ -366,7 +376,8 @@ async function main() {
     });
     await text('The phone cannot edit this schedule');
     await shot('7-routine-advanced');
-    await tap('Close');
+    await page.goBack({ waitUntil: 'networkidle0' });
+    await text('New routine');
     steps.push('a cron routine says the phone cannot edit it and offers the full client');
 
     await tap('New routine');

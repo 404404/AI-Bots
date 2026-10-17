@@ -1,0 +1,11 @@
+# Native drawer navigation evidence
+
+All screenshots are real Android portrait captures (1220 × 2712, dark, Chinese) on the same shared phone and isolated QA Host. No pairing links, tokens, credentials or unrelated conversations are included. The floating developer-menu gear is part of the installed development client.
+
+- `before-token`, `before-usage`, `before-app-icon`, `before-routine-new`: delivered `d41221c` before this follow-up. Profile showed “partially known 0” while canonical Overview reported 674,655 tokens. No new model calls were made for the comparison.
+- `before-model`, `before-workspace`, `before-memory`: explicit baseline reload of main `4a53c39`; the first two show a second Modal stacked on the profile sheet. Original app sources were restored afterwards. The baseline was not committed as a change.
+- `final-*`: the follow-up native drawer stack, custom Android child header, shared surface, one persistent handle and back navigation. Some unchanged editor/header states were captured at `5afd14f`; those component sources are identical at `53ab3b9`. Final Token/Usage/App icon captures include the raised-group styling in `53ab3b9`.
+- Routine operation frames: a task-owned future daily routine was created in the phone, paused, renamed to `AXDrawerQA_v2`, read back from the Host, then deleted through confirmation. Canonical `schedules` returned an empty list afterwards. The typing probe committed the short instruction `AX`; it is navigation/mutation evidence, not model-output evidence.
+- Native profile/settings content-first scroll and handle-close journeys use `scripts/e2e-mobile-android-interactions.mjs`. Manual secondary-page acceptance checks back navigation, memory, model/workspace, global Usage and App icon without changing the selected model, access or icon.
+
+The development client still reports the pre-existing cold-start React-before-mount warning, previously symbolicated to Expo Router `useLinking.native.js`; it also reproduces on the baseline. Its private startup logs and initial warning-bearing captures are retained. Clean review captures dismiss the visible LogBox prompt; the warning is not suppressed or claimed fixed. The native check qualifies Android navigation and reported usage, not iOS, release rendering or 120 FPS. The updated browser-export routine journey is not a substitute for native evidence.
