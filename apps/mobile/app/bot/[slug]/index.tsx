@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
-import { botChannels, loadBotProfile } from '../../../src/host/bot-profile';
+import { botChannels, botProfileResource } from '../../../src/host/bot-profile';
 import { fullClientParams } from '../../../src/host/full-client';
 import { botRoutines } from '../../../src/host/routines';
 import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
@@ -18,13 +18,12 @@ export default function BotProfileScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const theme = useDesignTheme();
-  const { client } = useHostSession();
+  const { client, saved } = useHostSession();
   const roster = useHostSnapshot(client).roster;
   const bot = roster?.bots.find((entry) => entry.slug === slug);
   const channels = useMemo(() => botChannels(roster, slug ?? ''), [roster, slug]);
-  const load = useMemo(
-    () =>
-      client === undefined || bot === undefined ? undefined : () => loadBotProfile(client, bot),
+  const profile = useMemo(
+    () => (client === undefined || bot === undefined ? undefined : botProfileResource(client, bot)),
     [client, bot?.slug, bot?.dmChannelId],
   );
   const routines = useMemo(
@@ -32,7 +31,7 @@ export default function BotProfileScreen() {
     [client, slug],
   );
 
-  if (bot === undefined || load === undefined)
+  if (bot === undefined || profile === undefined)
     return (
       <View
         style={{
@@ -47,9 +46,11 @@ export default function BotProfileScreen() {
 
   return (
     <BotProfileSheet
+      key={`${saved?.hostId}:${bot.slug}`}
       bot={bot}
       channels={channels}
-      load={load}
+      initialProfile={profile.peek()}
+      load={profile.refresh}
       settings={client === undefined ? undefined : <BotSettingsPanel client={client} bot={bot} />}
       routines={
         routines === undefined

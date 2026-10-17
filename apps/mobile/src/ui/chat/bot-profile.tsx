@@ -14,7 +14,8 @@ import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
-import { ProfileSheet } from '../primitives/profile-sheet';
+import { SheetScreen } from '../primitives/sheet-screen';
+import { useSheetContent } from '../primitives/sheet-content';
 import {
   ActivityIcon,
   BrowserIcon,
@@ -85,7 +86,10 @@ function partRows<T>(
   if (part === undefined) return [{ kind: 'loading' }];
   if (part.status === 'failed') return [{ kind: 'failed', error: part.error }];
   const ready = rows(part.value);
-  return ready.length === 0 ? [{ kind: 'note', text: t.profileEmpty[section] }] : ready;
+  return [
+    ...(part.staleError === undefined ? [] : [{ kind: 'failed' as const, error: part.staleError }]),
+    ...(ready.length === 0 ? [{ kind: 'note' as const, text: t.profileEmpty[section] }] : ready),
+  ];
 }
 
 export function profileRows(
@@ -96,11 +100,7 @@ export function profileRows(
   return {
     activity: frame(
       'activity',
-      profile?.activity === undefined
-        ? [{ kind: 'loading' }]
-        : profile.activity.status === 'failed'
-          ? [{ kind: 'failed', error: profile.activity.error }]
-          : [{ kind: 'activity', activity: profile.activity.value }],
+      partRows(profile?.activity, 'activity', (activity) => [{ kind: 'activity', activity }]),
     ),
     identity: frame(
       'identity',
@@ -171,7 +171,7 @@ function ProfileAction({
         gap: space.x2,
         paddingVertical: space.x4,
         borderRadius: radius.md,
-        backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
       })}
     >
       {icon(theme.color.fg)}
@@ -275,7 +275,7 @@ function ProfileRow({
       />
     );
   const shape = {
-    backgroundColor: theme.layer.sheet.fill,
+    backgroundColor: theme.layer.raised.fill,
     paddingHorizontal: space.x5,
     paddingVertical: space.x4,
     borderTopLeftRadius: row.first ? radius.md : 0,
@@ -305,7 +305,7 @@ function ProfileRow({
             alignItems: 'center',
             gap: space.x3,
             minHeight: theme.touch,
-            backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+            backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
           },
         ]}
       >
@@ -336,7 +336,7 @@ function ProfileRow({
             alignItems: 'center',
             gap: space.x3,
             minHeight: theme.touch,
-            backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+            backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
           },
         ]}
       >
@@ -435,6 +435,7 @@ export function BotProfileSheet({
   actions: given,
   settings,
   routines,
+  initialProfile,
 }: {
   bot: RosterBot;
   channels: RosterChannel[];
@@ -442,14 +443,20 @@ export function BotProfileSheet({
   actions: BotProfileActions;
   settings?: ReactNode;
   routines?: ProfileRoutines | undefined;
+  initialProfile?: BotProfile | undefined;
 }) {
-  const theme = useDesignTheme();
-  const [profile, setProfile] = useState<BotProfile | undefined>();
+  const [profile, setProfile] = useState(initialProfile);
+  const content = useSheetContent();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [target, setTarget] = useState<RoutineTarget>();
   const read = useCallback(() => {
-    setProfile(undefined);
-    void load().then(setProfile);
+    let live = true;
+    void load().then((value) => {
+      if (live) setProfile(value);
+    });
+    return () => {
+      live = false;
+    };
   }, [load]);
   const mount = useMounted<SectionList<Row, { section: ProfileSection }>>(() => read(), [read]);
   const refreshRoutines = () => {
@@ -468,23 +475,31 @@ export function BotProfileSheet({
           onOpenRoutine: (routine) => setTarget({ kind: 'open', routine }),
           onNewRoutine: () => setTarget({ kind: 'new' }),
         };
-  const rows = profileRows(profile, channels, routines !== undefined);
+  const rows = profileRows(content.ready ? profile : undefined, channels, routines !== undefined);
   const sections = PROFILE_SECTIONS.map((section) => ({
     section,
     data: rows[section],
   }));
 
   return (
-    <ProfileSheet>
+    <SheetScreen onMount={content.mount}>
       <SectionList
         ref={mount}
         sections={sections}
         keyExtractor={(row) => row.key}
         stickySectionHeadersEnabled={false}
         nestedScrollEnabled
-        style={{ flex: 1, backgroundColor: theme.color.surface }}
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: space.x5, paddingTop: space.x6 }}
-        ListHeaderComponent={<ProfileHeader bot={bot} actions={actions} settings={settings} />}
+        ListHeaderComponent={
+          <ProfileHeader
+            bot={bot}
+            actions={actions}
+            settings={content.ready ? settings : undefined}
+          />
+        }
         renderSectionHeader={({ section }) => (
           <Text
             accessibilityRole="header"
@@ -528,6 +543,6 @@ export function BotProfileSheet({
           )
         }
       />
-    </ProfileSheet>
+    </SheetScreen>
   );
 }

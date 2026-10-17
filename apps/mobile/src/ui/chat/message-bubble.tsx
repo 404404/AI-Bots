@@ -1,4 +1,12 @@
-import { memo, useRef, type ReactNode } from 'react';
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import {
   Platform,
   Pressable,
@@ -20,19 +28,14 @@ import {
   type ConversationMessage,
   type MessageAttachment,
 } from '../../host/conversation';
+import type { ConversationPlayback } from '../../host/conversation-playback';
 import { lift, motion, radius, space } from '../design/tokens';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { MarkdownView } from '../markdown-view';
 import { Text } from '../primitives/text';
 import { haptic } from '../haptics';
 import { t } from '../strings';
-import {
-  AVATAR_CORNER,
-  bubbleCorners,
-  bubbleRow,
-  bubbleShape,
-  type BubbleGroup,
-} from './bubble-shape';
+import { bubbleCorners, bubbleRow, bubbleShape, type BubbleGroup } from './bubble-shape';
 import { MessageAttachments } from './message-attachments';
 import { openMessageMenu } from './message-menu';
 import { ReactionChips } from './message-reactions';
@@ -54,12 +57,14 @@ export function BubbleBody({
   onOpenImage = () => {},
   onShare = async () => {},
   fill,
+  streaming = false,
 }: {
   message: ConversationMessage;
   group: BubbleGroup;
   onOpenImage?: (attachment: MessageAttachment) => void;
   onShare?: (attachment: MessageAttachment) => Promise<void>;
   fill?: { maxWidth?: DimensionValue; width?: number; maxHeight?: number } | undefined;
+  streaming?: boolean;
 }) {
   const theme = useDesignTheme();
   const human = message.author === 'human';
@@ -72,13 +77,22 @@ export function BubbleBody({
         overflow: fill?.maxHeight === undefined ? 'visible' : 'hidden',
         backgroundColor: human ? theme.color.accent : theme.color.surface,
         gap: space.x2,
-        opacity: message.delivery === 'pending' ? 0.7 : 1,
+        opacity: human && message.delivery === 'pending' ? 0.7 : 1,
       }}
     >
-      {message.body.trim() === '' ? null : human ? (
+      {message.body.trim() === '' ? (
+        streaming ? (
+          <Text tone="muted">…</Text>
+        ) : null
+      ) : human ? (
         <Text tone={ink}>{message.body}</Text>
       ) : (
-        <MarkdownView source={message.body} color={theme.color[ink]} selectable={false} />
+        <MarkdownView
+          source={message.body}
+          color={theme.color[ink]}
+          selectable={false}
+          streaming={streaming}
+        />
       )}
       {message.attachments.length > 0 ? (
         <MessageAttachments
@@ -209,6 +223,8 @@ export const MessageBubble = memo(function MessageBubble({
   botName = (id) => id,
   speaker,
   lifted = false,
+  streaming = false,
+  rowKey = message.id,
 }: {
   message: ConversationMessage;
   first?: boolean;
@@ -221,6 +237,8 @@ export const MessageBubble = memo(function MessageBubble({
   botName?: (id: string) => string;
   speaker?: Speaker | undefined;
   lifted?: boolean;
+  streaming?: boolean;
+  rowKey?: string;
 }) {
   const human = message.author === 'human';
   const failed = message.delivery === 'failed';
@@ -236,8 +254,8 @@ export const MessageBubble = memo(function MessageBubble({
       </View>
     );
   const copyable = message.body.trim() !== '';
-  const actionable = copyable || (onReact !== undefined && reactable(message));
-  const reactions = message.reactions ?? [];
+  const actionable = !streaming && (copyable || (onReact !== undefined && reactable(message)));
+  const reactions = streaming ? [] : (message.reactions ?? []);
   const group = { first, last, avatar: speaker?.last === true };
   const bubble = (
     <BubbleBody
@@ -245,11 +263,12 @@ export const MessageBubble = memo(function MessageBubble({
       group={group}
       onOpenImage={onOpenImage}
       onShare={onShare}
-      fill={failed || actionable ? { maxWidth: '100%' } : undefined}
+      fill={failed || actionable || streaming ? { maxWidth: '100%' } : undefined}
+      streaming={streaming}
     />
   );
   const surface =
-    failed || actionable ? (
+    failed || actionable || streaming ? (
       <PressableBubble
         human={human}
         group={group}
@@ -271,6 +290,11 @@ export const MessageBubble = memo(function MessageBubble({
     );
   const after = (
     <>
+      {streaming ? (
+        <Text variant="meta" tone="muted" accessibilityLiveRegion="polite">
+          {t.typing}
+        </Text>
+      ) : null}
       {reactions.length === 0 ? null : (
         <ReactionChips
           reactions={reactions}
@@ -298,7 +322,7 @@ export const MessageBubble = memo(function MessageBubble({
     return (
       <SpeakerRow
         speaker={speaker}
-        rowKey={message.id}
+        rowKey={rowKey}
         inset={row.paddingTop}
         style={row}
         bubble={surface}
@@ -320,47 +344,47 @@ export const DraftBubble = memo(function DraftBubble({
   draft: ConversationDraft;
   speaker?: Speaker | undefined;
 }) {
-  const theme = useDesignTheme();
-  const surface = (
-    <View
-      style={{
-        maxWidth: '80%',
-        alignSelf: 'flex-start',
-        backgroundColor: theme.color.surface,
-        borderRadius: radius.lg,
-        borderBottomLeftRadius: speaker === undefined ? radius.lg : AVATAR_CORNER,
-        paddingHorizontal: space.x4,
-        paddingVertical: space.x3,
-      }}
-    >
-      {draft.body.trim() === '' ? (
-        <Text tone="muted">…</Text>
-      ) : (
-        <MarkdownView source={draft.body} streaming />
-      )}
-    </View>
+  const message: ConversationMessage = {
+    id: `draft:${draft.draftId}`,
+    at: '',
+    author: 'bot',
+    bot: draft.botSlug,
+    body: draft.body,
+    attachments: [],
+    delivery: 'pending',
+  };
+  return <MessageBubble message={message} speaker={speaker} streaming />;
+});
+
+export const PlaybackBubble = memo(function PlaybackBubble({
+  playback,
+  queueKey,
+  message,
+  ...props
+}: Omit<ComponentProps<typeof MessageBubble>, 'message' | 'streaming'> & {
+  playback?: ConversationPlayback | undefined;
+  queueKey: string;
+  message?: ConversationMessage | undefined;
+}) {
+  const fallback = useMemo(
+    () => (message === undefined ? undefined : { message, streaming: false }),
+    [message],
   );
-  const typing = (
-    <Text variant="meta" tone="muted" accessibilityLiveRegion="polite">
-      {t.typing}
-    </Text>
+  const subscribe = useCallback(
+    (listener: () => void) => playback?.subscribeBubble(queueKey, listener) ?? (() => {}),
+    [playback, queueKey],
   );
-  const row = { paddingHorizontal: space.x4, paddingTop: space.x3 };
-  if (speaker !== undefined)
-    return (
-      <SpeakerRow
-        speaker={speaker}
-        rowKey={`draft:${draft.draftId}`}
-        inset={row.paddingTop}
-        style={row}
-        bubble={surface}
-        after={typing}
-      />
-    );
-  return (
-    <View style={{ ...row, gap: space.x1 }}>
-      {surface}
-      {typing}
-    </View>
+  const read = useCallback(
+    () => playback?.getBubble(queueKey) ?? fallback,
+    [playback, queueKey, fallback],
+  );
+  const snapshot = useSyncExternalStore(subscribe, read);
+  return snapshot === undefined ? null : (
+    <MessageBubble
+      {...props}
+      rowKey={queueKey}
+      message={snapshot.message}
+      streaming={snapshot.streaming}
+    />
   );
 });

@@ -27,6 +27,7 @@ import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { Loading, Notice } from '../request-parts';
 import { t } from '../strings';
+import { useFloatingTabInset } from './floating-tab-inset';
 import {
   ALL_ACTIVITY,
   ActivityFilters,
@@ -296,6 +297,7 @@ export function ActivityFeed({
   now?: number;
 }) {
   const theme = useDesignTheme();
+  const bottom = useFloatingTabInset();
   const [refreshing, setRefreshing] = useState(false);
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
@@ -319,7 +321,8 @@ export function ActivityFeed({
       automaticallyAdjustKeyboardInsets
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      style={{ backgroundColor: theme.color.base }}
+      style={{ flex: 1, backgroundColor: theme.color.base }}
+      contentContainerStyle={{ paddingBottom: bottom }}
       data={rows}
       stickyHeaderIndices={sticky}
       keyExtractor={(row) => row.key}

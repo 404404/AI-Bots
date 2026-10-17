@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVATAR_EDGE } from '../chat/conversation-row';
 import { DEFAULT_HOST_LOOK, type HostLook } from '../design/host-look';
 import { useDesignTheme } from '../design/theme';
-import { radius, space } from '../design/tokens';
+import { edgeFade, radius, space } from '../design/tokens';
+import { EdgeFade } from '../chat/header-chrome';
 import { useMounted } from '../mounted';
 import { t } from '../strings';
 import { HostBandLayer, HostChipFace, useHostBand } from './host-band';
@@ -84,6 +85,7 @@ export function HomeHeader({
         }}
       >
         {children}
+        <EdgeFade edge="top" height={edgeFade.top} />
       </View>
     </HostBandLayer>
   );

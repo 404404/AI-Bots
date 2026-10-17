@@ -15,7 +15,10 @@ const title = flag('--title');
 const label = flag('--label');
 for (const key of ['--serial', '--owner', '--batch', '--mode', '--title', '--label'])
   assert(args.includes(key) && flag(key) && !flag(key).startsWith('--'), `Missing ${key}`);
-assert(['profile', 'keyboard'].includes(mode) && /^[a-z0-9-]+$/.test(label), 'Invalid mode/label');
+assert(
+  ['profile', 'settings', 'keyboard'].includes(mode) && /^[a-z0-9-]+$/.test(label),
+  'Invalid mode/label',
+);
 const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
   cwd: root,
   encoding: 'utf8',
@@ -81,8 +84,13 @@ const imeTop = () =>
       /(?:type|mType)=ime\b[^\n]*?(?:frame|mFrame)=\[\d+,(\d+)\]\[\d+,\d+\][^\n]*?(?:visible|mVisible)=true/,
     )?.[1],
   );
-const scroll = (list) => list.filter((node) => node.scrollable === 'true').at(-1);
-const handle = (list) => list.find((node) => node['resource-id'] === 'profile-sheet-handle');
+const scroll = (list) => {
+  const handleBottom = bounds(handle(list))[3] ?? 0;
+  return list
+    .filter((node) => node.scrollable === 'true' && bounds(node)[1] >= handleBottom)
+    .at(-1);
+};
+const handle = (list) => list.find((node) => node['resource-id'] === 'sheet-screen-handle');
 const proof = [];
 try {
   if (Number.isFinite(imeTop())) {
@@ -94,15 +102,20 @@ try {
     (node) =>
       node.class === 'android.widget.EditText' && (node['content-desc'] ?? '').includes(title),
   );
-  assert(field, 'OPEN_DESIGNATED_QA_CHAT_FIRST');
-  assert(!field.text || field.text === field['content-desc'], 'EMPTY_QA_COMPOSER_REQUIRED');
+  if (mode !== 'settings') {
+    assert(field, 'OPEN_DESIGNATED_QA_CHAT_FIRST');
+    assert(!field.text || field.text === field['content-desc'], 'EMPTY_QA_COMPOSER_REQUIRED');
+  }
+  assert(!handle(initial), 'CLOSE_EXISTING_SHEET_FIRST');
   const [, , width, height] = bounds(initial[0]);
-  if (mode === 'profile') {
+  if (mode === 'profile' || mode === 'settings') {
     tap(
       initial.find(
         (node) =>
           node.class === 'android.widget.Button' &&
-          (node['content-desc'] ?? '').startsWith(`${title},`),
+          (mode === 'settings'
+            ? node['content-desc'] === title
+            : (node['content-desc'] ?? '').startsWith(`${title},`)),
       ),
     );
     await sleep(700);
