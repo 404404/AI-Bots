@@ -51,6 +51,7 @@ export function mountClientControl(input: {
   handlers: ReadonlyMap<string, ClientControlHandler>;
   intervalMs?: number;
 }): () => void {
+  const lifetime = new AbortController();
   const proof = crypto.randomUUID();
   const ownerProof = targetOwners.get(input.target) ?? crypto.randomUUID();
   let active = true;
@@ -83,13 +84,16 @@ export function mountClientControl(input: {
           if (Date.now() >= command.expiresAt) throw new Error('client-command-expired');
           const handler = input.handlers.get(command.operation);
           if (!handler) throw new Error('client-control-unsupported');
-          const signal = AbortSignal.timeout(Math.max(1, command.expiresAt - Date.now()));
+          const signal = AbortSignal.any([
+            lifetime.signal,
+            AbortSignal.timeout(Math.max(1, command.expiresAt - Date.now())),
+          ]);
           const context: ClientControlContext = {
             signal,
             authorize: async () => {
-              if (signal.aborted) throw new Error('client-command-expired');
+              if (!active || signal.aborted) throw new Error('client-command-expired');
               await invoke({ action: 'authorize', target: input.target, id: command.id }, signal);
-              if (signal.aborted) throw new Error('client-command-expired');
+              if (!active || signal.aborted) throw new Error('client-command-expired');
             },
           };
           await context.authorize();
@@ -115,6 +119,7 @@ export function mountClientControl(input: {
   void tick();
   return () => {
     active = false;
+    lifetime.abort();
     registered = false;
     if (timer) clearTimeout(timer);
     origins.delete(input.call);
