@@ -92,6 +92,7 @@ export function AppIconSettings({
 
   return (
     <ScrollView
+      nestedScrollEnabled
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
     >

@@ -1,14 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
-import { useHostSession, useHostSnapshot } from '../src/host/host-session';
+import { useHostSession, useHostSnapshot } from '../../src/host/host-session';
 import {
   loadMemoryActivity,
   loadMoreMemoryActivity,
   loadMoreUsage,
   loadUsage,
-} from '../src/host/usage';
-import { UsageView, type UsageSources } from '../src/ui/usage-view';
+} from '../../src/host/usage';
+import { UsageView, type UsageSources } from '../../src/ui/usage-view';
 
 export default function UsageScreen() {
   const router = useRouter();

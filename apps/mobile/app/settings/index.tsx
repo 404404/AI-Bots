@@ -1,16 +1,16 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
-import { fullClientParams } from '../src/host/full-client';
-import { hostSession, useHostSession, useHostSnapshot } from '../src/host/host-session';
-import { loadUsage } from '../src/host/usage';
-import { appBuildLabel } from '../src/ui/app-build';
-import { copyMessage } from '../src/ui/chat/message-menu';
-import { currentAppBuild } from '../src/ui/native-app-build';
-import { StatisticsSettings } from '../src/ui/shell/statistics-settings';
-import { MessageDisplaySettings } from '../src/ui/shell/message-display-settings';
-import { SettingsView } from '../src/ui/settings-view';
-import { openHostDrawer } from '../src/ui/shell/host-drawer';
+import { fullClientParams } from '../../src/host/full-client';
+import { hostSession, useHostSession, useHostSnapshot } from '../../src/host/host-session';
+import { loadUsage } from '../../src/host/usage';
+import { appBuildLabel } from '../../src/ui/app-build';
+import { copyMessage } from '../../src/ui/chat/message-menu';
+import { currentAppBuild } from '../../src/ui/native-app-build';
+import { StatisticsSettings } from '../../src/ui/shell/statistics-settings';
+import { MessageDisplaySettings } from '../../src/ui/shell/message-display-settings';
+import { SettingsView } from '../../src/ui/settings-view';
+import { openHostDrawer } from '../../src/ui/shell/host-drawer';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function SettingsScreen() {
       version={appBuildLabel(currentAppBuild())}
       actions={{
         onClose: () => router.back(),
-        onUsage: () => router.push('/usage'),
+        onUsage: () => router.push('/settings/usage'),
         onOpenFullClient: () =>
           router.push({
             pathname: '/full-client',
@@ -41,7 +41,7 @@ export default function SettingsScreen() {
           router.back();
           openHostDrawer();
         },
-        onAppIcon: () => router.push('/app-icon'),
+        onAppIcon: () => router.push('/settings/app-icon'),
         onNotifications: () => router.push('/notifications'),
         onCopyVersion: copyMessage,
         onUnpair: () => hostSession.unpair().then(() => router.dismissTo('/')),

@@ -110,7 +110,7 @@ describe('Bot Activity screen', () => {
     await act(async () => button(view, t.activityWindow[4]!).click());
     await act(async () => undefined);
     expect(load).toHaveBeenLastCalledWith({ weeks: 4 });
-    expect(view.textContent).toContain(t.activityTokens(t.activityPartialCount('4,000')));
+    expect(view.textContent).toContain(t.activityTokens('4,000+'));
     expect(view.textContent).toContain(t.activityPartial);
 
     await act(async () => button(view, t.activityEarlier).click());

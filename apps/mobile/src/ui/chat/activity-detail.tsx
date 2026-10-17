@@ -392,7 +392,7 @@ export function ActivityDetailView({
     <AccentProvider accent={botColor(bot)}>
       <ScrollView
         ref={mount}
-        style={{ flex: 1, backgroundColor: theme.color.surface }}
+        style={{ flex: 1, backgroundColor: theme.overlay.fill }}
         contentContainerStyle={{ padding: space.x5, gap: space.x3 }}
       >
         <Segmented

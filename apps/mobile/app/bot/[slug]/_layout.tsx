@@ -1,21 +1,16 @@
 import { Stack } from 'expo-router';
-
-import { useDesignTheme } from '../../../src/ui/design/theme';
+import { SheetStack } from '../../../src/ui/primitives/sheet-stack';
 
 export default function BotProfileLayout() {
-  const theme = useDesignTheme();
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: theme.color.surface },
-        headerTintColor: theme.color.fg,
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: theme.color.surface },
-      }}
-    >
+    <SheetStack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="memory" />
       <Stack.Screen name="activity" />
-    </Stack>
+      <Stack.Screen name="routine" />
+      <Stack.Screen name="routine-edit" />
+      <Stack.Screen name="model" />
+      <Stack.Screen name="workspace" />
+    </SheetStack>
   );
 }

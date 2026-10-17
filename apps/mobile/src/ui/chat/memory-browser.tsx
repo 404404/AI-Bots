@@ -134,7 +134,7 @@ export function MemoryFolderView({
       ref={mount}
       data={entries}
       keyExtractor={(entry) => entry.path}
-      style={{ flex: 1, backgroundColor: theme.color.surface }}
+      style={{ flex: 1, backgroundColor: theme.overlay.fill }}
       contentContainerStyle={{ padding: space.x5 }}
       renderItem={({ item, index }) => (
         <MemoryEntryRow
@@ -163,7 +163,7 @@ export function MemoryFileView({ load }: { load: () => Promise<MemoryFile | unde
   return (
     <ScrollView
       ref={mount}
-      style={{ flex: 1, backgroundColor: theme.color.surface }}
+      style={{ flex: 1, backgroundColor: theme.overlay.fill }}
       contentContainerStyle={{ padding: space.x5 }}
     >
       {state.status !== 'ready' ? (

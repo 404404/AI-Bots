@@ -389,9 +389,10 @@ export function UsageView({
   ];
 
   return (
-    <View ref={usage.mount} style={{ flex: 1, backgroundColor: theme.color.surface }}>
+    <View ref={usage.mount} style={{ flex: 1, backgroundColor: theme.overlay.fill }}>
       <View ref={memory.mount} style={{ flex: 1 }}>
         <SectionList
+          nestedScrollEnabled
           ref={capability}
           sections={sections}
           keyExtractor={(row) => row.key}

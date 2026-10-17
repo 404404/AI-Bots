@@ -2564,6 +2564,48 @@ describe('bridge methods', () => {
     });
   });
 
+  it('keeps the same reported lower bound in Profile and Overview usage', () => {
+    const usage = {
+      activity: () => [
+        {
+          day: '2026-10-17',
+          purpose: 'orchestrator',
+          provider: 'deepseek',
+          model: 'flash',
+          inputTokens: 67711,
+          outputTokens: 3040,
+          cacheReadTokens: 603904,
+          cacheWriteTokens: 0,
+          totalTokens: null,
+          reportedTotalTokens: 674655,
+          unknownBuckets: {
+            inputTokens: 1,
+            outputTokens: 1,
+            cacheReadTokens: 1,
+            cacheWriteTokens: 2,
+          },
+        },
+      ],
+    } as unknown as UsageProjection;
+    const { registry, channels, methods } = setup(
+      [],
+      ['ada'],
+      undefined,
+      createTestOwnership(),
+      undefined,
+      undefined,
+      undefined,
+      usage,
+    );
+    registry.create({ slug: 'ada', displayName: 'Ada' });
+    const dm = channels.getOrCreateDm('ada', 'Ada')!;
+    const result = methods.profileActivity({ channelId: dm.id });
+    expect(result.ok && result.value.modelUsageRows[0]).toMatchObject({
+      totalTokens: 674655,
+      partial: true,
+    });
+  });
+
   it('buckets Profile activity by Host-local day with reasons and Memory commits', () => {
     const localDayOf = (at: string): string => {
       const date = new Date(at);
