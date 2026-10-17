@@ -808,6 +808,7 @@ it.each([
   'allow',
   'other-review',
   'wrong-plan-review',
+  'mixed-context',
   'different-context',
   'revoked-authority',
 ] as const)(
@@ -837,9 +838,23 @@ it.each([
             .get('accepted-human')!.source_event_id,
       ),
     );
+    if (caseName === 'mixed-context')
+      port.transaction((db) => {
+        db.prepare(
+          'INSERT INTO source_events (source_event_id, source_kind, bot_slug, body, created_at, payload_json) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run(
+          'memory-anchor',
+          'memory-change',
+          'keeper',
+          'Memory observation',
+          '2026-10-18T00:00:00Z',
+          '{}',
+        );
+      });
     const context = {
       sessionId: 'review-session',
-      sourceEventIds: [accepted],
+      sourceEventIds: caseName === 'mixed-context' ? [accepted, 'memory-anchor'] : [accepted],
+      humanSourceEventIds: [accepted],
       callIds: ['export-call'],
     };
     const handler = createProfileBackupHttp(source(core), root(), core.profileRecovery, catalog);
@@ -940,7 +955,7 @@ it.each([
         ? { ...exportContext, sourceEventIds: ['unrelated-source'] }
         : exportContext,
     );
-    if (caseName !== 'allow') {
+    if (caseName !== 'allow' && caseName !== 'mixed-context') {
       expect(await response.json()).toMatchObject({ error: { code: 'preview-stale' } });
       return;
     }
@@ -958,6 +973,9 @@ it.each([
   'approval-route',
   'failure-alert',
   'same-count-session',
+  'creation-receipt',
+  'channel-receipt',
+  'schedule-receipt',
 ] as const)('refuses a scoped reviewed export after an actual %s change', async (change) => {
   const core = mount();
   expect(core.registry.create({ slug: 'keeper', displayName: 'Keeper', persona: 'AAAA' }).ok).toBe(
@@ -1000,6 +1018,28 @@ it.each([
         db.prepare(
           'INSERT INTO messaging_failure_alert_settings (bot_slug, enabled, revision) VALUES (?, ?, ?)',
         ).run('keeper', 1, 1);
+    });
+  else if (change.endsWith('-receipt'))
+    attachOperationalModule(core.operationalDatabase, 'coordination-receipts').transaction((db) => {
+      if (change === 'creation-receipt')
+        db.prepare(
+          'INSERT INTO bot_creation_operations (operation_key, payload_hash, bot_slug, status) VALUES (?, ?, ?, ?)',
+        ).run('created-key', 'fingerprint', 'keeper', 'created');
+      else if (change === 'channel-receipt')
+        db.prepare(
+          'INSERT INTO channel_management_operations (operation_key, kind, payload_hash, channel_id, targets_json, status) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run('channel-key', 'create', 'fingerprint', channel.id, '[]', 'completed');
+      else
+        db.prepare(
+          'INSERT INTO bot_schedule_firings (firing_id, schedule_id, bot_slug, trigger, occurrence_at, fired_at) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run(
+          'firing',
+          'schedule',
+          'keeper',
+          'manual',
+          '2026-10-18T00:00:00Z',
+          '2026-10-18T00:00:00Z',
+        );
     });
   else if (change === 'same-count-session')
     attachOperationalModule(core.operationalDatabase, 'session-ownership').transaction((db) => {

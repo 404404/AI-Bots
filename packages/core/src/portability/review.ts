@@ -4,6 +4,7 @@ import { ProfileBackupError } from './files.js';
 export interface ProfileBackupReviewContext {
   readonly sessionId: string;
   readonly sourceEventIds: readonly string[];
+  readonly humanSourceEventIds: readonly string[];
   readonly callIds?: readonly string[];
   readonly exportPlanId?: string;
 }
@@ -50,6 +51,9 @@ const authorityTables = [
   'profile_recovery',
   'profile_recovery_bots',
   'tob_identity',
+  'bot_creation_operations',
+  'channel_management_operations',
+  'bot_schedule_firings',
   '_botharness_schema',
   'persona_bots_import',
   'model_presets_import',
@@ -69,11 +73,8 @@ const authorityTables = [
 
 const derivedTables = [
   'bot_assignment_access_events',
-  'bot_creation_operations',
   'bot_onboarding',
-  'bot_schedule_firings',
   'bot_source_wake_attempts',
-  'channel_management_operations',
   'channel_read_positions',
   'group_wake_policy_audit',
   'human_attention_decisions',
@@ -164,24 +165,39 @@ export function profileBackupReviewDatabase(
       const owner = db
         .prepare('SELECT bot_slug, root_role FROM session_ownership WHERE session_id = ?')
         .get(context.sessionId);
-      if (!owner || owner.root_role !== 'orchestrator' || context.sourceEventIds.length === 0)
+      if (
+        !owner ||
+        owner.root_role !== 'orchestrator' ||
+        context.sourceEventIds.length === 0 ||
+        context.humanSourceEventIds.length === 0
+      )
         throw new ProfileBackupError('invalid-input', 'Review execution context is unavailable');
       reviewBot = String(owner.bot_slug);
+      for (const id of context.humanSourceEventIds) {
+        const human = db
+          .prepare(
+            'SELECT source_kind, bot_slug, channel_id FROM source_events WHERE source_event_id = ?',
+          )
+          .get(id);
+        if (
+          !context.sourceEventIds.includes(id) ||
+          human?.source_kind !== 'human-message' ||
+          human.bot_slug !== owner.bot_slug ||
+          human.channel_id !== 'dm-' + owner.bot_slug
+        )
+          throw new ProfileBackupError(
+            'invalid-input',
+            'Review requires the captured Human DM input',
+          );
+      }
       for (const id of context.sourceEventIds) {
         const accepted = db
           .prepare(
             'SELECT source_kind, bot_slug, channel_id FROM source_events WHERE source_event_id = ?',
           )
           .get(id);
-        if (
-          accepted?.source_kind !== 'human-message' ||
-          accepted.bot_slug !== owner.bot_slug ||
-          accepted.channel_id !== 'dm-' + owner.bot_slug
-        )
-          throw new ProfileBackupError(
-            'invalid-input',
-            'Review source does not belong to the captured Human DM',
-          );
+        if (!accepted)
+          throw new ProfileBackupError('invalid-input', 'Captured review context is unavailable');
         for (const row of db
           .prepare(
             'SELECT e.source_event_id, e.message_id, e.payload_json FROM channel_output_origins o JOIN source_events e ON e.source_event_id = o.source_event_id WHERE o.session_id = ? AND o.request_source_event_id = ? AND e.bot_slug = ?',

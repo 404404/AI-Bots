@@ -664,10 +664,8 @@ export type DmMessageAdmission =
 
 export interface TobCliAuthority {
   (): void;
-  readonly reviewContext: {
-    readonly sessionId: string;
-    readonly sourceEventIds: readonly string[];
-  };
+  readonly humanSourceEventIds: readonly string[];
+  readonly acceptedSourceEventIds: readonly string[];
 
   markSideEffect(): void;
 }
@@ -3368,7 +3366,8 @@ class BotRuntimeImplementation implements BotRuntime {
     };
     authorize();
     return Object.assign(authorize, {
-      reviewContext: Object.freeze({ sessionId, sourceEventIds: Object.freeze([...accepted]) }),
+      humanSourceEventIds: Object.freeze([...accepted]),
+      acceptedSourceEventIds: Object.freeze([...accepted]),
       markSideEffect: () => {
         authorize();
         this.#markAdmissionsSideEffect(owner.botSlug, [...accepted]);
