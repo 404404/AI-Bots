@@ -3,17 +3,68 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { zstdCompressSync } from 'node:zlib';
-import { price, providerUsage, wholeHistoryGoal } from '../e2e-group-send-review.mjs';
+import {
+  price,
+  providerUsage,
+  wholeHistoryGoal,
+  usageDifference,
+} from '../e2e-group-send-review.mjs';
 import {
   auditRun,
   blindRun,
   humanReviewComplete,
   pairedInterval,
+  judgePrompt,
+  JUDGE_PROMPT,
   validateJudge,
 } from '../group-send-review-report.mjs';
 import { sumHostRows } from '../e2e-llm-scenarios.mjs';
 
 describe('send review evaluation evidence', () => {
+  it('keeps prelude history while judging cancellation only after the target request', () => {
+    const run = {
+      conversation: true,
+      family: 'cancel-or-revoke',
+      intervention: 'cancel',
+      interventionCompletedAt: 'now',
+      group: 'g',
+      preludeMessageIds: ['p'],
+      transcript: { g: [{ id: 'p', at: 'before', author: { kind: 'bot' }, body: '10:00 A-101' }] },
+    };
+    expect(wholeHistoryGoal(run)).toBe(true);
+    expect(auditRun(run).obsoleteConfirmationIds).toEqual([]);
+    expect(blindRun(run).channels[0].messages).toHaveLength(1);
+    run.transcript['dm-a'] = [{ id: 'late', author: { kind: 'bot' }, body: 'Cancelled' }];
+    expect(wholeHistoryGoal(run)).toBe(false);
+  });
+  it('requires both late corrections and rejects an unchanged second fact', () => {
+    const run = {
+      conversation: true,
+      family: 'correction',
+      group: 'g',
+      preludeMessageIds: ['p'],
+      transcript: {
+        g: [
+          { id: 'p', author: { kind: 'bot' }, body: '10:00 A-101' },
+          { id: 'reply', author: { kind: 'bot' }, body: '11:00 A-101' },
+        ],
+      },
+    };
+    expect(wholeHistoryGoal(run)).toBe(false);
+    expect(auditRun(run).obsoleteConfirmationIds).toEqual(['reply']);
+    run.transcript.g[1].body = '11：00 B-204';
+    expect(wholeHistoryGoal(run)).toBe(true);
+    run.transcript['dm-a'] = [{ id: 'elsewhere', author: { kind: 'bot' }, body: '11:00 B-204' }];
+    expect(wholeHistoryGoal(run)).toBe(false);
+  });
+  it('does not hide missing or backwards usage in the post-prelude cost', () => {
+    expect(
+      usageDifference({ totalTokens: 70, inputTokens: 30 }, { totalTokens: 50, inputTokens: 40 }),
+    ).toMatchObject({ totalTokens: 20, inputTokens: null, outputTokens: null });
+    expect(price(usageDifference({ totalTokens: 70 }, { totalTokens: 50 }))).toBeNull();
+    expect(judgePrompt({ protocol: { version: '2053-pilot-v4' } })).toBe(JUDGE_PROMPT);
+    expect(judgePrompt({ protocol: { version: '2053-ingest-v1' } })).toContain('B-204');
+  });
   it('does not count a DM fallback or cancellation acknowledgement as successful silence', () => {
     const run = {
       family: 'cancel-or-revoke',

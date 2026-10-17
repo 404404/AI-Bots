@@ -1690,9 +1690,9 @@
       "path": "scripts/e2e-group-send-review.mjs",
       "category": "mapped",
       "behaviors": ["desktop.group.send-review"],
-      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion and complete usage; Human acceptance remains separate.",
+      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate.",
       "task": 2053,
-      "sha256": "0b557ad8ad3356dc977b762afccb6943e6d4e661d88417466618481e9688ed57"
+      "sha256": "44bd60a1a1e4138f5002ad4dc6ae4b5929e62ca8559eabeaa080f6d4b183a013"
     }
   ],
   "native": [

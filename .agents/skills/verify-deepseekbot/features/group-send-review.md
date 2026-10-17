@@ -32,6 +32,13 @@ Launch and doctor two isolated instances: frozen baseline #2053 B0 and the candi
 `--formal` runs exactly four families of ten pairs; it must use committed candidate bytes.
 Do not count diagnostics or missed race windows as valid pilot successes.
 
+Append `--conversation` for the separately versioned `2053-ingest-v1` supplement: two real
+Human/Bot exchanges establish facts before the target request. During its draft, correction
+arrives as two separate messages (time and room). Full histories and whole-episode usage stay
+in the report; the prelude boundary only excludes already-completed replies from target-stage
+cancellation/obsolete-output counts. Post-prelude usage is reported separately, with unknown
+buckets preserved. This cohort does not replace the original pilot or erase its latency failures.
+
 Open the resulting Group in the Web Client and capture the original request, correction and
 final answer with `verify-app shot`; inspect console output. Compare `channelMessages` with
 the draft frames and `botToolTrace`: a held draft must have no canonical placement.
