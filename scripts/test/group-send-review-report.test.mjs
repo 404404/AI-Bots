@@ -4,10 +4,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { zstdCompressSync } from 'node:zlib';
 import { price, providerUsage } from '../e2e-group-send-review.mjs';
-import { blindRun, pairedInterval, validateJudge } from '../group-send-review-report.mjs';
+import { auditRun, blindRun, pairedInterval, validateJudge } from '../group-send-review-report.mjs';
 import { sumHostRows } from '../e2e-llm-scenarios.mjs';
 
 describe('send review evaluation evidence', () => {
+  it('does not turn a missing native export into zero usage or a reconciled run', () => {
+    const audit = auditRun({ usage: { host: { totalTokens: 0 } } });
+    expect(audit.nativeKnownBuckets.totalTokens).toBeNull();
+    expect(audit.hostReconciliation).toBe(false);
+  });
   it('keeps a missing bucket unknown even when the known subtotal is numeric', () => {
     const totals = sumHostRows([
       {
