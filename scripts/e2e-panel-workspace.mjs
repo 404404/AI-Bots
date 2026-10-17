@@ -224,6 +224,50 @@ try {
   await page.click('.bh-profile-back');
   await page.waitForSelector('[data-message-id]');
 
+  step = 'channel-switch-stability';
+  await page.click('.bh-workspace-rail [data-pinned-panel="activity-center"]');
+  const stablePanels = await page.$$(
+    '.bh-workspace-rail, [data-dock-panel="bh:channels"], [data-dock-panel="activity-center"]',
+  );
+  const shortcutRows = await page.$$eval(`${channels} [data-channel-id]`, (nodes) =>
+    nodes.map((node) => ({
+      id: node.dataset.channelId,
+      shortcut: node.getAttribute('aria-keyshortcuts'),
+    })),
+  );
+  const originalChannel = await page.$eval(
+    `${channels} .bh-selected[data-channel-id]`,
+    (node) => node.dataset.channelId,
+  );
+  const targets = shortcutRows.filter((row) => row.shortcut?.match(/Alt\+[12]$/));
+  assert.equal(targets.length, 2, 'QA profile needs two Channels with Alt+1/2 shortcuts');
+  for (const target of [...targets, ...targets]) {
+    await page.keyboard.down('Alt');
+    await page.keyboard.press(`Digit${target.shortcut.at(-1)}`);
+    await page.keyboard.up('Alt');
+    await page.waitForFunction(
+      (id) =>
+        document.querySelector('[data-dock-panel="bh:channels"] .bh-selected[data-channel-id]')
+          ?.dataset.channelId === id,
+      {},
+      target.id,
+    );
+    for (const panel of stablePanels)
+      assert.ok(
+        await panel.evaluate((node) => node.isConnected),
+        'unrelated Panel remains mounted during Channel shortcuts',
+      );
+  }
+  await page.click(`${channels} [data-channel-id="${originalChannel}"]`);
+  for (const panel of stablePanels)
+    assert.ok(
+      await panel.evaluate((node) => node.isConnected),
+      'mouse Channel navigation also preserves unrelated Panels',
+    );
+  await proof('01d-channel-switch-stability');
+  await page.click('.bh-workspace-rail [data-pinned-panel="activity-center"]');
+  await page.waitForSelector('[data-message-id]');
+
   const liveMessage = await page.$('[data-message-id]');
   const liveRoster = await page.$(`${channels} [data-channel-id]`);
   const assertLive = async () => {

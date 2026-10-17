@@ -1,3 +1,4 @@
+import { useScopedRef, useScopedState } from './scoped-state.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { Workspace, type WorkspaceOptions } from './workspace.js';
 import { WorkspaceContext } from './workspace-context.js';
@@ -985,6 +986,7 @@ function EmptyConversation({
 
 function ConversationView({
   onMobileBack,
+  scopeKey,
   state,
   actions,
   companion,
@@ -992,15 +994,17 @@ function ConversationView({
   dockPanels,
   profileCards = EMPTY_PROFILE_CARDS,
   nativeChatT,
+  nativeSessions,
   t,
 }: {
   onMobileBack?: (() => void) | undefined;
+  scopeKey: string;
   state: ClientState;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
   channelSidebar: ChannelSidebarRegistry;
   dockPanels?: DockPanelHost | undefined;
-  nativeSessions?: NativeSessionCatalog;
+  nativeSessions?: NativeSessionCatalog | undefined;
   profileCards?: ProfileCardRegistry | undefined;
   nativeChatT?: NativeChatFailureText | undefined;
   t: BotHarnessTranslate;
@@ -1069,38 +1073,38 @@ function ConversationView({
     settingsSections,
     settingsAttentionIds,
   );
-  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useScopedRef<HTMLDivElement | null>(scopeKey, null);
   const draftScope = conversationDraftKey(state);
   const recovery = useComposerRecovery(draftScope, state, actions);
   const [draft, setDraft] = useConversationDraft(draftScope, 'text', '');
-  const [allBotPreview, setAllBotPreview] = useState<AllBotPreview>();
-  const [allBotNotice, setAllBotNotice] = useState<string>();
-  const [botStop, setBotStop] = useState<{
+  const [allBotPreview, setAllBotPreview] = useScopedState<AllBotPreview>(scopeKey);
+  const [allBotNotice, setAllBotNotice] = useScopedState<string>(scopeKey);
+  const [botStop, setBotStop] = useScopedState<{
     channelId: string;
     stopping: boolean;
     notice?: string;
-  }>();
+  }>(scopeKey);
   const [mentionTokens, setMentionTokens] = useConversationDraft(draftScope, 'mentions', []);
   const [channelRefTokens, setChannelRefTokens] = useConversationDraft(
     draftScope,
     'channelRefs',
     [],
   );
-  const [selectedMemoryView, setSelectedMemoryView] = useState<
+  const [selectedMemoryView, setSelectedMemoryView] = useScopedState<
     { channelId: string } & (
       | { kind: 'commit'; sha: string }
       | { kind: 'file'; path: string }
       | { kind: 'working'; change: MemoryWorkingChange }
     )
-  >();
-  const chatScrollBeforeDiff = useRef(0);
+  >(scopeKey);
+  const chatScrollBeforeDiff = useScopedRef(scopeKey, 0);
   const [uploadItems, setUploadItems] = useConversationDraft(draftScope, 'uploads', []);
-  const [restoreBlocked, setRestoreBlocked] = useState(false);
-  const [restoreFocusSignal, setRestoreFocusSignal] = useState(0);
-  const uploadControllers = useRef(new Map<string, AbortController>());
+  const [restoreBlocked, setRestoreBlocked] = useScopedState(scopeKey, false);
+  const [restoreFocusSignal, setRestoreFocusSignal] = useScopedState(scopeKey, 0);
+  const uploadControllers = useScopedRef(scopeKey, new Map<string, AbortController>());
   const [replyTarget, setReplyTarget] = useConversationDraft(draftScope, 'reply', undefined);
-  const submitting = useRef(false);
-  const recall = useRef<
+  const submitting = useScopedRef(scopeKey, false);
+  const recall = useScopedRef<
     | {
         scope: string;
         index: number;
@@ -1108,9 +1112,9 @@ function ConversationView({
         saved: { text: string; mentions: SelectedMention[]; channelRefs: SelectedChannelRef[] };
       }
     | undefined
-  >(undefined);
-  const [recallNotice, setRecallNotice] = useState<string>();
-  const [submissionNotice, setSubmissionNotice] = useState<string>();
+  >(scopeKey, undefined);
+  const [recallNotice, setRecallNotice] = useScopedState<string>(scopeKey);
+  const [submissionNotice, setSubmissionNotice] = useScopedState<string>(scopeKey);
   const submissionChannelId = draftScope === undefined ? undefined : state.conversation.channel?.id;
   const readSubmissions = () =>
     submissionChannelId === undefined
@@ -1175,8 +1179,8 @@ function ConversationView({
     setRecallNotice(notice === '' ? undefined : notice.trim());
     return true;
   };
-  const followingLatest = useRef(true);
-  const activityOverlayPane = useRef<HTMLElement | null>(null);
+  const followingLatest = useScopedRef(scopeKey, true);
+  const activityOverlayPane = useScopedRef<HTMLElement | null>(scopeKey, null);
   const resizeActivityOverlay = useCallback(
     (height: number): void => {
       const timeline = scrollRef.current;
@@ -1189,37 +1193,42 @@ function ConversationView({
       else pane.style.removeProperty('--bh-activity-overlay-inset');
       if (following && timeline !== null) timeline.scrollTop = timeline.scrollHeight;
     },
-    [store],
+    [scopeKey],
   );
-  const prependAnchor = useRef<{
+  const prependAnchor = useScopedRef<{
     firstId: string | undefined;
     y: number | undefined;
     top: number;
     height: number;
-  } | null>(null);
-  const lastRevision = useRef<number | undefined>(undefined);
-  const positioned = useRef(false);
-  const restoredScroll = useRef(false);
-  const placedUnreadDivider = useRef<string | undefined>(undefined);
-  const readMarkTimer = useRef<number | undefined>(undefined);
-  const [unseen, setUnseen] = useState(0);
-  const [atLatest, setAtLatest] = useState(true);
-  const [messageMenu, setMessageMenu] = useState<MessageMenuRequest | undefined>();
-  const [reactionMenu, setReactionMenu] = useState<MessageMenuRequest | undefined>();
-  const [avatarMenu, setAvatarMenu] = useState<AvatarMenuRequest | undefined>();
-  const [diagnosticsTarget, setDiagnosticsTarget] = useState<
+  } | null>(scopeKey, null);
+  const lastRevision = useScopedRef<number | undefined>(scopeKey, undefined);
+  const positioned = useScopedRef(scopeKey, false);
+  const restoredScroll = useScopedRef(scopeKey, false);
+  const placedUnreadDivider = useScopedRef<string | undefined>(scopeKey, undefined);
+  const readMarkTimer = useScopedRef<number | undefined>(scopeKey, undefined);
+  const [unseen, setUnseen] = useScopedState(scopeKey, 0);
+  const [atLatest, setAtLatest] = useScopedState(scopeKey, true);
+  const [messageMenu, setMessageMenu] = useScopedState<MessageMenuRequest | undefined>(scopeKey);
+  const [reactionMenu, setReactionMenu] = useScopedState<MessageMenuRequest | undefined>(scopeKey);
+  const [avatarMenu, setAvatarMenu] = useScopedState<AvatarMenuRequest | undefined>(scopeKey);
+  const [diagnosticsTarget, setDiagnosticsTarget] = useScopedState<
     | { channelId: string; fromMessageId: string; toMessageId?: string; messageIds: string[] }
     | undefined
-  >();
-  const [selectedMessages, setSelectedMessages] = useState<
+  >(scopeKey);
+  const [selectedMessages, setSelectedMessages] = useScopedState<
     { channelId: string; ids: readonly string[] } | undefined
-  >();
-  const [profileViewOpen, setProfileViewOpen] = useState(
+  >(scopeKey);
+  const [profileViewOpen, setProfileViewOpen] = useScopedState(
+    scopeKey,
     state.selection?.kind === 'bot' && state.selection.profile === true,
   );
-  const [profileActivity, setProfileActivity] = useState<ProfileActivity | undefined>(undefined);
-  const [profileUsageLoading, setProfileUsageLoading] = useState(true);
-  const [groupProfileActivity, setGroupProfileActivity] = useState<GroupProfileActivity>();
+  const [profileActivity, setProfileActivity] = useScopedState<ProfileActivity | undefined>(
+    scopeKey,
+    undefined,
+  );
+  const [profileUsageLoading, setProfileUsageLoading] = useScopedState(scopeKey, true);
+  const [groupProfileActivity, setGroupProfileActivity] =
+    useScopedState<GroupProfileActivity>(scopeKey);
   const conversation = state.conversation;
   const channel = conversation.channel;
   const botNames = new Map(state.bots.map((member) => [member.slug, member.displayName]));
@@ -1442,9 +1451,9 @@ function ConversationView({
                 : { channelId, ids: toggleSelection(current.ids, message) },
             ),
         };
-  const cancelSelection = useCallback(() => setSelectedMessages(undefined), []);
-  const [selectionBusy, setSelectionBusy] = useState(false);
-  const [selectionNotice, setSelectionNotice] = useState<string>();
+  const cancelSelection = useCallback(() => setSelectedMessages(undefined), [scopeKey]);
+  const [selectionBusy, setSelectionBusy] = useScopedState(scopeKey, false);
+  const [selectionNotice, setSelectionNotice] = useScopedState<string>(scopeKey);
   const flashSelectionNotice = (notice: string): void => {
     setSelectionNotice(notice);
     window.setTimeout(
@@ -1578,42 +1587,46 @@ function ConversationView({
     return () => {
       cancelled = true;
     };
-  }, [channelId, previewRoster]);
-  const [searchTop, setSearchTop] = useState<number | undefined>(undefined);
-  const searchAvailable = useRef(false);
-  const searchReturnFocus = useRef<HTMLElement | null>(null);
+  }, [scopeKey, channelId, previewRoster]);
+  const [searchTop, setSearchTop] = useScopedState<number | undefined>(scopeKey, undefined);
+  const searchAvailable = useScopedRef(scopeKey, false);
+  const searchReturnFocus = useScopedRef<HTMLElement | null>(scopeKey, null);
   searchAvailable.current =
     channelId !== undefined &&
     actions.searchChannel !== undefined &&
     activeMemoryView === undefined &&
     !profileViewOpen;
-  const searchShortcutMount = useMountedResource<HTMLSpanElement>((node) => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (
-        !(event.metaKey || event.ctrlKey) ||
-        event.altKey ||
-        event.shiftKey ||
-        event.key.toLowerCase() !== 'f' ||
-        !searchAvailable.current ||
-        document.querySelector('[aria-modal="true"]') !== null
-      )
-        return;
-      const pane = node.parentElement?.querySelector<HTMLElement>('.bh-chat-pane');
-      const bar = pane?.querySelector<HTMLElement>('.bh-topbar');
-      if (pane == null) return;
-      event.preventDefault();
-      const field = pane.querySelector<HTMLInputElement>('[data-conversation-search] input');
-      if (field === null && document.activeElement instanceof HTMLElement)
-        searchReturnFocus.current = document.activeElement;
-      const offset =
-        bar == null ? 0 : bar.getBoundingClientRect().bottom - pane.getBoundingClientRect().top;
-      setSearchTop(Math.max(0, offset) + SEARCH_PANEL_GAP_PX);
-      field?.select();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  const searchShortcutMount = useMountedResource<HTMLSpanElement>(
+    (node) => {
+      const onKeyDown = (event: KeyboardEvent): void => {
+        if (
+          !(event.metaKey || event.ctrlKey) ||
+          event.altKey ||
+          event.shiftKey ||
+          event.key.toLowerCase() !== 'f' ||
+          !searchAvailable.current ||
+          document.querySelector('[aria-modal="true"]') !== null
+        )
+          return;
+        const pane = node.parentElement?.querySelector<HTMLElement>('.bh-chat-pane');
+        const bar = pane?.querySelector<HTMLElement>('.bh-topbar');
+        if (pane == null) return;
+        event.preventDefault();
+        const field = pane.querySelector<HTMLInputElement>('[data-conversation-search] input');
+        if (field === null && document.activeElement instanceof HTMLElement)
+          searchReturnFocus.current = document.activeElement;
+        const offset =
+          bar == null ? 0 : bar.getBoundingClientRect().bottom - pane.getBoundingClientRect().top;
+        setSearchTop(Math.max(0, offset) + SEARCH_PANEL_GAP_PX);
+        field?.select();
+      };
+      document.addEventListener('keydown', onKeyDown);
+      return () => document.removeEventListener('keydown', onKeyDown);
+    },
+    [scopeKey],
+  );
   const conversationMount = useMountedResource<HTMLDivElement>(() => {
+    currentChannel.current = channelId;
     setAllBotNotice(undefined);
     return () => {
       currentChannel.current = undefined;
@@ -1626,7 +1639,7 @@ function ConversationView({
         ),
       );
     };
-  }, [channelId]);
+  }, [channelId, scopeKey]);
 
   const profileMount = useMountedResource<HTMLDivElement>(() => {
     if (channel?.type !== 'dm' && !profileViewOpen) return;
@@ -1680,6 +1693,7 @@ function ConversationView({
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [
+    scopeKey,
     actions,
     channel?.type,
     channelId,
@@ -1916,6 +1930,7 @@ function ConversationView({
       };
     },
     [
+      scopeKey,
       actions,
       channelId,
       conversation.status,
@@ -2063,6 +2078,7 @@ function ConversationView({
       addFiles(files);
       setRestoreFocusSignal((value) => value + 1);
     },
+    scopeKey,
   );
 
   const submit = async (): Promise<void> => {
@@ -2267,7 +2283,7 @@ function ConversationView({
           onMemoryFileSelect: (path) => openMemoryView({ kind: 'file', path }),
           onMemoryWorkingSelect: (change) => openMemoryView({ kind: 'working', change }),
         };
-  const chatPane = (
+  const conversationPane = (
     <section
       className="bh-chat-pane"
       data-activity-concealed={composerActivityConcealed ? 'true' : undefined}
@@ -3079,6 +3095,14 @@ function ConversationView({
       )}
     </section>
   );
+  const chatPane =
+    state.selection === undefined ? (
+      <Welcome state={state} t={t} />
+    ) : state.selection.kind === 'inbox' ? (
+      <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />
+    ) : (
+      conversationPane
+    );
   return (
     <div ref={conversationMount} className="bh-root bh-main">
       <span ref={allBotPreviewMount} hidden />
@@ -3171,49 +3195,22 @@ function BotMainContent({
 }): ReactElement {
   const state = useClientState();
   const workspace = useContext(WorkspaceContext);
-  const panels = useSyncExternalStore(
-    dockPanels?.subscribe ?? subscribeWithoutPrefs,
-    () => dockPanels?.panels(),
-    () => dockPanels?.panels(),
-  );
-  if (state.selection === undefined)
-    return workspace ? (
-      <div className="bh-root bh-main">
-        <ChannelDock
-          body={<Welcome state={state} t={t} />}
-          panels={panels ?? []}
-          registry={dockPanels}
-          entryProps={undefined}
-          shows={() => false}
-          t={t}
-        />
-      </div>
-    ) : (
-      <Welcome state={state} t={t} />
-    );
-  if (state.selection.kind === 'inbox')
-    return workspace ? (
-      <div className="bh-root bh-main">
-        <ChannelDock
-          body={<ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />}
-          panels={panels ?? []}
-          registry={dockPanels}
-          entryProps={undefined}
-          shows={() => false}
-          t={t}
-        />
-      </div>
-    ) : (
-      <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />
-    );
+  if (!workspace && state.selection === undefined) return <Welcome state={state} t={t} />;
+  if (!workspace && state.selection?.kind === 'inbox')
+    return <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />;
   const scopeKey =
-    state.selection.kind === 'bot'
-      ? `bot:${state.selection.slug}:${state.selection.profile ? 'profile' : 'chat'}`
-      : `channel:${state.selection.channelId}`;
+    state.selection === undefined
+      ? 'welcome'
+      : state.selection.kind === 'inbox'
+        ? 'inbox'
+        : state.selection.kind === 'bot'
+          ? `bot:${state.selection.slug}:${state.selection.profile ? 'profile' : 'chat'}`
+          : `channel:${state.selection.channelId}`;
   return (
     <ConversationView
       onMobileBack={onMobileBack}
-      key={`${scopeKey}:${state.conversation.channel?.id ?? ''}`}
+      scopeKey={`${scopeKey}:${state.conversation.channel?.id ?? ''}`}
+      nativeSessions={nativeSessions}
       state={state}
       actions={actions}
       companion={companion}

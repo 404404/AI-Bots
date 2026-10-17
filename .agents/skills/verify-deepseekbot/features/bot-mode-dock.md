@@ -24,7 +24,7 @@ Enter Bot mode. Use the rail’s panel switches, grip menu, bottom settings cont
 
 ## Driving it with verify-app
 
-Launch a task-owned rc.2 Host and run doctor. Then run:
+Launch a task-owned rc.2 Host and run doctor. Seed one Bot DM and one Group Channel so Alt+1/2 can exercise distinct Channels. Then run:
 
 ```sh
 BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-panel-workspace.mjs
@@ -43,3 +43,5 @@ For native macOS, install the task Bundle into a separate rc.2 Desktop Profile a
 - Legacy `scripts/e2e-bot-mode-sidebar.mjs` tests the old fallback surface. Use the workspace journey for the qualified wide-shell path.
 
 - When reordering rail switches, check both themes: the blue insertion line tracks the upper/lower half and gaps, clears on leaving or cancelling, and never toggles a Panel. Alt+Up/Down remains available; refresh preserves the resulting order.
+
+- `channel-switch-stability`: Alt+1/2 and roster clicks change the active Channel without replacing the control rail, Channel list or Activity Center DOM. Channel-specific transient search/menu/profile state resets; per-Channel drafts stay separate. Test loading → ready and repeated store updates as well as switching back.
