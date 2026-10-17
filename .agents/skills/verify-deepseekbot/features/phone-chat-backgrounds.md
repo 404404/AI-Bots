@@ -30,3 +30,4 @@ The native picker/editor action, rendered chat, complete local metadata and owne
 - Dev clients must match SDK58 native inputs; never load SDK58 JS in an SDK57 binary.
 - Never publish the one-time pairing link, Host token, raw private app store, unrelated chats or device identifiers. Use neutral owned fixtures in PR screenshots.
 - A native device/queue unavailable to the agent remains explicitly untested. Source tests and web export do not close that gap.
+- Live ADB font-scale changes reproduce the existing SDK58 development-client navigation warning in [#2110](https://github.com/BotHarness/DeepSeekBot/issues/2110), including on the pre-background baseline. Cold-launch size checks do not qualify live-resize draft retention; record that case separately.
