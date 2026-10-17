@@ -1,0 +1,88 @@
+{
+  "productHead": "5ae3ed1f8dd966a64756bfb93dede338ad668cf1",
+  "scope": "Independent native startup recovery proof after original Web/native management journey",
+  "screenshots": [
+    {
+      "file": "native-reviewed-edit.png",
+      "productHead": "cc4f14d6db734830cba46dc8a5df2da5c014f5ba",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "b6ca7631b9d6e5ca920f60cf574f9c581549cf7fbc1402748bc585e22e55e14a",
+      "caption": "Native natural Tob schedule edit review before approval; synthetic task only.",
+      "privacy": "Inspected real synthetic Profile; no secrets or unrelated conversations; copied unchanged."
+    },
+    {
+      "file": "native-startup-recovered-paused.png",
+      "productHead": "5ae3ed1f8dd966a64756bfb93dede338ad668cf1",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "d6f190ba6bbfeccb0d4d325bfbf62f5a9466e31fb20de709d0f5cd44c8a3d724",
+      "caption": "Historical red failure card remains. Two replies below it correspond to old Source Event recovery and new startup firing. Current task is handled and paused.",
+      "privacy": "Inspected real synthetic Profile; no secrets or unrelated conversations; copied unchanged."
+    }
+  ],
+  "originalFailedSourceRecovered": {
+    "firing_id": "d970be61-f686-402b-b175-a2f1eec23740",
+    "source_event_id": "0a0fe08b-9cdd-453a-ab4d-276f9d862765",
+    "occurrence_at": "2026-10-17T21:41:41.201Z",
+    "fired_at": "2026-10-17T21:42:18.840Z",
+    "session_id": "botharness-7c31ff1d-1cd6-489e-b919-017069813d54",
+    "trigger": "planned",
+    "attempt_state": "handled",
+    "observed_at": "2026-10-17T22:05:26.232Z",
+    "handled_at": "2026-10-17T22:05:34.314Z",
+    "side_effect_started_at": null,
+    "last_error": null
+  },
+  "newStartup": {
+    "firing": {
+      "firing_id": "2183edff-9aff-4a0f-b645-16c8adc26658",
+      "source_event_id": "b9db2d63-455b-4d02-bdd3-73d4656e02ef",
+      "occurrence_at": "2026-10-17T22:08:10.712Z",
+      "fired_at": "2026-10-17T22:08:31.614Z",
+      "session_id": "botharness-7c31ff1d-1cd6-489e-b919-017069813d54",
+      "trigger": "planned",
+      "attempt_state": "handled",
+      "observed_at": "2026-10-17T22:08:31.621Z",
+      "handled_at": "2026-10-17T22:08:36.672Z",
+      "side_effect_started_at": null,
+      "last_error": null
+    },
+    "turn": 4,
+    "channelSend": {
+      "name": "channel_send",
+      "callId": "call_00_ET_5yT8yDN8C035pMFPH6rx5779",
+      "outcome": "ok",
+      "result": "{\"channelId\":\"dm-bot-c2e7fe74bc2445188843b1592a9f07c8\",\"messageId\":\"0c9d2fe8-c715-4570-ab13-807d925fafad\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"not-requested\",\"instruction\":\"This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leav…"
+    },
+    "reply": {
+      "id": "0c9d2fe8-c715-4570-ab13-807d925fafad",
+      "at": "2026-10-17T22:08:34.036Z",
+      "author": {
+        "kind": "bot",
+        "slug": "bot-c2e7fe74bc2445188843b1592a9f07c8"
+      },
+      "body": "SCHEDULE_OK_mvcx2729",
+      "channelRevision": 6
+    }
+  },
+  "finalTask": {
+    "id": "836078d2-1dff-48ed-8e88-802c00c35847",
+    "enabled": false,
+    "locked": false,
+    "title": "定时验收-mvcx2729-修改"
+  },
+  "priorFiringsRetained": 3,
+  "totalFirings": 4,
+  "historicalRedCard": "Kept from the original startup failure; it is not a new failed turn. The next two replies are recovery and the new startup occurrence, in order.",
+  "limits": [
+    "Original natural native create/edit/fire/pause/direct was on earlier product cc4f14d6.",
+    "Current product 5ae3ed1 independently proved original safe SourceEvent recovery, new missed-occurrence startup firing, exact fresh reply and pause.",
+    "Human QA, full CI at final pushed head, merge and deployment remain separate."
+  ],
+  "driverFailuresRetained": [
+    "Initial copied Session cwd blocked before model steps.",
+    "Truncated Shell args caused a false update failure; exact reviewed call ID correlation fixed the verifier.",
+    "First startup-arm used wrong boolean CLI arguments; old SourceEvent had already recovered; corrected bare --enabled/--disabled then arm/prove passed."
+  ]
+}
