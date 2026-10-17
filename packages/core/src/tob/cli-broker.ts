@@ -351,6 +351,7 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       authorize();
       let metadata: Record<string, unknown> | undefined;
       if (upload) {
+        if (options.scope === 'assignment-memory-read') refuse('memory-read-only');
         const encoded = request.headers['x-botharness-invocation'];
         if (typeof encoded !== 'string' || encoded.length > 8192) refuse('invalid-request');
         try {
