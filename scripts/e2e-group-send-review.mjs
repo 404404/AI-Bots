@@ -102,6 +102,7 @@ export function providerUsage(home, slugs) {
     const attempts = [];
     const auxiliary = [];
     const toolCalls = [];
+    const modelRequests = [];
     let route;
     for (const event of events) {
       if (event.type === 'tool/call') {
@@ -135,6 +136,7 @@ export function providerUsage(home, slugs) {
         }
       }
       if (event.type === 'request/header') {
+        modelRequests.push({ seq: event.seq, at: event.time });
         const config = event.data?.header?.config;
         route = {
           provider: config?.provider,
@@ -182,6 +184,7 @@ export function providerUsage(home, slugs) {
       attempts,
       auxiliary,
       toolCalls,
+      modelRequests,
       providerRetryCoverage:
         'Session events expose completed model responses; unreported provider retries remain unknown',
     });
@@ -189,7 +192,7 @@ export function providerUsage(home, slugs) {
   return sessions;
 }
 
-async function stream(instance, channelId, signal, consume) {
+export async function stream(instance, channelId, signal, consume) {
   const response = await fetch(
     `${new URL(instance.url).origin}/api/botharness/stream?channelId=${encodeURIComponent(channelId)}&after=0`,
     {
