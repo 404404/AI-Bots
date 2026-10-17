@@ -76,7 +76,7 @@ ScheduleOwner -> 数据库: 同事务写入任务与回执
 | 自然 Tob 创建、改名、暂停 | ok 通过           | 早于最后的过期重放修正                    |
 | 真实 planned firing       | ok 通过           | Source Event、Session、发送与消息 ID 对应 |
 | 同 Profile 重启读回       | ok 通过           | 已提交产品版本，停用状态与历史保留        |
-| 原生启动补跑              | warn 修复待复验   | 旧截图保留失败，不能写全通过              |
+| 原生旧事件恢复与新补跑    | ok 当前源码通过   | 保留历史红卡，新回复精确关联              |
 | Human QA、CI              | warn 待父任务验证 | 本地测试不代替验收                        |
 
 本地全套测试因共享资源压力中止，不能算通过。首次模型配额错误与证据脚本修正分别保留。
@@ -92,7 +92,7 @@ RuntimeRecovery -> ScheduleOwner: 既有补跑
 ScheduleOwner -> 模型路由检查: 缺key仍拒绝
 ```
 
-源码回归覆盖延迟初始化、缺 key、安全旧事件恢复及再次重启去重。恢复与收集共用检查，拒绝有副作用、不确定、已删、已解决、暂缓及已暂停 Bot 的任务。新的原生补跑仍待父任务验证。
+源码回归覆盖延迟初始化、缺 key、安全旧事件恢复及再次重启去重。恢复与收集共用检查，拒绝有副作用、不确定、已删、已解决、暂缓及已暂停 Bot 的任务。当前源码已在原生恢复同一个旧 Source Event，并完成错过时间后的新补跑。新截图保留历史红卡，卡片后两条回复分别来自恢复与新触发。
 
 ## G 交互截图与后续审核
 
@@ -100,4 +100,4 @@ ScheduleOwner -> 模型路由检查: 缺key仍拒绝
 
 [截图与双语验证记录](https://github.com/BotHarness/DeepSeekBot/tree/codex/2093-tob-schedules/.github/pr-screenshots/tob-schedules)。
 
-本页是审核说明，不是运行证据或发布授权。Draft PR 为 #2123。修复版本需父任务推送后核验。
+本页是审核说明，不是运行证据或发布授权。Draft PR 为 #2123。最终提交将推送至同一 PR，full CI 与 Human QA 分别判断。
