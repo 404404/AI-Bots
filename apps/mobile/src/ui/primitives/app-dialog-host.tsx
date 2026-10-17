@@ -35,6 +35,10 @@ export function AppDialogHost() {
   );
   const cancel = shown.actions.find((action) => action.style === 'cancel');
   const menu = choices.length > 1;
+  const stacked = theme.largeText || menu;
+  const actionStyle = stacked
+    ? undefined
+    : { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 };
   const dismiss = () => appDialogs.dismiss();
   return (
     <Modal
@@ -116,11 +120,9 @@ export function AppDialogHost() {
                 ))}
               </View>
             ) : null}
-            <View
-              style={{ flexDirection: theme.largeText || menu ? 'column' : 'row', gap: space.x3 }}
-            >
+            <View style={{ flexDirection: stacked ? 'column' : 'row', gap: space.x3 }}>
               {cancel === undefined ? null : (
-                <View style={{ flex: theme.largeText || menu ? undefined : 1 }}>
+                <View style={actionStyle}>
                   <Button
                     label={cancel.text}
                     onPress={dismiss}
@@ -132,7 +134,7 @@ export function AppDialogHost() {
               {menu
                 ? null
                 : choices.map(({ action, index }) => (
-                    <View key={index} style={{ flex: theme.largeText ? undefined : 1 }}>
+                    <View key={index} style={actionStyle}>
                       <Button
                         label={action.text}
                         tone={action.style === 'destructive' ? 'danger' : 'primary'}
