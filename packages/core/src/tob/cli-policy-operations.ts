@@ -65,6 +65,134 @@ function freeze<T>(value: T): T {
   }
   return value;
 }
+function pick(value: unknown, fields: string[]): Record<string, unknown> {
+  const source: Record<string, unknown> =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  return Object.fromEntries(
+    fields.filter((key) => Object.hasOwn(source, key)).map((key) => [key, source[key]]),
+  );
+}
+export function messagingPolicyState(value: unknown): Record<string, unknown> {
+  const source = object(value);
+  const rows = (key: string, fields: string[]) =>
+    Array.isArray(source[key]) ? source[key].map((item) => pick(item, fields)) : [];
+  return {
+    accounts: rows('accounts', [
+      'providerId',
+      'ref',
+      'platform',
+      'fingerprint',
+      'connected',
+      'boundBotSlug',
+      'bindingId',
+    ]),
+    identities: rows('identities', [
+      'id',
+      'botSlug',
+      'providerId',
+      'platform',
+      'accountRef',
+      'fingerprint',
+      'name',
+      'enabled',
+      'postLimit',
+      'postLimitRevision',
+      'typingEnabled',
+      'typingInheritance',
+      'receiveAfter',
+      'enabledInheritance',
+      'newConversations',
+      'newConversationsInheritance',
+      'defaultRevision',
+      'revision',
+      'revokedAt',
+      'availability',
+      'reception',
+      'scopes',
+    ]),
+    grants: rows('grants', [
+      'id',
+      'bindingId',
+      'botSlug',
+      'providerId',
+      'accountRef',
+      'fingerprint',
+      'platform',
+      'targetRef',
+      'targetName',
+      'targetDigest',
+      'revision',
+      'receiveAfter',
+      'receiveScope',
+      'receiveTargetChannelId',
+      'dmMirror',
+      'dmMirrorEpoch',
+      'dmSyncRevision',
+      'dmForward',
+      'dmForwardAfter',
+      'receptionInheritance',
+      'channelBridge',
+      'bridgeRoutes',
+      'origin',
+      'muted',
+      'preferenceRevision',
+      'openGroup',
+      'openGroupAfter',
+      'revokedAt',
+      'suspendedReason',
+      'availability',
+      'reception',
+      'canReceive',
+      'canPost',
+      'postConversationId',
+      'groupPolicy',
+      'threadPolicies',
+      'ordinaryDelivery',
+    ]),
+    pairings: rows('pairings', [
+      'id',
+      'reference',
+      'status',
+      'purpose',
+      'accountName',
+      'actorId',
+      'actorName',
+      'conversationId',
+      'conversationKind',
+      'capabilities',
+      'roleId',
+      'revision',
+      'createdAt',
+      'expiresAt',
+      'reviewedAt',
+    ]),
+    roles: source.roles ?? [],
+    permissionGroups: source.permissionGroups ?? [],
+    behaviorPermissions: source.behaviorPermissions ?? [],
+    senderPolicy: source.senderPolicy ?? null,
+    heldConversations: rows('heldConversations', [
+      'bindingId',
+      'conversation',
+      'name',
+      'reason',
+      'revision',
+    ]),
+    blockedConversations: rows('blockedConversations', [
+      'botSlug',
+      'fingerprint',
+      'bindingId',
+      'conversation',
+      'name',
+      'revision',
+    ]),
+    channelTargets: rows('channelTargets', ['id', 'name']),
+    pairingReceivers: rows('pairingReceivers', ['name', 'status']),
+    approvals: pick(source.approvals, ['route', 'routeRevision', 'destinations']),
+    failureAlerts: pick(source.failureAlerts, ['enabled', 'revision', 'available']),
+  };
+}
 
 export function createTobPolicyOperations(deps: {
   bridge: () => BridgeMethods;
@@ -169,7 +297,8 @@ export function createTobPolicyOperations(deps: {
       else if (defaults) value = await call('messagingDefaults', { platform: target });
       else if (bridges) value = await call('channelBridges', { channelId: target });
       else if (apps) value = await call('messagingApps', {});
-      else if (family === 'messaging') value = await call('messagingSnapshot', { slug: target });
+      else if (family === 'messaging')
+        value = messagingPolicyState(await call('messagingSnapshot', { slug: target }));
       else if (grant || command === 'workspace-options') {
         if (grant) bot();
         value = {
@@ -344,12 +473,16 @@ export function createTobPolicyOperations(deps: {
       return {
         async run(guard) {
           guard();
-          const result =
+          let result =
             template || reviewer || messaging || command.startsWith('pairing-')
               ? await execute(guard)
               : undefined;
           guard();
           const current = await snapshot();
+          if (command === 'failure-alerts' || command === 'approval-routes')
+            result = object(current.value)[
+              command === 'failure-alerts' ? 'failureAlerts' : 'approvals'
+            ];
           guard();
           return { ...current, ...(result === undefined ? {} : { result }) };
         },

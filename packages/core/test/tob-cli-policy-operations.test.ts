@@ -3,7 +3,10 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createCore } from '../src/plugin.js';
 import { createBridgeMethods } from '../src/bridge/methods.js';
-import { createTobPolicyOperations } from '../src/tob/cli-policy-operations.js';
+import {
+  createTobPolicyOperations,
+  messagingPolicyState,
+} from '../src/tob/cli-policy-operations.js';
 import { parseAgentPolicies } from '../src/bots/cli-agent-policies.js';
 import { createApprovalTemplateLibrary } from '../src/workspaces/approval-templates.js';
 import { TobError } from '../src/tob/service.js';
@@ -213,7 +216,8 @@ describe('Tob policy operations reuse canonical owners', () => {
     const after = await f.write('failure-alerts-set', { disabled: true }, before.stateFingerprint);
     expect(after.value).toMatchObject({ failureAlerts: { enabled: false, revision: 1 } });
     const exact = await f.bridge.messagingSnapshot({ slug: 'research' });
-    expect(exact).toEqual({ ok: true, value: after.value });
+    expect(exact.ok).toBe(true);
+    if (exact.ok) expect(messagingPolicyState(exact.value)).toEqual(after.value);
     expect(test).not.toHaveBeenCalled();
     expect(await f.prepare('failure-alerts-test', f.args(['research']))).toBeUndefined();
     expect(await f.prepare('messaging-send', f.args(['research']))).toBeUndefined();
@@ -246,6 +250,49 @@ describe('Tob policy operations reuse canonical owners', () => {
 });
 
 describe('connector concurrency at the owner boundary', () => {
+  it('projects only reviewed policy fields and does not bind unrelated Outbox or delivery text', async () => {
+    const f = fixture();
+    const before = await f.read('failure-alerts');
+    const original = f.bridge.messagingSnapshot.bind(f.bridge);
+    const secret = 'unrelated-history-sentinel';
+    vi.spyOn(f.bridge, 'messagingSnapshot').mockImplementation(async (input) => {
+      const result = await original(input);
+      if (result.ok) {
+        result.value.intents = [
+          {
+            id: 'history-one',
+            botSlug: 'research',
+            grantId: 'not-used-for-policy',
+            grantRevision: 0,
+            text: secret,
+            state: 'failed',
+            createdAt: new Date().toISOString(),
+          },
+        ];
+        if (result.value.failureAlerts)
+          result.value.failureAlerts.deliveries = [
+            {
+              id: 'delivery-one',
+              botSlug: 'research',
+              settingsRevision: 0,
+              createdAt: new Date().toISOString(),
+              state: 'failed',
+              attempts: 1,
+              reason: secret,
+            },
+          ];
+      }
+      return result;
+    });
+    const read = await f.read('failure-alerts');
+    expect(read.stateFingerprint).toBe(before.stateFingerprint);
+    expect(JSON.stringify(read)).not.toContain(secret);
+    expect(JSON.stringify(read)).not.toContain('deliveries');
+    const after = await f.write('failure-alerts-set', { disabled: true }, before.stateFingerprint);
+    expect(after.value).toMatchObject({ failureAlerts: { enabled: false, revision: 1 } });
+    expect(JSON.stringify(after)).not.toContain(secret);
+  });
+
   it('refuses a connector change that races an internal CLI read after approval', async () => {
     const f = fixture();
     const before = await f.read('failure-alerts');
