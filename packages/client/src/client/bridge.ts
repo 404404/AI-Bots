@@ -4785,7 +4785,11 @@ export type { MessagingApp } from '../../../core/src/messaging/outbound.js';
 
 export async function loadMessagingApps(
   call: BridgeCall,
-): Promise<{ apps: MessagingApp[]; setups: NonNullable<MessagingSnapshot['appSetups']> }> {
+): Promise<{
+  apps: MessagingApp[];
+  setups: NonNullable<MessagingSnapshot['appSetups']>;
+  pendingSetups?: import('../../../core/src/tob/cli-im-setup-operations.js').TobImSetupReceipt[];
+}> {
   const record = asRecord(await unwrap(call, 'messagingApps', {}));
   const apps = record?.['apps'];
   const setups = record?.['setups'];
@@ -4810,6 +4814,85 @@ export async function loadMessagingApps(
   return {
     apps: apps as MessagingApp[],
     setups: setups as NonNullable<MessagingSnapshot['appSetups']>,
+    ...(record?.['pendingSetups'] === undefined
+      ? {}
+      : { pendingSetups: parseSetupReceipts(record['pendingSetups']) }),
+  };
+}
+
+function parseSetupReceipts(
+  value: unknown,
+): import('../../../core/src/tob/cli-im-setup-operations.js').TobImSetupReceipt[] {
+  if (!Array.isArray(value) || value.length > 32)
+    throw new BridgeCallError('invalid-response', 'Invalid setup receipts');
+  return value.map((raw) => {
+    const item = asRecord(raw);
+    if (
+      !item ||
+      typeof item['receiptId'] !== 'string' ||
+      !/^[A-Za-z0-9_-]{1,128}$/u.test(item['receiptId']) ||
+      !['feishu', 'weixin'].includes(String(item['platform'])) ||
+      typeof item['state'] !== 'string' ||
+      ![
+        'credentials',
+        'creating',
+        'pending',
+        'scanned',
+        'needs_verification',
+        'connecting',
+        'ready',
+        'cancelled',
+        'expired',
+        'failed',
+      ].includes(item['state']) ||
+      typeof item['expiresAt'] !== 'number' ||
+      !Number.isFinite(item['expiresAt']) ||
+      typeof item['stateFingerprint'] !== 'string' ||
+      !/^[a-f0-9]{64}$/u.test(item['stateFingerprint'])
+    )
+      throw new BridgeCallError('invalid-response', 'Invalid setup receipt');
+    return {
+      receiptId: item['receiptId'],
+      platform: item['platform'] as 'feishu' | 'weixin',
+      state: item['state'],
+      expiresAt: item['expiresAt'],
+      stateFingerprint: item['stateFingerprint'],
+      handoff: 'applications-settings' as const,
+      ...(typeof item['connected'] === 'boolean' ? { connected: item['connected'] } : {}),
+    };
+  });
+}
+
+export async function resumeImSetup(
+  call: BridgeCall,
+  receiptId: string,
+): Promise<import('../../../core/src/tob/cli-im-setup-operations.js').TobImSetupResume> {
+  const result = asRecord(await unwrap(call, 'imSetupResume', { receiptId }));
+  const descriptor = asRecord(result?.['descriptor']);
+  const receipts = parseSetupReceipts([result?.['receipt']]);
+  if (
+    !result ||
+    !descriptor ||
+    receipts[0]!.receiptId !== receiptId ||
+    typeof result['attemptId'] !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,128}$/u.test(result['attemptId']) ||
+    descriptor['version'] !== 1 ||
+    descriptor['platform'] !== receipts[0]!.platform ||
+    descriptor['providerId'] !== `dsh-im/${descriptor['platform']}` ||
+    descriptor['endpoint'] !== 'dsh-im/app-setup' ||
+    descriptor['kind'] !== (descriptor['platform'] === 'feishu' ? 'credentials' : 'qr')
+  )
+    throw new BridgeCallError('invalid-response', 'Invalid setup resume response');
+  return {
+    attemptId: result['attemptId'],
+    receipt: receipts[0]!,
+    descriptor: {
+      version: 1,
+      platform: receipts[0]!.platform,
+      providerId: descriptor['providerId'] as string,
+      endpoint: 'dsh-im/app-setup',
+      kind: receipts[0]!.platform === 'feishu' ? 'credentials' : 'qr',
+    },
   };
 }
 

@@ -846,7 +846,7 @@ deepseekbot model-preset-apply <bot-id> --preset <preset-id> --expected-revision
 | `showApprovalReviewSessions` | 布尔值      |
 | `developerMode`              | 布尔值      |
 
-`settings-set botharness-client --patch-stdin` 必须配合成对的审核参数；previous-value JSON 必须与 patch 使用完全一致的字段。`settings agent-default-model` 读取默认模型路由，通过 `home-model-set` 修改。未知字段、其他命名空间和直接 patch 默认模型均拒绝，不绕过 owner 编辑配置文件。本片范围不包含动效、主题、语言、快捷键、布局等其他偏好。
+`settings-set botharness-client --patch-stdin` 必须配合成对的审核参数；previous-value JSON 必须与 patch 使用完全一致的字段。`settings agent-default-model` 读取默认模型路由，通过 `home-model-set` 修改。未知字段、受限 allowlist 之外的命名空间和直接 patch 默认模型均拒绝，不绕过 owner 编辑配置文件。#2094 补充的设备命名空间见下文。本片范围不包含动效、主题、语言、快捷键、布局等其他偏好。
 
 ### Tob 隐私、Git 与更新
 
@@ -886,5 +886,9 @@ deepseekbot release-restart --confirm
 Browser/Computer 原生 UI 字段继续走 `settings` 与 `settings-set --patch-stdin --expected-revision <n> --previous-value <json>`，且强制 Human 审阅。`botharness-browser` 只开放 `target`、`localDriver`、`containerDriver`；`botharness-computer` 只开放 `target`、`idleStopMinutes`（1–1440）、`exportDir`（空值／默认或绝对路径）、`autoAllowActions`。Provider 可用、运行时就绪与系统授权分别检查。
 
 应用 token、凭据和验证码保留在已认证 Human 的原有 CLI stdin／私密输入流程（`im-app-add`、`im-credentials`、`im-verify`）及原生配置 UI。Tob 可通过 `im-apps` 检查应用／配置能力，但不能通过此 broker 提交秘密或猜测 Provider 配置接口。外部发送、测试／重试投递及 `tool-approval-decide` 不在策略 allowlist；能列出其他 Bot 的审批不等于有权回答。
+
+对当前可用的合格飞书／微信 Provider，Tob 可在 Human 新作决定后执行 `im-authorize <platform> --expected-state <im-apps stateFingerprint>`，只收到所属的不透明收据、平台、状态和有效期。`pairing-status <receipt-id>` 查询原 Provider 尝试；`im-cancel <receipt-id> --expected-state <状态指纹>` 在审核后重验状态并取消。未知收据、owner／平台变化、过期与旧审核均拒绝；已完成配置的原生账号不会被取消命令删除。结果不确定不自动重试；同平台已有待处理尝试时先继续或取消。
+
+在 **Bot 设置 → 应用**，选择对应平台／有效期行的 **继续配置**，选择 Bot 后进入既有私密表单。Human 专用 owner 查询与 Client 接续只 poll 同一个原生尝试，不再次 `setup.start`；二维码、凭据和验证码仍仅在已认证表单内处理。Tob 不收到原生 attempt id、二维码、token、Provider 指令文字或原始错误。Human CLI 的 `im-setup-receipts`、`im-setup-resume <receipt-id>` 检查同一 owner／接续路径且不输出私密配置产物；Tob broker 不开放这两个命令。引用只在当前进程内有效，随原 Provider 尝试过期或 Host 重启消失；配置与原生凭据权威仍属于 Provider。
 
 Human CLI 补齐 Browser 控制路由：`browser-profile-pair`／`browser-profile-forget` 无 Bot 参数；`browser-daily-connect`、`browser-daily-grant`、`browser-daily-return`、`browser-borrow-pair`、`browser-borrow-return` 带一个 Bot 参数。均需 `--confirm`，复用已有配对／控制 owner，保留 Human 浏览器与系统授权步骤；这些命令不授予 Tob 受限策略权限。直接 CLI、真实 Tob 审批／拒绝／读回、Web 显示、macOS Desktop 与真实外部投递分别验收。

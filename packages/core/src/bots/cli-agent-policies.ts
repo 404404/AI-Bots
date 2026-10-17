@@ -165,7 +165,6 @@ export const TOB_POLICY_COMMANDS: Readonly<Record<string, TobPolicyCommand>> = {
     true,
     'pairing-review <bot> <pairing-id> --decision <approve|reject|revoke> [--role <id> | --capability <capability> ...] [--confirm]',
   ),
-  'im-apps': spec([], 0, false, 'im-apps'),
 };
 
 export const TOB_AGENT_POLICY_COMMAND_USAGE = Object.fromEntries(

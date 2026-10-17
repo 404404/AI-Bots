@@ -331,6 +331,8 @@ Usage:
   deepseekbot part-library-import-image --file <png> --slot <slot> --colors <n> [--name <text>]
   deepseekbot part-library-export --out <absolute-file> [--part-id <id> | --part-stdin]
   deepseekbot im-apps
+  deepseekbot im-setup-receipts
+  deepseekbot im-setup-resume <owned-receipt-id>
   deepseekbot im-authorize <feishu|weixin>
   deepseekbot im-credentials <attempt-id> --credentials-stdin
   deepseekbot im-verify <attempt-id> --verification-stdin

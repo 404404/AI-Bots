@@ -673,6 +673,7 @@ export async function runLiveCli(
       if (
         error instanceof CliLiveError &&
         !error.authorization &&
+        !command.startsWith('im-setup-') &&
         command !== 'im-apps' &&
         command !== 'im-authorize'
       )

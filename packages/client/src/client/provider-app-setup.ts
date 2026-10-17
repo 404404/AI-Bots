@@ -87,6 +87,40 @@ export class ProviderAppSetup {
     if (pending) return pending;
     return this.#operate(scope, 'setup.poll', {});
   }
+  async adopt(
+    scope: string,
+    descriptor: AppSetupDescriptor,
+    attemptId: string,
+  ): Promise<AppSetupAttempt> {
+    if (
+      this.#pending.has(scope) ||
+      !/^[A-Za-z0-9_-]{1,128}$/u.test(attemptId) ||
+      descriptor.version !== 1 ||
+      descriptor.endpoint !== 'dsh-im/app-setup' ||
+      descriptor.providerId !== `dsh-im/${descriptor.platform}` ||
+      !['feishu', 'weixin'].includes(descriptor.platform) ||
+      descriptor.kind !== (descriptor.platform === 'feishu' ? 'credentials' : 'qr')
+    )
+      throw failure();
+    const existing = this.#sessions.get(scope);
+    if (existing) {
+      if (
+        existing.attempt.attemptId !== attemptId ||
+        existing.descriptor.platform !== descriptor.platform
+      )
+        throw failure();
+      return this.poll(scope);
+    }
+    const promise = this.#call(descriptor, 'setup.poll', { attemptId })
+      .then((attempt) => {
+        if (attempt.attemptId !== attemptId || attempt.expiresAt <= Date.now()) throw failure();
+        this.#sessions.set(scope, { descriptor: { ...descriptor }, attempt });
+        return { ...attempt };
+      })
+      .finally(() => this.#pending.delete(scope));
+    this.#pending.set(scope, promise);
+    return promise;
+  }
   credentials(
     scope: string,
     input: { appId: string; appSecret: string; domain: 'lark' | 'feishu' },
@@ -157,7 +191,9 @@ export class ProviderAppSetup {
       raw['channel'] !== descriptor.platform ||
       typeof raw['attemptId'] !== 'string' ||
       !/^[A-Za-z0-9_-]{1,128}$/.test(raw['attemptId']) ||
+      (typeof payload['attemptId'] === 'string' && raw['attemptId'] !== payload['attemptId']) ||
       typeof raw['expiresAt'] !== 'number' ||
+      !Number.isFinite(raw['expiresAt']) ||
       ![
         'credentials',
         'creating',
