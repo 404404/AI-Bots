@@ -121,12 +121,25 @@ export function createTobBackupOperations(deps: {
       const planId = id(args.planId),
         plan = plans.get(planId);
       const archiveFile = join(folder(), planId + '.botharness-backup');
-      const completed = () => {
+      const completed = async (guard: () => void) => {
+        guard();
         const stat = lstatSync(archiveFile, { throwIfNoEntry: false });
         if (!stat) return undefined;
         if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 512 * 1024 * 1024)
           throw new TobError('invalid-input');
         const archive = readFileSync(archiveFile);
+        const inspection = backupInspectionView(
+          await json(
+            await deps.http(
+              new Request('http://localhost' + PROFILE_BACKUP_PATH + '/inspect', {
+                method: 'POST',
+                body: new Uint8Array(archive),
+              }),
+            ),
+          ),
+        );
+        guard();
+        if (inspection.sha256 !== digest(archive)) throw new TobError('package-invalid');
         return {
           receiptId: planId,
           archiveFile,
@@ -136,11 +149,10 @@ export function createTobBackupOperations(deps: {
           reconciled: true,
         };
       };
-      if (completed())
+      if (lstatSync(archiveFile, { throwIfNoEntry: false }))
         return {
-          run(guard) {
-            guard();
-            const receipt = completed();
+          async run(guard) {
+            const receipt = await completed(guard);
             if (!receipt) throw new TobError('preview-stale');
             return receipt;
           },
