@@ -1,0 +1,35 @@
+{
+  "source": {
+    "base": "37b2bc02eb47e76bc753d8c8a21e5c3590281fed",
+    "head": "2c15b4ae430d0a039a12a166c93d288b49e0e180"
+  },
+  "native": {
+    "before": "7ad8efed4",
+    "after": "76118019fa33d76a94465a57f723b1a28eb561f9",
+    "branch": "qa/windows-activity-2057",
+    "expo": "58.0.14",
+    "reactNative": "0.88.0",
+    "device": "Redmi Note 14 Pro, Android 16, arm64-v8a",
+    "capture": "1220x2712 native screenshots; same QA Host, bot and pending question; each theme/font case cold launched; before uses parent Activity files with SDK58 synchronous persistence and floating-tab inset retained on both sides"
+  },
+  "tests": {
+    "sourceFull": {
+      "passed": 439,
+      "skipped": 8
+    },
+    "finalFollowup": {
+      "passed": 19
+    },
+    "sdk58Integration": {
+      "passed": 531,
+      "skipped": 8
+    }
+  },
+  "limits": [
+    "iOS native untested",
+    "Human design acceptance pending",
+    "Rapid live font/theme switching emitted navigation-container warnings; cold-launch captures do not qualify that lifecycle",
+    "No FPS or release-runtime qualification"
+  ],
+  "date": "2026-10-17"
+}
