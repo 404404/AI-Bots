@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, realpathSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -12,6 +13,21 @@ const out = resolve(
   `${native ? 'desktop' : 'web'}-${Date.now()}`,
 );
 mkdirSync(out, { recursive: true });
+const humanCliPath = realpathSync(
+  resolve(process.env.BH_E2E_CLI_PATH || 'packages/deepseekbot/dist/deepseekbot.mjs'),
+);
+writeFileSync(
+  resolve(out, 'human-cli-provenance.json'),
+  JSON.stringify(
+    {
+      selection: process.env.BH_E2E_CLI_PATH ? 'explicit-artifact' : 'checkout-build',
+      filename: basename(humanCliPath),
+      sha256: createHash('sha256').update(readFileSync(humanCliPath)).digest('hex'),
+    },
+    null,
+    2,
+  ),
+);
 const cookie = native
   ? ''
   : readFileSync(
@@ -143,11 +159,10 @@ async function humanCli(command, args = [], input) {
   delete env.DEEPSEEKBOT_AGENT_ENDPOINT;
   delete env.DEEPSEEKBOT_AGENT_TOKEN;
   return new Promise((done, reject) => {
-    const child = spawn(
-      process.execPath,
-      [resolve('packages/deepseekbot/dist/deepseekbot.mjs'), command, ...args],
-      { env, stdio: ['pipe', 'pipe', 'pipe'] },
-    );
+    const child = spawn(process.execPath, [humanCliPath, command, ...args], {
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     let stdout = '';
     const timer = setTimeout(() => child.kill('SIGTERM'), 30000);
     child.stdout.on('data', (chunk) => {
