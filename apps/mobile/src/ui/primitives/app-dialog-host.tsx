@@ -36,9 +36,7 @@ export function AppDialogHost() {
   const cancel = shown.actions.find((action) => action.style === 'cancel');
   const menu = choices.length > 1;
   const stacked = theme.largeText || menu;
-  const actionStyle = stacked
-    ? undefined
-    : { width: '50%' as const, flexShrink: 1, minWidth: 0 };
+  const actionStyle = stacked ? undefined : { width: '50%' as const, flexShrink: 1, minWidth: 0 };
   const dismiss = () => appDialogs.dismiss();
   return (
     <Modal
