@@ -465,6 +465,7 @@ describe('plugin entry', () => {
       'get',
       'create',
       'createFromGit',
+      'botImportPreview',
       'update',
       'deletionPreview',
       'deletionConfirm',
