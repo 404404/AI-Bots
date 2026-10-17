@@ -786,3 +786,84 @@ it('updates the Messages Channel title and trailing actions without replacing it
   expect(host.querySelector('[data-message-draft]')).toBe(draft);
   expect(draft.value).toBe('Keep');
 });
+
+it('routes Sessions through its parent, remembers each Channel and preserves content on rearrangement', async () => {
+  const { WorkspaceContext } = await import('../src/client/workspace-context.js');
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  registry.registerEntry(entry('sessions'));
+  const workspace = { rail: () => createElement('nav') };
+  const view = (id: string) =>
+    createElement(
+      WorkspaceContext.Provider,
+      { value: workspace },
+      createElement(ChannelDock, {
+        body: createElement('input', { 'data-message-draft': '' }),
+        panels: registry.panels(),
+        registry,
+        channel: {
+          id,
+          type: id === 'group' ? 'group' : 'dm',
+          botSlug: id === 'group' ? undefined : id,
+        },
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view('ada')));
+  await settle();
+  expect(readChannelDock(storage)?.layout.panels.sessions).toBeUndefined();
+  expect(registry.isOpen('sessions')).toBe(true);
+  const draft = host.querySelector('[data-message-draft]');
+  const session = host.querySelector('[data-body="sessions"]');
+  const separator = host.querySelector('[role="separator"][aria-label="会话"]')!;
+  act(() =>
+    separator.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })),
+  );
+  await settle();
+  expect(host.querySelector('[data-message-draft]')).toBe(draft);
+  expect(host.querySelector('[data-body="sessions"]')).toBe(session);
+  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
+  act(() => registry.close(CHANNEL_BODY_PANEL));
+  await settle();
+  expect(registry.isOpen('sessions')).toBe(false);
+  act(() => registry.toggle('sessions'));
+  await settle();
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+  expect(registry.isOpen('sessions')).toBe(true);
+  act(() => registry.toggle('sessions'));
+  await settle();
+  expect(registry.isOpen('sessions')).toBe(false);
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+  act(() => root.render(view('group')));
+  await settle();
+  expect(registry.isOpen('sessions')).toBe(true);
+  act(() => root.render(view('ada')));
+  await settle();
+  expect(registry.isOpen('sessions')).toBe(false);
+  act(() => root.render(null));
+  await settle();
+  act(() => root.render(view('ada')));
+  await settle();
+  expect(registry.isOpen('sessions')).toBe(false);
+  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
+  act(() => registry.close(CHANNEL_BODY_PANEL));
+  await settle();
+  act(() => root.render(null));
+  await settle();
+  act(() => root.render(view('ada')));
+  await settle();
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(false);
+  expect(registry.isOpen('sessions')).toBe(false);
+  act(() => registry.toggle('sessions'));
+  await settle();
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+  expect(registry.isOpen('sessions')).toBe(true);
+});

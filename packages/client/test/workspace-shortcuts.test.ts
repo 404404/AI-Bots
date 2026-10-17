@@ -57,6 +57,11 @@ describe('workspace shortcut ownership', () => {
     if (result.status === 'handled') result.run();
     expect(open).toHaveBeenCalledWith('bh:channel-body');
     expect(command.resolve({ ...context, modal: 'settings' })).toEqual({ status: 'pass' });
+    registry.attach({ open, close: vi.fn(), canOpen: (id) => id !== 'botharness-browser' });
+    expect(commands.get(workspaceShortcutId('botharness-browser'))!.resolve(context)).toEqual({
+      status: 'pass',
+    });
+    expect(command.resolve(context).status).toBe('handled');
     const remove = registry.register({
       id: 'custom:inbox',
       title: 'Custom',

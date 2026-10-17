@@ -73,7 +73,7 @@ export function registerWorkspaceShortcuts(
           regions: ['page', 'editable'],
           modals: [],
           resolve: (context) =>
-            active() && registry.available() && !context.modal
+            active() && registry.available() && registry.canOpen?.(id) !== false && !context.modal
               ? { status: 'handled', run: () => registry.toggle(id) }
               : { status: 'pass' },
         }),

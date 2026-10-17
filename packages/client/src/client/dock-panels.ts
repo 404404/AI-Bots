@@ -37,6 +37,7 @@ export interface DockPanelRegistration extends DockPanel {
 }
 
 export interface DockPanelLayout {
+  canOpen?(id: string): boolean;
   open(id: string): void;
   close(id: string): void;
 }
@@ -46,6 +47,7 @@ export interface DockPanelRegistry {
   panels(): readonly DockPanelRegistration[];
   openPanels(): readonly string[];
   available(): boolean;
+  canOpen?(id: string): boolean;
   isOpen(id: string): boolean;
   open(id: string): void;
   close(id: string): void;
@@ -114,6 +116,7 @@ export function createDockPanelRegistry(): DockPanelHost {
     panels: () => ordered,
     openPanels: () => open,
     available: () => layout !== undefined,
+    canOpen: (id) => layout?.canOpen?.(id) ?? true,
     isOpen: (id) => open.includes(id),
     open: (id) => layout?.open(id),
     close: (id) => layout?.close(id),

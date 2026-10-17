@@ -1,6 +1,6 @@
 # ADR-0221: Global and Channel workspaces own panel placement
 
-- Status: Proposed
+- Status: Accepted (Sessions slice; remaining subpanels staged)
 - Date: 2026-10-17
 - Spec: [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048)
 - First runnable slice: [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049)
@@ -11,7 +11,7 @@
 
 The current flat Dock puts global content, such as Channel list and Activity Center, beside content that only makes sense for the active Channel. Hiding Messages leaves Channel-bound panels visible, and the Control Rail does not communicate that relationship. A Group's ability to inspect a member Bot's Sessions must not imply that the Group owns that Bot's Browser, Computer or Profile.
 
-The Human wants freedom to arrange content without losing the relationship between a Channel and its panels. The agreed target is two layout levels. This ADR records that design for implementation; it does not claim the current Client has shipped it.
+The Human wants freedom to arrange content without losing the relationship between a Channel and its panels. The agreed target is two layout levels. The first Sessions slice implements this ownership inside Messages. Other Channel-bound panels remain staged.
 
 ## Decision
 
@@ -65,4 +65,4 @@ Later slices move the remaining Channel-bound surfaces after Human feedback. Bro
 - Local layout migration has a cost: closed/missing parents, hidden switches, older Work layouts and partially migrated records all need observable recovery. Reverting code leaves Host data intact; restoring the saved layout backup replaces subsequent local geometry. Native bindings remain in their existing settings owner.
 - The Human confirmed the highest acceptance seam: real Web old-layout upgrade, Sessions inside Messages, split/resize and refresh, parent hide, shortcut restoration, then DM/Group switching. Supplement with actual macOS Desktop dispatch and window controls. Use existing real Sessions/Assignments where available; API-only checks are not proof of the UI journey.
 - Focused regression coverage checks migration idempotence and backup, closed-state preservation, per-Channel persistence, shortcut customization/unbinding/conflicts, stale reads and stable content on rearrangement. Verify Group exclusions independently of Sessions' member-Bot override.
-- This documentation change runs documentation checks only. Runtime, visual and native evidence belongs to #2049's implementation PR before Human QA.
+- The Sessions slice uses a stable flex split, rather than reparenting React content between Dockview groups. A pointer drop or header menu changes its side; the separator changes a saved proportion. The same content containers remain mounted. Below 520px of parent width, the split temporarily stacks vertically without changing its stored side or ratio. Runtime, visual and native evidence belongs to #2049's implementation PR before Human QA.
