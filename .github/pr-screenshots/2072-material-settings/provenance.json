@@ -1,0 +1,276 @@
+{
+  "source": "41637d6652dc28ab08452e1b2a11bb344bc97180",
+  "base": "2bda25af3c1a2f2562990e6c3b110e0d8012ae5a",
+  "baselineSource": "f1981551cc0fe09505b45e6469aca971ebea3043",
+  "baselineTreeMatchesMain": true,
+  "integration": "94f979121388bf096fc054d944d5138020bffe9b",
+  "native": {
+    "platform": "Android 16",
+    "device": "Redmi Note 14 Pro",
+    "viewport": [
+      1220,
+      2712
+    ],
+    "density": 3.25,
+    "expo": "58.0.14",
+    "reactNative": "0.88.0",
+    "expoUi": "58.0.20",
+    "abi": "arm64-v8a",
+    "build": "Debug",
+    "apkSha256": "a768452412af50335b56d5660ba65e17f1c43d204af3e1f910a17d9654f0f694",
+    "buildDuration": "18m03s",
+    "appData": "Retained with install-r; paired isolated QA Host and history reopened"
+  },
+  "pairs": [
+    {
+      "scheme": "light",
+      "scale": "1",
+      "view": "top",
+      "before": "before-light-1-top.png",
+      "after": "after-light-1-top.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "light",
+      "scale": "1",
+      "view": "display",
+      "before": "before-light-1-display.png",
+      "after": "after-light-1-display.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "light",
+      "scale": "1",
+      "view": "icon",
+      "before": "before-light-1-icon.png",
+      "after": "after-light-1-icon.png",
+      "afterSource": "c90361d1ffc15c4a4a845ae84e3d539a05e93aa9"
+    },
+    {
+      "scheme": "light",
+      "scale": "1-3",
+      "view": "top",
+      "before": "before-light-1-3-top.png",
+      "after": "after-light-1-3-top.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "light",
+      "scale": "1-3",
+      "view": "display",
+      "before": "before-light-1-3-display.png",
+      "after": "after-light-1-3-display.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "light",
+      "scale": "1-3",
+      "view": "icon",
+      "before": "before-light-1-3-icon.png",
+      "after": "after-light-1-3-icon.png",
+      "afterSource": "c90361d1ffc15c4a4a845ae84e3d539a05e93aa9"
+    },
+    {
+      "scheme": "light",
+      "scale": "2",
+      "view": "top",
+      "before": "before-light-2-top.png",
+      "after": "after-light-2-top.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "light",
+      "scale": "2",
+      "view": "display",
+      "before": "before-light-2-display.png",
+      "after": "after-light-2-display.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "light",
+      "scale": "2",
+      "view": "icon",
+      "before": "before-light-2-icon.png",
+      "after": "after-light-2-icon.png",
+      "afterSource": "c90361d1ffc15c4a4a845ae84e3d539a05e93aa9"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1",
+      "view": "top",
+      "before": "before-dark-1-top.png",
+      "after": "after-dark-1-top.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1",
+      "view": "display",
+      "before": "before-dark-1-display.png",
+      "after": "after-dark-1-display.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1",
+      "view": "icon",
+      "before": "before-dark-1-icon.png",
+      "after": "after-dark-1-icon.png",
+      "afterSource": "c90361d1ffc15c4a4a845ae84e3d539a05e93aa9"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1-3",
+      "view": "top",
+      "before": "before-dark-1-3-top.png",
+      "after": "after-dark-1-3-top.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1-3",
+      "view": "display",
+      "before": "before-dark-1-3-display.png",
+      "after": "after-dark-1-3-display.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1-3",
+      "view": "icon",
+      "before": "before-dark-1-3-icon.png",
+      "after": "after-dark-1-3-icon.png",
+      "afterSource": "c90361d1ffc15c4a4a845ae84e3d539a05e93aa9"
+    },
+    {
+      "scheme": "dark",
+      "scale": "2",
+      "view": "top",
+      "before": "before-dark-2-top.png",
+      "after": "after-dark-2-top.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "dark",
+      "scale": "2",
+      "view": "display",
+      "before": "before-dark-2-display.png",
+      "after": "after-dark-2-display.png",
+      "afterSource": "41637d6652dc28ab08452e1b2a11bb344bc97180"
+    },
+    {
+      "scheme": "dark",
+      "scale": "2",
+      "view": "icon",
+      "before": "before-dark-2-icon.png",
+      "after": "after-dark-2-icon.png",
+      "afterSource": "c90361d1ffc15c4a4a845ae84e3d539a05e93aa9"
+    }
+  ],
+  "matrix": [
+    {
+      "scheme": "light",
+      "scale": 1,
+      "done": false,
+      "handle": true,
+      "switch": [
+        {
+          "checked": "true",
+          "enabled": "true",
+          "bounds": "[947,2266][1116,2422]"
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "scale": 1.3,
+      "done": false,
+      "handle": true,
+      "switch": [
+        {
+          "checked": "true",
+          "enabled": "true",
+          "bounds": "[947,2363][1116,2519]"
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "scale": 2,
+      "done": false,
+      "handle": true,
+      "switch": [
+        {
+          "checked": "true",
+          "enabled": "true",
+          "bounds": "[947,2227][1116,2383]"
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "scale": 1,
+      "done": false,
+      "handle": true,
+      "switch": [
+        {
+          "checked": "true",
+          "enabled": "true",
+          "bounds": "[947,2266][1116,2422]"
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "scale": 1.3,
+      "done": false,
+      "handle": true,
+      "switch": [
+        {
+          "checked": "true",
+          "enabled": "true",
+          "bounds": "[947,2417][1116,2573]"
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "scale": 2,
+      "done": false,
+      "handle": true,
+      "switch": [
+        {
+          "checked": "true",
+          "enabled": "true",
+          "bounds": "[947,2227][1116,2383]"
+        }
+      ]
+    }
+  ],
+  "preference": {
+    "initial": "Memory updates shown",
+    "changed": "Hidden with one native tap",
+    "persisted": "Hidden after force-stop and cold reopen, with matching canonical local preference",
+    "restored": "Shown again through native UI; canonical memoryHidden=false"
+  },
+  "video": {
+    "original": "6-second crop from a native capture; original timing",
+    "halfSpeed": "Same frames at 0.5x; illustrative playback only",
+    "privacy": "Crop excludes unrelated content; reference attachments and full raw profile capture are not published"
+  },
+  "checks": {
+    "mobilePassed": 541,
+    "mobileSkipped": 8,
+    "types": "pass",
+    "lint": "pass",
+    "format": "pass",
+    "ci": "all required checks green"
+  },
+  "limits": [
+    "Manual TalkBack gestures are not qualified; native XML role/checked/enabled/target and adapter activation regression are checked.",
+    "Native iOS rebuild and runtime are untested; iOS existing rendering retained.",
+    "Release/R8 runtime, notification delivery and sustained120FPS are not qualified.",
+    "App icon images were captured at c90361d1; its actionable rows are unchanged by the subsequent semantic-only fix.",
+    "Native build labels in screenshots identify the dev client/QA manifest; JavaScript matches the source via Metro."
+  ]
+}
