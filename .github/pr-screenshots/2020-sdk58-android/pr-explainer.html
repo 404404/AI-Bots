@@ -769,8 +769,8 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <header class="am-panel-head"><span class="am-panel-id">A</span><h2>评审范围</h2></header>
 <div class="am-panel-body"><div class="am-md"><p>SDK 58 原生客户端需要重建。已保存的数据继续使用原有格式。</p>
 </div>
-<dl class="am-kv" style="--kv-cols: 2"><div class="am-kv-cell"><dt>PR</dt><dd>#2024</dd></div><div class="am-kv-cell"><dt>代码基线</dt><dd>6765e4c9aa833694efb66cfac4a1eed360afafe3</dd></div><div class="am-kv-cell"><dt>代码 head</dt><dd>aa4376587d582ef880926b7f329192cfc119ff39</dd></div><div class="am-kv-cell"><dt>生成日期</dt><dd>2026-10-17</dd></div></dl>
-<div class="am-md"><p><a href="https://github.com/BotHarness/DeepSeekBot/compare/6765e4c9aa833694efb66cfac4a1eed360afafe3...aa4376587d582ef880926b7f329192cfc119ff39">完整改动</a></p>
+<dl class="am-kv" style="--kv-cols: 2"><div class="am-kv-cell"><dt>PR</dt><dd>#2024</dd></div><div class="am-kv-cell"><dt>代码基线</dt><dd>73056fc59dcac42c3fd7e6cb1586f6c1c4e37157</dd></div><div class="am-kv-cell"><dt>代码 head</dt><dd>66b1bd978e540d7dad43e6c5d2f40604cb57e63f</dd></div><div class="am-kv-cell"><dt>生成日期</dt><dd>2026-10-17</dd></div></dl>
+<div class="am-md"><p><a href="https://github.com/BotHarness/DeepSeekBot/compare/73056fc59dcac42c3fd7e6cb1586f6c1c4e37157...66b1bd978e540d7dad43e6c5d2f40604cb57e63f">完整改动</a></p>
 </div></div>
 </section>
 <section class="am-panel am-span-wide" id="panel-B" style="grid-column: span 2">
@@ -779,14 +779,14 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 </div>
 <figure class="am-diagram am-flow"><svg viewBox="0 0 768 84" width="768" height="84" role="img" aria-label="流程图：设置操作、原适配器、File.writeSync、原有文件" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M94,42 L125.8,42 Q157.5,42 189.3,42 L221,42" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="118" y="33" width="79" height="18" rx="3"/><text x="157.5" y="42" text-anchor="middle" dominant-baseline="central">原有同步契约</text></g></g><g data-step="1"><path class="am-edge" d="M301,49 L335.6,55 Q370.3,61 404.9,55.9 L439.5,50.7" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="344.3" y="52" width="51.9" height="18" rx="3"/><text x="370.3" y="61" text-anchor="middle" dominant-baseline="central">SDK 58</text></g></g><g data-step="2"><path class="am-edge" d="M557.7,42 L586.6,42 Q615.5,42 644.3,42 L673.2,42" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="581.7" y="33" width="67.5" height="18" rx="3"/><text x="615.5" y="42" text-anchor="middle" dominant-baseline="central">不改变格式</text></g></g><g data-step="3"><path class="am-edge am-edge--dashed" d="M439.5,33.3 L404.9,28.1 Q370.3,23 335.6,29 L301,35" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="325" y="14" width="90.5" height="18" rx="3"/><text x="370.3" y="23" text-anchor="middle" dominant-baseline="central">同步返回或抛出</text></g></g></g><g><g class="am-node am-node--rect" data-key="设置操作" data-step="0"><rect class="am-node-shape" x="14" y="24.5" width="80" height="35" rx="3"/><text x="54" y="42" text-anchor="middle" dominant-baseline="central">设置操作</text></g><g class="am-node am-node--rect" data-key="原适配器" data-step="0"><rect class="am-node-shape" x="221" y="24.5" width="80" height="35" rx="3"/><text x="261" y="42" text-anchor="middle" dominant-baseline="central">原适配器</text></g><g class="am-node am-node--rect" data-key="File.writeSync" data-step="1"><rect class="am-node-shape" x="439.5" y="24.5" width="118.2" height="35" rx="3"/><text x="498.6" y="42" text-anchor="middle" dominant-baseline="central">File.writeSync</text></g><g class="am-node am-node--rect" data-key="原有文件" data-step="2"><rect class="am-node-shape" x="673.2" y="24.5" width="80" height="35" rx="3"/><text x="713.2" y="42" text-anchor="middle" dominant-baseline="central">原有文件</text></g></g></svg></figure>
 <div class="am-md"><p>缓存、Host 外观、折叠偏好、消息显示和统计共用此迁移方式。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/src/host/native-message-display.ts">消息显示适配器</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/test/native-persistence.test.ts">持久化回归测试</a></p>
+<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/src/host/native-message-display.ts">消息显示适配器</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/test/native-persistence.test.ts">持久化回归测试</a></p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-C">
 <header class="am-panel-head"><span class="am-panel-id">C</span><h2>Android 编译修复</h2></header>
 <div class="am-panel-body"><div class="am-md"><p>中文权限文案移入 locale 的 ios 区域。Android 不再生成这些 iOS 专属资源。</p>
 <p>真实 Expo locale 生成器测试先失败，再通过。Release 保留 lint、R8 和资源优化。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/locales/zh-Hans.json">locale 修复</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/test/localization.test.ts">生成器回归测试</a></p>
+<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/locales/zh-Hans.json">locale 修复</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/test/localization.test.ts">生成器回归测试</a></p>
 </div></div>
 </section>
 <section class="am-panel am-span-wide" id="panel-D" style="grid-column: span 2">
@@ -819,6 +819,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <td>UNTESTED</td>
 </tr>
 </tbody></table></div>
+<p>原生证据来自 aa4376587。最终 head 合入新 main，移动端和依赖文件相同。</p>
 <p>Human 已授权先合并。合并不代表发布或未测项目通过。</p>
 <p>回退需要恢复 SDK 57 代码并重建客户端。Host 与存储格式未变更。</p>
 <p><a href="https://github.com/BotHarness/DeepSeekBot/pull/2024#issuecomment-6232251941">Android 完整验收</a></p>
@@ -842,7 +843,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-lightbox-canvas am-diagram"></div>
 </div>
 </div>
-<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-17 18:37 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-17 18:42 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
 title: PR 2024 · SDK 58 合并说明
 lang: zh
@@ -853,12 +854,12 @@ SDK 58 原生客户端需要重建。已保存的数据继续使用原有格式�
 
 ```kv
 PR: #2024
-代码基线: 6765e4c9aa833694efb66cfac4a1eed360afafe3
-代码 head: aa4376587d582ef880926b7f329192cfc119ff39
+代码基线: 73056fc59dcac42c3fd7e6cb1586f6c1c4e37157
+代码 head: 66b1bd978e540d7dad43e6c5d2f40604cb57e63f
 生成日期: 2026-10-17
 ```
 
-[完整改动](https://github.com/BotHarness/DeepSeekBot/compare/6765e4c9aa833694efb66cfac4a1eed360afafe3...aa4376587d582ef880926b7f329192cfc119ff39)
+[完整改动](https://github.com/BotHarness/DeepSeekBot/compare/73056fc59dcac42c3fd7e6cb1586f6c1c4e37157...66b1bd978e540d7dad43e6c5d2f40604cb57e63f)
 
 ## B 为什么必须改同步写入
 
@@ -873,7 +874,7 @@ File.writeSync --&gt; 原适配器: 同步返回或抛出
 
 缓存、Host 外观、折叠偏好、消息显示和统计共用此迁移方式。
 
-[消息显示适配器](https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/src/host/native-message-display.ts) · [持久化回归测试](https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/test/native-persistence.test.ts)
+[消息显示适配器](https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/src/host/native-message-display.ts) · [持久化回归测试](https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/test/native-persistence.test.ts)
 
 ## C Android 编译修复
 
@@ -881,7 +882,7 @@ File.writeSync --&gt; 原适配器: 同步返回或抛出
 
 真实 Expo locale 生成器测试先失败，再通过。Release 保留 lint、R8 和资源优化。
 
-[locale 修复](https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/locales/zh-Hans.json) · [生成器回归测试](https://github.com/BotHarness/DeepSeekBot/blob/aa4376587d582ef880926b7f329192cfc119ff39/apps/mobile/test/localization.test.ts)
+[locale 修复](https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/locales/zh-Hans.json) · [生成器回归测试](https://github.com/BotHarness/DeepSeekBot/blob/66b1bd978e540d7dad43e6c5d2f40604cb57e63f/apps/mobile/test/localization.test.ts)
 
 ## D 证据与边界
 
@@ -892,6 +893,8 @@ File.writeSync --&gt; 原适配器: 同步返回或抛出
 | 本地移动端测试 | 511 passed / 8 skipped |
 | 最终 head GitHub CI | 单独检查，不以本地测试替代 |
 | Release 实机、iOS 原生、剩余权限和真实推送 | UNTESTED |
+
+原生证据来自 aa4376587。最终 head 合入新 main，移动端和依赖文件相同。
 
 Human 已授权先合并。合并不代表发布或未测项目通过。
 
