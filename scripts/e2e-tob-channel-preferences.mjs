@@ -278,7 +278,22 @@ async function dismissBubble() {
   for (const label of ['关闭气泡', 'Dismiss bubble']) {
     const selector = `button[aria-label=${JSON.stringify(label)}]`;
     const button = await page.$(selector);
-    if (button && (await button.isVisible())) await page.locator(selector).click();
+    if (button && (await button.isVisible())) await button.click();
+  }
+}
+async function clickLatest() {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const button = await page.$('.bh-timeline-new');
+    if (!button || !(await button.isVisible())) return;
+    try {
+      await button.click();
+      return;
+    } catch (error) {
+      const stillVisible = await button.isVisible().catch(() => false);
+      const connected = await button.evaluate((node) => node.isConnected).catch(() => false);
+      if (stillVisible && connected) throw error;
+      await pause(100);
+    }
   }
 }
 async function newToolCalls(slug, previousIds, sessionId) {
@@ -344,8 +359,7 @@ async function showApproval(message) {
   await dismissBubble();
   await setHomeVisible(false);
   mark('approval-current-card');
-  const latest = '.bh-timeline-new';
-  if (await page.$(latest)) await page.locator(latest).setTimeout(5000).click();
+  await clickLatest();
   const selector = `[data-message-id=${JSON.stringify(message.id)}] .bh-tool-approval-card`;
   await page.waitForSelector(selector, { timeout: 10000 });
   await page.waitForFunction(
@@ -359,7 +373,7 @@ async function showApproval(message) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const expanded = await page.$eval(summarySelector, (n) => n.getAttribute('aria-expanded'));
     if (expanded === 'true') break;
-    if (await page.$(latest)) await page.locator(latest).setTimeout(5000).click();
+    await clickLatest();
     await page.locator(summarySelector).setTimeout(5000).click();
     try {
       await page.waitForFunction(
