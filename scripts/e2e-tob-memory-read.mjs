@@ -329,6 +329,9 @@ try {
     assert.equal(file.body.trim(), memory);
     save('direct-' + name, { snapshot, file });
   }
+  const priorAssignments = new Set(
+    (await rpc('assignments', { slug: home.botSlug })).assignments.map((item) => item.sessionId),
+  );
   save('pending-fixture', { home, bots });
   await shot('before-memory-comparison');
   const previous =
@@ -364,7 +367,7 @@ try {
       (assignments) =>
         assignments.some((item) => bots.every((bot) => item.purpose.includes(bot.id))),
     );
-    assignment = assignments.find((item) => bots.every((bot) => item.purpose.includes(bot.id)));
+    assignment = assignments.find((item) => !priorAssignments.has(item.sessionId));
   }
   assert.ok(
     (await rpc('sessions', { slug: home.botSlug })).sessions.some(
@@ -391,7 +394,7 @@ try {
   const countBeforeResume = (await rpc('assignments', { slug: home.botSlug })).assignments.length;
   const resumed = await submit(
     home,
-    `请继续同一个 Assignment ${assignment.sessionId}，要求它在原来的只读范围内再读两个 MEMORY.md 并用一行解释偏好差异，报告后告诉我。不要新建 Assignment。`,
+    `请继续同一个 Assignment ${assignment.sessionId}，要求它在原来的只读范围内再读两个 MEMORY.md 并用一行解释偏好差异，报告后告诉我。不要新建 Assignment；若它已归档，请先正常解除归档，保留原来的只读范围。`,
   );
   const second = await assignmentResult(home, assignment.sessionId, first.latestReport.summary);
   await reply(home, resumed);
