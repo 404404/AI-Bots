@@ -92,8 +92,9 @@ diagnostic triplet. `--formal` freezes four families of ten triplets, including 
 FYI/explicit-request controls. Both Bots' real preparatory and target turns count in usage.
 Natural timing may miss the race: retain those attempts as incomparable, not replacement
 successes. Export the two pairwise comparisons without double-counting shared candidate cost.
-Capture full Group history in Messages and compare with direct CLI/trace evidence; judge
-complete histories in both orders before giving the Human the offline preference cards.
+Capture full Group history in Messages and compare with direct CLI/trace evidence. The original
+cohort used dual-order external judges; future diagnostics follow the Human-directed direct
+assistant assessment below, with complete histories retained for optional Human inspection.
 
 ## Merge follow-through regressions
 
@@ -110,3 +111,7 @@ The current GPT-6 Astra assistant reads full Session, conversation and Tool reco
 correctness and interaction quality; no external model judge is invoked. Record reviewer and
 protocol provenance, retain original external-judge results, and never label assistant review
 as independent Human acceptance. Missing token/cost data remains unknown.
+
+Peer refinement also applies the relevance check before an ordinary Group send, not only after
+a hold. Conditional requests to check for additions do not require public acknowledgments;
+explicit Human corrections remain constraints rather than speculative confirmation questions.
