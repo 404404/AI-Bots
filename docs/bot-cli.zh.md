@@ -643,6 +643,10 @@ Tob 通过普通原生 bash／pwsh Tool 调用 `deepseekbot`；专用的 `tob_as
 
 在具备权限的 Tob Shell 执行中：
 
+Tob 的受信任系统说明随插件打包，只注入受保护的 Tob Orchestrator；升级不会覆盖用户修改过的人格或记忆。用户只需问“你能做什么？”，Tob 会先发现当前安装版本的 CLI 能力，再用用户的语言解释可完成的事情，并提出一个具体的下一步。能力询问只读，不提交变更或审批；后续明确的修改请求仍走现有权限与审批校验。
+
+npm Bundle 自带 core CLI 模块和产品 CLI 入口。Tob 使用 Host 注入当前 Shell 的受管执行入口，不依赖全局安装的 `deepseekbot`、源码目录或手动复制的 skill。发布校验会拒绝缺少 CLI 入口的包；运行时缺失入口则报告安装问题，不回退到其他管理通道。
+
 ```bash
 deepseekbot capabilities
 deepseekbot settings botharness-client

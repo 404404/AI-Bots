@@ -218,7 +218,7 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
             : {}),
           examples: [
             'deepseekbot settings botharness-client',
-            "printf '%s' '{\"assignmentConcurrencyLimit\":3}' | deepseekbot settings-set botharness-client --patch-stdin --expected-revision 0 --previous-value '{\"assignmentConcurrencyLimit\":8}'",
+            'printf \'%s\' "$PATCH_JSON" | deepseekbot settings-set botharness-client --patch-stdin --expected-revision "$REVISION" --previous-value "$PREVIOUS_JSON"',
           ],
           write: {
             ...(options.capabilities
