@@ -1,0 +1,9 @@
+# #2055 fixed cohort evidence
+
+Open index.html after extracting the whole ZIP. It is self-contained, runs offline and makes no model/API requests. Compare the candidate with accepted incremental Bi or original B0; all Group/DM histories, native tools, visible Session text, failures and assistant assessments are available. This is openly labelled unblinded engineering review, not independent Human judgment. This archive preserves the original failed candidate cohort; it does not qualify the later fixes. Their separately registered diagnostics and any later cohort must not be pooled with these attempts.
+
+The frozen four-family × ten-triplet cohort has 120 planned episodes. Repeats use controlled synthetic fixtures, not 40 different real conversations. Every attempt is retained; no success-only replacement runs. Raw valid includes settlement and is distinct from exposure or semantic success. A preparation reply is not target success; derived analysis requires the actual target start. Fetch errors, missing interventions, censored tasks and unknown costs remain visible. Native completed usage is an independent subtotal, never added to Host usage. Full raw JSON is authoritative; the assistant review adds qualitative findings.
+
+Runtime/runner ac41a433b45965789cfda2683079feb07d70d3b7; Bi390630e0dc81b0e776758bc420c1622b2ad51981; B073056fc59dcac42c3fd7e6cb1586f6c1c4e37157. Publication of this evidence does not itself assert budget/quality acceptance. Final disposition is on issue2055/PR2124. No deployment.
+
+Analysis and view helpers are included for reproducibility in the original task-directory location of the matching repository. Native extraction needs the private retained profiles; the exported records themselves work without a running Host. The archive excludes credentials and hidden reasoning.
