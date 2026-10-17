@@ -364,8 +364,7 @@ try {
     const assignments = await poll(
       'Tob-owned Assignment',
       async () => (await rpc('assignments', { slug: home.botSlug })).assignments,
-      (assignments) =>
-        assignments.some((item) => bots.every((bot) => item.purpose.includes(bot.id))),
+      (assignments) => assignments.some((item) => !priorAssignments.has(item.sessionId)),
     );
     assignment = assignments.find((item) => !priorAssignments.has(item.sessionId));
   }
