@@ -1,3 +1,4 @@
+import type { RollingUsageRange } from '../usage/usage.js';
 import type { ChannelPreferencesSnapshot } from '../channels/preferences.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
@@ -1330,6 +1331,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.channelActivityToday({}));
   }
 
+  async homeDashboard(range: RollingUsageRange = '24h') {
+    return unwrap(await this.methods.homeDashboard({ range }));
+  }
+
   activityOverview() {
     return unwrap(this.methods.activityOverview({}));
   }
@@ -1969,6 +1974,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'botSourcePolicySet',
   'botSourcePolicyReset',
   'activityOverview',
+  'homeDashboard',
   'channelActivityToday',
   'humanAttention',
   'humanAssignmentContext',
