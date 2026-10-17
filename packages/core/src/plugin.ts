@@ -20,6 +20,10 @@ import {
   TOB_CHANNEL_PREFERENCES_CAPABILITIES,
 } from './tob/cli-channel-preferences.js';
 import { createTobPolicyOperations, TOB_POLICY_CAPABILITIES } from './tob/cli-policy-operations.js';
+import {
+  createTobImSetupOperations,
+  TOB_IM_SETUP_CAPABILITIES,
+} from './tob/cli-im-setup-operations.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
 import {
   createTobChannelOperations,
@@ -1229,7 +1233,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                       throw new TobError('current-client-unavailable');
                     return source.currentClientTarget();
                   })(command, args)) ??
-                  (await tobPolicyOperations(command, args)),
+                  (await tobPolicyOperations(command, args)) ??
+                  (await tobImSetup.prepare(command, args)),
                 capabilities: [
                   ...TOB_MEMORY_CAPABILITIES,
                   ...TOB_MEMORY_EDIT_CAPABILITIES,
@@ -1244,6 +1249,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   ...TOB_CLIENT_PREFERENCE_CAPABILITIES,
                   ...TOB_HUMAN_PREFERENCE_CAPABILITIES,
                   ...TOB_POLICY_CAPABILITIES,
+                  ...TOB_IM_SETUP_CAPABILITIES,
                 ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
@@ -2109,8 +2115,31 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     git,
     release: releaseService,
   });
+  const tobImSetup = createTobImSetupOperations({
+    apps: async () => ({
+      apps: await core.externalMessaging.apps(),
+      setups: await core.externalMessaging.setups(),
+    }),
+    owner: () => {
+      const bot = core.registry.list().find((record) => core.tob.isTob(record.slug));
+      if (!bot) throw new TobError('tob-authority-required');
+      return core.channels.humanIdentity().humanId + ':' + bot.slug + ':' + bot.createdAt;
+    },
+    native: (request) => {
+      const connection = ctx.get('connection') as unknown as
+        | {
+            createSharedFetchHandler(channel: '/api'): {
+              fetch(request: Request): Promise<Response>;
+            };
+          }
+        | undefined;
+      if (!connection) throw new TobError('capability-unavailable');
+      return connection.createSharedFetchHandler('/api').fetch(request);
+    },
+  });
   const bridgeMethods = createBridgeMethods({
     clientControl,
+    tobImSetup,
     approvalReviewer,
     composerIdentity: () =>
       composerRecoveryIdentity(

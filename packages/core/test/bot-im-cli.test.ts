@@ -94,6 +94,43 @@ async function invoke(argv: string[], url?: string, stdin = '', token = 'private
 }
 
 describe('Provider-owned IM application authorization CLI', () => {
+  it('uses authenticated Human receipt/resume owners without printing the native attempt or private setup artifacts', async () => {
+    const receipt = {
+      receiptId: 'owned-receipt',
+      platform: 'weixin',
+      state: 'pending',
+      expiresAt: Date.now() + 60_000,
+      stateFingerprint: 'a'.repeat(64),
+      handoff: 'applications-settings',
+    };
+    const live = await host((method, payload) => {
+      if (method === 'botharness/imSetupReceipts')
+        return { ok: true, value: { receipts: [receipt] } };
+      expect(method).toBe('botharness/imSetupResume');
+      expect(payload).toEqual({ args: { receiptId: receipt.receiptId } });
+      return {
+        ok: true,
+        value: {
+          receipt,
+          attemptId: 'native-private-reference',
+          descriptor: { platform: 'weixin' },
+          qrDataUrl: 'private-profile-name',
+        },
+      };
+    });
+    expect((await invoke(['im-setup-receipts'], live.url)).json).toEqual({ receipts: [receipt] });
+    const resumed = await invoke(['im-setup-resume', receipt.receiptId], live.url);
+    expect(resumed.code).toBe(0);
+    expect(resumed.json).toEqual({
+      receiptId: receipt.receiptId,
+      platform: 'weixin',
+      state: 'pending',
+      expiresAt: receipt.expiresAt,
+      handoff: 'applications-settings',
+    });
+    expect(resumed.text).not.toContain('native-private-reference');
+    expect(resumed.text).not.toContain('qrDataUrl');
+  });
   it.each(['pairing-status', 'im-cancel'])(
     'retains an attempt when the Host is down: %s',
     async (command) => {

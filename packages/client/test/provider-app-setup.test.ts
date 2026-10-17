@@ -1,6 +1,47 @@
 import { expect, it } from 'vitest';
 import { ProviderAppSetup } from '../src/client/provider-app-setup.js';
 
+it('adopts the exact Human-selected native attempt without starting another setup', async () => {
+  const calls: string[] = [];
+  const client = new ProviderAppSetup({
+    async call(_channel, endpoint, payload) {
+      expect(endpoint).toBe('dsh-im/app-setup');
+      const input = payload as { method: string; payload: { attemptId: string } };
+      calls.push(input.method);
+      expect(input.payload.attemptId).toBe('native-owned-attempt');
+      return {
+        ok: true,
+        value: {
+          version: 1,
+          attemptId: 'native-owned-attempt',
+          channel: 'feishu',
+          state: 'credentials',
+          expiresAt: Date.now() + 60_000,
+        },
+      };
+    },
+  });
+  const descriptor = {
+    version: 1 as const,
+    platform: 'feishu' as const,
+    providerId: 'dsh-im/feishu',
+    endpoint: 'dsh-im/app-setup' as const,
+    kind: 'credentials' as const,
+  };
+  await client.adopt('ada', descriptor, 'native-owned-attempt');
+  await client.start('ada', descriptor);
+  expect(calls).toEqual(['setup.poll', 'setup.poll']);
+  expect(client.current('ada')).toMatchObject({
+    attemptId: 'native-owned-attempt',
+    platform: 'feishu',
+    state: 'credentials',
+  });
+  await expect(client.adopt('ada', descriptor, 'unrelated-attempt')).rejects.toThrow(
+    'app-setup-unavailable',
+  );
+  expect(calls).toEqual(['setup.poll', 'setup.poll']);
+});
+
 it('submits credentials only to the Provider transport and resumes with identity after the dialog closes', async () => {
   const calls: { endpoint: string; payload: unknown }[] = [];
   const client = new ProviderAppSetup({

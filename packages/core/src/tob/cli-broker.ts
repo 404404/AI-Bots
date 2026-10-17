@@ -162,6 +162,14 @@ const CODES = new Set([
   'unknown-app',
   'unknown-target',
   'unknown-pairing',
+  'setup-expired',
+  'setup-limit',
+  'setup-account-exists',
+  'setup-failed',
+  'setup-outcome-uncertain',
+  'setup-owner-changed',
+  'setup-unknown-receipt',
+  'setup-already-pending',
 ]);
 
 export interface TobCliProposal {

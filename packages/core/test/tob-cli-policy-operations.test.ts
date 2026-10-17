@@ -221,8 +221,7 @@ describe('Tob policy operations reuse canonical owners', () => {
 
   it('keeps real Provider unavailability and never accepts credential setup over ordinary policy input', async () => {
     const f = fixture();
-    const apps = await f.read('im-apps', []);
-    expect(apps.value).toEqual({ apps: [], setups: [] });
+    expect(await f.prepare('im-apps', f.args([]))).toBeUndefined();
     expect(
       await f.prepare('im-credentials', f.args(['attempt'], {}, undefined, 'private-value')),
     ).toBeUndefined();

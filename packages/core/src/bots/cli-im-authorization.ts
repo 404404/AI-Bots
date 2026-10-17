@@ -9,6 +9,16 @@ export const IM_OPTIONS = {
 } as const;
 
 export const IM_COMMANDS = [
+  {
+    command: 'im-setup-receipts',
+    description:
+      'list owned Tob-started setup attempts for the Human Applications UI; no QR or tokens',
+  },
+  {
+    command: 'im-setup-resume',
+    description:
+      'validate the Human resume path for one owned receipt; continue private inputs in Applications settings',
+  },
   { command: 'im-apps', description: 'list live Provider IM application authorization flows' },
   {
     command: 'im-authorize',
@@ -82,7 +92,7 @@ export async function prepareImAuthorization(
   values: ImValues,
   io: BotCreateCliIo,
 ): Promise<ImOperation> {
-  const count = command === 'im-apps' ? 0 : 1;
+  const count = command === 'im-apps' || command === 'im-setup-receipts' ? 0 : 1;
   if (rest.length !== count) {
     if (rest.length > count && ['im-authorize', 'im-credentials', 'im-verify'].includes(command))
       throw new CliLiveError('secret-in-argv', 'IM应用授权 inputs must arrive through stdin.');
@@ -207,6 +217,27 @@ export async function runImAuthorization(
   rpc: Rpc,
   signal: AbortSignal,
 ): Promise<unknown> {
+  if (operation.command === 'im-setup-receipts') return rpc('imSetupReceipts', {});
+  if (operation.command === 'im-setup-resume') {
+    const resumed = record(await rpc('imSetupResume', { receiptId: operation.target }));
+    const receipt = record(resumed.receipt);
+    if (
+      receipt.receiptId !== operation.target ||
+      typeof receipt.state !== 'string' ||
+      !(states as readonly string[]).includes(receipt.state) ||
+      typeof receipt.expiresAt !== 'number' ||
+      !Number.isFinite(receipt.expiresAt) ||
+      !['feishu', 'weixin'].includes(String(receipt.platform))
+    )
+      invalidResponse();
+    return {
+      receiptId: operation.target,
+      platform: receipt.platform,
+      state: receipt.state,
+      expiresAt: receipt.expiresAt,
+      handoff: 'applications-settings',
+    };
+  }
   if (operation.command === 'im-apps' || operation.command === 'im-authorize') {
     const apps = record(await rpc('messagingApps', {}));
     if (!Array.isArray(apps['setups'])) invalidResponse();
