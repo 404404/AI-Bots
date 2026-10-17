@@ -1,6 +1,32 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import type { OperationalDatabaseModulePort } from '../database/owner.js';
+import { MessagingError } from './provider.js';
+
+const PAIRING_POLICY_FIELDS = [
+  'id',
+  'reference',
+  'botSlug',
+  'bindingId',
+  'accountName',
+  'actorId',
+  'actorName',
+  'conversationId',
+  'conversationKind',
+  'status',
+  'capabilities',
+  'createdAt',
+  'expiresAt',
+  'reviewedAt',
+  'revision',
+  'reviewedBy',
+  'reviewerActorId',
+  'purpose',
+  'roleId',
+  'roleRevision',
+  'permissionExceptions',
+  'effectivePermissions',
+];
 
 const TABLES = [
   'messaging_bindings',
@@ -61,7 +87,20 @@ export function createMessagingPolicyMutations(port: OperationalDatabaseModulePo
         const query = db.prepare(`SELECT * FROM ${table}${where}`);
         return [
           table,
-          (where ? query.all(botSlug!) : query.all()).map((row) => JSON.stringify(row)).sort(),
+          (where ? query.all(botSlug!) : query.all())
+            .map((row) => {
+              if (table !== 'messaging_pairings') return JSON.stringify(row);
+              const body = JSON.parse(String(row.body)) as Record<string, unknown>;
+              return JSON.stringify({
+                ...row,
+                body: Object.fromEntries(
+                  PAIRING_POLICY_FIELDS.filter((field) => Object.hasOwn(body, field)).map(
+                    (field) => [field, body[field]],
+                  ),
+                ),
+              });
+            })
+            .sort(),
         ];
       });
       return createHash('sha256').update(JSON.stringify(rows)).digest('hex');
@@ -73,7 +112,9 @@ export function createMessagingPolicyMutations(port: OperationalDatabaseModulePo
       if (stamp(current.botSlug) !== current.stamp) throw new MessagingPolicyConflict();
     } catch (error) {
       current.failure = error;
-      throw error;
+      throw new MessagingError(
+        error instanceof MessagingPolicyConflict ? 'stale-policy' : 'policy-authority-changed',
+      );
     }
   };
   return {
