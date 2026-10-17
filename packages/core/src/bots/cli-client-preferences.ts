@@ -4,20 +4,20 @@ import { CliLiveError } from './cli-live-error.js';
 
 export const CLIENT_PREFERENCE_USAGE: Readonly<Record<string, string>> = {
   'client-layout':
-    'deepseekbot client-layout <client-id|current> --generation <generation>; discover live workspace, Channel, stable panel ids and stateFingerprint',
+    'deepseekbot client-layout <client-id> --generation <generation>; discover live workspace, Channel, stable panel ids and stateFingerprint. Tob may replace <client-id> --generation <generation> with current; omit --generation with current.',
   'client-layout-set':
-    'deepseekbot client-layout-set <client-id|current> --generation <generation> --scope browser-origin --expected-state <fingerprint> --patch-stdin; one layout edit, with explicit channelId for Channel children',
+    'deepseekbot client-layout-set <client-id> --generation <generation> --scope browser-origin --expected-state <fingerprint> --patch-stdin; one layout edit, with explicit channelId for Channel children. Tob may replace <client-id> --generation <generation> with current; omit --generation with current.',
   'client-shortcuts':
-    'deepseekbot client-shortcuts <client-id|current> --generation <generation>; discover stable command ids, effective bindings, native revision and current platform profile',
+    'deepseekbot client-shortcuts <client-id> --generation <generation>; discover stable command ids, effective bindings, native revision and current platform profile. Tob may replace <client-id> --generation <generation> with current; omit --generation with current.',
   'client-shortcuts-set':
-    'deepseekbot client-shortcuts-set <client-id|current> --generation <generation> --scope client-profile --expected-state <fingerprint> --patch-stdin; {profile,id,type:set|disable|reset,binding?:{code,secondCode?,modifiers}}; no reset-all',
+    'deepseekbot client-shortcuts-set <client-id> --generation <generation> --scope client-profile --expected-state <fingerprint> --patch-stdin; {profile,id,type:set|disable|reset,binding?:{code,secondCode?,modifiers}}; no reset-all. Tob may replace <client-id> --generation <generation> with current; omit --generation with current.',
   'human-name': 'deepseekbot human-name; read default Human display name and stateFingerprint',
   'client-targets':
     'deepseekbot client-targets; discover live Client ids and generations; never selects a sole client implicitly',
   'client-preferences':
-    'deepseekbot client-preferences <client-id|current> --generation <generation>; current is available only to Tob from its canonical Human DM source',
+    'deepseekbot client-preferences <client-id> --generation <generation>; current is available only to Tob from its canonical Human DM source. Tob may replace <client-id> --generation <generation> with current; omit --generation with current.',
   'client-preferences-set':
-    'deepseekbot client-preferences-set <client-id|current> --generation <generation> --scope browser-origin --expected-state <observed-fingerprint> --patch-stdin; one field: notifications:boolean or notificationPermission:"request"; theme/locale require explicit Host settings commands',
+    'deepseekbot client-preferences-set <client-id> --generation <generation> --scope browser-origin --expected-state <observed-fingerprint> --patch-stdin; one field: notifications:boolean or notificationPermission:"request"; theme/locale require explicit Host settings commands. Tob may replace <client-id> --generation <generation> with current; omit --generation with current.',
 };
 export const CLIENT_PREFERENCE_COMMANDS = Object.entries(CLIENT_PREFERENCE_USAGE).map(
   ([command, description]) => ({ command, description }),

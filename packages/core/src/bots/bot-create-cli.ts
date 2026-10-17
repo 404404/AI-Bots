@@ -76,6 +76,7 @@ import { createPersonaBotRegistry, type PersonaBotRegistry } from './registry.js
 import { ZipArchiveError, writeZip, type ZipEntry } from './zip-archive.js';
 import { INBOX_HOST_COMMANDS } from './cli-inbox.js';
 import { CliLiveError, LIVE_COMMANDS, LIVE_OPTIONS, runLiveCli } from './cli-live.js';
+import { CLIENT_PREFERENCE_USAGE } from './cli-client-preferences.js';
 import { hasAgentCliContext, runAgentCli } from './cli-agent.js';
 import { PROFILE_ONLINE_COMMANDS } from './cli-profile.js';
 import {
@@ -335,6 +336,9 @@ Usage:
   deepseekbot bot-source-policy-reset <id> --source-class <class>
   deepseekbot bot-standing-limits-set <id> --soul <n> --core-memory <n>
   deepseekbot developer-mode-set (--enabled | --disabled)
+${Object.values(CLIENT_PREFERENCE_USAGE)
+  .map((usage) => '  ' + usage)
+  .join('\n')}
   deepseekbot roster | human-identity | part-library
   deepseekbot roster-batch pin|unpin|hide|move <channel>... [--section <section-id>]
   deepseekbot roster-pins-set|roster-hidden-set [<channel>...]
