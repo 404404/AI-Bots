@@ -4,14 +4,15 @@ title: Home：创建 Bot 与事实概览
 subtitle: Issue2081 · Draft评审资料，未授权合并
 lang: zh
 cols: 2
-source-head: 14d32dce1d2d0a273776f0351699c799af202fcb
-product-build: dca95340aa978aedfb82b09feef878bf7ab401b9
+source-head: ffb727860e1fa2ea3423e30ec0d74775d047b481
+product-build: 62e9b9981e138219c8ec2cfe01d435e8510d3221
+pr: 2140
 base: 5d44b7a6507d661415881808ab67e74275d54182
 generated: 2026-10-18
 ---
 
 Home 内嵌简单创建流程，并通过既有数据所有者展示状态。
-说明覆盖源码14d32dce1d2d0a273776f0351699c799af202fcb，后续提交仅增加评审证据。
+说明覆盖源码ffb727860e1fa2ea3423e30ec0d74775d047b481，后续提交仅增加评审证据。
 
 ## A 用户看到什么
 
@@ -36,6 +37,8 @@ Host查询 -> Channel与Assignment: 实际活动时间
 Host查询 -> UsageProjection: 精确时间范围
 ```
 
+原生审批和提问先交给已校验的频道所有者。
+未知请求只回退一次，取消与拒绝保持终态。
 Home 不启动轮询或模型报告。
 访问页面和修改频道名称不会提升最近活动排序。
 
@@ -68,28 +71,29 @@ Home 不启动轮询或模型报告。
 
 ## E 已有证据与剩余检查
 
-| 检查                                 | 状态                            |
-| ------------------------------------ | ------------------------------- |
-| 相关209项测试、类型、策略与构建      | ok 通过                         |
-| 构建后的 Client 包契约7项            | ok 通过                         |
-| Web 四卡片、精确范围和来源跳转       | ok 通过                         |
-| Web 简单真实对话、完成投递与正数用量 | ok 通过                         |
-| macOS 四卡片及简单真实对话           | ok 通过，独立原生运行           |
-| 原生创建与同配置重启                 | ok 同一 Bot、分组及用量总数保留 |
-| 缺少模型与真实待处理卡片             | warn 运行验证待完成             |
-| 真实 Git/ZIP 导入、降级用量状态      | warn 仍需运行验证               |
-| Human QA、完整 CI、整合栈            | warn 独立检查，尚未通过         |
+| 检查                                 | 状态                             |
+| ------------------------------------ | -------------------------------- |
+| 相关209项测试、类型、策略与构建      | ok 通过                          |
+| 构建后的 Client 包契约7项            | ok 通过                          |
+| Web 四卡片、精确范围和来源跳转       | ok 通过                          |
+| Web 简单真实对话、完成投递与正数用量 | ok 通过                          |
+| macOS 四卡片、真实对话、创建与重启   | ok 原产品dca独立验证             |
+| 新审批/提问桥接 macOS                | warn 重新验证排队中              |
+| Web 缺少模型创建、真实提问与审批     | ok 真实来源、回答/拒绝及完成回读 |
+| 真实 Git/ZIP 导入、降级用量状态      | warn 仍需运行验证                |
+| Human QA、完整 CI、整合栈            | warn 独立检查，尚未通过          |
 
-原生提问工具曾等待但未生成频道卡片。
-该轮已通过 Human CLI 取消，不计为通过。
+早先提问和审批被通用 Remote 等待截获。
+原失败保留；原提问已由 Human CLI 取消。
+真实 Cordis 先红后绿，修复后真实 Web 问答与审批均完成。
 没有为截图伪造待处理数据。
 
 ## F 代码与复现
 
-- [Home 查询](https://github.com/BotHarness/DeepSeekBot/blob/14d32dce1d2d0a273776f0351699c799af202fcb/packages/core/src/home/dashboard.ts)
-- [既有用量所有者](https://github.com/BotHarness/DeepSeekBot/blob/14d32dce1d2d0a273776f0351699c799af202fcb/packages/core/src/usage/usage.ts)
-- [真实 Web 与原生验证脚本](https://github.com/BotHarness/DeepSeekBot/blob/14d32dce1d2d0a273776f0351699c799af202fcb/scripts/e2e-tob-home.mjs)
-- [迁移与覆盖决策](https://github.com/BotHarness/DeepSeekBot/blob/14d32dce1d2d0a273776f0351699c799af202fcb/docs/adr/0230-home-rolling-usage-extends-retained-receipts.md)
+- [Home 查询](https://github.com/BotHarness/DeepSeekBot/blob/ffb727860e1fa2ea3423e30ec0d74775d047b481/packages/core/src/home/dashboard.ts)
+- [既有用量所有者](https://github.com/BotHarness/DeepSeekBot/blob/ffb727860e1fa2ea3423e30ec0d74775d047b481/packages/core/src/usage/usage.ts)
+- [真实 Web 与原生验证脚本](https://github.com/BotHarness/DeepSeekBot/blob/ffb727860e1fa2ea3423e30ec0d74775d047b481/scripts/e2e-tob-home.mjs)
+- [迁移与覆盖决策](https://github.com/BotHarness/DeepSeekBot/blob/ffb727860e1fa2ea3423e30ec0d74775d047b481/docs/adr/0230-home-rolling-usage-extends-retained-receipts.md)
 
 运行 dashboard 不需要模型调用。
 运行 simple 需要已配置的隔离 Tob 路由。
