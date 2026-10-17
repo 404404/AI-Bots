@@ -102,6 +102,7 @@ const click = async (name, scope = '') => {
     'Bot mode': ['Bot 模式', 'Bot mode'],
     'Bot settings': ['Bot 设置', 'Bot settings'],
     Advanced: ['高级', 'Advanced'],
+    'Data & privacy': ['数据与隐私', 'Data & privacy'],
     'Task model settings': ['任务模型设置…', 'Task model settings…'],
     Cancel: ['取消', 'Cancel'],
     'Approve once': ['仅批准这一次', 'Allow once'],
@@ -242,12 +243,12 @@ async function developerUi(expected) {
   mark('settings-verified');
   steps.push('real Settings UI developer mode matches canonical value ' + expected);
 }
-async function telemetryUi(expected) {
+async function telemetryUi(expected, label = 'telemetry-setting') {
   await dismissBubble();
   if (await page.$('[role="dialog"]')) await click('Close', '[role="dialog"]');
   await click('Bot settings', '.bh-workspace-rail');
   await page.waitForSelector('[role="dialog"]', { visible: true });
-  await click('Advanced', '[role="dialog"]');
+  await click('Data & privacy', '[role="dialog"]');
   const selector = '[data-telemetry-setting] [role="switch"]';
   await page.waitForSelector(selector);
   await page.waitForFunction(
@@ -264,7 +265,7 @@ async function telemetryUi(expected) {
     { selector, expected },
   );
   await page.$eval(selector, (node) => node.scrollIntoView({ block: 'center' }));
-  await shot('telemetry-setting');
+  await shot(label);
   await click('Close', '[role="dialog"]');
   steps.push('real unlocked privacy switch matches canonical telemetry ' + expected);
 }
@@ -294,6 +295,7 @@ async function waitForCommandCompletion(home, prompt, previousMessageIds, previo
         message.author.kind === 'bot' &&
         message.body &&
         !message.toolApprovalRequest &&
+        !message.toolApprovalDecision &&
         !message.onboardingWelcome &&
         !message.sessionFailure,
     );
@@ -635,11 +637,22 @@ try {
     const before = await humanCli('telemetry-status');
     assert.equal(before.lockedBy, undefined, 'privacy journey requires unlocked telemetry');
     if (phase === 'telemetry-direct') {
-      for (const enabled of [false, true, before.preference]) {
+      await telemetryUi(before.enabled, 'telemetry-direct-before');
+      const transitions = [];
+      for (const [label, enabled] of [
+        ['off', false],
+        ['on', true],
+        ['restore', before.preference],
+      ]) {
         const changed = await humanCli('telemetry-set', [enabled ? '--enabled' : '--disabled']);
         assert.equal(changed.preference, enabled);
         assert.equal(changed.enabled, enabled);
-        await telemetryUi(enabled);
+        transitions.push({ label, expected: enabled, actual: changed });
+        writeFileSync(
+          resolve(out, 'telemetry-direct-transitions.json'),
+          JSON.stringify(transitions, null, 2),
+        );
+        await telemetryUi(enabled, 'telemetry-direct-' + label);
       }
     }
     const current = await humanCli('telemetry-status');
