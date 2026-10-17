@@ -41,8 +41,8 @@ export function attachmentUploadInput(file: unknown, uploadId: unknown, requireI
       )
         throw new CliLiveError('input-changed', 'Selected attachment file is no longer available.');
     };
-    validate();
     if (!before.isFile()) throw new CliLiveError('input-unavailable', 'Select a regular file.');
+    validate();
     if (before.size > MAX_ATTACHMENT_BYTES)
       throw new CliLiveError('too-large', 'Attachment exceeds the 25 MiB limit.');
     const chunks: Buffer[] = [];

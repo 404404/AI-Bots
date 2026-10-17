@@ -1,5 +1,6 @@
 import { rmSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { attachOperationalModule } from '../src/database/owner.js';
 import { createCore } from '../src/plugin.js';
 import { createTobChannelOperations } from '../src/tob/cli-channel-operations.js';
 import { startTobCliBroker } from '../src/tob/cli-broker.js';
@@ -670,7 +671,7 @@ describe('reviewed Group end and local attachment transfer', () => {
     });
     expect(f.core.channels.get(args.channelId)).toBeUndefined();
     expect([
-      f.core.operationalDatabase.read((db) =>
+      attachOperationalModule(f.core.operationalDatabase, 'channel-transfer-proof').read((db) =>
         JSON.parse(
           (
             db

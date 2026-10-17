@@ -286,6 +286,7 @@ describe('Bot Group invitation tracer', () => {
         accept: true,
       });
       const methods = createBridgeMethods({
+        channelManagement: core.channelManagement,
         registry: core.registry,
         states: core.states,
         channels: core.channels,
