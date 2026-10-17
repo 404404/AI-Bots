@@ -90,7 +90,12 @@ const click = async (name) => {
     'Last 24 hours': ['过去 24 小时', 'Last 24 hours'],
     'Last 7 days': ['过去 7 天', 'Last 7 days'],
     'Last 30 days': ['过去 30 天', 'Last 30 days'],
-    'Configure model': ['配置模型，开始与 Tob 对话', 'Configure a model to talk to Tob'],
+    'Configure model': [
+      '配置模型，开始与 Tob 对话',
+      'Configure a model to talk to Tob',
+      '模型设置',
+      'Model settings',
+    ],
     Close: ['关闭', 'Close'],
     'Bot mode': ['Bot 模式', 'Bot mode'],
     'Approve once': ['仅批准这一次', 'Allow once'],
@@ -527,6 +532,83 @@ try {
     assert.equal(current.value.model, 'deepseek-flash');
     assert.equal(await page.$eval('[data-home-panel] textarea', (n) => n.value), '');
     steps.push('missing model, cancellation, native default save, input restored without sending');
+  }
+  if (phase === 'simple') {
+    const marker = 'HOME2081-' + Date.now();
+    const prompt =
+      '计算 6 × 7。通过 channel_send 只回复“' +
+      marker +
+      ': 42”。不要更改设置、委派任务或发送其他消息。';
+    const previous = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+    const previousIds = new Set(previous.turns.map((turn) => previous.sessionId + ':' + turn.turn));
+    await page.locator('[data-home-panel] textarea').fill(prompt);
+    await page.click('[data-home-panel] .bh-send-btn');
+    await page.waitForSelector('[data-dock-header="bh:channel-body"]');
+    let sent, response, delivery, turn, working;
+    for (let attempt = 0; attempt < 160; attempt++) {
+      const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+      sent = messages.find((message) => message.author.kind === 'human' && message.body === prompt);
+      const failure = messages.find(
+        (message) =>
+          message.sessionFailure && Date.parse(message.at) >= Number(marker.split('-')[1]),
+      );
+      if (failure) throw Error('simple model failure: ' + failure.sessionFailure.code);
+      response = messages.find(
+        (message) =>
+          message.author.kind === 'bot' && !message.sessionFailure && message.body.includes(marker),
+      );
+      const trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+      turn = trace.turns.find(
+        (candidate) => !previousIds.has(trace.sessionId + ':' + candidate.turn),
+      );
+      if (sent)
+        delivery = await rpc('channelSendStatus', {
+          channelId: home.channelId,
+          messageId: sent.id,
+        });
+      if (!working) {
+        const facts = await rpc('homeDashboard', { range: '24h' });
+        if (
+          facts.working.status === 'ready' &&
+          facts.working.value.some((bot) => bot.slug === home.botSlug)
+        ) {
+          working = facts;
+          await click('Refresh Home');
+          await pause(100);
+          await shot('simple-working');
+          writeFileSync(resolve(out, 'simple-working.json'), JSON.stringify(facts, null, 2));
+        }
+      }
+      if (response && turn?.endReason === 'completed' && delivery?.state === 'handled') break;
+      await pause(attempt < 40 ? 250 : 1000);
+    }
+    assert.ok(
+      sent && response && turn?.endReason === 'completed' && delivery?.state === 'handled',
+      'fresh model reply and handled delivery required',
+    );
+    assert.ok(working, 'live executing Tob root was not observed');
+    assert.equal(
+      (await rpc('channelMessages', { channelId: home.channelId })).messages.filter(
+        (message) => message.author.kind === 'human' && message.body === prompt,
+      ).length,
+      1,
+    );
+    assert.ok(
+      turn.calls.some((call) => call.name === 'channel_send' && call.outcome !== 'pending'),
+    );
+    const facts = await rpc('homeDashboard', { range: '24h' });
+    assert.equal(facts.usage.status, 'ready');
+    assert.ok(facts.usage.value.totalTokens > 0, 'reported real model usage must be positive');
+    await click('Refresh Home');
+    await pause(250);
+    await shot('simple-model-reply');
+    writeFileSync(
+      resolve(out, 'simple-model.json'),
+      JSON.stringify({ sent, response, delivery, turn, facts }, null, 2),
+    );
+    steps.push(
+      'real Home submission once; live working Tob root; completed native model turn and channel_send reply; handled Human delivery; positive retained token usage',
+    );
   }
   if (phase === 'composer') {
     const initialSettings = (await rpc('describe', {}, 'settings')).namespaces.find(
