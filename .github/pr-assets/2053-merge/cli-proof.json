@@ -1,0 +1,658 @@
+{
+  "group": "group-2053-long-history-merge-verification",
+  "bots": [
+    "bot-ad14024d432f4d63b27513d53b211b72",
+    "bot-90a81d7b6ca1447283793859b7fd8af1"
+  ],
+  "enabled": {
+    "enabled": true
+  },
+  "held": {
+    "status": "held",
+    "channelId": "group-2053-long-history-merge-verification",
+    "draftId": "bot-7bb307301950c601b47fe47caa4219c1f3bf26a8d99750125436743bc5602d37",
+    "reason": "read-new-context-then-revise-or-drop",
+    "changedMessageIds": [
+      "b909e2e8-2176-4cb5-9b44-df94a6ac0fb8",
+      "04305398-422d-44d3-9355-2176c32f9d60",
+      "9ba784bf-769e-4ea9-83a4-a7fffebf7fd4",
+      "53da1c35-2be8-4a8d-afb0-a65911fdf75f",
+      "fff63585-09f2-4e10-84b3-5692a1dbc136",
+      "e0b0d26e-67c3-490f-b05c-af4fd6a13207",
+      "7c5c7d4e-68ca-496f-bc2d-a0a3acf975b5",
+      "e825fff6-6888-4b3a-ae1f-13594fd35658",
+      "fedcf23c-aa1c-4de0-90bf-561a02f66d7f",
+      "6361e177-952a-4e5c-830a-8e239b85aa85",
+      "d6f9aea6-ac61-47ab-96bc-e8a26e94725f",
+      "5359c3ae-fe48-4834-98a4-47554f35af43",
+      "49532753-acb8-43fe-8392-8120adf31af9",
+      "798ea9ae-2994-41a7-9c69-102c34152f8d",
+      "4840d6c0-f8a7-4cda-9e91-485f3b7cb7c2",
+      "77024896-1aad-4ff1-8605-2cd7c9ba1a71",
+      "704dcf85-231e-46d0-9680-c0ea4ca195d3",
+      "b1267e68-6788-4f24-8f25-cbf2ed19b999",
+      "065e7c04-a523-43ba-ad3c-32f63fe17ce5",
+      "622433a7-7fe7-4ed7-81ae-61baead16519"
+    ],
+    "changedMessageCount": 20,
+    "read": {
+      "channel_id": "group-2053-long-history-merge-verification",
+      "limit": 20
+    },
+    "review": {
+      "observationId": "3f62263f-1fea-4693-bc52-4968cfe1416e",
+      "content": "{\"outputLimit\":12000,\"messages\":[{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"b909e2e8-2176-4cb5-9b44-df94a6ac0fb8\",\"at\":\"2026-10-17T19:53:47.051Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 5: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"04305398-422d-44d3-9355-2176c32f9d60\",\"at\":\"2026-10-17T19:53:47.060Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 6: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"9ba784bf-769e-4ea9-83a4-a7fffebf7fd4\",\"at\":\"2026-10-17T19:53:47.069Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 7: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"53da1c35-2be8-4a8d-afb0-a65911fdf75f\",\"at\":\"2026-10-17T19:53:47.077Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 8: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"fff63585-09f2-4e10-84b3-5692a1dbc136\",\"at\":\"2026-10-17T19:53:47.086Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 9: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"e0b0d26e-67c3-490f-b05c-af4fd6a13207\",\"at\":\"2026-10-17T19:53:47.094Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 10: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"7c5c7d4e-68ca-496f-bc2d-a0a3acf975b5\",\"at\":\"2026-10-17T19:53:47.104Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 11: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"e825fff6-6888-4b3a-ae1f-13594fd35658\",\"at\":\"2026-10-17T19:53:47.113Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 12: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"fedcf23c-aa1c-4de0-90bf-561a02f66d7f\",\"at\":\"2026-10-17T19:53:47.121Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 13: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"6361e177-952a-4e5c-830a-8e239b85aa85\",\"at\":\"2026-10-17T19:53:47.130Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 14: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"d6f9aea6-ac61-47ab-96bc-e8a26e94725f\",\"at\":\"2026-10-17T19:53:47.139Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 15: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"5359c3ae-fe48-4834-98a4-47554f35af43\",\"at\":\"2026-10-17T19:53:47.148Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 16: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"49532753-acb8-43fe-8392-8120adf31af9\",\"at\":\"2026-10-17T19:53:47.158Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 17: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"798ea9ae-2994-41a7-9c69-102c34152f8d\",\"at\":\"2026-10-17T19:53:47.166Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 18: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"4840d6c0-f8a7-4cda-9e91-485f3b7cb7c2\",\"at\":\"2026-10-17T19:53:47.175Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 19: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"77024896-1aad-4ff1-8605-2cd7c9ba1a71\",\"at\":\"2026-10-17T19:53:47.184Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 20: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"704dcf85-231e-46d0-9680-c0ea4ca195d3\",\"at\":\"2026-10-17T19:53:47.193Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 21: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"b1267e68-6788-4f24-8f25-cbf2ed19b999\",\"at\":\"2026-10-17T19:53:47.205Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 22: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"065e7c04-a523-43ba-ad3c-32f63fe17ce5\",\"at\":\"2026-10-17T19:53:47.214Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Earlier context 23: meeting was at 10:00.\"}},{\"channelId\":\"group-2053-long-history-merge-verification\",\"channelName\":\"2053 long-history merge verification\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"622433a7-7fe7-4ed7-81ae-61baead16519\",\"at\":\"2026-10-17T19:53:47.223Z\",\"author\":{\"kind\":\"human\"},\"body\":\"Human correction: meeting at 11:00, not 10:00.\"}}]}",
+      "complete": true,
+      "observedMessageIds": [
+        "b909e2e8-2176-4cb5-9b44-df94a6ac0fb8",
+        "04305398-422d-44d3-9355-2176c32f9d60",
+        "9ba784bf-769e-4ea9-83a4-a7fffebf7fd4",
+        "53da1c35-2be8-4a8d-afb0-a65911fdf75f",
+        "fff63585-09f2-4e10-84b3-5692a1dbc136",
+        "e0b0d26e-67c3-490f-b05c-af4fd6a13207",
+        "7c5c7d4e-68ca-496f-bc2d-a0a3acf975b5",
+        "e825fff6-6888-4b3a-ae1f-13594fd35658",
+        "fedcf23c-aa1c-4de0-90bf-561a02f66d7f",
+        "6361e177-952a-4e5c-830a-8e239b85aa85",
+        "d6f9aea6-ac61-47ab-96bc-e8a26e94725f",
+        "5359c3ae-fe48-4834-98a4-47554f35af43",
+        "49532753-acb8-43fe-8392-8120adf31af9",
+        "798ea9ae-2994-41a7-9c69-102c34152f8d",
+        "4840d6c0-f8a7-4cda-9e91-485f3b7cb7c2",
+        "77024896-1aad-4ff1-8605-2cd7c9ba1a71",
+        "704dcf85-231e-46d0-9680-c0ea4ca195d3",
+        "b1267e68-6788-4f24-8f25-cbf2ed19b999",
+        "065e7c04-a523-43ba-ad3c-32f63fe17ce5",
+        "622433a7-7fe7-4ed7-81ae-61baead16519"
+      ],
+      "responsibility": "These messages join this turn. On your recheck or drop, explicitly pass resolve_inbox_ids for these IDs and the original request if complete. They resolve only after a committed send or dropped draft; held/refused never resolve them. Unrelated FYI needs no reply or addition to the original draft. Cancelled work should be dropped silently. Keep unfinished work open."
+    }
+  },
+  "committed": {
+    "channelId": "group-2053-long-history-merge-verification",
+    "messageId": "bot-a6f235b2187342e2fb683c8e4f987599190e29ee8c19096eed515ccc75747226",
+    "status": "committed",
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "retry": {
+    "status": "refused",
+    "channelId": "group-2053-long-history-merge-verification",
+    "draftId": "bot-7bb307301950c601b47fe47caa4219c1f3bf26a8d99750125436743bc5602d37",
+    "reason": "draft-unavailable"
+  },
+  "history": {
+    "messages": [
+      {
+        "id": "bot-a6f235b2187342e2fb683c8e4f987599190e29ee8c19096eed515ccc75747226",
+        "at": "2026-10-17T19:53:47.740Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-ad14024d432f4d63b27513d53b211b72"
+        },
+        "botCausation": {
+          "rootSourceEventId": "311a0bb5-7a4a-4f15-8125-01812cf51eeb",
+          "parentSourceEventId": "311a0bb5-7a4a-4f15-8125-01812cf51eeb",
+          "hop": 1
+        },
+        "body": "Confirmed 11:00",
+        "channelRevision": 26,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          }
+        ],
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "622433a7-7fe7-4ed7-81ae-61baead16519",
+        "at": "2026-10-17T19:53:47.223Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Human correction: meeting at 11:00, not 10:00.",
+        "channelRevision": 25,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "065e7c04-a523-43ba-ad3c-32f63fe17ce5",
+        "at": "2026-10-17T19:53:47.214Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 23: meeting was at 10:00.",
+        "channelRevision": 24,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "b1267e68-6788-4f24-8f25-cbf2ed19b999",
+        "at": "2026-10-17T19:53:47.205Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 22: meeting was at 10:00.",
+        "channelRevision": 23,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "704dcf85-231e-46d0-9680-c0ea4ca195d3",
+        "at": "2026-10-17T19:53:47.193Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 21: meeting was at 10:00.",
+        "channelRevision": 22,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "77024896-1aad-4ff1-8605-2cd7c9ba1a71",
+        "at": "2026-10-17T19:53:47.184Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 20: meeting was at 10:00.",
+        "channelRevision": 21,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "4840d6c0-f8a7-4cda-9e91-485f3b7cb7c2",
+        "at": "2026-10-17T19:53:47.175Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 19: meeting was at 10:00.",
+        "channelRevision": 20,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "798ea9ae-2994-41a7-9c69-102c34152f8d",
+        "at": "2026-10-17T19:53:47.166Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 18: meeting was at 10:00.",
+        "channelRevision": 19,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "49532753-acb8-43fe-8392-8120adf31af9",
+        "at": "2026-10-17T19:53:47.158Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 17: meeting was at 10:00.",
+        "channelRevision": 18,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "5359c3ae-fe48-4834-98a4-47554f35af43",
+        "at": "2026-10-17T19:53:47.148Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 16: meeting was at 10:00.",
+        "channelRevision": 17,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "d6f9aea6-ac61-47ab-96bc-e8a26e94725f",
+        "at": "2026-10-17T19:53:47.139Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 15: meeting was at 10:00.",
+        "channelRevision": 16,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "6361e177-952a-4e5c-830a-8e239b85aa85",
+        "at": "2026-10-17T19:53:47.130Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 14: meeting was at 10:00.",
+        "channelRevision": 15,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "fedcf23c-aa1c-4de0-90bf-561a02f66d7f",
+        "at": "2026-10-17T19:53:47.121Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 13: meeting was at 10:00.",
+        "channelRevision": 14,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "e825fff6-6888-4b3a-ae1f-13594fd35658",
+        "at": "2026-10-17T19:53:47.113Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 12: meeting was at 10:00.",
+        "channelRevision": 13,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "7c5c7d4e-68ca-496f-bc2d-a0a3acf975b5",
+        "at": "2026-10-17T19:53:47.104Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 11: meeting was at 10:00.",
+        "channelRevision": 12,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "e0b0d26e-67c3-490f-b05c-af4fd6a13207",
+        "at": "2026-10-17T19:53:47.094Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 10: meeting was at 10:00.",
+        "channelRevision": 11,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "fff63585-09f2-4e10-84b3-5692a1dbc136",
+        "at": "2026-10-17T19:53:47.086Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 9: meeting was at 10:00.",
+        "channelRevision": 10,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "53da1c35-2be8-4a8d-afb0-a65911fdf75f",
+        "at": "2026-10-17T19:53:47.077Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 8: meeting was at 10:00.",
+        "channelRevision": 9,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "9ba784bf-769e-4ea9-83a4-a7fffebf7fd4",
+        "at": "2026-10-17T19:53:47.069Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 7: meeting was at 10:00.",
+        "channelRevision": 8,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "04305398-422d-44d3-9355-2176c32f9d60",
+        "at": "2026-10-17T19:53:47.060Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 6: meeting was at 10:00.",
+        "channelRevision": 7,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "b909e2e8-2176-4cb5-9b44-df94a6ac0fb8",
+        "at": "2026-10-17T19:53:47.051Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 5: meeting was at 10:00.",
+        "channelRevision": 6,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "9e91e32f-604b-47d0-8bb4-386d9a813ffb",
+        "at": "2026-10-17T19:53:47.042Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 4: meeting was at 10:00.",
+        "channelRevision": 5,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "020fdf53-e6ca-457d-89fa-fea0eeffec76",
+        "at": "2026-10-17T19:53:47.033Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 3: meeting was at 10:00.",
+        "channelRevision": 4,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "f4c7f314-89d6-43bf-9122-2adc51b778a0",
+        "at": "2026-10-17T19:53:47.024Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 2: meeting was at 10:00.",
+        "channelRevision": 3,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "6c658a1d-cfb1-4eaf-b4b0-40fda5682450",
+        "at": "2026-10-17T19:53:47.014Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 1: meeting was at 10:00.",
+        "channelRevision": 2,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "d6486226-84eb-4bca-8118-22dd1b917a59",
+        "at": "2026-10-17T19:53:47.002Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "Earlier context 0: meeting was at 10:00.",
+        "channelRevision": 1,
+        "deliveries": [
+          {
+            "botSlug": "bot-90a81d7b6ca1447283793859b7fd8af1",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-ad14024d432f4d63b27513d53b211b72",
+            "state": "pending"
+          }
+        ]
+      }
+    ],
+    "revision": 26
+  },
+  "trace": {
+    "slug": "bot-ad14024d432f4d63b27513d53b211b72",
+    "sessionId": "direct",
+    "turns": [
+      {
+        "turn": 1,
+        "startedAt": "2026-10-17T19:53:47.457Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_send",
+            "callId": "direct-66508b81-2628-4040-9d45-fa2f2fce2fc5",
+            "args": {
+              "channel_id": "group-2053-long-history-merge-verification",
+              "body": "Confirmed 10:00"
+            },
+            "outcome": "ok",
+            "result": "{\"status\":\"held\",\"channelId\":\"group-2053-long-history-merge-verification\",\"draftId\":\"bot-7bb307301950c601b47fe47caa4219c1f3bf26a8d99750125436743bc5602d37\",\"reason\":\"read-new-context-then-revise-or-drop\",\"changedMessageIds\":[\"b909e2e8-2176-4cb5-9b44-df94a6ac0fb8\",\"04305398-422d-44d3-9355-2176c32f9d60…"
+          }
+        ]
+      },
+      {
+        "turn": 2,
+        "startedAt": "2026-10-17T19:53:47.738Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_send",
+            "callId": "direct-2f2f64f6-6d71-49d7-96ff-51764258fa95",
+            "args": {
+              "channel_id": "group-2053-long-history-merge-verification",
+              "body": "Confirmed 11:00",
+              "draft_id": "bot-7bb307301950c601b47fe47caa4219c1f3bf26a8d99750125436743bc5602d37",
+              "observation_id": "3f62263f-1fea-4693-bc52-4968cfe1416e"
+            },
+            "outcome": "ok",
+            "result": "{\"channelId\":\"group-2053-long-history-merge-verification\",\"messageId\":\"bot-a6f235b2187342e2fb683c8e4f987599190e29ee8c19096eed515ccc75747226\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"not-requested\",\"instruction\":\"This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed …"
+          }
+        ]
+      },
+      {
+        "turn": 3,
+        "startedAt": "2026-10-17T19:53:47.980Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_send",
+            "callId": "direct-661497d3-573e-4cd5-ba10-a23f2799bd8e",
+            "args": {
+              "channel_id": "group-2053-long-history-merge-verification",
+              "body": "Duplicate 11:00",
+              "draft_id": "bot-7bb307301950c601b47fe47caa4219c1f3bf26a8d99750125436743bc5602d37",
+              "observation_id": "3f62263f-1fea-4693-bc52-4968cfe1416e"
+            },
+            "outcome": "ok",
+            "result": "{\"status\":\"refused\",\"channelId\":\"group-2053-long-history-merge-verification\",\"draftId\":\"bot-7bb307301950c601b47fe47caa4219c1f3bf26a8d99750125436743bc5602d37\",\"reason\":\"draft-unavailable\"}"
+          }
+        ]
+      }
+    ]
+  }
+}

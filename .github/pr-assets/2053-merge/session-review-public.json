@@ -1,0 +1,1153 @@
+{
+  "protocol": "2053-merge-session-review-v1",
+  "reviewer": "Current GPT-6 Astra assistant, direct unblinded Session and conversation review",
+  "runtimeHead": "78142090b5fd5fc3dd0bf78136356f41919d6dd2",
+  "currentHead": "6e727b9f440b47b185f60992a8b09e24c8a0c19c",
+  "headDifference": "Only channel-management migration test expectation; no runtime difference",
+  "assessment": "Candidate preferred: the Human changed both time and room while the first outgoing Tool arguments were streaming. Baseline committed 10:00/A-101 after both corrections. Candidate Tool result held both full corrections, then one explicit recheck committed 11:00/B-204 and resolved only selected responsibilities. Both retained all three agenda items and the read-only material. Neither final notice invents duration, attendees or follow-up promises. Earlier confirmations are mildly verbose in both arms.",
+  "citations": {
+    "baselineWrongMessage": "bot-4a2dda83fdeb7dc0a6147d489b52cac2e747e5ab6e86d7867c12d327554f448e",
+    "candidateCorrections": [
+      "64a5153d-ac37-415b-a7cd-70af3bafc747",
+      "86faf6c4-8d33-400b-9065-6a87cb2d08be"
+    ],
+    "candidateCorrectMessage": "bot-b010d08582388ecdde5fbe933642205b2cf8c6afac2f1288d5e2feff0c5f1db6",
+    "candidateSession": "botharness-05303daa-c899-453b-8721-60e33e48e8a9",
+    "heldToolSeq": 61,
+    "recheckToolSeq": 67
+  },
+  "limits": "One diagnostic pair, not a p95 claim or replacement for the accepted fixed pilot. Native auxiliary calls may have unknown billed usage. External judge calls: zero. Independent Human review: not collected for this diagnostic.",
+  "runs": {
+    "baseline": {
+      "valid": true,
+      "goal": false,
+      "firstReplyMs": 2758,
+      "episodeMs": 53428,
+      "usage": {
+        "inputTokens": 25240,
+        "outputTokens": 763,
+        "cacheReadTokens": 201344,
+        "cacheWriteTokens": 0,
+        "totalTokens": 227347,
+        "sessions": 1,
+        "routes": [
+          "deepseek-official/deepseek-flash"
+        ],
+        "settled": true,
+        "host": {
+          "routes": [
+            "deepseek-official/deepseek-flash"
+          ],
+          "inputTokens": 25240,
+          "outputTokens": 763,
+          "cacheReadTokens": 201344,
+          "cacheWriteTokens": 0,
+          "totalTokens": 227347,
+          "rows": [
+            {
+              "day": "2026-10-18",
+              "purpose": "orchestrator",
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "inputTokens": 25240,
+              "outputTokens": 763,
+              "cacheReadTokens": 201344,
+              "cacheWriteTokens": 0,
+              "totalTokens": 227347
+            }
+          ]
+        },
+        "hostMatches": true
+      },
+      "costEstimateUSD": 0.004847832,
+      "postPreludeUsage": {
+        "inputTokens": 698,
+        "outputTokens": 293,
+        "cacheReadTokens": 76672,
+        "cacheWriteTokens": 0,
+        "totalTokens": 77663
+      },
+      "postPreludeCostEstimateUSD": 0.0005105159999999999,
+      "transcript": {
+        "group-llm-e2e-correction-1-1792266860196": [
+          {
+            "id": "ce96bb26-f369-4d65-b9d0-371c061976f4",
+            "at": "2026-10-17T19:54:20.238Z",
+            "author": {
+              "kind": "human"
+            },
+            "mentions": [
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "label": "美工 Aura",
+                "start": 0,
+                "end": 8
+              }
+            ],
+            "body": "@美工 Aura 我们先对齐一件事：今天团队视觉方案评审，时间 10:00，地点 A-101，材料是视觉稿 v3。仅使用我提供的事实，不补充时长、参会人或承诺。暂时不用发通知，请在本群用一句话确认你记住的时间和地点，不要找其他 Bot 帮忙。",
+            "channelRevision": 1,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              },
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "state": "handled"
+              }
+            ]
+          },
+          {
+            "id": "bot-c60d2429aef2373ebdfdb710e26a98d34cd144a7e381e8c705de1d5399e18265",
+            "at": "2026-10-17T19:54:23.575Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-83cfabdd61834fedb6605c9b10aa056f"
+            },
+            "botCausation": {
+              "rootSourceEventId": "837789d2-0553-40e3-810d-b76079c83671",
+              "parentSourceEventId": "837789d2-0553-40e3-810d-b76079c83671",
+              "hop": 1
+            },
+            "body": "收到：今天 10:00 在 A-101 评审视觉稿 v3。",
+            "channelRevision": 2,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              }
+            ],
+            "humanReceipts": [
+              {
+                "humanId": "local-human",
+                "displayName": "Human",
+                "state": "unread"
+              }
+            ]
+          },
+          {
+            "id": "caf9f0af-bfe4-4a8c-a541-a77cee630672",
+            "at": "2026-10-17T19:54:28.271Z",
+            "author": {
+              "kind": "human"
+            },
+            "mentions": [
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "label": "美工 Aura",
+                "start": 0,
+                "end": 8
+              }
+            ],
+            "body": "@美工 Aura 补充议题：确认本周视觉方案、任务分工和下次交付。材料只读，无需修改。先在本群简短复述这三个议题，仍然不要写正式通知，不要找其他 Bot 帮忙。",
+            "channelRevision": 3,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              },
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "state": "handled"
+              }
+            ]
+          },
+          {
+            "id": "bot-76b97e5ac421c978fba4d248ab4e6807dd758d488e48a11eec3e8ddde97ca1cf",
+            "at": "2026-10-17T19:54:30.388Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-83cfabdd61834fedb6605c9b10aa056f"
+            },
+            "botCausation": {
+              "rootSourceEventId": "a4d3792f-74b0-4913-88ab-43bd607eb382",
+              "parentSourceEventId": "a4d3792f-74b0-4913-88ab-43bd607eb382",
+              "hop": 1
+            },
+            "body": "三个议题已记下：1) 确认本周视觉方案；2) 任务分工；3) 下次交付。材料只读，我不会改动，也不发通知、不找其他 Bot。",
+            "channelRevision": 4,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              }
+            ],
+            "humanReceipts": [
+              {
+                "humanId": "local-human",
+                "displayName": "Human",
+                "state": "unread"
+              }
+            ]
+          },
+          {
+            "id": "451a6dfe-e8a0-46d2-840f-ff95e0924ce7",
+            "at": "2026-10-17T19:54:41.989Z",
+            "author": {
+              "kind": "human"
+            },
+            "mentions": [
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "label": "美工 Aura",
+                "start": 0,
+                "end": 8
+              }
+            ],
+            "body": "@美工 Aura 现在可以发正式通知了。按我们刚才确认的事实，在本群写一段清楚的团队会议通知，包含时间、地点、材料和三个议题；不添加未约定的信息或后续承诺，不需要其他 Bot 帮忙。",
+            "channelRevision": 5,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              },
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "state": "handled"
+              }
+            ]
+          },
+          {
+            "id": "72638043-87e2-4df8-bbaf-e8c09a49a29b",
+            "at": "2026-10-17T19:54:44.555Z",
+            "author": {
+              "kind": "human"
+            },
+            "body": "纠正：会议改为 11:00，以这个时间为准。",
+            "channelRevision": 6,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              },
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "state": "pending"
+              }
+            ]
+          },
+          {
+            "id": "6ba8612a-81b4-4fce-8492-5591a9fa20aa",
+            "at": "2026-10-17T19:54:44.565Z",
+            "author": {
+              "kind": "human"
+            },
+            "body": "再补一句：地点也改为 B-204。请按这两条最新信息发，议题和材料不变。",
+            "channelRevision": 7,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              },
+              {
+                "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+                "state": "pending"
+              }
+            ]
+          },
+          {
+            "id": "bot-4a2dda83fdeb7dc0a6147d489b52cac2e747e5ab6e86d7867c12d327554f448e",
+            "at": "2026-10-17T19:54:44.744Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-83cfabdd61834fedb6605c9b10aa056f"
+            },
+            "botCausation": {
+              "rootSourceEventId": "d3aa96b5-d0bd-47c2-833c-fa66c03f32f2",
+              "parentSourceEventId": "d3aa96b5-d0bd-47c2-833c-fa66c03f32f2",
+              "hop": 1
+            },
+            "body": "【团队视觉方案评审通知】\n\n时间：今天 10:00\n地点：A-101\n材料：视觉稿 v3（只读，无需修改）\n\n议题：\n1. 确认本周视觉方案\n2. 任务分工\n3. 下次交付",
+            "channelRevision": 8,
+            "deliveries": [
+              {
+                "botSlug": "bot-219897331b914b3eab3918e16904d2d9",
+                "state": "pending"
+              }
+            ],
+            "humanReceipts": [
+              {
+                "humanId": "local-human",
+                "displayName": "Human",
+                "state": "unread"
+              }
+            ]
+          }
+        ],
+        "dm-bot-83cfabdd61834fedb6605c9b10aa056f": [
+          {
+            "id": "bot-channel-post-bot-c60d2429aef2373ebdfdb710e26a98d34cd144a7e381e8c705de1d5399e18265",
+            "at": "2026-10-17T19:54:23.575Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-83cfabdd61834fedb6605c9b10aa056f"
+            },
+            "botChannelPost": {
+              "channelId": "group-llm-e2e-correction-1-1792266860196",
+              "messageId": "bot-c60d2429aef2373ebdfdb710e26a98d34cd144a7e381e8c705de1d5399e18265"
+            },
+            "causeSourceEventId": "c2d2334e-21aa-447e-83a8-7540bc52dbce",
+            "body": "",
+            "channelRevision": 1,
+            "botChannelPostPreview": "收到：今天 10:00 在 A-101 评审视觉稿 v3。"
+          },
+          {
+            "id": "bot-channel-post-bot-76b97e5ac421c978fba4d248ab4e6807dd758d488e48a11eec3e8ddde97ca1cf",
+            "at": "2026-10-17T19:54:30.388Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-83cfabdd61834fedb6605c9b10aa056f"
+            },
+            "botChannelPost": {
+              "channelId": "group-llm-e2e-correction-1-1792266860196",
+              "messageId": "bot-76b97e5ac421c978fba4d248ab4e6807dd758d488e48a11eec3e8ddde97ca1cf"
+            },
+            "causeSourceEventId": "fdcdc315-8cb1-4fcc-a194-b60f90bb0e3c",
+            "body": "",
+            "channelRevision": 2,
+            "botChannelPostPreview": "三个议题已记下：1) 确认本周视觉方案；2) 任务分工；3) 下次交付。材料只读，我不会改动，也不发通知、不找其他 Bot。"
+          },
+          {
+            "id": "bot-channel-post-bot-4a2dda83fdeb7dc0a6147d489b52cac2e747e5ab6e86d7867c12d327554f448e",
+            "at": "2026-10-17T19:54:44.744Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-83cfabdd61834fedb6605c9b10aa056f"
+            },
+            "botChannelPost": {
+              "channelId": "group-llm-e2e-correction-1-1792266860196",
+              "messageId": "bot-4a2dda83fdeb7dc0a6147d489b52cac2e747e5ab6e86d7867c12d327554f448e"
+            },
+            "causeSourceEventId": "8d35b367-a71f-4557-a08a-cf2f7778f0f5",
+            "body": "",
+            "channelRevision": 3,
+            "botChannelPostPreview": "【团队视觉方案评审通知】 时间：今天 10:00 地点：A-101 材料：视觉稿 v3（只读，无需修改） 议题： 1. 确认本周视觉方案 2. 任务分工 3. ..."
+          }
+        ],
+        "dm-bot-219897331b914b3eab3918e16904d2d9": []
+      },
+      "nativeSessions": [
+        {
+          "sessionId": "botharness-20376af3-2fd5-424a-8949-7e6f000b4337",
+          "botSlug": "bot-83cfabdd61834fedb6605c9b10aa056f",
+          "modelSteps": null,
+          "attempts": [
+            {
+              "seq": 17,
+              "at": 1792266863562,
+              "turn": 1,
+              "step": 1,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 23401,
+                "outputTokens": 55,
+                "cacheReadTokens": 1024,
+                "cacheWriteTokens": 0,
+                "totalTokens": 24480
+              }
+            },
+            {
+              "seq": 24,
+              "at": 1792266864884,
+              "turn": 1,
+              "step": 2,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 236,
+                "outputTokens": 117,
+                "cacheReadTokens": 24320,
+                "cacheWriteTokens": 0,
+                "totalTokens": 24673
+              }
+            },
+            {
+              "seq": 30,
+              "at": 1792266866234,
+              "turn": 1,
+              "step": 3,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 147,
+                "outputTokens": 60,
+                "cacheReadTokens": 24576,
+                "cacheWriteTokens": 0,
+                "totalTokens": 24783
+              }
+            },
+            {
+              "seq": 39,
+              "at": 1792266870377,
+              "turn": 2,
+              "step": 1,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 306,
+                "outputTokens": 78,
+                "cacheReadTokens": 24704,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25088
+              }
+            },
+            {
+              "seq": 45,
+              "at": 1792266872133,
+              "turn": 2,
+              "step": 2,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 206,
+                "outputTokens": 116,
+                "cacheReadTokens": 24960,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25282
+              }
+            },
+            {
+              "seq": 51,
+              "at": 1792266873080,
+              "turn": 2,
+              "step": 3,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 246,
+                "outputTokens": 44,
+                "cacheReadTokens": 25088,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25378
+              }
+            },
+            {
+              "seq": 60,
+              "at": 1792266884734,
+              "turn": 3,
+              "step": 1,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 268,
+                "outputTokens": 92,
+                "cacheReadTokens": 25344,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25704
+              }
+            },
+            {
+              "seq": 66,
+              "at": 1792266885896,
+              "turn": 3,
+              "step": 2,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 184,
+                "outputTokens": 135,
+                "cacheReadTokens": 25600,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25919
+              }
+            },
+            {
+              "seq": 72,
+              "at": 1792266887094,
+              "turn": 3,
+              "step": 3,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 246,
+                "outputTokens": 66,
+                "cacheReadTokens": 25728,
+                "cacheWriteTokens": 0,
+                "totalTokens": 26040
+              }
+            }
+          ],
+          "auxiliary": [
+            {
+              "seq": 14,
+              "at": 1792266862355,
+              "kind": "session/title-llm-request",
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash"
+              },
+              "usage": null
+            }
+          ],
+          "toolCalls": [
+            {
+              "seq": 18,
+              "at": 1792266863566,
+              "callId": "call_00_pQzRQEvR57bfFPeqpWj73213",
+              "name": "channel_send",
+              "arguments": "{\"body\": \"收到：今天 10:00 在 A-101 评审视觉稿 v3。\"}",
+              "finishedAt": 1792266863586,
+              "isError": false,
+              "result": "{\"channelId\":\"group-llm-e2e-correction-1-1792266860196\",\"messageId\":\"bot-c60d2429aef2373ebdfdb710e26a98d34cd144a7e381e8c705de1d5399e18265\"}"
+            },
+            {
+              "seq": 25,
+              "at": 1792266864888,
+              "callId": "call_00_GApMY9mCpNHOCT3z91V21839",
+              "name": "inbox_resolve",
+              "arguments": "{\"ids\": [\"ce96bb26-f369-4d65-b9d0-371c061976f4\"], \"outcome\": \"done\", \"note\": \"已在群内一句话确认时间地点（10:00、A-101），未补充其他事实，未发通知。\"}",
+              "finishedAt": 1792266864899,
+              "isError": false,
+              "result": "{\"outcome\":\"resolved\",\"resolved\":[\"837789d2-0553-40e3-810d-b76079c83671\"],\"alreadyResolved\":[]}"
+            },
+            {
+              "seq": 40,
+              "at": 1792266870381,
+              "callId": "call_00_manzH1Fn7iII1mOzxfDu0302",
+              "name": "channel_send",
+              "arguments": "{\"body\": \"三个议题已记下：1) 确认本周视觉方案；2) 任务分工；3) 下次交付。材料只读，我不会改动，也不发通知、不找其他 Bot。\"}",
+              "finishedAt": 1792266870397,
+              "isError": false,
+              "result": "{\"channelId\":\"group-llm-e2e-correction-1-1792266860196\",\"messageId\":\"bot-76b97e5ac421c978fba4d248ab4e6807dd758d488e48a11eec3e8ddde97ca1cf\"}"
+            },
+            {
+              "seq": 46,
+              "at": 1792266872138,
+              "callId": "call_00_kNGnqJwnvrigzsEADyQ26253",
+              "name": "inbox_resolve",
+              "arguments": "{\"ids\": [\"caf9f0af-bfe4-4a8c-a541-a77cee630672\"], \"note\": \"已在群内简短复述三个议题，未写正式通知、未找其他 Bot、未改材料。\", \"outcome\": \"done\"}",
+              "finishedAt": 1792266872148,
+              "isError": false,
+              "result": "{\"outcome\":\"resolved\",\"resolved\":[\"a4d3792f-74b0-4913-88ab-43bd607eb382\"],\"alreadyResolved\":[]}"
+            },
+            {
+              "seq": 61,
+              "at": 1792266884738,
+              "callId": "call_00_MSEDA0jV5nSRrmtMix0M7388",
+              "name": "channel_send",
+              "arguments": "{\"body\": \"【团队视觉方案评审通知】\\n\\n时间：今天 10:00\\n地点：A-101\\n材料：视觉稿 v3（只读，无需修改）\\n\\n议题：\\n1. 确认本周视觉方案\\n2. 任务分工\\n3. 下次交付\"}",
+              "finishedAt": 1792266884753,
+              "isError": false,
+              "result": "{\"channelId\":\"group-llm-e2e-correction-1-1792266860196\",\"messageId\":\"bot-4a2dda83fdeb7dc0a6147d489b52cac2e747e5ab6e86d7867c12d327554f448e\"}"
+            },
+            {
+              "seq": 67,
+              "at": 1792266885901,
+              "callId": "call_00_nio0Gbmf56C8MOHMQan26091",
+              "name": "inbox_resolve",
+              "arguments": "{\"ids\": [\"451a6dfe-e8a0-46d2-840f-ff95e0924ce7\"], \"note\": \"已在本群发出正式会议通知，含时间 10:00、地点 A-101、材料视觉稿 v3（只读）和三个议题，未添加其他事实或承诺。\", \"outcome\": \"done\"}",
+              "finishedAt": 1792266885913,
+              "isError": false,
+              "result": "{\"outcome\":\"resolved\",\"resolved\":[\"d3aa96b5-d0bd-47c2-833c-fa66c03f32f2\"],\"alreadyResolved\":[]}"
+            }
+          ]
+        }
+      ]
+    },
+    "candidate": {
+      "valid": true,
+      "goal": true,
+      "firstReplyMs": 4152,
+      "episodeMs": 53345,
+      "usage": {
+        "inputTokens": 26503,
+        "outputTokens": 912,
+        "cacheReadTokens": 206080,
+        "cacheWriteTokens": 0,
+        "totalTokens": 233495,
+        "sessions": 1,
+        "routes": [
+          "deepseek-official/deepseek-flash"
+        ],
+        "settled": true,
+        "host": {
+          "routes": [
+            "deepseek-official/deepseek-flash"
+          ],
+          "inputTokens": 26503,
+          "outputTokens": 912,
+          "cacheReadTokens": 206080,
+          "cacheWriteTokens": 0,
+          "totalTokens": 233495,
+          "rows": [
+            {
+              "day": "2026-10-18",
+              "purpose": "orchestrator",
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "inputTokens": 26503,
+              "outputTokens": 912,
+              "cacheReadTokens": 206080,
+              "cacheWriteTokens": 0,
+              "totalTokens": 233495
+            }
+          ]
+        },
+        "hostMatches": true
+      },
+      "costEstimateUSD": 0.00514089,
+      "postPreludeUsage": {
+        "inputTokens": 1274,
+        "outputTokens": 464,
+        "cacheReadTokens": 79104,
+        "cacheWriteTokens": 0,
+        "totalTokens": 80842
+      },
+      "postPreludeCostEstimateUSD": 0.000706812,
+      "transcript": {
+        "group-llm-e2e-correction-1-1792266916015": [
+          {
+            "id": "cde713b2-e6e5-41fa-aa22-d353974bf257",
+            "at": "2026-10-17T19:55:16.060Z",
+            "author": {
+              "kind": "human"
+            },
+            "mentions": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "label": "美工 Aura",
+                "start": 0,
+                "end": 8
+              }
+            ],
+            "body": "@美工 Aura 我们先对齐一件事：今天团队视觉方案评审，时间 10:00，地点 A-101，材料是视觉稿 v3。仅使用我提供的事实，不补充时长、参会人或承诺。暂时不用发通知，请在本群用一句话确认你记住的时间和地点，不要找其他 Bot 帮忙。",
+            "channelRevision": 1,
+            "deliveries": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "state": "handled"
+              },
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ]
+          },
+          {
+            "id": "bot-13eb4dbcbf7569fc6a7eeb1b8f6d060555bc79337639fc654b3224de2087e194",
+            "at": "2026-10-17T19:55:20.019Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-4f03ae265c134132b1291917d79db212"
+            },
+            "botCausation": {
+              "rootSourceEventId": "5a271e1d-a36c-41a9-b335-5ab63630bf32",
+              "parentSourceEventId": "5a271e1d-a36c-41a9-b335-5ab63630bf32",
+              "hop": 1
+            },
+            "body": "记住了：今天视觉方案评审，10:00，A-101，材料是视觉稿 v3。（暂不发通知）",
+            "channelRevision": 2,
+            "deliveries": [
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ],
+            "humanReceipts": [
+              {
+                "humanId": "local-human",
+                "displayName": "Human",
+                "state": "unread"
+              }
+            ]
+          },
+          {
+            "id": "671c9f6a-6dde-4d4c-bf39-8531c748bbe6",
+            "at": "2026-10-17T19:55:24.534Z",
+            "author": {
+              "kind": "human"
+            },
+            "mentions": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "label": "美工 Aura",
+                "start": 0,
+                "end": 8
+              }
+            ],
+            "body": "@美工 Aura 补充议题：确认本周视觉方案、任务分工和下次交付。材料只读，无需修改。先在本群简短复述这三个议题，仍然不要写正式通知，不要找其他 Bot 帮忙。",
+            "channelRevision": 3,
+            "deliveries": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "state": "handled"
+              },
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ]
+          },
+          {
+            "id": "bot-1b821acdb332100cf3ecb95beb191578fd285dd3542f6e5bd40ad30872999667",
+            "at": "2026-10-17T19:55:26.634Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-4f03ae265c134132b1291917d79db212"
+            },
+            "botCausation": {
+              "rootSourceEventId": "dbc53b06-943b-4591-9e49-22c6c9959f1e",
+              "parentSourceEventId": "dbc53b06-943b-4591-9e49-22c6c9959f1e",
+              "hop": 1
+            },
+            "body": "三个议题复述：1) 确认本周视觉方案；2) 任务分工；3) 下次交付。材料只读，不改，也不写正式通知。",
+            "channelRevision": 4,
+            "deliveries": [
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ],
+            "humanReceipts": [
+              {
+                "humanId": "local-human",
+                "displayName": "Human",
+                "state": "unread"
+              }
+            ]
+          },
+          {
+            "id": "a411efae-fd3e-4adc-823f-4bab3704b532",
+            "at": "2026-10-17T19:55:37.069Z",
+            "author": {
+              "kind": "human"
+            },
+            "mentions": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "label": "美工 Aura",
+                "start": 0,
+                "end": 8
+              }
+            ],
+            "body": "@美工 Aura 现在可以发正式通知了。按我们刚才确认的事实，在本群写一段清楚的团队会议通知，包含时间、地点、材料和三个议题；不添加未约定的信息或后续承诺，不需要其他 Bot 帮忙。",
+            "channelRevision": 5,
+            "deliveries": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "state": "handled"
+              },
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ]
+          },
+          {
+            "id": "64a5153d-ac37-415b-a7cd-70af3bafc747",
+            "at": "2026-10-17T19:55:39.246Z",
+            "author": {
+              "kind": "human"
+            },
+            "body": "纠正：会议改为 11:00，以这个时间为准。",
+            "channelRevision": 6,
+            "deliveries": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "state": "handled"
+              },
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ]
+          },
+          {
+            "id": "86faf6c4-8d33-400b-9065-6a87cb2d08be",
+            "at": "2026-10-17T19:55:39.354Z",
+            "author": {
+              "kind": "human"
+            },
+            "body": "再补一句：地点也改为 B-204。请按这两条最新信息发，议题和材料不变。",
+            "channelRevision": 7,
+            "deliveries": [
+              {
+                "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+                "state": "handled"
+              },
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ]
+          },
+          {
+            "id": "bot-b010d08582388ecdde5fbe933642205b2cf8c6afac2f1288d5e2feff0c5f1db6",
+            "at": "2026-10-17T19:55:41.218Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-4f03ae265c134132b1291917d79db212"
+            },
+            "botCausation": {
+              "rootSourceEventId": "aa2da8ca-4eab-4670-bcdd-651cac6f94b3",
+              "parentSourceEventId": "aa2da8ca-4eab-4670-bcdd-651cac6f94b3",
+              "hop": 1
+            },
+            "perf": {
+              "outputTokens": 61,
+              "elapsedMs": 639,
+              "estimated": true
+            },
+            "body": "【团队会议通知】\n时间：今天 11:00\n地点：B-204\n材料：视觉稿 v3\n\n议题：\n1. 确认本周视觉方案\n2. 任务分工\n3. 下次交付\n\n（材料只读，无需修改）",
+            "channelRevision": 8,
+            "deliveries": [
+              {
+                "botSlug": "bot-65189bb0be9248aa813543481246d181",
+                "state": "pending"
+              }
+            ],
+            "humanReceipts": [
+              {
+                "humanId": "local-human",
+                "displayName": "Human",
+                "state": "unread"
+              }
+            ]
+          }
+        ],
+        "dm-bot-4f03ae265c134132b1291917d79db212": [
+          {
+            "id": "bot-channel-post-bot-13eb4dbcbf7569fc6a7eeb1b8f6d060555bc79337639fc654b3224de2087e194",
+            "at": "2026-10-17T19:55:20.019Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-4f03ae265c134132b1291917d79db212"
+            },
+            "botChannelPost": {
+              "channelId": "group-llm-e2e-correction-1-1792266916015",
+              "messageId": "bot-13eb4dbcbf7569fc6a7eeb1b8f6d060555bc79337639fc654b3224de2087e194"
+            },
+            "causeSourceEventId": "0697dcf3-9e6f-46ec-8d4a-0524bbc378b8",
+            "body": "",
+            "channelRevision": 1,
+            "botChannelPostPreview": "记住了：今天视觉方案评审，10:00，A-101，材料是视觉稿 v3。（暂不发通知）"
+          },
+          {
+            "id": "bot-channel-post-bot-1b821acdb332100cf3ecb95beb191578fd285dd3542f6e5bd40ad30872999667",
+            "at": "2026-10-17T19:55:26.634Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-4f03ae265c134132b1291917d79db212"
+            },
+            "botChannelPost": {
+              "channelId": "group-llm-e2e-correction-1-1792266916015",
+              "messageId": "bot-1b821acdb332100cf3ecb95beb191578fd285dd3542f6e5bd40ad30872999667"
+            },
+            "causeSourceEventId": "4f09dd4d-5ff1-494f-9465-af505dd2f564",
+            "body": "",
+            "channelRevision": 2,
+            "botChannelPostPreview": "三个议题复述：1) 确认本周视觉方案；2) 任务分工；3) 下次交付。材料只读，不改，也不写正式通知。"
+          },
+          {
+            "id": "bot-channel-post-bot-b010d08582388ecdde5fbe933642205b2cf8c6afac2f1288d5e2feff0c5f1db6",
+            "at": "2026-10-17T19:55:41.218Z",
+            "author": {
+              "kind": "bot",
+              "slug": "bot-4f03ae265c134132b1291917d79db212"
+            },
+            "botChannelPost": {
+              "channelId": "group-llm-e2e-correction-1-1792266916015",
+              "messageId": "bot-b010d08582388ecdde5fbe933642205b2cf8c6afac2f1288d5e2feff0c5f1db6"
+            },
+            "causeSourceEventId": "33e69b8c-2f99-4978-bd9d-3795fafd4b93",
+            "body": "",
+            "channelRevision": 3,
+            "botChannelPostPreview": "【团队会议通知】 时间：今天 11:00 地点：B-204 材料：视觉稿 v3 议题： 1. 确认本周视觉方案 2. 任务分工 3. 下次交付 （材料只读，无需..."
+          }
+        ],
+        "dm-bot-65189bb0be9248aa813543481246d181": []
+      },
+      "nativeSessions": [
+        {
+          "sessionId": "botharness-05303daa-c899-453b-8721-60e33e48e8a9",
+          "botSlug": "bot-4f03ae265c134132b1291917d79db212",
+          "modelSteps": null,
+          "attempts": [
+            {
+              "seq": 18,
+              "at": 1792266920008,
+              "turn": 1,
+              "step": 1,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 24102,
+                "outputTokens": 63,
+                "cacheReadTokens": 768,
+                "cacheWriteTokens": 0,
+                "totalTokens": 24933
+              }
+            },
+            {
+              "seq": 24,
+              "at": 1792266921271,
+              "turn": 1,
+              "step": 2,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 223,
+                "outputTokens": 114,
+                "cacheReadTokens": 24832,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25169
+              }
+            },
+            {
+              "seq": 30,
+              "at": 1792266922857,
+              "turn": 1,
+              "step": 3,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 261,
+                "outputTokens": 50,
+                "cacheReadTokens": 24960,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25271
+              }
+            },
+            {
+              "seq": 39,
+              "at": 1792266926624,
+              "turn": 2,
+              "step": 1,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 287,
+                "outputTokens": 72,
+                "cacheReadTokens": 25216,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25575
+              }
+            },
+            {
+              "seq": 45,
+              "at": 1792266927860,
+              "turn": 2,
+              "step": 2,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 222,
+                "outputTokens": 114,
+                "cacheReadTokens": 25472,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25808
+              }
+            },
+            {
+              "seq": 51,
+              "at": 1792266929041,
+              "turn": 2,
+              "step": 3,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 134,
+                "outputTokens": 35,
+                "cacheReadTokens": 25728,
+                "cacheWriteTokens": 0,
+                "totalTokens": 25897
+              }
+            },
+            {
+              "seq": 60,
+              "at": 1792266939402,
+              "turn": 3,
+              "step": 1,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 272,
+                "outputTokens": 93,
+                "cacheReadTokens": 25856,
+                "cacheWriteTokens": 0,
+                "totalTokens": 26221
+              }
+            },
+            {
+              "seq": 66,
+              "at": 1792266941203,
+              "turn": 3,
+              "step": 2,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 786,
+                "outputTokens": 282,
+                "cacheReadTokens": 26112,
+                "cacheWriteTokens": 0,
+                "totalTokens": 27180
+              }
+            },
+            {
+              "seq": 72,
+              "at": 1792266943361,
+              "turn": 3,
+              "step": 3,
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash",
+                "reasoningEffort": "off",
+                "maxTokens": 256000
+              },
+              "usage": {
+                "inputTokens": 216,
+                "outputTokens": 89,
+                "cacheReadTokens": 27136,
+                "cacheWriteTokens": 0,
+                "totalTokens": 27441
+              }
+            }
+          ],
+          "auxiliary": [
+            {
+              "seq": 14,
+              "at": 1792266918214,
+              "kind": "session/title-llm-request",
+              "route": {
+                "provider": "deepseek-official",
+                "model": "deepseek-flash"
+              },
+              "usage": null
+            }
+          ],
+          "toolCalls": [
+            {
+              "seq": 19,
+              "at": 1792266920012,
+              "callId": "call_00_tWzADO41NmubYreYFesr1871",
+              "name": "channel_send",
+              "arguments": "{\"body\": \"记住了：今天视觉方案评审，10:00，A-101，材料是视觉稿 v3。（暂不发通知）\"}",
+              "finishedAt": 1792266920028,
+              "isError": false,
+              "result": "{\"channelId\":\"group-llm-e2e-correction-1-1792266916015\",\"messageId\":\"bot-13eb4dbcbf7569fc6a7eeb1b8f6d060555bc79337639fc654b3224de2087e194\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"not-requested\",\"instruction\":\"This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open.\"}}"
+            },
+            {
+              "seq": 25,
+              "at": 1792266921275,
+              "callId": "call_00_u0ikmqj7TURoiVMGtZvs1780",
+              "name": "inbox_resolve",
+              "arguments": "{\"ids\": [\"cde713b2-e6e5-41fa-aa22-d353974bf257\"], \"outcome\": \"done\", \"note\": \"在群里用一句话确认了时间 10:00、地点 A-101，并说明暂不发通知。\"}",
+              "finishedAt": 1792266921285,
+              "isError": false,
+              "result": "{\"outcome\":\"resolved\",\"resolved\":[\"5a271e1d-a36c-41a9-b335-5ab63630bf32\"],\"alreadyResolved\":[]}"
+            },
+            {
+              "seq": 40,
+              "at": 1792266926628,
+              "callId": "call_00_MJ0A7Ao5dTMzWXlZUJn28594",
+              "name": "channel_send",
+              "arguments": "{\"body\": \"三个议题复述：1) 确认本周视觉方案；2) 任务分工；3) 下次交付。材料只读，不改，也不写正式通知。\"}",
+              "finishedAt": 1792266926643,
+              "isError": false,
+              "result": "{\"channelId\":\"group-llm-e2e-correction-1-1792266916015\",\"messageId\":\"bot-1b821acdb332100cf3ecb95beb191578fd285dd3542f6e5bd40ad30872999667\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"not-requested\",\"instruction\":\"This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open.\"}}"
+            },
+            {
+              "seq": 46,
+              "at": 1792266927864,
+              "callId": "call_00_tT9O2unQBIaNRDgW8BKw6152",
+              "name": "inbox_resolve",
+              "arguments": "{\"ids\": [\"671c9f6a-6dde-4d4c-bf39-8531c748bbe6\"], \"note\": \"已在群里简短复述三个议题，未写正式通知、未找其他 Bot。\", \"outcome\": \"done\"}",
+              "finishedAt": 1792266927872,
+              "isError": false,
+              "result": "{\"outcome\":\"resolved\",\"resolved\":[\"dbc53b06-943b-4591-9e49-22c6c9959f1e\"],\"alreadyResolved\":[]}"
+            },
+            {
+              "seq": 61,
+              "at": 1792266939416,
+              "callId": "call_00_0M6OO98vJUDcCHZ90UGO5133",
+              "name": "channel_send",
+              "arguments": "{\"body\": \"【团队会议通知】\\n时间：今天 10:00\\n地点：A-101\\n材料：视觉稿 v3\\n\\n议题：\\n1. 确认本周视觉方案\\n2. 任务分工\\n3. 下次交付\\n\\n（材料只读，无需修改）\"}",
+              "finishedAt": 1792266939473,
+              "isError": false,
+              "result": "{\"status\":\"held\",\"channelId\":\"group-llm-e2e-correction-1-1792266916015\",\"draftId\":\"bot-2c2b84fe91df4f84b2532a0c28d46ed6781ae0c74d45f05da0ac0188a17473b3\",\"reason\":\"read-new-context-then-revise-or-drop\",\"changedMessageIds\":[\"64a5153d-ac37-415b-a7cd-70af3bafc747\",\"86faf6c4-8d33-400b-9065-6a87cb2d08be\"],\"changedMessageCount\":2,\"read\":{\"channel_id\":\"group-llm-e2e-correction-1-1792266916015\",\"limit\":20},\"review\":{\"observationId\":\"69612769-85df-4441-a2a2-b3ba21859c1e\",\"content\":\"{\\\"outputLimit\\\":12000,\\\"messages\\\":[{\\\"channelId\\\":\\\"group-llm-e2e-correction-1-1792266916015\\\",\\\"channelName\\\":\\\"LLM e2e correction-1 1792266916015\\\",\\\"actorNames\\\":{\\\"humans\\\":{\\\"local-human\\\":\\\"Human\\\"},\\\"bots\\\":{}},\\\"message\\\":{\\\"id\\\":\\\"64a5153d-ac37-415b-a7cd-70af3bafc747\\\",\\\"at\\\":\\\"2026-10-17T19:55:39.246Z\\\",\\\"author\\\":{\\\"kind\\\":\\\"human\\\"},\\\"body\\\":\\\"纠正：会议改为 11:00，以这个时间为准。\\\"}},{\\\"channelId\\\":\\\"group-llm-e2e-correction-1-1792266916015\\\",\\\"channelName\\\":\\\"LLM e2e correction-1 1792266916015\\\",\\\"actorNames\\\":{\\\"humans\\\":{\\\"local-human\\\":\\\"Human\\\"},\\\"bots\\\":{}},\\\"message\\\":{\\\"id\\\":\\\"86faf6c4-8d33-400b-9065-6a87cb2d08be\\\",\\\"at\\\":\\\"2026-10-17T19:55:39.354Z\\\",\\\"author\\\":{\\\"kind\\\":\\\"human\\\"},\\\"body\\\":\\\"再补一句：地点也改为 B-204。请按这两条最新信息发，议题和材料不变。\\\"}}]}\",\"complete\":true,\"observedMessageIds\":[\"64a5153d-ac37-415b-a7cd-70af3bafc747\",\"86faf6c4-8d33-400b-9065-6a87cb2d08be\"],\"responsibility\":\"These messages join this turn. On your recheck or drop, explicitly pass resolve_inbox_ids for these IDs and the original request if complete. They resolve only after a committed send or dropped draft; held/refused never resolve them. Unrelated FYI needs no reply or addition to the original draft. Cancelled work should be dropped silently. Keep unfinished work open.\"}}"
+            },
+            {
+              "seq": 67,
+              "at": 1792266941207,
+              "callId": "call_00_jQvNBuUyRkdr4CnyeeeI7712",
+              "name": "channel_send",
+              "arguments": "{\"body\": \"【团队会议通知】\\n时间：今天 11:00\\n地点：B-204\\n材料：视觉稿 v3\\n\\n议题：\\n1. 确认本周视觉方案\\n2. 任务分工\\n3. 下次交付\\n\\n（材料只读，无需修改）\", \"draft_id\": \"bot-2c2b84fe91df4f84b2532a0c28d46ed6781ae0c74d45f05da0ac0188a17473b3\", \"observation_id\": \"69612769-85df-4441-a2a2-b3ba21859c1e\", \"resolve_inbox_ids\": [\"a411efae-fd3e-4adc-823f-4bab3704b532\", \"64a5153d-ac37-415b-a7cd-70af3bafc747\", \"86faf6c4-8d33-400b-9065-6a87cb2d08be\"]}",
+              "finishedAt": 1792266941238,
+              "isError": false,
+              "result": "{\"channelId\":\"group-llm-e2e-correction-1-1792266916015\",\"messageId\":\"bot-b010d08582388ecdde5fbe933642205b2cf8c6afac2f1288d5e2feff0c5f1db6\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"resolved\",\"resolved\":[\"85049be9-128f-4491-80cf-4a220c646b28\",\"a119f106-1605-4378-bb6e-3e1174381783\",\"aa2da8ca-4eab-4670-bcdd-651cac6f94b3\"],\"alreadyResolved\":[]}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
