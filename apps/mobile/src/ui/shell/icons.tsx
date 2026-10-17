@@ -36,6 +36,15 @@ export function PersonIcon(props: IconProps) {
   return <Glyph {...props} d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7.5 8a7.5 7.5 0 0 1 15 0" />;
 }
 
+export function SettingsIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M9.7 4.5 10.3 2h3.4l.6 2.5 2 .9 2.2-.7 1.7 2.9-1.6 1.8.2 2.2 1.7 1.7-1.7 2.9-2.3-.5-1.8 1.3-.4 2.5h-3.4l-.6-2.4-2-.9-2.2.7-1.7-2.9 1.6-1.8-.2-2.2-1.7-1.7 1.7-2.9 2.3.5 1.6-1.5ZM15.5 11a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+    />
+  );
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return <Glyph {...props} d="m6 9 6 6 6-6" />;
 }

@@ -1,4 +1,4 @@
-import { layers, type Layer, type LayerName } from './layers';
+import { layers, tint, type Layer, type LayerName } from './layers';
 import { palette } from './palette.generated';
 import { mono, touch, typeScale, weight, type PlatformOS } from './tokens';
 
@@ -14,6 +14,7 @@ export type DesignTheme = {
   scheme: ColorScheme;
   color: Record<ColorRole, string>;
   layer: Record<LayerName, Layer>;
+  overlay: { fill: string; handle: string };
   scrim: string;
   type: (typeof typeScale)[PlatformOS];
   weight: (typeof weight)[PlatformOS];
@@ -131,6 +132,7 @@ export function resolveTheme(
     scheme,
     color,
     layer: layers(scheme, color),
+    overlay: { fill: color.sheet, handle: tint(color.sheet, color.fg, 0.38) },
     scrim: SCRIM[scheme],
     type: typeScale[os],
     weight: weight[os],

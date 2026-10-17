@@ -1,4 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
+import { View } from 'react-native';
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
 import { cardHref } from '../../../src/host/push';
@@ -7,6 +8,8 @@ import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { ActivityFeed } from '../../../src/ui/shell/activity-feed';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { t } from '../../../src/ui/strings';
+import { EdgeFade } from '../../../src/ui/chat/header-chrome';
+import { edgeFade } from '../../../src/ui/design/tokens';
 
 export default function ActivityScreen() {
   const router = useRouter();
@@ -40,20 +43,23 @@ export default function ActivityScreen() {
     <>
       <Stack.Screen options={{ title: t.activity }} />
       <HostDrawerEdge>
-        <ActivityFeed
-          client={client}
-          inbox={inbox}
-          snapshot={list}
-          bot={(slug) => bots.find((bot) => bot.slug === slug)}
-          onOpen={open}
-          header={
-            <ConnectionBanner
-              connection={snapshot.connection}
-              onRetry={() => client?.retryNow()}
-              onPairAgain={() => router.push('/pair')}
-            />
-          }
-        />
+        <View style={{ flex: 1 }}>
+          <ActivityFeed
+            client={client}
+            inbox={inbox}
+            snapshot={list}
+            bot={(slug) => bots.find((bot) => bot.slug === slug)}
+            onOpen={open}
+            header={
+              <ConnectionBanner
+                connection={snapshot.connection}
+                onRetry={() => client?.retryNow()}
+                onPairAgain={() => router.push('/pair')}
+              />
+            }
+          />
+          <EdgeFade edge="top" height={edgeFade.top} />
+        </View>
       </HostDrawerEdge>
     </>
   );

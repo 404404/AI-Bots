@@ -3,6 +3,23 @@ import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const navigation = vi.hoisted(() => {
+  const listeners = new Set<(event: { data: { closing: boolean } }) => void>();
+  return {
+    listeners,
+    addListener(_event: string, listener: (event: { data: { closing: boolean } }) => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+});
+vi.mock('expo-router', () => ({
+  useRouter: () => ({ back() {} }),
+  useNavigation: () => navigation,
+}));
+
 vi.mock('react-native', () => import('./react-native-shim'));
 vi.mock('../src/ui/bot-avatar', () => ({
   BotAvatar: ({ bot }: { bot: { slug: string } }) =>
@@ -37,12 +54,16 @@ afterEach(() => {
   root = undefined;
 });
 
-async function render(element: ReactElement): Promise<HTMLElement> {
+async function render(element: ReactElement, opened = true): Promise<HTMLElement> {
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
   await act(async () => root!.render(element));
   await act(async () => undefined);
+  if (opened)
+    await act(async () => {
+      for (const listener of navigation.listeners) listener({ data: { closing: false } });
+    });
   return host;
 }
 
@@ -131,6 +152,31 @@ const headers = (view: HTMLElement) =>
   [...view.querySelectorAll('[role="header"]')].map((node) => node.textContent);
 
 describe('Bot profile sheet', () => {
+  it('opens a lightweight shell before data resolves and keeps cached content during refresh', async () => {
+    const request = Promise.withResolvers<BotProfile>();
+    const view = await render(
+      <BotProfileSheet
+        bot={bot}
+        channels={[]}
+        initialProfile={full}
+        load={() => request.promise}
+        settings={<span>Full settings</span>}
+        actions={actions()}
+      />,
+      false,
+    );
+    expect(headers(view)).toContain(bot.displayName);
+    expect(view.querySelector('[role="progressbar"]')).not.toBeNull();
+    expect(view.textContent).not.toContain('Full settings');
+    await act(async () => {
+      for (const listener of navigation.listeners) listener({ data: { closing: false } });
+    });
+    expect(view.textContent).toContain('Full settings');
+    expect(view.textContent).toContain('Standing rules:');
+    await act(async () => request.resolve(empty));
+    expect(view.textContent).not.toContain('Standing rules:');
+  });
+
   it('shows the identity, persona, memory, routines, Channels and folders', async () => {
     const view = await render(
       <BotProfileSheet

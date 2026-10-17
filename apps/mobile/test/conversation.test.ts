@@ -597,6 +597,36 @@ describe('DM conversation', () => {
     expect(messageArrays.has(live.messages)).toBe(true);
   });
 
+  it('keeps the timeline identity during body appends while publishing live draft text', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    seed(channel, 2);
+    const target = open(host, { draftDelayMs: 0 });
+    await until(target, (s) => s.status === 'live');
+    const draft = { channelId: DM, draftId: 'draft-1', attemptId: 'attempt-1', botSlug: SLUG };
+    channel.emit({
+      type: 'notification',
+      notification: { kind: 'draft', draft: { ...draft, revision: 1, body: 'First' } },
+    });
+    await until(target, (s) => s.drafts[0]?.body === 'First');
+    const before = target.getTimelineSnapshot();
+    channel.emit({
+      type: 'notification',
+      notification: {
+        kind: 'draft-append',
+        append: { ...draft, base: 1, revision: 2, offset: 5, append: ' second' },
+      },
+    });
+    await until(target, (s) => s.drafts[0]?.body === 'First second');
+    expect(target.getTimelineSnapshot()).toBe(before);
+    expect(before.drafts).toEqual([{ draftId: 'draft-1', botSlug: SLUG }]);
+    channel.append({ id: 'settled', body: 'First second', author: { kind: 'bot', slug: SLUG } });
+    await until(target, (s) => s.messages.at(-1)?.id === 'settled');
+    expect(target.getTimelineSnapshot()).not.toBe(before);
+    expect(target.getTimelineSnapshot().drafts).toEqual([]);
+    expect(target.getTimelineSnapshot().messages.at(-1)?.body).toBe('First second');
+  });
+
   it('publishes a settled draft at once instead of waiting for the coalescing window', async () => {
     const host = new FakeHost();
     const channel = host.channel(DM);

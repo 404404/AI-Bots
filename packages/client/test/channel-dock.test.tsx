@@ -563,3 +563,80 @@ it('persists hidden rail controls, closes only the hidden Panel and supports hea
   expect(registry.isOpen(WORKSPACE_CHANNELS)).toBe(false);
   expect(readChannelDock(storage)?.hiddenControls).toEqual([]);
 });
+
+it('opens Channel files inside Messages for DMs and Groups and switches with Members', async () => {
+  const { WorkspaceContext } = await import('../src/client/workspace-context.js');
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  registry.registerEntry(entry('members', 'channel'));
+  const workspace = { rail: () => createElement('nav') };
+  let open = false;
+  let group = false;
+  const view = () =>
+    createElement(
+      WorkspaceContext.Provider,
+      { value: workspace },
+      createElement(ChannelDock, {
+        body: createElement('input', { 'data-message-draft': '' }),
+        files: {
+          open,
+          setOpen: (next: boolean) => {
+            open = next;
+            root.render(view());
+          },
+          content: createElement(
+            'section',
+            { 'data-channel-files': '' },
+            group ? 'group file' : 'DM file',
+          ),
+        },
+        panels: registry.panels(),
+        registry,
+        channel: { id: group ? 'group' : 'dm', type: group ? 'group' : 'dm', botSlug: undefined },
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view()));
+  await settle();
+  const toggle = () =>
+    act(() =>
+      host
+        .querySelector<HTMLButtonElement>('[data-dock-header] button[aria-label="频道文件"]')!
+        .click(),
+    );
+  expect(host.querySelector('[data-channel-files]')).toBeNull();
+  const draft = host.querySelector<HTMLInputElement>('[data-message-draft]')!;
+  draft.value = 'unsent';
+  toggle();
+  await settle();
+  expect(host.querySelector('aside [data-channel-files]')?.textContent).toBe('DM file');
+  expect(host.querySelector('[data-dock-panel="generated-files"]')).toBeNull();
+  expect(host.querySelector('[data-message-draft]')).toBe(draft);
+  toggle();
+  await settle();
+  expect(host.querySelector('[data-channel-files]')).toBeNull();
+  group = true;
+  act(() => root.render(view()));
+  await settle();
+  act(() => registry.open('members'));
+  await settle();
+  expect(host.querySelector('aside [data-body="members"]')).not.toBeNull();
+  toggle();
+  await settle();
+  expect(host.querySelector('aside [data-channel-files]')?.textContent).toBe('group file');
+  expect(host.querySelector('aside [data-body="members"]')).toBeNull();
+  expect(registry.isOpen('members')).toBe(false);
+  act(() => registry.open('members'));
+  await settle();
+  expect(host.querySelector('[data-channel-files]')).toBeNull();
+  expect(host.querySelector('aside [data-body="members"]')).not.toBeNull();
+  expect(draft.value).toBe('unsent');
+});

@@ -7,24 +7,17 @@ import { radius, space } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
+import { SheetGrabber } from '../primitives/sheet-grabber';
 import { CloseIcon } from '../shell/icons';
 import { t } from '../strings';
 
 export const SHEET_GROUP: LayerName = 'raised';
 
 function Grabber() {
-  const theme = useDesignTheme();
   return (
-    <View
-      style={{
-        alignSelf: 'center',
-        width: space.x6 + space.x3,
-        height: space.x2,
-        borderRadius: radius.round,
-        backgroundColor: theme.layer.canvas.selected,
-        marginBottom: space.x3,
-      }}
-    />
+    <View style={{ alignSelf: 'center', marginBottom: space.x3 }}>
+      <SheetGrabber />
+    </View>
   );
 }
 
@@ -96,7 +89,7 @@ export function Sheet({
             onAccessibilityEscape={onClose}
             style={{
               maxHeight: height - insets.top - theme.touch,
-              backgroundColor: theme.layer.canvas.fill,
+              backgroundColor: theme.overlay.fill,
               borderTopLeftRadius: radius.lg,
               borderTopRightRadius: radius.lg,
               paddingTop: space.x3,

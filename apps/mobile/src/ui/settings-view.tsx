@@ -8,6 +8,7 @@ import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
+import { SheetScreen } from './primitives/sheet-screen';
 import { errorText, Notice } from './request-parts';
 import { UsageCard } from './shell/usage-card';
 import { t } from './strings';
@@ -39,6 +40,7 @@ export function SettingsView({
   version,
   actions,
   statistics,
+  messageDisplay,
 }: {
   hostName: string | undefined;
   connection: ConnectionState;
@@ -46,105 +48,110 @@ export function SettingsView({
   version: string;
   actions: SettingsActions;
   statistics?: ReactNode;
+  messageDisplay?: ReactNode;
 }) {
   const theme = useDesignTheme();
   const [unpairError, setUnpairError] = useState<string>();
   const [versionCopied, setVersionCopied] = useState(false);
   const status = [STATUS[connection.status], connection.route].filter((part) => part !== '');
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.color.base }}
-      contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
-    >
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          marginRight: -space.x3,
-        }}
+    <SheetScreen onClose={actions.onClose}>
+      <ScrollView
+        nestedScrollEnabled
+        style={{ flex: 1 }}
+        contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
-        <Text variant="title" accessibilityRole="header" style={{ flex: 1 }}>
-          {t.settings}
-        </Text>
-        <Pressable
-          onPress={actions.onClose}
-          accessibilityRole="button"
-          accessibilityLabel={t.done}
-          style={({ pressed }) => ({
-            minWidth: theme.touch,
-            minHeight: theme.touch,
-            paddingHorizontal: space.x3,
+        <View
+          style={{
+            flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center',
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <Text tone="accent" strong>
-            {t.done}
-          </Text>
-        </Pressable>
-      </View>
-      <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
-      <SettingsSection title={t.connections} on={SHEET_GROUP}>
-        <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
-        <SettingsRow
-          on={SHEET_GROUP}
-          title={t.computers}
-          detail={t.computersHint}
-          onPress={actions.onComputers}
-        />
-        <SettingsRow on={SHEET_GROUP} title={t.notifications} onPress={actions.onNotifications} />
-        <SettingsRow
-          on={SHEET_GROUP}
-          title={t.openFullClient}
-          tone="accent"
-          onPress={actions.onOpenFullClient}
-        />
-        <SettingsRow
-          on={SHEET_GROUP}
-          title={t.unpair}
-          tone="danger"
-          onPress={() => {
-            setUnpairError(undefined);
-            actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
+            marginRight: -space.x3,
           }}
-        />
-      </SettingsSection>
-      {unpairError === undefined ? null : (
-        <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
-      )}
-      <SettingsSection title={t.interface} on={SHEET_GROUP}>
-        <SettingsRow
-          on={SHEET_GROUP}
-          title={t.appIcon}
-          detail={t.appIconHint}
-          onPress={actions.onAppIcon}
-        />
-      </SettingsSection>
-      <SettingsSection title={t.about} on={SHEET_GROUP}>
-        <SettingsRow
-          on={SHEET_GROUP}
-          title={t.appVersion}
-          detail={
-            version === ''
-              ? t.appVersionUnknown
-              : versionCopied
-                ? `${version} · ${t.copied}`
-                : version
-          }
-          accessibilityLabel={`${t.appVersion}, ${version === '' ? t.appVersionUnknown : version}, ${t.copy}`}
-          onPress={
-            version === ''
-              ? undefined
-              : () => {
-                  actions.onCopyVersion(version);
-                  setVersionCopied(true);
-                  setTimeout(() => setVersionCopied(false), 1500);
-                }
-          }
-        />
-      </SettingsSection>
-      {statistics}
-    </ScrollView>
+        >
+          <Text variant="title" accessibilityRole="header" style={{ flex: 1 }}>
+            {t.settings}
+          </Text>
+          <Pressable
+            onPress={actions.onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t.done}
+            style={({ pressed }) => ({
+              minWidth: theme.touch,
+              minHeight: theme.touch,
+              paddingHorizontal: space.x3,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text tone="accent" strong>
+              {t.done}
+            </Text>
+          </Pressable>
+        </View>
+        <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
+        <SettingsSection title={t.connections} on={SHEET_GROUP}>
+          <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.computers}
+            detail={t.computersHint}
+            onPress={actions.onComputers}
+          />
+          <SettingsRow on={SHEET_GROUP} title={t.notifications} onPress={actions.onNotifications} />
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.openFullClient}
+            tone="accent"
+            onPress={actions.onOpenFullClient}
+          />
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.unpair}
+            tone="danger"
+            onPress={() => {
+              setUnpairError(undefined);
+              actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
+            }}
+          />
+        </SettingsSection>
+        {unpairError === undefined ? null : (
+          <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
+        )}
+        <SettingsSection title={t.interface} on={SHEET_GROUP}>
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.appIcon}
+            detail={t.appIconHint}
+            onPress={actions.onAppIcon}
+          />
+        </SettingsSection>
+        {messageDisplay}
+        <SettingsSection title={t.about} on={SHEET_GROUP}>
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.appVersion}
+            detail={
+              version === ''
+                ? t.appVersionUnknown
+                : versionCopied
+                  ? `${version} · ${t.copied}`
+                  : version
+            }
+            accessibilityLabel={`${t.appVersion}, ${version === '' ? t.appVersionUnknown : version}, ${t.copy}`}
+            onPress={
+              version === ''
+                ? undefined
+                : () => {
+                    actions.onCopyVersion(version);
+                    setVersionCopied(true);
+                    setTimeout(() => setVersionCopied(false), 1500);
+                  }
+            }
+          />
+        </SettingsSection>
+        {statistics}
+      </ScrollView>
+    </SheetScreen>
   );
 }

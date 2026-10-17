@@ -108,7 +108,7 @@ export function EdgeFade({ edge: side, height }: { edge: 'top' | 'bottom'; heigh
     >
       <Svg width="100%" height="100%" preserveAspectRatio="none">
         <Defs>
-          <LinearGradient id={id} x1="0" y1={top ? '0' : '1'} x2="0" y2={top ? '1' : '0'}>
+          <LinearGradient id={id} x1="0%" y1={top ? '0%' : '100%'} x2="0%" y2={top ? '100%' : '0%'}>
             {edgeFade.stops.map((stop) => (
               <Stop
                 key={stop.offset}
