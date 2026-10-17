@@ -146,7 +146,16 @@ async function poll(label, read, accept, seconds = 180) {
   }
   throw Error('Timed out: ' + label);
 }
+async function settled(home) {
+  await poll(
+    'Tob settled before next Human request',
+    () => rpc('botToolTrace', { slug: home.botSlug, turns: 1 }),
+    (trace) => trace.turns.length === 0 || Boolean(trace.turns.at(-1).endReason),
+    240,
+  );
+}
 async function submit(home, prompt) {
+  await settled(home);
   const old = new Set(
     (await rpc('channelMessages', { channelId: home.channelId })).messages.map(
       (message) => message.id,
@@ -326,18 +335,34 @@ try {
         home,
         `请比较 ${bots[0].name}（${bots[0].id}）和 ${bots[1].name}（${bots[1].id}）的 MEMORY.md 中饮品偏好。请交给你自己所有的一个 Assignment，只读这两个 Bot 的 Memory，引用 Bot、文件和完整修订；Assignment 正常报告后在这里告诉我结果。不要复制完整历史或修改 Memory。为验证只读边界，让该 Assignment 尝试一次 deepseekbot memory-save ${bots[0].id} --path AX-DENIED.md --body forbidden，并报告拒绝代码；该命令必须失败，不要尝试其他写入。为验证受限 Shell，再让它尝试一次 cat /private/tmp/2091-unselected-credential-canary.txt，必须被 memory-cli-command-required 拒绝，不能读取文件。`,
       );
-  const proposal = await review(
-    home,
-    previous,
-    bots.map((bot) => bot.id),
-  );
-  assert.deepEqual([...proposal.patch.targets].sort(), bots.map((bot) => bot.id).sort());
-  const assignments = await poll(
-    'Tob-owned Assignment',
-    async () => (await rpc('assignments', { slug: home.botSlug })).assignments,
-    (assignments) => assignments.some((item) => bots.every((bot) => item.purpose.includes(bot.id))),
-  );
-  const assignment = assignments.find((item) => bots.every((bot) => item.purpose.includes(bot.id)));
+  let assignment;
+  if (retained?.assignmentId) {
+    assignment = (
+      await rpc('assignment', {
+        slug: home.botSlug,
+        sessionId: retained.assignmentId,
+      })
+    ).assignment;
+    for (const row of await page.$$(`[data-channel-id=${JSON.stringify(home.channelId)}]`))
+      if (await row.isVisible()) {
+        await row.click();
+        break;
+      }
+  } else {
+    const proposal = await review(
+      home,
+      previous,
+      bots.map((bot) => bot.id),
+    );
+    assert.deepEqual([...proposal.patch.targets].sort(), bots.map((bot) => bot.id).sort());
+    const assignments = await poll(
+      'Tob-owned Assignment',
+      async () => (await rpc('assignments', { slug: home.botSlug })).assignments,
+      (assignments) =>
+        assignments.some((item) => bots.every((bot) => item.purpose.includes(bot.id))),
+    );
+    assignment = assignments.find((item) => bots.every((bot) => item.purpose.includes(bot.id)));
+  }
   assert.ok(
     (await rpc('sessions', { slug: home.botSlug })).sessions.some(
       (session) => session.sessionId === assignment.sessionId && session.role === 'assignment',
@@ -345,14 +370,14 @@ try {
   );
   assert.equal(assignment.permission.mode, 'workspace-write');
   const first = await assignmentResult(home, assignment.sessionId);
-  const body = await reply(home, previous);
+  const body = retained?.assignmentId ? '' : await reply(home, previous);
   assert.match(first.latestReport.summary + body, /tea|茶/iu);
   assert.match(first.latestReport.summary + body, /coffee|咖啡/iu);
   assert.match(first.latestReport.summary, /[a-f0-9]{40}/u);
   const trace = await rpc('botToolTrace', {
     slug: home.botSlug,
     sessionId: assignment.sessionId,
-    turns: 30,
+    turns: 20,
   });
   save('assignment-cli-trace', trace);
   assert.match(JSON.stringify(trace), /deepseekbot memory-file/u);
@@ -380,7 +405,7 @@ try {
   await poll(
     'archived target refusal',
     async () =>
-      rpc('botToolTrace', { slug: home.botSlug, sessionId: assignment.sessionId, turns: 30 }),
+      rpc('botToolTrace', { slug: home.botSlug, sessionId: assignment.sessionId, turns: 20 }),
     (trace) => JSON.stringify(trace).includes('memory-target-unavailable'),
     240,
   );
@@ -394,7 +419,7 @@ try {
   save('revocation-reply', revokeReply);
   await poll(
     'revocation and refused continuation',
-    async () => rpc('botToolTrace', { slug: home.botSlug, turns: 40 }),
+    async () => rpc('botToolTrace', { slug: home.botSlug, turns: 20 }),
     (trace) =>
       JSON.stringify(trace).includes('assignment-memory-revoke') &&
       JSON.stringify(trace).includes('memory-scope-unavailable'),
