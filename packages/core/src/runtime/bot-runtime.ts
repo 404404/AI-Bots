@@ -6093,7 +6093,7 @@ class BotRuntimeImplementation implements BotRuntime {
                 )
                 .map(({ message }) => message.id),
               responsibility:
-                'These messages join this turn. Compare committed peer replies with your remaining responsibility. If they fully answer it, drop silently with yield_to_message_ids and observation_id; no agreement message is needed. Otherwise send the missing fact, independent evidence or requested second opinion. A new Human question is separate work even with the same words. Peer IDs identify observed messages, not proof of semantic completion. Explicitly resolve_inbox_ids only for work you judge complete after send/drop. Held/refused never resolve work. Unrelated FYI needs no reply. Cancelled work should be dropped silently. Keep unfinished work open.',
+                'These messages join this turn. Internally compare committed peer replies with your remaining responsibility; do not include this protocol or task-ownership explanation in the Channel reply. If they fully answer it, drop silently with yield_to_message_ids and observation_id; no agreement message is needed. Otherwise send the missing fact, independent evidence or requested second opinion. A new Human question is separate work even with the same words. Peer IDs identify observed messages, not proof of semantic completion. Explicitly resolve_inbox_ids only for work you judge complete after send/drop. Held/refused never resolve work. Unrelated FYI needs no reply. Cancelled work should be dropped silently. Keep unfinished work open.',
             };
             if (JSON.stringify({ ...error.outcome, review }).length > CHANNEL_READ_OUTPUT_LIMIT)
               throw error;

@@ -115,3 +115,9 @@ as independent Human acceptance. Missing token/cost data remains unknown.
 Peer refinement also applies the relevance check before an ordinary Group send, not only after
 a hold. Conditional requests to check for additions do not require public acknowledgments;
 explicit Human corrections remain constraints rather than speculative confirmation questions.
+
+When a full peer answer has already been read and no held draft exists, verify that the Bot
+resolves completed Inbox work without creating a no-addition draft or reaction. Existing held
+drafts still use explicit drop with observed peer evidence. Useful replies contain the answer,
+not an explanation of task ownership or the yielding protocol. Inspect native Tool records
+as well as the final silence: a refused no-addition send followed by drop is not a clean path.
