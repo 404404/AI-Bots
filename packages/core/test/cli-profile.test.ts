@@ -269,6 +269,42 @@ describe('Roster and Human naming', () => {
     expect(live.calls).toHaveLength(12);
   });
 
+  it('forwards only the observed target preference state for an online Human nickname change', async () => {
+    const live = await host(ok);
+    const expectedState = 'd'.repeat(64);
+    for (const [flags, nickname] of [
+      [['--nickname', 'Boss'], 'Boss'],
+      [['--clear'], null],
+    ] as const) {
+      expect(
+        (
+          await invoke(
+            ['channel-human-name-set', 'group-1', ...flags, '--expected-state', expectedState],
+            live.url,
+          )
+        ).code,
+      ).toBe(0);
+      expect(live.calls.at(-1)).toEqual({
+        method: 'channelHumanNameSet',
+        args: { channelId: 'group-1', nickname, expectedState },
+      });
+    }
+    for (const value of ['', 'old', 'A'.repeat(64)])
+      expect(
+        (
+          await invoke(
+            ['channel-human-name-set', 'group-1', '--clear', '--expected-state', value],
+            live.url,
+          )
+        ).json.error.code,
+      ).toBe('usage');
+    expect(
+      (await invoke(['human-name-set', '--clear', '--expected-state', expectedState], live.url))
+        .json.error.code,
+    ).toBe('usage');
+    expect(live.calls).toHaveLength(2);
+  });
+
   it('reads the Human identity and sets names through the Host when one is selected', async () => {
     const live = await host(ok);
     await invoke(['human-identity'], live.url);

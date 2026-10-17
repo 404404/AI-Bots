@@ -1,4 +1,9 @@
 import {
+  ChannelPreferencesError,
+  type ChannelPreferencesService,
+  type ChannelPreferencesSnapshot,
+} from '../channels/preferences.js';
+import {
   ChannelManagementError,
   type ChannelManagementService,
   type ChannelManagementResult,
@@ -555,7 +560,12 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }>;
   humanNameSet(payload: unknown): BridgeResult<LocalHumanIdentity>;
-  channelHumanNameSet(payload: unknown): BridgeResult<{ channel: ChannelListItem }>;
+  channelPreferences(payload: unknown): BridgeResult<ChannelPreferencesSnapshot>;
+  channelPinSet(payload: unknown): Promise<BridgeResult<ChannelPreferencesSnapshot>>;
+  channelHiddenSet(payload: unknown): Promise<BridgeResult<ChannelPreferencesSnapshot>>;
+  channelHumanNameSet(
+    payload: unknown,
+  ): BridgeResult<{ channel: ChannelListItem; preferences?: ChannelPreferencesSnapshot }>;
   channels(payload: unknown): BridgeResult<{ channels: ChannelListItem[] }>;
   channelDm(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
   channelGet(payload: unknown): BridgeResult<ChannelManagementResult>;
@@ -703,7 +713,9 @@ export interface BridgeMethods {
   topReorder(payload: unknown): Promise<BridgeResult<{ topOrder: TopOrderEntry[] }>>;
   pinsSet(payload: unknown): Promise<BridgeResult<{ pins: string[] }>>;
   hiddenSet(payload: unknown): Promise<BridgeResult<{ hidden: string[] }>>;
-  channelMuteSet(payload: unknown): Promise<BridgeResult<{ muted: string[] }>>;
+  channelMuteSet(
+    payload: unknown,
+  ): Promise<BridgeResult<{ muted: string[]; preferences?: ChannelPreferencesSnapshot }>>;
   rosterBatch(payload: unknown): Promise<BridgeResult<RosterSnapshot>>;
   developerModeSet(payload: unknown): BridgeResult<{ accepted: boolean }>;
   computerAccessSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
@@ -771,6 +783,7 @@ export interface BridgeMethodsDeps {
   registry: PersonaBotRegistry;
   creations?: BotCreationService;
   channelManagement?: ChannelManagementService;
+  channelPreferences?: ChannelPreferencesService;
   approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
@@ -1041,7 +1054,16 @@ const topReorderPayload = z.object({
 });
 const pinsSetPayload = z.object({ pins: z.array(z.string()) });
 const hiddenSetPayload = z.object({ hidden: z.array(z.string()) });
-const channelMuteSetPayload = z.object({ channelId: z.string().trim().min(1), muted: z.boolean() });
+const channelMuteSetPayload = z
+  .object({
+    channelId: z.string().trim().min(1),
+    muted: z.boolean(),
+    expectedState: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/u)
+      .optional(),
+  })
+  .strict();
 const rosterBatchPayload = z.object({
   action: z.enum(['pin', 'unpin', 'hide', 'move']),
   channelIds: z
@@ -3275,20 +3297,134 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(error instanceof Error ? error.message : String(error));
       }
     },
+    channelPreferences(payload) {
+      const input = z
+        .object({ channelId: z.string().trim().min(1) })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return invalidInput('channelId is required');
+      if (!deps.channelPreferences)
+        return {
+          ok: false,
+          error: { code: 'preferences-unavailable', message: 'Channel preferences unavailable' },
+        };
+      try {
+        return { ok: true, value: deps.channelPreferences.snapshot(input.data.channelId) };
+      } catch (error) {
+        if (error instanceof ChannelPreferencesError)
+          return { ok: false, error: { code: error.code, message: error.code } };
+        throw error;
+      }
+    },
+    async channelPinSet(payload) {
+      const input = z
+        .object({
+          channelId: z.string().trim().min(1),
+          pinned: z.boolean(),
+          expectedState: z
+            .string()
+            .regex(/^[a-f0-9]{64}$/u)
+            .optional(),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return invalidInput('channelId and pinned are required');
+      if (!deps.channelPreferences)
+        return {
+          ok: false,
+          error: { code: 'preferences-unavailable', message: 'Channel preferences unavailable' },
+        };
+      try {
+        return {
+          ok: true,
+          value: await deps.channelPreferences.update({
+            channelId: input.data.channelId,
+            patch: { pinned: input.data.pinned },
+            ...(input.data.expectedState === undefined
+              ? {}
+              : { expectedState: input.data.expectedState }),
+          }),
+        };
+      } catch (error) {
+        if (error instanceof ChannelPreferencesError)
+          return { ok: false, error: { code: error.code, message: error.code } };
+        throw error;
+      }
+    },
+    async channelHiddenSet(payload) {
+      const input = z
+        .object({
+          channelId: z.string().trim().min(1),
+          hidden: z.boolean(),
+          expectedState: z
+            .string()
+            .regex(/^[a-f0-9]{64}$/u)
+            .optional(),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return invalidInput('channelId and hidden are required');
+      if (!deps.channelPreferences)
+        return {
+          ok: false,
+          error: { code: 'preferences-unavailable', message: 'Channel preferences unavailable' },
+        };
+      try {
+        return {
+          ok: true,
+          value: await deps.channelPreferences.update({
+            channelId: input.data.channelId,
+            patch: { hidden: input.data.hidden },
+            ...(input.data.expectedState === undefined
+              ? {}
+              : { expectedState: input.data.expectedState }),
+          }),
+        };
+      } catch (error) {
+        if (error instanceof ChannelPreferencesError)
+          return { ok: false, error: { code: error.code, message: error.code } };
+        throw error;
+      }
+    },
     channelHumanNameSet(payload) {
       const input = z
-        .object({ channelId: z.string(), nickname: z.string().max(128).nullable() })
+        .object({
+          channelId: z.string(),
+          nickname: z.string().max(128).nullable(),
+          expectedState: z
+            .string()
+            .regex(/^[a-f0-9]{64}$/u)
+            .optional(),
+        })
         .strict()
         .safeParse(payload);
       if (!input.success)
         return invalidInput('A channelId and nickname string or null are required');
       try {
-        deps.channels.setHumanNickname(input.data.channelId, input.data.nickname);
+        if (input.data.expectedState !== undefined && !deps.channelPreferences)
+          return {
+            ok: false,
+            error: { code: 'preferences-unavailable', message: 'Channel preferences unavailable' },
+          };
+        const preferences = deps.channelPreferences?.setHumanNickname({
+          channelId: input.data.channelId,
+          patch: { nickname: input.data.nickname },
+          ...(input.data.expectedState === undefined
+            ? {}
+            : { expectedState: input.data.expectedState }),
+        });
+        if (!deps.channelPreferences)
+          deps.channels.setHumanNickname(input.data.channelId, input.data.nickname);
         return {
           ok: true,
-          value: { channel: channelView(deps.channels.get(input.data.channelId)!) },
+          value: {
+            channel: channelView(deps.channels.get(input.data.channelId)!),
+            ...(preferences ? { preferences } : {}),
+          },
         };
       } catch (error) {
+        if (error instanceof ChannelPreferencesError)
+          return { ok: false, error: { code: error.code, message: error.code } };
         return invalidInput(error instanceof Error ? error.message : String(error));
       }
     },
@@ -6163,7 +6299,26 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     async channelMuteSet(payload) {
       const parsed = channelMuteSetPayload.safeParse(payload);
       if (!parsed.success) return invalidInput('channelId and a boolean muted are required');
-      const { channelId, muted } = parsed.data;
+      const { channelId, muted, expectedState } = parsed.data;
+      if (deps.channelPreferences) {
+        try {
+          const preferences = await deps.channelPreferences.update({
+            channelId,
+            patch: { muted },
+            ...(expectedState === undefined ? {} : { expectedState }),
+          });
+          return { ok: true, value: { muted: deps.roster.snapshot().muted, preferences } };
+        } catch (error) {
+          if (error instanceof ChannelPreferencesError)
+            return { ok: false, error: { code: error.code, message: error.code } };
+          throw error;
+        }
+      }
+      if (expectedState !== undefined)
+        return {
+          ok: false,
+          error: { code: 'preferences-unavailable', message: 'Channel preferences unavailable' },
+        };
       if (muted && deps.channels.get(channelId) === undefined) return unknownChannel(channelId);
       return rosterWrite(async () => ({ muted: await deps.roster.mutedSet(channelId, muted) }));
     },

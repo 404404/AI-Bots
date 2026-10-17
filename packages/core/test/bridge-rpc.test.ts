@@ -555,6 +555,9 @@ describe('bridge typert service', () => {
       'composerIdentity',
       'composerValidate',
       'humanNameSet',
+      'channelPreferences',
+      'channelPinSet',
+      'channelHiddenSet',
       'channelHumanNameSet',
       'channelDm',
       'channelGet',
@@ -850,7 +853,7 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.topReorder)).toEqual(['order']);
     expect(parameterNames(service.pinsSet)).toEqual(['pins']);
     expect(parameterNames(service.hiddenSet)).toEqual(['hidden']);
-    expect(parameterNames(service.channelMuteSet)).toEqual(['channelId', 'muted']);
+    expect(parameterNames(service.channelMuteSet)).toEqual(['channelId', 'muted', 'expectedState']);
     expect(parameterNames(service.rosterBatch)).toEqual(['action', 'channelIds', 'sectionId']);
   });
 

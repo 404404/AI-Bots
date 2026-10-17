@@ -144,7 +144,7 @@ Usage:
   deepseekbot resume <id> [--home <dsh-home>]
   deepseekbot update <id> [--name <name>] [--description <text>] [--role <tag> ...] [--home <dsh-home>]
   deepseekbot human-name-set (--name <text> | --clear) [--home <dsh-home>]
-  deepseekbot channel-human-name-set <channel> (--nickname <text> | --clear) [--home <dsh-home>]
+  deepseekbot channel-human-name-set <channel> (--nickname <text> | --clear) [--home <dsh-home> | --host <url> --expected-state <fingerprint>]
   deepseekbot memory-snapshot <id> [--home <dsh-home>]
   deepseekbot memory-file <id> --path <file> [--home <dsh-home>]
   deepseekbot memory-history <id> [--limit <n>] [--home <dsh-home>]
@@ -209,6 +209,10 @@ Usage:
   deepseekbot settings <namespace>
   deepseekbot settings-set <namespace> --patch-stdin [--expected-revision <n> --previous-value <json>]
   deepseekbot workspace-create <absolute-path>
+  deepseekbot channel-preferences <channel-id>
+  deepseekbot channel-pin <channel-id> [--off] [--expected-state <fingerprint>]
+  deepseekbot channel-hide <channel-id> [--off] [--expected-state <fingerprint>]
+  deepseekbot channel-mute <channel-id> [--off] [--expected-state <fingerprint>]
   deepseekbot channel <channel-id>
   deepseekbot group-create <name> [--member <bot-id> ...] [--operation-key <key>]
   deepseekbot group-invite <channel-id> --bot <bot-id> [--operation-key <key>] [--expected-channel <fingerprint>]
@@ -2585,6 +2589,16 @@ export async function runBotCreateCli(
       return 0;
     }
     const online = values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined;
+    if (
+      values['expected-state'] !== undefined &&
+      (!online ||
+        !['channel-pin', 'channel-hide', 'channel-mute', 'channel-human-name-set'].includes(
+          command,
+        ))
+    )
+      throw usageError(
+        '--expected-state is supported only for online personal Channel preference changes.',
+      );
     if (
       values['operation-key'] !== undefined &&
       (!online || !['create', 'group-create', 'group-invite'].includes(command))

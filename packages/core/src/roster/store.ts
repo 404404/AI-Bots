@@ -56,6 +56,12 @@ export class RosterUnavailableError extends Error {
   }
 }
 
+class RosterGuardError extends Error {
+  constructor(readonly refusal: unknown) {
+    super('roster guarded write refused');
+  }
+}
+
 export class RosterUnknownSectionError extends Error {
   constructor(readonly sectionId: string) {
     super(`unknown Channel section: ${sectionId}`);
@@ -528,6 +534,36 @@ export class RosterStore {
     });
   }
 
+  channelPreferenceSet(
+    channelId: string,
+    field: 'pinned' | 'hidden' | 'muted',
+    enabled: boolean,
+    guard: () => void,
+    resolvePin: (pin: string) => string = (pin) => pin,
+    beforeTransaction?: () => void,
+  ): Promise<RosterSnapshot> {
+    return this.enqueue(() => {
+      try {
+        guard();
+      } catch (error) {
+        throw new RosterGuardError(error);
+      }
+      const global = this.requireGlobal();
+      const state = global.get();
+      const key = field === 'pinned' ? 'pins' : field;
+      const stored = state[key] ?? [];
+      const matches = (id: string) => (field === 'pinned' ? resolvePin(id) : id) === channelId;
+      const exists = stored.some(matches);
+      const next = enabled
+        ? exists
+          ? [...stored]
+          : [...stored, channelId]
+        : stored.filter((id) => !matches(id));
+      if (!sameIds(next, stored)) global.set(nextGlobalState(state, { [key]: next }));
+      return this.snapshot();
+    }, beforeTransaction);
+  }
+
   pinsSet(pins: readonly string[]): Promise<string[]> {
     return this.enqueue(() => {
       const global = this.requireGlobal();
@@ -591,12 +627,13 @@ export class RosterStore {
     return sections;
   }
 
-  private enqueue<T>(operation: () => T): Promise<T> {
+  private enqueue<T>(operation: () => T, beforeTransaction?: () => void): Promise<T> {
     const result = this.tail.then(() => {
       if (!this.available) {
         this.reportUnavailable();
         throw new RosterUnavailableError();
       }
+      beforeTransaction?.();
       let value: T;
       try {
         value = this.database.transaction(
@@ -624,6 +661,8 @@ export class RosterStore {
           ['roster'],
         );
       } catch (error) {
+        if (error instanceof OperationalDatabaseError && error.cause instanceof RosterGuardError)
+          throw error.cause.refusal;
         if (
           error instanceof OperationalDatabaseError &&
           this.options.database.mode === 'ready' &&
