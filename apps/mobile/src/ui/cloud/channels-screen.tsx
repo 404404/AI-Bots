@@ -167,6 +167,8 @@ function ChannelWorkspace({
                 <TextInput
                   accessibilityLabel={t.cloudChannels.message}
                   placeholder={t.cloudChannels.message}
+                  placeholderTextColor={theme.color.subtle}
+                  style={{ color: theme.color.fg }}
                   multiline
                   maxLength={4000}
                   value={pendingSend?.value ?? draft}
@@ -200,6 +202,8 @@ function ChannelWorkspace({
                   <TextInput
                     accessibilityLabel={t.cloudChannels.name}
                     placeholder={t.cloudChannels.name}
+                    placeholderTextColor={theme.color.subtle}
+                    style={{ color: theme.color.fg }}
                     value={pendingCreate?.value ?? name}
                     maxLength={80}
                     editable={!busy && !pendingCreate}
