@@ -1,3 +1,5 @@
+import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
+import { resolveChannelSidebarContext } from './channel-sidebar.js';
 import { usePanelMenu, PanelVisibilityLabel } from './panel-menu.js';
 import type { Shortcuts } from '@deepseek-ai/dsh-client-shortcuts/client';
 import { workspaceShortcutId } from './workspace-shortcuts.js';
@@ -120,6 +122,7 @@ export function Workspace({
         value={
           enabled && options
             ? {
+                shortcuts: options.shortcuts,
                 rail: (
                   api,
                   gap,
@@ -181,6 +184,7 @@ function WorkspaceRail({
     () => options.prefs.source.getSnapshot().botIcon,
   );
   const state = useClientState();
+  const botOnlyHidden = resolveChannelSidebarContext(state)?.botSlug ? [] : BOT_ONLY_CHANNEL_PANELS;
   const shortcuts = useSyncExternalStore(
     options.shortcuts.catalog.subscribe,
     options.shortcuts.catalog.getSnapshot,
@@ -190,7 +194,13 @@ function WorkspaceRail({
     items: [
       { type: 'label', id: 'controls', text: t('workspace.visibleControls') },
       ...panels
-        .filter((panel) => panel.id !== 'members' && panel.id !== 'bot-inbox')
+        .filter(
+          (panel) =>
+            panel.id !== 'members' &&
+            panel.id !== 'bot-inbox' &&
+            panel.id !== 'sessions' &&
+            !botOnlyHidden.includes(panel.id),
+        )
         .map((panel) => ({
           id: panel.id,
           icon: <ChannelSidebarIcon name={panel.icon} />,
@@ -242,7 +252,7 @@ function WorkspaceRail({
             registry={options.dockPanels}
             order={order}
             onOrderChange={setOrder}
-            hiddenIds={['members', 'bot-inbox', ...hiddenControls]}
+            hiddenIds={['members', 'bot-inbox', 'sessions', ...botOnlyHidden, ...hiddenControls]}
             shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
             collapsed
             t={t}

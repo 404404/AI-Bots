@@ -1,6 +1,6 @@
 # ADR-0221: Global and Channel workspaces own panel placement
 
-- Status: Proposed
+- Status: Accepted (Sessions slice; remaining subpanels staged)
 - Date: 2026-10-17
 - Spec: [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048)
 - First runnable slice: [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049)
@@ -11,7 +11,7 @@
 
 The current flat Dock puts global content, such as Channel list and Activity Center, beside content that only makes sense for the active Channel. Hiding Messages leaves Channel-bound panels visible, and the Control Rail does not communicate that relationship. A Group's ability to inspect a member Bot's Sessions must not imply that the Group owns that Bot's Browser, Computer or Profile.
 
-The Human wants freedom to arrange content without losing the relationship between a Channel and its panels. The agreed target is two layout levels. This ADR records that design for implementation; it does not claim the current Client has shipped it.
+The Human wants freedom to arrange content without losing the relationship between a Channel and its panels. The agreed target is two layout levels. The first Sessions slice implements this ownership inside Messages. Other Channel-bound panels remain staged.
 
 ## Decision
 
@@ -21,7 +21,7 @@ The Global workspace contains the unique Workspace Control Rail, global Dock pan
 
 The Control Rail controls global panels and Messages. The Messages header controls Channel subpanels, with localized tooltips, effective shortcut labels and an overflow path for constrained widths. Hiding the parent hides all children while retaining their open states and geometry. Reopening restores them. Neither a parent nor a child visibility action stops Sessions, closes Browser tabs, changes access or creates execution requests.
 
-Sessions is applicable to both PersonaBot DMs and Groups, preserving ADR-0220. Group members belong within the Group's Channel workspace. Browser control, Computer control and PersonaBot Profile require an applicable PersonaBot DM and are absent from Group headers and executable shortcuts. An explicit member-Bot scope in Sessions changes only that query; it cannot enable those Bot-only surfaces. Group Profile and Group settings remain available. Ambiguous Bot-to-Bot conversations must not guess a Bot or reuse the last DM's identity.
+Sessions is applicable to both PersonaBot DMs and Groups, preserving ADR-0220. Group members belong within the Group's Channel workspace. Memory files, Memory evolution, Schedules, Browser control, Computer control and PersonaBot Profile require an applicable PersonaBot DM and are absent from Group headers and executable shortcuts. An explicit member-Bot scope in Sessions changes only that query; it cannot enable those Bot-only surfaces. Group Profile and Group settings remain available. Ambiguous Bot-to-Bot conversations must not guess a Bot or reuse the last DM's identity.
 
 Shared Browser Profiles and Computer Targets can have global resource settings. The fact that multiple Bots use the same physical machine does not make a Bot's tabs, screen access or permissions global. Placement scope is application-defined presentation, not a new DSH permission or resource-isolation mechanism.
 
@@ -35,7 +35,7 @@ Moving or resizing a panel must preserve its content instance, drafts and active
 
 Normalize existing Work-to-Sessions migrations before moving the surviving Sessions entry from the outer layout into Messages. Back up the original record and make migration idempotent. Preserve unrelated panels, unknown registration IDs, parked placement, switch order, gap, and explicit open or closed states. Collapse empty outer nodes. Do not open a closed Messages panel during migration or create duplicates when its old node is absent.
 
-Meaningful adjacency to Messages supplies an inner side and ratio; otherwise start with message content at 70% and Sessions on the right at 30%. The old global Sessions preference seeds Channels lazily; existing new per-Channel preferences win. A previously hidden Sessions rail entry becomes a hidden header-switch preference, recoverable through child-panel management, without disabling its shortcut. Write failure must leave the backup recoverable and must not report a persisted migration as complete.
+Meaningful adjacency to Messages supplies an inner side and ratio; otherwise start with message content at 70% and Sessions on the right at 30%. The old global Sessions preference seeds Channels lazily; existing new per-Channel preferences win. A previously hidden Sessions rail entry becomes a hidden header-switch preference, recoverable through the Messages header context menu, without disabling its shortcut. Write failure must leave the backup recoverable and must not report a persisted migration as complete.
 
 Keep the existing Sessions command identity and native shortcut settings, including custom bindings and explicit unbinding. Keep the default Primary+Alt+Shift+7. Retain the earlier Work binding migration's precedence and conflict handling; do not introduce a competing command or silently overwrite accepted bindings.
 
@@ -65,4 +65,4 @@ Later slices move the remaining Channel-bound surfaces after Human feedback. Bro
 - Local layout migration has a cost: closed/missing parents, hidden switches, older Work layouts and partially migrated records all need observable recovery. Reverting code leaves Host data intact; restoring the saved layout backup replaces subsequent local geometry. Native bindings remain in their existing settings owner.
 - The Human confirmed the highest acceptance seam: real Web old-layout upgrade, Sessions inside Messages, split/resize and refresh, parent hide, shortcut restoration, then DM/Group switching. Supplement with actual macOS Desktop dispatch and window controls. Use existing real Sessions/Assignments where available; API-only checks are not proof of the UI journey.
 - Focused regression coverage checks migration idempotence and backup, closed-state preservation, per-Channel persistence, shortcut customization/unbinding/conflicts, stale reads and stable content on rearrangement. Verify Group exclusions independently of Sessions' member-Bot override.
-- This documentation change runs documentation checks only. Runtime, visual and native evidence belongs to #2049's implementation PR before Human QA.
+- The Sessions slice uses a stable flex split, rather than reparenting React content between Dockview groups. A pointer drop or header menu changes its side; the separator changes a saved proportion. The same content containers remain mounted. Below 520px of parent width, the split temporarily stacks vertically without changing its stored side or ratio. Runtime, visual and native evidence belongs to #2049's implementation PR before Human QA.

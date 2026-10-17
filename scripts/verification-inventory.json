@@ -1600,25 +1600,43 @@
       "path": "scripts/e2e-panel-workspace.mjs",
       "category": "mapped",
       "behaviors": ["desktop.bot-mode.entry", "desktop.bot-mode.dock"],
-      "reason": "Runs qualified Web/macOS workspace movement, spacing, shortcut routing, persistence and exit restoration against a real isolated Client. Profile navigation now uses the Messages header icon; no floating chip is expected (#2042).",
-      "task": 2042,
-      "sha256": "285892460d4511d395cf02dc36b731c27d98334098ddaaba100e636e021bd8c5"
+      "reason": "Runs qualified Web/macOS workspace movement, spacing, shortcut routing, persistence and exit restoration against a real isolated Client. Profile navigation now uses the Messages header icon; no floating chip is expected (#2042). Layout persistence now expects v4; Sessions-specific controls are qualified by the nested journey.",
+      "task": 2049,
+      "sha256": "4a78a061c6838f04312d07537f3697fa7a7193e2d9f6b60373d8affbaeb540ae"
     },
     {
       "path": "scripts/e2e-unified-sessions.mjs",
-      "category": "mapped",
+      "category": "superseded",
       "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
-      "reason": "Runs the real Web Channel and Bot scope journey, same Assignment navigation, refresh, stable peer panels and legacy layout migration.",
-      "task": 2034,
-      "sha256": "e957a7921820ac79a58a3fd200f8f9501e29e6bc6ea29b55705694f02d86e9b5"
+      "reason": "Historical flat Sessions journey; replaced by the Messages-owned Sessions slice. Existing scope and shortcut unit tests remain active.",
+      "task": 2049,
+      "sha256": "e957a7921820ac79a58a3fd200f8f9501e29e6bc6ea29b55705694f02d86e9b5",
+      "replacement": "scripts/e2e-channel-sessions.mjs"
     },
     {
       "path": "scripts/e2e-unified-sessions-desktop.mjs",
+      "category": "superseded",
+      "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
+      "reason": "Historical flat Sessions journey; replaced by the Messages-owned Sessions slice. Existing scope and shortcut unit tests remain active.",
+      "task": 2049,
+      "sha256": "8c0887eb84b21d0a6b1f2ad725555ce409c5bd0c940630a4bdaa17d7c69efc90",
+      "replacement": "scripts/e2e-channel-sessions-desktop.mjs"
+    },
+    {
+      "path": "scripts/e2e-channel-sessions.mjs",
       "category": "mapped",
       "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
-      "reason": "Runs actual macOS Desktop default and custom shortcut dispatch, persistence, automatic Channel scope and explicit Bot scope.",
-      "task": 2034,
-      "sha256": "8c0887eb84b21d0a6b1f2ad725555ce409c5bd0c940630a4bdaa17d7c69efc90"
+      "reason": "Real Web old-layout upgrade, same Assignment navigation, nested drag/resize, stable content, per-Channel persistence and native shortcut catalog customization.",
+      "task": 2049,
+      "sha256": "2bc38b24b4010d49549bfc2b2cf3558edcfd323985ad15a07d1d80743c230cd6"
+    },
+    {
+      "path": "scripts/e2e-channel-sessions-desktop.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
+      "reason": "Task-owned macOS dsh-app window with Electron input dispatch for parent/child default and custom shortcuts, reload and Group exclusions.",
+      "task": 2049,
+      "sha256": "4d55ffe43bac2cb8b3e457f94af87949b972ee910a74eefbc2eaffcdb6f12340"
     }
   ],
   "native": [

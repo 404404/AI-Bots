@@ -837,7 +837,7 @@ A movable content unit whose declared presentation scope determines its owning w
 _Avoid_: widget, view, pane, DSH main panel
 
 **Messages panel**:
-The unique outer Dock panel that hosts the active Channel workspace. Its header identifies the Channel and controls available Channel subpanels. Hiding Messages hides the entire Channel workspace while preserving its child visibility and geometry preferences; it does not stop execution or revoke access.
+The unique outer Dock panel that hosts the active Channel workspace. Its header identifies the Channel and controls available Channel subpanels. Right-clicking the header manages which subpanel switches appear, using an icon, label and trailing checkbox; hiding a switch also closes its subpanel. There is no separate management button. Hiding Messages hides the entire Channel workspace while preserving its child visibility and geometry preferences; it does not stop execution or revoke access.
 _Avoid_: Channel body, chat sidebar, message list (when referring to the whole panel)
 
 **Channel workspace**:
@@ -845,7 +845,7 @@ The inner presentation space owned by Messages for the active Channel, containin
 _Avoid_: Channel sidebar, nested global workspace, DSH Workspace
 
 **Channel subpanel**:
-A Dock panel within a Channel workspace, opened from the Messages header and visible only while its parent is visible. Availability follows the active Channel and existing access checks. Sessions applies to both PersonaBot DMs and Groups; members applies to Groups. Browser control, Computer control and PersonaBot Profile are Bot-only surfaces and have no entry in Group Channels, even when Sessions is explicitly inspecting a member Bot. Group Profile remains available. Showing or hiding a subpanel changes presentation, not execution or permission.
+A Dock panel within a Channel workspace, opened from the Messages header and visible only while its parent is visible. Availability follows the active Channel and existing access checks. Sessions applies to both PersonaBot DMs and Groups; members applies to Groups. Memory files, Memory evolution, Schedules, Browser control, Computer control and PersonaBot Profile are Bot-only surfaces and have no entry in Group Channels, even when Sessions is explicitly inspecting a member Bot. Group Profile remains available. Showing or hiding a subpanel changes presentation, not execution or permission.
 _Avoid_: Channel sidebar entry, global panel (for Channel-bound content), tab
 
 **Channel settings**:
