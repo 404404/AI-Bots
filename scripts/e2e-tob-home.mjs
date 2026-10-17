@@ -539,9 +539,14 @@ try {
       '计算 6 × 7。通过 channel_send 只回复“' +
       marker +
       ': 42”。不要更改设置、委派任务或发送其他消息。';
-    const previous = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+    const previous = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 }).catch(() => ({
+      turns: [],
+    }));
     const previousIds = new Set(previous.turns.map((turn) => previous.sessionId + ':' + turn.turn));
     await page.locator('[data-home-panel] textarea').fill(prompt);
+    await page.waitForFunction(
+      () => !document.querySelector('[data-home-panel] .bh-send-btn')?.disabled,
+    );
     await page.click('[data-home-panel] .bh-send-btn');
     await page.waitForSelector('[data-dock-header="bh:channel-body"]');
     let sent, response, delivery, turn, working;
@@ -557,7 +562,9 @@ try {
         (message) =>
           message.author.kind === 'bot' && !message.sessionFailure && message.body.includes(marker),
       );
-      const trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+      const trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 }).catch(() => ({
+        turns: [],
+      }));
       turn = trace.turns.find(
         (candidate) => !previousIds.has(trace.sessionId + ':' + candidate.turn),
       );
@@ -575,6 +582,12 @@ try {
           working = facts;
           await click('Refresh Home');
           await pause(100);
+          await page.$eval('[data-home-panel]', (panel) => {
+            const card = [...panel.querySelectorAll('section')].find((node) =>
+              ['正在工作的 Bot', 'Working Bots'].includes(node.getAttribute('aria-label')),
+            );
+            card?.scrollIntoView({ block: 'nearest' });
+          });
           await shot('simple-working');
           writeFileSync(resolve(out, 'simple-working.json'), JSON.stringify(facts, null, 2));
         }
