@@ -475,8 +475,16 @@ export function migrateSessionsWorkspace(stored: StoredChannelDock): StoredChann
             : 0.3,
       };
     }
-    const data = children.flatMap((child) => {
-      const next = walk(child, !horizontal);
+    const data = children.flatMap((child, index) => {
+      const absorbsSession =
+        index === messageIndex &&
+        sessionIndex >= 0 &&
+        sessionIndex !== messageIndex &&
+        collectPanels(children[sessionIndex]!).length === 1;
+      const sized = absorbsSession
+        ? { ...child, size: (child.size ?? 0) + (children[sessionIndex]!.size ?? 0) }
+        : child;
+      const next = walk(sized, !horizontal);
       return next ? [next] : [];
     });
     return data.length ? { ...node, data } : undefined;

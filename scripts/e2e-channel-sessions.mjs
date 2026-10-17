@@ -26,6 +26,16 @@ const browser = await puppeteer.launch({
   ignoreDefaultArgs: ['--hide-scrollbars'],
 });
 const page = await browser.newPage();
+const cdp = await page.createCDPSession();
+await cdp.send('Network.enable');
+const follows = [];
+cdp.on('Network.webSocketFrameSent', ({ response }) => {
+  try {
+    const frame = JSON.parse(response.payloadData);
+    if (frame.type === 'open' && frame.endpoint === 'session/follow')
+      follows.push(frame.payload.args.request.address.sessionId);
+  } catch {}
+});
 const errors = [],
   results = [];
 page.on('pageerror', (error) => errors.push(error.message));
@@ -62,7 +72,25 @@ async function enter() {
 try {
   await page.setViewport({ width: 1440, height: 900 });
   await page.goto(instance.url, { waitUntil: 'networkidle2' });
+  if (process.env.BH_LEGACY_LAYOUT) {
+    const original = readFileSync(process.env.BH_LEGACY_LAYOUT, 'utf8');
+    assert.equal(JSON.parse(original).version, 3, 'Replay an actual old-UI saved layout');
+    await page.evaluate((raw) => localStorage.setItem('botharness.bot-mode-layout', raw), original);
+    await page.reload({ waitUntil: 'networkidle2' });
+  }
   await enter();
+  if (!(await page.$('.bh-workspace-rail button[aria-label="Bot 设置"]'))) {
+    await page.click('.bh-workspace-rail button[aria-label="Bot settings"]');
+    await page.evaluate(() =>
+      [...document.querySelectorAll('button')]
+        .find((node) => node.textContent.trim() === 'Appearance')
+        ?.click(),
+    );
+    await page.click('button[aria-label="Interface language"]');
+    await page.locator('::-p-aria(中文)').click();
+    await page.waitForSelector('.bh-workspace-rail button[aria-label="Bot 设置"]');
+    await page.keyboard.press('Escape');
+  }
   await page.click(`[data-dock-panel="bh:channels"] [data-channel-id="${scene.channel.id}"]`);
   if (!(await page.$(parent)))
     await page.click('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]');
@@ -242,20 +270,14 @@ try {
   await page.locator('::-p-aria(当前频道)').click();
   await page.waitForSelector(`${entry} .bh-group-work-row`);
   const assignment = canonical.value.assignments[0];
-  const cdp = await page.createCDPSession();
-  await cdp.send('Network.enable');
-  const follows = [];
-  cdp.on('Network.webSocketFrameSent', ({ response }) => {
-    try {
-      const frame = JSON.parse(response.payloadData);
-      if (frame.type === 'open' && frame.endpoint === 'session/follow')
-        follows.push(frame.payload.args.request.address.sessionId);
-    } catch {}
-  });
   await page.click(`${entry} [data-flip-key="${assignment.sessionId}"] .bh-group-work-row`);
   await page.waitForFunction(() => !document.querySelector('.bh-workspace-rail'));
   await page.waitForFunction(() => document.body.innerText.includes('SESSION_SCOPE_QA_DONE'));
-  assert.ok(follows.includes(assignment.sessionId));
+  await pause(300);
+  assert.ok(
+    follows.includes(assignment.sessionId),
+    'The Client follows the canonical Assignment, including a reused stream',
+  );
   results.push({
     sameAssignmentNavigation: true,
     nativeReportVisible: true,

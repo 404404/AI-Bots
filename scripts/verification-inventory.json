@@ -1628,7 +1628,7 @@
       "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
       "reason": "Real Web old-layout upgrade, same Assignment navigation, nested drag/resize, stable content, per-Channel persistence and native shortcut catalog customization.",
       "task": 2049,
-      "sha256": "ab109d89871d70694d3021bba7f9b534410737020ea1f0a1cecdab12fb4eee1b"
+      "sha256": "38ed16800113060027ec87c015415639daa2d94854dd0fe61f0a9b41c7be37c8"
     },
     {
       "path": "scripts/e2e-channel-sessions-desktop.mjs",
@@ -1636,7 +1636,7 @@
       "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
       "reason": "Task-owned macOS dsh-app window with Electron input dispatch for parent/child default and custom shortcuts, reload and Group exclusions.",
       "task": 2049,
-      "sha256": "4bbd53e1cab1e93c54aca5cc705b8e16f19f6bf22584eea8e222f46f857513cb"
+      "sha256": "4637aed5f3c5a9311731fe78a788b751dfb99349622bff7c9e3ac1b9d32a2761"
     }
   ],
   "native": [

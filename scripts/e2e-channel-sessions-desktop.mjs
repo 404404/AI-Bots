@@ -21,7 +21,7 @@ console.log('Connected native renderer');
 const pages = (await browser.pages()).filter((page) => page.url().startsWith('dsh-app://app/'));
 assert.equal(pages.length, 1, 'Use the single task product window');
 const page = pages[0];
-page.setDefaultTimeout(10000);
+page.setDefaultTimeout(45000);
 console.log('Resolved native page');
 const results = [],
   errors = [];

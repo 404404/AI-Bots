@@ -278,6 +278,9 @@ describe('flat Sessions → Channel workspace migration', () => {
       ratio: 0.25,
       hiddenControl: false,
     });
+    expect(readChannelDock(storage)?.layout.grid.root.data).toEqual([
+      { ...leaf('messages', CHANNEL_BODY_PANEL), size: 1000 },
+    ]);
     nextLayout.panels = { sessions: { id: 'sessions' } };
     nextLayout.grid.root.data.pop();
     storage.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify({ version: 3, layout: nextLayout }));
