@@ -188,11 +188,18 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 `draftVersion` 和可选动作；新来源消息不能重置已有草稿预算。需要延后时，不带
 `resolve_inbox_ids` 放弃草稿，再通过既有 `inbox_snooze` 为已观察且未完成的事项设置时间和说明。
 等待中的事项不能标为完成。
+在同一原生 Orchestrator turn 内，放弃耗尽预算的草稿后不能重新发送，返回
+`dropped-exhausted-draft-defer-turn`；后续一轮可以读取最新上下文继续处理。
+独立的直接 CLI 调用不共享原生 turn。
 
 读全要求的上下文后，仍有必要发送的答案可通过同一直接 CLI 传入
 `freshness_override: {"draftVersion":3,"reason":"复核后仍有必要回答"}`，同时传原群的
 `channel_id`、`draft_id`、`observation_id` 和实际 `body`。版本必须使用结果返回的值，不能猜。
-每条预算耗尽草稿只能显式继续一次；成员、停止/归档、过期、purge 和 owner 检查始终生效。
+每条预算耗尽草稿只能显式申请继续一次，提交时仍原子核对当前内容。
+`override-context-changed-defer` 表示又有新消息或编辑：尚未发送，本次申请已经用完。
+读完返回内容，不结清未完成事项，放弃草稿后短暂 snooze，恢复时再读最新消息；
+Human 指定的更晚时间或条件仍须遵守。`override-already-attempted-defer` 拒绝重复申请。
+成员、停止/归档、过期、purge 和 owner 检查始终生效。
 `draft-version-changed`、`override-context-not-observed`、`override-requires-exhausted-draft`
 是拒绝结果，不是发送成功。正式 message ID 证明结果，工具 trace 留下选择理由。
 Human 要求等待或取消时不得使用 override。

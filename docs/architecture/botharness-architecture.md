@@ -6,7 +6,7 @@
 原始依据与修订草稿归同一 owner，purge 清除派生内容。默认关闭，按群 opt-in；CLI 与模型使用同一契约。
 held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0227](../adr/0227-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
 
-忙群最多进行两次复核，耗尽后明确 drop、既有 Inbox snooze 或一次显式 freshness override。
+忙群最多进行两次复核，耗尽后明确 drop、既有 Inbox snooze 或一次显式继续申请（freshness_override）。显式继续仍原子核对当前消息；出现未读变化则拒绝本次申请，保留责任并延后，不能跳过新纠正。
 Override 绑定 owner、原 Group、当前草稿版本与实际观察；只跳过新鲜度检查，保留停止、权限、过期与 purge fence。
 选择理由、观察与提交 ID 留在原草稿记录；不新增 wake scheduler 或公开系统消息。见 [ADR-0228](../adr/0228-busy-group-review-has-an-explicit-progress-boundary.md)。
 

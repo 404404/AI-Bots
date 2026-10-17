@@ -5119,6 +5119,7 @@ class BotRuntimeImplementation implements BotRuntime {
       ? `direct:${botSlug}`
       : `${botSlug}:${sessionId}`;
     const observations = new Map<string, string>();
+    const exhaustedDrops = new Map<string, string>();
     const recordObservation = (views: ChannelMessageView[]): void => {
       for (const id of new Set(views.map((view) => view.channelId))) {
         if (!this.groupSendReview.enabled(id)) continue;
@@ -5973,7 +5974,7 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       dropDraft: (input) => {
         resolve(input.channelId);
-        return this.groupSendReview.drop(
+        const result = this.groupSendReview.drop(
           reviewOwner,
           input.channelId,
           input.draftId,
@@ -5984,6 +5985,9 @@ class BotRuntimeImplementation implements BotRuntime {
                 messageIds: input.yieldToMessageIds,
               },
         );
+        if (result.status === 'dropped' && result.budget?.exhausted)
+          exhaustedDrops.set(input.channelId, input.draftId);
+        return result;
       },
       send: async (input) => {
         requireReplySource();
@@ -6023,6 +6027,15 @@ class BotRuntimeImplementation implements BotRuntime {
               )}. Call channel_send again with channel_id for the Channel this reply belongs to, or with reply_to set to the message ID you are answering.`,
           );
         const channel = resolve(input.channelId);
+        const exhaustedDraftId = exhaustedDrops.get(channel.id);
+        if (exhaustedDraftId)
+          throw new SendReviewRequired({
+            status: 'requires-review',
+            channelId: channel.id,
+            draftId: exhaustedDraftId,
+            reason: 'dropped-exhausted-draft-defer-turn',
+            choices: ['snooze-inbox'],
+          });
         if (input.freshnessOverride && channel.type !== 'group')
           throw new Error('Freshness override requires the original Group draft');
         if (input.mentionBotIds?.length && channel.type !== 'group')

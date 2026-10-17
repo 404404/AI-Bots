@@ -197,12 +197,19 @@ Busy Groups allow an initial hold and at most two rechecks. `budget.exhausted` r
 `requires-review`, `draftVersion` and choices; new source messages do not reset the existing
 draft. To defer, drop without `resolve_inbox_ids`, then use `inbox_snooze` for the observed
 unfinished work with a time and note. Do not mark waiting work done.
+Inside a native Orchestrator turn, dropping an exhausted draft fences replacement sends
+until the turn ends (`dropped-exhausted-draft-defer-turn`). A later turn can read fresh
+context and proceed. Separate direct CLI invocations do not share a native turn.
 
 After reading all required content, an answer that remains necessary may use the same direct
 command with `freshness_override: {"draftVersion":3,"reason":"Necessary after review"}`,
 `draft_id`, `observation_id`, original `channel_id` and the actual `body`. Use the returned
-version, never a guessed constant. This explicit override is permitted once per exhausted
-draft; it does not bypass membership, stopped/archived state, expiry, purge or ownership.
+version, never a guessed constant. This explicit attempt is permitted once per exhausted
+draft and still atomically checks current content. `override-context-changed-defer` means a
+new message or edit arrived: nothing was sent, and the attempt is spent. Read that context,
+drop without resolving unfinished work, then snooze briefly and read fresh context on return;
+respect a later Human time or condition. `override-already-attempted-defer` refuses repetition.
+The attempt does not bypass membership, stopped/archived state, expiry, purge or ownership.
 `draft-version-changed`, `override-context-not-observed` and `override-requires-exhausted-draft`
 are coded refusals, not delivery. A committed message ID proves the result; tool traces retain
 the selected reason. Human requests to wait or cancel must never be overridden.

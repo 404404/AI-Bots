@@ -62,6 +62,7 @@ export type ReviewDraft = {
   requiredReview?: Seen[];
   requiredObservationSerial?: number;
   terminationReason?: 'stopped';
+  overrideAttemptedAt?: string;
   override?: {
     actor: string;
     reason: string;
@@ -218,6 +219,7 @@ export class GroupSendReview {
         reason: draft.yieldedToMessageIds
           ? 'explicit-peer-yield'
           : 'explicit-drop-does-not-resolve-inbox',
+        budget: this.#progress(draft).budget,
         ...(draft.yieldedToMessageIds ? { yieldedToMessageIds: draft.yieldedToMessageIds } : {}),
       };
     });
@@ -287,6 +289,8 @@ export class GroupSendReview {
         return fail('refused', 'draft-terminal');
       if (!input.draftId) return fail('held', 'use-explicit-draft-id');
       if (input.freshnessOverride) {
+        if (previous.overrideAttemptedAt)
+          return fail('refused', 'override-already-attempted-defer');
         if (previous.attempts < MAX_RECHECKS || previous.override)
           return fail('refused', 'override-requires-exhausted-draft');
         if (input.freshnessOverride.draftVersion !== (previous.version ?? 1))
@@ -381,6 +385,20 @@ export class GroupSendReview {
       })
       .map((row) => row.id);
     if (input.freshnessOverride) {
+      draft.overrideAttemptedAt = this.now().toISOString();
+      if (changed.length > 0) {
+        draft.state = 'requires-review';
+        draft.requiredReview = currentBasis;
+        draft.requiredObservationSerial = this.#observationSerial;
+        this.#save(db, draft);
+        return {
+          ...fail('requires-review', 'override-context-changed-defer'),
+          ...this.#progress(draft),
+          changedMessageIds: changed.slice(0, 20).reverse(),
+          changedMessageCount: changed.length,
+          read: { channel_id: channelId, limit: 20 },
+        };
+      }
       draft.state = 'committed';
       draft.override = {
         actor: owner,
@@ -419,11 +437,14 @@ export class GroupSendReview {
     return undefined;
   }
 
-  #progress(draft: ReviewDraft): Pick<SendReviewOutcome, 'draftVersion' | 'budget' | 'choices'> {
+  #progress(
+    draft: ReviewDraft,
+  ): Required<Pick<SendReviewOutcome, 'draftVersion' | 'budget'>> &
+    Pick<SendReviewOutcome, 'choices'> {
     const choices: NonNullable<SendReviewOutcome['choices']> = [
       'drop',
       'snooze-inbox',
-      'freshness-override',
+      ...(draft.overrideAttemptedAt ? [] : (['freshness-override'] as const)),
     ];
     return {
       draftVersion: draft.version ?? 1,

@@ -12,6 +12,13 @@ the consumed budget, current draft version and explicit progress choices. Anothe
 send cannot replenish the budget, even when it follows a different source message in the
 same owner/Group. Existing wake policy remains unchanged.
 
+Dropping an exhausted draft also fences another send to that Group within the same
+Orchestrator turn. It cannot create a replacement draft to replenish the budget. This
+turn-local guard ends with the turn; a later independent request or resumed responsibility
+can read fresh context and proceed. Each model-free direct Tool invocation is its own
+operation, not a continuing native Orchestrator turn. The guard does not add persistence or
+claim recovery across a Host restart.
+
 At that boundary the PersonaBot chooses one of three actions. It may drop a redundant or
 cancelled draft. It may drop the draft while leaving responsibility open, then use the existing
 Bot Inbox `inbox_snooze` operation with a bounded time and note; resumption must read fresh
@@ -22,10 +29,18 @@ The draft owner does not schedule a wake or interpret natural-language condition
 
 The override is one action for the original owner, Group and expected draft version. Its
 observation must cover all content required at the exhausted review boundary. Reading a
-later revision of the same message counts; an older merged observation does not. Later
-traffic can still arrive, so an override proves an explicit reviewed decision, not absolute
-freshness or semantic correctness. Human corrections, cancellation and requests to wait
-remain model responsibilities tested in real Sessions, not keyword rules in the Host.
+later revision of the same message counts; an older merged observation does not. The final
+transaction still compares that observation with current canonical content. If any unread
+change has arrived, it refuses the explicit attempt with `override-context-changed-defer`,
+returns the changed context, and leaves only drop/defer as choices. The consumed attempt
+cannot be repeated. This overrides the automatic retry budget, not the obligation to read
+current messages. Semantic interpretation of corrections, cancellation and requests to wait
+remains the model's responsibility; the Host does not classify message text with keywords.
+
+The first frozen #2055 cohort demonstrated why this check is necessary: a correction arrived
+after the exhausted snapshot but before the override, and the candidate sent obsolete facts.
+Earlier green tests allowed unseen trailing chatter and missed this race. The regression now
+inserts a correction at that exact boundary and requires refusal without any public append.
 
 The owner records actor, reason, observation, version, count and committed message identity
 in its existing draft JSON in the same transaction as the formal Channel append. A successful

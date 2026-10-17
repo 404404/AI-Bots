@@ -10,7 +10,7 @@ import { createTempRoot } from './helpers.js';
 import { attachOperationalModule, mountOperationalDatabase } from '../src/database/owner.js';
 import { defineSchemaPlan } from '../src/database/schema.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
-import { GroupSendReview } from '../src/channels/send-review.js';
+import { GroupSendReview, SendReviewRequired } from '../src/channels/send-review.js';
 
 it('adds review tables after the canonical Channel management migration while preserving existing identities', () => {
   const dshHome = createTempRoot('review-tob-upgrade-');
@@ -756,6 +756,103 @@ async function exhaustReview(f: Parameters<Parameters<typeof fixture>[0]>[0]) {
 }
 
 describe('busy Group progress through the direct tool', () => {
+  it('cannot drop an exhausted draft and restart its budget inside the same Orchestrator turn', async () => {
+    let groupId = '';
+    let turns = 0;
+    const outcomes: string[] = [];
+    const core = createCore({
+      dshHome: createTempRoot('review-turn-budget-'),
+      agents: {
+        async runOrchestrator(run) {
+          if (run.bot.slug !== 'ada') return;
+          turns += 1;
+          if (turns > 1) {
+            const read = JSON.parse(run.channels.readModel({ channelId: groupId }));
+            await run.channels.send({
+              body: 'New request answered',
+              observationId: read.observationIds[groupId],
+            });
+            return;
+          }
+          let draftId: string | undefined;
+          for (let n = 0; n < 3; n++) {
+            const read = JSON.parse(run.channels.readModel({ channelId: groupId }));
+            await core.channels.appendMessage(groupId, {
+              id: `busy-turn-${n}`,
+              at: new Date().toISOString(),
+              author: { kind: 'human' },
+              body: `Side message ${n}`,
+            });
+            try {
+              await run.channels.send({
+                body: 'Draft',
+                observationId: read.observationIds[groupId],
+                ...(draftId ? { draftId } : {}),
+              });
+              throw Error('Expected a held draft');
+            } catch (error) {
+              if (!(error instanceof SendReviewRequired)) throw error;
+              draftId = error.outcome.draftId;
+              outcomes.push(error.outcome.status);
+            }
+          }
+          const dropped = run.channels.dropDraft!({ channelId: groupId, draftId: draftId! });
+          expect(dropped.budget?.exhausted).toBe(true);
+          const fresh = JSON.parse(run.channels.readModel({ channelId: groupId }));
+          await expect(
+            run.channels.send({
+              body: 'Replacement',
+              observationId: fresh.observationIds[groupId],
+            }),
+          ).rejects.toMatchObject({ outcome: { reason: 'dropped-exhausted-draft-defer-turn' } });
+          outcomes.push('replacement-refused');
+        },
+        async runAssignment() {},
+        requestAssignment() {
+          throw Error('unexpected assignment');
+        },
+        async close() {},
+      },
+    });
+    try {
+      core.registry.create({ slug: 'ada', displayName: 'Ada' });
+      core.registry.create({ slug: 'bob', displayName: 'Bob' });
+      groupId = core.channels.createGroup({ name: 'Budget', members: ['ada', 'bob'] }).id;
+      core.channels.setGroupWakePolicy(groupId, 'ada', {
+        mode: 'silent',
+        count: 5,
+        intervalSeconds: 30,
+      });
+      core.channels.setGroupWakePolicy(groupId, 'bob', {
+        mode: 'silent',
+        count: 5,
+        intervalSeconds: 30,
+      });
+      core.runtime.groupSendReview!.configure(groupId, true);
+      for (const id of ['initial-request', 'new-request']) {
+        await core.channels.appendMessage(groupId, {
+          id,
+          at: new Date().toISOString(),
+          author: { kind: 'human' },
+          body: '@Ada Reply here',
+          mentions: [{ botSlug: 'ada', label: 'Ada', start: 0, end: 4 }],
+        });
+        core.runtime.admitGroupMessage(groupId, id);
+        await core.runtime.whenIdle();
+      }
+      expect(outcomes).toEqual(['held', 'held', 'requires-review', 'replacement-refused']);
+      expect(
+        core.channels
+          .readMessages(groupId)
+          .filter((m) => m.author.kind === 'bot')
+          .map((m) => m.body),
+      ).toEqual(['New request answered']);
+    } finally {
+      await core.runtime.close();
+      core.operationalDatabase.close();
+    }
+  });
+
   it('holds two rechecks, keeps its budget across new source messages, and audits one explicit override', async () => {
     await fixture(async (f) => {
       const exhausted = await exhaustReview(f);
@@ -785,7 +882,6 @@ describe('busy Group progress through the direct tool', () => {
           reason: 'Only unrelated chatter changed; the requested time remains 11:00.',
         },
       };
-      await f.human('last-chatter', 'Coffee cups are on the table');
       const committed = await f.tool('channel_send', override);
       expect(committed.status).toBe('committed');
       expect(
@@ -806,6 +902,47 @@ describe('busy Group progress through the direct tool', () => {
       expect(
         f.core.channels.readMessages(f.channelId).filter((m) => m.author.kind === 'bot'),
       ).toHaveLength(1);
+    });
+  });
+
+  it('refuses a correction arriving after the final review and consumes the single explicit attempt', async () => {
+    await fixture(async (f) => {
+      const exhausted = await exhaustReview(f);
+      const read = await f.tool('channel_read', {});
+      await f.human('last-correction', 'Correction: meet at 12:00, not 11:00');
+      const args = {
+        body: 'Meet at 11:00',
+        draft_id: exhausted.draftId,
+        observation_id: read.observationIds[f.channelId],
+        freshness_override: { draftVersion: exhausted.draftVersion, reason: 'Still necessary' },
+      };
+      const refused = await f.tool('channel_send', args);
+      expect(refused).toMatchObject({
+        status: 'requires-review',
+        reason: 'override-context-changed-defer',
+        budget: { used: 2, limit: 2, exhausted: true },
+        choices: ['drop', 'snooze-inbox'],
+        changedMessageIds: ['last-correction'],
+      });
+      expect(refused.review?.content).toContain('Correction: meet at 12:00');
+      const fresh = await f.tool('channel_read', {});
+      expect(
+        (
+          await f.tool('channel_send', {
+            ...args,
+            body: 'Meet at 12:00',
+            observation_id: fresh.observationIds[f.channelId],
+            freshness_override: { draftVersion: refused.draftVersion, reason: 'Corrected' },
+          })
+        ).reason,
+      ).toBe('override-already-attempted-defer');
+      expect(
+        f.core.channels.readMessages(f.channelId).filter((m) => m.author.kind === 'bot'),
+      ).toHaveLength(0);
+      expect(
+        (await f.tool('channel_send', { body: '', draft_id: exhausted.draftId, drop: true }))
+          .status,
+      ).toBe('dropped');
     });
   });
 

@@ -134,7 +134,14 @@ Use the same direct send Tool to hold a draft, then inject more messages before 
 rechecks. Verify `budget.used` reaches two and `requires-review` reports the current
 `draftVersion`; new ordinary sends must return the existing draft and cannot replenish the
 budget. A full read plus `freshness_override` with that version and a reason can commit once
-despite later chatter. Inspect the one canonical reply and durable decision/Tool trace.
+when the observation still covers current content. Insert a correction after that read and
+before submission: require `override-context-changed-defer`, no public append, and only
+drop/snooze choices. A second override must refuse even after another read. Inspect the one
+canonical reply on the unchanged-content path and the durable decision/Tool trace.
+In a native Orchestrator turn, drop the exhausted draft and attempt a fresh send: require
+`dropped-exhausted-draft-defer-turn`. A later independent request must remain answerable.
+Separate direct Tool invocations are separate operations, so verify this turn boundary in
+the native Session path as well as the focused runtime regression.
 Wrong owner, wrong version, incomplete observation, revoked membership, stopped/archived Bot,
 expiry and purge must refuse without a new message.
 
