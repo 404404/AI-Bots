@@ -26,8 +26,13 @@ export function CloudOrganizationsScreen() {
   const [working, setWorking] = useState(false);
   const busy = snapshot.busy || working;
   const selected = row?.organization;
-  const selectionKey = selected ? selected.organizationId + ':' + selected.version : '';
-  const description = draft?.key === selectionKey ? draft.text : (selected?.description ?? '');
+  const selectionKey = selected
+    ? selected.organizationId + ':' + selected.version + ':' + selected.role
+    : '';
+  const description =
+    selected?.role === 'owner' && draft?.key === selectionKey
+      ? draft.text
+      : (selected?.description ?? '');
   const run = async (action: () => Promise<void>) => {
     if (working) return;
     setWorking(true);
@@ -182,6 +187,8 @@ export function CloudOrganizationsScreen() {
             onPress={() =>
               void run(async () => {
                 await cloudClient.useOrganization(instanceId, item.organizationId);
+                setDraft(undefined);
+                await reload();
               })
             }
           />
