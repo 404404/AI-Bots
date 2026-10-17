@@ -78,7 +78,7 @@ checks remain unchanged.
 
 ## Merge follow-through regressions
 
-Start from a fresh isolated Profile for schema generation 98; old unmerged generation 96/97
+Start from a fresh isolated Profile for schema generation 99; old unmerged generation 96/97/98
 pilot Profiles remain immutable evidence, not supported upgrade sources. In a Group with more
 than 20 historical messages, send without an observation: the held delta must include the latest
 Human correction and permit a corrected recheck. With an existing observation and more than

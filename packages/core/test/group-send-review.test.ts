@@ -9,16 +9,19 @@ import { defineSchemaPlan } from '../src/database/schema.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 import { GroupSendReview } from '../src/channels/send-review.js';
 
-it('adds review tables after the canonical Bot creation migration while preserving existing identities', () => {
+it('adds review tables after the canonical Channel management migration while preserving existing identities', () => {
   const dshHome = createTempRoot('review-tob-upgrade-');
   const prior = mountOperationalDatabase({
     dshHome,
     schemaPlan: defineSchemaPlan(
-      BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 97),
+      BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 98),
     ),
   });
   try {
     attachOperationalModule(prior, 'tob-upgrade-test').transaction((db) => {
+      db.exec(
+        "INSERT INTO channel_management_operations VALUES ('group-a', 'create', 'hash-a', 'channel-a', NULL, '[]', 'completed')",
+      );
       db.exec(
         "INSERT INTO bot_creation_operations VALUES ('create-a', 'hash-a', 'created-bot', 'created')",
       );
@@ -45,6 +48,14 @@ it('adds review tables after the canonical Bot creation migration while preservi
             .get('create-a')?.bot_slug,
       ),
     ).toBe('created-bot');
+    expect(
+      port.read(
+        (db) =>
+          db
+            .prepare('SELECT channel_id FROM channel_management_operations WHERE operation_key = ?')
+            .get('group-a')?.channel_id,
+      ),
+    ).toBe('channel-a');
     const review = new GroupSendReview(port);
     expect(review.enabled('group-a')).toBe(false);
     review.configure('group-a', true);

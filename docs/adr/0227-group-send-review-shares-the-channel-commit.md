@@ -1,4 +1,4 @@
-# ADR-0226: Group send review shares the Channel commit transaction
+# ADR-0227: Group send review shares the Channel commit transaction
 
 - Status: Accepted for opt-in slice #2053; Human accepted the quiet-latency exception on 2026-10-18
 - Date: 2026-10-17
@@ -43,15 +43,15 @@ decision adds neither a Session manager nor a wake scheduler. Review evidence co
 canonical history and usage; exported pilot files are process evidence, not message authority.
 
 The durable draft shape and purge integration make this more than a prompt experiment.
-Schema generation 98 is additive, following main's generation 97 Bot creation receipts;
+Schema generation 99 is additive, following main's generation 98 Channel management receipts;
 roll back behavior by disabling the opt-in before reverting code.
 The database generation still requires a compatible binary. Acceptance remains separate from
 mechanical regression, real-model outcomes and Human evaluation.
 
-Earlier unmerged pilot Profiles used generations 96 or 97 for the review tables. Those private QA
+Earlier unmerged pilot Profiles used generations 96, 97 or 98 for the review tables. Those private QA
 Profiles remain historical QA evidence and must not be opened by the new binary; they are not
 a supported upgrade source for the merged migration order. Integration verification uses a fresh Profile
-and separately checks the canonical main generation 97 to 98 migration without changing Tob or Bot creation receipts.
+and separately checks the canonical main generation 98 to 99 migration without changing Tob, Bot creation or Channel management receipts.
 
 The model can explicitly select `resolve_inbox_ids` on the send/drop Tool. The Consumer
 first awaits a committed send or successful drop, then calls the existing Inbox triage

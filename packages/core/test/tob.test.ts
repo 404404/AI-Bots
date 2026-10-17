@@ -393,4 +393,86 @@ describe('Tob canonical identity and settings', () => {
       await f.close();
     }
   });
+  it('refuses legacy Group management at the runtime boundary while keeping Tob private replies available', async () => {
+    let checked = false;
+    const f = fixture(async (run) => {
+      const actions = [
+        () => run.channels.createGroup('Group'),
+        () => run.channels.inviteGroup({ channelId: 'group', targetBotSlug: 'peer' }),
+        () => run.channels.respondToGroupInvite({ invitationId: 'invite', accept: true }),
+        () => run.channels.requestGroupJoin!({ channelId: 'group' }),
+        () =>
+          run.channels.decideGroupJoin!({ channelId: 'group', requestId: 'request', accept: true }),
+        () => run.channels.renameGroup({ channelId: 'group', name: 'Renamed' }),
+        () => run.channels.removeGroupMember({ channelId: 'group', botSlug: 'peer' }),
+        () => run.channels.leaveGroup({ channelId: 'group' }),
+      ];
+      for (const action of actions) expect(action).toThrow('tob-cli-required');
+      const sent = await run.channels.send({ body: 'I can manage groups from this private DM.' });
+      expect(sent.body).toBe('I can manage groups from this private DM.');
+      checked = true;
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Create a group',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+  it('keeps ordinary Group tools working but prevents inviting or approving protected Tob', async () => {
+    let checked = false;
+    let tobSlug!: string;
+    const f = fixture(async (run) => {
+      if (run.bot.slug !== 'owner') return;
+      const group = run.channels.createGroup('Ordinary Group');
+      expect(group.members).toContain('owner');
+      expect(() =>
+        run.channels.inviteGroup({ channelId: group.id, targetBotSlug: tobSlug }),
+      ).toThrow('protected-bot');
+      const invitation = run.channels.inviteGroup({ channelId: group.id, targetBotSlug: 'peer' });
+      expect(invitation.targetBotSlug).toBe('peer');
+      const request = f.core.channels.requestGroupJoin({
+        channelId: group.id,
+        requesterBotSlug: tobSlug,
+        requesterBotCreatedAt: f.core.registry.get(tobSlug)!.createdAt,
+      });
+      expect(() =>
+        run.channels.decideGroupJoin!({ channelId: group.id, requestId: request.id, accept: true }),
+      ).toThrow('protected-bot');
+      expect(f.core.channels.get(group.id)?.members).not.toContain(tobSlug);
+      const peerRequest = f.core.channels.requestGroupJoin({
+        channelId: group.id,
+        requesterBotSlug: 'another-peer',
+        requesterBotCreatedAt: f.core.registry.get('another-peer')!.createdAt,
+      });
+      const decided = run.channels.decideGroupJoin!({
+        channelId: group.id,
+        requestId: peerRequest.id,
+        accept: true,
+      });
+      expect(decided.channel.members).toContain('another-peer');
+      checked = true;
+    });
+    try {
+      tobSlug = (await f.core.tob.ensure()).botSlug;
+      for (const slug of ['owner', 'peer', 'another-peer'])
+        f.core.registry.create({ slug, displayName: slug });
+      const dm = f.core.channels.getOrCreateDm('owner', 'owner')!;
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: dm.id,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Create a group',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
 });

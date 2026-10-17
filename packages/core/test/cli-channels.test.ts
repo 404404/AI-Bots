@@ -78,6 +78,91 @@ const ok = (method: string, args: Record<string, unknown>) => ({
 });
 
 describe('Channel and group CLI commands', () => {
+  it('reads group snapshots and forwards stable create and invite identity without changing unkeyed calls', async () => {
+    const live = await host(ok);
+    expect((await invoke(['channel', 'team'], live.url)).json).toMatchObject({
+      method: 'channelGet',
+      args: { channelId: 'team' },
+    });
+    expect((await invoke(['group-create', 'Empty team'], live.url)).code).toBe(0);
+    expect(live.calls.at(-1)).toEqual({
+      method: 'channelCreate',
+      args: { name: 'Empty team', members: [] },
+    });
+    expect(
+      (
+        await invoke(
+          [
+            'group-create',
+            'Team',
+            '--member',
+            'ada',
+            '--member',
+            'bob',
+            '--operation-key',
+            'team-create-1',
+          ],
+          live.url,
+        )
+      ).code,
+    ).toBe(0);
+    expect(live.calls.at(-1)).toEqual({
+      method: 'channelCreate',
+      args: { name: 'Team', members: ['ada', 'bob'], operationKey: 'team-create-1' },
+    });
+    expect(
+      (
+        await invoke(
+          [
+            'group-invite',
+            'team',
+            '--bot',
+            'ada',
+            '--operation-key',
+            'team-invite-1',
+            '--expected-channel',
+            'fingerprint',
+          ],
+          live.url,
+        )
+      ).code,
+    ).toBe(0);
+    expect(live.calls.at(-1)).toEqual({
+      method: 'channelGroupInvite',
+      args: {
+        channelId: 'team',
+        botSlug: 'ada',
+        operationKey: 'team-invite-1',
+        expectedChannel: 'fingerprint',
+      },
+    });
+    expect((await invoke(['group-invite', 'team', '--bot', 'ada'], live.url)).code).toBe(0);
+    expect(live.calls.at(-1)).toEqual({
+      method: 'channelGroupInvite',
+      args: { channelId: 'team', botSlug: 'ada' },
+    });
+  });
+
+  it('rejects invalid operation identity before connecting and preserves owner refusal codes', async () => {
+    const live = await host(() => ({
+      ok: false,
+      error: { code: 'stale-channel', message: 'Channel changed' },
+    }));
+    for (const argv of [
+      ['group-create', 'Team', '--operation-key', 'short'],
+      ['group-invite', 'team', '--bot', 'ada', '--operation-key', 'bad key value'],
+      ['group-invite', 'team', '--bot', 'ada', '--expected-channel', ''],
+    ])
+      expect((await invoke(argv, live.url)).json.error.code).toBe('usage');
+    expect(live.calls).toEqual([]);
+    const refused = await invoke(
+      ['group-invite', 'team', '--bot', 'ada', '--expected-channel', 'old'],
+      live.url,
+    );
+    expect(refused.code).not.toBe(0);
+    expect(refused.json.error.code).toBe('stale-channel');
+  });
+
   it('downloads exact original bytes with owner authorization without overwriting an existing file', async () => {
     const bytes = Buffer.from('name,quantity\nalpha,17\n');
     const live = await host(ok, { status: 200, body: bytes });

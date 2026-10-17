@@ -475,6 +475,7 @@ describe('plugin entry', () => {
       'humanNameSet',
       'channelHumanNameSet',
       'channelDm',
+      'channelGet',
       'channelCreate',
       'channelRename',
       'channelGroupAvatarSet',

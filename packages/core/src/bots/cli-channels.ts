@@ -6,6 +6,7 @@ import type { connectLiveHost } from './cli-live.js';
 
 export const CHANNEL_OPTIONS = {
   'avatar-file': { type: 'string' },
+  'expected-channel': { type: 'string' },
   invitation: { type: 'string' },
   request: { type: 'string' },
   accept: { type: 'boolean' },
@@ -27,6 +28,7 @@ export const CHANNEL_OPTIONS = {
 } as const;
 
 export const CHANNEL_COMMANDS = [
+  { command: 'channel', description: 'read a group Channel and its current fingerprint' },
   {
     command: 'channel-media-target',
     description: 'acquire authorized source media and resolve its Host file target',
@@ -94,6 +96,8 @@ export const CHANNEL_COMMANDS = [
 type ChannelCommand = (typeof CHANNEL_COMMANDS)[number]['command'];
 
 interface ChannelValues {
+  'operation-key'?: string;
+  'expected-channel'?: string;
   timeout?: string;
   name?: string;
   clear?: boolean;
@@ -133,6 +137,14 @@ const MAX_AVATAR_BYTES = 98_304;
 
 function usage(message: string): never {
   throw new CliLiveError('usage', message);
+}
+
+export function channelOperationKey(value: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/u.test(value))
+    usage(
+      '--operation-key must be 8–128 letters, digits, dots, underscores, colons or hyphens, starting with a letter or digit.',
+    );
+  return value;
 }
 
 export function isChannelCommand(command: string): command is ChannelCommand {
@@ -216,6 +228,9 @@ export async function runChannelCommand(
   let args: Record<string, unknown> = { channelId };
   let method: string;
   switch (command) {
+    case 'channel':
+      method = 'channelGet';
+      break;
     case 'channel-media-target':
     case 'channel-media-download':
       method = 'channelMediaTarget';
@@ -238,6 +253,10 @@ export async function runChannelCommand(
     case 'group-invite':
       method = 'channelGroupInvite';
       args.botSlug = required(values.bot, '--bot');
+      if (values['operation-key'] !== undefined)
+        args.operationKey = channelOperationKey(values['operation-key']);
+      if (values['expected-channel'] !== undefined)
+        args.expectedChannel = required(values['expected-channel'], '--expected-channel');
       break;
     case 'group-invite-cancel':
       method = 'channelGroupInviteCancel';
