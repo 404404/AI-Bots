@@ -44,6 +44,7 @@ export function SettingsRow({
     <Pressable
       onPress={onPress}
       disabled={onPress === undefined}
+      accessible={android && onPress === undefined ? false : undefined}
       android_ripple={android && onPress ? { color: pressTint(theme.color.fg) } : undefined}
       accessibilityRole={onPress === undefined ? undefined : 'button'}
       accessibilityLabel={
