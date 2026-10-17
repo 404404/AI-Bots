@@ -486,7 +486,7 @@ it('binds activation recovery state and current authority at the owner commit af
   restored.registry.setPaused('keeper', false);
   expect(() =>
     restored.profileRecovery.activate('keeper', true, {
-      planRevision: observed.planRevision,
+      planRevision: observed.planRevision!,
       stateFingerprint: observed.stateFingerprint,
     }),
   ).toThrowError(expect.objectContaining({ code: 'plan-changed' }));
@@ -503,7 +503,7 @@ it('binds activation recovery state and current authority at the owner commit af
           authorized = false;
         },
       },
-      { planRevision: now.planRevision, stateFingerprint: now.stateFingerprint },
+      { planRevision: now.planRevision!, stateFingerprint: now.stateFingerprint },
       () => {
         if (!authorized) throw new TobError('agent-context-expired');
       },
