@@ -1072,3 +1072,23 @@ Browser/Computer 原生 UI 字段继续走 `settings` 与 `settings-set --patch-
 在 **Bot 设置 → 应用**，选择对应平台／有效期行的 **继续配置**，选择 Bot 后进入既有私密表单。Human 专用 owner 查询与 Client 接续只 poll 同一个原生尝试，不再次 `setup.start`；二维码、凭据和验证码仍仅在已认证表单内处理。Tob 不收到原生 attempt id、二维码、token、Provider 指令文字或原始错误。Human CLI 的 `im-setup-receipts`、`im-setup-resume <receipt-id>` 检查同一 owner／接续路径且不输出私密配置产物；Tob broker 不开放这两个命令。引用只在当前进程内有效，随原 Provider 尝试过期或 Host 重启消失；配置与原生凭据权威仍属于 Provider。
 
 Human CLI 补齐 Browser 控制路由：`browser-profile-pair`／`browser-profile-forget` 无 Bot 参数；`browser-daily-connect`、`browser-daily-grant`、`browser-daily-return`、`browser-borrow-pair`、`browser-borrow-return` 带一个 Bot 参数。均需 `--confirm`，复用已有配对／控制 owner，保留 Human 浏览器与系统授权步骤；这些命令不授予 Tob 受限策略权限。直接 CLI、真实 Tob 审批／拒绝／读回、Web 显示、macOS Desktop 与真实外部投递分别验收。
+
+## 已配对设备
+
+`deepseekbot devices` 返回 Host、当前路由诊断和已配对设备，不含凭据。每台设备的 `identity` 指纹覆盖稳定 id、名称、配对时间和撤销状态。`device-routes` 读取同一管理模块，不修改 Tailscale、不发布隧道；`ready: false`、`serve-missing`、`serve-other-target`、Tailscale 停止或未安装均保留为明确结果。
+
+```sh
+deepseekbot devices
+deepseekbot device-routes
+deepseekbot device-offer --out /private/local-folder/new-pairing.json
+deepseekbot device-offer-status <receipt-id>
+deepseekbot device-revoke <device-id> --expected-device <devices返回的identity> --confirm
+```
+
+直接创建邀请时，命令以独占方式新建权限为 0600 的本地文件，仅在该文件写入配对链接和过期时间。请选择受保护的本地目录，切勿把文件粘贴到聊天或 Session。普通 JSON 只返回收据、过期时间、可达性及交接状态；已有文件不会被覆盖。文件内是五分钟有效的一次性邀请，不含操作员 token 或设备凭据。Windows 原生私有文件 ACL 仍需单独验证，请在那里使用人工 Devices 界面。
+
+在 Tob 的已认证私信内，通过普通 Shell 调用同名命令，复用现有受限代理。`device-offer` 不接受 `--out`：审批后只返回安全收据，请人工打开「设置 → 设备 → 配对手机」。人工对话框会复用最新且仍待配对的邀请，链接仅进入人工界面。创建邀请和撤销设备沿用现有审批策略并重新验证人工来源；受限 CLI 拒绝本地文件输出、Host 凭据和权限覆盖。这些命令不代表任意执行授权。
+
+收据状态包括 `pending`、`redeemed`（附设备 id）、`expired`、`unknown`。邀请和有界收据历史仅在当前进程保留：重启、容量淘汰或超出保留窗口会返回 `unknown`，不能据此认定已配对；重试前用 `devices` 核对。已配对设备继续由现有持久化模块管理，跨 Host 重启保留。
+
+撤销必须携带已审阅的身份指纹和明确确认。Host 在撤销前重新核对身份；变化返回 `stale-device`，设备不存在返回 `device-unknown`，身份匹配且已撤销返回 `alreadyRevoked`。撤销会关闭设备的现有流，并由同一监听器上的设备网关拒绝后续请求。直接 CLI 使用现有认证管理路由，Tob 则在原有来源和审批校验后调用同一管理模块。授权协议测试客户端仅证明网关行为，不代表真机、相机、Keychain 或原生网络已验证。

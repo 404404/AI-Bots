@@ -144,3 +144,26 @@ describe('UI and CLI coverage inventory', () => {
     ).toEqual([]);
   });
 });
+
+it('tracks the computed Devices registration table and requires each CLI command mapping', () => {
+  const file = 'packages/core/src/devices/mount.ts';
+  const source =
+    "for (const [path, methods] of [[DEVICES_PATH, ['GET']], [`${DEVICES_PATH}/offer-status`, ['GET']]] as const) connection.fetch.register({ path, methods, requestBody: 'buffered' });";
+  const surfaces = uiSurfacesFrom(file, source);
+  expect(surfaces[0]).toContain('DEVICES_PATH');
+  expect(surfaces[0]).toContain('/offer-status');
+  expect(checkUiInventory(surfaces, { groups: [] }, '')).toHaveLength(1);
+  const mapped = {
+    id: 'device-pairing',
+    scope: 'Profile',
+    description: 'Devices management routes',
+    surfaces,
+    commands: ['devices', 'device-offer-status'],
+  };
+  expect(
+    checkUiInventory(surfaces, { groups: [mapped] }, "'devices' 'device-offer-status'"),
+  ).toEqual([]);
+  expect(checkUiInventory(surfaces, { groups: [mapped] }, "'devices'")[0]).toContain(
+    'missing command device-offer-status',
+  );
+});

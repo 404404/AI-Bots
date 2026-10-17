@@ -1096,3 +1096,23 @@ For an available qualified Feishu/WeChat Provider, Tob may run `im-authorize <pl
 In **Bot settings → Applications**, choose **Continue setup** on the matching platform/expiry row, select the Bot, and continue in the existing setup form. The Human-only owner lookup and Client adoption poll the exact native attempt; they never call `setup.start` again. QR, credentials and verification remain inside that authenticated private form. Tob receives no native attempt id, QR, token, Provider instruction text or error payload. The authenticated Human CLI paths `im-setup-receipts` and `im-setup-resume <receipt-id>` inspect this same owner/handoff without emitting private setup artifacts; neither is admitted by the Tob broker. References are process-local and expire with the Provider attempt or Host restart, while the Provider remains the sole authority for provisioning and native credentials.
 
 The authenticated Human CLI also covers the remaining Browser control routes: `browser-profile-pair` / `browser-profile-forget` (no Bot argument), and `browser-daily-connect`, `browser-daily-grant`, `browser-daily-return`, `browser-borrow-pair`, `browser-borrow-return` (one Bot argument). Each requires `--confirm`; they reuse existing pairing/control owners and leave required Human browser and OS consent intact. These pairing commands are outside scoped Tob policy authority. Direct CLI, real Tob review/refusal/readback, rendered Web, macOS Desktop and actual external delivery are distinct verification gates.
+
+## Paired devices
+
+`deepseekbot devices` lists the Host, current route diagnostics and paired devices without credentials. Each device includes an `identity` fingerprint covering its stable id, name, pairing time and revocation state. `device-routes` reads the same route owner without changing Tailscale or publishing a tunnel; `ready: false`, `serve-missing`, `serve-other-target` and stopped/missing Tailscale remain explicit diagnostics.
+
+```sh
+deepseekbot devices
+deepseekbot device-routes
+deepseekbot device-offer --out /private/local-folder/new-pairing.json
+deepseekbot device-offer-status <receipt-id>
+deepseekbot device-revoke <device-id> --expected-device <identity-from-devices> --confirm
+```
+
+The direct offer command exclusively creates a new mode-0600 local file containing the pairing link and expiry; choose a protected local folder and never paste the file into a chat or Session. Ordinary JSON contains only a receipt, expiry, reachability and handoff status. Existing files are never overwritten. This file contains a one-time five-minute offer, never an operator token or a device credential. Native Windows private-file ACL qualification remains separate; use the Human Devices UI there.
+
+In Tob’s authenticated private DM, ordinary Shell supports these same commands through the existing scoped broker. `device-offer` takes no `--out`: after review it returns a safe receipt and asks the Human to open Settings → Devices → Pair a phone. The Human dialog reuses the latest still-pending offer, so the link stays in the Human UI. Offer creation and revocation use existing approval policy and revalidate the Human source. Local file output, Host credentials and authority overrides are refused in scoped CLI. This is capability coverage, not blanket permission.
+
+Offer receipts report `pending`, `redeemed` (with device id), `expired` or `unknown`. Offers and bounded receipt history are process-local: restart, capacity eviction or a receipt outside the retained window yields `unknown`; do not infer successful pairing. Reconcile using `devices` before retrying. Devices stay in the existing durable device owner across Host restarts.
+
+Revocation requires the reviewed fingerprint and explicit confirmation. The Host rechecks identity immediately before revocation; a changed identity returns `stale-device`, an absent device returns `device-unknown`, and an already revoked matching identity returns `alreadyRevoked`. Revocation closes open device streams and denies later requests through the same listener’s device gateway. Direct CLI uses the existing authenticated management routes; Tob uses the same owner behind its source and review checks. An authorized protocol test client proves gateway behavior; it does not qualify a physical phone, camera, Keychain or native network transport.
