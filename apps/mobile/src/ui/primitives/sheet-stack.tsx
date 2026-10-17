@@ -24,7 +24,9 @@ function SheetStackHeader({ back, navigation, options, route }: NativeStackHeade
         backgroundColor: theme.overlay.fill,
       }}
     >
-      {back === undefined ? null : (
+      {back === undefined ? (
+        options.headerLeft?.({ tintColor: theme.color.fg, canGoBack: false })
+      ) : (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t.back}
@@ -46,13 +48,19 @@ function SheetStackHeader({ back, navigation, options, route }: NativeStackHeade
   );
 }
 
-export function SheetStack({ children }: { children: ReactNode }) {
+export function SheetStack({
+  children,
+  modalGrabber = false,
+}: {
+  children: ReactNode;
+  modalGrabber?: boolean;
+}) {
   const theme = useDesignTheme();
   const navigation = useNavigation('/');
   const insets = useSafeAreaInsets();
   const contentInsets = useMemo(() => ({ ...insets, top: 0 }), [insets]);
   return (
-    <SheetScreen onClose={() => navigation.goBack()}>
+    <SheetScreen modalGrabber={modalGrabber} onClose={() => navigation.goBack()}>
       <SafeAreaInsetsContext value={contentInsets}>
         <Stack
           screenOptions={{
@@ -68,5 +76,26 @@ export function SheetStack({ children }: { children: ReactNode }) {
         </Stack>
       </SafeAreaInsetsContext>
     </SheetScreen>
+  );
+}
+
+export function SheetCloseButton({ onPress }: { onPress(): void }) {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.close}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minWidth: theme.touch,
+        minHeight: theme.touch,
+        paddingHorizontal: space.x3,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Text tone="accent">{t.close}</Text>
+    </Pressable>
   );
 }

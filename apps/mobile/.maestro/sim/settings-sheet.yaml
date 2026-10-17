@@ -5,7 +5,7 @@ appId: ai.botharness.deepseekbot.dev
 - tapOn: 'Chats'
 - tapOn: 'Settings'
 - extendedWaitUntil:
-    visible: 'Done'
+    visible: 'Close'
     timeout: 10000
 - scrollUntilVisible:
     element: 'Computers.*'
@@ -20,17 +20,17 @@ appId: ai.botharness.deepseekbot.dev
     timeout: 10000
 - tapOn: 'Settings'
 - scrollUntilVisible:
-    element: 'Done'
+    element: 'Close'
     direction: UP
-- tapOn: 'Done'
+- tapOn: 'Close'
 - assertVisible: 'Chats'
 - assertNotVisible: 'Computers.*'
 - tapOn: 'Settings'
-- assertVisible: 'Done'
+- assertVisible: 'Close'
 - scrollUntilVisible:
     element: 'Computers.*'
     direction: DOWN
 - scrollUntilVisible:
-    element: 'Done'
+    element: 'Close'
     direction: UP
-- tapOn: 'Done'
+- tapOn: 'Close'

@@ -23,15 +23,31 @@ export function SheetScreen({
   children,
   onMount,
   onClose,
+  modalGrabber = false,
 }: {
   children: ReactNode;
   onMount?: RefCallback<ViewInstance>;
   onClose?: () => void;
+  modalGrabber?: boolean;
 }) {
   const theme = useDesignTheme();
   const router = useRouter();
   return (
-    <View ref={onMount} style={{ flex: 1, backgroundColor: theme.overlay.fill }}>
+    <View
+      ref={onMount}
+      onAccessibilityEscape={onClose}
+      style={{ flex: 1, backgroundColor: theme.overlay.fill }}
+    >
+      {Platform.OS === 'ios' && modalGrabber ? (
+        <View
+          testID="sheet-modal-handle"
+          accessible={false}
+          pointerEvents="none"
+          style={{ alignItems: 'center', paddingVertical: space.x3 }}
+        >
+          <SheetGrabber />
+        </View>
+      ) : null}
       {Platform.OS === 'android' ? (
         <Pressable
           testID="sheet-screen-handle"
