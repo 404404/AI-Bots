@@ -59,6 +59,55 @@ function sourceEvents(owner: OperationalDatabaseOwner): Array<{ id: string; body
 }
 
 describe('Bot Schedule store', () => {
+  it('persists creation receipts across owner restart and preserves deletion tombstones', () => {
+    const root = createTempRoot('schedule-receipt-restart-');
+    const mount = () =>
+      trackTestOwner(
+        mountOperationalDatabase({ dshHome: root, schemaPlan: BOT_HARNESS_SCHEMA_PLAN }),
+      );
+    const make = (databaseOwner: OperationalDatabaseOwner) =>
+      createBotScheduleStore({
+        database: attachOperationalModule(databaseOwner, 'bot-schedules'),
+        isBotActive: () => true,
+        onAdmitted() {},
+      });
+    const firstOwner = mount();
+    const first = make(firstOwner);
+    const input = {
+      title: 'Restart',
+      prompt: 'Synthetic',
+      trigger: { kind: 'every' as const, everySeconds: 3600 },
+    };
+    const receipt = { operationKey: 'restart-schedule-001', payloadHash: 'same-request' };
+    const created = first.create('writer', input, 'human', receipt);
+    first.close();
+    firstOwner.close();
+    const secondOwner = mount();
+    const second = make(secondOwner);
+    expect(second.creation(receipt.operationKey, receipt.payloadHash)).toBe(created.id);
+    expect(second.create('writer', input, 'human', receipt).id).toBe(created.id);
+    expect(second.list('writer')).toHaveLength(1);
+    second.remove('writer', created.id, 'human');
+    expect(() => second.create('writer', input, 'human', receipt)).toThrow(
+      expect.objectContaining({ code: 'schedule-creation-deleted' }),
+    );
+    expect(second.list('writer')).toHaveLength(0);
+    second.close();
+  });
+  it('reconciles a one-time creation after its original deadline has passed', () => {
+    const f = storeAt('2026-10-06T00:00:00.000Z');
+    const input = {
+      title: 'Once',
+      prompt: 'Synthetic',
+      trigger: { kind: 'once' as const, date: '2026-10-06', time: '00:01', timeZone: 'UTC' },
+    };
+    const receipt = { operationKey: 'once-replay-001', payloadHash: 'once-request' };
+    const created = f.store.create('writer', input, 'human', receipt);
+    f.clock.now = new Date('2026-10-06T00:02:00.000Z');
+    f.store.tick();
+    expect(f.store.create('writer', input, 'human', receipt).id).toBe(created.id);
+    expect(f.store.list('writer')).toHaveLength(1);
+  });
   it('validates input, creates every and daily schedules, and keeps targets in the future', () => {
     const { store } = storeAt('2026-10-06T00:00:00.000Z');
     const hourly = store.create(

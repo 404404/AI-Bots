@@ -1,3 +1,4 @@
+import { parseAgentSchedules, TOB_AGENT_SCHEDULE_COMMAND_USAGE } from './cli-agent-schedules.js';
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
 import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
 import {
@@ -16,6 +17,7 @@ export interface AgentManagementInvocation {
 }
 
 export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
+  ...TOB_AGENT_SCHEDULE_COMMAND_USAGE,
   ...TOB_AGENT_BOT_COMMAND_USAGE,
   ...TOB_AGENT_CHANNEL_COMMAND_USAGE,
   list: 'deepseekbot list',
@@ -205,6 +207,8 @@ export async function parseAgentManagement(
   values: Record<string, unknown>,
   io: BotCreateCliIo,
 ): Promise<AgentManagementInvocation | undefined> {
+  const schedule = parseAgentSchedules(command, rest, values);
+  if (schedule) return schedule;
   const channel = parseAgentChannels(command, rest, values);
   if (channel) return channel;
   const bot = await parseAgentBots(command, rest, values, io);
