@@ -1,3 +1,9 @@
+import {
+  BOT_TRANSFER_COMMANDS,
+  BOT_TRANSFER_OPTIONS,
+  runBotTransfer,
+  type BotTransferValues,
+} from './cli-bot-transfer.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +101,7 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...BOT_TRANSFER_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -183,6 +190,7 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...BOT_TRANSFER_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -353,7 +361,8 @@ interface LiveValues
     ProfileValues,
     TodoValues,
     ApprovalTemplateValues,
-    ApprovalReviewerValues {
+    ApprovalReviewerValues,
+    BotTransferValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -660,6 +669,8 @@ export async function runLiveCli(
   values: LiveValues,
   io: BotCreateCliIo,
 ): Promise<unknown> {
+  if (BOT_TRANSFER_COMMANDS.some((entry) => entry.command === command))
+    return runBotTransfer(command, rest, values, io, connectLiveHost);
   if (IM_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareImAuthorization(command, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));

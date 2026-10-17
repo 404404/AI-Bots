@@ -1,3 +1,4 @@
+import { TobCliDownload } from './cli-operations.js';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage } from 'node:http';
 import { TOB_AGENT_COMMAND_USAGE } from '../bots/cli-agent-management.js';
@@ -87,6 +88,9 @@ const CODES = new Set([
   'git-not-found',
   'memory-unavailable',
   'invalid-memory-dir',
+  'stale-bot-files',
+  'too-large',
+  'unsafe-path',
 ]);
 
 export interface TobCliProposal {
@@ -227,9 +231,11 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       const commandBodyLimit =
         input.command === 'group-avatar-set'
           ? GROUP_AVATAR_BODY_BYTES
-          : IMAGE_COMMANDS.has(String(input.command))
+          : input.command === 'bot-zip-export'
             ? MAX_BODY_BYTES
-            : SMALL_BODY_BYTES;
+            : IMAGE_COMMANDS.has(String(input.command))
+              ? MAX_BODY_BYTES
+              : SMALL_BODY_BYTES;
       if (received.bytes > commandBodyLimit) refuse('request-too-large');
       const args = object(input.args);
       authorize();
@@ -350,6 +356,17 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
         }
       } else refuse('unsupported-command');
       log('completed', { command: String(input.command) });
+      if (value instanceof TobCliDownload) {
+        authorize();
+        response.writeHead(200, {
+          'content-type': 'application/zip',
+          'content-length': String(value.bytes.byteLength),
+          'cache-control': 'no-store',
+          'x-botharness-result': Buffer.from(JSON.stringify(value.metadata)).toString('base64url'),
+        });
+        response.end(value.bytes);
+        return;
+      }
       response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       response.end(JSON.stringify({ ok: true, value }));
     } catch (error) {

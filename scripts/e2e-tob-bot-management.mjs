@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -588,6 +589,8 @@ try {
       'direct',
       'model',
       'restart-read',
+      'transfer',
+      'retry',
     ].includes(phase),
     'unknown phase',
   );
@@ -825,6 +828,148 @@ try {
     steps.push(
       'natural model request reviewed correct Bot and current revision, completed native turn, canonical Orchestrator route and visible model chip',
     );
+  }
+  if (phase === 'retry') {
+    assert.ok(fixture, 'BH_E2E_BOT_FIXTURE required');
+    const before = await rpc('get', { slug: fixture.botSlug });
+    const listBefore = await rpc('list');
+    const context = await beginPrompt(
+      home,
+      `上次创建请求的答复无法确认，请只通过原 operation key 与原始参数核对结果，不能创建新的身份、不能改写后来编辑的资料或记忆。请用原 key ${fixture.operationKey} 重放 deepseekbot create，原参数 JSON 是 ${JSON.stringify(fixture.input)}。不要换 key，不要导入，也不要编辑文件。`,
+    );
+    await completeTurn(home, context, 'create');
+    const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    assert.ok(
+      !messages.some(
+        (message) => !context.previousMessages.has(message.id) && message.toolApprovalRequest,
+      ),
+      'completed receipt replay unexpectedly requested mutation approval',
+    );
+    assert.deepEqual(await rpc('get', { slug: fixture.botSlug }), before);
+    assert.deepEqual(await rpc('list'), listBefore);
+    const current = await verifyCreated(fixture);
+    await openCreatedDm(fixture, current.bot.displayName);
+    steps.push(
+      'real Tob exact-key receipt reconciliation preserved one identity/DM and later profile/Memory; simulated missing previous reply, not a runtime-injected transport failure',
+    );
+  }
+  if (phase === 'transfer') {
+    assert.ok(fixture, 'BH_E2E_BOT_FIXTURE required');
+    const target = await rpc('get', { slug: fixture.botSlug });
+    const before = await humanCli('bot-zip-files', [fixture.botSlug]);
+    assert.ok(before.files.some((file) => file.path === 'SOUL.md'));
+    const directPath = resolve(out, 'direct-selected.zip');
+    const direct = await humanCli('bot-zip-export', [
+      fixture.botSlug,
+      '--include',
+      'SOUL.md',
+      '--expected-state',
+      before.stateFingerprint,
+      '--out',
+      directPath,
+    ]);
+    assert.equal(
+      direct.download.sha256,
+      createHash('sha256').update(readFileSync(directPath)).digest('hex'),
+    );
+    const existing = await humanCli(
+      'bot-zip-export',
+      [
+        fixture.botSlug,
+        '--include',
+        'SOUL.md',
+        '--expected-state',
+        before.stateFingerprint,
+        '--out',
+        directPath,
+      ],
+      undefined,
+      true,
+    );
+    assert.equal(existing.error.code, 'output-exists');
+    const exportPath = resolve(home.workspacePath, 'reviewed-export-' + Date.now() + '.zip');
+    await shot('transfer-before');
+    let context = await beginPrompt(
+      home,
+      `请把 Bot“${target.bot.displayName}”当前 SOUL.md 单独导出为 ZIP，保留系统要求的描述和展示文件，不包含其他记忆或 Git 历史。保存到你的工作区中新文件 ${exportPath}。先检查可导出文件，再让我审核具体范围。不要读取文件内容到聊天里。`,
+    );
+    const proposal = await review(
+      home,
+      context,
+      'bot-zip-export',
+      (value) =>
+        value.target === fixture.botSlug &&
+        value.patch?.history === false &&
+        value.patch.files.includes('SOUL.md') &&
+        !value.patch.files.includes('MEMORY.md'),
+    );
+    const completed = await completeTurn(home, context, 'bot-zip-export');
+    const bytes = readFileSync(exportPath);
+    const after = await humanCli('bot-zip-files', [fixture.botSlug]);
+    assert.deepEqual(after, before, 'export mutated source files or identity');
+    assert.ok(
+      !completed.calls.some((call) => call.result?.includes(fixture.personaMarker)),
+      'file content leaked into Tob tool result',
+    );
+    writeFileSync(
+      resolve(out, 'transfer-readback.json'),
+      JSON.stringify(
+        {
+          listing: after,
+          proposal,
+          download: {
+            bytes: bytes.length,
+            sha256: createHash('sha256').update(bytes).digest('hex'),
+          },
+          direct,
+        },
+        null,
+        2,
+      ),
+    );
+    await shot('transfer-after');
+    const deniedPath = resolve(home.workspacePath, 'denied-export-' + Date.now() + '.zip');
+    context = await beginPrompt(
+      home,
+      `请将同一个 Bot“${target.bot.displayName}”的 SOUL.md 再导出到新文件 ${deniedPath}，不含其他记忆或 Git 历史。这次请仍提交审核。`,
+    );
+    await review(
+      home,
+      context,
+      'bot-zip-export',
+      (value) => value.target === fixture.botSlug && value.patch?.history === false,
+      true,
+    );
+    await completeTurn(home, context, 'bot-zip-export', 'approval-denied');
+    assert.ok(!readdirSync(home.workspacePath).includes(basename(deniedPath)));
+    const stalePath = resolve(home.workspacePath, 'stale-export-' + Date.now() + '.zip');
+    context = await beginPrompt(
+      home,
+      `请再次将 Bot“${target.bot.displayName}”的 SOUL.md 导出到新文件 ${stalePath}，不含其他记忆或 Git 历史，重新读取当前文件状态并提交审核。`,
+    );
+    const pending = await waitForApproval(
+      home.channelId,
+      context.previousMessages,
+      context.previousCalls,
+      'bot-zip-export',
+      (value) => value.target === fixture.botSlug,
+    );
+    const selector = await showApproval(pending);
+    const profile = await humanCli('show', [fixture.botSlug]);
+    await humanCli('update', [
+      fixture.botSlug,
+      '--name',
+      target.bot.displayName + ' newer',
+      '--expected-profile',
+      profile.profileFingerprint,
+    ]);
+    await decideApproval(selector, false);
+    await completeTurn(home, context, 'bot-zip-export', 'stale-bot-files');
+    assert.ok(!readdirSync(home.workspacePath).includes(basename(stalePath)));
+    steps.push(
+      'independent Human CLI selected export, exclusive output refusal, real Tob scoped binary export with exact review and unchanged source, denied export and stale profile refusal',
+    );
+    saveFixture();
   }
   if (phase === 'restart-read') {
     assert.ok(fixture, 'BH_E2E_BOT_FIXTURE required after restarting the same isolated Profile');

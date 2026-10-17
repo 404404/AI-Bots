@@ -299,6 +299,8 @@ Usage:
   deepseekbot private-mcp-set <id> --server <name> (--enabled | --disabled)
   deepseekbot private-mcp-remove <id> --server <name> --confirm
   deepseekbot bot-delete-preview <id>
+  deepseekbot bot-zip-files <id> --host <url>
+  deepseekbot bot-zip-export <id> --out <new-path> (--all | --include <path> ...) [--history] --expected-state <fingerprint> --host <url>
   deepseekbot bot-delete-memory-folder <id>
   deepseekbot bot-delete-confirm <id> --confirmation-stdin --confirm [--erase-memory]
   deepseekbot bot-delete-retry <id> --confirm
@@ -2592,12 +2594,16 @@ export async function runBotCreateCli(
     if (
       values['expected-state'] !== undefined &&
       (!online ||
-        !['channel-pin', 'channel-hide', 'channel-mute', 'channel-human-name-set'].includes(
-          command,
-        ))
+        ![
+          'channel-pin',
+          'channel-hide',
+          'channel-mute',
+          'channel-human-name-set',
+          'bot-zip-export',
+        ].includes(command))
     )
       throw usageError(
-        '--expected-state is supported only for online personal Channel preference changes.',
+        '--expected-state is supported only for online personal Channel preference changes or Bot ZIP export.',
       );
     if (
       values['operation-key'] !== undefined &&

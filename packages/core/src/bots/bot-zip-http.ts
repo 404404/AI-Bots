@@ -1,3 +1,4 @@
+import { createBotTransfer, BotTransferError, type BotTransferService } from './transfer.js';
 import { randomUUID } from 'node:crypto';
 
 import { safeAttachmentName } from '../attachments/store.js';
@@ -18,6 +19,7 @@ type DetailResult =
 
 export interface BotZipHttpDeps {
   registry: PersonaBotRegistry;
+  transfer?: BotTransferService;
   detail: (slug: string) => DetailResult;
   log?: (message: string) => void;
   createBotId?: () => string;
@@ -71,6 +73,7 @@ function fileStem(name: string | null): string | undefined {
 }
 
 export function createBotZipHttp(deps: BotZipHttpDeps): (request: Request) => Promise<Response> {
+  const transfer = deps.transfer ?? createBotTransfer(deps.registry);
   const botOf = (
     slug: string | null,
   ):
@@ -92,15 +95,29 @@ export function createBotZipHttp(deps: BotZipHttpDeps): (request: Request) => Pr
     const bot = botOf(new URL(request.url).searchParams.get('slug'));
     if (bot instanceof Response) return bot;
     try {
-      return Response.json(listBotZipFiles(bot.memoryDir), { headers: NO_STORE });
-    } catch {
+      return Response.json(
+        new URL(request.url).searchParams.get('snapshot') === '1'
+          ? transfer.files(bot.record.slug)
+          : listBotZipFiles(bot.memoryDir),
+        { headers: NO_STORE },
+      );
+    } catch (error) {
+      if (error instanceof BotTransferError)
+        return failure(
+          error.code === 'too-large' ? 413 : 400,
+          error.code,
+          'The Bot file snapshot is unavailable',
+        );
       return failure(500, 'memory-unavailable', 'The Bot files could not be read');
     }
   };
 
   const readSelection = async (
     request: Request,
-  ): Promise<{ slug: string | null; include?: Set<string>; history: boolean } | Response> => {
+  ): Promise<
+    | { slug: string | null; include?: Set<string>; history: boolean; expectedState?: string }
+    | Response
+  > => {
     if (request.method === 'GET') {
       const params = new URL(request.url).searchParams;
       return { slug: params.get('slug'), history: params.get('history') === '1' };
@@ -122,18 +139,27 @@ export function createBotZipHttp(deps: BotZipHttpDeps): (request: Request) => Pr
     const slug = source['slug'];
     const include = source['include'];
     const history = source['history'] ?? false;
+    const expectedState = source['expectedState'];
     if (
       typeof slug !== 'string' ||
-      !Array.isArray(include) ||
-      !include.every((path) => typeof path === 'string') ||
+      (include === undefined
+        ? typeof expectedState !== 'string'
+        : !Array.isArray(include) || !include.every((path) => typeof path === 'string')) ||
+      (expectedState !== undefined &&
+        (typeof expectedState !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedState))) ||
       typeof history !== 'boolean'
     ) {
       return failure(400, 'invalid-input', 'slug and include are required');
     }
-    if (history) {
+    if (history && include !== undefined) {
       return failure(400, 'invalid-input', 'Git history can only be exported with every file');
     }
-    return { slug, include: new Set(include as string[]), history: false };
+    return {
+      slug,
+      ...(include === undefined ? {} : { include: new Set(include as string[]) }),
+      history,
+      ...(expectedState === undefined ? {} : { expectedState: expectedState as string }),
+    };
   };
 
   const exportZip = async (request: Request): Promise<Response> => {
@@ -143,10 +169,20 @@ export function createBotZipHttp(deps: BotZipHttpDeps): (request: Request) => Pr
     if (bot instanceof Response) return bot;
     const startedAt = performance.now();
     try {
-      const archive = exportBotZip(bot.memoryDir, {
-        ...(selection.include === undefined ? {} : { include: selection.include }),
-        history: selection.history,
-      });
+      const exported =
+        selection.expectedState === undefined
+          ? undefined
+          : transfer.exportZip(bot.record.slug, {
+              history: selection.history,
+              expectedState: selection.expectedState,
+              ...(selection.include === undefined ? {} : { include: [...selection.include] }),
+            });
+      const archive =
+        exported?.archive ??
+        exportBotZip(bot.memoryDir, {
+          ...(selection.include === undefined ? {} : { include: selection.include }),
+          history: selection.history,
+        });
       deps.log?.(
         `bot-zip-export slug=${bot.record.slug} selected=${selection.include === undefined ? 'all' : selection.include.size} history=${selection.history} bytes=${archive.length} durationMs=${Math.round(performance.now() - startedAt)}`,
       );
@@ -154,12 +190,25 @@ export function createBotZipHttp(deps: BotZipHttpDeps): (request: Request) => Pr
         headers: {
           ...NO_STORE,
           'content-type': 'application/zip',
+          ...(exported
+            ? {
+                'x-botharness-result': Buffer.from(JSON.stringify(exported.metadata)).toString(
+                  'base64url',
+                ),
+              }
+            : {}),
           'content-length': String(archive.length),
           'content-disposition': disposition(bot.record.displayName),
           'x-content-type-options': 'nosniff',
         },
       });
     } catch (error) {
+      if (error instanceof BotTransferError)
+        return failure(
+          error.code === 'too-large' ? 413 : error.code === 'stale-bot-files' ? 409 : 400,
+          error.code,
+          'The reviewed Bot export could not be completed',
+        );
       if (error instanceof ZipArchiveError) return zipFailure(error);
       deps.log?.(`bot-zip-export-failed slug=${bot.record.slug}`);
       return failure(500, 'memory-unavailable', 'The Bot files could not be read');
