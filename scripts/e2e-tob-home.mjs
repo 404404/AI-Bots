@@ -539,7 +539,7 @@ try {
     await page.locator('[data-home-creation] ::-p-aria(创建)').click();
     await page.waitForFunction(() => !document.querySelector('[data-home-creation]'));
     const bots = (await rpc('list')).bots;
-    const created = bots.find((bot) => bot.displayName === displayName);
+    const created = bots.find((bot) => !before.has(bot.slug) && bot.displayName === displayName);
     assert.ok(created, 'canonical Bot persisted');
     const roster = await rpc('rosterGet');
     const target = roster.sections.find((item) => item.id === section.id);
