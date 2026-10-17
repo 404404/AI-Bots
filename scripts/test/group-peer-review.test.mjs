@@ -1,5 +1,11 @@
 import { expect, it } from 'vitest';
 import { peerGoal, PEER_PROTOCOL } from '../e2e-group-peer-review.mjs';
+import {
+  summarize,
+  humanReviewSet,
+  judgePrompt,
+  renderHistory,
+} from '../group-send-review-report.mjs';
 const msg = (id, slug, body, at = '2026-10-17T10:00:02Z') => ({
   id,
   author: { kind: 'bot', slug },
@@ -16,6 +22,36 @@ const fixture = (family) => ({
     g: [msg('b', 'b', 'October 20 09:00 UTC R3')],
     'dm-a': [msg('prep', 'a', 'confirmed')],
   },
+});
+it('uses peer families, budgets, fixed sampling and author identities in the shared report', () => {
+  const pairs = PEER_PROTOCOL.families.map((family) => ({
+    id: family + '-1',
+    family,
+    runs: {
+      baseline: {
+        ...fixture(family),
+        valid: true,
+        goal: true,
+        usage: { host: { totalTokens: 100 } },
+      },
+      candidate: {
+        ...fixture(family),
+        valid: true,
+        goal: true,
+        usage: { host: { totalTokens: 150 } },
+      },
+    },
+  }));
+  const report = { protocol: PEER_PROTOCOL, pairs, candidate: 'candidate', protocolHash: 'hash' };
+  expect(summarize(report).map((row) => row.family)).toEqual(PEER_PROTOCOL.families);
+  for (const reasons of Object.values(humanReviewSet(report))) {
+    expect(reasons).toContain('固定 seed 2054 抽样');
+    expect(reasons).toContain('超过预登记 token 预算');
+  }
+  expect(judgePrompt(report)).toContain('QA-317');
+  const html = renderHistory(report);
+  expect(html).toContain('Object.entries(r.bots');
+  expect(html).toContain('data.report.protocol?.issue||2053');
 });
 it('does not count silent omission of independent evidence as success', () => {
   const run = fixture('independent');
