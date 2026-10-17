@@ -1965,9 +1965,10 @@
             <div class="am-panel-body">
               <div class="am-md">
                 <p>
-                  本页解释 #2099 的产品源码 <code>20126473bd69c5404c720a19874f40b173817f3e</code>。
-                  基础为 PR #2119 的 <code>a3e2c4e64d131191e686e33cb207d3db9b3a0937</code>。
-                  生成日期为 2026-10-18。后续证据文件提交不改变该产品源码。
+                  本页解释 PR #2141 / #2099 的产品源码
+                  <code>20126473bd69c5404c720a19874f40b173817f3e</code>。 基础为 PR #2119 的
+                  <code>a3e2c4e64d131191e686e33cb207d3db9b3a0937</code>。 生成日期为
+                  2026-10-18。后续证据文件提交不改变该产品源码。
                 </p>
                 <p>
                   Human 可以通过同一 Host owner 预览、导出、检查备份，并逐个授权和启用恢复后的 Bot。
@@ -2232,7 +2233,15 @@
                         <td>恢复后拒绝未授权启用，授权后仅选定一个 Bot 活动</td>
                       </tr>
                       <tr>
-                        <td>CI、macOS、Human 审核</td>
+                        <td>macOS</td>
+                        <td>实际应用恢复 UI、源预览、同路径进程重启均通过</td>
+                      </tr>
+                      <tr>
+                        <td>CI</td>
+                        <td>前一证据提交的完整 CI 已通过；本次证据更新状态见 PR</td>
+                      </tr>
+                      <tr>
+                        <td>Human 审核与最终集成</td>
                         <td>独立门槛，尚未通过</td>
                       </tr>
                     </tbody>
@@ -2242,6 +2251,11 @@
                   首次失败证据保留。早期 trace driver 截断了组合 Shell 参数。
                   成功行为另由完整原生事件、持久 Source 和文件哈希核对。 丢弃 stdout
                   的测试不等于网络丢包证明。 合并后的 schema100 至102 仍需独立集成检查。
+                </p>
+                <p>
+                  Native 截图保留目标模型或本地凭据不可用的状态。
+                  已激活标记存在，执行仍被阻止；未证明恢复后的 Native 模型对话。
+                  源预览截图还显示独立的活动同步重连提示。
                 </p>
               </div>
             </div>
@@ -2292,7 +2306,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 08:04 ·
+      0.5.0 · 2026-10-18 08:24 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2305,7 +2319,7 @@ lang: zh
 
 ## A 范围与版本
 
-本页解释 #2099 的产品源码 `20126473bd69c5404c720a19874f40b173817f3e`。
+本页解释 PR #2141 / #2099 的产品源码 `20126473bd69c5404c720a19874f40b173817f3e`。
 基础为 PR #2119 的 `a3e2c4e64d131191e686e33cb207d3db9b3a0937`。
 生成日期为 2026-10-18。后续证据文件提交不改变该产品源码。
 
@@ -2353,12 +2367,18 @@ Human 审批卡 -&gt; 执行快照: 再验当前权限及范围
 | 实际 Tob | 审批、拒绝、过期、完成重试及损坏拒绝已核对原生会话 |
 | 中断 | 实际 SIGKILL 后最终路径不存在，私有暂存保留 |
 | 渲染 Web | 恢复后拒绝未授权启用，授权后仅选定一个 Bot 活动 |
-| CI、macOS、Human 审核 | 独立门槛，尚未通过 |
+| macOS | 实际应用恢复 UI、源预览、同路径进程重启均通过 |
+| CI | 前一证据提交的完整 CI 已通过；本次证据更新状态见 PR |
+| Human 审核与最终集成 | 独立门槛，尚未通过 |
 
 首次失败证据保留。早期 trace driver 截断了组合 Shell 参数。
 成功行为另由完整原生事件、持久 Source 和文件哈希核对。
 丢弃 stdout 的测试不等于网络丢包证明。
 合并后的 schema100 至102 仍需独立集成检查。
+
+Native 截图保留目标模型或本地凭据不可用的状态。
+已激活标记存在，执行仍被阻止；未证明恢复后的 Native 模型对话。
+源预览截图还显示独立的活动同步重连提示。
 </textarea>
     <script>
       (() => {
