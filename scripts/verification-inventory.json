@@ -1851,7 +1851,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Bounded selected Channel/body and other-Bot progress reads through direct CLI and actual Tob native Shell, with Human delivery, source readback, Web/Native screenshots and fresh restart reads.",
       "task": 2134,
-      "sha256": "e490d04bf0405ab993d7e86f5ee8d8d9d7f3f7a823bbc39949305b84b57f0fc6"
+      "sha256": "e7e53a27400c3d89cf7937554a3c941c342ef0ef740a6e2fff81655a06d10938"
     }
   ],
   "native": [

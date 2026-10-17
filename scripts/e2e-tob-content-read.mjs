@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { resolve, basename } from 'node:path';
-import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
 
 const native = Boolean(process.env.BH_DESKTOP_CDP);
 const instance = JSON.parse(
@@ -15,12 +14,16 @@ const out = resolve(
 );
 mkdirSync(out, { recursive: true });
 const url = new URL(instance.url);
-const cookie = native
-  ? ''
-  : readFileSync(
-      resolve(tmpdir(), `dsh-${basename(instance.home).replace(/[^a-zA-Z0-9-]/gu, '-')}.cookies`),
-      'utf8',
-    ).split(';')[0];
+async function ownCookie() {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    const cookie = response.headers.get('set-cookie')?.split(';')[0];
+    await response.body?.cancel();
+    if (cookie) return cookie;
+  }
+  throw new Error('Own candidate login did not provide a cookie');
+}
+const cookie = native ? '' : await ownCookie();
 const puppeteer = createRequire(
   resolve(
     'node_modules/.pnpm',
@@ -156,7 +159,7 @@ async function poll(label, read, accept, seconds = 180) {
   throw Error('Timed out: ' + label);
 }
 const phase = process.argv[2] || 'direct';
-assert.ok(['direct', 'model', 'restart-read'].includes(phase), 'Unknown phase');
+assert.ok(['direct', 'model', 'restart-read', 'capture'].includes(phase), 'Unknown phase');
 assert.ok(process.env.BH_E2E_CONTENT_FIXTURE, 'Provide the exact owned fixture JSON path');
 const fixture = JSON.parse(readFileSync(process.env.BH_E2E_CONTENT_FIXTURE));
 assert.equal(typeof fixture.botSlug, 'string');
@@ -253,9 +256,32 @@ async function direct() {
 }
 async function model() {
   const home = await rpc('tobHome');
+  const stableState = async () => ({
+    bot: await rpc('get', { slug: fixture.botSlug }).then(({ bot }) => ({
+      slug: bot.slug,
+      displayName: bot.displayName,
+      createdAt: bot.createdAt,
+      paused: bot.paused ?? false,
+      modelPlan: bot.modelPlan,
+    })),
+    channels: (await rpc('channels')).channels
+      .filter((channel) => fixture.channels.some((selected) => selected.id === channel.id))
+      .map((channel) => ({
+        id: channel.id,
+        name: channel.name,
+        members: channel.members,
+        createdAt: channel.createdAt,
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id)),
+  });
+  const previousState = await stableState();
+  save('before-canonical-state', previousState);
   const beforeMessages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
   const previous = new Set(beforeMessages.map((entry) => entry.id));
-  const traceBefore = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+  const sessionsBefore = await rpc('sessions', { slug: home.botSlug });
+  const traceBefore = sessionsBefore.sessions.some((session) => session.role === 'orchestrator')
+    ? await rpc('botToolTrace', { slug: home.botSlug, turns: 20 })
+    : { turns: [] };
   const previousCalls = new Set(
     traceBefore.turns.flatMap((turn) => turn.calls).map((call) => call.callId),
   );
@@ -288,6 +314,8 @@ async function model() {
         !['retryable', 'needs-repair', 'ignored'].includes(handled),
         'Human delivery failed',
       );
+      const sessions = await rpc('sessions', { slug: home.botSlug });
+      if (!sessions.sessions.some((session) => session.role === 'orchestrator')) return undefined;
       const trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
       const turns = trace.turns.filter((turn) =>
         turn.calls.some((call) => !previousCalls.has(call.callId)),
@@ -334,6 +362,19 @@ async function model() {
     240,
   );
   save('model-completion', result);
+  await poll(
+    'Tob idle before stable capture',
+    () => rpc('get', { slug: home.botSlug }),
+    (value) => value.bot.aggregateState === 'idle',
+    30,
+  );
+  const currentState = await stableState();
+  assert.deepEqual(
+    currentState,
+    previousState,
+    'Read-only inspection or quoted content changed a selected identity or membership',
+  );
+  save('after-canonical-state', currentState);
   await shot('after-selected-read');
   checks.push(
     'Visible Tob request, fresh completed native Shell reads, completed turn, handled delivery and canonical source-grounded reply',
@@ -341,8 +382,30 @@ async function model() {
 }
 try {
   await enter();
-  await direct();
+  if (phase !== 'capture') await direct();
   if (phase === 'model') await model();
+  if (phase === 'capture') {
+    const home = await rpc('tobHome');
+    const buttons = await page.$$('button');
+    let selected = false;
+    for (const button of buttons) {
+      const label = await button.evaluate((node) => node.textContent || '');
+      if (
+        (await button.isVisible()) &&
+        /^Tob/u.test(label.trim()) &&
+        label.includes('Read-only inspection')
+      ) {
+        await button.click();
+        selected = true;
+        break;
+      }
+    }
+    assert.ok(selected, 'Visible Tob row with existing synthetic reply');
+    await click('消息 · ⌥ ⇧ ⌘ 2');
+    const expand = await page.$('::-p-aria([name="展开全部"])');
+    if (expand && (await expand.isVisible())) await expand.click();
+    await shot('expanded-selected-read');
+  }
   await shot(phase);
   assert.deepEqual(errors, []);
   save('result', {
