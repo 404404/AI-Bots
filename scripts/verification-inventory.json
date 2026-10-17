@@ -1780,7 +1780,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Tob-owned real Assignment reads two selected Memory repositories through immutable revision CLI pages; rendered review, denied write, resumed report, archived target and revoked scope. Web and macOS are independent runs.",
       "task": 2091,
-      "sha256": "3382d50efbc9445f8f167f581371380aa53de85f136b4e41b1c0705c9788185c"
+      "sha256": "6a29eb9f2b1a32e354fffb8c3e65055145d40d61c0c373350db1df7f21c34f08"
     }
   ],
   "native": [
