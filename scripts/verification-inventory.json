@@ -1653,6 +1653,14 @@
       "reason": "Real v5 Browser/Computer upgrade, stable Bot subpanels, per-Channel state, Group exclusion and shortcuts.",
       "task": 2069,
       "sha256": "cf0e8a8bf6e11527b9752df3edc1c4a4537b90b588edfe3765194f3d7321f26a"
+    },
+    {
+      "path": "scripts/e2e-panel-size-persistence.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.bot-mode.dock"],
+      "reason": "Actual global width/height and child ratios across repeated toggles, closed refresh and parent recovery.",
+      "task": 2071,
+      "sha256": "6b9589f8877ff104b1a960d5fcf50aba3e1c0ec7a1d10ca2c6c11ce3a57902a0"
     }
   ],
   "native": [

@@ -30,6 +30,7 @@ export type DockDirection = 'left' | 'right' | 'above' | 'below';
 export interface DockPosition {
   readonly neighbor?: string | undefined;
   readonly direction: DockDirection;
+  readonly size?: { readonly width: number; readonly height: number } | undefined;
 }
 
 export interface ChannelWorkspaceState {
@@ -85,10 +86,22 @@ function isLayout(value: unknown): value is SerializedDockview {
 }
 
 function isPosition(value: unknown): value is DockPosition {
+  const size = isRecord(value) ? value['size'] : undefined;
   return (
     isRecord(value) &&
     (value['neighbor'] === undefined || typeof value['neighbor'] === 'string') &&
-    ['left', 'right', 'above', 'below'].includes(value['direction'] as string)
+    ['left', 'right', 'above', 'below'].includes(value['direction'] as string) &&
+    (size === undefined ||
+      (isRecord(size) &&
+        ['width', 'height'].every((axis) => {
+          const fraction = size[axis];
+          return (
+            typeof fraction === 'number' &&
+            Number.isFinite(fraction) &&
+            fraction > 0 &&
+            fraction <= 1
+          );
+        })))
   );
 }
 
@@ -222,6 +235,42 @@ function lastPanel(node: GridNode): string | undefined {
     if (id !== undefined) return id;
   }
   return undefined;
+}
+
+export function dockPanelGap(
+  layout: SerializedDockview,
+  panelId: string,
+  gap: number,
+): { width: number; height: number } {
+  const visit = (
+    node: GridNode,
+    horizontal: boolean,
+    width: number,
+    height: number,
+  ): { width: number; height: number } | undefined => {
+    if (node.type === 'leaf')
+      return (node.data as { views: string[] }).views.includes(panelId)
+        ? { width, height }
+        : undefined;
+    const children = node.data as GridNode[];
+    const offset = (gap * (children.length - 1)) / Math.max(1, children.length);
+    for (const child of children) {
+      const found = visit(
+        child,
+        !horizontal,
+        horizontal ? offset : width,
+        horizontal ? height : offset,
+      );
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return (
+    visit(layout.grid.root as GridNode, layout.grid.orientation === 'HORIZONTAL', 0, 0) ?? {
+      width: 0,
+      height: 0,
+    }
+  );
 }
 
 export function pruneChannelDock(

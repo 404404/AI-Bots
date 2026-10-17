@@ -185,7 +185,7 @@ describe('desktop Bot mode dock', () => {
   it('reopens a closed panel where it was, from the Panels menu', async () => {
     await render(builtins);
     await click('[data-dock-close="sessions"]');
-    expect(readChannelDock(storage)!.parked['sessions']).toEqual({
+    expect(readChannelDock(storage)!.parked['sessions']).toMatchObject({
       neighbor: CHANNEL_BODY_PANEL,
       direction: 'right',
     });
@@ -846,6 +846,7 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
   expect(registry.isOpen('sessions')).toBe(true);
+  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
   act(() => registry.toggle('sessions'));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
@@ -940,6 +941,16 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     act(() => registry.toggle(id));
     await settle();
     expect(registry.isOpen(id)).toBe(false);
+    expect(readChannelDock(storage)?.botWorkspaces?.ada?.[id]?.ratio).toBeCloseTo(0.32);
+    act(() => registry.open(id));
+    await settle();
+    expect(
+      host
+        .querySelector(`[data-workspace-split="${id}"] > [role="separator"]`)
+        ?.getAttribute('aria-valuenow'),
+    ).toBe('32');
+    act(() => registry.close(id));
+    await settle();
   }
   act(() => root.render(view('bob')));
   await settle();

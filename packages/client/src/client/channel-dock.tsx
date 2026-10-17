@@ -42,6 +42,7 @@ import {
   clearChannelDock,
   DEFAULT_DOCK_PANELS,
   pruneChannelDock,
+  dockPanelGap,
   readChannelDock,
   resolveDefaultPosition,
   resolveDockPosition,
@@ -620,22 +621,36 @@ function hideBodyHeader(api: DockviewApi): void {
   }
 }
 
-function addEntryPanel(
+function restoreEntryPanel(
   api: DockviewApi,
   panel: DockPanelRegistration,
   remembered: DockPosition | undefined,
+  gap: number,
 ): void {
   if (api.getPanel(panel.id) !== undefined) return;
-  api.addPanel({
+  const added = api.addPanel({
     id: panel.id,
     component: panel.id === CHANNEL_BODY_PANEL ? CHANNEL_BODY_COMPONENT : CHANNEL_ENTRY_COMPONENT,
     title: panel.title,
+    ...(remembered?.size
+      ? {
+          initialWidth: Math.round(remembered.size.width * api.width),
+          initialHeight: Math.round(remembered.size.height * api.height),
+        }
+      : {}),
     params: { entryId: panel.id },
     position:
       remembered === undefined
         ? resolveDefaultPosition(api, panel.defaultPosition)
         : resolveDockPosition(api, remembered),
   });
+  if (remembered?.size) {
+    const offset = dockPanelGap(api.toJSON(), panel.id, gap);
+    added.group.api.setSize({
+      width: remembered.size.width * api.width + offset.width,
+      height: remembered.size.height * api.height + offset.height,
+    });
+  }
 }
 
 function buildDefaultLayout(api: DockviewApi, entries: ReadonlyMap<string, DockPanelRegistration>) {
@@ -814,8 +829,22 @@ export function ChannelDock({
       );
   };
 
-  const positionOf = (target: DockviewApi, panelId: string): DockPosition | undefined =>
-    pruneChannelDock(target.toJSON(), (id) => id !== panelId).parked[panelId];
+  const positionOf = (target: DockviewApi, panelId: string): DockPosition | undefined => {
+    const position = pruneChannelDock(target.toJSON(), (id) => id !== panelId).parked[panelId];
+    const group = target.getPanel(panelId)?.group;
+    if (!position || !group || target.width <= 0 || target.height <= 0) return position;
+    const width = group.api.width / target.width;
+    const height = group.api.height / target.height;
+    return width > 0 && height > 0
+      ? { ...position, size: { width: Math.min(1, width), height: Math.min(1, height) } }
+      : position;
+  };
+
+  const addEntryPanel = (
+    target: DockviewApi,
+    panel: DockPanelRegistration,
+    remembered: DockPosition | undefined,
+  ) => restoreEntryPanel(target, panel, remembered, workspace ? gapRef.current : 0);
 
   const onReady = ({ api: ready }: DockviewReadyEvent): void => {
     const stored = readChannelDock(storage);
@@ -921,10 +950,40 @@ export function ChannelDock({
       )
         event.preventDefault();
     });
+    ready.onDidMovePanel(() => {
+      for (const panel of ready.panels) delete parked.current[panel.id];
+      save(ready);
+    });
     ready.onDidLayoutChange(() => save(ready));
     save(ready);
     setApi(ready);
   };
+
+  const geometryMount = useMountedResource<HTMLSpanElement>(
+    (node) => {
+      if (!api || !node.parentElement) return;
+      const root = node.parentElement;
+      let resizing = false;
+      const start = (event: PointerEvent) => {
+        resizing = event.target instanceof Element && !!event.target.closest('.dv-sash');
+      };
+      const finish = () => {
+        if (!resizing) return;
+        resizing = false;
+        for (const panel of api.panels) delete parked.current[panel.id];
+        save(api);
+      };
+      root.addEventListener('pointerdown', start, true);
+      window.addEventListener('pointerup', finish);
+      window.addEventListener('pointercancel', finish);
+      return () => {
+        root.removeEventListener('pointerdown', start, true);
+        window.removeEventListener('pointerup', finish);
+        window.removeEventListener('pointercancel', finish);
+      };
+    },
+    [api],
+  );
 
   const scrollbarsMount = useMountedResource<HTMLSpanElement>((node) => {
     if (node.parentElement) return mountPanelScrollbars(node.parentElement);
@@ -1015,8 +1074,11 @@ export function ChannelDock({
       (!workspace && panelId === CHANNEL_BODY_PANEL)
     )
       return;
-    const position = positionOf(api, panelId);
-    if (position !== undefined) parked.current[panelId] = position;
+    for (const visible of api.panels) {
+      if (visible.id === WORKSPACE_RAIL || parked.current[visible.id]) continue;
+      const position = positionOf(api, visible.id);
+      if (position) parked.current[visible.id] = position;
+    }
     panel.api.close();
   };
 
@@ -1287,6 +1349,7 @@ export function ChannelDock({
         <span ref={inboxStateMount} hidden />
         <span ref={layoutMount} hidden />
         <span ref={scrollbarsMount} hidden />
+        <span ref={geometryMount} hidden />
         {dropX !== undefined && <span className="bh-workspace-drop" style={{ left: dropX }} />}
         <DockviewReact
           key={workspace ? 'workspace' : 'legacy'}

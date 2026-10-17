@@ -7,6 +7,7 @@ import {
   CHANNEL_BODY_PANEL,
   CHANNEL_DOCK_STORAGE_KEY,
   pruneChannelDock,
+  dockPanelGap,
   readChannelDock,
   writeChannelDock,
 } from '../src/client/channel-dock-layout.js';
@@ -498,4 +499,36 @@ it('upgrades v5 Browser/Computer without rewriting existing Channel workspaces o
   );
   expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v6`)).toBe(raw);
   expect(readChannelDock(storage)).toEqual(next);
+});
+
+it('persists closed panel proportions and rejects invalid saved dimensions', () => {
+  const storage = memoryStorage();
+  const parked = {
+    activity: {
+      direction: 'below' as const,
+      neighbor: CHANNEL_BODY_PANEL,
+      size: { width: 0.65, height: 0.27 },
+    },
+    channels: { direction: 'left' as const },
+  };
+  writeChannelDock({ layout, parked }, storage);
+  expect(readChannelDock(storage)?.parked).toEqual(parked);
+  for (const width of [0, -0.2, 1.2, '0.3', null]) {
+    storage.setItem(
+      CHANNEL_DOCK_STORAGE_KEY,
+      JSON.stringify({
+        version: 6,
+        layout,
+        parked: { ...parked, activity: { ...parked.activity, size: { width, height: 0.3 } } },
+      }),
+    );
+    expect(readChannelDock(storage)?.parked).toEqual({ channels: parked.channels });
+  }
+});
+
+it('converts rendered dimensions back to Dockview pre-gap sizes on both axes', () => {
+  expect(dockPanelGap(layout, 'sessions', 4)).toEqual({ width: 2, height: 8 / 3 });
+  expect(dockPanelGap(layout, CHANNEL_BODY_PANEL, 4)).toEqual({ width: 2, height: 0 });
+  expect(dockPanelGap(layout, 'sessions', 0)).toEqual({ width: 0, height: 0 });
+  expect(dockPanelGap(layout, 'missing', 4)).toEqual({ width: 0, height: 0 });
 });
