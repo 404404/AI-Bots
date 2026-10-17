@@ -18,14 +18,16 @@ export async function approveTobCliOperation(options: {
   const { execution, operation, signal, channelApproval, approval, authorize } = options;
   const actor = execution.agent;
   const command = 'command' in operation ? operation.command : 'settings-set';
-  const requireHumanReview = [
-    'release-install',
-    'release-restart',
-    'bot-delete-confirm',
-    'bot-delete-retry',
-    'memory-save',
-    'memory-restore-commit',
-  ].includes(command);
+  const requireHumanReview =
+    ('requireHumanReview' in operation && operation.requireHumanReview === true) ||
+    [
+      'release-install',
+      'release-restart',
+      'bot-delete-confirm',
+      'bot-delete-retry',
+      'memory-save',
+      'memory-restore-commit',
+    ].includes(command);
   const scope =
     'target' in operation &&
     (command.startsWith('model-plan-') ||

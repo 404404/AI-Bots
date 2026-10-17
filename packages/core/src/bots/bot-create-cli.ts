@@ -204,6 +204,13 @@ Usage:
   deepseekbot grant-create <id> --workspace <workspace-id>
   deepseekbot browser-access-set <id> (--enabled | --disabled)
   deepseekbot computer-access-set <id> (--enabled | --disabled)
+  deepseekbot browser-profile-pair --confirm
+  deepseekbot browser-profile-forget --confirm
+  deepseekbot browser-daily-connect <id> --confirm
+  deepseekbot browser-daily-grant <id> --confirm
+  deepseekbot browser-daily-return <id> --confirm
+  deepseekbot browser-borrow-pair <id> --confirm
+  deepseekbot browser-borrow-return <id> --confirm
   deepseekbot access <id>
   deepseekbot access-set <id> --mode workspace-write|danger-full-access [--scope chat|assignments] [--acknowledge-risk]
   deepseekbot settings <namespace>

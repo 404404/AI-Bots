@@ -8,6 +8,7 @@ import {
 } from './cli-client-preferences.js';
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
 import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
+import { parseAgentPolicies, TOB_AGENT_POLICY_COMMAND_USAGE } from './cli-agent-policies.js';
 import {
   isAssignmentModelOption,
   isModelRoute,
@@ -35,6 +36,7 @@ export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
   'messaging-defaults-set':
     'deepseekbot messaging-defaults-set <platform> --input-stdin; same schema and expectedRevision as existing Human CLI',
   ...TOB_AGENT_CHANNEL_COMMAND_USAGE,
+  ...TOB_AGENT_POLICY_COMMAND_USAGE,
   list: 'deepseekbot list',
   'model-catalog': 'deepseekbot model-catalog',
   'model-plan': 'deepseekbot model-plan <bot-slug>',
@@ -231,6 +233,8 @@ export async function parseAgentManagement(
   if (client) return client;
   const human = await parseHumanPreferences(command, rest, values, io);
   if (human) return human;
+  const policy = await parseAgentPolicies(command, rest, values, io);
+  if (policy) return policy;
   const channel = parseAgentChannels(command, rest, values);
   if (channel) return channel;
   const bot = await parseAgentBots(command, rest, values, io);

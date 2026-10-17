@@ -12,6 +12,7 @@ import {
 } from '../models/presets.js';
 import type { PreparedTobOperation } from './cli-operations.js';
 import { TobError } from './service.js';
+import { TOB_DEVICE_SETTINGS_FIELDS, validDeviceSetting } from '../bots/cli-device-settings.js';
 
 export const TOB_MODEL_CAPABILITIES = [
   ['list', 'List Bot names and identifiers', false],
@@ -106,7 +107,15 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
     return owner;
   };
   const settings = (ns: string) => {
-    if (!['botharness-client', 'agent-default-model', 'ui-theme', 'locale'].includes(ns))
+    if (
+      ![
+        'botharness-client',
+        'agent-default-model',
+        'ui-theme',
+        'locale',
+        ...Object.keys(TOB_DEVICE_SETTINGS_FIELDS),
+      ].includes(ns)
+    )
       throw new TobError('unsupported-setting');
     const row = native()
       .describe({ redactSecrets: true })
@@ -118,7 +127,9 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
         ? runtimeFields
         : ns === 'agent-default-model'
           ? routeFields
-          : ['preference'];
+          : ['ui-theme', 'locale'].includes(ns)
+            ? ['preference']
+            : (TOB_DEVICE_SETTINGS_FIELDS[ns] ?? routeFields);
     const value = Object.fromEntries(
       fields.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]),
     );
@@ -132,7 +143,7 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
       value.autoAcceptGroupInvites ??= true;
     } else if (ns === 'ui-theme') value.preference ??= 'system';
     else if (ns === 'locale') value.preference ??= null;
-    else {
+    else if (ns === 'agent-default-model') {
       if (isModelRoute(value) && deps.defaultModel)
         same(value, deps.defaultModel.currentSelection());
     }
@@ -195,6 +206,7 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
         previousValue,
         patch,
         ...(expectedRevision === undefined ? {} : { expectedRevision }),
+        ...(Object.hasOwn(TOB_DEVICE_SETTINGS_FIELDS, target) ? { requireHumanReview: true } : {}),
       }),
     ),
     run,
@@ -260,9 +272,13 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
                 namespaces: native()
                   .describe({ redactSecrets: true })
                   .filter((row) =>
-                    ['botharness-client', 'agent-default-model', 'ui-theme', 'locale'].includes(
-                      row.ns,
-                    ),
+                    [
+                      'botharness-client',
+                      'agent-default-model',
+                      'ui-theme',
+                      'locale',
+                      ...Object.keys(TOB_DEVICE_SETTINGS_FIELDS),
+                    ].includes(row.ns),
                   )
                   .map((row) => settings(row.ns)),
               };
@@ -278,7 +294,8 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
           : ['ns', 'patch', 'expectedRevision', 'previousValue', 'scope'],
       );
       const ns = isDefault ? 'agent-default-model' : text(args.ns);
-      if (!isDefault && !['botharness-client', 'ui-theme', 'locale'].includes(ns))
+      const deviceFields = TOB_DEVICE_SETTINGS_FIELDS[ns];
+      if (!isDefault && !['botharness-client', 'ui-theme', 'locale'].includes(ns) && !deviceFields)
         throw new TobError('unsupported-setting');
       const appearance = ns === 'ui-theme' || ns === 'locale';
       if (
@@ -294,23 +311,25 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
       same(current.revision, expected);
       const patch = isDefault ? object(route(args.route)) : object(args.patch);
       if (!isDefault) {
-        keys(patch, appearance ? ['preference'] : runtimeFields);
+        keys(patch, appearance ? ['preference'] : deviceFields ? [...deviceFields] : runtimeFields);
         if (!Object.keys(patch).length) throw new TobError('invalid-input');
         for (const [key, value] of Object.entries(patch)) {
           if (
-            key === 'assignmentConcurrencyLimit'
-              ? !Number.isInteger(value) || Number(value) < 1 || Number(value) > 32
-              : key === 'motionPreference'
-                ? !['system', 'reduce', 'full'].includes(String(value))
-                : key === 'botIcon'
-                  ? !['mascot', 'simple', 'blob', 'bot'].includes(String(value))
-                  : key === 'sendKey'
-                    ? !['enter', 'shift-enter', 'mod-enter'].includes(String(value))
-                    : key === 'preference'
-                      ? ns === 'ui-theme'
-                        ? !['light', 'dark', 'system'].includes(String(value))
-                        : !['zh', 'en'].includes(String(value))
-                      : typeof value !== 'boolean'
+            deviceFields
+              ? !validDeviceSetting(ns, key, value)
+              : key === 'assignmentConcurrencyLimit'
+                ? !Number.isInteger(value) || Number(value) < 1 || Number(value) > 32
+                : key === 'motionPreference'
+                  ? !['system', 'reduce', 'full'].includes(String(value))
+                  : key === 'botIcon'
+                    ? !['mascot', 'simple', 'blob', 'bot'].includes(String(value))
+                    : key === 'sendKey'
+                      ? !['enter', 'shift-enter', 'mod-enter'].includes(String(value))
+                      : key === 'preference'
+                        ? ns === 'ui-theme'
+                          ? !['light', 'dark', 'system'].includes(String(value))
+                          : !['zh', 'en'].includes(String(value))
+                        : typeof value !== 'boolean'
           )
             throw new TobError('invalid-setting');
         }
@@ -353,7 +372,7 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
             (isDefault && !isDeepStrictEqual(saved.value, patch))
           )
             throw new TobError('setting-readback-mismatch');
-          if (!isDefault) deps.runtimeChanged?.(patch);
+          if (ns === 'botharness-client') deps.runtimeChanged?.(patch);
           return isDefault ? { route: saved.value, revision: saved.revision } : saved;
         },
       );

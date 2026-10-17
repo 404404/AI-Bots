@@ -19,6 +19,7 @@ import {
   createTobChannelPreferencesOperations,
   TOB_CHANNEL_PREFERENCES_CAPABILITIES,
 } from './tob/cli-channel-preferences.js';
+import { createTobPolicyOperations, TOB_POLICY_CAPABILITIES } from './tob/cli-policy-operations.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
 import {
   createTobChannelOperations,
@@ -1227,7 +1228,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                     if (!source.currentClientTarget)
                       throw new TobError('current-client-unavailable');
                     return source.currentClientTarget();
-                  })(command, args)),
+                  })(command, args)) ??
+                  (await tobPolicyOperations(command, args)),
                 capabilities: [
                   ...TOB_MEMORY_CAPABILITIES,
                   ...TOB_MEMORY_EDIT_CAPABILITIES,
@@ -1241,6 +1243,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
 
                   ...TOB_CLIENT_PREFERENCE_CAPABILITIES,
                   ...TOB_HUMAN_PREFERENCE_CAPABILITIES,
+                  ...TOB_POLICY_CAPABILITIES,
                 ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
@@ -2242,6 +2245,11 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const tobChannelPreferencesOperations = createTobChannelPreferencesOperations(
     core.channelPreferences,
   );
+  const tobPolicyOperations = createTobPolicyOperations({
+    bridge: () => bridgeMethods,
+    registry: core.registry,
+    grants: core.grants,
+  });
   const tobChannelOperations = createTobChannelOperations({
     management: core.channelManagement,
     channels: core.channels,

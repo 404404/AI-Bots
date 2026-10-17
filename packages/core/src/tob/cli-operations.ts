@@ -4,6 +4,7 @@ export interface TobManagementProposal {
   readonly previousValue: unknown;
   readonly patch: unknown;
   readonly expectedRevision?: number;
+  readonly requireHumanReview?: boolean;
 }
 
 export interface PreparedTobOperation {

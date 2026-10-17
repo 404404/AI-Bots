@@ -1,5 +1,7 @@
 # BotHarness 架构与数据流
 
+#2094 沿用 ADR-0224 的 application-defined Tob CLI broker，开放已有 Workspace Grant、访问模式、Browser/Computer 能力、审批模板／规则／审核模型和连接器策略 owner。策略快照绑定规范旧值及 Bot 身份代次；每次写入必须经 Human 新作决定，Full access、自动审核和记住规则不能替代。审批后、异步读取后及实际写入前重查来源和快照；Workspace status await 后的 Grant 提交额外使用原 owner 的同步 validation callback。Browser/Computer native Settings 仅开放现有 UI 字段并使用 revision、准确 previousValue 和规范读回。所有权限仍由既有 owner 在执行和后续委派中消费；无新 Tool、权限库或持久 schema。浏览器配对／系统授权、私密凭据与验证码、其他 Bot 的审批卡和外部测试投递保留已有 Human 入口，不因可列出状态而开放。
+
 #2053 的本地 Group 发送复核试点由 Channel owner 在正式 Source Event / placement 追加的同一事务内比较实际观察依据。
 #2054 复用该 owner：held 标出实际返回的同伴正式消息；Bot 可引用这些消息显式让话，或提交独立补充。Host 只核对引用是否真实观察且仍有效，不判断语义重复，也不自动结清 Inbox；让话依据随现有草稿 JSON 保存。
 待复核草稿保存在现有 Operational Database，仅正式提交进入 Channel/Inbox；仅 drop 不解决 Inbox；显式 `resolve_inbox_ids` 可在 drop 成功后结清所选事项，过期或重启不自动恢复。

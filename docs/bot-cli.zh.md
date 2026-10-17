@@ -1041,3 +1041,26 @@ Channel 移动以叶节点为目标，`messages` 是固定内容叶；隐藏子�
 通过 `client-shortcuts-set CLIENT_ID --generation GENERATION --scope client-profile --expected-state FINGERPRINT --patch-stdin` 提交 `{ "profile":"web:macos", "id":"DISCOVERED_ID", "type":"set", "binding":{"code":"KeyJ","modifiers":["primary","alt","shift"]} }`。使用不带 `binding` 的 `"type":"disable"` 显式禁用，或 `"type":"reset"` 仅恢复该动作。原生面板组合保留已有的可选 `secondCode`；导航动作沿用单键及 primary／Alt／Shift 限制。
 
 必须匹配目标 profile。面板修改把读取到的原生 revision 交给 Settings、提示文字与按键派发共用的原生 owner；导航修改复用现有 owner 和存储键，将旧覆盖迁入保留其他 profile 的记录，null 禁用重载后仍有效。保留键或冲突返回 `outcome:refused`、原因、冲突稳定 ID 及未变更的有效目录，不抢占已有绑定，也不重置全部配置。导航保存失败保留已接受绑定并明确拒绝，原生 revision／冲突拒绝继续由原生 owner 分类。调用原生保存前重新核对授权、Client 生命周期和已审阅状态；原生 owner 在串行队列中、写入前再次比较 revision。请求交给原生 owner 后不能取消保存：回复丢失、Client 生命周期结束或写入失败返回 `client-outcome-uncertain`。重新发现在线 Client 并读取 `client-shortcuts` 后再提出修改，不得自动重放写入。实体按键、输入框／弹窗／IME、Web 重载与 macOS 重启须分别验证。
+
+### Tob 授权、审批与连接器策略
+
+在合格的 Tob Human-DM Shell 中，已有策略命令返回 `{value, stateFingerprint, result?}`。先读对应 owner，再用 `--expected-state` 携带指纹提交修改。每次策略写入（包括缩小权限）都必须由 Human 新作决定；Full access、记住规则与自动审核模型不能代替。审批卡展示准确目标、旧状态和变更。执行时重验来源与策略，完成后返回规范读回。指纹过期返回 `stale-policy`，必须重新读取再提议；`policy-outcome-uncertain` 或 `agent-write-uncertain` 不得盲目重试。
+
+| 先读                                                                                            | Tob 可使用的已有写入                                                                                                                 |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `grants <bot>`                                                                                  | `grant-create --workspace <id>`、`grant-write-set --grant <id> (--enabled                                                            | --disabled)`、`grant-revoke --grant <id> --confirm` |
+| `access <bot>`                                                                                  | `access-set --mode <workspace-write                                                                                                  | danger-full-access> [--scope <chat                  | assignments>] [--acknowledge-risk]`、Browser/Computer 访问开关 |
+| `approval-templates`                                                                            | Bot 模板选择／关闭、模板创建／编辑／删除；文本经 `--text-stdin`，复制经 `--from`，删除带 `--confirm`                                 |
+| `tool-approval-rules <bot>`                                                                     | `tool-approval-rule-revoke <bot> --rule <id> --confirm`                                                                              |
+| `approval-reviewer-model`                                                                       | `approval-reviewer-model-set <provider/model                                                                                         | bot> [--effort <effort>]`                           |
+| `messaging-defaults <platform>`                                                                 | `messaging-defaults-set <platform> --input-stdin`                                                                                    |
+| `messaging-grants <bot>`、`pairing-list <bot>`、`approval-routes <bot>`、`failure-alerts <bot>` | 已有配对决定、消息授权／撤销、接收开关、Channel 目标、群／线程接收与唤醒策略、会话与发送者策略、主动发送限额、审批路由和失败提醒设置 |
+| `channel-bridges <channel>`                                                                     | `channel-bridge <channel> --input-stdin [--confirm]`                                                                                 |
+
+`workspace-options`、`approval-template-show`、`messaging-targets` 与 `im-apps` 用于只读发现，准确参数见 `capabilities`。Provider 缺失仍是缺失，不能伪装成本地成功。`access` 包含 Browser/Computer 能力开关；改变开关不启动运行时、不配对 Human 浏览器，也不授予系统权限。`workspace-write` 的实际 scope 沿用已有 owner。
+
+Browser/Computer 原生 UI 字段继续走 `settings` 与 `settings-set --patch-stdin --expected-revision <n> --previous-value <json>`，且强制 Human 审阅。`botharness-browser` 只开放 `target`、`localDriver`、`containerDriver`；`botharness-computer` 只开放 `target`、`idleStopMinutes`（1–1440）、`exportDir`（空值／默认或绝对路径）、`autoAllowActions`。Provider 可用、运行时就绪与系统授权分别检查。
+
+应用 token、凭据和验证码保留在已认证 Human 的原有 CLI stdin／私密输入流程（`im-app-add`、`im-credentials`、`im-verify`）及原生配置 UI。Tob 可通过 `im-apps` 检查应用／配置能力，但不能通过此 broker 提交秘密或猜测 Provider 配置接口。外部发送、测试／重试投递及 `tool-approval-decide` 不在策略 allowlist；能列出其他 Bot 的审批不等于有权回答。
+
+Human CLI 补齐 Browser 控制路由：`browser-profile-pair`／`browser-profile-forget` 无 Bot 参数；`browser-daily-connect`、`browser-daily-grant`、`browser-daily-return`、`browser-borrow-pair`、`browser-borrow-return` 带一个 Bot 参数。均需 `--confirm`，复用已有配对／控制 owner，保留 Human 浏览器与系统授权步骤；这些命令不授予 Tob 受限策略权限。直接 CLI、真实 Tob 审批／拒绝／读回、Web 显示、macOS Desktop 与真实外部投递分别验收。

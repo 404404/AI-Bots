@@ -24,6 +24,34 @@ export const BROWSER_COMPUTER_OPTIONS = {
 
 export const BROWSER_COMPUTER_COMMANDS = [
   {
+    command: 'browser-profile-pair',
+    description: 'start Human Chrome Profile pairing (--confirm; does not grant OS permission)',
+  },
+  {
+    command: 'browser-profile-forget',
+    description: 'forget Human Chrome Profile pairing (--confirm)',
+  },
+  {
+    command: 'browser-daily-connect',
+    description: 'connect a Bot to Daily Browser (--confirm; Human still grants control)',
+  },
+  {
+    command: 'browser-daily-grant',
+    description: 'grant a Bot Daily Browser control (--confirm; OS consent remains required)',
+  },
+  {
+    command: 'browser-daily-return',
+    description: 'return a Bot Daily Browser control (--confirm)',
+  },
+  {
+    command: 'browser-borrow-pair',
+    description: 'start Human Borrowed Browser pairing for a Bot (--confirm)',
+  },
+  {
+    command: 'browser-borrow-return',
+    description: 'return a Bot Borrowed Browser control (--confirm)',
+  },
+  {
     command: 'browser-observation',
     description: "read a Bot's Browser state, tabs and current picture (--out saves the picture)",
   },
@@ -213,7 +241,14 @@ export async function runBrowserComputerCommand(
   io: BotCreateCliIo,
   connect: () => Promise<LiveHost>,
 ): Promise<unknown> {
-  const positionals = BOT_COMMANDS.includes(command) || FILE_COMMANDS.includes(command) ? 1 : 0;
+  const browserControl =
+    /^browser-(profile|daily|borrow)-(pair|forget|connect|grant|return)$/u.exec(command);
+  const positionals =
+    BOT_COMMANDS.includes(command) ||
+    FILE_COMMANDS.includes(command) ||
+    (browserControl && browserControl[1] !== 'profile')
+      ? 1
+      : 0;
   if (rest.length !== positionals || rest.some((value) => !value.trim()))
     usage(
       positionals === 0
@@ -223,11 +258,13 @@ export async function runBrowserComputerCommand(
           : `${command} needs exactly one bot id.`,
     );
   const target = rest[0]?.trim() ?? '';
-  if (CONFIRMED.includes(command) && values.confirm !== true)
+  if ((CONFIRMED.includes(command) || browserControl) && values.confirm !== true)
     usage(
       command === 'computer-import'
         ? 'computer-import replaces Container Computer data with the archive. Pass --confirm.'
-        : `${command} installs system packages on the Host. Pass --confirm.`,
+        : browserControl
+          ? `${command} changes Human Browser control. Pass --confirm; required OS consent remains separate.`
+          : `${command} installs system packages on the Host. Pass --confirm.`,
     );
   if (values.out !== undefined && !absolute(values.out))
     usage('--out must be an absolute file path.');
@@ -296,6 +333,17 @@ export async function runBrowserComputerCommand(
   };
 
   switch (command) {
+    case 'browser-profile-pair':
+    case 'browser-profile-forget':
+    case 'browser-daily-connect':
+    case 'browser-daily-grant':
+    case 'browser-daily-return':
+    case 'browser-borrow-pair':
+    case 'browser-borrow-return':
+      return json(
+        `/api/browser/${browserControl![1]}/${browserControl![2]}`,
+        browserControl![1] === 'profile' ? {} : { slug: target },
+      );
     case 'browser-observation': {
       const observed = await json(
         query('/api/browser/observation', { slug: target, tab: values.tab }),

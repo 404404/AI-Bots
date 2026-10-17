@@ -310,6 +310,9 @@ describe('disruptive scoped CLI operations require Human review', () => {
     'bot-delete-retry',
     'memory-save',
     'memory-restore-commit',
+    'grant-create',
+    'approval-template-set',
+    'failure-alerts-set',
   ])('does not bypass %s via full access, saved rules or automatic reviewer', async (command) => {
     const match = vi.fn(() => ({ id: 'allow-all' }));
     const createPending = vi.fn();
@@ -320,7 +323,12 @@ describe('disruptive scoped CLI operations require Human review', () => {
       autoApproval: { template, review, log: vi.fn() },
     });
     f.setFullAccess(true);
-    const operation = release(command);
+    const operation = {
+      ...release(command),
+      ...(['grant-create', 'approval-template-set', 'failure-alerts-set'].includes(command)
+        ? { requireHumanReview: true }
+        : {}),
+    };
     const pending = writeAfterApproval({ ...f.options, operation });
     const card = await f.card();
     expect(card.toolApprovalRequest).toMatchObject({
