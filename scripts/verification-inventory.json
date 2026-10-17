@@ -1698,9 +1698,9 @@
       "path": "scripts/e2e-tob-model-runtime.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Scoped CLI model/runtime discovery and actual Tob approval, denial, stale refusal and settings UI persistence in Web and native Desktop.",
+      "reason": "Scoped CLI model/runtime discovery plus natural telemetry approval/denial, completed native turns, independent privacy UI/CLI readback and explicit same-Profile restart phases for Web and native Desktop.",
       "task": 2088,
-      "sha256": "cbd8d9837eb8657672c2ec765f2fd5f8cd7a302dc1950e362d2135cfae01a578"
+      "sha256": "bc2ba484174fb74bc9cd2a6cc8a185b6a94f61cf08e5403114b173645fc149d4"
     },
     {
       "path": "scripts/e2e-tob-bot-management.mjs",

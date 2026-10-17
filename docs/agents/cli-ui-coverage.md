@@ -114,3 +114,11 @@ This is partial delivery of #2090, so implementation PRs reference rather than c
 For each new UI setting or action, identify its durable owner and scope first. Reuse its existing CLI command when equivalent; otherwise record the smallest delivery issue. A combined group is acceptable only while all recorded members share the same mapping or gap. Split a group when one operation becomes covered, remove stale mappings, and preserve precise nonconfigurable exceptions.
 
 For Client settings, acceptance must prove which Client changes, a reload/restart readback, and that another Client or Channel is unaffected. For Host mutations, test the direct CLI independently of the model, then the real Tob conversation and canonical readback. Approval, revoked/stale context, unsupported operations and failed readback remain coded outcomes, never fallback access.
+
+### Maintenance qualification boundaries (#2088)
+
+The model/runtime journey now has separate `telemetry-direct`, `telemetry-approve`, `telemetry-deny` and `telemetry-restart-read` phases. They require an explicitly unlocked disposable launch, the real privacy switch, fresh native Shell calls and completed/handled model turns. A passing environment-lock refusal does not satisfy this path. Web and macOS each retain their own qualification gate.
+
+The optional `qualify-managed-git.mjs` driver exercises the production managed-Git owner with an isolated process PATH and a fresh disposable home, including real pinned download/checksum, extraction, commit and service recovery. Its evidence is actual owner/artifact execution; it does not stand in for the scoped CLI, a real Tob installation request, rendered Git settings or operating-system restart.
+
+A genuine published release update requires an older genuine release and a newer available exact release in a disposable Profile. The development candidate must retain its real identity and coded install refusal. Running an older published updater proves only that artifact; qualifying the current Tob install/restart journey remains bound to an artifact containing this candidate.
