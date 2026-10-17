@@ -147,6 +147,20 @@ export type AssignmentRequestMode = 'next-step' | 'next-turn';
 const MAX_INLINE_REPORT_BYTES = 2048;
 const MAX_REPORT_BYTES = 1_048_576;
 const REPORT_PREVIEW_CHARACTERS = 400;
+const RECOVERABLE_SCHEDULE_SOURCE = `
+  e.observed_at IS NULL AND e.handled_at IS NULL AND e.side_effect_started_at IS NULL
+  AND EXISTS (
+    SELECT 1 FROM inbox_admissions sa
+      JOIN bot_schedule_firings sf ON sf.source_event_id = sa.source_event_id
+        AND sf.bot_slug = sa.bot_slug AND sf.coalesced = 0
+      JOIN bot_schedules ss ON ss.schedule_id = sf.schedule_id AND ss.bot_slug = sf.bot_slug
+     WHERE sa.source_event_id = e.source_event_id AND sa.bot_slug = e.bot_slug
+       AND sf.schedule_id = json_extract(e.payload_json, '$.schedule.id')
+       AND sa.reason = 'schedule' AND sa.attempt_state IN ('pending', 'retryable')
+       AND sa.observed_at IS NULL AND sa.handled_at IS NULL
+       AND sa.side_effect_started_at IS NULL AND sa.resolved_at IS NULL
+       AND (sa.snoozed_until IS NULL OR sa.snoozed_until <= ?)
+  )`;
 
 export interface AssignmentReportInput {
   state: AssignmentReportState;
@@ -1421,6 +1435,7 @@ class BotRuntimeImplementation implements BotRuntime {
       }
       this.#recoverPendingDigests();
       this.#recoverPendingAssignmentReports();
+      this.#recoverPendingSchedules();
       for (const bot of this.#registry.list()) this.#armSnooze(bot.slug);
     }
   }
@@ -2344,6 +2359,32 @@ class BotRuntimeImplementation implements BotRuntime {
     for (const row of due) this.#scheduleHarvest(row.bot_slug);
   }
 
+  #recoverPendingSchedules(): void {
+    const rows = this.#database.read(
+      (database) =>
+        database
+          .prepare(`
+        SELECT DISTINCT e.bot_slug FROM source_events e
+         WHERE e.source_kind = 'schedule' AND ${RECOVERABLE_SCHEDULE_SOURCE}
+      `)
+          .all(this.#now().toISOString()) as { bot_slug: string }[],
+    );
+    for (const row of rows) {
+      const bot = this.#registry.get(row.bot_slug);
+      if (bot === undefined || bot.paused === true || this.#dmChannel(row.bot_slug) === undefined)
+        continue;
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'schedule-recovery-enqueued',
+          initiator: 'host-startup',
+          botSlug: row.bot_slug,
+        }),
+      );
+      this.#scheduleHarvest(row.bot_slug);
+    }
+  }
+
   #recoverPendingChannelAdmissions(): void {
     const rows = this.#database.read((database) =>
       database
@@ -2523,10 +2564,10 @@ class BotRuntimeImplementation implements BotRuntime {
         .prepare(`
         SELECT 1 AS found FROM inbox_admissions a JOIN source_events e USING(source_event_id)
          WHERE a.bot_slug = ? AND a.reason = 'schedule' AND a.attempt_state = 'pending'
-           AND e.observed_at IS NULL
+           AND ${RECOVERABLE_SCHEDULE_SOURCE}
          LIMIT 1
       `)
-        .get(botSlug),
+        .get(botSlug, this.#now().toISOString()),
     );
     if (scheduled !== undefined && this.#dmChannel(botSlug) !== undefined) {
       this.#scheduleHarvest(botSlug);
@@ -7726,10 +7767,11 @@ class BotRuntimeImplementation implements BotRuntime {
               WHERE e.bot_slug = ?
                 AND e.source_kind IN ('assignment-report', 'assignment-lifecycle', 'schedule')
                 AND e.observed_at IS NULL
+                AND (e.source_kind != 'schedule' OR (${RECOVERABLE_SCHEDULE_SOURCE}))
               ORDER BY e.rowid DESC
               LIMIT 20`,
           )
-          .all(botSlug) as unknown as InboxReportRow[],
+          .all(botSlug, this.#now().toISOString()) as unknown as InboxReportRow[],
     );
 
     rows.reverse();
@@ -8041,7 +8083,8 @@ class BotRuntimeImplementation implements BotRuntime {
         database
           .prepare(`
             UPDATE inbox_admissions
-               SET attempt_state = 'handled', handled_at = ?, opened_at = COALESCE(opened_at, ?)
+               SET attempt_state = 'handled', handled_at = ?, opened_at = COALESCE(opened_at, ?),
+                   last_error = CASE WHEN reason = 'schedule' THEN NULL ELSE last_error END
              WHERE reason IN ('assignment-report', 'assignment-lifecycle', 'memory-change', 'schedule', 'group-mention', 'group-ordinary', 'human-dm')
                AND attempt_state = 'running'
                AND (? IS NULL OR bot_slug = ?)
