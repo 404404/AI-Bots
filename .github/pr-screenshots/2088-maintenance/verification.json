@@ -1,6 +1,6 @@
 {
   "issue": 2088,
-  "sourceHead": "8962d221307fb46b114dd47b4f0b38bd5f9dab4c",
+  "sourceHead": "547ced4919bb23ceedbe1d225cd5a113c9a5bd91",
   "base": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
   "surface": "Web Chromium1440x900",
   "dsh": "0.2.0-rc.2",
@@ -468,5 +468,16 @@
     "reconciledWithoutNewModelPrompts": true,
     "finalCorrectedMonolithicIntroRerun": false,
     "independentSupportedOwnerReadback": "installed Human settings revision0 and32modelentries passed; actual modelplan unchanged and no scoped mutation calls/approvals verified"
+  },
+  "runtimeApplicationBuildHead": "8962d221307fb46b114dd47b4f0b38bd5f9dab4c",
+  "sourceScope": "Review driver/docs source differs from runtime build only in qualification code and evidence; product runtime source unchanged from baseline.",
+  "explainer": {
+    "sourceHead": "547ced4919bb23ceedbe1d225cd5a113c9a5bd91",
+    "generatorWarnings": 0,
+    "renderedWidths": [1440, 390],
+    "horizontalOverflow": false,
+    "pageErrors": [],
+    "generatedHtmlFormatted": true,
+    "scope": "review prose only, not runtime or Human approval"
   }
 }
