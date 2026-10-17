@@ -1,5 +1,5 @@
-import { BotSettingsScreen } from '../../../src/ui/chat/bot-settings-screen';
+import { ModelSettingsScreen } from '../../../src/ui/chat/model-settings-screen';
 
 export default function ModelScreen() {
-  return <BotSettingsScreen kind="model" />;
+  return <ModelSettingsScreen kind="bot" />;
 }

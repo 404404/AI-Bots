@@ -45,6 +45,7 @@ export default function SettingsScreen() {
         },
         onAppIcon: () => router.push('/settings/app-icon'),
         onNotifications: () => router.push('/settings/notifications'),
+        onModels: () => router.push('/settings/models'),
         onCopyVersion: copyMessage,
         onUnpair: () => hostSession.unpair().then(() => router.dismissTo('/')),
       }}

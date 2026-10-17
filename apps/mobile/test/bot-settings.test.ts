@@ -88,7 +88,9 @@ describe('Bot model from the composer', () => {
       'GPT-5',
     ]);
     expect(model.models[2]?.credential).toBe('missing');
-    expect(model.presets).toEqual([{ id: 'fast', name: 'Fast', orchestrator: flash }]);
+    expect(model.presets).toEqual([
+      { id: 'fast', name: 'Fast', revision: 1, orchestrator: flash, assignmentDefault: flash },
+    ]);
     expect(currentModel(model).name).toBe('DeepSeek V4 Pro');
     expect(modelLabel({ status: 'ready', value: model })).toBe('DeepSeek V4 Pro');
   });

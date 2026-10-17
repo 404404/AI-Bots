@@ -19,6 +19,7 @@ export interface SettingsActions {
   onComputers(): void;
   onAppIcon(): void;
   onNotifications(): void;
+  onModels(): void;
   onUnpair(): Promise<void>;
   onCopyVersion(text: string): void;
 }
@@ -97,6 +98,15 @@ export function SettingsView({
           </Pressable>
         </View>
         <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
+        <SettingsSection title={t.modelSettings.title} on={SHEET_GROUP}>
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.modelSettings.title}
+            detail={t.modelSettings.global}
+            disclosure
+            onPress={actions.onModels}
+          />
+        </SettingsSection>
         <SettingsSection title={t.connections} on={SHEET_GROUP}>
           <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
           <SettingsRow

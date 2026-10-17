@@ -30,7 +30,7 @@ const ready: InboxSnapshot = {
 };
 
 describe('navigation Activity count', () => {
-  it('defaults to approvals only, persists multi-select and permits icon-only across restart', async () => {
+  it('defaults to four action kinds, preserves saved choices and permits icon-only across restart', async () => {
     let stored: unknown;
     const storage = {
       read: async () => stored,
@@ -40,7 +40,16 @@ describe('navigation Activity count', () => {
     };
     const first = createActivityCountPreferences(storage);
     await first.ready;
-    expect(first.getSnapshot().kinds).toEqual(['approvals']);
+    expect(first.getSnapshot().kinds).toEqual([
+      'approvals',
+      'questions',
+      'privateInput',
+      'otherActions',
+    ]);
+    first.setKinds(['approvals']);
+    const previousSelection = createActivityCountPreferences(storage);
+    await previousSelection.ready;
+    expect(previousSelection.getSnapshot().kinds).toEqual(['approvals']);
     first.setKinds(['questions', 'approvals', 'questions']);
     const second = createActivityCountPreferences(storage);
     await second.ready;
@@ -78,7 +87,12 @@ describe('navigation Activity count', () => {
   it('rejects corrupt stored categories instead of silently disabling the default', async () => {
     const state = createActivityCountPreferences({ read: async () => ['future'], write() {} });
     await state.ready;
-    expect(state.getSnapshot().kinds).toEqual(['approvals']);
+    expect(state.getSnapshot().kinds).toEqual([
+      'approvals',
+      'questions',
+      'privateInput',
+      'otherActions',
+    ]);
   });
 
   it('queries the selected kind and follows later pages beyond unrelated first-page items', async () => {
@@ -164,10 +178,10 @@ describe('navigation Activity count', () => {
       prefs,
     );
     const off = observer.subscribe(() => {});
-    await vi.waitFor(() => expect(observer.getSnapshot().count).toBe(1));
+    await vi.waitFor(() => expect(observer.getSnapshot().count).toBe(3));
     fail = true;
     changed();
-    await vi.waitFor(() => expect(observer.getSnapshot()).toEqual({ count: 1, stale: true }));
+    await vi.waitFor(() => expect(observer.getSnapshot()).toEqual({ count: 3, stale: true }));
     prefs.setKinds(['questions']);
     await vi.waitFor(() =>
       expect(observer.getSnapshot()).toEqual({ count: undefined, stale: true }),

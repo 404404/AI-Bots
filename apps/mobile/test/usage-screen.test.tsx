@@ -68,6 +68,7 @@ function actions(overrides: Partial<SettingsActions> = {}): SettingsActions {
     onComputers: vi.fn(),
     onAppIcon: vi.fn(),
     onNotifications: vi.fn(),
+    onModels: vi.fn(),
     onUnpair: vi.fn(async () => undefined),
     onCopyVersion: vi.fn(),
     ...overrides,

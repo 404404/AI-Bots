@@ -12,6 +12,32 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  modelSettings: {
+    title: 'Models and presets',
+    global: 'Global default model',
+    globalHint:
+      'Bots without an override follow this computer’s default. Presets are shared on this computer; applying one copies its Orchestrator and Assignment settings to that Bot.',
+    botHint:
+      'Orchestrator handles the conversation. Assignment models run delegated work. Changes apply to this Bot.',
+    presetHint:
+      'Editing a preset changes the shared template. Bots already using a copy keep their settings until you apply it again.',
+    orchestrator: 'Orchestrator model',
+    assignment: 'Assignment default model',
+    allowed: 'Allowed Assignment models',
+    allowedHint:
+      'The Orchestrator can select from these models for delegated work. Choose a different default before removing its model.',
+    effort: 'Reasoning effort',
+    providerDefault: 'Provider default',
+    inherit: 'Restore global default',
+    inherited: 'Following global default',
+    search: 'Search models or providers',
+    noResults: 'No matching models. Try another name or provider.',
+    name: 'Preset name',
+    create: 'Save as new preset',
+    rename: 'Save preset name',
+    saved: 'Preset saved',
+    count: (count: number) => `${count} models`,
+  },
   activityCountSettings: {
     title: 'Activity count',
     hint: 'Choose what the navigation number includes. Each pending item or unread conversation counts once. This device only; push notifications are unchanged.',
@@ -723,6 +749,30 @@ const en = {
 };
 
 const zh: typeof en = {
+  modelSettings: {
+    title: '模型与预设',
+    global: '全局默认模型',
+    globalHint:
+      '未单独配置的 Bot 跟随这台电脑的默认模型。模型预设在这台电脑上共享；应用预设会将 Orchestrator 和 Assignment 设置复制给该 Bot。',
+    botHint: 'Orchestrator 负责对话，Assignment 模型执行委派任务。这里的修改只影响此 Bot。',
+    presetHint: '修改预设会更新共享模板。已应用预设的 Bot 保留原有设置，重新应用后才会更新。',
+    orchestrator: 'Orchestrator 模型',
+    assignment: 'Assignment 默认模型',
+    allowed: '允许的 Assignment 模型',
+    allowedHint:
+      'Orchestrator 可以从这些模型中选择执行委派任务的模型。移除默认模型前，请先选择其他默认模型。',
+    effort: '推理强度',
+    providerDefault: '服务商默认',
+    inherit: '恢复全局默认',
+    inherited: '跟随全局默认',
+    search: '搜索模型或服务商',
+    noResults: '没有匹配的模型，请更换名称或服务商。',
+    name: '预设名称',
+    create: '另存为新预设',
+    rename: '保存预设名称',
+    saved: '预设已保存',
+    count: (count: number) => `${count} 个模型`,
+  },
   activityCountSettings: {
     title: '动态数字',
     hint: '多选数字包含的类型。每条待办或每个未读会话计一项。仅保存在这台设备，不改变推送通知。',

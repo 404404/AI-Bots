@@ -10,7 +10,12 @@ export const ACTIVITY_COUNT_KINDS = [
   'unread',
 ] as const;
 export type ActivityCountKind = (typeof ACTIVITY_COUNT_KINDS)[number];
-export const DEFAULT_ACTIVITY_COUNT: readonly ActivityCountKind[] = ['approvals'];
+export const DEFAULT_ACTIVITY_COUNT: readonly ActivityCountKind[] = [
+  'approvals',
+  'questions',
+  'privateInput',
+  'otherActions',
+];
 
 export function createActivityCountPreferences(storage: {
   read(): Promise<unknown>;

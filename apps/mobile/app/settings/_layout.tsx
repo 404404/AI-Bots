@@ -9,6 +9,9 @@ export default function SettingsLayout() {
       <Stack.Screen name="usage" options={{ title: t.usage }} />
       <Stack.Screen name="app-icon" options={{ title: t.appIcon }} />
       <Stack.Screen name="activity-count" options={{ title: t.activityCountSettings.title }} />
+      <Stack.Screen name="models" options={{ title: t.modelSettings.title }} />
+      <Stack.Screen name="model-picker" />
+      <Stack.Screen name="model-preset" />
       <Stack.Screen name="notifications" options={{ title: t.notifications }} />
     </SheetStack>
   );
