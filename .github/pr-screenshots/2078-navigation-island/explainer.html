@@ -761,7 +761,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <button class="am-btn" type="button" data-am="copy" data-done="已复制 ✓">复制源稿</button>
 </div>
 <main class="am-sheet">
-<header class="am-head"><h1>Android 导航浮岛与预测返回</h1><p class="am-sub">PR2078 · 源码 e6e42ebcb0ecebbb4841466c19416052ab683734 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180 · 2026-10-17</p></header>
+<header class="am-head"><h1>Android 导航浮岛与预测返回</h1><p class="am-sub">PR2078 · 源码 75175fcb348aeafddbf8eacb1026aa392074eef4 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180 · 2026-10-17</p></header>
 <div class="am-frame">
 <div class="am-ruler am-ruler--top" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--bottom" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--left" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div><div class="am-ruler am-ruler--right" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div>
 <div class="am-grid" style="--cols: 2">
@@ -788,7 +788,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <tr>
 <td>选中图标</td>
 <td>中性色胶囊</td>
-<td>强调色矩形底块，圆角12dp</td>
+<td>强调色矩形底块，40×32dp，圆角12dp</td>
 </tr>
 <tr>
 <td>大字号</td>
@@ -800,10 +800,12 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 </div></div>
 </section>
 <section class="am-panel" id="panel-B">
-<header class="am-panel-head"><span class="am-panel-id">B</span><h2>交互沿用现有链路</h2></header>
+<header class="am-panel-head"><span class="am-panel-id">B</span><h2>修正内部垂直布局</h2></header>
 <div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 302 261" width="302" height="261" role="img" aria-label="流程图：系统字号与安全区、浮岛尺寸、列表底部留白、列表滚动、UI线程隐藏进度、浮岛位移与淡出" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M80,49 L80,65 Q80,81 80,97 L80,113" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="48.1" y="72" width="63.8" height="18" rx="3"/><text x="80" y="81" text-anchor="middle" dominant-baseline="central">React布局</text></g></g><g data-step="1"><path class="am-edge" d="M80,148 L80,164 Q80,180 80,196 L80,212" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="52" y="171" width="56" height="18" rx="3"/><text x="80" y="180" text-anchor="middle" dominant-baseline="central">末行可达</text></g></g><g data-step="2"><path class="am-edge" d="M228.5,49 L228.5,65 Q228.5,81 228.5,97 L228.5,113" marker-end="url(#am1-arrow)"/></g><g data-step="3"><path class="am-edge" d="M228.5,148 L228.5,164 Q228.5,180 228.5,196 L228.5,212" marker-end="url(#am1-arrow)"/></g></g><g><g class="am-node am-node--rect" data-key="系统字号与安全区" data-step="0"><rect class="am-node-shape" x="14" y="14" width="132" height="35" rx="3"/><text x="80" y="31.5" text-anchor="middle" dominant-baseline="central">系统字号与安全区</text></g><g class="am-node am-node--rect" data-key="浮岛尺寸" data-step="0"><rect class="am-node-shape" x="40" y="113" width="80" height="35" rx="3"/><text x="80" y="130.5" text-anchor="middle" dominant-baseline="central">浮岛尺寸</text></g><g class="am-node am-node--rect" data-key="列表底部留白" data-step="1"><rect class="am-node-shape" x="27" y="212" width="106" height="35" rx="3"/><text x="80" y="229.5" text-anchor="middle" dominant-baseline="central">列表底部留白</text></g><g class="am-node am-node--rect" data-key="列表滚动" data-step="2"><rect class="am-node-shape" x="188.5" y="14" width="80" height="35" rx="3"/><text x="228.5" y="31.5" text-anchor="middle" dominant-baseline="central">列表滚动</text></g><g class="am-node am-node--rect" data-key="UI线程隐藏进度" data-step="2"><rect class="am-node-shape" x="169" y="113" width="119" height="35" rx="3"/><text x="228.5" y="130.5" text-anchor="middle" dominant-baseline="central">UI线程隐藏进度</text></g><g class="am-node am-node--rect" data-key="浮岛位移与淡出" data-step="3"><rect class="am-node-shape" x="169" y="212" width="119" height="35" rx="3"/><text x="228.5" y="229.5" text-anchor="middle" dominant-baseline="central">浮岛位移与淡出</text></g></g></svg></figure>
-<div class="am-md"><p>选择、长按和角标仍由现有 BottomTabBar 管理。此改动不增加持久化状态或原生依赖。iOS保留原有系统底栏。</p>
-</div></div>
+<div class="am-md"><p>BottomTabItem内部原本使用顶部对齐和默认内边距，图标宿主也小于选中底块。现在由NavigationButton居中排列，图标宿主与底块都为40×32dp，角标落在宿主内。既有点击、长按与无障碍属性完整转发。</p>
+<p>实机可见内容偏移从上偏6.46dp降至1.54dp；高亮宽度从56dp收至40dp。iOS保留原有系统底栏。</p>
+</div>
+<figure class="am-codeblock" data-am-src="apps/mobile/src/ui/shell/navigation-button.android.tsx" data-am-lines="1-6"><figcaption class="am-code-head"><span class="am-code-title">apps/mobile/src/ui/shell/navigation-button.android.tsx:1-6</span><span class="am-code-lang">tsx</span><button class="am-code-copy" type="button" data-am="copy-code" data-done="已复制 ✓">复制</button></figcaption><pre class="am-code am-code--num"><code data-lang="tsx"><span class="am-ln" data-n="1">import { PlatformPressable } from &#39;expo-router/react-navigation&#39;;</span><span class="am-ln" data-n="2">import type { ComponentProps } from &#39;react&#39;;</span><span class="am-ln" data-n="3"></span><span class="am-ln" data-n="4">export function NavigationButton({ style, ...props }: ComponentProps&lt;typeof PlatformPressable&gt;) {</span><span class="am-ln" data-n="5">  return &lt;PlatformPressable {...props} style={[style, { justifyContent: &#39;center&#39;, padding: 0 }]} /&gt;;</span><span class="am-ln" data-n="6">}</span></code></pre></figure></div>
 </section>
 <section class="am-panel" id="panel-C">
 <header class="am-panel-head"><span class="am-panel-id">C</span><h2>图3能否直接启用</h2></header>
@@ -842,12 +844,12 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 </section>
 <section class="am-panel" id="panel-D">
 <header class="am-panel-head"><span class="am-panel-id">D</span><h2>实现依据与验收边界</h2></header>
-<div class="am-panel-body"><div class="am-md"><p>源码：<a href="https://github.com/BotHarness/DeepSeekBot/commit/e6e42ebcb0ecebbb4841466c19416052ab683734">精确提交</a>。QA运行与截图另有完整提交记录。</p>
+<div class="am-panel-body"><div class="am-md"><p>源码：<a href="https://github.com/BotHarness/DeepSeekBot/commit/75175fcb348aeafddbf8eacb1026aa392074eef4">精确提交</a>。QA运行与截图另有完整提交记录。</p>
 </div>
-<figure class="am-codeblock" data-am-src="apps/mobile/app/(tabs)/_layout.android.tsx" data-am-lines="57-68"><figcaption class="am-code-head"><span class="am-code-title">apps/mobile/app/(tabs)/_layout.android.tsx:57-68</span><span class="am-code-lang">ts</span><button class="am-code-copy" type="button" data-am="copy-code" data-done="已复制 ✓">复制</button></figcaption><pre class="am-code am-code--num"><code data-lang="ts"><span class="am-ln" data-n="57">  const { width, fontScale } = useWindowDimensions();</span><span class="am-ln" data-n="58">  const { inbox } = useHostSession();</span><span class="am-ln" data-n="59">  const pending = actionCount(useInbox(inbox));</span><span class="am-ln" data-n="60">  const scale = Math.max(1, fontScale);</span><span class="am-ln" data-n="61">  const barWidth = Math.min(</span><span class="am-ln" data-n="62">    width - insets.left - insets.right - space.x6 * 2,</span><span class="am-ln" data-n="63">    navigationBar.itemWidth * 2 * scale + space.x3 * 2,</span><span class="am-ln" data-n="64">  );</span><span class="am-ln" data-n="65">  const height = navigationBar.height + theme.type.meta.line * (scale - 1);</span><span class="am-ln" data-n="66">  const bottom = Math.max(insets.bottom, space.x4);</span><span class="am-ln" data-n="67">  const reserved = height + bottom + space.x5;</span><span class="am-ln" data-n="68">  return (</span></code></pre></figure>
+<figure class="am-codeblock" data-am-src="apps/mobile/app/(tabs)/_layout.android.tsx" data-am-lines="60-71"><figcaption class="am-code-head"><span class="am-code-title">apps/mobile/app/(tabs)/_layout.android.tsx:60-71</span><span class="am-code-lang">ts</span><button class="am-code-copy" type="button" data-am="copy-code" data-done="已复制 ✓">复制</button></figcaption><pre class="am-code am-code--num"><code data-lang="ts"><span class="am-ln" data-n="60">  const pending = actionCount(useInbox(inbox));</span><span class="am-ln" data-n="61">  const scale = Math.max(1, fontScale);</span><span class="am-ln" data-n="62">  const barWidth = Math.min(</span><span class="am-ln" data-n="63">    width - insets.left - insets.right - space.x6 * 2,</span><span class="am-ln" data-n="64">    navigationBar.itemWidth * 2 * scale + space.x3 * 2,</span><span class="am-ln" data-n="65">  );</span><span class="am-ln" data-n="66">  const height = navigationBar.height + theme.type.meta.line * (scale - 1);</span><span class="am-ln" data-n="67">  const bottom = Math.max(insets.bottom, space.x4);</span><span class="am-ln" data-n="68">  const reserved = height + bottom + space.x5;</span><span class="am-ln" data-n="69">  return (</span><span class="am-ln" data-n="70">    &lt;FloatingTabInset.Provider value={reserved}&gt;</span><span class="am-ln" data-n="71">      &lt;View style={{ flex: 1, backgroundColor: theme.color.base }}&gt;</span></code></pre></figure>
 <div class="am-md"><p>自动检查：541项移动端测试通过，8项跳过；类型、lint、格式、更新记录均通过。</p>
-<p>手机完成12组前后对照、选中状态与点击范围检查。短列表保留底栏，长列表收起并恢复。</p>
-<p>ACTION_CANCEL保留聊天，完整边缘滑动返回列表；反向拖回边缘的注入异常，Human取消手势尚未认证。解释页不替代这些实机证据。120FPS与iOS实机尚未认证。PR2073及本PR均待Human验收。</p>
+<p>手机完成12组前后对照、选中状态与点击范围检查。本次短列表保留底栏、切换Tab通过；长列表收起与恢复也在当前版本补测通过，并另存原速录屏。</p>
+<p>此前稳定栈基线的ACTION_CANCEL保留聊天，完整边缘滑动返回列表；反向拖回边缘的注入异常，Human取消手势尚未认证。解释页不替代这些实机证据。120FPS与iOS实机尚未认证。PR2073及本PR均待Human验收。</p>
 </div></div>
 </section>
 </div>
@@ -868,12 +870,12 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-lightbox-canvas am-diagram"></div>
 </div>
 </div>
-<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-17 22:47 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-17 23:41 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
 template: sheet
 theme: paper
 title: Android 导航浮岛与预测返回
-subtitle: PR2078 · 源码 e6e42ebcb0ecebbb4841466c19416052ab683734 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180 · 2026-10-17
+subtitle: PR2078 · 源码 75175fcb348aeafddbf8eacb1026aa392074eef4 · 基线41637d6652dc28ab08452e1b2a11bb344bc97180 · 2026-10-17
 cols: 2
 lang: zh
 ---
@@ -884,12 +886,12 @@ lang: zh
 |---|---|---|
 | 外形 | 接近全宽的胶囊 | 居中的小圆角矩形 |
 | 默认尺寸 | 屏幕左右各留24dp |176×64dp，外圆角20dp |
-| 选中图标 | 中性色胶囊 | 强调色矩形底块，圆角12dp |
+| 选中图标 | 中性色胶囊 | 强调色矩形底块，40×32dp，圆角12dp |
 | 大字号 | 固定高度 | 字号放大时扩宽并增高 |
 
 保留聊天、动态两个入口及待处理角标。浮岛底色与页面底色有区别。
 
-## B 交互沿用现有链路
+## B 修正内部垂直布局
 
 ```flow TB
 系统字号与安全区 -&gt; 浮岛尺寸: React布局
@@ -898,7 +900,12 @@ lang: zh
 UI线程隐藏进度 -&gt; 浮岛位移与淡出
 ```
 
-选择、长按和角标仍由现有 BottomTabBar 管理。此改动不增加持久化状态或原生依赖。iOS保留原有系统底栏。
+BottomTabItem内部原本使用顶部对齐和默认内边距，图标宿主也小于选中底块。现在由NavigationButton居中排列，图标宿主与底块都为40×32dp，角标落在宿主内。既有点击、长按与无障碍属性完整转发。
+
+实机可见内容偏移从上偏6.46dp降至1.54dp；高亮宽度从56dp收至40dp。iOS保留原有系统底栏。
+
+```tsx src=apps/mobile/src/ui/shell/navigation-button.android.tsx lines=1-6
+```
 
 ## C 图3能否直接启用
 
@@ -915,16 +922,16 @@ UI线程隐藏进度 -&gt; 浮岛位移与淡出
 
 ## D 实现依据与验收边界
 
-源码：[精确提交](https://github.com/BotHarness/DeepSeekBot/commit/e6e42ebcb0ecebbb4841466c19416052ab683734)。QA运行与截图另有完整提交记录。
+源码：[精确提交](https://github.com/BotHarness/DeepSeekBot/commit/75175fcb348aeafddbf8eacb1026aa392074eef4)。QA运行与截图另有完整提交记录。
 
-```ts src=apps/mobile/app/(tabs)/_layout.android.tsx lines=57-68
+```ts src=apps/mobile/app/(tabs)/_layout.android.tsx lines=60-71
 ```
 
 自动检查：541项移动端测试通过，8项跳过；类型、lint、格式、更新记录均通过。
 
-手机完成12组前后对照、选中状态与点击范围检查。短列表保留底栏，长列表收起并恢复。
+手机完成12组前后对照、选中状态与点击范围检查。本次短列表保留底栏、切换Tab通过；长列表收起与恢复也在当前版本补测通过，并另存原速录屏。
 
-ACTION_CANCEL保留聊天，完整边缘滑动返回列表；反向拖回边缘的注入异常，Human取消手势尚未认证。解释页不替代这些实机证据。120FPS与iOS实机尚未认证。PR2073及本PR均待Human验收。
+此前稳定栈基线的ACTION_CANCEL保留聊天，完整边缘滑动返回列表；反向拖回边缘的注入异常，Human取消手势尚未认证。解释页不替代这些实机证据。120FPS与iOS实机尚未认证。PR2073及本PR均待Human验收。
 
 
 

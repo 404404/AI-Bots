@@ -1,0 +1,66 @@
+[
+  {
+    "name": "nav-centering-before",
+    "itemBounds": [
+      340,
+      2455,
+      610,
+      2657
+    ],
+    "contentBounds": [
+      2465,
+      2605
+    ],
+    "verticalOffsetDp": -6.461538461538462,
+    "highlightWidthDp": 56,
+    "pass": false
+  },
+  {
+    "name": "nav-centering-probe",
+    "itemBounds": [
+      340,
+      2455,
+      610,
+      2657
+    ],
+    "contentBounds": [
+      2478,
+      2618
+    ],
+    "verticalOffsetDp": -2.4615384615384617,
+    "highlightWidthDp": 56,
+    "pass": false
+  },
+  {
+    "name": "nav-centering-after",
+    "itemBounds": [
+      340,
+      2455,
+      610,
+      2657
+    ],
+    "contentBounds": [
+      2478,
+      2624
+    ],
+    "verticalOffsetDp": -1.5384615384615385,
+    "highlightWidthDp": 40,
+    "pass": true
+  },
+  {
+    "name": "nav-centering-after-activity",
+    "itemBounds": [
+      610,
+      2455,
+      880,
+      2657
+    ],
+    "contentBounds": [
+      2478,
+      2624
+    ],
+    "verticalOffsetDp": -1.5384615384615385,
+    "highlightWidthDp": 40,
+    "pass": true
+  }
+]
