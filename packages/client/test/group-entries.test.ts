@@ -215,7 +215,6 @@ it('registers both group entries between members and group management, shown onl
     .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
   expect(entries.map((entry) => entry.id)).toEqual([
     'group-human-nickname',
-    'group-work',
     'members',
     'group-wake-policy',
     'group-external-connectors',

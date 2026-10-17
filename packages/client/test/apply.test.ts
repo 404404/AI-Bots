@@ -94,7 +94,11 @@ function fakeScope(): FakeScope {
 
 function createScoped(specs: Spec[], disposed: Spec[], withSettings = false, withPanelInfo = true) {
   const scoped: Record<string, unknown> = {
-    shortcuts: { register: () => () => undefined },
+    shortcuts: {
+      register: () => () => undefined,
+      config: { getSnapshot: () => ({ status: 'loading' }), subscribe: () => () => undefined },
+      catalog: { getSnapshot: () => [], subscribe: () => () => undefined },
+    },
     slots: {
       inject: (_name: string, callback: () => unknown) => callback(),
       register: (spec: Spec) => {

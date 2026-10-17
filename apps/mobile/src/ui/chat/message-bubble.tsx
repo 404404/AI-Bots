@@ -290,11 +290,6 @@ export const MessageBubble = memo(function MessageBubble({
     );
   const after = (
     <>
-      {streaming ? (
-        <Text variant="meta" tone="muted" accessibilityLiveRegion="polite">
-          {t.typing}
-        </Text>
-      ) : null}
       {reactions.length === 0 ? null : (
         <ReactionChips
           reactions={reactions}

@@ -360,6 +360,7 @@ export interface ProfileActivityTokensDay extends ProfileTokenBuckets {
 }
 
 export interface ProfileModelUsageRow {
+  partial?: boolean;
   day: string;
   purpose: string;
   provider: string;
@@ -5631,10 +5632,15 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
               (row.unknownBuckets?.cacheReadTokens ?? 0) > 0 ? null : row.cacheReadTokens,
             cacheWriteTokens:
               (row.unknownBuckets?.cacheWriteTokens ?? 0) > 0 ? null : row.cacheWriteTokens,
+            ...(row.totalTokens === null ? { partial: true } : {}),
             totalTokens:
-              row.totalTokens === undefined
-                ? row.inputTokens + row.outputTokens + row.cacheReadTokens + row.cacheWriteTokens
-                : row.totalTokens,
+              row.totalTokens === null
+                ? (row.reportedTotalTokens ?? 0) > 0
+                  ? row.reportedTotalTokens!
+                  : null
+                : row.totalTokens === undefined
+                  ? row.inputTokens + row.outputTokens + row.cacheReadTokens + row.cacheWriteTokens
+                  : row.totalTokens,
           })),
           modelUsageStatus: deps.usage === undefined ? 'unavailable' : 'ready',
         },

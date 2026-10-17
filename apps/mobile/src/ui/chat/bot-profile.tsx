@@ -12,9 +12,8 @@ import type { BotScheduleSummary, ProfileActivity } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
-import { useMounted } from '../mounted';
+import { useFocusEffect } from 'expo-router';
 import { Text } from '../primitives/text';
-import { SheetScreen } from '../primitives/sheet-screen';
 import { useSheetContent } from '../primitives/sheet-content';
 import {
   ActivityIcon,
@@ -421,20 +420,12 @@ function ProfileRow({
   );
 }
 
-export type RoutineTarget = { kind: 'new' } | { kind: 'open'; routine: BotScheduleSummary };
-
-export interface ProfileRoutines {
-  load(): Promise<BotScheduleSummary[]>;
-  sheet(host: { target: RoutineTarget; onChanged(): void; onClose(): void }): ReactNode;
-}
-
 export function BotProfileSheet({
   bot,
   channels,
   load,
   actions: given,
   settings,
-  routines,
   initialProfile,
 }: {
   bot: RosterBot;
@@ -442,13 +433,11 @@ export function BotProfileSheet({
   load: () => Promise<BotProfile>;
   actions: BotProfileActions;
   settings?: ReactNode;
-  routines?: ProfileRoutines | undefined;
   initialProfile?: BotProfile | undefined;
 }) {
   const [profile, setProfile] = useState(initialProfile);
   const content = useSheetContent();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [target, setTarget] = useState<RoutineTarget>();
   const read = useCallback(() => {
     let live = true;
     void load().then((value) => {
@@ -458,33 +447,21 @@ export function BotProfileSheet({
       live = false;
     };
   }, [load]);
-  const mount = useMounted<SectionList<Row, { section: ProfileSection }>>(() => read(), [read]);
-  const refreshRoutines = () => {
-    if (routines === undefined) return;
-    void routines.load().then(
-      (value) =>
-        setProfile((current) => current && { ...current, routines: { status: 'ready', value } }),
-      () => undefined,
-    );
-  };
-  const actions: BotProfileActions =
-    routines === undefined
-      ? given
-      : {
-          ...given,
-          onOpenRoutine: (routine) => setTarget({ kind: 'open', routine }),
-          onNewRoutine: () => setTarget({ kind: 'new' }),
-        };
-  const rows = profileRows(content.ready ? profile : undefined, channels, routines !== undefined);
+  useFocusEffect(read);
+  const actions = given;
+  const rows = profileRows(
+    content.ready ? profile : undefined,
+    channels,
+    given.onNewRoutine !== undefined,
+  );
   const sections = PROFILE_SECTIONS.map((section) => ({
     section,
     data: rows[section],
   }));
 
   return (
-    <SheetScreen onMount={content.mount}>
+    <View ref={content.mount} style={{ flex: 1 }}>
       <SectionList
-        ref={mount}
         sections={sections}
         keyExtractor={(row) => row.key}
         stickySectionHeadersEnabled={false}
@@ -531,18 +508,7 @@ export function BotProfileSheet({
             }
           />
         )}
-        ListFooterComponent={
-          routines === undefined || target === undefined ? null : (
-            <>
-              {routines.sheet({
-                target,
-                onChanged: refreshRoutines,
-                onClose: () => setTarget(undefined),
-              })}
-            </>
-          )
-        }
       />
-    </SheetScreen>
+    </View>
   );
 }

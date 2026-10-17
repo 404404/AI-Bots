@@ -298,6 +298,7 @@ function stubActions(): BridgeActions {
     applyChannelTail: vi.fn(),
     dismissFailedMessage: vi.fn(() => false),
     openSession: vi.fn(() => undefined),
+    readSessions: vi.fn(async () => []),
     refreshSessions: vi.fn(async () => undefined),
     setSessionArchived: vi.fn(async () => undefined),
     messageAttachmentTarget: vi.fn(async () => ({

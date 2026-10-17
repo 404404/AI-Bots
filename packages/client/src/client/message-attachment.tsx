@@ -209,7 +209,9 @@ export function MessageAttachment({
               {contents}
             </button>
           )}
-          {compact ? <span className="bh-channel-file-actions">{fileActions}</span> : fileActions}
+          <span className={compact ? 'bh-channel-file-actions' : 'bh-message-file-actions'}>
+            {fileActions}
+          </span>
         </div>
       )}
       {menu.menu}

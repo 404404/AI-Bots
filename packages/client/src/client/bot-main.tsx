@@ -1036,9 +1036,11 @@ function ConversationView({
   const dockEntryPanels = useMemo(
     () =>
       dockPanelsFromEntries(
-        [...dockBotEntries, ...dockGroupEntries].filter(
-          (entry) => !isChannelSettingsSection(entry),
-        ),
+        [
+          ...new Map(
+            [...dockBotEntries, ...dockGroupEntries].map((entry) => [entry.id, entry]),
+          ).values(),
+        ].filter((entry) => !isChannelSettingsSection(entry)),
       ),
     [dockBotEntries, dockGroupEntries],
   );
@@ -3239,7 +3241,10 @@ function ConversationView({
               channel={dockChannel}
               registry={dockPanels}
               entryProps={dockEntryProps}
-              shows={(entry) => entry.scope === settingsScope && (entry.visible?.(state) ?? true)}
+              shows={(entry) =>
+                (entry.scope === 'both' || entry.scope === settingsScope) &&
+                (entry.visible?.(state) ?? true)
+              }
               t={t}
             />
           ) : (

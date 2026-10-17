@@ -65,6 +65,7 @@ export const CHANNEL_DOCK_CSS =
   padding: 0;
   cursor: grab;
 }
+.bh-dock .dv-full-width-single-tab .dv-tab { flex: 1 1 0; min-width: 0; }
 .bh-dock .dv-tab:has([data-dock-header="bh:channel-body"]) { flex: 1 1 0; min-width: 0; max-width: 100%; }
 .bh-dock .dv-tab:active { cursor: grabbing; }
 .bh-dock .dv-tab:focus-visible,

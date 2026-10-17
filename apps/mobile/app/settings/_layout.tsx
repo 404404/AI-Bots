@@ -1,0 +1,14 @@
+import { Stack } from 'expo-router';
+import { SheetStack } from '../../src/ui/primitives/sheet-stack';
+import { t } from '../../src/ui/strings';
+
+export default function SettingsLayout() {
+  return (
+    <SheetStack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="usage" options={{ title: t.usage }} />
+      <Stack.Screen name="app-icon" options={{ title: t.appIcon }} />
+      <Stack.Screen name="notifications" options={{ title: t.notifications }} />
+    </SheetStack>
+  );
+}

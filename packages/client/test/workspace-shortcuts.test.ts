@@ -8,6 +8,7 @@ import {
 } from '@deepseek-ai/dsh-client-shortcuts/protocol';
 import { createDockPanelRegistry } from '../src/client/dock-panels.js';
 import {
+  migrateWorkShortcut,
   registerWorkspaceShortcuts,
   workspaceShortcutId,
 } from '../src/client/workspace-shortcuts.js';
@@ -68,5 +69,112 @@ describe('workspace shortcut ownership', () => {
     expect(commands.has(workspaceShortcutId('bh:channels'))).toBe(true);
     dispose();
     expect(commands.size).toBe(0);
+  });
+});
+
+describe('legacy Work shortcut migration', () => {
+  const old = workspaceShortcutId('group-work');
+  const next = workspaceShortcutId('sessions');
+  const binding = { code: 'KeyJ', modifiers: ['meta', 'shift'] };
+  function fixture(overrides: Record<string, unknown>, conflict = false) {
+    let profile = { ...overrides };
+    let revision = 0;
+    const listeners = new Set<() => void>();
+    const getSnapshot = () => ({
+      status: 'ready',
+      revision: String(revision),
+      document: { schemaVersion: 2, profiles: { 'desktop:macos': profile } },
+    });
+    const subscribe = (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+    const edits: unknown[] = [];
+    const api = {
+      runtime: 'desktop',
+      platform: 'macos',
+      config: { getSnapshot, subscribe },
+      catalog: { getSnapshot: () => [{ id: next }], subscribe },
+      describeBinding: () => ({ issue: null, conflicts: conflict ? ['other-command'] : [] }),
+      edit: async (edit: { type: string; id: string; binding?: unknown }) => {
+        edits.push(edit);
+        profile = { ...profile };
+        if (edit.type === 'reset') delete profile[edit.id];
+        else profile[edit.id] = edit.binding;
+        revision++;
+        listeners.forEach((listener) => listener());
+        return { status: 'saved', snapshot: getSnapshot() };
+      },
+    };
+    return {
+      api: api as unknown as Parameters<typeof migrateWorkShortcut>[0],
+      edits,
+      profile: () => profile,
+    };
+  }
+  async function settle() {
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+  }
+  it('uses accepted native edits to move a custom binding, once', async () => {
+    const f = fixture({ [old]: binding });
+    const notice = vi.fn();
+    const dispose = migrateWorkShortcut(f.api, notice);
+    await settle();
+    expect(f.profile()).toEqual({ [old]: binding, [next]: binding });
+    expect(f.edits).toHaveLength(1);
+    expect(notice).not.toHaveBeenCalled();
+    dispose();
+    const again = migrateWorkShortcut(f.api, notice);
+    await settle();
+    expect(f.edits).toHaveLength(1);
+    again();
+  });
+  it('retries native definition readiness without showing a false migration warning', async () => {
+    vi.useFakeTimers();
+    const f = fixture({ [old]: binding });
+    const original = f.api.edit;
+    const edit = vi
+      .spyOn(f.api, 'edit')
+      .mockResolvedValueOnce({ status: 'not-ready', snapshot: f.api.config.getSnapshot() });
+    edit.mockImplementation(original);
+    edit.mockResolvedValueOnce({ status: 'not-ready', snapshot: f.api.config.getSnapshot() });
+    const notice = vi.fn();
+    const dispose = migrateWorkShortcut(f.api, notice);
+    try {
+      await settle();
+      expect(notice).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(500);
+      expect(f.profile()[next]).toEqual(binding);
+      expect(notice).not.toHaveBeenCalled();
+    } finally {
+      dispose();
+      vi.useRealTimers();
+    }
+  });
+  it('preserves explicit Sessions unbinding and keeps the retired override dormant', async () => {
+    const f = fixture({ [old]: binding, [next]: null });
+    const notice = vi.fn();
+    const dispose = migrateWorkShortcut(f.api, notice);
+    await settle();
+    expect(f.profile()).toEqual({ [old]: binding, [next]: null });
+    expect(notice).toHaveBeenCalledTimes(1);
+    dispose();
+  });
+  it('refuses a conflict without changing any accepted binding', async () => {
+    const f = fixture({ [old]: binding }, true);
+    const notice = vi.fn();
+    const dispose = migrateWorkShortcut(f.api, notice);
+    await settle();
+    expect(f.edits).toEqual([]);
+    expect(f.profile()[old]).toEqual(binding);
+    expect(notice).toHaveBeenCalledTimes(1);
+    dispose();
+  });
+  it('does not turn a Work unbinding into a Sessions unbinding', async () => {
+    const f = fixture({ [old]: null });
+    const dispose = migrateWorkShortcut(f.api, vi.fn());
+    await settle();
+    expect(f.profile()).toEqual({ [old]: null });
+    dispose();
   });
 });

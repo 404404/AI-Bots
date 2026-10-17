@@ -3,12 +3,9 @@ import { useMemo } from 'react';
 import { View } from 'react-native';
 
 import { botChannels, botProfileResource } from '../../../src/host/bot-profile';
-import { fullClientParams } from '../../../src/host/full-client';
-import { botRoutines } from '../../../src/host/routines';
 import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
 import { BotProfileSheet } from '../../../src/ui/chat/bot-profile';
 import { BotSettingsPanel } from '../../../src/ui/chat/bot-settings-panel';
-import { RoutineSheet } from '../../../src/ui/chat/routine-sheet';
 import { useDesignTheme } from '../../../src/ui/design/theme';
 import { space } from '../../../src/ui/design/tokens';
 import { Text } from '../../../src/ui/primitives/text';
@@ -25,10 +22,6 @@ export default function BotProfileScreen() {
   const profile = useMemo(
     () => (client === undefined || bot === undefined ? undefined : botProfileResource(client, bot)),
     [client, bot?.slug, bot?.dmChannelId],
-  );
-  const routines = useMemo(
-    () => (client === undefined || slug === undefined ? undefined : botRoutines(client, slug)),
-    [client, slug],
   );
 
   if (bot === undefined || profile === undefined)
@@ -52,31 +45,14 @@ export default function BotProfileScreen() {
       initialProfile={profile.peek()}
       load={profile.refresh}
       settings={client === undefined ? undefined : <BotSettingsPanel client={client} bot={bot} />}
-      routines={
-        routines === undefined
-          ? undefined
-          : {
-              load: routines.list,
-              sheet: ({ target, onChanged, onClose }) => (
-                <RoutineSheet
-                  key={target.kind === 'open' ? target.routine.id : 'new'}
-                  botName={bot.displayName}
-                  target={target}
-                  routines={routines}
-                  onChanged={onChanged}
-                  onClose={onClose}
-                  onOpenFullClient={() => {
-                    onClose();
-                    router.push({
-                      pathname: '/full-client',
-                      params: fullClientParams({ kind: 'dm', slug: bot.slug }),
-                    });
-                  }}
-                />
-              ),
-            }
-      }
       actions={{
+        onOpenRoutine: (routine) =>
+          router.push({
+            pathname: '/bot/[slug]/routine/[id]',
+            params: { slug: bot.slug, id: routine.id },
+          }),
+        onNewRoutine: () =>
+          router.push({ pathname: '/bot/[slug]/routine-new', params: { slug: bot.slug } }),
         onMessage: () => (router.canGoBack() ? router.back() : router.replace(`/dm/${bot.slug}`)),
         ...(bot.browserAccess
           ? {
@@ -96,7 +72,8 @@ export default function BotProfileScreen() {
                 }),
             }
           : {}),
-        onNotifications: () => router.push('/notifications'),
+        onNotifications: () =>
+          router.push({ pathname: '/bot/[slug]/notifications', params: { slug: bot.slug } }),
         onOpenActivity: () =>
           router.push({ pathname: '/bot/[slug]/activity', params: { slug: bot.slug } }),
         onOpenMemory: (entry) =>

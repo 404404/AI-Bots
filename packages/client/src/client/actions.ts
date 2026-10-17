@@ -297,6 +297,7 @@ import type {
   ChannelMessage,
   ChannelSummary,
   ClientStore,
+  OwnedSessionSummary,
   ConversationSelection,
   HumanAttentionItem,
   HumanInboxCategory,
@@ -559,6 +560,7 @@ export interface BridgeActions {
   dismissFailedMessage(channelId: string, messageId: string): boolean;
   openSession(sessionId: string): void;
   refreshSessions(slug: string): Promise<void>;
+  readSessions(slug: string): Promise<OwnedSessionSummary[]>;
   setSessionArchived(slug: string, sessionId: string, archived: boolean): Promise<void>;
   messageAttachmentTarget(
     channelId: string,
@@ -2641,6 +2643,7 @@ export function createActions(
         throw new Error('DSH Session navigation is unavailable');
       folderAccess.openSession(sessionId);
     },
+    readSessions: (slug) => loadSessions(call, slug),
     async refreshSessions(slug) {
       const selection = currentSelection();
       if (selection === undefined || selectedBotSlug(selection) !== slug) return;

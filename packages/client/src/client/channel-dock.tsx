@@ -70,7 +70,7 @@ const styles = stylex.create({
   breadcrumb: { display: 'flex', alignItems: 'center', gap: space.x2, minWidth: 0 },
   channelName: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
   messageLabel: { flexShrink: 0 },
-  actions: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
+  actions: { display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: space.x1 },
 });
 
 const DOCK_THEME: DockviewTheme = {

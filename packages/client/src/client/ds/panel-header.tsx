@@ -85,7 +85,9 @@ const styles = stylex.create({
   action: {
     display: 'inline-flex',
     alignItems: 'center',
-    flexShrink: 0,
+    minWidth: 0,
+    maxWidth: { default: 'none', ':has([data-session-target])': '60%' },
+    flexShrink: { default: 0, ':has([data-session-target])': 1 },
     paddingInlineEnd: space.x1,
   },
 });
