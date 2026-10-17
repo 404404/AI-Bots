@@ -182,7 +182,7 @@ describe('canonical keyed Bot creation', () => {
     const after = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
     cleanup.push(() => after.close());
     const port = attachOperationalModule(after, 'migration-test');
-    expect(after.generation).toBe(97);
+    expect(after.generation).toBe(BOT_HARNESS_SCHEMA_PLAN.targetGeneration);
     expect(port.read((db) => db.prepare('SELECT bot_slug FROM tob_identity').get())).toEqual({
       bot_slug: 'tob-original',
     });

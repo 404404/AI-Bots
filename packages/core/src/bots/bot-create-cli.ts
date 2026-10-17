@@ -209,7 +209,9 @@ Usage:
   deepseekbot settings <namespace>
   deepseekbot settings-set <namespace> --patch-stdin [--expected-revision <n> --previous-value <json>]
   deepseekbot workspace-create <absolute-path>
-  deepseekbot group-create <name> --member <bot-id> [--member <bot-id> ...]
+  deepseekbot channel <channel-id>
+  deepseekbot group-create <name> [--member <bot-id> ...] [--operation-key <key>]
+  deepseekbot group-invite <channel-id> --bot <bot-id> [--operation-key <key>] [--expected-channel <fingerprint>]
   deepseekbot im-app-add <discord|slack|qq|dingtalk|wecom|matrix> --credentials-stdin
   deepseekbot im-app-status <platform>
   deepseekbot im-app-remove <platform> --app <app-id>
@@ -2576,8 +2578,15 @@ export async function runBotCreateCli(
       return 0;
     }
     const online = values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined;
-    if (values['operation-key'] !== undefined && (!online || command !== 'create'))
-      throw usageError('--operation-key is supported only for online blank creation.');
+    if (
+      values['operation-key'] !== undefined &&
+      (!online || !['create', 'group-create', 'group-invite'].includes(command))
+    )
+      throw usageError(
+        '--operation-key is supported only for online Bot creation, group creation or group invitation.',
+      );
+    if (values['expected-channel'] !== undefined && command !== 'group-invite')
+      throw usageError('--expected-channel is supported only for group-invite.');
     if (
       DIAGNOSTIC_COMMANDS.some((entry) => entry.command === command) ||
       LIFECYCLE_COMMANDS.some((entry) => entry.command === command) ||

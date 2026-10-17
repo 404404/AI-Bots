@@ -1,3 +1,4 @@
+import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
 import type { PartLibraryEntry } from '../bots/part-library.js';
@@ -927,8 +928,16 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.channelDm({ slug, displayName }));
   }
 
-  channelCreate(name: string, members: string[]): { channel: ChannelRecord } {
-    return unwrap(this.methods.channelCreate({ name, members }));
+  channelGet(channelId: string): ChannelManagementResult {
+    return unwrap(this.methods.channelGet({ channelId }));
+  }
+
+  channelCreate(
+    name: string,
+    members: string[],
+    operationKey?: string,
+  ): { channel: ChannelRecord } | ChannelManagementResult {
+    return unwrap(this.methods.channelCreate({ name, members, operationKey }));
   }
 
   channelRename(
@@ -942,8 +951,15 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.channelGroupAvatarSet({ channelId, avatar }));
   }
 
-  channelGroupInvite(channelId: string, botSlug: string): { channel: ChannelRecord } {
-    return unwrap(this.methods.channelGroupInvite({ channelId, botSlug }));
+  channelGroupInvite(
+    channelId: string,
+    botSlug: string,
+    operationKey?: string,
+    expectedChannel?: string,
+  ): { channel: ChannelRecord } | ChannelManagementResult {
+    return unwrap(
+      this.methods.channelGroupInvite({ channelId, botSlug, operationKey, expectedChannel }),
+    );
   }
 
   channelGroupInviteCancel(channelId: string, invitationId: string): { channel: ChannelRecord } {
@@ -1768,6 +1784,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanNameSet',
   'channelHumanNameSet',
   'channelDm',
+  'channelGet',
   'channelCreate',
   'channelRename',
   'channelGroupAvatarSet',

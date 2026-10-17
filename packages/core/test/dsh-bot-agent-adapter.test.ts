@@ -13,6 +13,22 @@ import { isDshGovernedTool } from '../src/workspaces/grant-execution.js';
 import type { AssignmentAgentRun, OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { FakeAgentHost, FAKE_BOT as BOT } from './dsh-agent-host-fixture.js';
 
+const TOB_GROUP_TOOL_CASES = [
+  ['group_create', { name: 'Group' }, 'createGroup'],
+  ['group_invite_bot', { channel_id: 'group', bot_id: 'peer' }, 'inviteGroup'],
+  ['group_invite_respond', { invite_id: 'invite', accept: true }, 'respondToGroupInvite'],
+  ['group_join_request', { channel_id: 'group' }, 'requestGroupJoin'],
+  [
+    'group_join_decide',
+    { channel_id: 'group', request_id: 'request', accept: true },
+    'decideGroupJoin',
+  ],
+  ['group_rename', { channel_id: 'group', name: 'Renamed' }, 'renameGroup'],
+  ['group_remove_member', { channel_id: 'group', bot_id: 'peer' }, 'removeGroupMember'],
+  ['group_leave', { channel_id: 'group' }, 'leaveGroup'],
+] as const;
+const TOB_CLI_TOOL_NAMES = ['bot_create', ...TOB_GROUP_TOOL_CASES.map(([name]) => name)];
+
 const ASSIGNMENT = {
   sessionId: 'assignment-1',
   purpose: '核对发布状态',
@@ -141,6 +157,18 @@ describe('DSH Bot Agent adapter', () => {
             ),
           ).toBe(false);
         }
+        for (const [name] of TOB_GROUP_TOOL_CASES) {
+          expect(scope.tools.some((tool) => tool.name === name)).toBe(!tobCli);
+          expect(
+            scope.guards.some((guard) => guard({ name })?.includes('scoped deepseekbot CLI')),
+          ).toBe(tobCli);
+        }
+        expect(scope.tools.map((tool) => tool.name)).toContain('channel_send');
+        expect(scope.tools.map((tool) => tool.name)).toContain('channel_read');
+        expect(
+          rolePrompt?.includes("Tob is the Human's private steward, never a Group participant"),
+        ).toBe(tobCli);
+        expect(rolePrompt?.includes('You may create a Group with group_create')).toBe(!tobCli);
         expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_read');
         expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_set');
         expect(scope.tools.map((tool) => tool.name)).toContain('create_assignment');
@@ -193,80 +221,123 @@ describe('DSH Bot Agent adapter', () => {
     }
   });
 
-  it('uses the pinned ToolRuntime guard for local-only creation without global restriction lookup', async () => {
-    const host = new FakeAgentHost({ kind: 'completed' }, { onTurn: async () => undefined });
-    const adapter = createDshBotAgentAdapter({
-      agents: host,
-      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
-      orchestratorCwd: () => '/memory/ada',
-      ensureWorkspace: () => undefined,
-    });
-    await adapter.runOrchestrator({ ...reportRun, tobCli: true });
-    const fence = host.scopes
-      .get(reportRun.sessionId)!
-      .guards.find((guard) => guard({ name: 'bot_create' })?.includes('scoped deepseekbot CLI'))!;
-    const ctx = new Context();
-    const providers = ctx.plugin({
-      name: 'test-tob-creation-native-tools',
-      apply(c: Context) {
-        c.provide('systemPrompt', {
-          tools: () => () => undefined,
-          section: () => () => undefined,
-          getSectionOrder: () => 1,
-        });
-      },
-    });
-    await providers.await();
-    const runtime = ctx.plugin(ToolRuntime, {});
-    await runtime.await();
-    const tob = { session: { id: 'tob-creation', header: { cwd: '/memory/tob' } } } as Agent;
-    const ordinary = {
-      session: { id: 'ordinary-creation', header: { cwd: '/memory/ordinary' } },
-    } as Agent;
-    const tobScope = createScope(ctx, tob);
-    const ordinaryScope = createScope(ctx, ordinary);
-    Object.assign(tob, { ctx: tobScope.ctx });
-    Object.assign(ordinary, { ctx: ordinaryScope.ctx });
-    const effects = vi.fn(async () => 'created');
-    const tool = defineTool({
-      name: 'bot_create',
-      description: 'Local-only creation',
-      parameters: {},
-      output: {
-        schema: { type: 'string' },
-        render: (_args, value) => [{ type: 'text', text: value }],
-      },
-      execute: effects,
-    });
-    tobScope.ctx.get('tools')!.register(tool);
-    ordinaryScope.ctx.get('tools')!.register(tool);
-    tobScope.ctx.get('tools')!.presentAs('native');
-    ordinaryScope.ctx.get('tools')!.presentAs('native');
-    try {
-      expect(() => tobScope.ctx.get('tools')!.restrict({ deny: ['bot_create'] })).toThrow(
-        'unknown global tool',
+  it.each(TOB_GROUP_TOOL_CASES)(
+    'rejects retained ordinary %s callbacks during a Tob run',
+    async (name, args, method) => {
+      let invokeLegacy!: () => Promise<unknown>;
+      let turn = 0;
+      const action = vi.fn(() => {
+        throw new Error('ordinary Group method reached');
+      });
+      const host = new FakeAgentHost(
+        { kind: 'completed' },
+        {
+          onTurn: async (_session, tools) => {
+            if (turn++ === 0) {
+              const tool = tools.find((candidate) => candidate.name === name)!;
+              invokeLegacy = async () => tool.execute(args, {} as ToolRunContext);
+              await expect(invokeLegacy()).rejects.toThrow('ordinary Group method reached');
+            } else
+              await expect(invokeLegacy()).rejects.toThrow(
+                'Tob must use the scoped deepseekbot CLI',
+              );
+          },
+        },
       );
-      expect(() => tobScope.ctx.get('tools')!.guard(fence)).not.toThrow();
-      const execute = (agent: Agent) =>
-        ctx.get('tools')!.execute({
-          agent,
-          callId: ToolCallId(agent.session.id),
-          name: 'bot_create',
-          arguments: {},
-          signal: new AbortController().signal,
-        });
-      expect((await execute(tob)).isError).toBe(true);
-      expect(effects).not.toHaveBeenCalled();
-      expect((await execute(ordinary)).isError).not.toBe(true);
-      expect(effects).toHaveBeenCalledOnce();
-    } finally {
-      await tobScope.dispose();
-      await ordinaryScope.dispose();
-      await runtime.dispose();
-      await providers.dispose();
-      await adapter.close();
-    }
-  });
+      const adapter = createDshBotAgentAdapter({
+        agents: host,
+        defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+        orchestratorCwd: () => '/memory/ada',
+        ensureWorkspace: () => undefined,
+      });
+      const run = { ...reportRun, channels: { ...reportRun.channels, [method]: action } };
+      try {
+        await adapter.runOrchestrator({ ...run, tobCli: false });
+        await adapter.runOrchestrator({ ...run, resume: true, tobCli: true });
+        expect(action).toHaveBeenCalledOnce();
+      } finally {
+        await adapter.close();
+      }
+    },
+  );
+
+  it.each(TOB_CLI_TOOL_NAMES)(
+    'uses the pinned ToolRuntime guard for local-only %s without global restriction lookup',
+    async (toolName) => {
+      const host = new FakeAgentHost({ kind: 'completed' }, { onTurn: async () => undefined });
+      const adapter = createDshBotAgentAdapter({
+        agents: host,
+        defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+        orchestratorCwd: () => '/memory/ada',
+        ensureWorkspace: () => undefined,
+      });
+      await adapter.runOrchestrator({ ...reportRun, tobCli: true });
+      const fence = host.scopes
+        .get(reportRun.sessionId)!
+        .guards.find((guard) => guard({ name: toolName })?.includes('scoped deepseekbot CLI'))!;
+      const ctx = new Context();
+      const providers = ctx.plugin({
+        name: 'test-tob-creation-native-tools',
+        apply(c: Context) {
+          c.provide('systemPrompt', {
+            tools: () => () => undefined,
+            section: () => () => undefined,
+            getSectionOrder: () => 1,
+          });
+        },
+      });
+      await providers.await();
+      const runtime = ctx.plugin(ToolRuntime, {});
+      await runtime.await();
+      const tob = { session: { id: 'tob-creation', header: { cwd: '/memory/tob' } } } as Agent;
+      const ordinary = {
+        session: { id: 'ordinary-creation', header: { cwd: '/memory/ordinary' } },
+      } as Agent;
+      const tobScope = createScope(ctx, tob);
+      const ordinaryScope = createScope(ctx, ordinary);
+      Object.assign(tob, { ctx: tobScope.ctx });
+      Object.assign(ordinary, { ctx: ordinaryScope.ctx });
+      const effects = vi.fn(async () => 'created');
+      const tool = defineTool({
+        name: toolName,
+        description: 'Local-only creation',
+        parameters: {},
+        output: {
+          schema: { type: 'string' },
+          render: (_args, value) => [{ type: 'text', text: value }],
+        },
+        execute: effects,
+      });
+      tobScope.ctx.get('tools')!.register(tool);
+      ordinaryScope.ctx.get('tools')!.register(tool);
+      tobScope.ctx.get('tools')!.presentAs('native');
+      ordinaryScope.ctx.get('tools')!.presentAs('native');
+      try {
+        expect(() => tobScope.ctx.get('tools')!.restrict({ deny: [toolName] })).toThrow(
+          'unknown global tool',
+        );
+        expect(() => tobScope.ctx.get('tools')!.guard(fence)).not.toThrow();
+        const execute = (agent: Agent) =>
+          ctx.get('tools')!.execute({
+            agent,
+            callId: ToolCallId(agent.session.id),
+            name: toolName,
+            arguments: {},
+            signal: new AbortController().signal,
+          });
+        expect((await execute(tob)).isError).toBe(true);
+        expect(effects).not.toHaveBeenCalled();
+        expect((await execute(ordinary)).isError).not.toBe(true);
+        expect(effects).toHaveBeenCalledOnce();
+      } finally {
+        await tobScope.dispose();
+        await ordinaryScope.dispose();
+        await runtime.dispose();
+        await providers.dispose();
+        await adapter.close();
+      }
+    },
+  );
 
   it.each<TurnEndCancelCause>([
     { kind: 'user' },
