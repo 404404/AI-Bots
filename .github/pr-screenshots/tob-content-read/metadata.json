@@ -5,8 +5,8 @@
       "file": "after-expanded-reply.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "a52f82fa83e6d890e09511d8c9b4300e0b06f52826adbf0b69414f2d2c67e980",
       "bytes": 164699,
+      "sha256": "a52f82fa83e6d890e09511d8c9b4300e0b06f52826adbf0b69414f2d2c67e980",
       "syntheticOnly": true,
       "reviewed": true
     },
@@ -14,8 +14,8 @@
       "file": "after-reply.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "09b1ba77bc6404f6979e2c630ba1396e85257a975ddc001c97bfc7c4a5f2716b",
       "bytes": 158768,
+      "sha256": "09b1ba77bc6404f6979e2c630ba1396e85257a975ddc001c97bfc7c4a5f2716b",
       "syntheticOnly": true,
       "reviewed": true
     },
@@ -23,11 +23,39 @@
       "file": "before-request.png",
       "width": 1440,
       "height": 1000,
-      "sha256": "193b9bcf0084a2059ea6bb21871bc6a607b2dfdc5eaf840cc2f4ded552ec86d1",
       "bytes": 66646,
+      "sha256": "193b9bcf0084a2059ea6bb21871bc6a607b2dfdc5eaf840cc2f4ded552ec86d1",
+      "syntheticOnly": true,
+      "reviewed": true
+    },
+    {
+      "file": "native-before-request.png",
+      "width": 2522,
+      "height": 1640,
+      "bytes": 145058,
+      "sha256": "b460c287e8677c3a7c7ec5e2d9b7609c2bdc88d9d028e36adce8c9f9b1453ba7",
+      "syntheticOnly": true,
+      "reviewed": true
+    },
+    {
+      "file": "native-expanded-reply.png",
+      "width": 2522,
+      "height": 1640,
+      "bytes": 310871,
+      "sha256": "0ddf21ac5a8065b4330191eaaaec25beb97e5d559d0d34a97052286090664964",
+      "syntheticOnly": true,
+      "reviewed": true
+    },
+    {
+      "file": "native-retained-reply.png",
+      "width": 2522,
+      "height": 1640,
+      "bytes": 296740,
+      "sha256": "b471d422c4713b282a159bfa872d28235ba58ab6c249c5799a0dedc9824e7461",
       "syntheticOnly": true,
       "reviewed": true
     }
   ],
-  "interpretation": "Current-product before-request and after-real-reply interaction states; not a layout comparison. No credentials or unrelated conversations."
+  "interpretation": "Current-product before-request and after-real-reply interaction states; not a layout comparison. No credentials or unrelated conversations.",
+  "nativeInterpretation": "Before fresh Native question and retained actual Turn2 reply after same-home process restarts; capture only, no replay. Physical pixels, not CSS viewport claim."
 }

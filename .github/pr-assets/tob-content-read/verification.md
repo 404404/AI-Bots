@@ -4,7 +4,7 @@ Issue [#2134](https://github.com/BotHarness/DeepSeekBot/issues/2134), child of #
 
 ## Source
 
-170 distinct focused cases across five affected files passed: 134 initially unaffected cases plus the final 36 content/RPC cases. Root TypeScript, lint, targeted formatting, ten source/ledger/ADR/CLI-parity/feature-map/preset/CI/install policies and one production build passed. Independent Spec and Standards review closed signed-cursor offset/anchor tampering and Unicode traversal-boundary findings at product895. Initial fixture/type failures were retained, corrected and rerun. No full local suite claim.
+170 distinct focused cases across five affected files passed: 134 initially unaffected cases plus the final 36 content/RPC cases. Root TypeScript, lint, targeted formatting, ten source/ledger/ADR/CLI-parity/feature-map/preset/CI/install policies and one production build passed. Independent Spec and Standards review closed signed-cursor offset/anchor tampering and Unicode traversal-boundary findings at product895. Initial fixture/type failures were retained, corrected and rerun. The first full CI at19faf failed only the separate plugin registration-name inventory. Test-only correction `b60b246767cfe59fa59d4e66262075838b70c906` adds the two actual methods; that exact regression was reproduced red then passed green (one selected case,16 unselected). Total focused coverage is171 distinct cases across six files. No full local suite claim.
 
 ## Actual isolated Web
 
@@ -18,11 +18,22 @@ Pinned DSH `0.2.0-rc.2`, official `deepseek-official/deepseek-flash` Bot plans. 
 
 Screenshots are synthetic interaction states on the new product at 1440×1000, dark theme, Chinese shell: before submitting the request, after the real reply, and read-only expanded reply capture after restart. These are not a base-versus-head layout comparison and do not claim a UI redesign. The inherited Home model-setup hint and default composer model label are not evidence of the actual selected Bot plan; the official route is proved by canonical Bot plans and actual completed execution.
 
+## Actual macOS Native and restart
+
+Root ran the real Desktop renderer against the same retained canonical home and product895. A fresh Human request in the retained Tob Session produced completed Turn2: eight successful native Shell reads, including four selected Unicode-body chunks, then a committed reply and handled delivery. Selected Bot identity/model plan and all three Channel memberships were unchanged; runtime returned idle and console/error collections were empty.
+
+- Human message `human-16269fed-a71d-4793-8eb9-0661ddb496c7`; Source Event `24fa2493-5cfb-4f6a-bf1f-b737bdd3e75f` resolved/handled.
+- Committed reply `50722715-ebf8-4c86-9cc2-4576a50b72dc`, same Tob Session as Web.
+- Actual second Desktop process restart: fresh direct content/body/progress readback passed against the same canonical home.
+- The initial after-turn viewport stayed on older messages with a new-message button; that image is preserved privately and is not used as visible-reply proof. A third read-only Desktop capture used the real latest-message button and expanded the retained reply. No new prompt or model execution occurred. The inspected images show the actual second-turn source revision and DM marker.
+
+Native captures are 2522×1640 physical pixels, dark Chinese shell, synthetic fixtures only. The prior Web images remain 1440×1000. These capture dimensions are not a responsive-layout claim. Root stopped each exact candidate and restored the main app. Fresh Desktop Profile configuration used an explicit package/config/link allowlist; no Session or credential store was copied.
+
 ## Preserved first failures and limits
 
 An initial English-only stock screenshot selector timed out against the Chinese shell. A direct synthetic Bot DM seed without trusted Source Event correctly refused; the fixture was then created through a normal actual Human/Bot conversation. The first custom driver queried a fresh Tob Session before it existed and failed before submitting any Tob request; explicit Session readiness fixed it. Two optional capture selectors timed out; a visible accessible row capture succeeded without another model request. These verifier/setup failures remain private, alongside screenshots and logs; they are not hidden or counted as successful feature runs.
 
-Native Desktop, exact-head CI, combined-stack qualification and Human QA remain pending at initial Draft publication. Source tests cover purge/visibility/incarnation/ordinary-Bot membership and Memory-Assignment denial; the Web run does not claim every source edge was reenacted. No real private conversations, attachment downloads, external delivery, membership expansion, management delegation, merge or release were exercised.
+Native model/restart/capture are now qualified as above; exact final-head CI, combined-stack qualification and Human QA remain separate pending gates. Source tests cover purge/visibility/incarnation/ordinary-Bot membership and Memory-Assignment denial; the Web run does not claim every source edge was reenacted. No real private conversations, attachment downloads, external delivery, membership expansion, management delegation, merge or release were exercised.
 
 ## Reproduce
 
