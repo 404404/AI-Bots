@@ -454,7 +454,7 @@ export function apply(ctx: ClientContext): void {
         ...createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
           channelSidebar.register(entry),
         ),
-        dockPanels.register(createActivityCenterPanel(actions, t, nativeSessions)),
+        dockPanels.register(createActivityCenterPanel(actions, t)),
         dockPanels.register(createGeneratedFilesPanel(actions, t)),
       ];
     };
@@ -1186,9 +1186,7 @@ export function apply(ctx: ClientContext): void {
                   snapshot.channels.some((channel) => channel.id === selection.channelId)
                 ? actions.openChannel(selection.channelId)
                 : selection?.kind === 'inbox'
-                  ? selection.view === 'overview'
-                    ? actions.openActivityCenter('overview')
-                    : actions.openHumanInbox()
+                  ? actions.openActivityCenter()
                   : undefined;
           void opening?.catch((error: unknown) => {
             ctx.logger.warn('botharness: Bot view restore failed', error);

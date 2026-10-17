@@ -259,6 +259,8 @@ describe('dockPanels Service in the dock', () => {
     title: 'To-do',
     icon: 'list-todo',
     scope: 'global',
+    headerAction: ({ channel }) =>
+      createElement('button', { 'data-todo-action': channel?.id ?? 'global' }, 'Filter todo'),
     component: ({ channel }) =>
       createElement('div', { 'data-todo': channel?.id ?? 'global' }, 'todo body'),
   };
@@ -285,6 +287,12 @@ describe('dockPanels Service in the dock', () => {
     expect(host.querySelector('[data-menu-item="example:todo"]')?.textContent).toBe('To-do');
     await click('[data-menu-item="example:todo"]');
     expect(host.querySelector('[data-todo]')?.getAttribute('data-todo')).toBe('global');
+    expect(
+      host
+        .querySelector('[data-dock-header="example:todo"] [data-todo-action]')
+        ?.getAttribute('data-todo-action'),
+    ).toBe('global');
+    expect(host.querySelector('[data-dock-panel="example:todo"] [data-todo-action]')).toBeNull();
     expect(registry.isOpen('example:todo')).toBe(true);
     const layout = JSON.stringify(readChannelDock(storage)!.layout.grid);
 
@@ -292,6 +300,12 @@ describe('dockPanels Service in the dock', () => {
     root = createRoot(host);
     await render(registry.panels(), 'channel', { channel: group, registry });
     expect(host.querySelector('[data-todo]')?.getAttribute('data-todo')).toBe('global');
+    expect(
+      host
+        .querySelector('[data-dock-header="example:todo"] [data-todo-action]')
+        ?.getAttribute('data-todo-action'),
+    ).toBe('global');
+    expect(host.querySelector('[data-dock-panel="example:todo"] [data-todo-action]')).toBeNull();
     expect(JSON.stringify(readChannelDock(storage)!.layout.grid)).toBe(layout);
   });
 

@@ -639,7 +639,7 @@ _避免使用_：wake policy、inferred step state、message priority
 _避免使用_：per-event queue、wake storm、batch（单独使用）
 
 **Activity Center**：
-「活动中心」是 Bot 模式中面向 Human 的跨 PersonaBot、跨 Channel 入口，包含运行总览与个人 Human Inbox。它汇总已有权威事实，不成为消息、用量或 Session 活动的另一份权威。
+「活动中心」是 Bot 模式中面向 Human 的跨 PersonaBot、跨 Channel 注意力入口，直接打开个人 Human Inbox。完整页面与 Dock 共用原位工具审批卡，运行统计不再属于此入口（#2026）。它汇总已有权威事实，不成为消息、用量或 Session 活动的另一份权威。
 _避免使用_：Human Inbox（指整个入口时）、dashboard list
 
 **Human Inbox**：

@@ -3195,7 +3195,7 @@ function BotMainContent({
     return workspace ? (
       <div className="bh-root bh-main">
         <ChannelDock
-          body={<ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />}
+          body={<ActivityCenterView actions={actions} t={t} />}
           panels={panels ?? []}
           registry={dockPanels}
           entryProps={undefined}
@@ -3204,7 +3204,7 @@ function BotMainContent({
         />
       </div>
     ) : (
-      <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />
+      <ActivityCenterView actions={actions} t={t} />
     );
   const scopeKey =
     state.selection.kind === 'bot'

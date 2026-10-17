@@ -13,11 +13,11 @@
     },
     {
       "id": "desktop.activity-center.idle-personabot",
-      "label": "Show one idle PersonaBot with no sessions or actions",
+      "label": "Historical Overview idle PersonaBot (presentation retired by #2026)",
       "source": "packages/client/src/client/activity-center-panel.tsx",
       "guide": ".agents/skills/verify-deepseekbot/features/activity-center-idle.md",
       "task": 1972,
-      "gap": null
+      "gap": "The Overview entry and Show idle Bots control were removed by #2026. The retained recipe and script document historical behavior and cannot qualify current Activity Center UI."
     },
     {
       "id": "desktop.bot-mode.entry",
@@ -473,6 +473,14 @@
       "source": "packages/client/src/client/dm-composer-context.tsx",
       "task": 2000,
       "guide": ".agents/skills/verify-deepseekbot/features/orchestrator-model-switch.md"
+    },
+    {
+      "id": "desktop.activity-center.inline-tool-approval",
+      "label": "Decide Tool approvals inline on the full page and Dock, with below-card context and retry",
+      "source": "packages/client/src/client/activity-approval.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/activity-inline-approval.md",
+      "task": 2026,
+      "gap": null
     }
   ],
   "scripts": [
@@ -1246,11 +1254,11 @@
     },
     {
       "path": "scripts/e2e-inbox-tool-approval.mjs",
-      "category": "historical-regression",
-      "behaviors": ["desktop.inbox.requests"],
-      "reason": "#550 real native tool approvals; one allow/reject audit, other Bot independence and stale decision refusal.",
-      "task": 1967,
-      "sha256": "90d2b8495c708a65b17dcf5ecc52c196809ac2cbc6b3130526d67f89b182f6de"
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Task-owned isolated Host with two real pending native requests; validates exact harmless marker commands, page failed-response retry/allow/native file effect, Dock reject, context, focus safety, canonical audit and light/dark evidence. Does not qualify other request kinds or multi-window stale UI.",
+      "task": 2026,
+      "sha256": "6145ee06184f09742dc846febda0d6615da9bc4f4a81fab2de1e984979b20268"
     },
     {
       "path": "scripts/e2e-informational-attention.mjs",

@@ -269,6 +269,8 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
   const Badge = shown ? entry.badge : undefined;
   const HeaderAction = shown ? entry.headerAction : undefined;
   const HeaderTabs = shown ? entry.headerTabs : undefined;
+  const PanelAction =
+    panel.scope === 'global' || dock.channel !== undefined ? panel.headerAction : undefined;
   const closeLabel = dock.t('dock.close', { label: panel.title });
   return (
     <div className="bh-dock-header" data-dock-header={entryId}>
@@ -296,6 +298,9 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
               </IconButton>
             )}
             {HeaderAction === undefined || props === undefined ? null : <HeaderAction {...props} />}
+            {PanelAction && (
+              <PanelAction channel={panel.scope === 'channel' ? dock.channel : undefined} />
+            )}
             {entryId === WORKSPACE_CHANNELS && (
               <span className="bh-workspace-channel-actions" ref={dock.setChannelsHeader} />
             )}

@@ -62,12 +62,6 @@ import type {
 } from '../../../core/src/messaging/identity.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
 import type { HumanAttentionPage, HumanInboxState } from './store.js';
-import {
-  readActivityCenterTab,
-  writeActivityCenterTab,
-  type ActivityCenterTab,
-} from './last-view.js';
-import { defaultStorage, type ConfigStorage } from './roster-config.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
 import type { MessagingConversationInput } from '../../../core/src/messaging/conversations.js';
 import { publishWorkspaceGrantChange } from './workspace-grant-events.js';
@@ -167,7 +161,6 @@ import {
   type WorkspaceOption,
   type WorkspaceGrantView,
   loadBotAttention,
-  loadActivityOverview,
   loadChannelActivityToday,
   loadHumanAttention,
   loadHumanAttentionStatus,
@@ -484,10 +477,13 @@ export interface BridgeActions {
   installGit(): Promise<void>;
   openBot(slug: string, view?: 'profile'): Promise<void>;
   refreshBotInbox(slug: string): Promise<void>;
-  openActivityCenter(view?: ActivityCenterTab): Promise<void>;
+  openActivityCenter(): Promise<void>;
   attachActivityCenterPanel(): () => void;
-  refreshOverview(): Promise<void>;
-  humanActionPage(botSlug: string, cursor?: string): Promise<HumanAttentionPage>;
+  activityPage(
+    category: HumanInboxCategory,
+    filters: HumanInboxFilters & { search?: string; mentionsFirst?: boolean },
+    cursor?: string,
+  ): Promise<HumanAttentionPage>;
   openHumanInbox(): Promise<void>;
   refreshHumanInboxStatus(): Promise<void>;
   refreshHumanInbox(category?: HumanInboxCategory, background?: boolean): Promise<void>;
@@ -931,14 +927,8 @@ export function createActions(
     fileOpenPreferences?: FileOpenPreferences;
     submissions?: ComposerSubmissionStore;
   },
-  navigationStorage: ConfigStorage | undefined = defaultStorage(),
 ): BridgeActions {
   clientStore.setComposerIdentity(undefined);
-  let activityTab = readActivityCenterTab(navigationStorage) ?? 'overview';
-  const rememberActivityTab = (view: ActivityCenterTab): void => {
-    activityTab = view;
-    writeActivityCenterTab(navigationStorage, view);
-  };
   let openingFile = false;
   const fileOpenPreferences =
     folderAccess?.fileOpenPreferences ?? createFileOpenPreferences({ storage: undefined });
@@ -1230,27 +1220,6 @@ export function createActions(
   const humanInboxScope = (): object | undefined => {
     const selection = currentSelection();
     return selection?.kind === 'inbox' ? selection : activityPanelScope;
-  };
-  const overviewScope = (): object | undefined => {
-    const selection = currentSelection();
-    if (selection?.kind !== 'inbox') return activityPanelScope;
-    return selection.view === 'overview' ? selection : undefined;
-  };
-  let overviewSeq = 0;
-  const refreshOverview = async (): Promise<void> => {
-    const scope = overviewScope();
-    if (scope === undefined) return;
-    const seq = ++overviewSeq;
-    if (clientStore.getSnapshot().overview.status === 'idle')
-      clientStore.setOverview({ status: 'loading', error: undefined });
-    try {
-      const value = await loadActivityOverview(call);
-      if (seq !== overviewSeq || overviewScope() !== scope) return;
-      clientStore.setOverview({ status: 'ready', value, error: undefined });
-    } catch (error) {
-      if (seq !== overviewSeq || overviewScope() !== scope) return;
-      clientStore.setOverview({ status: 'error', error: errorMessage(error) });
-    }
   };
   let humanInboxHeadSeq = 0;
   let humanInboxPageSeq = 0;
@@ -1891,13 +1860,8 @@ export function createActions(
         return Promise.resolve();
       return loadBotInboxFor(slug, selection, cursor);
     },
-    openActivityCenter(view) {
-      const tab = view ?? activityTab;
-      if (tab === 'inbox') return actions.openHumanInbox();
-      rememberActivityTab('overview');
-      clientStore.select({ kind: 'inbox', view: 'overview' });
-      void refreshHumanInboxStatus();
-      return refreshOverview();
+    openActivityCenter() {
+      return actions.openHumanInbox();
     },
     attachActivityCenterPanel() {
       const scope = {};
@@ -1909,15 +1873,9 @@ export function createActions(
         humanInboxScopeVersion += 1;
       };
     },
-    refreshOverview,
-    humanActionPage: (botSlug, cursor) =>
-      loadHumanAttention(call, 'action', 50, cursor, {
-        botSlug,
-        channelId: undefined,
-        sort: 'oldest',
-      }),
+    activityPage: (category, filters, cursor) =>
+      loadHumanAttention(call, category, 50, cursor, filters),
     openHumanInbox() {
-      rememberActivityTab('inbox');
       clientStore.select({ kind: 'inbox' });
       void refreshHumanInboxStatus();
       const scope = humanInboxScope();
