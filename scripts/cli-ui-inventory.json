@@ -44,18 +44,12 @@
     },
     {
       "id": "client-layout",
-      "description": "Workspace, Channel Dock, roster, folders and view layouts; includes migration/backup keys owned by these preferences.",
+      "description": "Remaining roster, folder and view preferences outside the Workspace layout owner.",
       "scope": "Client / Channel",
       "surfaces": [
-        "setting:packages/client/src/client/workspace.tsx:{t('dock.reset')}",
-        "setting:packages/client/src/client/workspace.tsx:{t('workspace.gap')}",
         "storage:packages/client/src/client/activity-feed.ts:setItem(preferenceKey)",
         "storage:packages/client/src/client/bot-session-folders.tsx:setItem(BOT_FOLDER_PREFERENCES_KEY)",
         "storage:packages/client/src/client/channel-activity-view.tsx:setItem('botharness/overview-statistics-collapsed.v1')",
-        "storage:packages/client/src/client/channel-dock-layout.ts:removeItem(CHANNEL_DOCK_STORAGE_KEY)",
-        "storage:packages/client/src/client/channel-dock-layout.ts:setItem(CHANNEL_DOCK_STORAGE_KEY)",
-        "storage:packages/client/src/client/channel-dock-layout.ts:setItem(backupKey)",
-        "storage:packages/client/src/client/channel-dock-layout.ts:setItem(key)",
         "storage:packages/client/src/client/channel-sidebar-prefs.ts:setItem(STORAGE_KEY)",
         "storage:packages/client/src/client/inbox-view-prefs.ts:setItem(INBOX_VIEW_PREFERENCES_KEY)",
         "storage:packages/client/src/client/last-view.ts:setItem(LAST_VIEW_KEY)",
@@ -67,6 +61,23 @@
         "storage:packages/client/src/client/session-view-prefs.ts:setItem(SESSION_VIEW_PREFERENCES_KEY)"
       ],
       "issue": "#2096"
+    },
+    {
+      "id": "client-workspace-layout",
+      "description": "Explicit live Client target and fingerprint edits through the existing Workspace/Dockview and per-Channel split owners; no Host layout store.",
+      "scope": "Client / Channel / browser origin",
+      "surfaces": [
+        "setting:packages/client/src/client/workspace.tsx:{t('dock.reset')}",
+        "setting:packages/client/src/client/workspace.tsx:{t('workspace.gap')}",
+        "storage:packages/client/src/client/channel-dock-layout.ts:removeItem(CHANNEL_DOCK_STORAGE_KEY)",
+        "storage:packages/client/src/client/channel-dock-layout.ts:setItem(CHANNEL_DOCK_STORAGE_KEY)",
+        "storage:packages/client/src/client/channel-dock-layout.ts:setItem(backupKey)",
+        "storage:packages/client/src/client/channel-dock-layout.ts:setItem(key)"
+      ],
+      "commands": [
+        "client-layout",
+        "client-layout-set"
+      ]
     },
     {
       "id": "client-shortcuts",

@@ -1,9 +1,11 @@
+import { createTobClientLayoutOperations, TOB_CLIENT_LAYOUT_CAPABILITIES } from './cli-client-layout.js';
 import { validateClientPatch, type ClientTarget } from '../client-control/contracts.js';
 import type { ClientControlService } from '../client-control/service.js';
 import type { PrepareTobOperation, TobCliCapability } from './cli-operations.js';
 import { TobError } from './service.js';
 
 export const TOB_CLIENT_PREFERENCE_CAPABILITIES: readonly TobCliCapability[] = [
+  ...TOB_CLIENT_LAYOUT_CAPABILITIES,
   {
     command: 'client-targets',
     description: 'Discover live targets; never infer current from one connected Client',
@@ -25,7 +27,9 @@ export function createTobClientPreferenceOperations(
   service: ClientControlService,
   current: () => ClientTarget,
 ): PrepareTobOperation {
+  const layout = createTobClientLayoutOperations(service, current);
   return async (command, raw) => {
+    if (command === 'client-layout' || command === 'client-layout-set') return layout(command, raw);
     if (!TOB_CLIENT_PREFERENCE_CAPABILITIES.some((item) => item.command === command))
       return undefined;
     const args = structuredClone(raw);

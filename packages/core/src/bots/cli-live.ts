@@ -680,9 +680,7 @@ export async function runLiveCli(
       action:
         command === 'client-targets'
           ? 'targets'
-          : command === 'client-preferences'
-            ? 'preferences'
-            : 'preferences-set',
+          : command.slice('client-'.length),
       ...client.args,
     });
   }
