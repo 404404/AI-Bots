@@ -1491,6 +1491,29 @@ async function runMemoryCommand(
   };
   let method: string;
   let args: Record<string, unknown>;
+  if (
+    ['memory-snapshot', 'memory-file', 'memory-history', 'memory-diff'].includes(command) &&
+    (values.sha !== undefined || values.offset !== undefined || values.limit !== undefined)
+  ) {
+    const number = (key: 'offset' | 'limit') => {
+      const value = values[key];
+      if (value === undefined) return undefined;
+      if (typeof value !== 'string' || !/^\d+$/u.test(value))
+        usage('Memory pagination requires nonnegative integers.');
+      return Number(value);
+    };
+    const query = {
+      kind: command.slice(7),
+      ...(values.sha === undefined ? {} : { sha: sha() }),
+      ...(command === 'memory-file' ? { path: required('path', 'path <file>') } : {}),
+      ...(values.offset === undefined ? {} : { offset: number('offset') }),
+      ...(values.limit === undefined ? {} : { limit: number('limit') }),
+    };
+    return (await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)))).rpc(
+      'memoryRevisionQuery',
+      { channelId, query },
+    );
+  }
   switch (command) {
     case 'memory-snapshot':
       [method, args] = ['memorySnapshot', { channelId }];

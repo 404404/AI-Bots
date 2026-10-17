@@ -292,7 +292,7 @@
     },
     {
       "id": "memory-download",
-      "description": "Current Memory file download.",
+      "description": "Current Memory file download; immutable revision pages share the Memory owner, and selected cross-Bot reads use the #2091 scoped Tob-owned Assignment CLI.",
       "scope": "Host",
       "surfaces": ["route:packages/core/src/plugin.ts:MEMORY_FILE_DOWNLOAD_PATH"],
       "commands": ["memory-file"]

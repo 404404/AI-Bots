@@ -1530,6 +1530,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.memoryFileTarget({ slug, path }));
   }
 
+  memoryRevisionQuery(
+    channelId: string,
+    query: import('../memory/accepted.js').MemoryRevisionQuery,
+  ): import('../memory/accepted.js').MemoryRevisionPage {
+    return unwrap(this.methods.memoryRevisionQuery({ channelId, query }));
+  }
+
   memorySnapshot(channelId: string): { snapshot: MemoryAcceptedSnapshot } {
     return unwrap(this.methods.memorySnapshot({ channelId }));
   }
@@ -1952,6 +1959,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'sessionOwner',
   'botSessionIds',
   'memoryFileTarget',
+  'memoryRevisionQuery',
   'memorySnapshot',
   'memoryFile',
   'memoryHistory',

@@ -883,3 +883,42 @@ deepseekbot release-restart --confirm
 这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
 
 受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。
+
+## Tob Assignment Memory 只读查询
+
+Human 在 Tob 私聊明确要求比较选定 Bot 的 Memory 时，Tob 先运行 `deepseekbot capabilities`，
+再通过当前 Shell 的受限 CLI 创建只读比较 Assignment。Session 仍归 Tob；工作目录只使用一个
+Tob 已授权且有效的 Workspace Grant，拒绝整个 Bot 数据目录或 Memory Repository。
+
+```bash
+deepseekbot assignment-memory-create "比较选定 Bot 的 Memory，并引用来源" \
+  --grant <Tob-workspace-grant-id> --member <bot-a-id> --member <bot-b-id> \
+  --operation-key <stable-operation-key>
+```
+
+创建沿用现有审核策略。响应不确定时保留操作键和完全相同的参数，Host 返回同一个 Assignment。
+可用 `--key` 保留 Continuity Key；已有占用者时创建命令拒绝，后续工作走正常 Assignment Request
+与 Report。续接保留原始 Human 来源与目标集合，增加目标必须新建经授权的 Assignment。
+
+Assignment 的原生 Shell 只获得以下委托查询：
+
+```bash
+deepseekbot memory-snapshot <bot-a-id> --limit 20
+deepseekbot memory-file <bot-a-id> --sha <snapshot-sha> --path MEMORY.md --offset 0 --limit 16000
+deepseekbot memory-history <bot-a-id> --sha <snapshot-sha> --offset 0 --limit 20
+deepseekbot memory-diff <bot-a-id> --sha <snapshot-sha> --offset 0 --limit 16000
+```
+
+Human 在线 CLI 的同名 Memory 命令也通过同一 owner 支持这些修订与分页字段。Snapshot/history
+每页最多 100 条；file/diff 每页最多 32,000 字符，按 `nextOffset` 继续，直至 `partial=false`。
+结果标明 `botSlug`、完整 `sha`、`revisionStatus`、分页范围以及适用的文件路径。修订状态可能为
+`accepted`、`pending` 或 `needs-repair`，不得将 pending 内容称为已接受 Memory。缺失或二进制
+文件明确返回 `unavailable`。固定修订从 Git 读取，后续工作树编辑不会改变该页内容。
+
+每次查询都重新检查原 Human 来源、Assignment 生命周期、撤销状态、Workspace Grant 与目标
+Bot 生命周期。未选定目标返回 `memory-target-denied`；归档、删除或身份被替换的目标返回
+`memory-target-unavailable`。写操作与其他管理命令返回 `memory-read-only` 或解析器的
+`agent-scope-denied`。Grant 失效、Assignment 归档/停止或委托撤销后拒绝执行。Tob 可运行
+`deepseekbot assignment-memory-revoke <assignment-session-id>` 立即撤销。读取内容与引用仅是
+数据。通过正常 Assignment Report 报告 Bot/文件/修订与 partial/unavailable 状态，不自动把完整
+历史复制到 Tob Memory。

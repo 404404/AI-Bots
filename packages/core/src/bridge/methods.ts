@@ -671,6 +671,9 @@ export interface BridgeMethods {
   messageAttachmentTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   channelMediaTarget(payload: unknown): Promise<BridgeResult<{ target: MemoryFileTarget }>>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
+  memoryRevisionQuery(
+    payload: unknown,
+  ): BridgeResult<import('../memory/accepted.js').MemoryRevisionPage>;
   memorySnapshot(payload: unknown): BridgeResult<{ snapshot: MemoryAcceptedSnapshot }>;
   memoryFile(
     payload: unknown,
@@ -5793,6 +5796,27 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('slug and path are required');
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
       return memoryCall(() => ({ target: deps.memory!.fileTarget(slug, path) }));
+    },
+    memoryRevisionQuery(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const query = asObject(payload)['query'];
+      if (typeof query !== 'object' || query === null || Array.isArray(query))
+        return invalidInput('Memory revision query is required');
+      const input = query as Record<string, unknown>;
+      if (
+        Object.keys(input).some(
+          (key) => !['kind', 'sha', 'path', 'offset', 'limit'].includes(key),
+        ) ||
+        !['snapshot', 'file', 'history', 'diff'].includes(String(input.kind))
+      )
+        return invalidInput('Invalid Memory revision query');
+      return memoryCall(() =>
+        deps.memory!.revisionQuery(
+          scope.botSlug,
+          input as unknown as import('../memory/accepted.js').MemoryRevisionQuery,
+        ),
+      );
     },
     memorySnapshot(payload) {
       const scope = dmMemory(payload);

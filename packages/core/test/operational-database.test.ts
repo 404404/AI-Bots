@@ -738,14 +738,16 @@ describe('operational database owner', () => {
   it('fails unknown newer generations with upgrade-required and never down-migrates', () => {
     const dshHome = createTempRoot('botharness-db-newer-');
     mountOperationalDatabase({ dshHome }).close();
-    mutateGeneration(dshHome, 99);
+    mutateGeneration(dshHome, BOT_HARNESS_SCHEMA_PLAN.targetGeneration + 1);
 
     const owner = mountOperationalDatabase({ dshHome });
 
     expect(owner.mode).toBe('recovery');
     expect(owner.recovery).toMatchObject({ code: 'upgrade-required' });
     owner.close();
-    expect(() => mutateGeneration(dshHome, 100)).not.toThrow();
+    expect(() =>
+      mutateGeneration(dshHome, BOT_HARNESS_SCHEMA_PLAN.targetGeneration + 2),
+    ).not.toThrow();
   });
 
   it('notifies only after commit and isolates observer failures', () => {

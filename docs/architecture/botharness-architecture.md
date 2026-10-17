@@ -1063,3 +1063,14 @@ The application-defined Bot Settings modal keeps a single active settings Slot m
 The Client owns a per-Channel binary split tree inside Messages. A leaf is message content or one registered Channel subpanel; a branch stores its axis and first-child fraction. Hidden/unavailable leaves collapse only in the rendered projection, leaving the saved tree intact. Bot-only availability and shortcut dispatch still use the existing ChannelDock owner. No Host capability, data authority, or execution permission changes.
 
 Version 7 retains the old per-panel open/hidden-control records and migrates legacy side/fraction geometry lazily into an equivalent tree. It backs up the prior raw record before upgrade. Explicit dragging splits the destination leaf; resizing only updates the selected branch. Stable keyed portals render into leaf-owned DOM containers, which move between layout slots without remounting content. Width changes never rewrite topology. See ADR-0222.
+
+### Tob 所有的 Assignment Memory 查询（#2091）
+
+Host 授权的应用定义只读范围，把一个 Tob 所有的 Assignment Session 绑定到原始 Human 私聊
+Source Event 与选定 Bot 身份。现有 scoped Shell broker 每次调用生成短期 lease，只准许有界、
+固定修订的 Memory snapshot/file/history/diff 查询，不传入管理 Host token。Memory 保持查询
+owner；Assignment Runtime 保留 Session Ownership、单一 Tob Workspace Grant、正常 Report/
+Request 生命周期与撤销检查。续接保留原目标，每次读取重新检查来源、Assignment、Grant 与
+目标生命周期；读取内容不会扩大权限。结果标明 Bot/文件/完整 SHA、修订状态与 partial/
+unavailable。见 [ADR-0228](../adr/0228-tob-assignments-read-selected-memory-through-scoped-cli.md)
+与 [CLI 指南](../bot-cli.zh.md#tob-assignment-memory-只读查询)。

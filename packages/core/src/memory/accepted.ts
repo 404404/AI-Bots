@@ -76,6 +76,36 @@ export interface MemoryRepairEvent {
   completedAt: string | null;
 }
 
+export interface MemoryRevisionQuery {
+  kind: 'snapshot' | 'file' | 'history' | 'diff';
+  sha?: string;
+  path?: string;
+  offset?: number;
+  limit?: number;
+}
+
+export interface MemoryRevisionPage {
+  botSlug: string;
+  sha: string;
+  kind: MemoryRevisionQuery['kind'];
+  path?: string;
+  files?: string[];
+  commits?: Array<{
+    sha: string;
+    parents: string[];
+    subject: string;
+    authoredAt: string;
+    status: MemoryGitCommit['status'];
+  }>;
+  revisionStatus: MemoryGitCommit['status'];
+  body?: string;
+  unavailable?: boolean;
+  binary?: boolean;
+  offset: number;
+  nextOffset: number | null;
+  partial: boolean;
+}
+
 export interface MemoryAcceptedSnapshot {
   head: string | null;
   files: string[];
@@ -186,6 +216,7 @@ export interface MemoryAcceptance {
     preserveObservation?: boolean;
   }): MemoryAcceptedCommit[];
   abortTurn(botSlug: string, sessionId: string, preserveObservation?: boolean): void;
+  revisionQuery(botSlug: string, query: MemoryRevisionQuery): MemoryRevisionPage;
   snapshot(botSlug: string): MemoryAcceptedSnapshot;
   readAccepted(
     botSlug: string,
@@ -1470,6 +1501,143 @@ export function createMemoryAcceptance(options: {
           sessionId,
           flight.observation?.observationJson,
         );
+    },
+    revisionQuery(botSlug, query) {
+      const { root } = readRepository(botSlug);
+      bootstrap(botSlug, root);
+      if (
+        typeof query !== 'object' ||
+        query === null ||
+        Array.isArray(query) ||
+        Object.keys(query).some(
+          (key) => !['kind', 'sha', 'path', 'offset', 'limit'].includes(key),
+        ) ||
+        !['snapshot', 'file', 'history', 'diff'].includes(query.kind) ||
+        (query.sha !== undefined && typeof query.sha !== 'string')
+      )
+        throw new MemoryAcceptError('memory-invalid', 'Invalid Memory query');
+      const offset = query.offset ?? 0;
+      const limit = query.limit ?? (query.kind === 'file' || query.kind === 'diff' ? 16000 : 20);
+      const text = query.kind === 'file' || query.kind === 'diff';
+      if (
+        !Number.isSafeInteger(offset) ||
+        offset < 0 ||
+        offset > MAX_DIFF_BYTES ||
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > (text ? 32000 : 100)
+      )
+        throw new MemoryAcceptError('memory-invalid', 'Invalid bounded Memory page');
+      if (query.kind !== 'snapshot' && query.sha === undefined)
+        throw new MemoryAcceptError('memory-invalid', 'An explicit Memory revision is required');
+      const sha = query.sha ?? head(root);
+      if (!/^[0-9a-f]{40}$/u.test(sha))
+        throw new MemoryAcceptError('memory-invalid', 'Invalid Memory revision');
+      try {
+        if (output(root, ['cat-file', '-t', sha]) !== 'commit') throw new Error('not a commit');
+        run(root, ['merge-base', '--is-ancestor', sha, 'HEAD']);
+      } catch {
+        throw new MemoryAcceptError(
+          'memory-unknown-commit',
+          'Memory revision is not reachable from its current branch',
+        );
+      }
+      const status = (revision: string): MemoryGitCommit['status'] =>
+        pendingRepair(botSlug)?.provisional_head_sha === revision
+          ? 'needs-repair'
+          : database.read((db) =>
+                db
+                  .prepare('SELECT 1 FROM memory_accepted_commits WHERE bot_slug = ? AND sha = ?')
+                  .get(botSlug, revision),
+              )
+            ? 'accepted'
+            : 'pending';
+      const base = {
+        botSlug,
+        sha,
+        revisionStatus: status(sha),
+        kind: query.kind,
+        offset,
+        nextOffset: null,
+        partial: false,
+      };
+      if (query.kind === 'history') {
+        const lines = output(root, [
+          'log',
+          sha,
+          `--skip=${offset}`,
+          `--max-count=${limit + 1}`,
+          '--format=%H%x1f%P%x1f%s%x1f%aI',
+        ])
+          .split('\n')
+          .filter(Boolean);
+        const partial = lines.length > limit;
+        const commits = lines.slice(0, limit).map((line) => {
+          const [revision, parents, subject, authoredAt] = line.split('\x1f');
+          return {
+            sha: revision!,
+            parents: parents ? parents.split(' ') : [],
+            subject: subject ?? '',
+            authoredAt: authoredAt ?? '',
+            status: status(revision!),
+          };
+        });
+        return { ...base, commits, partial, nextOffset: partial ? offset + limit : null };
+      }
+      if (query.kind === 'snapshot') {
+        const files = run(root, ['ls-tree', '-r', '--name-only', '-z', sha])
+          .toString('utf8')
+          .split('\0')
+          .filter(Boolean);
+        const partial = offset + limit < files.length;
+        return {
+          ...base,
+          files: files.slice(offset, offset + limit),
+          partial,
+          nextOffset: partial ? offset + limit : null,
+        };
+      }
+      let bytes: Buffer;
+      let path: string | undefined;
+      if (query.kind === 'file') {
+        if (typeof query.path !== 'string')
+          throw new MemoryAcceptError('memory-invalid', 'Memory file path is required');
+        try {
+          path = toMemoryRelativePath(query.path);
+        } catch {
+          throw new MemoryAcceptError('memory-invalid', 'Invalid relative Memory path');
+        }
+        try {
+          bytes = run(root, ['cat-file', 'blob', `${sha}:${path}`]);
+        } catch {
+          return { ...base, path, unavailable: true };
+        }
+      } else if (query.kind === 'diff')
+        bytes = run(root, [
+          'show',
+          '--format=',
+          '--no-ext-diff',
+          '--no-textconv',
+          '--no-renames',
+          sha,
+        ]);
+      else throw new MemoryAcceptError('memory-invalid', 'Unknown Memory read operation');
+      let body: string;
+      try {
+        body = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      } catch {
+        return { ...base, ...(path ? { path } : {}), binary: true, unavailable: true };
+      }
+      if (bytes.includes(0))
+        return { ...base, ...(path ? { path } : {}), binary: true, unavailable: true };
+      const partial = offset + limit < body.length;
+      return {
+        ...base,
+        ...(path ? { path } : {}),
+        body: body.slice(offset, offset + limit),
+        partial,
+        nextOffset: partial ? offset + limit : null,
+      };
     },
     snapshot(botSlug) {
       const { root, repairing } = readRepository(botSlug);
