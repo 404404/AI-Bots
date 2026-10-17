@@ -4,7 +4,7 @@ title: Tob 审核后修改指定 Bot 的记忆
 subtitle: 现有 Memory owner 保存，Human 审核固定目标、差异和版本
 lang: zh
 cols: 2
-source: 'PR #2132 · issue #2092 · source 926bdf4fef76a7e935d93a57c97fcdc89fbb70a6 · base 417c6fc509a1cfdb5730bb068308cc788add82cc · 2026-10-18'
+source: 'PR #2132 · issue #2092 · source 4a4554904c0b327a9eca7df68b94924870b39ee1 · base 5d44b7a6507d661415881808ab67e74275d54182 · 2026-10-18'
 ---
 
 Human 可以让 Tob 修改指定 Bot 的人格或记忆。每次写入都要审核真实差异，Assignment 保持只读。
@@ -33,7 +33,7 @@ Git提交 -> 可见记忆: 读回版本和内容
 | 仓库身份与干净状态          | 同 HEAD 下覆盖未提交工作 |
 | 原始 Human 来源             | 失效来源继续行使权限     |
 
-代码：[准备与重检](https://github.com/BotHarness/DeepSeekBot/blob/926bdf4fef76a7e935d93a57c97fcdc89fbb70a6/packages/core/src/tob/cli-memory-operations.ts#L58)。
+代码：[准备与重检](https://github.com/BotHarness/DeepSeekBot/blob/4a4554904c0b327a9eca7df68b94924870b39ee1/packages/core/src/tob/cli-memory-operations.ts#L58)。
 
 ## C 自身编辑与失败边界
 
@@ -41,7 +41,7 @@ Tob 可以修改自己的记忆，但只能使用当前所属的 Orchestrator fl
 它必须已接纳当前分支和 HEAD，工作树也必须干净。
 初始化尚未形成 accepted baseline 时拒绝自身编辑。
 
-代码：[Memory owner 的 flight 校验](https://github.com/BotHarness/DeepSeekBot/blob/926bdf4fef76a7e935d93a57c97fcdc89fbb70a6/packages/core/src/memory/accepted.ts#L1171)。
+代码：[Memory owner 的 flight 校验](https://github.com/BotHarness/DeepSeekBot/blob/4a4554904c0b327a9eca7df68b94924870b39ee1/packages/core/src/memory/accepted.ts#L1171)。
 
 | 操作                      | 约束                                |
 | ------------------------- | ----------------------------------- |
@@ -70,7 +70,7 @@ SOUL.md 和 MEMORY.md 在新 Session 或下次 compaction 生效。
 
 另一个 Bot 始终不变。
 已完成卡片隐藏原输入，因此只补拍一条待审提案，随后拒绝。
-[真实截图和证据边界](https://github.com/BotHarness/DeepSeekBot/blob/926bdf4fef76a7e935d93a57c97fcdc89fbb70a6/.github/pr-assets/tob-memory-edit/web-evidence.md)。
+[真实截图和证据边界](https://github.com/BotHarness/DeepSeekBot/blob/4a4554904c0b327a9eca7df68b94924870b39ee1/.github/pr-assets/tob-memory-edit/web-evidence.md)。
 
 ## E 哪些检查已完成
 
@@ -80,10 +80,13 @@ SOUL.md 和 MEMORY.md 在新 Session 或下次 compaction 生效。
 | TypeScript、针对性 lint、parity 与 inventory | ok 旧 qualified source 已通过             |
 | 产品 build                                   | ok 旧 build 已通过，产品内容与旧 Web 相同 |
 | 独立 Human CLI 与官方模型 Web                | ok 已通过，保存首次失败                   |
-| 新 base 的启动凭据改动                       | warn 已 rebase，仍需集成检查              |
+| 上游启动凭据改动                             | warn CI 源检查已过，整合运行仍待验证      |
 | 完整 CI、原生 macOS、Human QA                | warn 待完成                               |
 
-当前 source 是新 base 上的代码，旧 Web 证据不证明上游启动修复通过。
+当前 source 已同步上游三个旧 contract 测试修正。旧 Web 证据不证明启动修复的运行结果。
 旧 build 为 74c591117，旧 Web source 为 e3ed175cc。
 range-diff 确认本片三条产品及测试提交未变。
 本页面只解释审阅内容，不代表 Human 批准合并。
+
+首次完整 CI 的检查、构建和冒烟已通过；分片因旧 endpoint 清单漏项失败。
+修正后产品源码不变，完整 CI 重新运行。
