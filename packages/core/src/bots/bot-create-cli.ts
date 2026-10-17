@@ -194,6 +194,12 @@ Usage:
   deepseekbot marketplace-detail <owner/repo>
   deepseekbot marketplace-submit <github-repo-url>
   deepseekbot marketplace-report <owner/repo> [--reason <text>]
+  deepseekbot profile-backup-preview --out <new-private-plan-file>
+  deepseekbot profile-backup-export --file <private-plan-file> --out <new-archive> --confirm
+  deepseekbot profile-backup-inspect --file <archive>
+  deepseekbot profile-recovery
+  deepseekbot profile-recovery-authorize <bot-slug> --confirm
+  deepseekbot profile-recovery-activate <bot-slug> --confirm --acknowledge-split-brain
   deepseekbot telemetry-status
   deepseekbot telemetry-set (--enabled | --disabled)
   deepseekbot git-status

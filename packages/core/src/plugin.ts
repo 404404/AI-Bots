@@ -13,6 +13,7 @@ import {
   createTobClientPreferenceOperations,
   TOB_CLIENT_PREFERENCE_CAPABILITIES,
 } from './tob/cli-client-preferences.js';
+import { createTobBackupOperations, TOB_BACKUP_CAPABILITIES } from './tob/cli-backup-operations.js';
 import {
   createChannelPreferences,
   type ChannelPreferencesService,
@@ -1218,6 +1219,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                 signal: execution.signal,
                 authorize,
                 prepareOperation: async (command, args) =>
+                  (await tobBackupOperations(command, args)) ??
                   (await tobModelOperations(command, args)) ??
                   (await tobMaintenanceOperations(command, args)) ??
                   (await tobDeviceOperations(command, args)) ??
@@ -1247,6 +1249,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                 capabilities: [
                   ...TOB_MEMORY_CAPABILITIES,
                   ...TOB_MEMORY_EDIT_CAPABILITIES,
+                  ...TOB_BACKUP_CAPABILITIES,
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
                   ...TOB_DEVICE_CAPABILITIES,
@@ -2116,6 +2119,27 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     installer: () => releaseInstaller.current,
     restarter: () => releaseRestarter.current,
   });
+  const profileBackupHttp = createProfileBackupHttp(
+    {
+      database: core.operationalDatabase,
+      registry: core.registry,
+      deletions: core.deletions,
+      attachments: core.attachments,
+      purge: core.contentPurge,
+      version: runningRelease.version,
+      sessionCount: () => core.ownership.list().length,
+      dshVersion: installedDshVersion(),
+      log: (message) => ctx.logger.info(message),
+    },
+    join(dshHome, 'botharness', 'backup-staging'),
+    core.profileRecovery,
+    modelCatalog,
+  );
+  const tobBackupOperations = createTobBackupOperations({
+    http: profileBackupHttp,
+    root: join(dshHome, 'botharness', 'protected-backups'),
+    registry: core.registry,
+  });
   const tobModelOperations = createTobModelOperations({
     registry: core.registry,
     presets: core.modelPresets,
@@ -2466,22 +2490,6 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       detail: (slug) => bridgeMethods.get({ slug }),
       log: (message) => ctx.logger.info(message),
     });
-    const profileBackupHttp = createProfileBackupHttp(
-      {
-        database: core.operationalDatabase,
-        registry: core.registry,
-        deletions: core.deletions,
-        attachments: core.attachments,
-        purge: core.contentPurge,
-        version: runningRelease.version,
-        sessionCount: () => core.ownership.list().length,
-        dshVersion: installedDshVersion(),
-        log: (message) => ctx.logger.info(message),
-      },
-      join(dshHome, 'botharness', 'backup-staging'),
-      core.profileRecovery,
-      modelCatalog,
-    );
     for (const suffix of ['', '/inspect', '/recovery', '/authorize', '/activate'])
       connectionCtx.effect(
         () =>

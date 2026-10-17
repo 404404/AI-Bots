@@ -1094,3 +1094,22 @@ deepseekbot device-revoke <device-id> --expected-device <devices返回的identit
 收据状态包括 `pending`、`redeemed`（附设备 id）、`expired`、`unknown`。邀请和有界收据历史仅在当前进程保留：重启、容量淘汰或超出保留窗口会返回 `unknown`，不能据此认定已配对；重试前用 `devices` 核对。已配对设备继续由现有持久化模块管理，跨 Host 重启保留。
 
 撤销必须携带已审阅的身份指纹和明确确认。Host 在撤销前重新核对身份；变化返回 `stale-device`，设备不存在返回 `device-unknown`，身份匹配且已撤销返回 `alreadyRevoked`。撤销会关闭设备的现有流，并由同一监听器上的设备网关拒绝后续请求。直接 CLI 使用现有认证管理路由，Tob 则在原有来源和审批校验后调用同一管理模块。授权协议测试客户端仅证明网关行为，不代表真机、相机、Keychain 或原生网络已验证。
+
+## Profile 备份与恢复
+
+在线命令通过已认证的运行中 Host 调用与 Bot 模式 Settings 相同的备份 owner，不在运行中的 Host 上覆盖恢复。stdout 不包含档案内容或一次性导出 token。Human CLI 文件路径必须为绝对路径，输出只能创建新的私有文件（POSIX 为 0600），预览计划输入必须为权限私有的普通文件。先检查返回的范围，再确认导出；Profile 变化或五分钟计划过期会拒绝为 `preview-stale`。失败导出的不完整文件会被删除。请私下保存计划和档案。
+
+```sh
+deepseekbot profile-backup-preview --out /private/path/review.json
+deepseekbot profile-backup-export --file /private/path/review.json --out /private/path/environment.botharness-backup --confirm
+deepseekbot profile-backup-inspect --file /private/path/environment.botharness-backup
+deepseekbot profile-recovery
+deepseekbot profile-recovery-authorize <bot-slug> --confirm
+deepseekbot profile-recovery-activate <bot-slug> --confirm --acknowledge-split-brain
+```
+
+`profile-backup-inspect` 将受保护档案上传到所选 Host，只返回有界数量、Session 支持情况、字节数和完整性元数据。已有的 `botharness-profile inspect --file <archive>` 在本地离线检查。`botharness-profile restore --file <archive> --new-home <new-directory>` 仍是唯一恢复入口：必须选择不存在的新目录，恢复后保持停止及冷状态，不重启或修改正在使用的 Desktop。使用可信固定版 DSH 0.2.0-rc.2 和当前 BotHarness 候选版启动新数据空间，再对新 Host 执行恢复命令。仍可读取 rc.1 生成的 v1 档案。原生 Session 历史仍不支持迁移；凭据和外部权限不会导入。
+
+恢复的 Bot 必须在目标端明确配置 Model Plan 和凭据，逐个授权并确认同身份双活风险。先检查就绪状态，再授权或激活一个 Bot。Plan 变化会使授权失效。Browser／Computer access、外部绑定、Workspace 和其他导入权限保持挂起，需要通过原有路径独立授权。
+
+在 Tob 经过认证的 Home／私聊 Shell 中，先发现当前 capabilities。`profile-backup-preview` 只返回安全的 `planId`，导出 bearer token 留在 Host 内。`profile-backup-export --plan <planId> --confirm` 经过新的 Human 审核，仅写入 Host 受保护档案；回执只返回 `receiptId`、文件位置、字节数和 hash。`profile-backup-inspect --receipt <receiptId>` 返回有界元数据。Tob 不能提供 `--host`、`--token-file`、任意输入／输出路径或档案内容。模型授权与激活同样需要 Human 审核、当前就绪状态和显式标志。写入结果不确定时通过回执及当前状态核对，不自动重试。这些导出是手动文件，没有自动保留 catalog；使用后通过可信本地文件管理清理。Host 将该导出目录限制为八个文件和总计 512 MiB。

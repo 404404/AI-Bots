@@ -64,7 +64,9 @@ const manifestSchema = z
     id: z.uuid(),
     createdAt: z.iso.datetime(),
     schemaGeneration: z.number().int().min(70),
-    producer: z.object({ botharness: z.string().max(100), dsh: z.literal('0.2.0-rc.1') }).strict(),
+    producer: z
+      .object({ botharness: z.string().max(100), dsh: z.enum(['0.2.0-rc.1', '0.2.0-rc.2']) })
+      .strict(),
     sessions: z
       .object({
         status: z.literal('unsupported'),
@@ -155,7 +157,8 @@ export function inspectProfileBackup(archive: Buffer): {
       if (
         dependency.required &&
         (dependency.contract !== contracts[dependency.kind] ||
-          (dependency.kind === 'runtime' && dependency.reference !== 'dsh@0.2.0-rc.1'))
+          (dependency.kind === 'runtime' &&
+            !['dsh@0.2.0-rc.1', 'dsh@0.2.0-rc.2'].includes(dependency.reference)))
       )
         throw new ProfileBackupError(
           'dependency-incompatible',
@@ -225,10 +228,10 @@ export function inspectProfileBackup(archive: Buffer): {
 }
 
 export function profileBackupPreview(source: ProfileBackupSource) {
-  if (source.dshVersion !== '0.2.0-rc.1')
+  if (!['0.2.0-rc.1', '0.2.0-rc.2'].includes(source.dshVersion ?? ''))
     throw new ProfileBackupError(
       'dependency-incompatible',
-      'Profile Backup requires the verified DSH 0.2.0-rc.1 runtime',
+      'Profile Backup requires a verified DSH 0.2.0-rc.1 or 0.2.0-rc.2 runtime',
     );
   const memories = profileMemoryFiles(source.registry, source.deletions);
   const memoryFiles = memories.flatMap((repo) => repo.files);
@@ -399,7 +402,7 @@ export async function exportProfileBackup(
           {
             kind: 'runtime',
             scope: 'core',
-            reference: 'dsh@0.2.0-rc.1',
+            reference: `dsh@${source.dshVersion}`,
             required: true,
             contract: 'botharness-core/1',
           },
@@ -450,7 +453,10 @@ export async function exportProfileBackup(
           id,
           createdAt: new Date().toISOString(),
           schemaGeneration: source.database.generation,
-          producer: { botharness: source.version, dsh: '0.2.0-rc.1' },
+          producer: {
+            botharness: source.version,
+            dsh: source.dshVersion as '0.2.0-rc.1' | '0.2.0-rc.2',
+          },
           sessions: {
             status: 'unsupported',
             count: source.sessionCount(),

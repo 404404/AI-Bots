@@ -7,6 +7,7 @@ import {
   CLIENT_PREFERENCE_USAGE,
 } from './cli-client-preferences.js';
 import { parseAgentDevices, TOB_AGENT_DEVICE_COMMAND_USAGE } from './cli-agent-devices.js';
+import { parseAgentBackup, TOB_AGENT_BACKUP_USAGE } from './cli-agent-backup.js';
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
 import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
 import { parseAgentPolicies, TOB_AGENT_POLICY_COMMAND_USAGE } from './cli-agent-policies.js';
@@ -30,6 +31,7 @@ export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
   ...TOB_AGENT_SCHEDULE_COMMAND_USAGE,
   ...TOB_MEMORY_COMMAND_USAGE,
   ...TOB_AGENT_DEVICE_COMMAND_USAGE,
+  ...TOB_AGENT_BACKUP_USAGE,
   ...TOB_AGENT_BOT_COMMAND_USAGE,
   ...CLIENT_PREFERENCE_USAGE,
   'human-name-set':
@@ -243,6 +245,8 @@ export async function parseAgentManagement(
   if (policy) return policy;
   const device = parseAgentDevices(command, rest, values);
   if (device) return device;
+  const backup = parseAgentBackup(command, rest, values);
+  if (backup) return backup;
   const channel = parseAgentChannels(command, rest, values);
   if (channel) return channel;
   const bot = await parseAgentBots(command, rest, values, io);
