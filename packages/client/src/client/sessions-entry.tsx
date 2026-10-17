@@ -28,7 +28,7 @@ import { botNameSource, paintBotScale } from './bot-primary-color.js';
 import { useFlipList } from './flip-list.js';
 import { GroupHeading } from './ds/group-heading.js';
 import { IconButton } from './ds/icon-button.js';
-import { Note } from './ds/note.js';
+import { PanelEmptyState } from './ds/empty-state.js';
 import { color, radius, space } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
@@ -291,9 +291,7 @@ function SessionsPanel({
         <div className="bh-error">{t('sessions.error', { error: owned.error })}</div>
       ) : null}
       {owned.status === 'ready' && rows.length === 0 && assignments.length === 0 ? (
-        <Note tone="subtle" inset>
-          {t('sessions.empty')}
-        </Note>
+        <PanelEmptyState icon="text-quote">{t('sessions.empty')}</PanelEmptyState>
       ) : null}
       {archiveError === undefined ? null : (
         <div className="bh-error" role="alert">

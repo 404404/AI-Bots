@@ -174,10 +174,12 @@ describe('@botharness/ui browser bundle', () => {
     expect(plugin['name']).toBe('botharness-client');
     expect(plugin['inject']).toEqual([
       'slots',
+      'shortcuts',
       'connection',
       'inputTriggers',
       'layout',
       'locale',
+      'theme',
       'sessions',
       'uiWorkspace',
       'workspaces',
@@ -194,6 +196,7 @@ describe('@botharness/ui browser bundle', () => {
     }[] = [];
     const sources: unknown[] = [];
     const scoped = {
+      shortcuts: { register: () => () => undefined },
       slots: {
         inject: (_name: string, callback: () => unknown) => callback(),
         register: (spec: {
@@ -263,12 +266,6 @@ describe('@botharness/ui browser bundle', () => {
         locale: 'botharness',
         inject: expect.any(Function),
         children: { 'botharness.settings.section': { kind: 'list', scope: 'root' } },
-      },
-      {
-        name: 'shell.overlay',
-        id: 'botharness-shortcut-help',
-        locale: 'botharness',
-        inject: expect.any(Function),
       },
       {
         name: 'sidebar.panellist',
