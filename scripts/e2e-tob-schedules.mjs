@@ -320,13 +320,20 @@ async function newToolCalls(slug, previousIds, sessionId) {
   return { trace, calls };
 }
 
-async function verifyCliTrace(slug, previousIds, commands, refusal) {
+function shellMatchesCommand(call, command, context) {
+  if (context.previousCalls.has(call.callId) || !['bash', 'pwsh'].includes(call.name)) return false;
+  const reviewed = context.reviewedShellCalls?.get(command);
+  if (reviewed?.size) return reviewed.has(call.callId);
+  return JSON.stringify(call.args).includes('deepseekbot ' + command);
+}
+
+async function verifyCliTrace(slug, context, commands, refusal) {
   let evidence;
   for (let i = 0; i < 120; i++) {
-    evidence = await newToolCalls(slug, previousIds);
+    evidence = await newToolCalls(slug, context.previousCalls);
     const shells = evidence.calls.filter((call) => ['bash', 'pwsh'].includes(call.name));
     const hasCommands = commands.every((command) =>
-      shells.some((call) => JSON.stringify(call.args).includes('deepseekbot ' + command)),
+      shells.some((call) => shellMatchesCommand(call, command, context)),
     );
     const complete = shells.length > 0 && shells.every((call) => call.outcome !== 'pending');
     const hasRefusal = !refusal || shells.some((call) => call.result.includes(refusal));
@@ -335,12 +342,21 @@ async function verifyCliTrace(slug, previousIds, commands, refusal) {
   }
   writeFileSync(
     resolve(out, 'cli-tool-trace-' + Date.now() + '.json'),
-    JSON.stringify(evidence, null, 2),
+    JSON.stringify(
+      {
+        ...evidence,
+        reviewedShellCalls: Object.fromEntries(
+          [...(context.reviewedShellCalls ?? [])].map(([command, calls]) => [command, [...calls]]),
+        ),
+      },
+      null,
+      2,
+    ),
   );
   const shells = evidence.calls.filter((call) => ['bash', 'pwsh'].includes(call.name));
   for (const command of commands)
     assert.ok(
-      shells.some((call) => JSON.stringify(call.args).includes('deepseekbot ' + command)),
+      shells.some((call) => shellMatchesCommand(call, command, context)),
       'missing native Shell CLI call: ' + command,
     );
   assert.ok(
@@ -450,6 +466,7 @@ async function beginPrompt(home, prompt) {
     started: Date.now(),
     previousMessages: new Set(messages.map((message) => message.id)),
     previousCalls: new Set(trace.turns.flatMap((turn) => turn.calls).map((call) => call.callId)),
+    reviewedShellCalls: new Map(),
   };
   await setHomeVisible(true);
   const input = await visibleElement('[data-home-panel] textarea');
@@ -460,13 +477,16 @@ async function beginPrompt(home, prompt) {
 }
 
 async function completeTurn(home, context, command, refusal) {
-  await verifyCliTrace(home.botSlug, context.previousCalls, [command], refusal);
+  await verifyCliTrace(home.botSlug, context, [command], refusal);
   for (let i = 0; i < 180; i++) {
     const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
     const fresh = messages.filter((message) => !context.previousMessages.has(message.id));
     assert.ok(!fresh.some((message) => message.sessionFailure), 'native Session failed');
     const submitted = fresh.find(
-      (message) => message.author.kind === 'human' && message.body === context.prompt,
+      (message) =>
+        message.author.kind === 'human' &&
+        message.body === context.prompt &&
+        (!context.expectedMessageId || message.id === context.expectedMessageId),
     );
     const delivery = submitted?.deliveries?.find((entry) => entry.botSlug === home.botSlug);
     assert.ok(
@@ -475,12 +495,7 @@ async function completeTurn(home, context, command, refusal) {
     );
     const evidence = await newToolCalls(home.botSlug, context.previousCalls);
     const turn = evidence.trace.turns.find((item) =>
-      item.calls.some(
-        (call) =>
-          !context.previousCalls.has(call.callId) &&
-          ['bash', 'pwsh'].includes(call.name) &&
-          JSON.stringify(call.args).includes('deepseekbot ' + command),
-      ),
+      item.calls.some((call) => shellMatchesCommand(call, command, context)),
     );
     if (turn?.endReason !== undefined) assert.equal(turn.endReason, 'completed');
     const reply = fresh.find(
@@ -520,6 +535,16 @@ async function review(home, context, command, matches, deny = false) {
     matches,
   );
   const proposal = JSON.parse(message.toolApprovalRequest.input);
+  assert.equal(proposal.command, command);
+  assert.equal(typeof proposal.parentShellCallId, 'string');
+  assert.ok(
+    !context.previousCalls.has(proposal.parentShellCallId),
+    'review bound an old Shell call',
+  );
+  context.reviewedShellCalls ??= new Map();
+  const bindings = context.reviewedShellCalls.get(command) ?? new Set();
+  bindings.add(proposal.parentShellCallId);
+  context.reviewedShellCalls.set(command, bindings);
   writeFileSync(
     resolve(out, command + '-review-' + context.started + '.json'),
     JSON.stringify(proposal, null, 2),
@@ -689,6 +714,7 @@ try {
         'seed',
         'create',
         'change',
+        'change-read',
         'fire',
         'disable',
         'direct',
@@ -753,6 +779,67 @@ try {
     await inspectSchedule(fixture, 'changed-visible-next-run');
     steps.push(
       'natural Tob edit with exact selected Bot, schedule and state fingerprint; visible persisted title and next occurrence',
+    );
+  }
+  if (runs('change-read')) {
+    const resume = fixture.resumeChange;
+    assert.ok(
+      resume?.reviewPath &&
+        resume.requestMessageId &&
+        resume.prompt &&
+        Array.isArray(resume.previousCallIds),
+      'change-read requires canonical resumeChange proof',
+    );
+    const review = JSON.parse(readFileSync(resume.reviewPath, 'utf8'));
+    assert.equal(review.command, 'schedule-update');
+    assert.equal(review.target, fixture.botSlug + '/' + fixture.scheduleId);
+    assert.equal(typeof review.parentShellCallId, 'string');
+    assert.deepEqual(Object.keys(review.patch.changes), ['title']);
+    const canonical = (await list(fixture)).find((row) => row.id === fixture.scheduleId);
+    assert.ok(canonical);
+    assert.equal(canonical.title, review.patch.changes.title);
+    for (const field of [
+      'id',
+      'botSlug',
+      'prompt',
+      'trigger',
+      'enabled',
+      'locked',
+      'creator',
+      'createdAt',
+    ])
+      assert.deepEqual(canonical[field], review.previousValue[field]);
+    const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    const submitted = messages.find((message) => message.id === resume.requestMessageId);
+    assert.equal(submitted?.author.kind, 'human');
+    assert.equal(submitted.body, resume.prompt);
+    const approval = messages.find((message) => {
+      if (!message.toolApprovalRequest) return false;
+      const input = JSON.parse(message.toolApprovalRequest.input);
+      return (
+        input.command === review.command && input.parentShellCallId === review.parentShellCallId
+      );
+    });
+    assert.ok(approval, 'previous reviewed operation is absent from canonical DM');
+    assert.deepEqual(JSON.parse(approval.toolApprovalRequest.input), review);
+    const context = {
+      prompt: submitted.body,
+      started: Date.parse(submitted.at),
+      expectedMessageId: submitted.id,
+      previousMessages: new Set(
+        messages
+          .filter((message) => Date.parse(message.at) < Date.parse(submitted.at))
+          .map((message) => message.id),
+      ),
+      previousCalls: new Set(resume.previousCallIds),
+      reviewedShellCalls: new Map([['schedule-update', new Set([review.parentShellCallId])]]),
+    };
+    await completeTurn(home, context, 'schedule-update');
+    fixture.title = canonical.title;
+    save();
+    await inspectSchedule(fixture, 'resumed-change-visible-next-run');
+    steps.push(
+      'read-only recovery confirms previous review, fresh exact Shell call, completed turn, handled Human delivery, reply and canonical changed schedule; no repeated mutation',
     );
   }
   if (runs('journey') || runs('fire')) {

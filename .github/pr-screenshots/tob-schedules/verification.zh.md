@@ -16,3 +16,5 @@
 首个失败保留在私有记录：共享 AX Go 返回 `429 GoUsageLimitError`，之后仅为本隔离 Profile 通过既有 owner 选择可用的官方 DeepSeek 路由。首次官方路由流程额外读取了 Tob 自身的定时任务；明确的 Tob 指引修正后，新成功流程只走受限管理 CLI。证据脚本的 author 字段和面板可见性修正与产品行为分别记录，旧驱动已停止。
 
 Generation 100 虽仅新增一张表，仍推进共享 operational database 的代次；旧版本会拒绝新代次。已升级 Profile 不能仅靠 Git revert 降级，恢复需兼容的新版本或升级前备份，恢复前先保全后续状态；不得删除回执或降低代次标记强行降级。
+
+原生续跑诊断：第一次复制 Profile 的尝试，在模型步骤和工具调用前即 `blocked`；其 Session cwd 仍指向原 Web home，而 Registry 按复制后的 Desktop home 计算路径。该次仍为失败，改为在最终绝对 home 新建 Profile，不修旧历史。新的第二次原生尝试已完成审核后的创建与改名；离线读取停机 Profile 的规范任务名称与已处理 Human Source Event，确认改名确已发生。验证器因 Shell 参数仅展示前 200 字符、隐藏了 update 命令而误报。修正版按审核命令及准确、新鲜的 `parentShellCallId` 匹配，保留完成轮次／已处理 delivery／真实回复／规范状态检查，提供只读 `change-read` 续跑。离线重放该截断调用通过新匹配，并拒绝错误和过期调用 ID。此诊断不代表后续原生触发、暂停、独立 CLI、重启验收已通过。
