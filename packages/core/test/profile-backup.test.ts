@@ -74,6 +74,27 @@ function source(core: BotHarnessCore): ProfileBackupSource {
     sessionCount: () => core.ownership.list().length,
   };
 }
+function seedMemoryReadScope(core: BotHarnessCore) {
+  const at = '2026-10-18T00:00:00Z';
+  core.ownership.claim({
+    sessionId: 'memory-reader',
+    botSlug: 'keeper',
+    rootRole: 'assignment',
+    at,
+  });
+  attachOperationalModule(core.operationalDatabase, 'memory-read-fixture').transaction((db) => {
+    db.prepare(
+      'INSERT INTO source_events (source_event_id, source_kind, bot_slug, body, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run('memory-human-source', 'human-message', 'keeper', 'Read selected Memory', at);
+    db.prepare(
+      'INSERT INTO assignments (session_id, source_event_id, bot_slug, purpose, activity, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).run('memory-reader', 'memory-human-source', 'keeper', 'Read selected Memory', 'idle', at, at);
+    db.prepare(
+      'INSERT INTO assignment_memory_read_scopes (session_id, source_event_id, targets_json, operation_key, payload_hash, revoked_at) VALUES (?, ?, ?, ?, ?, ?)',
+    ).run('memory-reader', 'memory-human-source', '[]', 'memory-operation', 'memory-payload', null);
+  });
+}
+
 async function scene() {
   const home = root();
   const core = mount(home);
@@ -976,6 +997,8 @@ it.each([
   'creation-receipt',
   'channel-receipt',
   'schedule-receipt',
+  'schedule-creation-receipt',
+  'memory-read-revocation',
 ] as const)('refuses a scoped reviewed export after an actual %s change', async (change) => {
   const core = mount();
   expect(core.registry.create({ slug: 'keeper', displayName: 'Keeper', persona: 'AAAA' }).ok).toBe(
@@ -989,6 +1012,7 @@ it.each([
       rootRole: 'orchestrator',
       at: '2026-10-18T00:00:00Z',
     });
+  if (change === 'memory-read-revocation') seedMemoryReadScope(core);
   const handler = createProfileBackupHttp(source(core), root(), core.profileRecovery, catalog);
   const preview = await (
     await handler(new Request('http://localhost' + PROFILE_BACKUP_PATH))
@@ -1029,6 +1053,10 @@ it.each([
         db.prepare(
           'INSERT INTO channel_management_operations (operation_key, kind, payload_hash, channel_id, targets_json, status) VALUES (?, ?, ?, ?, ?, ?)',
         ).run('channel-key', 'create', 'fingerprint', channel.id, '[]', 'completed');
+      else if (change === 'schedule-creation-receipt')
+        db.prepare(
+          'INSERT INTO bot_schedule_creations (operation_key, payload_hash, schedule_id) VALUES (?, ?, ?)',
+        ).run('schedule-operation', 'schedule-payload', 'original-deleted-schedule');
       else
         db.prepare(
           'INSERT INTO bot_schedule_firings (firing_id, schedule_id, bot_slug, trigger, occurrence_at, fired_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -1040,6 +1068,12 @@ it.each([
           '2026-10-18T00:00:00Z',
           '2026-10-18T00:00:00Z',
         );
+    });
+  else if (change === 'memory-read-revocation')
+    attachOperationalModule(core.operationalDatabase, 'memory-read-fixture').transaction((db) => {
+      db.prepare(
+        'UPDATE assignment_memory_read_scopes SET revoked_at = ? WHERE session_id = ?',
+      ).run('2026-10-18T00:00:02Z', 'memory-reader');
     });
   else if (change === 'same-count-session')
     attachOperationalModule(core.operationalDatabase, 'session-ownership').transaction((db) => {
@@ -1061,6 +1095,46 @@ it.each([
     }),
   );
   expect(await response.json()).toMatchObject({ error: { code: 'preview-stale' } });
+});
+
+it('exports schema102 with schedule creation and Memory scope authority plus complete retained usage', async () => {
+  const { core } = await scene();
+  seedMemoryReadScope(core);
+  const port = attachOperationalModule(core.operationalDatabase, 'combined-schema-backup');
+  port.transaction((db) => {
+    db.prepare('INSERT INTO bot_schedule_creations VALUES (?, ?, ?)').run(
+      'schedule-operation',
+      'schedule-payload',
+      'original-deleted-schedule',
+    );
+    db.prepare('UPDATE assignment_memory_read_scopes SET revoked_at = ?').run(
+      '2026-10-18T00:00:02Z',
+    );
+    db.prepare(
+      'INSERT INTO usage_receipts (fingerprint, bot_slug, occurred_at_ms, total_tokens) VALUES (?, ?, ?, ?)',
+    ).run('retained-without-session', 'keeper', 1792274400000, 42);
+    db.prepare(
+      'UPDATE usage_receipt_state SET rolling_coverage_start_ms = ? WHERE singleton = 1',
+    ).run(1792188000000);
+  });
+  expect(core.operationalDatabase.generation).toBe(102);
+  expect(() => profileBackupReviewScope(source(core))).not.toThrow();
+  const rows = (owner: BotHarnessCore) =>
+    attachOperationalModule(owner.operationalDatabase, 'combined-schema-readback').read((db) => ({
+      schedules: db.prepare('SELECT * FROM bot_schedule_creations').all(),
+      scopes: db.prepare('SELECT * FROM assignment_memory_read_scopes').all(),
+      usage: db.prepare('SELECT * FROM usage_receipts').all(),
+      state: db.prepare('SELECT * FROM usage_receipt_state').all(),
+    }));
+  const before = rows(core);
+  const archive = join(root(), 'combined.botharness-backup');
+  const receipt = await exportProfileBackup(source(core), archive);
+  expect(receipt.manifest.schemaGeneration).toBe(102);
+  const destination = join(root(), 'combined-restored');
+  await restoreProfileBackup(readFileSync(archive), destination);
+  const restored = mount(destination);
+  expect(rows(restored)).toEqual(before);
+  expect(() => restored.profileRecovery.requireExecution('keeper')).toThrow();
 });
 
 it('requires an explicit backup review classification for every future canonical schema table', async () => {

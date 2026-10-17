@@ -54,6 +54,8 @@ const authorityTables = [
   'bot_creation_operations',
   'channel_management_operations',
   'bot_schedule_firings',
+  'bot_schedule_creations',
+  'assignment_memory_read_scopes',
   '_botharness_schema',
   'persona_bots_import',
   'model_presets_import',
