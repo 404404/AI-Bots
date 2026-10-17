@@ -32,6 +32,17 @@ export const navigationBar = {
 } as const;
 export const modalRail = { maxWidth: 360 } as const;
 
+export const androidSettings = {
+  radius: radius.xl,
+  rowHeight: 56,
+  supportingRowHeight: 72,
+  inset: space.x5,
+  vertical: space.x5,
+  sectionGap: space.x4,
+  switchWidth: 52,
+  switchHeight: 48,
+} as const;
+
 export type TypeRole = { size: number; line: number };
 
 export const typeScale: Record<

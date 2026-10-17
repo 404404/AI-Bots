@@ -101,9 +101,15 @@ export function SettingsView({
             on={SHEET_GROUP}
             title={t.computers}
             detail={t.computersHint}
+            disclosure
             onPress={actions.onComputers}
           />
-          <SettingsRow on={SHEET_GROUP} title={t.notifications} onPress={actions.onNotifications} />
+          <SettingsRow
+            on={SHEET_GROUP}
+            title={t.notifications}
+            disclosure
+            onPress={actions.onNotifications}
+          />
           <SettingsRow
             on={SHEET_GROUP}
             title={t.openFullClient}
@@ -128,6 +134,7 @@ export function SettingsView({
             on={SHEET_GROUP}
             title={t.appIcon}
             detail={t.appIconHint}
+            disclosure
             onPress={actions.onAppIcon}
           />
         </SettingsSection>
