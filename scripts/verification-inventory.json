@@ -1661,6 +1661,14 @@
       "reason": "Actual global width/height and child ratios across repeated toggles, closed refresh and parent recovery.",
       "task": 2071,
       "sha256": "6b9589f8877ff104b1a960d5fcf50aba3e1c0ec7a1d10ca2c6c11ce3a57902a0"
+    },
+    {
+      "path": "scripts/e2e-panel-resize-stability.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.bot-mode.dock"],
+      "reason": "Continuous pointer-held global resize must not snap back; Channel split placement remains fixed across narrow widths on Web and macOS.",
+      "task": 2074,
+      "sha256": "7e38b7beaaba216b416dfd2cf63ce652f7b982ad5a6fc2e4aee694b7aee6a31c"
     }
   ],
   "native": [

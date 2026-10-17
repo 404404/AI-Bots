@@ -968,3 +968,59 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   for (const id of botOnly) expect(registry.isOpen(id)).toBe(true);
 });
+
+it('does not reapply Dockview options while geometry changes', async () => {
+  const { WorkspaceContext, WORKSPACE_CHANNELS } =
+    await import('../src/client/workspace-context.js');
+  let dock: import('dockview-react').DockviewApi | undefined;
+  let changeGap: (value: number) => void = () => {};
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  registry.register({
+    id: WORKSPACE_CHANNELS,
+    title: 'Channels',
+    scope: 'global',
+    component: () => null,
+  });
+  const workspace: NonNullable<ContextType<typeof WorkspaceContext>> = {
+    rail: (api, _gap, setGap) => {
+      dock = api;
+      changeGap = setGap;
+      return createElement('nav');
+    },
+  };
+  act(() =>
+    root.render(
+      createElement(
+        WorkspaceContext.Provider,
+        { value: workspace },
+        createElement(ChannelDock, {
+          body: createElement('div'),
+          panels: registry.panels(),
+          registry,
+          entryProps,
+          shows: () => true,
+          t: zhTranslate,
+          storage,
+        }),
+      ),
+    ),
+  );
+  await settle();
+  const update = vi.spyOn(dock!, 'updateOptions');
+  act(() => dock!.layout(1200, 800));
+  await settle();
+  act(() => dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 370 }));
+  await settle();
+  expect(update).not.toHaveBeenCalled();
+  act(() => changeGap(12));
+  await settle();
+  expect(update).toHaveBeenCalledWith(
+    expect.objectContaining({ theme: expect.objectContaining({ gap: 12 }) }),
+  );
+});

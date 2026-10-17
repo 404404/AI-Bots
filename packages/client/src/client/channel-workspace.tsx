@@ -1,5 +1,4 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { useMountedResource } from './mounted-resource.js';
 import type { ChannelWorkspaceState, DockDirection } from './channel-dock-layout.js';
 
 const DRAG_TYPE = 'application/x-bh-channel-session';
@@ -26,26 +25,13 @@ export function ChannelWorkspace({
   const [drop, setDrop] = useState<DockDirection>();
   const dragChannel = useRef<string | undefined>(undefined);
   const host = useRef<HTMLDivElement | null>(null);
-  const [compact, setCompact] = useState(false);
-  const mount = useMountedResource<HTMLDivElement>((node) => {
-    host.current = node;
-    const measure = () => {
-      const width = node.getBoundingClientRect().width;
-      setCompact(width > 0 && width < 520);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-  const vertical = compact || state.direction === 'above' || state.direction === 'below';
+  const vertical = state.direction === 'above' || state.direction === 'below';
   const leading = state.direction === 'left' || state.direction === 'above';
   const active = state.open && channelId !== undefined;
   const directionAt = (x: number, y: number): DockDirection => {
     const box = host.current!.getBoundingClientRect();
     const dx = (x - box.left) / box.width;
     const dy = (y - box.top) / box.height;
-    if (compact) return dy < 0.5 ? 'above' : 'below';
     return Math.min(dx, 1 - dx) < Math.min(dy, 1 - dy)
       ? dx < 0.5
         ? 'left'
@@ -56,7 +42,7 @@ export function ChannelWorkspace({
   };
   return (
     <div
-      ref={mount}
+      ref={host}
       className="bh-channel-workspace"
       data-channel-workspace={panelId === 'sessions' ? channelId : undefined}
       data-workspace-split={panelId}

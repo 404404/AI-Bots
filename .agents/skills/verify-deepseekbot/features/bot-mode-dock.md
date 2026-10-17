@@ -108,3 +108,9 @@ Run `scripts/e2e-panel-size-persistence.mjs` against the same disposable two-Bot
 Dockview 8.4.1's `setSize` expects a pre-gap allocation while its rendered group dimensions and serialized sizes exclude the split margin. Restore adds `gap × (sibling count − 1) / sibling count` on each affected axis, derived from the reopened tree. Without this conversion every reopen loses pixels.
 
 Sequential closes preserve the pre-close geometry of surviving panels too, so temporary expansion cannot replace the user's dimensions. Active-panel resize or move clears these retained snapshots; closed-panel preferences stay intact. The journey also closes both global panels, refreshes, restores them in sequence, and changes viewport size while Activity is closed.
+
+## Continuous resize and fixed Channel placement (#2074)
+
+Run `scripts/e2e-panel-resize-stability.mjs` against the task-owned Web instance with `BH_E2E_INSTANCE` and `BH_BROWSER_PROFILE`, or an authorized native rc.2 window with `BH_DESKTOP_CDP`. Prepare a Bot DM with Memory files and Memory evolution switches available. The script opens both, holds the outer sash through eight pointer positions and samples five stationary frames each time; the sash must stay within 3px of the requested position. A screenshot only after releasing the pointer cannot prove this behavior. It also asserts that each visible subpanel's axis matches its saved direction even below 520px, and that saved ratios/visibility are untouched.
+
+Dockview 8.4.1 calls its shell layout when **any** options change; new theme or dndEdges objects on a size-driven React render can restore cached proportions during an active drag. Keep both identities stable until their actual values change. Channel subpanels have no width-based axis fallback: only an explicit placement action changes sides. Retain failed probes, inspect screenshots and page errors, and rerun the dimensions-across-visibility journey after changing this path.
