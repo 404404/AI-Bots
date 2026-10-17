@@ -1769,7 +1769,13 @@ export function createActions(
         kind: 'bot',
         slug,
         ...(view === 'profile' ? { profile: true } : {}),
-        ...(view === 'inbox' ? { inbox: true } : {}),
+        ...(view === 'inbox'
+          ? {
+              inboxRequest:
+                (snapshot.selection?.kind === 'bot' ? (snapshot.selection.inboxRequest ?? 0) : 0) +
+                1,
+            }
+          : {}),
       };
       clientStore.select(selection);
       const active = currentSelection();

@@ -1011,7 +1011,7 @@ function ConversationView({
   const workspaceEnabled = useContext(WorkspaceContext) !== undefined;
   const [detail, setDetail] = useScopedState<'files' | 'inbox' | undefined>(
     scopeKey,
-    state.selection?.kind === 'bot' && state.selection.inbox ? 'inbox' : undefined,
+    state.selection?.kind === 'bot' && state.selection.inboxRequest ? 'inbox' : undefined,
   );
   const filesOpen = detail === 'files';
   const inboxOpen = detail === 'inbox';
@@ -3176,7 +3176,7 @@ function ConversationView({
               inbox={inboxAvailable ? { open: inboxOpen, setOpen: setInboxOpen } : undefined}
               revealBody={
                 state.selection?.kind === 'bot' &&
-                (state.selection.profile === true || state.selection.inbox === true)
+                (state.selection.profile === true || state.selection.inboxRequest !== undefined)
               }
               panels={dockPanelList}
               channel={dockChannel}
@@ -3281,7 +3281,7 @@ function BotMainContent({
       : state.selection.kind === 'inbox'
         ? 'inbox'
         : state.selection.kind === 'bot'
-          ? `bot:${state.selection.slug}:${state.selection.profile ? 'profile' : state.selection.inbox ? 'inbox' : 'chat'}`
+          ? `bot:${state.selection.slug}:${state.selection.profile ? 'profile' : state.selection.inboxRequest ? `inbox:${state.selection.inboxRequest}` : 'chat'}`
           : `channel:${state.selection.channelId}`;
   return (
     <ConversationView
