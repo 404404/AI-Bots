@@ -8,6 +8,8 @@ Web-qualified code and verifier head: `e3ed175ccd26de4ad980d1059ee7783db8f96bc4`
 The sole authorized product build passed at `74c591117`; production source directories are byte-identical through that Web-qualified head.
 The branch was then rebased onto `417c6fc509a1cfdb5730bb068308cc788add82cc`, which inherits the upstream credential-startup fix. Range-diff shows the three #2092 production/test commits unchanged. The inherited startup changes still require integration qualification; the prior Web evidence does not qualify them. This does not claim an exact-final-head rebuild or native pass.
 
+The current source is `4a4554904c0b327a9eca7df68b94924870b39ee1`, based on `5d44b7a6507d661415881808ab67e74275d54182`. This second parent update adds #2091 evidence assets and three legacy contract-test corrections; product source is byte-identical to previous PR head `db8073dab`. Its first full CI passed lint, formatting, TypeScript, build, mobile bundles, docs and isolated smoke. Shard2 failed because its old bridge endpoint list omitted `memoryRevisionQuery`; this upstream correction is now included. The new full-CI run remains a separate result, and native integration/Human QA remain pending.
+
 ## Checks actually run
 
 | Layer                                            | Result                                                                                                                                                                                                      |
