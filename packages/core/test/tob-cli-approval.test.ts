@@ -306,6 +306,7 @@ describe('disruptive scoped CLI operations require Human review', () => {
   it.each([
     'release-install',
     'release-restart',
+    'group-delete',
     'bot-delete-confirm',
     'bot-delete-retry',
     'memory-save',

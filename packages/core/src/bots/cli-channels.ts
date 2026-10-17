@@ -1,10 +1,13 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { attachmentUploadInput } from './cli-attachment-upload.js';
 import { createHash } from 'node:crypto';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 import type { connectLiveHost } from './cli-live.js';
 
 export const CHANNEL_OPTIONS = {
+  file: { type: 'string' },
+  'upload-id': { type: 'string' },
   'avatar-file': { type: 'string' },
   'expected-channel': { type: 'string' },
   'expected-state': { type: 'string' },
@@ -29,6 +32,10 @@ export const CHANNEL_OPTIONS = {
 } as const;
 
 export const CHANNEL_COMMANDS = [
+  {
+    command: 'attachment-upload',
+    description: 'upload a local file without sending it; optional stable --upload-id UUID',
+  },
   {
     command: 'channel-preferences',
     description: 'read personal Channel preferences and their current fingerprint',
@@ -103,6 +110,8 @@ export const CHANNEL_COMMANDS = [
 type ChannelCommand = (typeof CHANNEL_COMMANDS)[number]['command'];
 
 interface ChannelValues {
+  file?: string;
+  'upload-id'?: string;
   'operation-key'?: string;
   'expected-channel'?: string;
   'expected-state'?: string;
@@ -226,6 +235,7 @@ export async function runChannelCommand(
 ): Promise<unknown> {
   const values = input as ChannelValues;
   const noTarget =
+    command === 'attachment-upload' ||
     command === 'channel-history' ||
     command === 'channel-mark-all-read' ||
     command === 'channel-unread';
@@ -239,6 +249,20 @@ export async function runChannelCommand(
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 600)
     usage('--timeout must be between 0 and 600 seconds.');
 
+  if (command === 'attachment-upload') {
+    const upload = attachmentUploadInput(values.file, values['upload-id']);
+    const host = await connect(values, io, AbortSignal.timeout(Math.ceil(seconds * 1000)));
+    const response = await host.stream(
+      '/api/botharness/attachment/upload?' +
+        new URLSearchParams({ name: upload.name, uploadId: upload.uploadId }),
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/octet-stream' },
+        body: new Uint8Array(upload.bytes),
+      },
+    );
+    return { ...(await response.json()), sha256: upload.sha256, uploadId: upload.uploadId };
+  }
   let args: Record<string, unknown> = { channelId };
   let method: string;
   switch (command) {

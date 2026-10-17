@@ -4175,14 +4175,23 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     channelGroupDelete(payload) {
-      const channelId = asNonBlank(asObject(payload), 'channelId');
+      const source = asObject(payload);
+      const channelId = asNonBlank(source, 'channelId');
       if (channelId === undefined) return invalidInput('channelId is required');
       try {
-        deps.channels.deleteGroup(channelId);
-        deps.externalMessaging?.inbound.endChannel(channelId);
+        if (!deps.channelManagement) return unavailable();
+        const expectedChannel = source['expectedChannel'];
+        if (expectedChannel !== undefined && typeof expectedChannel !== 'string')
+          return invalidInput('expectedChannel must be a string');
+        deps.channelManagement.deleteGroup({
+          channelId,
+          ...(expectedChannel === undefined ? {} : { expectedChannel }),
+        });
         return { ok: true, value: { deleted: true } };
       } catch (error) {
-        return invalidInput(String(error));
+        if (error instanceof ChannelManagementError)
+          return { ok: false, error: { code: error.code, message: error.message } };
+        throw error;
       }
     },
     channelMessages(payload) {

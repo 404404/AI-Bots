@@ -215,6 +215,7 @@ export function createRealAttachments(root: string, maxBytes: number) {
       name?: string;
       signal?: AbortSignal;
       uploadId?: string;
+      authorize?: () => void;
     }): Promise<ChannelAttachmentRef> {
       const id = 'file:' + (input.uploadId ?? randomUUID());
       directory(id);
@@ -254,6 +255,7 @@ export function createRealAttachments(root: string, maxBytes: number) {
           await file.sync();
           await file.close();
           closed = true;
+          input.authorize?.();
           const checksum = digest.digest('hex');
           const name = destinationName(input.name);
           let existing: Receipt | undefined;
@@ -274,6 +276,7 @@ export function createRealAttachments(root: string, maxBytes: number) {
                 'invalid-ref',
               );
             target(id);
+            input.authorize?.();
             return existing.ref;
           }
           const dir = directory(id);
@@ -281,10 +284,13 @@ export function createRealAttachments(root: string, maxBytes: number) {
             throw new ChannelAttachmentError('Attachment content was purged', 'not-found');
           await mkdir(join(root, 'files'), { recursive: true });
           checkedDirectory(join(root, 'files'));
+          input.authorize?.();
           await rm(dir, { recursive: true, force: true });
+          input.authorize?.();
           await mkdir(dir, { recursive: false });
           try {
             await mkdir(join(dir, 'data'));
+            input.authorize?.();
             await rename(temp, join(dir, 'data', name));
             const ref = {
               fileId: id,
@@ -293,6 +299,7 @@ export function createRealAttachments(root: string, maxBytes: number) {
               size,
             };
             const record = join(dir, 'record.json');
+            input.authorize?.();
             await writeFile(record, JSON.stringify({ ref, checksum }), { flag: 'wx', mode: 0o600 });
             const handle = await open(record, 'r+');
             try {
@@ -300,6 +307,7 @@ export function createRealAttachments(root: string, maxBytes: number) {
             } finally {
               await handle.close();
             }
+            input.authorize?.();
             if (purged.has(id))
               throw new ChannelAttachmentError('Attachment content was purged', 'not-found');
             return ref;

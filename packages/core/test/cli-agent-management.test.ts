@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { realpathSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -291,6 +291,7 @@ describe('scoped Group settings CLI', () => {
   const expectedChannel = 'a'.repeat(64);
   const writes = [
     { command: 'channel-rename', flags: { name: ' Launch team ' }, args: { name: 'Launch team' } },
+    { command: 'group-delete', flags: { confirm: true }, args: { confirm: true } },
     { command: 'group-avatar-set', flags: { clear: true }, args: { avatar: null } },
     { command: 'group-member-remove', flags: { bot: 'ada' }, args: { botSlug: 'ada' } },
     {
@@ -413,6 +414,38 @@ describe('scoped Group settings CLI', () => {
       }
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('scoped attachment transfer arguments', () => {
+  it('transports selected bytes without exposing a local Host path and requires stable identity', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'scoped-attachment-'));
+    try {
+      const path = join(realpathSync(root), 'qa.txt');
+      writeFileSync(path, 'synthetic attachment');
+      await expect(parser().parse('attachment-upload', [], { file: path })).rejects.toMatchObject({
+        code: 'usage',
+      });
+      const invocation = await parser().parse('attachment-upload', [], {
+        file: path,
+        'upload-id': 'ac501275-f752-44d6-8d5f-82e7c8b50ab2',
+      });
+      expect(invocation).toEqual({
+        command: 'attachment-upload',
+        write: true,
+        args: {
+          name: 'qa.txt',
+          uploadId: 'ac501275-f752-44d6-8d5f-82e7c8b50ab2',
+          data: Buffer.from('synthetic attachment').toString('base64'),
+        },
+      });
+      expect(JSON.stringify(invocation)).not.toContain(root);
+      await expect(
+        parser().parse('group-delete', ['team'], { 'expected-channel': 'a'.repeat(64) }),
+      ).rejects.toMatchObject({ code: 'usage' });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

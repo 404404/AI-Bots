@@ -2,7 +2,7 @@
 
 | Feature | Needs a model | Scripted journey | File |
 | --- | --- | --- | --- |
-| Home and protected Tob (Bot management, models, runtime, privacy and updates) | yes for reply and approval | `scripts/e2e-tob-home.mjs`, `scripts/e2e-tob-model-runtime.mjs`, `scripts/e2e-tob-bot-management.mjs`, `scripts/e2e-tob-channel-management.mjs`, `scripts/e2e-tob-group-settings.mjs`, `scripts/e2e-tob-group-decisions.mjs`, `scripts/e2e-tob-channel-preferences.mjs`, `scripts/e2e-tob-schedules.mjs`, `scripts/e2e-tob-memory-read.mjs`, `scripts/e2e-tob-client-preferences.mjs` | [tob-home.md](tob-home.md) |
+| Home and protected Tob (Bot management, models, runtime, privacy and updates) | yes for reply and approval | `scripts/e2e-tob-home.mjs`, `scripts/e2e-tob-model-runtime.mjs`, `scripts/e2e-tob-bot-management.mjs`, `scripts/e2e-tob-channel-management.mjs`, `scripts/e2e-tob-group-settings.mjs`, `scripts/e2e-tob-group-decisions.mjs`, `scripts/e2e-tob-channel-preferences.mjs`, `scripts/e2e-tob-channel-transfer.mjs`, `scripts/e2e-tob-schedules.mjs`, `scripts/e2e-tob-memory-read.mjs`, `scripts/e2e-tob-client-preferences.mjs` | [tob-home.md](tob-home.md) |
 | Profile backup and cold recovery | yes for Tob; no for direct CLI/export/recovery UI | `scripts/e2e-tob-profile-backup.mjs` | [profile-backup.md](profile-backup.md) |
 | DSH Session list Bot folders | for fresh execution | `scripts/e2e-bot-session-folders.mjs` | [bot-session-folders.md](bot-session-folders.md) |
 

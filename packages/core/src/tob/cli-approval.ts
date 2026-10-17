@@ -23,6 +23,7 @@ export async function approveTobCliOperation(options: {
     [
       'release-install',
       'release-restart',
+      'group-delete',
       'bot-delete-confirm',
       'bot-delete-retry',
       'memory-save',
