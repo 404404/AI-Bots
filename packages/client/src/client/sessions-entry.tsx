@@ -1,3 +1,6 @@
+import { GroupWorkEntry } from './group-work-entry.js';
+import { useSessionTarget } from './session-target.js';
+import type { SessionsState } from './store.js';
 import { useState, useSyncExternalStore, type ReactElement } from 'react';
 
 import * as stylex from '@stylexjs/stylex';
@@ -97,7 +100,14 @@ function SessionsPanel({
   const [archiving, setArchiving] = useState<string>();
   const [archiveError, setArchiveError] = useState<string>();
   const client = useClientState();
-  const owned = client.sessions;
+  const [local, setLocal] = useState<SessionsState>({
+    status: 'loading',
+    items: [],
+    error: undefined,
+  });
+  const [reload, setReload] = useState(0);
+  const groupBot = client.conversation.channel?.type === 'group';
+  const owned = groupBot ? local : client.sessions;
   const native = useSyncExternalStore(
     nativeSessions.subscribe,
     nativeSessions.getSnapshot,
@@ -110,8 +120,24 @@ function SessionsPanel({
     .join('|');
 
   const mount = useMountedResource<HTMLDivElement>(() => {
-    if (botSlug !== undefined) void actions.refreshSessions(botSlug);
-  }, [actions, botSlug, signature]);
+    if (botSlug === undefined) return;
+    if (!groupBot) {
+      void actions.refreshSessions(botSlug);
+      return;
+    }
+    let live = true;
+    void actions.readSessions(botSlug).then(
+      (items) => {
+        if (live) setLocal({ status: 'ready', items, error: undefined });
+      },
+      (error) => {
+        if (live) setLocal({ status: 'error', items: [], error: String(error) });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [actions, botSlug, signature, groupBot, client.conversation.revision, reload]);
 
   const toggleWorkspace = (key: string): void => {
     updateSessionViewPreference(slug, (current) => ({
@@ -213,7 +239,10 @@ function SessionsPanel({
                         .catch((error: unknown) =>
                           setArchiveError(error instanceof Error ? error.message : String(error)),
                         )
-                        .finally(() => setArchiving(undefined));
+                        .finally(() => {
+                          setArchiving(undefined);
+                          setReload((value) => value + 1);
+                        });
                     }}
                   >
                     <ChannelSidebarIcon
@@ -375,9 +404,11 @@ export function SessionsHeaderAction({
   botSlug,
   t,
   extraItems = [],
+  extraSelectedIds = [],
   onExtraSelect,
 }: ChannelSidebarEntryProps & {
   extraItems?: readonly MenuEntry[];
+  extraSelectedIds?: readonly string[];
   onExtraSelect?: (id: string) => void;
 }): ReactElement {
   const slug = botSlug ?? '';
@@ -386,16 +417,23 @@ export function SessionsHeaderAction({
     <SidebarViewMenu
       label={t('sessions.menu')}
       items={[
-        { type: 'label', id: 'scope-label', text: t('sessions.view') },
-        { id: 'scope:current', label: t('sessions.current') },
-        { id: 'scope:all', label: t('sessions.all') },
-        { type: 'separator', id: 'layout-separator' },
-        { type: 'label', id: 'layout-label', text: t('sessions.layout') },
-        { id: 'layout:status', label: t('sessions.layout.status') },
-        { id: 'layout:workspace', label: t('sessions.layout.workspace') },
+        ...(botSlug
+          ? [
+              { type: 'label' as const, id: 'scope-label', text: t('sessions.view') },
+              { id: 'scope:current', label: t('sessions.current') },
+              { id: 'scope:all', label: t('sessions.all') },
+              { type: 'separator' as const, id: 'layout-separator' },
+              { type: 'label' as const, id: 'layout-label', text: t('sessions.layout') },
+              { id: 'layout:status', label: t('sessions.layout.status') },
+              { id: 'layout:workspace', label: t('sessions.layout.workspace') },
+            ]
+          : []),
         ...extraItems,
       ]}
-      selectedIds={['scope:' + preference.scope, 'layout:' + preference.layout]}
+      selectedIds={[
+        ...extraSelectedIds,
+        ...(botSlug ? ['scope:' + preference.scope, 'layout:' + preference.layout] : []),
+      ]}
       onSelect={(id) => {
         const [kind, value] = id.split(':');
         if (kind !== 'scope' && kind !== 'layout') {
@@ -418,5 +456,10 @@ export function SessionsEntry(
     assignmentLimit?: number | undefined;
   },
 ): ReactElement {
-  return <SessionsPanel key={props.botSlug ?? 'none'} {...props} />;
+  const target = useSessionTarget(props);
+  return target.kind === 'channel' ? (
+    <GroupWorkEntry key={props.channelId} {...props} nativeSessions={props.nativeSessions} />
+  ) : (
+    <SessionsPanel key={props.channelId + ':' + target.slug} {...props} botSlug={target.slug} />
+  );
 }

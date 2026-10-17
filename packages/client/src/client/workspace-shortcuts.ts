@@ -1,3 +1,4 @@
+import { defaultStorage } from './roster-config.js';
 import type { Shortcuts, ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client';
 import type { DockPanelRegistry } from './dock-panels.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -9,7 +10,6 @@ const DEFAULT_KEYS: Readonly<Record<string, string>> = {
   [CHANNEL_BODY_PANEL]: 'Digit2',
   'activity-center': 'Digit3',
   'generated-files': 'Digit4',
-  'group-work': 'Digit5',
   'memory-files': 'Digit6',
   sessions: 'Digit7',
   'bot-inbox': 'Digit8',
@@ -85,5 +85,101 @@ export function registerWorkspaceShortcuts(
   return () => {
     unsubscribe();
     for (const dispose of registered.values()) dispose();
+  };
+}
+
+export function migrateWorkShortcut(
+  shortcuts: Pick<
+    Shortcuts,
+    'runtime' | 'platform' | 'config' | 'catalog' | 'describeBinding' | 'edit'
+  >,
+  notice: () => void,
+): () => void {
+  const old = workspaceShortcutId('group-work');
+  const next = workspaceShortcutId('sessions');
+  let busy = false;
+  let disposed = false;
+  let notified = false;
+  let attempted = '';
+  let retries = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  const sync = async () => {
+    if (busy || disposed) return;
+    const state = shortcuts.config.getSnapshot();
+    if (state.status !== 'ready' || !shortcuts.catalog.getSnapshot().some((row) => row.id === next))
+      return;
+    const profile = state.document.profiles[`${shortcuts.runtime}:${shortcuts.platform}`] ?? {};
+    if (!Object.hasOwn(profile, old)) return;
+    const fingerprint = JSON.stringify([profile[old], profile[next]]);
+    const migrationKey = `botharness/work-shortcut-migration.v1:${shortcuts.runtime}:${shortcuts.platform}`;
+    try {
+      if (defaultStorage()?.getItem(migrationKey) === JSON.stringify(profile[old])) return;
+    } catch {}
+    if (attempted === fingerprint) return;
+    busy = true;
+    attempted = fingerprint;
+    const warn = () => {
+      if (!disposed && !notified) {
+        notified = true;
+        const key = `botharness/work-shortcut-notice.v1:${shortcuts.runtime}:${shortcuts.platform}`;
+        try {
+          const storage = defaultStorage();
+          if (storage?.getItem(key) === fingerprint) return;
+          storage?.setItem(key, fingerprint);
+        } catch {}
+        notice();
+      }
+    };
+    try {
+      if (!Object.hasOwn(profile, next) && profile[old] !== null) {
+        const binding = profile[old]!;
+        const check = shortcuts.describeBinding(binding);
+        if (check.issue || check.conflicts.some((id) => id !== old && id !== next)) {
+          warn();
+          return;
+        }
+        const saved = await shortcuts.edit({ type: 'set', id: next, binding }, state.revision);
+        if (saved.status !== 'saved') {
+          attempted = '';
+          if ((saved.status === 'not-ready' || saved.status === 'stale') && retries < 3) {
+            retryTimer = setTimeout(
+              () => {
+                retryTimer = undefined;
+                void sync();
+              },
+              100 * 3 ** retries++,
+            );
+          } else warn();
+          return;
+        }
+      } else if (
+        Object.hasOwn(profile, next) &&
+        JSON.stringify(profile[next]) !== JSON.stringify(profile[old])
+      ) {
+        warn();
+      }
+      try {
+        defaultStorage()?.setItem(migrationKey, JSON.stringify(profile[old]));
+      } catch {}
+    } catch {
+      attempted = '';
+      warn();
+    } finally {
+      busy = false;
+    }
+  };
+  const changed = () => {
+    queueMicrotask(() => {
+      void sync();
+    });
+  };
+  const unsubConfig = shortcuts.config.subscribe(changed);
+  const unsubCatalog = shortcuts.catalog.subscribe(changed);
+  changed();
+  return () => {
+    disposed = true;
+    if (retryTimer !== undefined) clearTimeout(retryTimer);
+    unsubConfig();
+    unsubCatalog();
   };
 }

@@ -909,3 +909,9 @@ _Avoid_: ad, promotion
 **Campaign Link**:
 A short link on `go.botharness.ai` for one post or video in a Campaign, carrying its platform and media type; resolving it redirects to the product site with UTM parameters and counts the click.
 _Avoid_: short URL, UTM link, referral link
+
+### Sessions panel
+
+The single Dock panel (`sessions`, TextQuote icon) for inspecting existing Sessions. In a PersonaBot DM its scope is that Bot. In a Group Channel its default scope is **Current channel**: Assignments whose original Source Event belongs to that Group, across responsible Bots. The Human can explicitly select an accessible member Bot to inspect that Bot's owned Orchestrator and Assignment Sessions without changing the active conversation. Scope is a per-Channel local view preference, separate from history and workspace grouping. It does not create Assignments, send requests, or change execution. The former Work panel is retired; Activity Center still owns Human attention and approval. See ADR-0220.
+
+Default-following Sessions headers omit a redundant scope label. Group scope choices live in the existing view-options menu; only an explicit member-Bot override shows `Bot · name` in the header.

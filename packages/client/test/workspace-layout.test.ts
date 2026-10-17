@@ -71,7 +71,7 @@ describe('workspace layout', () => {
       removeItem() {},
     };
     expect(readChannelDock(storage)).toEqual({
-      version: 2,
+      version: 3,
       gap: 4,
       order: [],
       hiddenControls: [],
