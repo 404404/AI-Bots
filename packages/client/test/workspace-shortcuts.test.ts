@@ -34,7 +34,13 @@ describe('workspace shortcut ownership', () => {
       };
     };
     const registry = createDockPanelRegistry();
-    for (const id of ['botharness-browser', 'botharness-computer'])
+    for (const id of [
+      'botharness-browser',
+      'botharness-computer',
+      'memory-files',
+      'memory-evolution',
+      'schedules',
+    ])
       registry.register({ id, title: id, scope: 'global', component: () => null });
     let active = false;
     const dispose = registerWorkspaceShortcuts({ register }, registry, () => active, zhTranslate);
@@ -44,6 +50,13 @@ describe('workspace shortcut ownership', () => {
     expect(
       commands.get(workspaceShortcutId('botharness-computer'))?.defaults['desktop:macos']?.code,
     ).toBe('Digit0');
+    for (const [id, code] of [
+      ['memory-files', 'Digit6'],
+      ['memory-evolution', 'KeyE'],
+      ['schedules', 'Digit9'],
+    ]) {
+      expect(commands.get(workspaceShortcutId(id!))?.defaults['desktop:macos']?.code).toBe(code);
+    }
     const open = vi.fn();
     registry.attach({ open, close: vi.fn() });
     const command = commands.get(workspaceShortcutId('bh:channel-body'))!;

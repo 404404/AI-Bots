@@ -8,13 +8,16 @@ import type {
 import type { DockPanelPosition } from './dock-panels.js';
 
 export const CHANNEL_DOCK_STORAGE_KEY = 'botharness.bot-mode-layout';
-export const CHANNEL_DOCK_LAYOUT_VERSION = 4;
+export const CHANNEL_DOCK_LAYOUT_VERSION = 5;
 export const DEFAULT_WORKSPACE_GAP = 4;
 export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
 export const CHANNEL_BODY_COMPONENT = 'channel-body';
 export const CHANNEL_ENTRY_COMPONENT = 'channel-entry';
 export const DEFAULT_DOCK_PANELS = ['sessions'] as const;
+export const BOT_WORKSPACE_PANELS = ['memory-files', 'memory-evolution', 'schedules'] as const;
+export const CHANNEL_WORKSPACE_PANELS: readonly string[] = ['sessions', ...BOT_WORKSPACE_PANELS];
+export type BotWorkspaceStates = Readonly<Record<string, ChannelWorkspaceState>>;
 
 export type DockDirection = 'left' | 'right' | 'above' | 'below';
 
@@ -43,6 +46,8 @@ export interface StoredChannelDock {
   readonly order?: readonly string[] | undefined;
   readonly hiddenControls?: readonly string[] | undefined;
   readonly members?: { open: boolean; ratio: number } | undefined;
+  readonly botPanelSeeds?: BotWorkspaceStates | undefined;
+  readonly botWorkspaces?: Readonly<Record<string, BotWorkspaceStates>> | undefined;
   readonly sessionSeed?: ChannelWorkspaceState | undefined;
   readonly channelWorkspaces?: Readonly<Record<string, ChannelWorkspaceState>> | undefined;
   readonly layout: SerializedDockview;
@@ -90,7 +95,7 @@ export function readChannelDock(
     const value: unknown = JSON.parse(raw);
     if (
       !isRecord(value) ||
-      ![1, 2, 3, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
+      ![1, 2, 3, 4, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
     )
       return undefined;
     if (!isLayout(value['layout'])) return undefined;
@@ -119,6 +124,15 @@ export function readChannelDock(
                 : 0.3,
           }
         : { open: false, ratio: 0.3 },
+      botPanelSeeds: parseBotWorkspaces(value['botPanelSeeds']),
+      botWorkspaces: isRecord(value['botWorkspaces'])
+        ? Object.fromEntries(
+            Object.entries(value['botWorkspaces']).map(([id, state]) => [
+              id,
+              parseBotWorkspaces(state),
+            ]),
+          )
+        : {},
       sessionSeed: parseChannelWorkspace(value['sessionSeed']),
       channelWorkspaces: isRecord(value['channelWorkspaces'])
         ? Object.fromEntries(
@@ -132,19 +146,19 @@ export function readChannelDock(
       parked: parked as Record<string, DockPosition>,
     };
     const normalized = migrateWorkPanel(restored);
+    const sessions =
+      Number(value['version']) < 4 ? migrateSessionsWorkspace(normalized) : normalized;
     const migrated =
-      value['version'] === CHANNEL_DOCK_LAYOUT_VERSION
-        ? normalized
-        : migrateSessionsWorkspace(normalized);
+      value['version'] === CHANNEL_DOCK_LAYOUT_VERSION ? sessions : migrateBotWorkspaces(sessions);
     if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
       try {
-        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-channel-workspace-v4`;
-        if (
-          value['version'] !== 3 &&
-          storage?.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-sessions-v3`) == null
-        )
-          storage?.setItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-sessions-v3`, raw);
-        if (storage?.getItem(backupKey) == null) storage?.setItem(backupKey, raw);
+        const backups = ['before-bot-workspace-v5'];
+        if (Number(value['version']) < 4) backups.push('before-channel-workspace-v4');
+        if (Number(value['version']) < 3) backups.push('before-sessions-v3');
+        for (const suffix of backups) {
+          const key = `${CHANNEL_DOCK_STORAGE_KEY}.${suffix}`;
+          if (storage?.getItem(key) == null) storage?.setItem(key, raw);
+        }
         storage?.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify(migrated));
       } catch {}
     }
@@ -166,7 +180,7 @@ export function writeChannelDock(
         previous = JSON.parse(raw);
       } catch {}
       if (!isRecord(previous) || previous['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
-        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-channel-workspace-v4`;
+        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`;
         if (storage?.getItem(backupKey) == null) storage?.setItem(backupKey, raw);
       }
     }
@@ -431,12 +445,15 @@ function parseChannelWorkspace(value: unknown): ChannelWorkspaceState | undefine
   };
 }
 
-export function migrateSessionsWorkspace(stored: StoredChannelDock): StoredChannelDock {
+function movePanelIntoWorkspace(
+  stored: StoredChannelDock,
+  panelId: string,
+): { stored: StoredChannelDock; seed: ChannelWorkspaceState } {
   let geometry: Pick<ChannelWorkspaceState, 'direction' | 'ratio'> = DEFAULT_CHANNEL_WORKSPACE;
   const walk = (node: GridNode, horizontal: boolean): GridNode | undefined => {
     if (node.type === 'leaf') {
       const data = node.data as { views: string[]; activeView?: string; id: string };
-      const views = data.views.filter((id) => id !== 'sessions');
+      const views = data.views.filter((id) => id !== panelId);
       if (!views.length) return undefined;
       return {
         ...node,
@@ -451,7 +468,7 @@ export function migrateSessionsWorkspace(stored: StoredChannelDock): StoredChann
     const messageIndex = children.findIndex((child) =>
       collectPanels(child).includes(CHANNEL_BODY_PANEL),
     );
-    const sessionIndex = children.findIndex((child) => collectPanels(child).includes('sessions'));
+    const sessionIndex = children.findIndex((child) => collectPanels(child).includes(panelId));
     if (
       messageIndex >= 0 &&
       sessionIndex >= 0 &&
@@ -494,35 +511,69 @@ export function migrateSessionsWorkspace(stored: StoredChannelDock): StoredChann
     stored.layout.grid.orientation === 'HORIZONTAL',
   ) ?? { ...stored.layout.grid.root, type: 'branch' as const, data: [] };
   const panels = Object.fromEntries(
-    Object.entries(stored.layout.panels).filter(([id]) => id !== 'sessions'),
+    Object.entries(stored.layout.panels).filter(([id]) => id !== panelId),
   );
   const groups = new Set(collectGroups(root));
   const { activeGroup, ...layout } = stored.layout;
   return {
-    ...stored,
-    sessionSeed: stored.sessionSeed ?? {
+    seed: {
       ...geometry,
-      open: !!stored.layout.panels['sessions'],
-      hiddenControl: stored.hiddenControls?.includes('sessions') ?? false,
+      direction: stored.layout.panels[panelId]
+        ? geometry.direction
+        : (stored.parked[panelId]?.direction ?? geometry.direction),
+      open: !!stored.layout.panels[panelId],
+      hiddenControl: stored.hiddenControls?.includes(panelId) ?? false,
     },
-    channelWorkspaces: stored.channelWorkspaces ?? {},
-    order: stored.order?.filter((id) => id !== 'sessions'),
-    hiddenControls: stored.hiddenControls?.filter((id) => id !== 'sessions'),
-    parked: Object.fromEntries(
-      Object.entries(stored.parked)
-        .filter(([id]) => id !== 'sessions')
-        .map(([id, position]) => [
-          id,
-          position.neighbor === 'sessions'
-            ? { ...position, neighbor: CHANNEL_BODY_PANEL }
-            : position,
-        ]),
-    ),
-    layout: {
-      ...layout,
-      panels,
-      grid: { ...layout.grid, root },
-      ...(activeGroup && groups.has(activeGroup) ? { activeGroup } : {}),
+    stored: {
+      ...stored,
+      order: stored.order?.filter((id) => id !== panelId),
+      hiddenControls: stored.hiddenControls?.filter((id) => id !== panelId),
+      parked: Object.fromEntries(
+        Object.entries(stored.parked)
+          .filter(([id]) => id !== panelId)
+          .map(([id, position]) => [
+            id,
+            position.neighbor === panelId
+              ? { ...position, neighbor: CHANNEL_BODY_PANEL }
+              : position,
+          ]),
+      ),
+      layout: {
+        ...layout,
+        panels,
+        grid: { ...layout.grid, root },
+        ...(activeGroup && groups.has(activeGroup) ? { activeGroup } : {}),
+      },
     },
   };
+}
+
+function parseBotWorkspaces(value: unknown): BotWorkspaceStates {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    BOT_WORKSPACE_PANELS.flatMap((id) => {
+      const state = parseChannelWorkspace(value[id]);
+      return state ? [[id, state]] : [];
+    }),
+  );
+}
+
+export function migrateSessionsWorkspace(stored: StoredChannelDock): StoredChannelDock {
+  const moved = movePanelIntoWorkspace(stored, 'sessions');
+  return {
+    ...moved.stored,
+    sessionSeed: stored.sessionSeed ?? moved.seed,
+    channelWorkspaces: stored.channelWorkspaces ?? {},
+  };
+}
+
+export function migrateBotWorkspaces(stored: StoredChannelDock): StoredChannelDock {
+  const seeds = { ...stored.botPanelSeeds };
+  let next = stored;
+  for (const id of BOT_WORKSPACE_PANELS) {
+    const moved = movePanelIntoWorkspace(next, id);
+    seeds[id] ??= moved.seed;
+    next = moved.stored;
+  }
+  return { ...next, botPanelSeeds: seeds, botWorkspaces: stored.botWorkspaces ?? {} };
 }

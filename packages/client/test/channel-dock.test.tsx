@@ -796,7 +796,7 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     scope: 'global',
     component: () => null,
   });
-  registry.registerEntry(entry('sessions'));
+  registry.registerEntry({ ...entry('sessions'), label: '会话' });
   const botOnly = ['memory-files', 'memory-evolution', 'schedules'];
   for (const id of botOnly) registry.registerEntry(entry(id));
   const workspace = { rail: () => createElement('nav') };
@@ -885,7 +885,7 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     ),
   );
   await settle();
-  const item = document.querySelector<HTMLButtonElement>('[data-menu-item="session-control"]')!;
+  const item = document.querySelector<HTMLButtonElement>('[data-menu-item="control:sessions"]')!;
   expect(item).not.toBeNull();
   act(() => item.click());
   await settle();
@@ -904,10 +904,50 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   );
   await settle();
   act(() =>
-    document.querySelector<HTMLButtonElement>('[data-menu-item="session-control"]')!.click(),
+    document.querySelector<HTMLButtonElement>('[data-menu-item="control:sessions"]')!.click(),
   );
   await settle();
   expect(readChannelDock(storage)?.channelWorkspaces?.ada?.hiddenControl).toBe(false);
   expect(context().querySelector('button[aria-label="会话"]')).not.toBeNull();
   expect(registry.isOpen('sessions')).toBe(false);
+  for (const id of botOnly) {
+    act(() => registry.open(id));
+    await settle();
+    expect(
+      host.querySelector(`[data-channel-subpanel="${id}"] [data-body="${id}"]`),
+    ).not.toBeNull();
+    expect(readChannelDock(storage)?.layout.panels[id]).toBeUndefined();
+    const body = host.querySelector(`[data-body="${id}"]`);
+    const divider = host.querySelector(`[data-workspace-split="${id}"] > [role="separator"]`)!;
+    act(() =>
+      divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })),
+    );
+    await settle();
+    expect(host.querySelector(`[data-body="${id}"]`)).toBe(body);
+    expect(readChannelDock(storage)?.botWorkspaces?.ada?.[id]?.ratio).toBeCloseTo(0.32);
+    act(() => registry.close(CHANNEL_BODY_PANEL));
+    await settle();
+    act(() => registry.toggle(id));
+    await settle();
+    expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+    expect(registry.isOpen(id)).toBe(true);
+    act(() => registry.toggle(id));
+    await settle();
+    expect(registry.isOpen(id)).toBe(false);
+  }
+  act(() => root.render(view('bob')));
+  await settle();
+  for (const id of botOnly) {
+    expect(registry.isOpen(id)).toBe(false);
+    act(() => registry.open(id));
+  }
+  await settle();
+  act(() => root.render(view('ada')));
+  await settle();
+  for (const id of botOnly) expect(registry.isOpen(id)).toBe(false);
+  act(() => root.render(null));
+  await settle();
+  act(() => root.render(view('bob')));
+  await settle();
+  for (const id of botOnly) expect(registry.isOpen(id)).toBe(true);
 });
