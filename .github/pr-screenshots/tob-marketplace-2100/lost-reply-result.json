@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "productSource": "19a6119fbf62904776c5d39a624b41fb93e033fe",
+  "actualTransport": "Loopback proxy forwarded actual authenticated Host request and dropped only the complete successful import response",
+  "hostCommittedBeforeDrop": true,
+  "cliOutcome": "unknown",
+  "sameKnownOperationKeyRecovered": true,
+  "newIdentities": 1,
+  "duplicateAfterReplay": false
+}
