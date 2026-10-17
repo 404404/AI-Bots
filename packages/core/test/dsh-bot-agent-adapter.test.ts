@@ -333,6 +333,9 @@ describe('DSH Bot Agent adapter', () => {
           expect(prompt).not.toContain('only assignmentConcurrencyLimit');
           expect(prompt).toContain('private steward and secretary');
           expect(prompt).toContain('never replace a required Human decision with your own');
+          expect(prompt).toContain('distinguish requested, pending, approved and denied');
+          expect(prompt).toContain('A successful policy write follows Human approval');
+          expect(prompt).toContain('without claiming your proposal applied');
         } else {
           expect(prompt).toBeUndefined();
           expect(rolePrompt).toContain('Create a new PersonaBot with bot_create');
