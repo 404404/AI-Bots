@@ -1040,3 +1040,9 @@ A local default-on preference preserves saved opt-outs. The switch lives at the 
 ### Searchable Bot Settings
 
 The application-defined Bot Settings modal keeps a single active settings Slot mounted. Its localized search index resolves only currently registered pages, then selects the page and focuses the matching settings row or section; searching never mounts hidden providers or starts their requests. Appearance contains a nested layout Slot so the live workspace retains ownership of gap/reset state. Theme and language remain DSH-native preferences, written through `theme.setTheme` and `locale.setLocale`; no second preference store is introduced. Notifications and Keyboard shortcuts are first-level pages. The shortcuts page reuses existing Bot bindings and the DSH-native Panel command catalog/edit protocol, including revision checks, conflicts and native recording interception. The General tutorial describes the current Panel workspace and retains the narrow-layout fallback.
+
+### Channel workspace split topology (#2076)
+
+The Client owns a per-Channel binary split tree inside Messages. A leaf is message content or one registered Channel subpanel; a branch stores its axis and first-child fraction. Hidden/unavailable leaves collapse only in the rendered projection, leaving the saved tree intact. Bot-only availability and shortcut dispatch still use the existing ChannelDock owner. No Host capability, data authority, or execution permission changes.
+
+Version 7 retains the old per-panel open/hidden-control records and migrates legacy side/fraction geometry lazily into an equivalent tree. It backs up the prior raw record before upgrade. Explicit dragging splits the destination leaf; resizing only updates the selected branch. Stable keyed portals render into leaf-owned DOM containers, which move between layout slots without remounting content. Width changes never rewrite topology. See ADR-0222.

@@ -1,3 +1,8 @@
+import {
+  BOT_WORKSPACE_PANELS,
+  parseChannelSplit,
+  type ChannelSplit,
+} from './channel-split-layout.js';
 import type {
   AddPanelPositionOptions,
   DockviewApi,
@@ -8,21 +13,14 @@ import type {
 import type { DockPanelPosition } from './dock-panels.js';
 
 export const CHANNEL_DOCK_STORAGE_KEY = 'botharness.bot-mode-layout';
-export const CHANNEL_DOCK_LAYOUT_VERSION = 6;
+export const CHANNEL_DOCK_LAYOUT_VERSION = 7;
 export const DEFAULT_WORKSPACE_GAP = 4;
 export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
 export const CHANNEL_BODY_COMPONENT = 'channel-body';
 export const CHANNEL_ENTRY_COMPONENT = 'channel-entry';
 export const DEFAULT_DOCK_PANELS = ['sessions'] as const;
-export const BOT_WORKSPACE_PANELS = [
-  'memory-files',
-  'memory-evolution',
-  'schedules',
-  'botharness-browser',
-  'botharness-computer',
-] as const;
-export const CHANNEL_WORKSPACE_PANELS: readonly string[] = ['sessions', ...BOT_WORKSPACE_PANELS];
+export { BOT_WORKSPACE_PANELS, CHANNEL_WORKSPACE_PANELS } from './channel-split-layout.js';
 export type BotWorkspaceStates = Readonly<Record<string, ChannelWorkspaceState>>;
 
 export type DockDirection = 'left' | 'right' | 'above' | 'below';
@@ -57,6 +55,7 @@ export interface StoredChannelDock {
   readonly botWorkspaces?: Readonly<Record<string, BotWorkspaceStates>> | undefined;
   readonly sessionSeed?: ChannelWorkspaceState | undefined;
   readonly channelWorkspaces?: Readonly<Record<string, ChannelWorkspaceState>> | undefined;
+  readonly channelSplits?: Readonly<Record<string, ChannelSplit>> | undefined;
   readonly layout: SerializedDockview;
   readonly parked: Readonly<Record<string, DockPosition>>;
 }
@@ -114,7 +113,7 @@ export function readChannelDock(
     const value: unknown = JSON.parse(raw);
     if (
       !isRecord(value) ||
-      ![1, 2, 3, 4, 5, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
+      ![1, 2, 3, 4, 5, 6, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
     )
       return undefined;
     if (!isLayout(value['layout'])) return undefined;
@@ -161,17 +160,25 @@ export function readChannelDock(
             }),
           )
         : {},
+      channelSplits: isRecord(value['channelSplits'])
+        ? Object.fromEntries(
+            Object.entries(value['channelSplits']).flatMap(([id, raw]) => {
+              const tree = parseChannelSplit(raw);
+              return tree ? [[id, tree]] : [];
+            }),
+          )
+        : {},
       layout: value['layout'],
       parked: parked as Record<string, DockPosition>,
     };
     const normalized = migrateWorkPanel(restored);
     const sessions =
       Number(value['version']) < 4 ? migrateSessionsWorkspace(normalized) : normalized;
-    const migrated =
-      value['version'] === CHANNEL_DOCK_LAYOUT_VERSION ? sessions : migrateBotWorkspaces(sessions);
+    const migrated = Number(value['version']) >= 6 ? sessions : migrateBotWorkspaces(sessions);
     if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
       try {
-        const backups = ['before-bot-workspace-v6'];
+        const backups = ['before-channel-splits-v7'];
+        if (Number(value['version']) < 6) backups.push('before-bot-workspace-v6');
         if (Number(value['version']) < 5) backups.push('before-bot-workspace-v5');
         if (Number(value['version']) < 4) backups.push('before-channel-workspace-v4');
         if (Number(value['version']) < 3) backups.push('before-sessions-v3');
@@ -200,7 +207,7 @@ export function writeChannelDock(
         previous = JSON.parse(raw);
       } catch {}
       if (!isRecord(previous) || previous['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
-        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v6`;
+        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-channel-splits-v7`;
         if (storage?.getItem(backupKey) == null) storage?.setItem(backupKey, raw);
       }
     }

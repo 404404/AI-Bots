@@ -1,3 +1,9 @@
+import {
+  legacyChannelSplit,
+  MESSAGE_LEAF,
+  moveChannelSplit,
+  type ChannelSplit,
+} from './channel-split-layout.js';
 import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
 import { ChannelWorkspace } from './channel-workspace.js';
 import { workspaceShortcutId } from './workspace-shortcuts.js';
@@ -8,7 +14,6 @@ import { PanelEmptyState } from './ds/empty-state.js';
 import { workspaceColumns, moveWorkspaceRail, isFullHeightRail } from './workspace-layout.js';
 import { WorkspaceContext, WORKSPACE_RAIL, WORKSPACE_CHANNELS } from './workspace-context.js';
 import {
-  createElement,
   createContext,
   useContext,
   useMemo,
@@ -152,6 +157,7 @@ interface SubpanelState {
 }
 
 interface DockContextValue {
+  childLayout: { tree: ChannelSplit; setTree(next: ChannelSplit): void };
   botWorkspaces?: Readonly<Record<string, SubpanelState>> | undefined;
   sessionWorkspace?:
     | { state: ChannelWorkspaceState; setState(next: ChannelWorkspaceState): void; toggle(): void }
@@ -207,26 +213,27 @@ function workspaceState(dock: DockContextValue, id: string): SubpanelState | und
 
 function ChannelBodyPanel(): ReactElement {
   const dock = useDock();
-  return CHANNEL_WORKSPACE_PANELS.reduceRight(
-    (content, id) => {
-      const state = workspaceState(dock, id);
-      const panel = dock.panels.get(id);
-      if (!state || !panel) return content;
-      const available =
-        id === 'sessions' || (dock.channel?.type === 'dm' && !!dock.channel.botSlug);
-      return createElement(ChannelWorkspace, {
-        key: id,
-        panelId: id,
-        channelId: available ? dock.channel?.id : undefined,
-        state: state.state,
-        setState: state.setState,
+  const panels: Record<string, { label: string; header?: ReactNode; content: ReactNode }> = {
+    [MESSAGE_LEAF]: { label: dock.t('workspace.messages'), content: <ChannelMessageContent /> },
+  };
+  for (const id of CHANNEL_WORKSPACE_PANELS) {
+    const state = workspaceState(dock, id);
+    const panel = dock.panels.get(id);
+    const available = id === 'sessions' || (dock.channel?.type === 'dm' && !!dock.channel.botSlug);
+    if (state?.state.open && panel && available && dock.channel)
+      panels[id] = {
         label: panel.title,
-        content,
         header: <DockPanelHeader entryId={id} panelId={id} />,
-        sessions: <ChannelEntryContent entryId={id} />,
-      });
-    },
-    <ChannelMessageContent />,
+        content: <ChannelEntryContent entryId={id} />,
+      };
+  }
+  return (
+    <ChannelWorkspace
+      channelId={dock.channel?.id}
+      tree={dock.childLayout.tree}
+      setTree={dock.childLayout.setTree}
+      panels={panels}
+    />
   );
 }
 
@@ -436,7 +443,15 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
           });
       } else {
         const child = workspaceState(dock, entryId ?? '');
-        if (child) child.setState({ ...child.state, direction: id as DockPosition['direction'] });
+        if (child)
+          dock.childLayout.setTree(
+            moveChannelSplit(
+              dock.childLayout.tree,
+              entryId!,
+              MESSAGE_LEAF,
+              id as DockPosition['direction'],
+            ),
+          );
       }
     },
   });
@@ -737,6 +752,11 @@ export function ChannelDock({
         botSeeds.current[id] ?? { ...DEFAULT_CHANNEL_WORKSPACE, open: false },
     ]),
   );
+  const [channelSplits, updateChannelSplits] = useState(initial?.channelSplits ?? {});
+  const channelSplitsRef = useRef(channelSplits);
+  const childTree =
+    (channel && channelSplits[channel.id]) ||
+    legacyChannelSplit({ ...botStates, sessions: sessionState });
   const botStatesRef = useRef(botStates);
   botStatesRef.current = botStates;
   const channelRef = useRef(channel);
@@ -834,6 +854,7 @@ export function ChannelDock({
           botWorkspaces: botWorkspacesRef.current,
           sessionSeed: seed.current,
           channelWorkspaces: channelWorkspacesRef.current,
+          channelSplits: channelSplitsRef.current,
         },
         storage,
       );
@@ -1184,6 +1205,8 @@ export function ChannelDock({
     botStatesRef.current = Object.fromEntries(
       BOT_WORKSPACE_PANELS.map((id) => [id, { ...DEFAULT_CHANNEL_WORKSPACE, open: false }]),
     );
+    channelSplitsRef.current = {};
+    updateChannelSplits({});
     seed.current = DEFAULT_CHANNEL_WORKSPACE;
     channelWorkspacesRef.current = {};
     updateChannelWorkspaces({});
@@ -1213,6 +1236,15 @@ export function ChannelDock({
     save(api);
   };
   const value: DockContextValue = {
+    childLayout: {
+      tree: childTree,
+      setTree: (next) => {
+        if (!channel) return;
+        channelSplitsRef.current = { ...channelSplitsRef.current, [channel.id]: next };
+        updateChannelSplits(channelSplitsRef.current);
+        if (api) save(api);
+      },
+    },
     botWorkspaces: workspace
       ? Object.fromEntries(
           BOT_WORKSPACE_PANELS.map((id) => [

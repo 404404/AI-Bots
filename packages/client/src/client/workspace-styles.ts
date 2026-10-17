@@ -61,6 +61,13 @@ body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-action
 .bh-message-members > section { flex:1; min-height:0; overflow:auto; }
 .bh-message-member-divider { flex:0 0 var(--bh-workspace-gap); min-width:${space.x2}; background:${color.base}; cursor:col-resize; touch-action:none; }
 .bh-message-member-divider:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }
+.bh-channel-workspace-root, .bh-channel-branch, .bh-channel-leaf, .bh-channel-leaf-content { display:flex; flex-direction:column; min-width:0; min-height:0; height:100%; overflow:hidden; }
+.bh-channel-leaf { position:relative; flex:1; }
+.bh-channel-leaf-content { flex:1; }
+.bh-channel-leaf-content > .bh-channel-session-host { flex:1; }
+.bh-channel-session-header [data-panel-tabs] > * { flex-shrink:0; white-space:nowrap; }
+.bh-channel-session-header [data-panel-tabs] button { white-space:nowrap; flex-shrink:0; }
+.bh-channel-session-header .bh-dock-header { height:100%; }
 .bh-channel-workspace { position:relative; display:flex; height:100%; min-width:0; min-height:0; overflow:hidden; }
 .bh-channel-message-host { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; overflow:hidden; }
 .bh-channel-message-host > .bh-message-split { flex:1; }

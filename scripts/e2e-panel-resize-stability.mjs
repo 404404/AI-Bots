@@ -89,10 +89,10 @@ try {
             .filter((r) => r.height > r.width)
             .map((r) => r.x + r.width / 2),
           splits: [...document.querySelectorAll('[data-workspace-split]')]
-            .filter((n) => n.querySelector(':scope > [data-channel-subpanel]')?.checkVisibility())
+            .filter((n) => n.checkVisibility())
             .map((n) => ({
               id: n.dataset.workspaceSplit,
-              direction: n.dataset.direction,
+
               axis: n.dataset.splitAxis,
               width: n.getBoundingClientRect().width,
             })),
@@ -111,7 +111,7 @@ try {
       for (const split of frame.splits)
         assert.equal(
           split.axis,
-          ['left', 'right'].includes(split.direction) ? 'horizontal' : 'vertical',
+          samples[0].stationary[0].splits.find((prior) => prior.id === split.id).axis,
           `placement changed for ${split.id} at ${split.width}px`,
         );
     }
@@ -120,6 +120,7 @@ try {
   const after = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('botharness.bot-mode-layout')),
   );
+  assert.deepEqual(after.channelSplits, before.channelSplits);
   assert.deepEqual(after.botWorkspaces, before.botWorkspaces);
   assert.deepEqual(after.channelWorkspaces, before.channelWorkspaces);
   assert.deepEqual(errors, []);

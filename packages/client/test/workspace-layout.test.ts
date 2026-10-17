@@ -77,7 +77,7 @@ describe('workspace layout', () => {
     };
     const migrated = readChannelDock(storage)!;
     expect(migrated).toMatchObject({
-      version: 6,
+      version: 7,
       gap: 4,
       order: [],
       hiddenControls: [],

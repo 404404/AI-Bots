@@ -1660,7 +1660,7 @@
       "behaviors": ["desktop.bot-mode.dock"],
       "reason": "Actual global width/height and child ratios across repeated toggles, closed refresh and parent recovery.",
       "task": 2071,
-      "sha256": "6b9589f8877ff104b1a960d5fcf50aba3e1c0ec7a1d10ca2c6c11ce3a57902a0"
+      "sha256": "745b8be62c9f4a699bfbcd3d8e9653939bc70da9a0eece7999683b231226463d"
     },
     {
       "path": "scripts/e2e-panel-resize-stability.mjs",
@@ -1668,7 +1668,15 @@
       "behaviors": ["desktop.bot-mode.dock"],
       "reason": "Continuous pointer-held global resize must not snap back; Channel split placement remains fixed across narrow widths on Web and macOS.",
       "task": 2074,
-      "sha256": "7e38b7beaaba216b416dfd2cf63ce652f7b982ad5a6fc2e4aee694b7aee6a31c"
+      "sha256": "5fb02975e38188c0e2597490f19e323386636df5de18ca5b5bd9b6f134c51a5d"
+    },
+    {
+      "path": "scripts/e2e-nested-channel-panels.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.bot-mode.dock"],
+      "reason": "Nested sibling drops, narrow headers, stable content, per-Channel topology, reload and shortcut recovery on Web and macOS.",
+      "task": 2076,
+      "sha256": "b4c12797d82402e181762bd864acfc4b35a927161f090c2b096af31f26f2d0b9"
     }
   ],
   "native": [

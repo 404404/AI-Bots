@@ -107,8 +107,12 @@ try {
   ]) {
     const control = `${parent} button[aria-label="${label}"]`;
     const child = `[data-channel-subpanel="${id}"]`;
-    if (!(await page.$eval(child, (n) => n.checkVisibility()))) await page.click(control);
-    const divider = `[data-workspace-split="${id}"] > [role="separator"]`;
+    if (!(await page.$(child))) await page.click(control);
+    const path = await page.$eval(
+      `[data-channel-leaf="${id}"]`,
+      (n) => n.closest('.bh-channel-branch').parentElement.dataset.workspaceSplit,
+    );
+    const divider = `[data-workspace-split="${path}"] > [role="separator"]`;
     await page.focus(divider);
     const vertical = await page.$eval(
       divider,
@@ -117,23 +121,21 @@ try {
     await page.keyboard.press(vertical ? 'ArrowUp' : 'ArrowLeft');
     await settle();
     const before = await state();
-    const pref = id === 'sessions' ? before.channelWorkspaces[bot] : before.botWorkspaces[bot][id];
+    const pref = before.channelSplits[bot];
+    const fraction = await page.$eval(divider, (n) => Number(n.getAttribute('aria-valuenow')));
     await page.click(control);
     await page.click(control);
     await page.click(rail('bh:channel-body'));
     await page.click(rail('bh:channel-body'));
     await settle();
     const after = await state();
-    assert.deepEqual(
-      id === 'sessions' ? after.channelWorkspaces[bot] : after.botWorkspaces[bot][id],
-      pref,
-    );
+    assert.deepEqual(after.channelSplits[bot], pref);
     assert.equal(
       await page.$eval(divider, (n) => Number(n.getAttribute('aria-valuenow'))),
-      Math.round(pref.ratio * 100),
+      fraction,
     );
     await equalBox('bh:channel-body', messages, `parent restored for ${id}`);
-    results.push({ id, ratio: pref.ratio, childAndParentReopen: true });
+    results.push({ id, ratio: fraction / 100, childAndParentReopen: true });
     await page.click(control);
   }
   const saved = await state();
@@ -141,6 +143,7 @@ try {
   await page.waitForSelector(parent);
   await settle();
   const loaded = await state();
+  assert.deepEqual(loaded.channelSplits, saved.channelSplits);
   assert.deepEqual(loaded.botWorkspaces, saved.botWorkspaces);
   assert.deepEqual(loaded.channelWorkspaces, saved.channelWorkspaces);
   await equalBox('bh:channels', channels, 'final reload');
