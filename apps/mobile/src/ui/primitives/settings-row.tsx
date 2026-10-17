@@ -3,6 +3,7 @@ import { Platform, Pressable, View } from 'react-native';
 
 import type { LayerName } from '../design/layers';
 import type { ColorRole } from '../design/resolve-theme';
+import { settingsColors } from '../design/controls';
 import { androidSettings, edge, radius, space } from '../design/tokens';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { ChevronRightIcon } from '../shell/icons';
@@ -38,6 +39,7 @@ export function SettingsRow({
   const theme = useDesignTheme();
   const layer = theme.layer[on];
   const android = Platform.OS === 'android';
+  const colors = settingsColors(theme, on);
   return (
     <Pressable
       onPress={onPress}
@@ -64,7 +66,7 @@ export function SettingsRow({
         paddingHorizontal: space.x5,
         paddingVertical: android ? androidSettings.vertical : space.x3,
         backgroundColor:
-          pressed && !android ? layer.pressed : android && selected ? layer.chosen : layer.fill,
+          pressed && !android ? layer.pressed : android && selected ? colors.selected : layer.fill,
       })}
     >
       {leading}
@@ -73,6 +75,7 @@ export function SettingsRow({
           variant={android ? 'title' : 'body'}
           tone={android && selected ? 'accent' : tone}
           strong={strong}
+          style={android && selected ? { color: colors.selectedText } : undefined}
         >
           {title}
         </Text>
@@ -130,13 +133,17 @@ export function SettingsSection({
 
 export function SettingsHeading({ children }: { children: string }) {
   const android = Platform.OS === 'android';
+  const theme = useDesignTheme();
   return (
     <Text
       variant={android ? 'body' : 'meta'}
       tone={android ? 'accent' : 'muted'}
       strong={android}
       accessibilityRole="header"
-      style={{ paddingHorizontal: space.x5 }}
+      style={{
+        paddingHorizontal: space.x5,
+        ...(android ? { color: settingsColors(theme, 'sheet').heading } : {}),
+      }}
     >
       {children}
     </Text>
