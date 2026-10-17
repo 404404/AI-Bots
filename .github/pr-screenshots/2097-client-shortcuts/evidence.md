@@ -23,7 +23,7 @@ Source verification: 19 focused files / 165 cases were covered after the two ini
 
 Read-only inspection of installed Desktop 0.2.0-rc.2, build `5e9e301dd9dc8923b2762f76dacfc5751f6ca851`, confirms sender validation and a queued revision comparison before the owner writes. Its edit API accepts no abort signal. BotHarness rechecks authorization, lifetime and state before dispatch; a lost reply or expired lifetime afterward reports client-outcome-uncertain and requires readback, never automatic replay. Focused tests cover pre-dispatch abort, accepted-write abort, lost reply and queued stale revision.
 
-Native runtime/restart, editable/modal/IME edge cases, physical keys, the real Tob model approval journey and Human QA are separate gates. None is inferred from browser or source tests. No merge authorization is implied.
+The root-owned native queue passed single-Client desktop:macos direct CLI edits and restart: Home changes from Command+Alt+Shift+H to U, Electron key delivery opens Home, quick-switcher disables, and both bindings persist under a new generation. Main Desktop was restored after both phases. See native-verification.json and native screenshots. Native set/disable/reset coverage is narrower than the Web run; native default reset, editable/modal/IME edge cases, physical keys, the real Tob model approval journey and Human QA remain unverified. No merge authorization is implied.
 
 Private reconstruction: `.humanlayer/verify/tob-layout-shortcuts/journey/web-1792276104850/`; replay helper `.humanlayer/tasks/2097-client-shortcuts/web-control-journey.mjs`. Native driver and the private switch launcher are prepared for the root-owned queue. Credentials, login manifests and user profiles are excluded.
 
