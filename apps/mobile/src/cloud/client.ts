@@ -6,7 +6,7 @@ import {
   type InstanceConfig,
 } from './instance-contract';
 
-export type Identity = { userId: string; instanceId: string; instanceRole: 'admin' };
+export type Identity = { userId: string; instanceId: string; instanceRole: 'admin' | 'user' };
 type Session = {
   accessToken: string;
   refreshToken: string;
@@ -387,19 +387,29 @@ export class CloudClient {
       typeof r.value.userId !== 'string' ||
       !r.value.userId.startsWith('user_') ||
       r.value.instanceId !== entry.config.instanceId ||
-      r.value.instanceRole !== 'admin' ||
+      (r.value.instanceRole !== 'admin' && r.value.instanceRole !== 'user') ||
       (entry.session.userId && entry.session.userId !== r.value.userId)
     )
       fail('IDENTITY_RESPONSE_MISMATCH');
     const identity: Identity = {
       userId: r.value.userId as string,
       instanceId: entry.config.instanceId,
-      instanceRole: 'admin',
+      instanceRole: r.value.instanceRole === 'admin' ? 'admin' : 'user',
     };
     await this.save({
       ...entry,
       session: { ...entry.session, userId: identity.userId },
     });
+    const onboarding = await this.json(entry.config.server + '/api/onboarding', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + entry.session.accessToken },
+    });
+    if (
+      !onboarding.ok ||
+      typeof onboarding.value.organizationId !== 'string' ||
+      !/^org_[A-Za-z0-9]+$/.test(onboarding.value.organizationId)
+    )
+      fail('ONBOARDING_INCOMPLETE');
     if (entry.session.organizationId) {
       const organization = this.parseOrganization(
         await this.orgRequest(

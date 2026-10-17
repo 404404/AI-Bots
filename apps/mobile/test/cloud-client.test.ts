@@ -31,6 +31,8 @@ function fixture() {
     tokenNumber: 0,
     browserUrl: '',
     user: 'user_test',
+    instanceRole: 'admin',
+    onboardingError: false,
   };
   const response = (v: unknown, status = 200) => new Response(JSON.stringify(v), { status });
   const rt: CloudRuntime = {
@@ -72,11 +74,15 @@ function fixture() {
           refresh_token: 'secret-refresh-' + ++state.tokenNumber,
         });
       }
+      if (url.endsWith('/api/onboarding'))
+        return state.onboardingError
+          ? response({ error: { code: 'IDENTITY_UNAVAILABLE' } }, 503)
+          : response({ organizationId: 'org_default' });
       if (url.endsWith('/api/me'))
         return response({
           userId: state.user,
           instanceId: config.instanceId,
-          instanceRole: 'admin',
+          instanceRole: state.instanceRole,
         });
       if (url.endsWith('/api/auth/logout')) return response({ remoteRevoked: true });
       throw Error('unexpected request');
@@ -380,4 +386,21 @@ describe('cloud organizations', () => {
       code: 'ORGANIZATION_TOKEN_MISMATCH',
     });
   });
+});
+
+it('ordinary user onboarding retains a retryable session and does not display administrator authority', async () => {
+  const f = fixture();
+  f.state.instanceRole = 'user';
+  f.state.onboardingError = true;
+  await f.client.importConfig(JSON.stringify(config));
+  await expect(f.client.login(config.instanceId)).rejects.toThrow('ONBOARDING_INCOMPLETE');
+  expect(f.stored()).toContain('secret-refresh');
+  f.state.onboardingError = false;
+  expect(await f.client.whoami(config.instanceId)).toMatchObject({ instanceRole: 'user' });
+  expect(f.calls.filter((c) => c.url.endsWith('/api/onboarding'))).toHaveLength(2);
+  expect(
+    f.calls
+      .filter((c) => c.url.endsWith('/api/onboarding'))
+      .every((c) => c.init?.method === 'POST'),
+  ).toBe(true);
 });

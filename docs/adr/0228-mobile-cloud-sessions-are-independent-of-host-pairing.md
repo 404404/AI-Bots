@@ -6,7 +6,7 @@
 
 ## Context
 
-TOB is an independent cloud group service. Its administrator must be able to connect from a phone without pairing a running DSH Host. Host owner tokens cannot authorize TOB requests, and a QR code must not copy another device's login.
+TOB is an independent cloud group service. Its users must be able to connect from a phone without pairing a running DSH Host. Host owner tokens cannot authorize TOB requests, and a QR code must not copy another device's login.
 
 ## Decision
 
@@ -23,3 +23,7 @@ The portable configuration validator is copied from the pinned TOB source named 
 ## Consequences
 
 This needs a new SDK58 development binary with Expo Crypto/WebBrowser and the callback scheme. Source tests/exports cannot qualify camera, secure storage, browser return or Human login. T1 closes only after native verification and the remaining organization/revocation slices. Organization controls, T2 group messaging, Prod and store releases remain outside this change.
+
+## Ordinary-user onboarding extension
+
+After verified cloud identity, the client calls the instance onboarding endpoint to ensure one default workspace. The service owns the stable operation identity; the phone never chooses another user ID. A setup failure retains the session and makes Check session the retry path. `admin` and `user` are distinct server-verified instance roles; both can use workspaces, while organization membership remains separately enforced by TOB. This requires the multi-user service candidate; older instances without onboarding cannot complete this updated login flow.

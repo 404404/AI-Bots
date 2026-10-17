@@ -34,6 +34,9 @@ const en = {
     refresh: 'Refresh session',
     logout: 'Sign out',
     signedIn: 'Signed in · Instance administrator',
+    signedInUser: 'Signed in',
+    onboardingIncomplete:
+      'Your session is saved. Workspace setup is incomplete; check the session to retry.',
     savedSession: 'Saved session · Check to verify',
     signedOut: 'Signed out',
     imported: 'Configuration imported',
@@ -49,7 +52,7 @@ const en = {
     settings: 'Open camera settings',
     changed: 'Configuration changed: obtain and verify a new QR code from the deployer.',
     denied:
-      'This account is not admitted to this instance. Use the initialized administrator account.',
+      'This account cannot access this instance. Verify the account and contact the instance administrator.',
     cancelled: 'Sign-in cancelled. You can start again.',
     expired: 'Sign-in expired. Start again.',
     required:
@@ -833,6 +836,8 @@ const zh: typeof en = {
     refresh: '刷新会话',
     logout: '退出登录',
     signedIn: '已登录 · 实例管理员',
+    signedInUser: '已登录',
+    onboardingIncomplete: '登录会话已保存，工作区尚未准备完成。请检查会话以重试。',
     savedSession: '已保存会话 · 待核验',
     signedOut: '未登录',
     imported: '配置已导入',
@@ -846,7 +851,7 @@ const zh: typeof en = {
     permission: '扫描部署配置需要相机权限。',
     settings: '打开相机设置',
     changed: '配置已变更，请向部署者获取并核验新的二维码。',
-    denied: '此账号尚无实例访问权限，请使用初始化管理员账号。',
+    denied: '此账号尚无实例访问权限，请核对账号或联系实例管理员。',
     cancelled: '已取消登录，可以重新开始。',
     expired: '登录已过期，请重新开始。',
     required: '需要重新登录。如果仍有已保存的会话，请先退出本机登录。',

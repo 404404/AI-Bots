@@ -15,6 +15,7 @@ import { t } from '../strings';
 
 function errorMessage(code: string) {
   if (code === 'INSTANCE_CONFIG_CHANGED') return t.cloud.changed;
+  if (code === 'ONBOARDING_INCOMPLETE') return t.cloud.onboardingIncomplete;
   if (code === 'INSTANCE_ACCESS_DENIED') return t.cloud.denied;
   if (code === 'LOGIN_CANCELLED') return t.cloud.cancelled;
   if (code === 'LOGIN_EXPIRED') return t.cloud.expired;
@@ -243,7 +244,9 @@ export function CloudServicesScreen() {
           <Text variant="meta">{item.config.environment.toUpperCase()}</Text>
           <Text>
             {item.identity
-              ? t.cloud.signedIn
+              ? item.identity.instanceRole === 'admin'
+                ? t.cloud.signedIn
+                : t.cloud.signedInUser
               : item.hasSession
                 ? t.cloud.savedSession
                 : t.cloud.signedOut}

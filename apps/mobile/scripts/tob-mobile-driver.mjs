@@ -9,6 +9,8 @@ import { argsOf, privateFile } from './tob-uat-session.mjs';
 export function fixtureExpression(mode, state) {
   if (!['inject', 'checkpoint', 'signed-out'].includes(mode) || state.config.environment !== 'uat')
     throw Error('UAT_FIXTURE_REQUIRED');
+  if (!['admin', 'user'].includes(state.instanceRole ?? 'admin'))
+    throw Error('INVALID_INSTANCE_ROLE');
   return `(async () => {
     if (typeof __DEV__ === 'undefined' || !__DEV__) throw Error('DEBUG_ONLY');
     const modules = [...globalThis.__r.getModules().values()];
@@ -17,7 +19,7 @@ export function fixtureExpression(mode, state) {
     const client = matches[0].publicModule.exports.cloudClient;
     await client.load();
     if (client.getSnapshot().busy) throw Error('SESSION_BUSY');
-    const expected = ${JSON.stringify({ config: state.config, userId: state.userId, ...(mode === 'inject' ? { accessToken: state.accessToken, refreshToken: state.refreshToken } : {}) })};
+    const expected = ${JSON.stringify({ config: state.config, userId: state.userId, instanceRole: state.instanceRole ?? 'admin', ...(mode === 'inject' ? { accessToken: state.accessToken, refreshToken: state.refreshToken } : {}) })};
     const vault = JSON.parse(await client.rt.read());
     if (vault.version !== 1 || !Array.isArray(vault.entries)) throw Error('INVALID_VAULT');
     const stable = v => v && typeof v === 'object' ? Array.isArray(v) ? v.map(stable) : Object.fromEntries(Object.keys(v).sort().map(k => [k, stable(v[k])])) : v;
@@ -38,7 +40,7 @@ export function fixtureExpression(mode, state) {
       return { signedOut: true, configRetained: true };
     }
     const row = client.getSnapshot().rows.find(r => r.config.instanceId === expected.config.instanceId);
-    if (!entry.session || row?.identity?.userId !== expected.userId || row.identity.instanceRole !== 'admin') throw Error('VERIFIED_NATIVE_IDENTITY_REQUIRED');
+    if (!entry.session || row?.identity?.userId !== expected.userId || row.identity.instanceRole !== expected.instanceRole) throw Error('VERIFIED_NATIVE_IDENTITY_REQUIRED');
     return { accessToken: entry.session.accessToken, refreshToken: entry.session.refreshToken };
   })()`;
 }
