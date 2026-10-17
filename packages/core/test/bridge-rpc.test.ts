@@ -513,6 +513,8 @@ describe('bridge typert service', () => {
       'pairingReview',
       'senderAccess',
       'messagingApps',
+      'imSetupReceipts',
+      'imSetupResume',
       'messagingSnapshot',
       'messagingTargets',
       'messagingReachable',

@@ -431,6 +431,8 @@ describe('plugin entry', () => {
       'pairingReview',
       'senderAccess',
       'messagingApps',
+      'imSetupReceipts',
+      'imSetupResume',
       'messagingSnapshot',
       'messagingTargets',
       'messagingReachable',
