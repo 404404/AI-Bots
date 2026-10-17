@@ -376,7 +376,10 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                   ? MAX_BODY_BYTES
                   : SMALL_BODY_BYTES;
       if (!upload && received.bytes > commandBodyLimit) refuse('request-too-large');
-      const args = { ...object(input.args), ...(upload ? { archive: received.value } : {}) };
+      const args: Record<string, unknown> = {
+        ...object(input.args),
+        ...(upload ? { archive: received.value } : {}),
+      };
       authorize();
       let value: unknown;
       if (input.command === 'capabilities') {
