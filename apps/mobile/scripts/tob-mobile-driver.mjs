@@ -67,8 +67,20 @@ async function connect(port, targetId) {
     if (!p) return;
     clearTimeout(p.timer);
     pending.delete(r.id);
-    if (r.error || r.result?.exceptionDetails) p.reject(Error('INSPECTOR_EVALUATION_FAILED'));
-    else p.resolve(r.result);
+    if (r.error || r.result?.exceptionDetails) {
+      const description = r.result?.exceptionDetails?.exception?.description ?? '';
+      const code = [
+        'DEBUG_ONLY',
+        'CLOUD_MODULE_AMBIGUOUS',
+        'SESSION_BUSY',
+        'INVALID_VAULT',
+        'TRUSTED_IMPORT_REQUIRED',
+        'EXISTING_SESSION_REFUSED',
+        'LOCAL_SESSION_REMAINS',
+        'VERIFIED_NATIVE_IDENTITY_REQUIRED',
+      ].find((v) => description.includes(v));
+      p.reject(Error(code ?? 'INSPECTOR_EVALUATION_FAILED'));
+    } else p.resolve(r.result);
   });
   ws.on('close', () => {
     for (const p of pending.values()) {
@@ -127,7 +139,11 @@ export async function main(mode, args) {
           refreshChangedSinceCheckpoint: hash !== previous,
         }),
       );
-    } else console.log(JSON.stringify({ event: 'native_fixture', ...result }));
+    } else {
+      if (mode === 'inject' ? result?.injected !== true : result?.signedOut !== true)
+        throw Error('NATIVE_RESULT_REQUIRED');
+      console.log(JSON.stringify({ event: 'native_fixture', ...result }));
+    }
   } finally {
     c.close();
   }
