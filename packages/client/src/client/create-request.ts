@@ -1,4 +1,4 @@
-export type CreateIntent = 'bot' | 'channel';
+export type CreateIntent = 'bot' | 'channel' | 'section' | 'marketplace';
 
 const EVENT = 'botharness/create';
 let pending: CreateIntent | undefined;

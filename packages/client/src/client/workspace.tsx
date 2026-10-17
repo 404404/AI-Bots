@@ -1,3 +1,4 @@
+import { HomeCreation, type HomeCreationRequest } from './home-creation.js';
 import { HomePanel } from './home-panel.js';
 import { WORKSPACE_HOME } from './workspace-context.js';
 import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
@@ -58,6 +59,10 @@ export function Workspace({
       setEnabled(false);
       if (!wide || !options?.dockPanels) return;
       const registry = options.dockPanels;
+      const creation = new HomeCreation();
+      const openCreation = (request: HomeCreationRequest) => {
+        if (creation.open(request)) registry.open(WORKSPACE_HOME);
+      };
       if (
         registry
           .panels()
@@ -86,6 +91,7 @@ export function Workspace({
               <BotSidebar
                 {...options}
                 headerTarget={headerTarget}
+                onCreateBot={openCreation}
                 onViewProfile={(slug) => {
                   registry.open(CHANNEL_BODY_PANEL);
                   void options.actions.openBot(slug, 'profile');
@@ -121,7 +127,13 @@ export function Workspace({
             () => options.prefs.source.getSnapshot().sendKey,
           );
           return (
-            <HomePanel actions={options.actions} registry={registry} t={t} sendKey={sendKey} />
+            <HomePanel
+              actions={options.actions}
+              registry={registry}
+              t={t}
+              sendKey={sendKey}
+              creation={creation}
+            />
           );
         },
       });

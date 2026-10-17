@@ -1,12 +1,16 @@
+import { requestCreation, type CreateIntent } from './create-request.js';
+import { WORKSPACE_CHANNELS } from './workspace-context.js';
+import { HomeCreationPanel } from './home-creation-panel.js';
+import { HomeCreation } from './home-creation.js';
 import { ChannelComposer, type ChannelComposerUpload } from './channel-composer.js';
 import type { ComposerSendKey } from './composer-send-key.js';
 import { uploadChannelAttachment } from './bridge.js';
 import { insertAttachmentReferences, removeAttachmentReferences } from './attachment-refs.js';
 import { isChannelAttachmentRef } from '../../../core/src/attachments/ref.js';
 import { useMountedResource } from './mounted-resource.js';
-import { useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { DockPanelRegistry } from './dock-panels.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -52,6 +56,7 @@ const styles = stylex.create({
     backgroundColor: color.hover,
     borderRadius: radius.sm,
   },
+  choices: { display: 'flex', flexWrap: 'wrap', gap: space.x2 },
   error: { color: color.danger, margin: 0, overflowWrap: 'anywhere' },
 });
 export function HomePanel({
@@ -59,12 +64,16 @@ export function HomePanel({
   registry,
   t,
   sendKey,
+  creation,
 }: {
   actions: BridgeActions;
   registry: DockPanelRegistry;
   t: BotHarnessTranslate;
   sendKey: ComposerSendKey;
+  creation: HomeCreation;
 }): ReactElement {
+  const [creationMenu, setCreationMenu] = useState(false);
+  const request = useSyncExternalStore(creation.subscribe, creation.getSnapshot);
   const [home, setHome] = useState<Home>();
   const [ready, setReady] = useState<boolean>();
   const [configuring, setConfiguring] = useState(false);
@@ -223,6 +232,60 @@ export function HomePanel({
     for (const item of added) startUpload(item);
     return next.caret;
   };
+  const moreCreation = (intent: CreateIntent) => {
+    setCreationMenu(false);
+    registry.open(WORKSPACE_CHANNELS);
+    requestCreation(intent);
+  };
+  const creationChoices = (
+    <div {...stylex.props(styles.choices)} aria-label={t('home.create')}>
+      <Button
+        disabled={creation.isBusy()}
+        variant="outline"
+        onClick={() => creation.open({ source: 'empty' })}
+      >
+        {t('bot.create.title')}
+      </Button>
+      <Button
+        disabled={creation.isBusy()}
+        variant="ghost"
+        onClick={() => creation.open({ source: 'git' })}
+      >
+        {t('bot.create.gitTitle')}
+      </Button>
+      <Button
+        disabled={creation.isBusy()}
+        variant="ghost"
+        onClick={() => creation.open({ source: 'zip' })}
+      >
+        {t('botZip.import.title')}
+      </Button>
+      <Menu
+        open={creationMenu}
+        portal
+        dense
+        align="end"
+        anchor={
+          <Button
+            disabled={creation.isBusy()}
+            variant="ghost"
+            onClick={() => setCreationMenu(!creationMenu)}
+          >
+            {t('home.moreCreation')}
+          </Button>
+        }
+        items={[
+          { id: 'channel', label: t('home.createChannel') },
+          { id: 'section', label: t('home.createSection') },
+          { id: 'marketplace', label: t('home.marketplace') },
+        ]}
+        onSelect={(id) => {
+          if (id === 'channel' || id === 'section' || id === 'marketplace') moreCreation(id);
+        }}
+        onClose={() => setCreationMenu(false)}
+      />
+    </div>
+  );
   const submit = async () => {
     if (
       !home ||
@@ -276,67 +339,83 @@ export function HomePanel({
   };
   return (
     <div ref={mount} {...stylex.props(styles.root)} data-home-panel>
-      <div {...stylex.props(styles.content)}>
-        <h2 {...stylex.props(styles.title)}>{t('home.greeting')}</h2>
-        <p {...stylex.props(styles.description)}>{t('home.description')}</p>
-        {ready === undefined ? (
-          <Button variant="ghost" onClick={() => void load()}>
-            {error ? t('activityInbox.retry') : t('modelPreset.loading')}
-          </Button>
-        ) : !ready ? (
-          <Button variant="primary" onClick={() => setConfiguring(true)}>
-            {t('home.configure')}
-          </Button>
-        ) : (
-          <ChannelComposer
-            value={draft}
-            placeholder={t('home.input')}
-            sendKey={sendKey}
-            sending={busy}
-            focusSignal={focusSignal}
-            attachments={uploads}
-            onAddFiles={addFiles}
-            onRetryAttachment={(id) => {
-              const item = uploads.find((x) => x.id === id);
-              if (item) startUpload(item);
-            }}
-            onRemoveAttachment={(id) => {
-              const item = uploads.find((x) => x.id === id);
-              if (!item) return;
-              const next = removeAttachmentReferences(draftRef.current, item);
-              uploadControllers.current.get(id)?.abort();
-              uploadControllers.current.delete(id);
-              updateUploads(uploadsRef.current.filter((x) => x.id !== id));
-              saveDraft(next.value);
-            }}
+      {request ? (
+        <div {...stylex.props(styles.content)} data-home-creation="">
+          {creationChoices}
+          <HomeCreationPanel
+            key={creation.key(request)}
+            creation={creation}
+            request={request}
+            actions={actions}
             t={t}
-            onChange={saveDraft}
-            onSubmit={submit}
+            onCreated={() => registry.open(CHANNEL_BODY_PANEL)}
           />
-        )}
-        {ready && (
-          <Button variant="ghost" onClick={() => setConfiguring(true)}>
-            {t('home.configure')}
-          </Button>
-        )}
-        <div {...stylex.props(styles.card)}>
-          <span>
-            {!home && !error
-              ? t('modelPreset.loading')
-              : home?.attention
-                ? t('home.attention', { count: home.attention.unreadCount })
-                : t('home.unavailable')}
-          </span>
-          <Button variant="ghost" onClick={() => registry.open('activity-center')}>
-            {t('home.activity')}
-          </Button>
         </div>
-        {error && (
-          <p role="alert" {...stylex.props(styles.error)}>
-            {error}
-          </p>
-        )}
-      </div>
+      ) : (
+        <div {...stylex.props(styles.content)}>
+          <h2 {...stylex.props(styles.title)}>{t('home.greeting')}</h2>
+          <p {...stylex.props(styles.description)}>{t('home.description')}</p>
+          {ready === undefined ? (
+            <Button variant="ghost" onClick={() => void load()}>
+              {error ? t('activityInbox.retry') : t('modelPreset.loading')}
+            </Button>
+          ) : !ready ? (
+            <Button variant="primary" onClick={() => setConfiguring(true)}>
+              {t('home.configure')}
+            </Button>
+          ) : (
+            <ChannelComposer
+              value={draft}
+              placeholder={t('home.input')}
+              sendKey={sendKey}
+              sending={busy}
+              focusSignal={focusSignal}
+              attachments={uploads}
+              onAddFiles={addFiles}
+              onRetryAttachment={(id) => {
+                const item = uploads.find((x) => x.id === id);
+                if (item) startUpload(item);
+              }}
+              onRemoveAttachment={(id) => {
+                const item = uploads.find((x) => x.id === id);
+                if (!item) return;
+                const next = removeAttachmentReferences(draftRef.current, item);
+                uploadControllers.current.get(id)?.abort();
+                uploadControllers.current.delete(id);
+                updateUploads(uploadsRef.current.filter((x) => x.id !== id));
+                saveDraft(next.value);
+              }}
+              t={t}
+              onChange={saveDraft}
+              onSubmit={submit}
+            />
+          )}
+          {ready && (
+            <Button variant="ghost" onClick={() => setConfiguring(true)}>
+              {t('home.configure')}
+            </Button>
+          )}
+          {creationChoices}
+          <div {...stylex.props(styles.card)}>
+            <span>
+              {!home && !error
+                ? t('modelPreset.loading')
+                : home?.attention
+                  ? t('home.attention', { count: home.attention.unreadCount })
+                  : t('home.unavailable')}
+            </span>
+            <Button variant="ghost" onClick={() => registry.open('activity-center')}>
+              {t('home.activity')}
+            </Button>
+          </div>
+          {error && (
+            <p role="alert" {...stylex.props(styles.error)}>
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+
       {configuring && (
         <OnboardingModelDialog
           actions={actions}

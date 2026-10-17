@@ -143,3 +143,7 @@ a second report without another Assignment; archive one disposable target and re
 with `memory-scope-unavailable`. Keep direct CLI, real model, canonical records, Web and macOS
 results separate. Native Session navigation and restart persistence require their own captures;
 the script's report/message captures do not by themselves qualify those views.
+
+## Embedded manual creation
+
+In the real workspace, click Channels (+): Home opens with a name-only creation form, not a modal. Verify Home/Channels/Messages geometry remains unchanged. Enter a name and optional persona, return Home, then reopen (+); the draft must return. Switch GitHub/ZIP and target Channel sections to verify drafts are independent. Submit one blank Bot while model setup is unavailable; canonical Bot/DM must be created, Messages opened, and only the submitted draft cleared. Reopen and confirm the previous Channel conversation draft is untouched. Use an actual valid/invalid ZIP and Git URL for existing owner errors; do not treat a file picker screenshot as successful import. The same path must work in macOS Desktop. Drafts are transient to the Client workspace lifetime, and ZIP bytes never enter browser storage.

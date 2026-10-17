@@ -5,6 +5,12 @@ export const LOCALE_NS = 'botharness';
 export const zh = {
   'workspace.home': '首页',
   'workspace.storageFailed': '布局未能保存，已保留原来的布局。你仍可继续使用当前界面。',
+  'home.create': '创建或导入 Bot',
+  'home.moreCreation': '更多创建方式',
+  'home.createChannel': '创建群聊',
+  'home.createSection': '创建分组',
+  'home.marketplace': '浏览 Bot 市场',
+  'home.back': '返回 Home',
   'home.greeting': '你好，我是 Tob',
   'home.description': '你的本地总管。了解 Bot 的状态，或告诉我你想调整什么。',
   'home.configure': '配置模型，开始与 Tob 对话',
@@ -3658,6 +3664,12 @@ export const en = {
   'workspace.home': 'Home',
   'workspace.storageFailed':
     'Layout could not be saved. Your previous layout is retained; this session remains usable.',
+  'home.create': 'Create or import a Bot',
+  'home.moreCreation': 'More options',
+  'home.createChannel': 'Create group',
+  'home.createSection': 'Create section',
+  'home.marketplace': 'Browse Bot Marketplace',
+  'home.back': 'Back to Home',
   'home.greeting': 'Hello, I’m Tob',
   'home.description':
     'Your local steward. Check on your Bots or tell me what you’d like to change.',
