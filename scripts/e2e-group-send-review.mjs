@@ -9,11 +9,11 @@ import { rpc, cookieFor } from './verify-app.mjs';
 import { createContext, presetFor, parseModelRoute } from './e2e-llm-scenarios.mjs';
 
 export const PROTOCOL = {
-  version: '2053-pilot-v3',
-  revisionOf: '2053-pilot-v2',
-  priorCandidate: '0d50b0669788d04d49a4c2dfe4afc495ad786f35',
+  version: '2053-pilot-v4',
+  revisionOf: '2053-pilot-v3',
+  priorCandidate: '7fe6308c15c6c4c86e4428ce07971d1beeebfe2b',
   interventionChange:
-    'Explicit post-send/drop Inbox completion; revoked initiating Group prevents cross-Channel continuation; freshness/retry limits unchanged',
+    'Missing explicit completion is reported as not-requested; drop uses the inbound Channel default. Prior source fence, freshness checks and budgets unchanged',
   oracle:
     'whole-history-v2: no unsolicited cross-Channel outputs; cancellation/revocation should be silent; retain legacyGroupGoal separately',
   concurrentPairs: 2,

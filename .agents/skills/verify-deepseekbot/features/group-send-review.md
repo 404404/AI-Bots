@@ -63,3 +63,8 @@ through `inbox_resolve`, without resending. In a real Group turn, remove the sen
 neither the Group nor a DM may receive continuation of that task. A subsequent independent
 DM still works. The fixed pilot retains `legacyGroupGoal` but uses the versioned whole-history
 oracle; cancellation/revocation succeeds only with no public Bot output in any Channel.
+
+A send without explicit completion IDs returns `inboxResolution.outcome: not-requested`.
+Verify the Bot handles completion in the current turn, rather than creating a second cleanup
+turn. Drop may omit channel_id only when an inbound Channel exists; the draft owner/channel
+checks remain unchanged.

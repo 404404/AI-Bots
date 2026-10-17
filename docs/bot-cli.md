@@ -159,7 +159,7 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
 
-`channel_send` accepts optional `resolve_inbox_ids`: an explicit selection of 1–200 observed Source Event or Message IDs to mark done after a committed send or successful drop. Omitting it preserves Inbox responsibility. Held/refused outcomes never resolve these IDs. Inspect `inboxResolution` separately: if it fails, repair with `inbox_resolve`, never resend a committed reply. The same parameters work through `bot-tool <bot> channel_send --args-stdin`.
+`channel_send` accepts optional `resolve_inbox_ids`: an explicit selection of 1–200 observed Source Event or Message IDs to mark done after a committed send or successful drop. Omitting it preserves Inbox responsibility. Held/refused outcomes never resolve these IDs. When the selection is omitted, `inboxResolution.outcome` is `not-requested`: complete remaining work with `inbox_resolve` before ending the turn. Drop uses the inbound Channel when `channel_id` is omitted. Inspect `inboxResolution` separately: if it fails, repair with `inbox_resolve`, never resend a committed reply. The same parameters work through `bot-tool <bot> channel_send --args-stdin`.
 
 If membership in the initiating opted-in Group is revoked, this run cannot redirect its reply to another Channel. `channel_send` returns `refused` with reason `group-reply-source-revoked`. A later independent DM is unaffected.
 

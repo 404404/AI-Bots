@@ -212,6 +212,38 @@ describe('explicit Inbox completion with channel_send', () => {
       expect(resolve).toHaveBeenCalledTimes(1);
     });
   });
+  it('reports omitted completion without resolving work or hiding committed delivery', async () => {
+    await fixture(async (run, call) => {
+      const resolve = vi.spyOn(run.triage!, 'resolve');
+      expect(await call({ body: 'Answer' })).toMatchObject({
+        status: 'committed',
+        messageId: 'bot-1',
+        inboxResolution: { outcome: 'not-requested' },
+      });
+      expect(resolve).not.toHaveBeenCalled();
+    });
+  });
+  it('uses the inbound Channel for drop and preserves explicit Channel and refusal checks', async () => {
+    await fixture(async (run, call) => {
+      const drop = vi.fn((input: { channelId: string; draftId: string }) => ({
+        status: 'refused' as const,
+        channelId: input.channelId,
+        draftId: input.draftId,
+        reason: 'draft-channel-mismatch' as const,
+      }));
+      run.channels.dropDraft = drop;
+      const resolve = vi.spyOn(run.triage!, 'resolve');
+      const args = { body: '', draft_id: 'draft', drop: true, resolve_inbox_ids: ['request'] };
+      expect(await call(args)).toMatchObject({ status: 'refused', channelId: 'dm-test' });
+      expect(drop).toHaveBeenLastCalledWith({ channelId: 'dm-test', draftId: 'draft' });
+      await call({ ...args, channel_id: 'explicit-group' });
+      expect(drop).toHaveBeenLastCalledWith({ channelId: 'explicit-group', draftId: 'draft' });
+      run.inboundChannelId = undefined;
+      await expect(call(args)).rejects.toThrow('explicit or inbound channel_id');
+      expect(drop).toHaveBeenCalledTimes(2);
+      expect(resolve).not.toHaveBeenCalled();
+    });
+  });
   it('rejects malformed completion IDs before delivery', async () => {
     await fixture(async (run, call) => {
       const send = vi.spyOn(run.channels, 'send');

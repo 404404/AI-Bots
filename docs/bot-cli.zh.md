@@ -154,7 +154,7 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
 
-`channel_send` 可选传入 `resolve_inbox_ids`，显式指定 1–200 个已观察的 Source Event 或 Message ID，仅在发送提交或成功 drop 后标记 done。不传时保留 Inbox 责任；held/refused 不结清。单独检查 `inboxResolution`：结清失败时用 `inbox_resolve` 修复，不要重发已提交的消息。CLI `bot-tool <bot> channel_send --args-stdin` 使用相同参数。
+`channel_send` 可选传入 `resolve_inbox_ids`，显式指定 1–200 个已观察的 Source Event 或 Message ID，仅在发送提交或成功 drop 后标记 done。不传时保留 Inbox 责任；held/refused 不结清。省略结清参数时，`inboxResolution.outcome` 为 `not-requested`，提示在本轮结束前显式结清已完成事项。drop 省略 `channel_id` 时使用入站 Channel。单独检查 `inboxResolution`：结清失败时用 `inbox_resolve` 修复，不要重发已提交的消息。CLI `bot-tool <bot> channel_send --args-stdin` 使用相同参数。
 
 若本轮发起来源是启用复核的 Group，成员资格被撤销后不能把回复改道其他 Channel；`channel_send` 返回 `refused`，reason 为 `group-reply-source-revoked`。后续独立私聊请求不受影响。
 

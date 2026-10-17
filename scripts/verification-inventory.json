@@ -1652,7 +1652,7 @@
       "behaviors": ["desktop.group.send-review"],
       "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion and complete usage; Human acceptance remains separate.",
       "task": 2053,
-      "sha256": "6b020361a5abfb980d32a071154a0d6cf42eaed76e41b7b4f04fc5e4aa00c27a"
+      "sha256": "0b557ad8ad3356dc977b762afccb6943e6d4e661d88417466618481e9688ed57"
     }
   ],
   "native": [

@@ -60,3 +60,7 @@ cross-Channel continuation, including a DM fallback. It does not revoke the Pers
 independent DM capability for later requests. Natural-language cancellation remains a model
 decision to drop silently, not a Host keyword classifier. Whole-history evaluation checks
 all Group/DM outputs so destination changes cannot masquerade as successful silence.
+
+Omitting explicit completion returns `inboxResolution.outcome: not-requested`, so the
+Consumer does not imply sending completed Inbox work. Drop shares the send Tool's inbound
+Channel default; the existing draft owner/channel check still decides whether it can drop.

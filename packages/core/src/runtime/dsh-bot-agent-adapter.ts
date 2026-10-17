@@ -117,7 +117,7 @@ const ROLE_PROMPT_ORDER = 10_350;
 const REPLY_DELIVERY_PROMPT = `## Before ending this Orchestrator turn
 MUST deliver any intended Human-facing answer with channel_send({body: your actual answer}). Final assistant text is NOT sent to the Channel. This includes "only reply", "no tools", greetings and image answers: channel_send is the required reply transport, not optional extra work. Do not follow earlier assistant-only examples. Omit channel_id for the inbound Channel. Each turn names its source and Channel in a leading bracketed header such as [Human DM] or [Bot Inbox: ...]; that Channel is this turn's inbound Channel, and requests from earlier turns belong to the Channel named in their own header. When a message from another Channel joins a running turn, address every channel_send in that turn: pass channel_id, or reply_to with the message ID you are answering. What a Human says in your DM, and your answer to it, stays in that DM: post it in a Group only when the Human asked for it to be shared there. A [Host: ...] line reports Host state such as an interrupted turn; it is not a request.
 中文：要回答用户，就必须调用 channel_send，body 填实际答复；纯文本 final 不会发送给用户。“只回复”“不要调用工具”指不要额外工作，仍须用 channel_send 送达答复。读完图片后也必须发送回答。
-If no reply is wanted, remain silent. A cancellation ends the task: drop a held draft silently, without an acknowledgement unless requested. A refused Group send or revoked membership does not authorize a DM fallback, a copied draft or an unsolicited explanation elsewhere. Stop that task. For completed work, pass resolve_inbox_ids on channel_send to explicitly resolve those Inbox items only after a successful send or drop, avoiding a separate cleanup call. Do not include unfinished work. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. All authorization checks still apply.`;
+If no reply is wanted, remain silent. A cancellation ends the task: drop a held draft silently, without an acknowledgement unless requested. A refused Group send or revoked membership does not authorize a DM fallback, a copied draft or an unsolicited explanation elsewhere. Stop that task. For completed work, pass resolve_inbox_ids on channel_send to explicitly resolve those Inbox items only after a successful send or drop, avoiding a separate cleanup call. If omitted, Inbox work remains open: explicitly inbox_resolve completed items before ending this turn. Do not include unfinished work. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. All authorization checks still apply.`;
 const REPLY_DELIVERY_REMINDER =
   '[Host reply transport reminder] If you answer this message, put the actual answer in channel_send, not assistant final text. "No tools" means no extra work, not skipping reply transport. If no reply is wanted, stay silent. External replies keep their trusted bridge route. Do not repeat a successful send or retry an uncertain outcome. 要回答就用发送工具送达；纯文本不会发给用户。';
 const NATIVE_SCHEDULE_TOOLS = new Set([
@@ -3423,13 +3423,14 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           },
           drop: {
             type: 'boolean',
-            description: 'Drop draft_id without sending. Keep unresolved Inbox work open.',
+            description:
+              'Drop draft_id without sending. channel_id defaults to the inbound Channel. Keep unresolved Inbox work open unless explicitly selected in resolve_inbox_ids.',
           },
           body: {
             type: 'string',
             required: true,
             description:
-              'The actual Human-facing answer to deliver, not a plan to send later. May be empty when attachments are present or when only reacting.',
+              'The actual Human-facing answer to deliver, not a plan to send later. May be empty when dropping a draft, attachments are present or when only reacting.',
           },
           attachments: {
             type: 'array',
@@ -3505,7 +3506,16 @@ class DshBotAgentAdapter implements BotAgentAdapter {
               'channel_send: resolve_inbox_ids requires 1–200 IDs, an Inbox, and a send or drop (not a reaction)',
             );
           const resolveCompleted = () => {
-            if (args.resolve_inbox_ids === undefined) return {};
+            if (args.resolve_inbox_ids === undefined)
+              return active.run.triage === undefined
+                ? {}
+                : {
+                    inboxResolution: {
+                      outcome: 'not-requested',
+                      instruction:
+                        'This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open.',
+                    },
+                  };
             try {
               return {
                 inboxResolution: active.run.triage!.resolve({
@@ -3533,13 +3543,16 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           if (args.react_to !== undefined && args.reaction === undefined)
             throw new Error('channel_send: react_to needs reaction, the emoji to add or take back');
           if (args.drop === true) {
-            if (!args.draft_id || !args.channel_id || !active.run.channels.dropDraft)
-              throw new Error('channel_send: drop requires draft_id and channel_id');
+            const dropChannelId = args.channel_id ?? active.run.inboundChannelId;
+            if (!args.draft_id || !dropChannelId || !active.run.channels.dropDraft)
+              throw new Error(
+                'channel_send: drop requires draft_id and an explicit or inbound channel_id',
+              );
             const outcome = active.run.channels.dropDraft({
-              channelId: args.channel_id,
+              channelId: dropChannelId,
               draftId: args.draft_id,
             });
-            this.#drafts.discard(run.sessionId, args.channel_id);
+            this.#drafts.discard(run.sessionId, dropChannelId);
             return JSON.stringify({
               ...outcome,
               ...(outcome.status === 'dropped' ? resolveCompleted() : {}),
