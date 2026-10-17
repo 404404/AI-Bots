@@ -52,6 +52,10 @@ const runtimeFields = [
   'developerMode',
   'showBotSessions',
   'showApprovalReviewSessions',
+  'motionPreference',
+  'botIcon',
+  'sendKey',
+  'autoAcceptGroupInvites',
 ];
 const routeFields = ['provider', 'model', 'reasoningEffort'];
 function object(value: unknown): Record<string, unknown> {
@@ -102,25 +106,43 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
     return owner;
   };
   const settings = (ns: string) => {
-    if (!['botharness-client', 'agent-default-model'].includes(ns))
+    if (!['botharness-client', 'agent-default-model', 'ui-theme', 'locale'].includes(ns))
       throw new TobError('unsupported-setting');
     const row = native()
       .describe({ redactSecrets: true })
       .find((entry) => entry.ns === ns);
     if (!row) throw new TobError('settings-unavailable');
     const source = object(row.value);
-    const fields = ns === 'botharness-client' ? runtimeFields : routeFields;
+    const fields =
+      ns === 'botharness-client'
+        ? runtimeFields
+        : ns === 'agent-default-model'
+          ? routeFields
+          : ['preference'];
     const value = Object.fromEntries(
       fields.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]),
     );
     if (ns === 'botharness-client') {
       value.assignmentConcurrencyLimit ??= 8;
-      for (const key of runtimeFields.slice(1)) value[key] ??= key === 'showBotSessions';
-    } else {
+      for (const key of ['developerMode', 'showBotSessions', 'showApprovalReviewSessions'])
+        value[key] ??= key === 'showBotSessions';
+      value.motionPreference ??= 'system';
+      value.botIcon ??= 'mascot';
+      value.sendKey ??= 'enter';
+      value.autoAcceptGroupInvites ??= true;
+    } else if (ns === 'ui-theme') value.preference ??= 'system';
+    else if (ns === 'locale') value.preference ??= null;
+    else {
       if (isModelRoute(value) && deps.defaultModel)
         same(value, deps.defaultModel.currentSelection());
     }
-    return { scope: 'global' as const, ns, revision: row.revision, value };
+    return {
+      scope: 'global' as const,
+      ns,
+      revision: row.revision,
+      value,
+      ...(['ui-theme', 'locale'].includes(ns) ? { affectsAllConnectedClients: true } : {}),
+    };
   };
   const bot = (slug: string) => {
     const record = deps.registry.get(slug);
@@ -234,7 +256,16 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
           guard();
           return ns
             ? settings(ns)
-            : { namespaces: [settings('botharness-client'), settings('agent-default-model')] };
+            : {
+                namespaces: native()
+                  .describe({ redactSecrets: true })
+                  .filter((row) =>
+                    ['botharness-client', 'agent-default-model', 'ui-theme', 'locale'].includes(
+                      row.ns,
+                    ),
+                  )
+                  .map((row) => settings(row.ns)),
+              };
         },
       };
     }
@@ -244,22 +275,42 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
         args,
         isDefault
           ? ['route', 'expectedRevision']
-          : ['ns', 'patch', 'expectedRevision', 'previousValue'],
+          : ['ns', 'patch', 'expectedRevision', 'previousValue', 'scope'],
       );
       const ns = isDefault ? 'agent-default-model' : text(args.ns);
-      if (!isDefault && ns !== 'botharness-client') throw new TobError('unsupported-setting');
+      if (!isDefault && !['botharness-client', 'ui-theme', 'locale'].includes(ns))
+        throw new TobError('unsupported-setting');
+      const appearance = ns === 'ui-theme' || ns === 'locale';
+      if (
+        (appearance ||
+          Object.keys(object(args.patch ?? {})).some((key) =>
+            ['motionPreference', 'botIcon', 'sendKey', 'autoAcceptGroupInvites'].includes(key),
+          )) &&
+        args.scope !== 'host'
+      )
+        throw new TobError('host-scope-required');
       const expected = revision(args.expectedRevision);
       const current = settings(ns);
       same(current.revision, expected);
       const patch = isDefault ? object(route(args.route)) : object(args.patch);
       if (!isDefault) {
-        keys(patch, runtimeFields);
+        keys(patch, appearance ? ['preference'] : runtimeFields);
         if (!Object.keys(patch).length) throw new TobError('invalid-input');
         for (const [key, value] of Object.entries(patch)) {
           if (
             key === 'assignmentConcurrencyLimit'
               ? !Number.isInteger(value) || Number(value) < 1 || Number(value) > 32
-              : typeof value !== 'boolean'
+              : key === 'motionPreference'
+                ? !['system', 'reduce', 'full'].includes(String(value))
+                : key === 'botIcon'
+                  ? !['mascot', 'simple', 'blob', 'bot'].includes(String(value))
+                  : key === 'sendKey'
+                    ? !['enter', 'shift-enter', 'mod-enter'].includes(String(value))
+                    : key === 'preference'
+                      ? ns === 'ui-theme'
+                        ? !['light', 'dark', 'system'].includes(String(value))
+                        : !['zh', 'en'].includes(String(value))
+                      : typeof value !== 'boolean'
           )
             throw new TobError('invalid-setting');
         }
@@ -274,7 +325,7 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
         command,
         ns,
         isDefault ? current.value : args.previousValue,
-        patch,
+        appearance ? { scope: 'host', affectsAllConnectedClients: true, changes: patch } : patch,
         expected,
         async (guard, beforeEffect) => {
           if (isDefault) await validate([route(patch)]);

@@ -1,3 +1,5 @@
+import { isClientTarget } from '../client-control/contracts.js';
+import type { ClientControlService } from '../client-control/service.js';
 import {
   ChannelPreferencesError,
   type ChannelPreferencesService,
@@ -463,6 +465,7 @@ export interface MessagingAppsView {
 }
 
 export interface BridgeMethods {
+  clientControl(payload: unknown): Promise<BridgeResult<unknown>>;
   tobHome(
     payload: unknown,
   ): Promise<BridgeResult<TobHome & { attention?: { unreadCount: number; hasAction: boolean } }>>;
@@ -796,6 +799,7 @@ export interface BridgeMethodsDeps {
   modelReadiness?: ModelRouteReadiness;
   onboarding?: BotOnboarding;
   tob?: TobService;
+  clientControl?: ClientControlService;
   partLibrary?: PartLibrary;
   onboardingNews?: (slug?: string) => Promise<boolean>;
   defaultModel?: {
@@ -1869,6 +1873,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
               : await service.send(slug, grantId, requestId, text),
         };
       });
+    },
+    async clientControl(payload) {
+      if (!deps.clientControl) return unavailable();
+      const input = asObject(payload);
+      try {
+        let value: unknown;
+        if (input['action'] === 'register')
+          value = deps.clientControl.register(input['target'], input['kind']);
+        else if (input['action'] === 'poll') value = deps.clientControl.poll(input['target']);
+        else if (input['action'] === 'complete')
+          value = deps.clientControl.complete(input['target'], input['id'], input['result']);
+        else if (input['action'] === 'targets') value = { targets: deps.clientControl.targets() };
+        else if (input['action'] === 'preferences')
+          value = await deps.clientControl.request(input['target'], 'preferences', {});
+        else if (input['action'] === 'preferences-set')
+          value = await deps.clientControl.request(input['target'], 'preferences-set', {
+            scope: input['scope'],
+            patch: input['patch'],
+            expectedState: input['expectedState'],
+          });
+        else throw new TobError('invalid-input');
+        return { ok: true, value };
+      } catch (error) {
+        const code = error instanceof TobError ? error.code : 'client-operation-failed';
+        return { ok: false, error: { code, message: code } };
+      }
     },
     async tobHome() {
       if (!deps.tob) return unavailable();
@@ -4205,6 +4235,17 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     },
     async channelSend(payload) {
       const source = asObject(payload);
+      const clientTarget = source['clientTarget'];
+      if (clientTarget !== undefined) {
+        if (!isClientTarget(clientTarget)) return invalidInput('Invalid Client target');
+        try {
+          if (!deps.clientControl) throw new TobError('client-control-unavailable');
+          deps.clientControl.require(clientTarget);
+        } catch (error) {
+          const code = error instanceof TobError ? error.code : 'client-target-required';
+          return { ok: false, error: { code, message: code } };
+        }
+      }
       const channelId = asNonBlank(source, 'channelId');
       if (channelId === undefined) return invalidInput('channelId is required');
       const rawBody = source['body'];
@@ -4392,6 +4433,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (existing !== undefined) {
         const same =
           existing.author.kind === 'human' &&
+          JSON.stringify(existing.clientTarget) === JSON.stringify(clientTarget) &&
           existing.body === body &&
           existing.replyTo === replyTo &&
           existing.memorySwitchTarget === memorySwitchTarget &&
@@ -4486,6 +4528,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         }
       }
       const message: ChannelMessage = {
+        ...(clientTarget === undefined ? {} : { clientTarget }),
         id: requestedMessageId ?? randomUUID(),
         at: new Date().toISOString(),
         author: { kind: 'human' },

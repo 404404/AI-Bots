@@ -1,3 +1,4 @@
+import { ClientControlService } from '../src/client-control/service.js';
 import { describe, expect, it, vi } from 'vitest';
 import { attachOperationalModule } from '../src/database/owner.js';
 import type { DshWorkspace } from '../src/workspaces/grants.js';
@@ -168,6 +169,47 @@ describe('Tob canonical identity and settings', () => {
       await expect(f.core.tob.writeSetting(3, 0, () => {})).rejects.toThrow('stale-setting');
       expect(f.native.update).toHaveBeenCalledTimes(1);
     } finally {
+      await f.close();
+    }
+  });
+  it('derives current Client only from canonical admitted Human source metadata', async () => {
+    const target = { clientId: 'client-source', generation: 'generation-source' };
+    const clients = new ClientControlService();
+    clients.register(target, 'web');
+    const results: unknown[] = [];
+    const f = fixture(async (run) => {
+      const authority = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+      try {
+        results.push(authority.currentClientTarget!());
+      } catch (error) {
+        results.push((error as Error).message);
+      }
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      const bridge = createBridgeMethods({ ...f.core, clientControl: clients });
+      await bridge.channelSend({
+        channelId: home.channelId,
+        body: 'Use this Client',
+        clientTarget: target,
+      });
+      await f.core.runtime.whenIdle();
+      expect(results).toEqual([target]);
+      const message = f.core.channels
+        .readMessages(home.channelId)
+        .find((item) => item.body === 'Use this Client');
+      expect(message?.clientTarget).toEqual(target);
+      const refused = await bridge.channelSend({
+        channelId: home.channelId,
+        body: 'Forged generation',
+        clientTarget: { ...target, generation: 'generation-foreign' },
+      });
+      expect(refused).toMatchObject({ ok: false, error: { code: 'client-target-replaced' } });
+      await bridge.channelSend({ channelId: home.channelId, body: 'No originating Client' });
+      await f.core.runtime.whenIdle();
+      expect(results.at(-1)).toBe('current-client-unavailable');
+    } finally {
+      clients.dispose();
       await f.close();
     }
   });

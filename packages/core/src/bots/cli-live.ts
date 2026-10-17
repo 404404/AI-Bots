@@ -1,3 +1,8 @@
+import {
+  parseClientPreferences,
+  CLIENT_PREFERENCE_COMMANDS,
+  CLIENT_PREFERENCE_OPTIONS,
+} from './cli-client-preferences.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +100,7 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...CLIENT_PREFERENCE_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -183,6 +189,7 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...CLIENT_PREFERENCE_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -398,6 +405,7 @@ interface LiveValues
   'expected-head'?: string;
   'edit-id'?: string;
   target?: string;
+  generation?: string;
 }
 
 function usage(message: string): never {
@@ -660,6 +668,24 @@ export async function runLiveCli(
   values: LiveValues,
   io: BotCreateCliIo,
 ): Promise<unknown> {
+  const client = await parseClientPreferences(command, rest, values as Record<string, unknown>, io);
+  if (client) {
+    const { rpc } = await connectLiveHost(
+      values,
+      io,
+      AbortSignal.timeout(timeoutMs(values.timeout)),
+    );
+    if (command === 'human-name') return rpc('humanIdentity', {});
+    return rpc('clientControl', {
+      action:
+        command === 'client-targets'
+          ? 'targets'
+          : command === 'client-preferences'
+            ? 'preferences'
+            : 'preferences-set',
+      ...client.args,
+    });
+  }
   if (IM_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareImAuthorization(command, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
@@ -1076,6 +1102,8 @@ async function runControlCommand(
       );
   }
   if (command === 'settings-set') {
+    if (values.scope !== undefined && values.scope !== 'host')
+      usage('settings-set uses Host scope and affects all connected Clients.');
     if (values['patch-stdin'] !== true) usage('settings-set requires --patch-stdin.');
     try {
       const parsed: unknown = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
@@ -1122,7 +1150,13 @@ async function runControlCommand(
   if (found === undefined)
     throw new CliLiveError('unknown-settings', `The Host has no settings namespace ${target}.`);
   if (command === 'settings')
-    return { ns: target, revision: found['revision'], value: found['value'] };
+    return {
+      ns: target,
+      revision: found['revision'],
+      value: found['value'],
+      scope: 'host',
+      affectsAllConnectedClients: true,
+    };
   if (reviewed !== undefined) {
     const current = record(found['value']);
     if (

@@ -103,6 +103,30 @@ const CODES = new Set([
   'locked',
   'inactive',
   'limit-reached',
+
+  'client-target-required',
+  'unknown-client-target',
+  'no-connected-client',
+  'client-target-replaced',
+  'client-target-stale',
+  'client-command-expired',
+  'client-busy',
+  'client-capacity',
+  'client-outcome-uncertain',
+  'client-unresponsive',
+  'client-control-unavailable',
+  'client-operation-failed',
+  'client-control-unsupported',
+  'client-scope-mismatch',
+  'host-scope-required',
+  'stale-client-preferences',
+  'current-client-unavailable',
+  'ambiguous-client-target',
+  'stale-human-preferences',
+  'defaults-stale',
+  'one-preference-required',
+  'unsupported-client-preference',
+
   'invalid-memory-dir',
 ]);
 
@@ -282,8 +306,8 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                   usage:
                     TOB_AGENT_COMMAND_USAGE[entry.command] ??
                     (entry.command === 'settings'
-                      ? 'deepseekbot settings [botharness-client|agent-default-model]'
-                      : 'deepseekbot settings-set <namespace> --patch-stdin --expected-revision <observed revision> --previous-value <JSON of previous values for patched fields>'),
+                      ? 'deepseekbot settings [botharness-client|agent-default-model|ui-theme|locale]'
+                      : 'deepseekbot settings-set <namespace> --patch-stdin --expected-revision <observed revision> --previous-value <JSON of previous values for patched fields> [--scope host; required for theme, locale, motionPreference, botIcon, sendKey and autoAcceptGroupInvites; affects all connected Clients]'),
                 })),
               }
             : {}),

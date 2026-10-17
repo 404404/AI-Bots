@@ -60,6 +60,17 @@ export class DesktopNotificationPrefs {
     };
   };
 
+  persisted(): boolean {
+    try {
+      return (
+        this.#storage?.getItem(DESKTOP_NOTIFICATIONS_KEY) ===
+        (this.#snapshot.enabled ? 'on' : 'off')
+      );
+    } catch {
+      return false;
+    }
+  }
+
   active(): boolean {
     this.refreshPermission();
     return this.#snapshot.enabled && this.#snapshot.permission === 'granted';

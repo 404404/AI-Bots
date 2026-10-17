@@ -1,5 +1,11 @@
 import { parseAgentSchedules, TOB_AGENT_SCHEDULE_COMMAND_USAGE } from './cli-agent-schedules.js';
 import { parseAgentMemory, TOB_MEMORY_COMMAND_USAGE } from './cli-agent-memory.js';
+
+import {
+  parseClientPreferences,
+  parseHumanPreferences,
+  CLIENT_PREFERENCE_USAGE,
+} from './cli-client-preferences.js';
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
 import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
 import {
@@ -21,6 +27,13 @@ export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
   ...TOB_AGENT_SCHEDULE_COMMAND_USAGE,
   ...TOB_MEMORY_COMMAND_USAGE,
   ...TOB_AGENT_BOT_COMMAND_USAGE,
+  ...CLIENT_PREFERENCE_USAGE,
+  'human-name-set':
+    'deepseekbot human-name-set (--name <text> | --clear) --expected-state <observed-fingerprint>; changes this Human/Profile default',
+  'messaging-defaults':
+    'deepseekbot messaging-defaults <feishu|slack|discord|weixin>; Host/Profile scope',
+  'messaging-defaults-set':
+    'deepseekbot messaging-defaults-set <platform> --input-stdin; same schema and expectedRevision as existing Human CLI',
   ...TOB_AGENT_CHANNEL_COMMAND_USAGE,
   list: 'deepseekbot list',
   'model-catalog': 'deepseekbot model-catalog',
@@ -213,6 +226,11 @@ export async function parseAgentManagement(
   if (schedule) return schedule;
   const memory = await parseAgentMemory(command, rest, values, io);
   if (memory) return memory;
+
+  const client = await parseClientPreferences(command, rest, values, io, true);
+  if (client) return client;
+  const human = await parseHumanPreferences(command, rest, values, io);
+  if (human) return human;
   const channel = parseAgentChannels(command, rest, values);
   if (channel) return channel;
   const bot = await parseAgentBots(command, rest, values, io);

@@ -979,3 +979,33 @@ Bot 生命周期。未选定目标返回 `memory-target-denied`；归档、删�
 委托 Memory Assignment 的每次 Shell 调用只接受一条字面的 `deepseekbot` 命令。受限 Consumer
 仅携带 broker 上下文，在进程内调用随产品交付的 CLI，不执行操作系统 Shell。原始命令、解释器、
 命令替换、重定向、文件工具与 Subagent 均不可用。目标身份在审核前固定，创建时再次比对。
+
+### Tob Client 偏好
+
+`client-targets` 发现在线 `{clientId,generation}`；`client-preferences <client-id> --generation <generation>` 读取目标 Client 的当前值、`stateFingerprint` 和各字段真实 owner／作用域。不会因只有一个 Client 在线就默认选中。仅在 Tob 的普通 Shell 中，`current` 从触发当前回合的已认证 Human 私聊 Source Event 解析；模型不能自行提供 current 的 generation。来源缺失或混合时分别拒绝 `current-client-unavailable`／`ambiguous-client-target`。
+
+```sh
+deepseekbot client-targets --host "$DEEPSEEKBOT_HOST"
+deepseekbot client-preferences CLIENT_ID --generation GENERATION --host "$DEEPSEEKBOT_HOST"
+printf '%s' '{"notifications":false}' | deepseekbot client-preferences-set CLIENT_ID --generation GENERATION --scope browser-origin --expected-state 'OBSERVED_FINGERPRINT' --patch-stdin --host "$DEEPSEEKBOT_HOST"
+```
+
+每次只修改一个字段，并在实际应用时比较现有 owner 的当前状态。通知沿用原 localStorage key 与旧值，保留其他本地数据。真实作用域是**浏览器上下文中的同源存储**，同源标签页共享持久化值，不是设备身份或单标签页持久设置；独立浏览器上下文保持隔离。`notifications:true` 只有在真实权限已经为 `granted` 时才启用，否则返回 `permission-pending`、`permission-denied` 或 `permission-unsupported` 与 `changed:false`。`{"notificationPermission":"request"}` 返回当前权限，待授权时引导 Human 使用既有“设置 → 通知”开关。CLI 不伪造用户手势或系统授权。
+
+| UI 控件                                                     | 现有 owner 与作用域                                       | CLI 路径                                                                                                                              |
+| ----------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 浅色／深色／跟随系统                                        | 原生 `ui-theme.preference`，Host／Profile 用户设置        | `settings ui-theme`，然后经审核的 `settings-set ui-theme --scope host`                                                                |
+| 中文／英文                                                  | 原生 `locale.preference`，Host／Profile 用户设置          | `settings locale`，然后经审核的 `settings-set locale --scope host`                                                                    |
+| 动效：system／reduce／full                                  | `botharness-client.motionPreference`，Host／Profile       | `settings`／`settings-set botharness-client --scope host`                                                                             |
+| Bot 图标：mascot／simple／blob／bot                         | `botharness-client.botIcon`，Host／Profile                | 同一 settings 路径                                                                                                                    |
+| 发送键：enter／shift-enter／mod-enter                       | `botharness-client.sendKey`，Host／Profile                | 同一 settings 路径                                                                                                                    |
+| 自动接受群邀请                                              | `botharness-client.autoAcceptGroupInvites`，Host／Profile | 同一 settings 路径                                                                                                                    |
+| Human 默认名称                                              | 现有 Human identity owner，本地 Human／Profile            | `human-name`；受限命令 `human-name-set (--name TEXT                                                                                   | --clear) --expected-state FINGERPRINT` |
+| IM 默认收集、唤醒、阈值、身份启用、微信输入状态及新会话策略 | 现有 messaging owner，Host／Profile 内按平台              | `messaging-defaults PLATFORM`；`messaging-defaults-set PLATFORM --input-stdin`，使用观察到的 `expectedRevision` 与既有完整输入 schema |
+| 桌面通知                                                    | 选中 Client 的现有同源浏览器 owner；权限归 Human／OS      | `client-preferences`／`client-preferences-set`                                                                                        |
+
+原生 DSH `0.2.0-rc.2` 的**主题和语言均保存在 Host 用户设置文档中**，不会因 UI 位于 Client 就变为本地设置。其修改影响所有已连接 Client，Tob 必须显式传 `--scope host`。先读取 revision 与旧字段值，向 Human 说明共享影响，再沿用 `--expected-revision`、`--previous-value`、`--patch-stdin` 的审核。`client-preferences-set` 对主题／语言拒绝 `host-scope-required`，不创建第二份本地覆盖。Human 若要求只改当前 Client，Tob 必须先澄清作用域，才能提出共享修改；其他字段与并发 UI 编辑继续受原生 revision 保护。
+
+补充覆盖清单仍把本地文件打开方式、输入框 footer 和 DM trace 展示记录为本切片不可用；`client-preferences-set` 对这些字段拒绝 `unsupported-client-preference`。连接的 Web Client 不具备的原生通知控制保持 unsupported，存储成功不证明系统通知已送达。布局与快捷键属于独立切片。
+
+`no-connected-client`、`unknown-client-target`、`client-target-stale`、`client-target-replaced` 区分无在线目标、未知目标、过期租约与已替换实例。刷新保留标签页 id，但替换 generation。未派发请求超时返回 `client-unresponsive`；已派发写入未确认完成返回 `client-outcome-uncertain`，必须重新读取 owner 进行核对，不能盲目重试。待执行命令有界、仅存于进程内，Host 重启后不重放；偏好继续由选中 Client 的现有 owner 持久化。

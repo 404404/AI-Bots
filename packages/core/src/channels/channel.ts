@@ -283,6 +283,7 @@ export function isReactionEmoji(value: unknown): value is string {
 }
 
 export interface ChannelMessage {
+  clientTarget?: import('../client-control/contracts.js').ClientTarget;
   id: string;
   at: string;
   author: ChannelMessageAuthor;
