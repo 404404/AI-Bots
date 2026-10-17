@@ -1,3 +1,4 @@
+import type { ClientLayoutEdit } from '../../../core/src/client-control/layout.js';
 import type { ComponentType } from 'react';
 
 import type { ChannelSidebarEntry } from './channel-sidebar.js';
@@ -45,6 +46,8 @@ export interface DockPanelRegistration extends DockPanel {
 }
 
 export interface DockPanelLayout {
+  readLayout?(): unknown;
+  editLayout?(patch: ClientLayoutEdit, expected: string): void | 'applied' | 'constrained';
   canOpen?(id: string): boolean;
   open(id: string): void;
   close(id: string): void;
@@ -55,6 +58,8 @@ export interface DockPanelRegistry {
   panels(): readonly DockPanelRegistration[];
   openPanels(): readonly string[];
   available(): boolean;
+  readLayout(): unknown;
+  editLayout(patch: ClientLayoutEdit, expected: string): void | 'applied' | 'constrained';
   canOpen?(id: string): boolean;
   isOpen(id: string): boolean;
   open(id: string): void;
@@ -124,6 +129,14 @@ export function createDockPanelRegistry(): DockPanelHost {
     panels: () => ordered,
     openPanels: () => open,
     available: () => layout !== undefined,
+    readLayout: () => {
+      if (!layout?.readLayout) throw new Error('client-layout-unavailable');
+      return layout.readLayout();
+    },
+    editLayout: (patch, expected) => {
+      if (!layout?.editLayout) throw new Error('client-layout-unavailable');
+      return layout.editLayout(patch, expected);
+    },
     canOpen: (id) => layout?.canOpen?.(id) ?? true,
     isOpen: (id) => open.includes(id),
     open: (id) => layout?.open(id),

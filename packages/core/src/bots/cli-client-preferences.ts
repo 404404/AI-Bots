@@ -3,6 +3,8 @@ import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 
 export const CLIENT_PREFERENCE_USAGE: Readonly<Record<string, string>> = {
+  'client-layout': 'deepseekbot client-layout <client-id|current> --generation <generation>; discover live workspace, Channel, stable panel ids and stateFingerprint',
+  'client-layout-set': 'deepseekbot client-layout-set <client-id|current> --generation <generation> --scope browser-origin --expected-state <fingerprint> --patch-stdin; one layout edit, with explicit channelId for Channel children',
   'human-name': 'deepseekbot human-name; read default Human display name and stateFingerprint',
   'client-targets':
     'deepseekbot client-targets; discover live Client ids and generations; never selects a sole client implicitly',
@@ -36,7 +38,7 @@ export async function parseClientPreferences(
     return { command, args: {}, write: false };
   }
   const discovery = command === 'client-targets';
-  const write = command === 'client-preferences-set';
+  const write = command.endsWith('-set');
   const allowed = new Set([
     'help',
     'compact',
@@ -94,7 +96,7 @@ export async function parseClientPreferences(
         'Pass the observed --expected-state and a single preference as --patch-stdin.',
       );
     const text = (await io.readStdin?.()) ?? '';
-    if (text.length > 4096)
+    if (text.length > (command === 'client-layout-set' ? 16384 : 4096))
       throw new CliLiveError('invalid-input', 'Preference patch exceeds 4 KiB.');
     try {
       args.patch = JSON.parse(text);

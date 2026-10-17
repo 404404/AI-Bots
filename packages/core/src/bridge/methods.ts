@@ -1902,6 +1902,12 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           deps.clientControl.requireOrigin(input['target'], input['proof'], clientPeer);
           value = deps.clientControl.complete(input['target'], input['id'], input['result']);
         } else if (input['action'] === 'targets') value = { targets: deps.clientControl.targets() };
+        else if (input['action'] === 'layout')
+          value = await deps.clientControl.request(input['target'], 'layout', {});
+        else if (input['action'] === 'layout-set')
+          value = await deps.clientControl.request(input['target'], 'layout-set', {
+            scope: input['scope'], patch: input['patch'], expectedState: input['expectedState'],
+          });
         else if (input['action'] === 'preferences')
           value = await deps.clientControl.request(input['target'], 'preferences', {});
         else if (input['action'] === 'preferences-set')
