@@ -12,6 +12,14 @@
       "gap": null
     },
     {
+      "id": "desktop.sessions.unified",
+      "label": "Follow Channel scope in one Sessions panel and migrate legacy Work layouts and shortcuts",
+      "source": "packages/client/src/client/sessions-entry.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/bot-mode-dock.md",
+      "task": 2034,
+      "gap": null
+    },
+    {
       "id": "desktop.activity-center.idle-personabot",
       "label": "Historical Overview idle PersonaBot (presentation retired by #2026)",
       "source": "packages/client/src/client/activity-center-panel.tsx",
@@ -1594,7 +1602,23 @@
       "behaviors": ["desktop.bot-mode.entry", "desktop.bot-mode.dock"],
       "reason": "Runs qualified Web/macOS workspace movement, spacing, shortcut routing, persistence and exit restoration against a real isolated Client.",
       "task": 2017,
-      "sha256": "859674cc509501f8e47f3788c853171d6dc2af7dd78da45a51fa0442680f6c72"
+      "sha256": "f8db897635cc57e397f65ab6682d4634984ab71cccb7e7eb20368205bb9b45c1"
+    },
+    {
+      "path": "scripts/e2e-unified-sessions.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
+      "reason": "Runs the real Web Channel and Bot scope journey, same Assignment navigation, refresh, stable peer panels and legacy layout migration.",
+      "task": 2034,
+      "sha256": "e957a7921820ac79a58a3fd200f8f9501e29e6bc6ea29b55705694f02d86e9b5"
+    },
+    {
+      "path": "scripts/e2e-unified-sessions-desktop.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
+      "reason": "Runs actual macOS Desktop default and custom shortcut dispatch, persistence, automatic Channel scope and explicit Bot scope.",
+      "task": 2034,
+      "sha256": "d98edfc44d1782da9f8ffdf54927712db1a829a21d533f340dff2073a1ad891f"
     }
   ],
   "native": [

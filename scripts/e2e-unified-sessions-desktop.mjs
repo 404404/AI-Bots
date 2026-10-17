@@ -27,6 +27,14 @@ const wait = (ms) => new Promise((done) => setTimeout(done, ms));
 const rail = '.bh-workspace-rail';
 const header = '[data-dock-header="sessions"]';
 const toggle = `${rail} [data-pinned-panel="sessions"]`;
+async function settledSessions() {
+  await page.waitForSelector(header, { visible: true });
+  await page.waitForFunction(() => {
+    const body = document.querySelector('[data-sidebar-entry="sessions"]');
+    return body && !body.querySelector('.bh-skeleton') && body.innerText.trim().length > 0;
+  });
+  await wait(800);
+}
 async function key(keyCode, modifiers = []) {
   const [{ webSocketDebuggerUrl }] = await (
     await fetch(`${process.env.BH_DESKTOP_MAIN_CDP}/json/list`)
@@ -157,11 +165,13 @@ try {
       'DeepSeek Bot',
     ),
   );
+  await settledSessions();
   await page.screenshot({ path: resolve(out, 'group-bot-scope.png') });
   await page.waitForSelector(`${header} button[aria-label="会话视图选项"]`);
   await page.locator(`${header} button[aria-label="会话视图选项"]`).click();
   await page.locator('::-p-aria(当前频道)').click();
   assert.equal(await page.$('[data-session-target]'), null);
+  await settledSessions();
   await page.screenshot({ path: resolve(out, 'group-channel-scope.png') });
   results.push({ groupScope: true, scopeRefresh: true, defaultLabelOmitted: true });
   assert.deepEqual(errors, []);
