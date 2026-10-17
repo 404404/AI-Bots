@@ -25,9 +25,12 @@ export const workspaceShortcutId = (id: string): ShortcutCommandId =>
 
 export function workspaceShortcutDefaultForCommand(commandId: string, profile: string) {
   if (profile === 'web:linux') return undefined;
-  const id = Object.keys(DEFAULT_KEYS).find(id => workspaceShortcutId(id) === commandId);
+  const id = Object.keys(DEFAULT_KEYS).find((id) => workspaceShortcutId(id) === commandId);
   if (!id) return undefined;
-  return { code: profile === 'desktop:linux' && id === WORKSPACE_HOME ? 'KeyO' : DEFAULT_KEYS[id]!, modifiers: ['primary', 'alt', 'shift'] as const };
+  return {
+    code: profile === 'desktop:linux' && id === WORKSPACE_HOME ? 'KeyO' : DEFAULT_KEYS[id]!,
+    modifiers: ['primary', 'alt', 'shift'] as const,
+  };
 }
 
 export function registerWorkspaceShortcuts(
