@@ -38,7 +38,7 @@ export function AppDialogHost() {
   const stacked = theme.largeText || menu;
   const actionStyle = stacked
     ? undefined
-    : { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 };
+    : { width: '50%' as const, flexShrink: 1, minWidth: 0 };
   const dismiss = () => appDialogs.dismiss();
   return (
     <Modal
