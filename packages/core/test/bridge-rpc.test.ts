@@ -524,6 +524,7 @@ describe('bridge typert service', () => {
       'messagingConversation',
       'messagingSend',
       'tobHome',
+      'clientControl',
       'onboarding',
       'onboardingModel',
       'modelPlanInherit',
