@@ -153,6 +153,9 @@ declare module '@deepseek-ai/dsh-typert-protocol/types' {
     'invalid-git-url': Record<string, never>;
     'git-clone-failed': Record<string, never>;
     'git-clone-timeout': Record<string, never>;
+    'git-source-changed': Record<string, never>;
+    'unsupported-source': Record<string, never>;
+    'stale-import-source': Record<string, never>;
     'marketplace-unavailable': Record<string, never>;
   }
 }
@@ -811,13 +814,34 @@ export class BotharnessBridgeService extends TypertRemoteService {
     );
   }
 
+  async botImportPreview(gitUrl: string) {
+    return unwrapAsync(this.methods.botImportPreview({ gitUrl }));
+  }
+
   async createFromGit(
     displayName: string,
     gitUrl: string,
     roles?: string[],
     description?: string,
-  ): Promise<{ bot: PersonaBotDetail; httpsFallback?: HttpsFallback }> {
-    return unwrapAsync(this.methods.createFromGit({ displayName, gitUrl, roles, description }));
+    operationKey?: string,
+    expectedCommit?: string,
+  ): Promise<{
+    bot: PersonaBotDetail;
+    httpsFallback?: HttpsFallback;
+    receipt?: BotCreationReceipt;
+    channelId?: string;
+    source?: unknown;
+  }> {
+    return unwrapAsync(
+      this.methods.createFromGit({
+        displayName,
+        gitUrl,
+        roles,
+        description,
+        operationKey,
+        expectedCommit,
+      }),
+    );
   }
 
   update(
@@ -1925,6 +1949,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'get',
   'create',
   'createFromGit',
+  'botImportPreview',
   'update',
   'deletionPreview',
   'deletionConfirm',

@@ -692,9 +692,9 @@
     },
     {
       "id": "bot-zip-import",
-      "description": "Existing authenticated CLI path.",
+      "description": "Authenticated and scoped inspected archive import through existing owners and stable creation receipts.",
       "scope": "Host",
-      "commands": ["create"],
+      "commands": ["create", "bot-import-preview"],
       "surfaces": ["route:packages/core/src/plugin.ts:BOT_ZIP_IMPORT_PATH"]
     },
     {
