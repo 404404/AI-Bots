@@ -100,7 +100,7 @@ const scroll = (list) => {
 const handle = (list) => list.find((node) => node['resource-id'] === 'sheet-screen-handle');
 const proof = [];
 try {
-  if (Number.isFinite(imeTop())) {
+  if (mode !== 'form-keyboard' && Number.isFinite(imeTop())) {
     call('shell', 'input', 'keyevent', '4');
     await sleep(500);
   }
@@ -117,7 +117,7 @@ try {
   if (mode !== 'form-keyboard') assert(!handle(initial), 'CLOSE_EXISTING_SHEET_FIRST');
   const [, , width, height] = bounds(initial[0]);
   if (mode === 'form-keyboard') {
-    capture('hidden');
+    capture('initial');
     tap(field);
     await sleep(1000);
     const shown = capture('shown');
