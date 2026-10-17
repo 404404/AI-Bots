@@ -83,3 +83,9 @@ Source: Cloud services → Cloud workspaces → create a synthetic workspace →
 Through the verified UAT control plane only, change the first test organization's membership owner → member while preserving the stale owner access token. The existing token must fail description updates; mobile Check session must display Member and read-only settings. Inactive membership must disappear from lists and deny access despite instance admin. Restore owner and read back. This controlled fixture does not add a product role-management API or admit another user.
 
 Capture real UI before creation, owner selected, member read-only, restored owner and cross-client readback. Record mobile/Worker SHAs, independent auth sessions and restored WorkOS settings. API-prepared authentication does not re-prove Hosted AuthKit, which has its separate #2103 evidence. Only assigned Simulator/Metro/build lane; preserve physical phone and other Hosts. UAT only; no merge.
+
+### Organization slice outcome (2026-10-18)
+
+See `.github/pr-screenshots/tob-t1-organizations/README.md` for exact runtimes and native evidence. One organization was created on the phone and independently selected/read by the formal CLI. Live owner → member → owner checks passed without changing the instance administrator. Stale-owner writes were denied; the native rerun also verified discarded unsaved drafts and refreshed role labels. Optional second-organization creation and membership deactivation were rejected by automatic approval review and did not execute.
+
+For Simulator SecureStore checks, preserve normal local ad-hoc code signing. The initial `CODE_SIGNING_ALLOWED=NO` build produced a Keychain error; a signed incremental build resolved it without erasing app data. This was a test-build issue, not an authentication bypass. Current screenshots use per-process English launch options; global Simulator language preferences remain unchanged.
