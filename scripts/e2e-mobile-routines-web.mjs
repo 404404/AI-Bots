@@ -228,7 +228,7 @@ async function main() {
         trigger: { kind: 'daily', time: '09:00', timeZone },
       },
     });
-    await call(hostOrigin, 'scheduleCreate', {
+    const { schedule: advanced } = await call(hostOrigin, 'scheduleCreate', {
       slug: bot.slug,
       input: {
         title: 'Weekly cleanup',
@@ -264,20 +264,17 @@ async function main() {
       );
     const settle = () => new Promise((done) => setTimeout(done, 400));
     const tap = async (label) => {
-      await page.waitForFunction(
-        (name) =>
-          [...document.querySelectorAll('[aria-label]')].some(
-            (node) => node.getAttribute('aria-label') === name,
-          ),
-        { timeout: 30_000 },
-        label,
-      );
-      await page.evaluate((name) => {
-        const nodes = [...document.querySelectorAll('[aria-label]')].filter(
-          (node) => node.getAttribute('aria-label') === name,
-        );
-        nodes.at(-1).click();
-      }, label);
+      const selector = `[aria-label="${label}"]`;
+      await page.waitForSelector(selector, { visible: true, timeout: 30_000 });
+      const handles = await page.$$(selector);
+      let pressed = false;
+      for (const handle of handles.reverse()) {
+        if (!(await handle.isVisible())) continue;
+        await handle.click();
+        pressed = true;
+        break;
+      }
+      if (!pressed) throw new Error(`No visible control: ${label}`);
       await settle();
     };
     const fill = async (label, value) => {
@@ -340,11 +337,7 @@ async function main() {
     await shot('1-profile-routines');
     steps.push('the profile lists both routines and a New routine row');
 
-    await page.evaluate(() => {
-      [...document.querySelectorAll('[aria-label]')]
-        .find((node) => node.getAttribute('aria-label')?.startsWith('Morning digest, opens'))
-        .click();
-    });
+    await page.locator('[aria-label^="Morning digest, opens"]').click();
     await text('Recent runs');
     await text('Not run yet.');
     await shot('2-routine-detail');
@@ -380,17 +373,22 @@ async function main() {
     await text('Delete “Morning digest”?');
     await shot('6-routine-delete-confirm');
     await tap('Delete');
-    await page.waitForFunction(() => !document.body.innerText.includes('Recent runs'), {
-      timeout: 30_000,
-    });
+    await page.waitForFunction(
+      (slug) => new URL(location.href).pathname.replace(/\/$/u, '') === `/bot/${slug}`,
+      { timeout: 30_000 },
+      bot.slug,
+    );
+    await text('Weekly cleanup');
     checks.deletedOnHost = !(await list()).some((entry) => entry.id === digest.id);
     steps.push('Delete asked first, then removed the routine on the Host');
 
-    await page.evaluate(() => {
-      [...document.querySelectorAll('[aria-label]')]
-        .find((node) => node.getAttribute('aria-label')?.startsWith('Weekly cleanup, opens'))
-        .click();
-    });
+    await page.locator('[aria-label^="Weekly cleanup, opens"]').click();
+    await settle();
+    checks.advancedRouteMatchesHost = new URL(page.url()).pathname.endsWith(
+      `/routine/${advanced.id}`,
+    );
+    if (!checks.advancedRouteMatchesHost)
+      throw new Error('Routine route does not match the selected Host routine');
     await text('The phone cannot edit this schedule');
     await shot('7-routine-advanced');
     await page.goBack({ waitUntil: 'networkidle0' });
@@ -416,11 +414,9 @@ async function main() {
       0,
       5,
     );
-    const shown = await page.evaluate(() => document.body.innerText);
-    checks.previewMatchesHost =
-      expected.length > 0 &&
-      expected.every((at) =>
-        shown.includes(
+    const expectedLabels = await page.evaluate(
+      (occurrences) =>
+        occurrences.map((at) =>
           new Date(at).toLocaleString(undefined, {
             weekday: 'short',
             month: 'short',
@@ -429,7 +425,11 @@ async function main() {
             minute: '2-digit',
           }),
         ),
-      );
+      expected,
+    );
+    const shown = await page.evaluate(() => document.body.innerText);
+    checks.previewMatchesHost =
+      expectedLabels.length > 0 && expectedLabels.every((label) => shown.includes(label));
     await shot('8-routine-new');
     await tap('Create');
     await page.waitForFunction(() => !document.body.innerText.includes('Next runs'), {
@@ -450,6 +450,10 @@ async function main() {
     checks.noPageErrors = !log.includes('pageerror:');
   } catch (error) {
     await page?.screenshot({ path: join(paths.evidence, 'failure.png') }).catch(() => {});
+    writeFileSync(
+      join(paths.evidence, 'failure-route.json'),
+      redact(JSON.stringify({ url: page?.url() })),
+    );
     writeFileSync(join(paths.evidence, 'failure.console.txt'), redact(console_.join('\n')));
     throw error;
   } finally {

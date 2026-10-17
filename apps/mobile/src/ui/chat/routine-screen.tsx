@@ -77,7 +77,7 @@ export function RoutineScreen({ edit = false }: { edit?: boolean }) {
             onChanged={() => undefined}
             onClose={() => router.back()}
             onEdit={() =>
-              router.push({ pathname: '/bot/[slug]/routine-edit', params: { slug, id: id! } })
+              router.push({ pathname: '/bot/[slug]/routine-edit/[id]', params: { slug, id: id! } })
             }
             onOpenFullClient={() =>
               router.push({

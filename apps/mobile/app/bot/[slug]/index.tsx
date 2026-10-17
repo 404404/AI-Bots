@@ -48,11 +48,11 @@ export default function BotProfileScreen() {
       actions={{
         onOpenRoutine: (routine) =>
           router.push({
-            pathname: '/bot/[slug]/routine',
+            pathname: '/bot/[slug]/routine/[id]',
             params: { slug: bot.slug, id: routine.id },
           }),
         onNewRoutine: () =>
-          router.push({ pathname: '/bot/[slug]/routine', params: { slug: bot.slug } }),
+          router.push({ pathname: '/bot/[slug]/routine-new', params: { slug: bot.slug } }),
         onMessage: () => (router.canGoBack() ? router.back() : router.replace(`/dm/${bot.slug}`)),
         ...(bot.browserAccess
           ? {
@@ -72,7 +72,8 @@ export default function BotProfileScreen() {
                 }),
             }
           : {}),
-        onNotifications: () => router.push('/notifications'),
+        onNotifications: () =>
+          router.push({ pathname: '/bot/[slug]/notifications', params: { slug: bot.slug } }),
         onOpenActivity: () =>
           router.push({ pathname: '/bot/[slug]/activity', params: { slug: bot.slug } }),
         onOpenMemory: (entry) =>

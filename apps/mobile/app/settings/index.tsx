@@ -42,7 +42,7 @@ export default function SettingsScreen() {
           openHostDrawer();
         },
         onAppIcon: () => router.push('/settings/app-icon'),
-        onNotifications: () => router.push('/notifications'),
+        onNotifications: () => router.push('/settings/notifications'),
         onCopyVersion: copyMessage,
         onUnpair: () => hostSession.unpair().then(() => router.dismissTo('/')),
       }}
