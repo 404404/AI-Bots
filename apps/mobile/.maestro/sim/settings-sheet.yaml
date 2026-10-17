@@ -5,19 +5,32 @@ appId: ai.botharness.deepseekbot.dev
 - tapOn: 'Chats'
 - tapOn: 'Settings'
 - extendedWaitUntil:
-    visible: 'Computers.*'
+    visible: 'Done'
     timeout: 10000
-- assertVisible: 'Done'
-- assertVisible: 'Notifications'
+- scrollUntilVisible:
+    element: 'Computers.*'
+    direction: DOWN
+- assertVisible: 'Computers.*'
+- scrollUntilVisible:
+    element: 'Notifications'
+    direction: DOWN
 - tapOn: 'Notifications'
 - extendedWaitUntil:
     visible: 'Get a notification when a PersonaBot needs you or replies to you.*'
     timeout: 10000
 - tapOn: 'Settings'
-- assertVisible: 'Computers.*'
+- scrollUntilVisible:
+    element: 'Done'
+    direction: UP
 - tapOn: 'Done'
 - assertVisible: 'Chats'
 - assertNotVisible: 'Computers.*'
 - tapOn: 'Settings'
-- assertVisible: 'Computers.*'
+- assertVisible: 'Done'
+- scrollUntilVisible:
+    element: 'Computers.*'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'Done'
+    direction: UP
 - tapOn: 'Done'
