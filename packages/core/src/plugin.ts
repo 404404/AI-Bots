@@ -1,3 +1,4 @@
+import { mountChannelInteractionOwners } from './channels/interaction-owners.js';
 import {
   createTobScheduleOperations,
   TOB_SCHEDULE_CAPABILITIES,
@@ -1647,17 +1648,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     () => core.companions.attachQuestions(userQuestions),
     'botharness: companion question observation',
   );
-  ctx.on(
-    'user-questions/request',
-    async (request, next) => (await userQuestions.ask(request)) ?? next(),
-    { global: true },
-  );
   const approvedCalls = new Map<symbol, (name: string, args: unknown) => boolean>();
   ctx.effect(() => () => approvedCalls.clear(), 'botharness: one-call approval execution fences');
   ctx.effect(() => () => toolApproval.close(), 'botharness: Channel tool approvals');
-  ctx.on('approval/request', async (request, next) => (await toolApproval.ask(request)) ?? next(), {
-    global: true,
-  });
+  mountChannelInteractionOwners(ctx, { questions: userQuestions, approvals: toolApproval });
   ctx.on(
     'tools/pre-execute',
     async (execution, next) => {
