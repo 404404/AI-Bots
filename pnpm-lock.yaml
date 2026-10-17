@@ -414,6 +414,9 @@ importers:
       react-native-gesture-handler:
         specifier: ~2.32.0
         version: 2.32.0(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
+      react-native-pager-view:
+        specifier: 8.0.2
+        version: 8.0.2(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
       react-native-reanimated:
         specifier: 4.5.1
         version: 4.5.1(react-native-worklets@0.10.1(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
@@ -426,6 +429,9 @@ importers:
       react-native-svg:
         specifier: 15.15.4
         version: 15.15.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
+      react-native-tab-view:
+        specifier: ^4.3.4
+        version: 4.3.4(react-native-pager-view@8.0.2(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
       react-native-web:
         specifier: ~0.21.4
         version: 0.21.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -10877,6 +10883,12 @@ packages:
       react: '*'
       react-native: '*'
 
+  react-native-pager-view@8.0.2:
+    resolution: {integrity: sha512-Y8All2BbjidI4ZIF9kBOIIoldkqrY/2FXapHZMdjwD+ByXhiOWTFenPs5rq9KRN5uAH/gOXtQCqHLxQDNBQRiQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
   react-native-reanimated@4.5.1:
     resolution: {integrity: sha512-RnMvtDuR+68ig864gAvZCOdZehqhC5rFmMo0kn+ARfgVSTvFeF6IFLBVgMPUu0KwihaapEyW24WRi6nEyy1kSA==}
     peerDependencies:
@@ -10901,6 +10913,13 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  react-native-tab-view@4.3.4:
+    resolution: {integrity: sha512-z8eXgVmfLx2aSMeppQkuZPbb2N00H76T7OwtGcZYua5g2h9AYBbkYrYN4rKY0wSl1g0YRQ+NS6LLVkxppGr68g==}
+    peerDependencies:
+      react: '>= 18.2.0'
+      react-native: '*'
+      react-native-pager-view: '>= 6.0.0'
 
   react-native-web@0.21.4:
     resolution: {integrity: sha512-77B6KlalB4osNIck91TNFixPkYPsTbuNEvw8P7IV+4v4/5wZSBRKZnw0Zhx6YjuauDTz71gc8IW+fVhcBMjr5A==}
@@ -23970,6 +23989,11 @@ snapshots:
       react: 19.2.3
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2)
 
+  react-native-pager-view@8.0.2(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2)
+
   react-native-reanimated@4.5.1(react-native-worklets@0.10.1(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3):
     dependencies:
       react: 19.2.3
@@ -24015,6 +24039,13 @@ snapshots:
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
       warn-once: 0.1.1
     optional: true
+
+  react-native-tab-view@4.3.4(react-native-pager-view@8.0.2(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2)
+      react-native-pager-view: 8.0.2(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
+      use-latest-callback: 0.2.6(react@19.2.3)
 
   react-native-web@0.21.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:

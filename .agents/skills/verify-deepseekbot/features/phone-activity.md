@@ -33,13 +33,19 @@ Confirm exactly three pinned, underlined tabs: Needs you (default), For you and
 Other unread. Needs you retains approvals, formal questions and private input.
 Switch all three tabs; only their own rows appear, without collapsible section
 headings. The selected tab shows its leading icon and underline together; inactive
-tabs show only their labels. Labels and tab bounds stay in place as selection changes.
+tabs show only their labels. All three blocks have equal width; the selected icon and
+label are centered together and its underline fills the entire block without gutters.
+Swipe left/right from the page content (including empty/loading states), not just the
+tab strip, to switch pages. The underline tracks the gesture; short/cancelled drags
+return to the same page. Scroll a populated page vertically, switch away and back,
+and confirm its scroll position is retained. Vertical scrolling and pull-to-refresh
+must not switch pages. Check repeated fast direction changes and tap-to-third-tab.
 All and handled history remain available through the filter. The header contains
 sorting, filtering and Activity search; no permanent chips appear above the feed.
 Open Filters, combine Bot/Channel/unread/category, switch tabs and confirm those
 other filters survive. Reset returns to Needs you and default filters, preserving
 the search. Close the sheet. While a question submission is pending, switch tabs;
-a late refusal must not restore its post in the new tab.
+a late refusal must not restore its post in the new tab. Repeat with a page swipe.
 Search a safe summary beyond the first page and use Load more. Default ordering
 puts mentions before replies; explicit newest/oldest replaces that priority.
 Scroll under the header with search open and closed; verify light/dark and large
