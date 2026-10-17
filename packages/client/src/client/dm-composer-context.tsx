@@ -1,3 +1,4 @@
+import { useScopedState } from './scoped-state.js';
 import {
   useCallback,
   useRef,
@@ -71,24 +72,24 @@ export function useDmComposerContext({
   avgPerf?: AveragePerfView | undefined;
 }): ComposerContext | undefined {
   const footerSettings = useRef<ComposerFooterHandle>(null);
-  const [panel, setPanel] = useState<{
+  const [panel, setPanel] = useScopedState<{
     slug: string;
     kind: 'model' | 'model-settings' | 'workspace';
-  }>();
+  }>(channelId);
   const plan = useSyncExternalStore(
     subscribeModelPlans,
     () => modelPlanOf(bot?.slug),
     () => modelPlanOf(bot?.slug),
   );
-  const [modelData, setModelData] = useState<{
+  const [modelData, setModelData] = useScopedState<{
     slug: string;
     catalog: ModelCatalogView;
     state: ModelPlanStateView;
     inheritedRoute?: ModelRouteView;
     unavailable?: boolean;
-  }>();
-  const [modelBusy, setModelBusy] = useState(false);
-  const [modelError, setModelError] = useState<string | undefined>(undefined);
+  }>(channelId);
+  const [modelBusy, setModelBusy] = useScopedState(channelId, false);
+  const [modelError, setModelError] = useScopedState<string | undefined>(channelId, undefined);
   const companionState = useSyncExternalStore(
     companion?.subscribe ?? subscribeUnavailable,
     companion?.getSnapshot ?? unavailableSnapshot,
@@ -149,7 +150,7 @@ export function useDmComposerContext({
       active = false;
       unsubscribe();
     };
-  }, [actions, modelSlug, plan?.revision]);
+  }, [actions, channelId, modelSlug, plan?.revision]);
   if (bot === undefined || bot.deleted || channelId === undefined) return;
   const data = modelData?.slug === bot.slug ? modelData : undefined;
   const catalog = data?.catalog;

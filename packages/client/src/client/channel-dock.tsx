@@ -1,3 +1,5 @@
+import { mountPanelScrollbars } from './ds/panel-scrollbars.js';
+import { usePanelMenu } from './panel-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { workspaceColumns, moveWorkspaceRail, isFullHeightRail } from './workspace-layout.js';
 import { WorkspaceContext, WORKSPACE_RAIL, WORKSPACE_CHANNELS } from './workspace-context.js';
@@ -62,6 +64,7 @@ const styles = stylex.create({
     paddingInline: space.x4,
     paddingBottom: space.x4,
   },
+  flushBody: { paddingTop: 0, paddingBottom: 0, paddingInline: 0 },
   workspaceBody: { paddingTop: space.x1, paddingBottom: space.x1, paddingInline: space.x1 },
   panel: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
   actions: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
@@ -138,6 +141,7 @@ function useEntryProps(entryId: string): ChannelSidebarEntryProps | undefined {
   if (dock.entryProps === undefined) return undefined;
   return {
     ...dock.entryProps,
+    flush: entryId === 'bot-inbox',
     refreshRevision: runtime.refreshRevision,
     requestRefresh: () =>
       dock.setRuntime(entryId, { refreshRevision: dock.runtime(entryId).refreshRevision + 1 }),
@@ -246,7 +250,11 @@ function ChannelEntryContent({ entryId }: { entryId: string }): ReactElement {
         props.expanded ? (
           <div
             data-sidebar-entry-body=""
-            {...stylex.props(styles.body, !!dock.rail && styles.workspaceBody)}
+            {...stylex.props(
+              styles.body,
+              !!dock.rail && styles.workspaceBody,
+              props.flush && styles.flushBody,
+            )}
           >
             <entry.component {...props} />
           </div>
@@ -264,6 +272,18 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
   const panel = entryId === undefined ? undefined : dock.panels.get(entryId);
   const entry = panel?.entry;
   const props = useEntryProps(entryId ?? '');
+  const contextMenu = usePanelMenu({
+    items: panel
+      ? [
+          {
+            id: 'close',
+            label: dock.t('dock.close', { label: panel.title }),
+            icon: <ChannelSidebarIcon name="x" />,
+          },
+        ]
+      : [],
+    onSelect: () => dock.close(api.id),
+  });
   if (entryId === undefined || panel === undefined) return null;
   const shown = entry !== undefined && props !== undefined && dock.shows(entry);
   const Badge = shown ? entry.badge : undefined;
@@ -273,7 +293,8 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
     panel.scope === 'global' || dock.channel !== undefined ? panel.headerAction : undefined;
   const closeLabel = dock.t('dock.close', { label: panel.title });
   return (
-    <div className="bh-dock-header" data-dock-header={entryId}>
+    <div className="bh-dock-header" data-dock-header={entryId} {...contextMenu.triggerProps}>
+      {contextMenu.menu}
       <PanelHeader
         icon={<ChannelSidebarIcon name={panel.icon} />}
         label={HeaderTabs === undefined ? panel.title : (entry?.headerLabel ?? panel.title)}
@@ -429,6 +450,10 @@ export function ChannelDock({
   const gapRef = useRef(gap);
   const [order, updateOrder] = useState(() => readChannelDock(storage)?.order ?? []);
   const orderRef = useRef(order);
+  const [hiddenControls, updateHiddenControls] = useState(
+    () => readChannelDock(storage)?.hiddenControls ?? [],
+  );
+  const hiddenControlsRef = useRef(hiddenControls);
   const [members, updateMembers] = useState(
     () => readChannelDock(storage)?.members ?? { open: false, ratio: 0.3 },
   );
@@ -473,6 +498,7 @@ export function ChannelDock({
           parked: parked.current,
           gap: gapRef.current,
           order: orderRef.current,
+          hiddenControls: hiddenControlsRef.current,
           members: membersRef.current,
         },
         storage,
@@ -565,6 +591,10 @@ export function ChannelDock({
     save(ready);
     setApi(ready);
   };
+
+  const scrollbarsMount = useMountedResource<HTMLSpanElement>((node) => {
+    if (node.parentElement) return mountPanelScrollbars(node.parentElement);
+  }, []);
 
   const registryMount = useMountedResource<HTMLDivElement>(() => {
     if (api === undefined) return;
@@ -664,6 +694,8 @@ export function ChannelDock({
     updateGap(DEFAULT_WORKSPACE_GAP);
     orderRef.current = [];
     updateOrder([]);
+    hiddenControlsRef.current = [];
+    updateHiddenControls([]);
     membersRef.current = { open: false, ratio: 0.3 };
     updateMembers(membersRef.current);
     buildDefaultLayout(api, byId);
@@ -711,6 +743,15 @@ export function ChannelDock({
         (ids) => {
           orderRef.current = ids;
           updateOrder(ids);
+          save(api);
+        },
+        hiddenControls,
+        (id, visible) => {
+          hiddenControlsRef.current = visible
+            ? hiddenControlsRef.current.filter((item) => item !== id)
+            : [...new Set([...hiddenControlsRef.current, id])];
+          updateHiddenControls(hiddenControlsRef.current);
+          if (!visible) close(id);
           save(api);
         },
       ),
@@ -783,6 +824,7 @@ export function ChannelDock({
         aria-label={t('dock.region')}
       >
         <span ref={layoutMount} hidden />
+        <span ref={scrollbarsMount} hidden />
         {dropX !== undefined && <span className="bh-workspace-drop" style={{ left: dropX }} />}
         <DockviewReact
           key={workspace ? 'workspace' : 'legacy'}

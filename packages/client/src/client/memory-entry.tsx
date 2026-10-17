@@ -1,3 +1,4 @@
+import { PointerMenu } from './ds/pointer-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import {
   Fragment,
@@ -8,7 +9,7 @@ import {
   type MouseEvent,
   type ReactElement,
 } from 'react';
-import { Button, Input, Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Input } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type {
   MemoryGitGraph,
@@ -719,14 +720,12 @@ function MemoryEntryForScope({
               </div>
             )}
             {commitMenu === undefined ? null : (
-              <span className="bh-menu-anchor" style={{ left: commitMenu.x, top: commitMenu.y }}>
-                <Menu
-                  open
-                  portal
+              <span hidden>
+                <PointerMenu
+                  point={commitMenu}
                   dense
                   autoFocus
                   anchor={<span ref={commitMenuAnchor} aria-hidden="true" />}
-                  getAnchorRect={() => commitMenuAnchor.current?.getBoundingClientRect() ?? null}
                   items={[
                     ...(commitMenu.sha === graph.head
                       ? []

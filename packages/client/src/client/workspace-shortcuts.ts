@@ -53,7 +53,12 @@ export function registerWorkspaceShortcuts(
           id: workspaceShortcutId(id),
           label: () =>
             t('workspace.shortcut', {
-              panel: registry.panels().find((panel) => panel.id === id)?.title ?? title,
+              panel:
+                id === WORKSPACE_CHANNELS
+                  ? t('workspace.channels')
+                  : id === CHANNEL_BODY_PANEL
+                    ? t('workspace.messages')
+                    : (registry.panels().find((panel) => panel.id === id)?.title ?? title),
             }),
           aliases: ['Bot mode', 'panel', id],
           defaults: binding

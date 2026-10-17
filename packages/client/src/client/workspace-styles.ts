@@ -23,6 +23,13 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 [data-workspace-dock] .bh-dock-menu, [data-workspace-dock] [data-panel-empty-action] { display:none; }
 [data-workspace-dock] .bh-dock-theme { --dv-activegroup-visiblepanel-tab-background-color:${panelBackground}; --dv-inactivegroup-visiblepanel-tab-background-color:${panelBackground}; --dv-separator-border:transparent; --dv-paneview-header-border-color:transparent; --dv-group-view-background-color:${panelBackground}; --dv-tabs-and-actions-container-background-color:${panelBackground}; }
 .bh-workspace-rail { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; position:relative; height:100%; display:flex; flex-direction:column; align-items:center; gap:${space.x2}; padding:${space.x2}; box-sizing:border-box; background:${panelBackground}; }
+/* Light DSH base and the blended Panel are both nearly white. Recess only
+   the workspace canvas; keep Panels bright and the existing dark palette. */
+body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock],
+body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-dockview,
+body:not([data-ds-dark-theme]) .bh-message-member-divider,
+html[data-platform="darwin"]:not([data-fullscreen]) body:not([data-ds-dark-theme]) [data-workspace-enabled] > .bh-workspace-chrome { background:${color.surface}; }
+body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-actions-container { border-bottom-color:${color.surface}; }
 .bh-workspace-rail > button, .bh-workspace-rail > span > button, .bh-workspace-move { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:${size.row}; height:${size.row}; padding:0; border:0; border-radius:${radius.md}; corner-shape:round; color:${color.fg}; background:transparent; cursor:pointer; }
 .bh-workspace-rail button:hover { background:${color.hover}; }
 .bh-workspace-rail button:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }
@@ -47,7 +54,7 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 .bh-workspace-channels > .bh-region { flex:1; min-height:0; padding:0; }
 .bh-workspace-channels .bh-region:has(> [data-panel-empty]) .bh-roster-list:empty { display:none; }
 .bh-workspace-drop { position:absolute; top:0; bottom:0; width:${space.x1}; background:${color.accent}; z-index:1000; pointer-events:none; }
-.bh-message-split { display:flex; height:100%; min-height:0; }
+.bh-dock-body.bh-message-split { display:flex; flex-direction:row; height:100%; min-height:0; }
 .bh-message-content { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; }
 .bh-message-members { display:flex; flex-direction:column; min-width:0; min-height:0; }
 .bh-message-members > section { flex:1; min-height:0; overflow:auto; }

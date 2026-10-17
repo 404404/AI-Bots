@@ -179,6 +179,7 @@ describe('@botharness/ui browser bundle', () => {
       'inputTriggers',
       'layout',
       'locale',
+      'theme',
       'sessions',
       'uiWorkspace',
       'workspaces',
@@ -265,12 +266,6 @@ describe('@botharness/ui browser bundle', () => {
         locale: 'botharness',
         inject: expect.any(Function),
         children: { 'botharness.settings.section': { kind: 'list', scope: 'root' } },
-      },
-      {
-        name: 'shell.overlay',
-        id: 'botharness-shortcut-help',
-        locale: 'botharness',
-        inject: expect.any(Function),
       },
       {
         name: 'sidebar.panellist',

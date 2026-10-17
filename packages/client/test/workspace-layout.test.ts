@@ -74,6 +74,7 @@ describe('workspace layout', () => {
       version: 2,
       gap: 4,
       order: [],
+      hiddenControls: [],
       members: { open: false, ratio: 0.3 },
       layout,
       parked,

@@ -46,6 +46,8 @@ describe('workspace shortcut ownership', () => {
     const open = vi.fn();
     registry.attach({ open, close: vi.fn() });
     const command = commands.get(workspaceShortcutId('bh:channel-body'))!;
+    expect(command.label()).toContain('消息');
+    expect(command.label()).not.toContain('workspace.messages');
     const context = { region: 'editable' as const, modal: null, target: null };
     expect(command.resolve(context)).toEqual({ status: 'pass' });
     active = true;

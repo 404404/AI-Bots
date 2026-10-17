@@ -76,6 +76,14 @@ import { GroupHeading } from './ds/group-heading.js';
 import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
+  flushInboxGroup: {
+    paddingBlock: 0,
+    marginTop: 0,
+    borderTopWidth: { default: border.hairline, ':first-child': 0 },
+    borderTopStyle: 'solid',
+    borderTopColor: color.divider,
+  },
+  flushInboxList: { marginBottom: 0 },
   inboxGroup: { paddingBlock: space.x1 },
   inboxSpaced: { marginTop: space.x3 },
   inboxList: { marginTop: 0, marginBottom: space.x2 },
@@ -632,11 +640,13 @@ function BotInboxItemRow({
 
 function BotInboxGroup({
   name,
+  flush,
   items,
   actions,
   t,
 }: {
   name: string;
+  flush?: boolean | undefined;
   items: BotAttentionItem[];
   actions: ChannelSidebarEntryProps['actions'];
   t: BotHarnessTranslate;
@@ -659,9 +669,10 @@ function BotInboxGroup({
       onToggle={(event) =>
         setExpansion({ signature: activeSignature, expanded: event.currentTarget.open })
       }
-      {...stylex.props(styles.inboxGroup)}
+      {...stylex.props(styles.inboxGroup, flush && styles.flushInboxGroup)}
     >
       <GroupHeading
+        flush={flush}
         summary
         quiet
         label={name}
@@ -669,7 +680,11 @@ function BotInboxGroup({
         expanded={expanded}
         count={<Tag tone="neutral">{items.length}</Tag>}
       />
-      <SidebarCardList label={name} className={stylex.props(styles.inboxList).className}>
+      <SidebarCardList
+        flush={flush}
+        label={name}
+        className={stylex.props(styles.inboxList, flush && styles.flushInboxList).className}
+      >
         {INBOX_SECTIONS.flatMap((section) => inboxSections(items)[section]).map((item) => (
           <BotInboxItemRow key={item.id} item={item} actions={actions} t={t} />
         ))}
@@ -680,6 +695,7 @@ function BotInboxGroup({
 
 function BotInboxSection({
   section,
+  flush,
   items,
   sourceLabel,
   spaced,
@@ -687,6 +703,7 @@ function BotInboxSection({
   t,
 }: {
   section: Exclude<InboxSection, 'active'>;
+  flush?: boolean | undefined;
   spaced: boolean;
   items: BotAttentionItem[];
   sourceLabel: (item: BotAttentionItem) => string;
@@ -701,16 +718,25 @@ function BotInboxSection({
       data-section={section}
       open={expanded}
       onToggle={(event) => setExpanded(event.currentTarget.open)}
-      {...stylex.props(styles.inboxGroup, spaced && styles.inboxSpaced)}
+      {...stylex.props(
+        styles.inboxGroup,
+        spaced && styles.inboxSpaced,
+        flush && styles.flushInboxGroup,
+      )}
     >
       <GroupHeading
+        flush={flush}
         summary
         quiet
         label={name}
         expanded={expanded}
         count={<Tag tone="neutral">{items.length}</Tag>}
       />
-      <SidebarCardList label={name} className={stylex.props(styles.inboxList).className}>
+      <SidebarCardList
+        flush={flush}
+        label={name}
+        className={stylex.props(styles.inboxList, flush && styles.flushInboxList).className}
+      >
         {items.map((item) => (
           <BotInboxItemRow
             key={item.id}
@@ -724,7 +750,7 @@ function BotInboxSection({
     </details>
   );
 }
-function BotInboxEntry({ actions, t, botSlug }: ChannelSidebarEntryProps): ReactElement {
+function BotInboxEntry({ actions, t, botSlug, flush }: ChannelSidebarEntryProps): ReactElement {
   const state = useClientState();
   const inbox = state.botInbox;
   const layout = useSyncExternalStore(
@@ -773,7 +799,7 @@ function BotInboxEntry({ actions, t, botSlug }: ChannelSidebarEntryProps): React
       {layout === 'time' ? (
         <>
           {sections.active.length === 0 ? null : (
-            <SidebarCardList label={t('inbox.section.active')}>
+            <SidebarCardList flush={flush} label={t('inbox.section.active')}>
               {sections.active.map((item) => (
                 <BotInboxItemRow
                   key={item.id}
@@ -788,6 +814,7 @@ function BotInboxEntry({ actions, t, botSlug }: ChannelSidebarEntryProps): React
           {(['snoozed', 'done'] as const).map((section) =>
             sections[section].length === 0 ? null : (
               <BotInboxSection
+                flush={flush}
                 key={section}
                 section={section}
                 spaced={
@@ -803,7 +830,14 @@ function BotInboxEntry({ actions, t, botSlug }: ChannelSidebarEntryProps): React
         </>
       ) : (
         [...groups.entries()].map(([key, group]) => (
-          <BotInboxGroup key={key} name={group.name} items={group.items} actions={actions} t={t} />
+          <BotInboxGroup
+            flush={flush}
+            key={key}
+            name={group.name}
+            items={group.items}
+            actions={actions}
+            t={t}
+          />
         ))
       )}
       {inbox.nextCursor !== undefined && botSlug !== undefined ? (
@@ -1068,7 +1102,7 @@ export function createChannelSidebarBuiltinTabs(
   return [
     {
       id: 'conversation',
-      icon: 'messages-square',
+      icon: 'messages-circle',
       label: t('tab.conversation'),
       order: 1,
       scope: 'personabot',
@@ -1136,7 +1170,7 @@ export function createChannelSidebarBuiltins(
     {
       id: 'sessions',
       tab: 'conversation',
-      icon: 'terminal',
+      icon: 'text-quote',
       label: t('entry.sessions'),
       order: 10,
       scope: 'personabot',

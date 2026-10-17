@@ -342,6 +342,36 @@ export function OnboardingWelcome({
 
 function onboardingTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
   const ownSidebar = botModeSidebarViewport();
+  if (document.querySelector('[data-workspace-enabled]'))
+    return [
+      {
+        selector: '.bh-workspace-rail',
+        title: t('onboarding.tour.rail.title'),
+        description: t('onboarding.tour.rail.hint'),
+      },
+      {
+        selector: '[data-dock-panel="bh:channels"]',
+        fallback: '.bh-workspace-rail [data-pinned-panel="bh:channels"]',
+        title: t('onboarding.tour.channels.title'),
+        description: t('onboarding.tour.channels.hint'),
+      },
+      {
+        selector: '[data-dock-panel="bh:channel-body"]',
+        fallback: '.bh-workspace-rail [data-pinned-panel="bh:channel-body"]',
+        title: t('onboarding.tour.messages.title'),
+        description: t('onboarding.tour.messages.hint'),
+      },
+      {
+        selector: '[data-workspace-enabled]',
+        title: t('onboarding.tour.panels.title'),
+        description: t('onboarding.tour.panels.hint'),
+      },
+      {
+        selector: '.bh-workspace-rail [data-pinned-panel="sessions"]',
+        title: t('onboarding.tour.tools.title'),
+        description: t('onboarding.tour.tools.hint'),
+      },
+    ];
   return [
     {
       selector: '[data-onboarding-welcome]',
