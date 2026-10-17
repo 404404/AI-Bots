@@ -865,3 +865,9 @@ deepseekbot release-restart --confirm
 这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
 
 受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。
+
+## Tob 群组删除与附件上传
+
+`deepseekbot group-delete <channel-id> --confirm [--expected-channel <fingerprint>]` 为所有成员结束群组，取消待处理邀请和申请，保留历史与 Bot。Tob 必须传入 `channel` 返回的最新指纹，仍有 Human 群组权限，并经显式确认与 Host 审批。审核期间发生变化返回 `stale-channel`；结果不确定时先读取当前状态，不得盲目重试删除。
+
+`deepseekbot attachment-upload --file <canonical-regular-file> [--upload-id <UUID-v4>]` 通过现有认证附件服务上传最多 25 MiB 的本地文件，输出元数据和 SHA-256；上传不会发送消息。含符号链接、非常规文件、超限或读取期间变化的文件会被拒绝。Human CLI 可省略 ID 自动生成，需保存返回的 ID 用于重试。Tob 必须提供稳定 UUID-v4，并经仅显示文件名、大小和摘要的审批。Host 接收文件字节，不会按调用者指定的路径读取 Host 文件。相同 ID 携带不同内容或名称会被拒绝；匹配的已保存上传返回同一文件身份。修改原文件、向外部发送仍需原有独立权限。

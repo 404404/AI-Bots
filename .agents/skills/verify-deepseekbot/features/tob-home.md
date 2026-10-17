@@ -114,3 +114,12 @@ Bounded phases are `seed`, `mute-pin`, `nickname`, `hide`, `show`, `deny`, `stal
 - A native turn may already be running when it receives a new Human message. Correlate completion using fresh tool-call IDs, command, handled Human delivery and a real reply; a turn start timestamp earlier than the prompt is not a failed operation.
 - Tool trace arguments/results are bounded summaries. Keep commands short and invoke the CLI directly so discovery, settings and coded refusal checks are visible; record full canonical Session evidence separately if a summary is truncated.
 - `accept` resumes an existing pending approval without sending a new Human message. A new prompt may supersede the original source, so use a fresh phase only after the prior operation settles.
+
+
+## Group end and local attachment upload (#2090)
+
+Run `scripts/e2e-tob-channel-transfer.mjs` on a task-owned Web Host through `BH_E2E_INSTANCE`; Desktop runs require the parent-coordinated `BH_DESKTOP_CDP` and private `BH_E2E_HUMAN_INSTANCE`. Phases `delete`, `deny`, `stale`, `upload`, `direct` can be run independently, or `journey` covers all. `BH_E2E_TRANSFER_FIXTURE` loads saved `transfer-fixture.json`; after an external same-Profile restart, `restart-read` rechecks retained Groups/history and attachment references.
+
+The Group journey creates only synthetic groups. Real Tob Shell `group-delete --confirm --expected-channel` must request a fresh Human decision even with full access or saved rules. Accept removes the group from the visible roster; deny and a concurrent Human rename preserve it. Read back `channels` and `channel-history` independently. The upload journey asks Tob to create a named synthetic text file in its own directory, then use native Shell `attachment-upload --file --upload-id` without sending the attachment. Inspect name/size/SHA-256 approval and retained file identity, validate it through the existing composer owner, and preserve the actual reply and console evidence. Direct Human CLI upload, same-ID replay and changed-content refusal are separate checks.
+
+The script does not itself restart a Host or open native Desktop. Screenshots prove the rendered approval/result; composer readback proves attachment availability, not an external delivery or original-file edit. Runtime phases remain unverified until run at the candidate head. No external IM message is sent.

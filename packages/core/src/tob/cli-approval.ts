@@ -21,6 +21,7 @@ export async function approveTobCliOperation(options: {
   const requireHumanReview = [
     'release-install',
     'release-restart',
+    'group-delete',
     'bot-delete-confirm',
     'bot-delete-retry',
   ].includes(command);

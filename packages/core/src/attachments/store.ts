@@ -35,6 +35,7 @@ export interface AttachmentStore {
     name?: string;
     signal?: AbortSignal;
     uploadId?: string;
+    authorize?: () => void;
   }): Promise<ChannelAttachmentRef>;
   acquire(input: {
     uploadId: string;

@@ -11,6 +11,7 @@ import type {
 const NAMESPACE = 'botharness-client';
 const FIELD = 'assignmentConcurrencyLimit';
 const MAX_BODY_BYTES = 3 * 1024 * 1024;
+const UPLOAD_BODY_BYTES = Math.ceil((25 * 1024 * 1024) / 3) * 4 + 16 * 1024;
 const SMALL_BODY_BYTES = 16 * 1024;
 const GROUP_AVATAR_BODY_BYTES = 256 * 1024;
 const IMAGE_COMMANDS = new Set([
@@ -21,6 +22,11 @@ const IMAGE_COMMANDS = new Set([
   'group-avatar-set',
 ]);
 const CODES = new Set([
+  'attachments-unavailable',
+  'invalid-ref',
+  'too-large',
+  'not-found',
+  'corrupt',
   'tob-authority-required',
   'human-dm-required',
   'stale-setting',
@@ -167,7 +173,7 @@ async function body(request: IncomingMessage): Promise<{ value: unknown; bytes: 
   for await (const chunk of request) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     length += bytes.length;
-    if (length > MAX_BODY_BYTES) refuse('request-too-large');
+    if (length > UPLOAD_BODY_BYTES) refuse('request-too-large');
     chunks.push(bytes);
   }
   try {
@@ -223,14 +229,16 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       authorize();
       const received = await body(request);
       const input = object(received.value);
-      keys(input, ['command', 'args']);
       const commandBodyLimit =
-        input.command === 'group-avatar-set'
-          ? GROUP_AVATAR_BODY_BYTES
-          : IMAGE_COMMANDS.has(String(input.command))
-            ? MAX_BODY_BYTES
-            : SMALL_BODY_BYTES;
+        input.command === 'attachment-upload'
+          ? UPLOAD_BODY_BYTES
+          : input.command === 'group-avatar-set'
+            ? GROUP_AVATAR_BODY_BYTES
+            : IMAGE_COMMANDS.has(String(input.command))
+              ? MAX_BODY_BYTES
+              : SMALL_BODY_BYTES;
       if (received.bytes > commandBodyLimit) refuse('request-too-large');
+      keys(input, ['command', 'args']);
       const args = object(input.args);
       authorize();
       let value: unknown;

@@ -65,6 +65,11 @@ export interface ChannelManagementResult extends ChannelManagementSnapshot {
 }
 export interface ChannelManagementService {
   snapshot(channelId: string): ChannelManagementSnapshot;
+  deleteGroup(input: ChannelManagementEditInput): {
+    channelId: string;
+    deleted: true;
+    historyPreserved: true;
+  };
   wakePolicies(channelId: string): ChannelManagementSnapshot;
   rename(input: ChannelManagementRenameInput): ChannelManagementSnapshot;
   setAvatar(input: ChannelManagementAvatarInput): ChannelManagementSnapshot;
@@ -172,6 +177,7 @@ export function createChannelManagement(options: {
   registry: Pick<PersonaBotRegistry, 'get'>;
   isProtectedBot: (slug: string) => boolean;
   autoAcceptGroupInvitations?: () => boolean;
+  onDeleted?: (channelId: string) => void;
   onInvitation?: (dmChannelId: string, invitationId: string) => void;
   onJoinDecision?: (dmChannelId: string, requestId: string) => void;
 }): ChannelManagementService {
@@ -377,6 +383,13 @@ export function createChannelManagement(options: {
   };
   return {
     snapshot,
+    deleteGroup(input) {
+      const before = edit(input, []);
+      current(before);
+      channels.deleteGroup(input.channelId);
+      options.onDeleted?.(input.channelId);
+      return { channelId: input.channelId, deleted: true, historyPreserved: true };
+    },
     wakePolicies: humanSnapshot,
     rename(input) {
       if (

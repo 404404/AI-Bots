@@ -1115,8 +1115,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.humanNameSet({ displayName }));
   }
 
-  channelGroupDelete(channelId: string): { deleted: boolean } {
-    return unwrap(this.methods.channelGroupDelete({ channelId }));
+  channelGroupDelete(channelId: string, expectedChannel?: string): { deleted: boolean } {
+    return unwrap(this.methods.channelGroupDelete({ channelId, expectedChannel }));
   }
 
   channelHistory(): { channels: ChannelHistoryItem[] } {

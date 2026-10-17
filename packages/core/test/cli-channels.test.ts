@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { realpathSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -23,8 +23,31 @@ async function host(
   media?: { status: number; body: Uint8Array | string },
 ) {
   const calls: Array<{ method: string; args: Record<string, unknown> }> = [];
+  const uploads: Array<{
+    url: string;
+    authorized: boolean;
+    contentType: string | undefined;
+    bytes: Buffer;
+  }> = [];
   const downloads: Array<{ url: string; authorized: boolean }> = [];
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (req.url?.startsWith('/api/botharness/attachment/upload?')) {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const bytes = Buffer.concat(chunks);
+      uploads.push({
+        url: req.url,
+        authorized: req.headers.cookie === 'authority=signed',
+        contentType: req.headers['content-type'],
+        bytes,
+      });
+      res.writeHead(200, { 'content-type': 'application/json' }).end(
+        JSON.stringify({
+          attachment: { fileId: 'file:ac501275-f752-44d6-8d5f-82e7c8b50ab2', size: bytes.length },
+        }),
+      );
+      return;
+    }
     if (media && req.url?.startsWith('/api/botharness/attachment?')) {
       downloads.push({ url: req.url, authorized: req.headers.cookie === 'authority=signed' });
       res
@@ -57,7 +80,7 @@ async function host(
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('missing address');
-  return { url: `http://127.0.0.1:${address.port}`, calls, downloads };
+  return { url: `http://127.0.0.1:${address.port}`, calls, downloads, uploads };
 }
 
 async function invoke(argv: string[], url: string, stdin = '') {
@@ -573,4 +596,43 @@ it('reads and explicitly toggles Group send review through the live CLI', async 
   expect(
     (await invoke(['group-send-review', 'group', '--accept', '--off'], live.url)).code,
   ).not.toBe(0);
+});
+
+describe('direct Human attachment transfer', () => {
+  it('uploads raw bytes with authentication, stable UUID and one metadata JSON response', async () => {
+    const live = await host(ok);
+    const root = mkdtempSync(join(tmpdir(), 'cli-upload-'));
+    const file = join(realpathSync(root), 'qa.txt');
+    writeFileSync(file, 'synthetic transfer');
+    const result = await invoke(
+      ['attachment-upload', '--file', file, '--upload-id', 'ac501275-f752-44d6-8d5f-82e7c8b50ab2'],
+      live.url,
+    );
+    expect(result.code).toBe(0);
+    expect(result.json).toMatchObject({
+      attachment: { size: 18 },
+      uploadId: 'ac501275-f752-44d6-8d5f-82e7c8b50ab2',
+      sha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+    });
+    expect(live.uploads).toEqual([
+      {
+        url: '/api/botharness/attachment/upload?name=qa.txt&uploadId=ac501275-f752-44d6-8d5f-82e7c8b50ab2',
+        authorized: true,
+        contentType: 'application/octet-stream',
+        bytes: Buffer.from('synthetic transfer'),
+      },
+    ]);
+    expect(
+      (
+        await invoke(
+          ['group-delete', 'qa', '--confirm', '--expected-channel', 'a'.repeat(64)],
+          live.url,
+        )
+      ).code,
+    ).toBe(0);
+    expect(live.calls.at(-1)).toEqual({
+      method: 'channelGroupDelete',
+      args: { channelId: 'qa', expectedChannel: 'a'.repeat(64) },
+    });
+  });
 });
