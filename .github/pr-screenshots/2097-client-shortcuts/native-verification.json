@@ -9,27 +9,16 @@
         "id": "botharness.panel.p62-68-3a-68-6f-6d-65",
         "binding": {
           "code": "KeyH",
-          "modifiers": [
-            "alt",
-            "shift",
-            "meta"
-          ]
+          "modifiers": ["alt", "shift", "meta"]
         },
         "modified": false,
-        "keys": [
-          "⌥",
-          "⇧",
-          "⌘",
-          "H"
-        ]
+        "keys": ["⌥", "⇧", "⌘", "H"]
       },
       {
         "id": "botharness.navigation.quick-switcher",
         "binding": {
           "code": "KeyK",
-          "modifiers": [
-            "primary"
-          ]
+          "modifiers": ["primary"]
         },
         "modified": false,
         "keys": "⌘K"
@@ -44,19 +33,10 @@
         "id": "botharness.panel.p62-68-3a-68-6f-6d-65",
         "binding": {
           "code": "KeyU",
-          "modifiers": [
-            "alt",
-            "shift",
-            "meta"
-          ]
+          "modifiers": ["alt", "shift", "meta"]
         },
         "modified": true,
-        "keys": [
-          "⌥",
-          "⇧",
-          "⌘",
-          "U"
-        ]
+        "keys": ["⌥", "⇧", "⌘", "U"]
       },
       {
         "id": "botharness.navigation.quick-switcher",
