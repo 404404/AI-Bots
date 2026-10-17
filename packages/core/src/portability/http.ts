@@ -1,3 +1,4 @@
+import type { ProfileBackupReviewContext } from './review.js';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -8,6 +9,7 @@ import {
   exportProfileBackup,
   inspectProfileBackup,
   profileBackupPreview,
+  profileBackupReviewSignature,
   PROFILE_BACKUP_LIMITS,
   type ProfileBackupSource,
 } from './package.js';
@@ -44,9 +46,16 @@ export function createProfileBackupHttp(
   catalog: ModelCatalog,
 ) {
   let exporting = false;
-  const plans = new Map<string, { signature: string; expires: number }>();
+  const plans = new Map<
+    string,
+    { signature: string; expires: number; context?: ProfileBackupReviewContext }
+  >();
   const preview = () => profileBackupPreview(source);
-  return async (request: Request, authorize?: () => void): Promise<Response> => {
+  return async (
+    request: Request,
+    authorize?: () => void,
+    reviewContext?: ProfileBackupReviewContext,
+  ): Promise<Response> => {
     let authorityError: unknown;
     const checkAuthority = () => {
       try {
@@ -67,7 +76,20 @@ export function createProfileBackupHttp(
         const token = randomUUID();
         for (const [id, plan] of plans) if (plan.expires < Date.now()) plans.delete(id);
         if (plans.size >= 32) plans.delete(plans.keys().next().value!);
-        plans.set(token, { signature: JSON.stringify(value), expires: Date.now() + 5 * 60_000 });
+        const context = reviewContext
+          ? Object.freeze({
+              sessionId: reviewContext.sessionId,
+              sourceEventIds: Object.freeze([...reviewContext.sourceEventIds]),
+              ...(reviewContext.callIds
+                ? { callIds: Object.freeze([...reviewContext.callIds]) }
+                : {}),
+            })
+          : undefined;
+        plans.set(token, {
+          signature: profileBackupReviewSignature(source, context),
+          expires: Date.now() + 5 * 60_000,
+          ...(context ? { context } : {}),
+        });
         return Response.json({ ...value, token }, { headers });
       }
       if (request.method !== 'POST') return new Response(null, { status: 405, headers });
@@ -138,8 +160,27 @@ export function createProfileBackupHttp(
       }
       if (action !== '') return new Response(null, { status: 404, headers });
       const value = JSON.parse((await body(request, 4096)).toString('utf8'));
+      checkAuthority();
       const plan = plans.get(value.token);
-      if (!plan || plan.expires < Date.now() || plan.signature !== JSON.stringify(preview()))
+      let context = plan?.context;
+      if (context) {
+        if (
+          !reviewContext ||
+          context.sessionId !== reviewContext.sessionId ||
+          JSON.stringify([...context.sourceEventIds].sort()) !==
+            JSON.stringify([...reviewContext.sourceEventIds].sort())
+        )
+          throw new ProfileBackupError('preview-stale', 'Review execution changed');
+        context = {
+          ...context,
+          callIds: [...new Set([...(context.callIds ?? []), ...(reviewContext.callIds ?? [])])],
+        };
+      }
+      if (
+        !plan ||
+        plan.expires < Date.now() ||
+        plan.signature !== profileBackupReviewSignature(source, context)
+      )
         throw new ProfileBackupError(
           'preview-stale',
           'Environment changed; review a fresh preview',
@@ -150,7 +191,9 @@ export function createProfileBackupHttp(
       exporting = true;
       try {
         const destination = join(stage, 'environment.botharness-backup');
+        checkAuthority();
         const result = await exportProfileBackup(source, destination, { signal: request.signal });
+        checkAuthority();
         return new Response(new Uint8Array(readFileSync(destination)), {
           headers: {
             ...headers,

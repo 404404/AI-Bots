@@ -322,9 +322,15 @@ async function target() {
   );
   return fixture;
 }
+async function tobTrace(slug) {
+  const owned = await rpc('sessions', { slug });
+  return owned.sessions.some((session) => session.role === 'orchestrator')
+    ? rpc('botToolTrace', { slug, turns: 20 })
+    : { turns: [] };
+}
 async function tob() {
   const home = await rpc('tobHome');
-  const before = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+  const before = await tobTrace(home.botSlug);
   const old = new Set(before.turns.flatMap((t) => t.calls).map((c) => c.callId));
   const previous = await rpc('channelMessages', { channelId: home.channelId });
   const oldMessages = new Set(previous.messages.map((m) => m.id));
@@ -356,7 +362,7 @@ async function tob() {
       approved = true;
       mark('real Tob export received explicit fresh Human approval');
     }
-    const trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+    const trace = await tobTrace(home.botSlug);
     const calls = trace.turns.flatMap((t) => t.calls).filter((c) => !old.has(c.callId));
     const shells = calls.filter((c) => ['bash', 'pwsh'].includes(c.name));
     const has = (command) =>
