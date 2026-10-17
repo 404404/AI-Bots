@@ -662,8 +662,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   modelPlanCustomize(
     slug: string,
     orchestrator: ModelRoute,
+    expectedRevision?: number,
   ): Promise<{ plan: PersonaBotModelPlan }> {
-    return unwrapAsync(this.methods.modelPlanCustomize({ slug, orchestrator }));
+    return unwrapAsync(this.methods.modelPlanCustomize({ slug, orchestrator, expectedRevision }));
   }
 
   modelPlanAssignmentsSet(
@@ -1156,9 +1157,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     channelId?: string,
     limit?: number,
     cursor?: string,
-    sort?: 'newest' | 'oldest',
+    sort?: 'newest' | 'oldest' | 'mentions-first',
     snoozed?: boolean,
     kind?: 'auto-rejection',
+    search?: string,
+    unreadOnly?: boolean,
+    queryVersion?: number,
   ): HumanAttentionPage {
     return unwrap(
       this.methods.humanAttention({
@@ -1170,6 +1174,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
         sort,
         snoozed,
         kind,
+        search,
+        unreadOnly,
+        queryVersion,
       }),
     );
   }

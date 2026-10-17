@@ -13,11 +13,11 @@
     },
     {
       "id": "desktop.activity-center.idle-personabot",
-      "label": "Show one idle PersonaBot with no sessions or actions",
+      "label": "Historical Overview idle PersonaBot (presentation retired by #2026)",
       "source": "packages/client/src/client/activity-center-panel.tsx",
       "guide": ".agents/skills/verify-deepseekbot/features/activity-center-idle.md",
       "task": 1972,
-      "gap": null
+      "gap": "The Overview entry and Show idle Bots control were removed by #2026. The retained recipe and script document historical behavior and cannot qualify current Activity Center UI."
     },
     {
       "id": "desktop.bot-mode.entry",
@@ -473,6 +473,21 @@
       "source": "packages/client/src/client/composer-context-bar.tsx",
       "guide": ".agents/skills/verify-deepseekbot/features/composer-footer.md",
       "task": 1958,
+      "gap": null
+    },
+    {
+      "id": "orchestrator-model-switch",
+      "label": "Orchestrator-only quick model switching with Assignment inheritance",
+      "source": "packages/client/src/client/dm-composer-context.tsx",
+      "task": 2000,
+      "guide": ".agents/skills/verify-deepseekbot/features/orchestrator-model-switch.md"
+    },
+    {
+      "id": "desktop.activity-center.inline-tool-approval",
+      "label": "Decide Tool approvals inline on the full page and Dock, with below-card context and retry",
+      "source": "packages/client/src/client/activity-approval.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/activity-inline-approval.md",
+      "task": 2026,
       "gap": null
     }
   ],
@@ -1051,7 +1066,7 @@
       "behaviors": ["desktop.usage"],
       "reason": "Existing execution fixture Bot required; browser period/model/child filtering agrees with Profile usage reads.",
       "task": 1967,
-      "sha256": "83a34c03eceed0933835353a07768fbd009204ca065977fe242acc3007cb3bdf"
+      "sha256": "1a41b06be4aa8e3107c74868efb0e99bb9dd87017955fc2b3b15702566bbf2c9"
     },
     {
       "path": "scripts/e2e-fresh-profile-install.mjs",
@@ -1075,7 +1090,7 @@
       "behaviors": ["desktop.group.activity"],
       "reason": "Task group and live model; measures header/profile state and overflow against Host activity snapshot.",
       "task": 1967,
-      "sha256": "e9a64187ae6fda5f1bd01451591c14448ecec242e4d57bf1cb0a82b26bc343be"
+      "sha256": "102a56f34894cbd603700a35e3221075dee85b6cc0e831410bcf06c92221e64d"
     },
     {
       "path": "scripts/e2e-group-assignment-activity.mjs",
@@ -1083,7 +1098,7 @@
       "behaviors": ["desktop.group.activity", "desktop.assignment.lifecycle"],
       "reason": "#124 real native timer and Group reply; layout and successful Assignment result precede committed completion.",
       "task": 1967,
-      "sha256": "44be2db1cc61a329173fed19dba54dd3c0c6ebc8a4bde2b34a24a999e72f8147"
+      "sha256": "594d95d7c486377ecd72beaf45fd4654470dca1042a2e547b5f94de2b4790d1d"
     },
     {
       "path": "scripts/e2e-group-assignment-proof.mjs",
@@ -1139,7 +1154,7 @@
       "behaviors": ["desktop.group.activity"],
       "reason": "#124 live tool and model; full/reduced motion matrix, overflow and completion ordering in Group header/profile.",
       "task": 1967,
-      "sha256": "e947294f11a38bd60224d1fa73dfb60fff0f73cade1e9181f7175b4cef1a6244"
+      "sha256": "f03dc611942e8d4d0aa0157d438b53022cbbe5f1ea7be3c1e7c74fab367b063b"
     },
     {
       "path": "scripts/e2e-group-motion-proof.mjs",
@@ -1155,7 +1170,7 @@
       "behaviors": ["desktop.group.manage"],
       "reason": "Task Group messages; aggregate counts and heatmap, reject DM misuse and render Group identity.",
       "task": 1967,
-      "sha256": "7f152651c5d6f9cc9a9d8582c105d0d23437aca661cb63560d184982102a9a03"
+      "sha256": "4be71ce14cb8c48e223699c5d971a75f4305440bd789c16e6a49284b7af541bb"
     },
     {
       "path": "scripts/e2e-group-shell-proof.mjs",
@@ -1247,11 +1262,11 @@
     },
     {
       "path": "scripts/e2e-inbox-tool-approval.mjs",
-      "category": "historical-regression",
-      "behaviors": ["desktop.inbox.requests"],
-      "reason": "#550 real native tool approvals; one allow/reject audit, other Bot independence and stale decision refusal.",
-      "task": 1967,
-      "sha256": "90d2b8495c708a65b17dcf5ecc52c196809ac2cbc6b3130526d67f89b182f6de"
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Task-owned isolated Host with two real pending native requests; validates exact harmless marker commands, page failed-response retry/allow/native file effect, Dock reject, context, focus safety, canonical audit and light/dark evidence. Does not qualify other request kinds or multi-window stale UI.",
+      "task": 2026,
+      "sha256": "6145ee06184f09742dc846febda0d6615da9bc4f4a81fab2de1e984979b20268"
     },
     {
       "path": "scripts/e2e-informational-attention.mjs",
@@ -1353,9 +1368,9 @@
       "path": "scripts/e2e-mobile-routines-web.mjs",
       "category": "mapped",
       "behaviors": ["phone.routines"],
-      "reason": "Own task Host and Expo Web export; routine mutations/history in Web, scheduler/model and native layers separate.",
-      "task": 1967,
-      "sha256": "e29724093fff370ef0a621c5784ec4715e46b3eb24b176b3349a10a653cf2f13"
+      "reason": "Own task Host and Expo Web export; verifies routine mutation/history, explicit selected routine IDs and preview dates against the Host. Drives visible controls after return completes, pins selector locale and formats expected dates in the browser; uses the Windows package-manager adapter. Native gestures and scheduler/model execution are separate.",
+      "task": 2028,
+      "sha256": "48702c190e4584f5265e7fe8832940b344d8d7b3d58c0c0dfd9607b8e3cf96f0"
     },
     {
       "path": "scripts/e2e-mobile-android-interactions.mjs",
@@ -1403,7 +1418,7 @@
       "behaviors": ["desktop.usage", "desktop.model.routing"],
       "reason": "Real model selection and native usage compared with Profile totals and theme/refresh; requires usable catalog route.",
       "task": 1967,
-      "sha256": "45a499b7a200b17a3111e0efa6c61d802eba9829388dc13901323e4a682b9747"
+      "sha256": "74bdf0052bbee85bd3ba8a6fe07891a4bc7191ace208cf9cdfe2698bf0e949df"
     },
     {
       "path": "scripts/e2e-orchestrator-activity.mjs",
@@ -1467,7 +1482,7 @@
       "behaviors": ["desktop.usage"],
       "reason": "Prepared task profile; browser hover tooltip geometry/screenshot only, not model or full usage qualification.",
       "task": 1967,
-      "sha256": "e2771c342d21b6104118c511d3d29d2e7fb422a482808a98193032e317f8307b"
+      "sha256": "44262146478902c348881ebbd88af4e640d13b83d1f08973c013501c38cd4ed1"
     },
     {
       "path": "scripts/e2e-question-attention.mjs",
@@ -1499,7 +1514,7 @@
       "behaviors": ["desktop.usage"],
       "reason": "Prepared real execution Bot and source logs; temporarily removes/restores owned logs to verify retained usage projection.",
       "task": 1967,
-      "sha256": "98acd015f3d03bebd917808347d3003bd9f47da897f2d0a555089b88ca82ccdb"
+      "sha256": "ca929e7b343afddc54d4937b50bd2a11f983bdc2eee99014cc7ad57db9b87f3f"
     },
     {
       "path": "scripts/e2e-roster-live.mjs",
@@ -1572,6 +1587,14 @@
       "reason": "Dedicated temporary sample outside Host data; actual Web Grant authorization, direct attachment-import read, explicit CLI revocation, same-read denial and before/after visible evidence. No model/native file tool/Shell security claim.",
       "task": 1974,
       "sha256": "4d06c35370b6a936c644e5f662d33644f30201a3203a92f6fbefebb0cefc0cf4"
+    },
+    {
+      "path": "scripts/e2e-panel-workspace.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.bot-mode.entry", "desktop.bot-mode.dock"],
+      "reason": "Runs qualified Web/macOS workspace movement, spacing, shortcut routing, persistence and exit restoration against a real isolated Client.",
+      "task": 2017,
+      "sha256": "859674cc509501f8e47f3788c853171d6dc2af7dd78da45a51fa0442680f6c72"
     }
   ],
   "native": [

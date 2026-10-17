@@ -1,3 +1,4 @@
+import { PointerMenu } from './ds/pointer-menu.js';
 import { useRef, useState, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
 
@@ -7,7 +8,6 @@ import {
   IconNewChatOutlineRegular,
   IconPlusOutlineRegular,
   IconTrashOutlineRegular,
-  Menu,
   Tag,
   Tooltip,
   type MenuEntry,
@@ -655,14 +655,12 @@ function MembersEntryForChannel({
         );
       })}
       {group && selectedMember ? (
-        <span className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
-          <Menu
-            open
-            portal
+        <span hidden>
+          <PointerMenu
+            point={menu}
             dense
             autoFocus
             anchor={<span ref={proxy} aria-hidden="true" />}
-            getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
             items={menuItems}
             onSelect={(id) => {
               setMenu(undefined);

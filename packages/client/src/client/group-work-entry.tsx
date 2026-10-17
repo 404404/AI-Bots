@@ -11,7 +11,7 @@ import { LoadingSkeleton } from './loading-skeleton.js';
 import { useMountedResource } from './mounted-resource.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { GroupHeading } from './ds/group-heading.js';
-import { Note } from './ds/note.js';
+import { PanelEmptyState } from './ds/empty-state.js';
 import { color, space } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
@@ -133,9 +133,7 @@ function GroupWorkPanel({ channelId, actions, t }: ChannelSidebarEntryProps): Re
         <div className="bh-error">{t('groupWork.error', { error: load.error })}</div>
       ) : null}
       {load.status === 'ready' && load.assignments.length === 0 ? (
-        <Note tone="subtle" inset>
-          {t('groupWork.empty')}
-        </Note>
+        <PanelEmptyState icon="list-checks">{t('groupWork.empty')}</PanelEmptyState>
       ) : null}
       {grouped.map(({ group, rows }) => {
         const collapsible = group === 'done';

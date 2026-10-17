@@ -1,3 +1,4 @@
+import { PanelEmptyState } from './ds/empty-state.js';
 import { createContext, useContext, useState, type ReactElement } from 'react';
 import { attachmentIdentity } from '../../../core/src/attachments/ref.js';
 import type { BridgeActions } from './actions.js';
@@ -122,7 +123,7 @@ function GeneratedFilesPanel({
         </div>
       )}
       {botSlug && !loading && error === undefined && files.size === 0 ? (
-        <p className="bh-generated-files-empty">{t('generatedFiles.empty')}</p>
+        <PanelEmptyState icon="file">{t('generatedFiles.empty')}</PanelEmptyState>
       ) : null}
       <ul className="bh-generated-files-list">
         {[...files].map(([id, file]) => (
@@ -160,7 +161,7 @@ export function createGeneratedFilesPanel(
   return {
     id: 'generated-files',
     title: t('generatedFiles.title'),
-    icon: 'archive',
+    icon: 'file',
     scope: 'channel',
     order: -90,
     defaultPosition: { zone: 'right' },

@@ -826,6 +826,51 @@ window.__ModuleLoader__.load({
 		* PERFORMANCE OF THIS SOFTWARE.
 		*/
 		const glyphs = {
+			hash: [
+				["line", {
+					x1: "4",
+					x2: "20",
+					y1: "9",
+					y2: "9"
+				}],
+				["line", {
+					x1: "4",
+					x2: "20",
+					y1: "15",
+					y2: "15"
+				}],
+				["line", {
+					x1: "10",
+					x2: "8",
+					y1: "3",
+					y2: "21"
+				}],
+				["line", {
+					x1: "16",
+					x2: "14",
+					y1: "3",
+					y2: "21"
+				}]
+			],
+			"messages-circle": [["path", { d: "M19.95 10.05a7 7 0 011.412 7.872 1 1 0 00-.058.787l.675 2.089a1 1 0 01-1.236 1.168l-2.155-.631a1 1 0 00-.745.06 7 7 0 01-7.793-1.445" }], ["path", { d: "M2.696 12.708a1 1 0 00-.058-.785 7 7 0 113.518 3.473 1 1 0 00-.744-.061l-2.155.63a1 1 0 01-1.236-1.167z" }]],
+			"text-quote": [
+				["path", { d: "M17 5H3" }],
+				["path", { d: "M21 12H8" }],
+				["path", { d: "M21 19H8" }],
+				["path", { d: "M3 12v7" }]
+			],
+			brain: [
+				["path", { d: "M12 18V5" }],
+				["path", { d: "M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" }],
+				["path", { d: "M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" }],
+				["path", { d: "M17.997 5.125a4 4 0 0 1 2.526 5.77" }],
+				["path", { d: "M18 18a4 4 0 0 0 2-7.464" }],
+				["path", { d: "M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" }],
+				["path", { d: "M6 18a4 4 0 0 1-2-7.464" }],
+				["path", { d: "M6.003 5.125a4 4 0 0 0-2.526 5.77" }]
+			],
+			file: [["path", { d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" }], ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5" }]],
+			terminal: [["path", { d: "M12 19h8" }], ["path", { d: "m4 17 6-6-6-6" }]],
 			archive: [
 				["rect", {
 					width: "20",
@@ -1196,9 +1241,10 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region packages/client/src/client/sidebar-card.tsx
-		function SidebarCardList({ label, className, listRef, children }) {
+		function SidebarCardList({ label, className, listRef, flush = false, children }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 				ref: listRef,
+				"data-flush": flush || void 0,
 				className: className === void 0 ? "bh-card-list" : "bh-card-list " + className,
 				"aria-label": label,
 				children
@@ -1332,7 +1378,7 @@ window.__ModuleLoader__.load({
 			"settings.containerDriver": "容器驱动",
 			"settings.driver.current": "默认",
 			"settings.driver.agent-browser": "agent-browser（试用）",
-			"settings.section": "Browser",
+			"settings.section": "浏览器控制",
 			"settings.target": "操作目标",
 			"settings.local": "本机 Browser",
 			"settings.container": "Docker Browser",

@@ -2,7 +2,6 @@ import type {
   PersonaBotAttention,
   PersonaBotSessionActivity,
 } from '../../../core/src/state/bot-state.js';
-import type { ActivityOverview } from '../../../core/src/bridge/methods.js';
 import type { PersonaBotToolActivity } from '../../../core/src/state/tool-activity.js';
 import type { PersonaBotActivityState } from './avatar.js';
 import type { AvatarAppearance } from '../../../core/src/bots/avatar-appearance.js';
@@ -351,7 +350,7 @@ export interface HumanInboxState {
 export type ConversationSelection =
   | { kind: 'bot'; slug: string; profile?: true }
   | { kind: 'channel'; channelId: string }
-  | { kind: 'inbox'; view?: 'overview' };
+  | { kind: 'inbox' };
 
 export interface ConversationTimeline {
   olderCursor: string | null;
@@ -490,11 +489,6 @@ export interface ClientState {
   sessions: SessionsState;
   botInbox: BotInboxState;
   humanInbox: HumanInboxState;
-  overview: {
-    status: ClientStatus;
-    value: ActivityOverview | undefined;
-    error: string | undefined;
-  };
   activitySync: 'live' | 'stale';
   git: GitAvailability | undefined;
 }
@@ -539,7 +533,6 @@ export interface ClientStore {
   ): void;
   setSessions(patch: Partial<SessionsState>): void;
   setBotInbox(patch: Partial<BotInboxState>): void;
-  setOverview(patch: Partial<ClientState['overview']>): void;
   setHumanInbox(patch: Partial<HumanInboxState>): void;
 }
 
@@ -602,7 +595,7 @@ function sameSelection(
 ): boolean {
   if (left === right) return true;
   if (left === undefined || right === undefined) return false;
-  if (left.kind === 'inbox' && right.kind === 'inbox') return left.view === right.view;
+  if (left.kind === 'inbox' && right.kind === 'inbox') return true;
   if (left.kind === 'bot' && right.kind === 'bot')
     return left.slug === right.slug && left.profile === right.profile;
   if (left.kind === 'channel' && right.kind === 'channel')
@@ -672,7 +665,6 @@ export function createStore(): ClientStore {
     conversation: initialConversation(),
     sessions: initialSessions(),
     botInbox: initialBotInbox(),
-    overview: { status: 'idle', value: undefined, error: undefined },
     humanInbox: initialHumanInbox(),
     activitySync: 'live',
     git: undefined,
@@ -836,9 +828,6 @@ export function createStore(): ClientStore {
     },
     setBotInbox(patch) {
       update({ botInbox: { ...state.botInbox, ...patch } });
-    },
-    setOverview(patch) {
-      update({ overview: { ...state.overview, ...patch } });
     },
     setHumanInbox(patch) {
       update({ humanInbox: { ...state.humanInbox, ...patch } });

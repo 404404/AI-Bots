@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { ActivityIndicator, Modal, Pressable, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -43,7 +43,14 @@ function CloseButton({ onPress }: { onPress(): void }) {
   );
 }
 
+export interface SheetPageProps {
+  title?: string;
+  subtitle?: string;
+  children: ReactNode;
+}
+
 export function Sheet({
+  page: Page,
   visible,
   label,
   title,
@@ -51,6 +58,7 @@ export function Sheet({
   onClose,
   children,
 }: {
+  page?: ComponentType<SheetPageProps> | undefined;
   visible: boolean;
   label: string;
   title?: string;
@@ -61,6 +69,15 @@ export function Sheet({
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  if (Page !== undefined)
+    return visible ? (
+      <Page
+        {...(title === undefined ? {} : { title })}
+        {...(subtitle === undefined ? {} : { subtitle })}
+      >
+        {children}
+      </Page>
+    ) : null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {visible ? (

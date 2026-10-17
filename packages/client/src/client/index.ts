@@ -1,5 +1,11 @@
+import type {} from '@deepseek-ai/dsh-client-ui-theme/client';
+import { AppearanceSection } from './appearance-settings.js';
+import { KeyboardSettings } from './keyboard-settings.js';
+import { DesktopNotificationSetting } from './notification-settings.js';
 import { createElement } from 'react';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
+import { registerWorkspaceShortcuts } from './workspace-shortcuts.js';
+import type {} from '@deepseek-ai/dsh-client-shortcuts/client';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-client-locale/client';
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client';
@@ -84,7 +90,6 @@ import {
   mountDesktopNotifications,
 } from './desktop-notifications.js';
 import { openHumanAttentionSource } from './human-attention-source.js';
-import { ShortcutHelp, ShortcutHelpView } from './shortcut-help.js';
 import { mountTabTitle } from './tab-title.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
 import { createDockPanelRegistry } from './dock-panels.js';
@@ -141,10 +146,12 @@ export const name = 'botharness-client';
 
 export const inject = [
   'slots',
+  'shortcuts',
   'connection',
   'inputTriggers',
   'layout',
   'locale',
+  'theme',
   'sessions',
   'uiWorkspace',
   'workspaces',
@@ -283,7 +290,6 @@ export function apply(ctx: ClientContext): void {
     ),
   );
   const botSettings = new BotSettings();
-  const shortcutHelp = new ShortcutHelp();
   const desktopNotifications = new DesktopNotificationPrefs(storage, browserNotificationApi());
   const shortcutBindings = new ShortcutBindings(storage);
   ctx.slots.inject('shell.overlay', () =>
@@ -327,17 +333,6 @@ export function apply(ctx: ClientContext): void {
         children: { 'botharness.settings.section': { kind: 'list', scope: 'root' } },
       },
       BotSettingsView,
-    ),
-  );
-  ctx.slots.inject('shell.overlay', () =>
-    ctx.slots.register(
-      {
-        name: 'shell.overlay',
-        id: 'botharness-shortcut-help',
-        locale: LOCALE_NS,
-        inject: () => ({ shortcutHelp, shortcutBindings, ...botModePrefsFace(prefs) }),
-      },
-      ShortcutHelpView,
     ),
   );
   const releaseNotes = new ReleaseNotesController(call, storage);
@@ -405,6 +400,40 @@ export function apply(ctx: ClientContext): void {
   const dockPanels = createDockPanelRegistry();
   ctx.provide('dockPanels', dockPanels);
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
+  const workspace = {
+    actions,
+    companion,
+    channelSidebar,
+    dockPanels,
+    shortcutBindings,
+    prefs,
+    layout: ctx.layout,
+    shortcuts: ctx.shortcuts,
+    registerLayoutSettings: (setTarget: (node: HTMLDivElement | null) => void) =>
+      ctx.slots.inject('botharness.settings.layout', () =>
+        ctx.slots.register(
+          {
+            name: 'botharness.settings.layout',
+            id: 'workspace-layout',
+            order: 5,
+            label: () => t('workspace.appearance'),
+            locale: LOCALE_NS,
+          },
+          () => createElement('div', { ref: setTarget }),
+        ),
+      ),
+    exitBotMode: () => ctx.layout.selectPanel(null),
+    openBotSettings: () => botSettings.open(),
+  };
+
+  ctx.effect(() =>
+    registerWorkspaceShortcuts(
+      ctx.shortcuts,
+      dockPanels,
+      () => document.querySelector('[data-workspace-enabled]') !== null,
+      t,
+    ),
+  );
   ctx.provide('channelSidebar', channelSidebar);
   const profileCards = createProfileCardRegistry();
   ctx.provide('profileCards', profileCards);
@@ -417,7 +446,7 @@ export function apply(ctx: ClientContext): void {
         ...createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
           channelSidebar.register(entry),
         ),
-        dockPanels.register(createActivityCenterPanel(actions, t, nativeSessions)),
+        dockPanels.register(createActivityCenterPanel(actions, t)),
         dockPanels.register(createGeneratedFilesPanel(actions, t)),
       ];
     };
@@ -488,9 +517,12 @@ export function apply(ctx: ClientContext): void {
           ? 'question'
           : undefined;
       if (trigger === undefined) return;
-      if (shortcutHelp.getSnapshot()) {
+      if (
+        botSettings.getSnapshot().open &&
+        botSettings.getSnapshot().sectionId === BOT_SETTINGS_SECTIONS.shortcuts
+      ) {
         event.preventDefault();
-        shortcutHelp.close();
+        botSettings.close();
         return;
       }
       if (
@@ -498,7 +530,7 @@ export function apply(ctx: ClientContext): void {
       )
         return;
       event.preventDefault();
-      shortcutHelp.open();
+      botSettings.open(BOT_SETTINGS_SECTIONS.shortcuts);
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -698,20 +730,65 @@ export function apply(ctx: ClientContext): void {
           order: 0,
           label: () => t('botSettings.section.general'),
           locale: LOCALE_NS,
-          inject: () => ({
-            ...botModePrefsFace(prefs),
-            call,
-            store,
-            onSaved: () => actions.refreshRoster(),
-            actions,
-            closeBotSettings: () => {
-              botSettings.close();
-            },
-            desktopNotifications,
-            shortcutHelp,
-          }),
+          inject: () => ({ actions, closeBotSettings: botSettings.close }),
         },
         GeneralSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.appearance,
+          order: 5,
+          label: () => t('botSettings.section.appearance'),
+          locale: LOCALE_NS,
+          children: { 'botharness.settings.layout': { kind: 'list', scope: 'root' } },
+          inject: () => ({
+            ...botModePrefsFace(prefs),
+            themeSource: {
+              getSnapshot: () => ctx.theme.getTheme(),
+              subscribe: (listener: () => void) => ctx.on('theme/change', listener),
+              set: (value: string) => ctx.theme.setTheme(value),
+            },
+            localeSource: {
+              getSnapshot: () => ctx.locale.getSnapshot(),
+              subscribe: (listener: () => void) => ctx.locale.subscribe(listener),
+              setLocale: (value: string) => ctx.locale.setLocale(value),
+            },
+          }),
+        },
+        AppearanceSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.notifications,
+          order: 21,
+          label: () => t('botSettings.section.notifications'),
+          locale: LOCALE_NS,
+          inject: () => ({ desktopNotifications }),
+        },
+        DesktopNotificationSetting,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.shortcuts,
+          order: 22,
+          label: () => t('shortcuts.title'),
+          locale: LOCALE_NS,
+          inject: () => ({
+            ...botModePrefsFace(prefs),
+            shortcutBindings,
+            shortcuts: ctx.shortcuts,
+          }),
+        },
+        KeyboardSettings,
       ),
     );
     settingsCtx.slots.inject('botharness.settings.section', () =>
@@ -748,7 +825,12 @@ export function apply(ctx: ClientContext): void {
           order: 20,
           label: () => t('botSettings.section.messaging'),
           locale: LOCALE_NS,
-          inject: () => ({ ...botModePrefsFace(prefs), call }),
+          inject: () => ({
+            ...botModePrefsFace(prefs),
+            call,
+            store,
+            onSaved: () => actions.refreshRoster(),
+          }),
         },
         MessagingSection,
       ),
@@ -901,6 +983,7 @@ export function apply(ctx: ClientContext): void {
           prefs,
           releaseNotes,
           telemetryNotice,
+          workspace,
           ...botModePrefsFace(prefs),
           exitBotMode: () => ctx.layout.selectPanel(null),
           openBotSettings: () => botSettings.open(),
@@ -1043,6 +1126,7 @@ export function apply(ctx: ClientContext): void {
             nativeChatT,
             nativeSessions,
             prefs,
+            workspace,
           }),
         },
         BotMain,
@@ -1147,9 +1231,7 @@ export function apply(ctx: ClientContext): void {
                   snapshot.channels.some((channel) => channel.id === selection.channelId)
                 ? actions.openChannel(selection.channelId)
                 : selection?.kind === 'inbox'
-                  ? selection.view === 'overview'
-                    ? actions.openActivityCenter('overview')
-                    : actions.openHumanInbox()
+                  ? actions.openActivityCenter()
                   : undefined;
           void opening?.catch((error: unknown) => {
             ctx.logger.warn('botharness: Bot view restore failed', error);

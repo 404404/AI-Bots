@@ -1,6 +1,6 @@
 # Bot mode entry and the default DeepSeek Bot
 
-Bot mode swaps the native DSH session view for the BotHarness conversation view. On desktop (960 px and wider) it also replaces the whole left column with the Bot mode sidebar (ADR-0203). On the first entry into a fresh Profile, the product creates a default DeepSeek Bot and opens its DM with a welcome letter.
+Bot mode swaps the native DSH session view for the BotHarness conversation view. On qualified Web/macOS windows at least 961px wide it opens the [workspace](bot-mode-dock.md); other shells retain the original Bot mode sidebar fallback (ADR-0203). On the first entry into a fresh Profile, the product creates a default DeepSeek Bot and opens its DM with a welcome letter.
 
 ## Sub-features
 
@@ -16,9 +16,11 @@ Bot mode swaps the native DSH session view for the BotHarness conversation view.
 - Choose `Bot mode` in the global sidebar.
 - On desktop, choose the logo at the top left of the Bot mode sidebar (its accessible name is `Exit Bot mode`) to return to the native view. Between 760 and 960 px wide, the native sidebar stays and `Bot mode` is chosen again instead.
 
+The workspace rail carries the exit control and panel switches; the independent Channel list carries the Roster. Both remain available without a selected Channel.
+
 ## Driving it with verify-app
 
-Preconditions: a fresh instance that passes `doctor`.
+Preconditions: a fresh instance that passes `doctor`. For the qualified workspace run `scripts/e2e-panel-workspace.mjs` as described in [the workspace feature](bot-mode-dock.md); the old sidebar journey below applies to fallback shells only.
 
 - **Enter.** Run `node scripts/verify-app.mjs shot bot-mode --name <n> --bot-mode`. The ARIA file has `StaticText "Messages"` and `button "Bot settings"`.
 - **Default Bot.** Run the same command a second time. The ARIA file has a button whose name starts with `DeepSeek Bot`, a `textbox "Message DeepSeek Bot"` and `button "Create Bot"`.

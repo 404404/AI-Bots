@@ -1,36 +1,61 @@
-# Bot mode dock (desktop layout)
+# Bot mode workspace and dock
 
-On a desktop-width window (961px and wider), Bot mode lays out the Channel body and the Channel sidebar entries as Dock panels. The Bot mode App Sidebar occupies the native-sized column outside the dock; see [bot-mode.md](bot-mode.md). Narrower windows keep the overlay Channel sidebar.
+At 961px and wider on a qualified rc.2 Web/macOS shell, the workspace contains a full-height control rail, independent Channel list, one closable Messages panel and Dock panels. Unsupported shells and Windows captions keep the legacy sidebar/dock fallback.
 
 ## Sub-features
 
-- `default-layout` opens the Channel body with Sessions above Bot Inbox on the right. Other panels start closed.
-- `panels-menu` appears at the top right of the Channel body only while the App Sidebar is collapsed. It lists every registered panel, reopens a closed one where it was, and has `Reset layout`. With the App Sidebar expanded, use its pinned panel cards.
-- `dock-panels-service` lets another plugin `inject(['dockPanels'])` and `register({ id, title, icon, scope, defaultPosition, order, component })`. A `global` panel keeps its content and place when the active Channel changes; a `channel` panel receives the active Channel. `open`, `close`, `toggle`, `isOpen` and `openPanels` drive the mounted layout.
-- `pinned-cards` toggles any panel from its card in the Bot mode sidebar; `activity-center` is a built-in `global` panel opened from the first card.
-- `close` closes any panel except the Channel body.
-- `drag-split` drags a panel by its header to split beside another panel or the layout edge. A drop on a panel's center is refused, so panels never become tabs.
-- `persist` saves the layout to `localStorage` key `botharness.bot-mode-layout` (versioned dockview serialization) and restores it on reload.
-- `narrow` falls back to the overlay sidebar below 961px and returns to the dock when widened.
+- `workspace-shell`: native sidebar allocation is released only in Bot mode and restored on exit, narrow layout or disposal.
+- `control-rail`: exactly one nonclosable full-height rail; move left/right/between root columns using its grip/menu. No half-height, tabs or floating placement.
+- `channel-list`: global panel retains Roster selection and actions; close/reopen remembers its neighbor.
+- `shortcuts`: native sidebar command toggles the Channel list while active, and resumes native behavior after exit. DSH keyboard settings customize each panel command; verify a changed binding after reload, then reset it in the isolated profile.
+- `spacing`: continuous 0–16px slider, default 4px; original dark background, slightly lighter panels, small round corners and a smaller header/body gap.
+- `persist`: version 2 of `botharness.bot-mode-layout` holds proportional geometry, parked panels, gap, switch order and member split preferences; v1 migrates without discarding custom layout.
+- `messages`: close/reopen and refresh preserve visibility; group header opens Members as an internal resizable split, absent in DMs.
+- `switch-order`: drag switches or use Alt+Up/Down; order survives refresh.
+- `live-content`: moving rail/panels or dragging the companion preserves mounted content and unsent drafts.
+- `empty-states`: Sessions, Inbox, Channels search, files, schedules, group work and Messages use a centered panel icon above their description; loading/errors stay distinct. Workspace content has 2px on each side, with no doubled native-sidebar inset. Check empty → populated and window resizing.
+- `global-panels`: Activity Center opens before or after selecting a Channel. Channel-scoped panels without a Channel show an empty state.
+- `macos-chrome`: only the traffic-light corner gets clearance; other panels start at the top. Move the rail to every column and verify native window dragging, fullscreen and restored native layout.
+- `fallback`: below 961px retain the responsive UI without overwriting the saved workspace.
 
 ## How to get to it (user POV)
 
-- Enter Bot mode in a window at least 961px wide and open any Channel.
-- Use the pinned panel cards in the expanded App Sidebar, or collapse the App Sidebar to reveal the `Panels` button at the top right of the Channel body. Each panel also has its own close button.
+Enter Bot mode. Use the rail’s panel switches, grip menu, bottom settings control and top DSB exit control. Drag Channel headers to rearrange panels. Bot Settings → Appearance → Workspace layout contains the continuous spacing slider and Reset layout. The grip retains its original icon/button styling above Settings, hidden until hover or keyboard focus. Channels header owns Search, list options and Create; expanded Search aligns both edges with Channel row backgrounds without clipping, including narrow panels; the windowed macOS top-left header retains its traffic-light clearance; the body does not repeat the Messages heading. Workspace panel headers have no close buttons: use rail switches. Right-click a Bot DM, verify the menu tracks viewport pointer coordinates and opens the full profile detail view directly; repeat with Messages closed and verify it reopens and activates with the requested Bot. The header’s View profile opens the same detail view without a popover or profile-card pin controls; Back/Escape returns to chat. Chinese shows 频道列表 and 查看资料.
 
 ## Driving it with verify-app
 
-Preconditions: a fresh instance that passes `doctor`.
+Launch a task-owned rc.2 Host and run doctor. Seed one Bot DM and one Group Channel so Alt+1/2 can exercise distinct Channels. Then run:
 
-- **Default layout.** Run `node scripts/verify-app.mjs shot dock --name <n> --bot-mode`. The ARIA file has `region "Bot mode layout"`, `button "Close Sessions"` and `button "Close Bot Inbox"`, and no close button for the Channel body. With the App Sidebar expanded there is no visible `Panels` button; its pinned cards still toggle panels.
-- **Collapsed menu.** Click `Collapse sidebar`: `Panels` appears. Open it, then expand with `Open sidebar`: the trigger and open menu disappear. Collapse again to reopen the menu; panel selections and positions stay unchanged. Also resize across the native responsive collapse boundary while keeping the desktop dock active.
-- **Close and reopen.** Add `--click "Collapse sidebar" --click "Close Bot Inbox" --click Panels --click "Bot Inbox"`. Bot Inbox is back below Sessions.
-- **Narrow.** `shot` captures at 1440px. From a Puppeteer script, `page.setViewport({ width: 900, height: 800 })` after Bot mode loads: the ARIA tree has no `region "Bot mode layout"` and the old sidebar toggle is back. Widen again and the dock returns.
-- **Plugin panel.** In the page, after Bot mode loads, register a test panel through the Client context the way a plugin does, then open it from `Panels`. The panel's title is in the menu and its header has `Close <title>`. Switch Channels: a `global` panel stays put.
-- **Canonical state.** The layout is browser state, not Host state: read `localStorage.getItem('botharness.bot-mode-layout')` from the page. `version` is `1` and `layout.panels` lists the open panels.
+```sh
+BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-panel-workspace.mjs
+```
+
+The script enters Bot mode, presses the sidebar shortcut, moves the rail right and between columns, drags Channels (Web), changes gap to 0/16/12, reorders rail switches with a visible insertion line and dimmed dragged switch (including a drop after the last switch), closes and reopens Channels and Messages, opens Activity Center, refreshes, verifies proportional resizing (Web), crosses the narrow threshold and exits. It checks visible geometry, canonical localStorage and restored native sidebar width, and saves screenshots, results and page errors in a unique attempt directory.
+
+For native macOS, install the task Bundle into a separate rc.2 Desktop Profile and connect with `BH_DESKTOP_CDP=http://127.0.0.1:<task-debug-port>` using the same command. This uses the existing `dsh-app:` page; never navigate the native window to a Web URL or fake `data-platform`. Desktop diagnostics availability differs from the Web verification launcher, so native proof uses actual UI, geometry and localStorage. Keep the task Desktop foreground: rc.2 deliberately ignores native shortcuts from an unfocused app. Desktop defaults to ⌘B; macOS Web uses ⌘⌥B. Customized bindings, traffic-light hit targets, fullscreen and window dragging need supplemental native checks. A Web group fixture must open Members from the Messages header, resize the inner split, then reload and verify the saved ratio. Drag the visible Window Companion and confirm the existing message DOM stays connected. rc.2 has no sidebar-toggle menu item; do not claim a nonexistent menu path.
 
 ## Gotchas
 
-- `shot` has no drag action. Drag and drop uses HTML5 drag events, which plain `page.mouse` moves in headless Chromium never fire. Drive drags from a Puppeteer script with `page.setDragInterception(true)`, then `page.mouse.drag(from, to)`, `dragEnter`, `dragOver` and `drop` at a point near the target's edge.
-- A drop near the top of a panel header resolves to a split on the layout edge, not a tab. That is expected.
-- The layout is one per browser, not per Channel. In a group Channel, the DM panels (Sessions, Bot Inbox) stay open and show `Nothing to show for this Channel.`, and Members starts closed.
+- A successful layout command unit test is not proof of native shortcut dispatch. Preserve native failures separately from Web evidence.
+- Select the visible `.bh-workspace-rail` when querying pinned cards: the fallback sidebar remains mounted but hidden.
+- The slider and its SettingsRow share an accessible name; target the slider role/input rather than the group.
+- Human feedback is required after this slice before extending the full panel matrix. Windows and Linux Desktop are not qualified by macOS evidence.
+- Legacy `scripts/e2e-bot-mode-sidebar.mjs` tests the old fallback surface. Use the workspace journey for the qualified wide-shell path.
+
+- When reordering rail switches, check both themes: the blue insertion line tracks the upper/lower half and gaps, clears on leaving or cancelling, and never toggles a Panel. Alt+Up/Down remains available; refresh preserves the resulting order.
+
+- `channel-switch-stability`: Alt+1/2 and roster clicks change the active Channel without replacing the control rail, Channel list or Activity Center DOM. Channel-specific transient search/menu/profile state resets; per-Channel drafts stay separate. Test loading → ready and repeated store updates as well as switching back.
+
+
+- `settings-navigation`: the rail gear opens Bot Settings. Search its sidebar for “spacing” / “间距” from General, select the result, and verify Appearance scrolls to the highlighted slider. Search results must only reference registered pages. Repeat at 600px using the same search above the page picker; no horizontal overflow.
+- `settings-preferences`: Appearance owns the DSH-native Light/Dark/System preference and language, plus motion, Bot icon and layout. Change theme/language and reload to verify native persistence. Messaging owns default name, Enter/Shift+Enter/Ctrl-or-Command+Enter send behavior, and IM defaults; it no longer repeats Channel sorting. Notifications has its own page. Browser/Computer navigation is 浏览器控制/电脑控制 in Chinese.
+- `settings-shortcuts`: open Keyboard shortcuts, filter Panel and conversation commands, edit a Panel binding, reload and verify its keycaps and dispatch, then reset. Conflicts/reserved keys and failed saves must retain the accepted binding. Bot help shortcut opens this page without a second modal. Native recorder interception still requires actual Desktop qualification.
+- `settings-tour`: General → Onboarding tutorial → Show me around starts driver.js over the Control Rail, Channels, Messages, workspace resizing and additional Panels. Hidden Channels/Messages use their visible rail switches as targets. Finishing or cancelling returns control; narrow layout retains its original tutorial.
+
+- `panel-visibility-menus`: right-click the Control Rail (or Shift+F10 while focused). Each row has the Panel icon, label and trailing checked/unchecked box. Hiding Sessions removes its switch and closes its Panel without replacing Messages; refresh preserves the hidden choice. Checking it again restores only the switch; click it to reopen the Panel. Right-click a Panel header → Close removes the Panel but retains its switch. Escape cancels either menu. Hover a switch to see its name and native shortcut keycaps outside the rail; edit the binding in Keyboard shortcuts and confirm both the tooltip and actual dispatch update. Reset layout restores all default switches.
+
+- `pointer-menu-position`: the workspace script measures Panel-header and Channel-row menus at 100% / 125% CSS zoom (within one rendered pixel), then right/bottom edge clamping and Escape dismissal. Native Desktop positioning is separately qualified. Every Control Rail Panel is opened in turn: verify its header menu at normal scale, Escape focus restoration, Shift+F10 anchoring, and Close removing only that Panel while keeping its switch and parked layout position. Other Panel headers must stay mounted. All pointer menus share `ds/PointerMenu`; feature code must not correct coordinates locally.
+
+- `scrollbar-activity`: scroll Messages and another overflow area independently. The active thumb appears immediately, begins fading after 800ms and is hidden by 1000ms; hover alone does not reveal it. Verify no content-width shift, a second scroll cancels the previous fade, reduced motion skips interpolation, and native dragging still works. Check light/dark and leave Bot mode to verify cleanup. The workspace journey asserts numeric thumb visibility and DOM identity.
+
+For headless scrollbar evidence, launch Puppeteer with `ignoreDefaultArgs: ['--hide-scrollbars']`: its default flag suppresses painted native thumbs and native dragging even when computed thumb colors look correct. Compare actual scrolling/idle screenshots as well as computed alpha and geometry.

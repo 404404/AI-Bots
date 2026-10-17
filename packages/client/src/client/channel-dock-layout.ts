@@ -8,7 +8,8 @@ import type {
 import type { DockPanelPosition } from './dock-panels.js';
 
 export const CHANNEL_DOCK_STORAGE_KEY = 'botharness.bot-mode-layout';
-export const CHANNEL_DOCK_LAYOUT_VERSION = 1;
+export const CHANNEL_DOCK_LAYOUT_VERSION = 2;
+export const DEFAULT_WORKSPACE_GAP = 4;
 export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
 export const CHANNEL_BODY_COMPONENT = 'channel-body';
@@ -24,6 +25,10 @@ export interface DockPosition {
 
 export interface StoredChannelDock {
   readonly version: typeof CHANNEL_DOCK_LAYOUT_VERSION;
+  readonly gap?: number | undefined;
+  readonly order?: readonly string[] | undefined;
+  readonly hiddenControls?: readonly string[] | undefined;
+  readonly members?: { open: boolean; ratio: number } | undefined;
   readonly layout: SerializedDockview;
   readonly parked: Readonly<Record<string, DockPosition>>;
 }
@@ -67,13 +72,37 @@ export function readChannelDock(
     const raw = storage?.getItem(CHANNEL_DOCK_STORAGE_KEY);
     if (raw === null || raw === undefined) return undefined;
     const value: unknown = JSON.parse(raw);
-    if (!isRecord(value) || value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) return undefined;
+    if (
+      !isRecord(value) ||
+      (value['version'] !== 1 && value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION)
+    )
+      return undefined;
     if (!isLayout(value['layout'])) return undefined;
     const parked = isRecord(value['parked'])
       ? Object.fromEntries(Object.entries(value['parked']).filter(([, entry]) => isPosition(entry)))
       : {};
     return {
       version: CHANNEL_DOCK_LAYOUT_VERSION,
+      gap:
+        typeof value['gap'] === 'number' && Number.isFinite(value['gap'])
+          ? Math.min(16, Math.max(0, Math.round(value['gap'])))
+          : DEFAULT_WORKSPACE_GAP,
+      order: Array.isArray(value['order'])
+        ? [...new Set(value['order'].filter((id): id is string => typeof id === 'string'))]
+        : [],
+      hiddenControls: Array.isArray(value['hiddenControls'])
+        ? [...new Set(value['hiddenControls'].filter((id): id is string => typeof id === 'string'))]
+        : [],
+      members: isRecord(value['members'])
+        ? {
+            open: value['members']['open'] === true,
+            ratio:
+              typeof value['members']['ratio'] === 'number' &&
+              Number.isFinite(value['members']['ratio'])
+                ? Math.min(0.6, Math.max(0.2, value['members']['ratio']))
+                : 0.3,
+          }
+        : { open: false, ratio: 0.3 },
       layout: value['layout'],
       parked: parked as Record<string, DockPosition>,
     };
@@ -175,7 +204,10 @@ export function pruneChannelDock(
   const root = prune(layout.grid.root as GridNode, horizontal);
   for (const id of Object.keys(layout.panels))
     if (!keep(id) && parked[id] === undefined) parked[id] = { direction: 'right' };
-  if (root === undefined || !collectPanels(root).includes(CHANNEL_BODY_PANEL))
+  if (
+    root === undefined ||
+    !collectPanels(root).some((id) => id === CHANNEL_BODY_PANEL || id === 'bh:workspace-rail')
+  )
     return { layout: undefined, parked };
   for (const group of layout.floatingGroups ?? [])
     for (const id of group.data?.views ?? []) parked[id] ??= { direction: 'right' };
@@ -211,11 +243,16 @@ export function resolveDockPosition(
   if (remembered?.neighbor !== undefined && api.getPanel(remembered.neighbor) !== undefined)
     return { referencePanel: remembered.neighbor, direction: remembered.direction };
   const column = api.panels.filter(
-    (panel) => panel.id !== CHANNEL_BODY_PANEL && panel.api.location.type === 'grid',
+    (panel) =>
+      panel.id !== CHANNEL_BODY_PANEL &&
+      panel.id !== 'bh:workspace-rail' &&
+      panel.api.location.type === 'grid',
   );
   const last = column.at(-1);
   if (last !== undefined) return { referencePanel: last.id, direction: 'below' };
-  return { referencePanel: CHANNEL_BODY_PANEL, direction: 'right' };
+  return api.getPanel(CHANNEL_BODY_PANEL)
+    ? { referencePanel: CHANNEL_BODY_PANEL, direction: 'right' }
+    : { direction: 'right' };
 }
 
 export function resolveDefaultPosition(
@@ -227,8 +264,13 @@ export function resolveDefaultPosition(
   if (anchor !== undefined && api.getPanel(anchor) !== undefined)
     return { referencePanel: anchor, direction: zone === 'bottom' ? 'right' : 'below' };
   if (zone === 'left') return { direction: 'left' };
-  if (zone === 'bottom') return { direction: 'below' };
-  if (zone === 'center') return { referencePanel: CHANNEL_BODY_PANEL, direction: 'below' };
+  if (zone === 'bottom' && !api.getPanel('bh:workspace-rail')) return { direction: 'below' };
+  if (zone === 'bottom' || zone === 'center') {
+    const target =
+      api.getPanel(CHANNEL_BODY_PANEL) ??
+      api.panels.find((panel) => panel.id !== 'bh:workspace-rail');
+    return target ? { referencePanel: target.id, direction: 'below' } : { direction: 'right' };
+  }
   return resolveDockPosition(api, undefined);
 }
 
