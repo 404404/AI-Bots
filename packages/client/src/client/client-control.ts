@@ -118,6 +118,7 @@ export function createClientPreferenceHandlers(input: {
     };
     return {
       scope: 'browser-origin',
+      persistence: input.notifications.persisted() ? 'confirmed' : 'unavailable',
       value,
       stateFingerprint: preferenceState(value),
       fields: {
@@ -159,7 +160,18 @@ export function createClientPreferenceHandlers(input: {
                   : `permission-${state.permission}`,
               changed: false,
             };
-          await input.notifications.setEnabled(patch.notifications === true);
+          await input.notifications.setEnabled(patch.notifications === true, false);
+          const saved = input.notifications.getSnapshot();
+          if (patch.notifications === true && saved.permission !== 'granted')
+            return {
+              ...snapshot(),
+              outcome:
+                saved.permission === 'default'
+                  ? 'permission-pending'
+                  : `permission-${saved.permission}`,
+              changed: false,
+            };
+          if (saved.enabled !== patch.notifications) throw new Error('client-outcome-uncertain');
         } else {
           const state = input.notifications.getSnapshot();
           if (state.permission === 'default')

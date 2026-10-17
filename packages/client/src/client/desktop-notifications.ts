@@ -62,10 +62,9 @@ export class DesktopNotificationPrefs {
 
   persisted(): boolean {
     try {
-      return (
-        this.#storage?.getItem(DESKTOP_NOTIFICATIONS_KEY) ===
-        (this.#snapshot.enabled ? 'on' : 'off')
-      );
+      if (!this.#storage) return false;
+      const stored = this.#storage.getItem(DESKTOP_NOTIFICATIONS_KEY);
+      return this.#snapshot.enabled ? stored === 'on' : stored === null || stored === 'off';
     } catch {
       return false;
     }
@@ -81,14 +80,14 @@ export class DesktopNotificationPrefs {
     if (permission !== this.#snapshot.permission) this.#set({ ...this.#snapshot, permission });
   }
 
-  readonly setEnabled = async (enabled: boolean): Promise<void> => {
+  readonly setEnabled = async (enabled: boolean, requestPermission = true): Promise<void> => {
     if (!enabled) {
       this.#persist(false);
       return;
     }
     if (this.api === undefined) return;
     let permission = this.api.permission();
-    if (permission === 'default') {
+    if (permission === 'default' && requestPermission) {
       try {
         permission = await this.api.requestPermission();
       } catch {
