@@ -930,6 +930,9 @@ Bot 生命周期。未选定目标返回 `memory-target-denied`；归档、删�
 数据。通过正常 Assignment Report 报告 Bot/文件/修订与 partial/unavailable 状态，不自动把完整
 历史复制到 Tob Memory。
 
+创建和撤销要求当前轮仅有 Human 私聊来源。若同轮还接纳了 Assignment 生命周期来源，则拒绝
+`human-dm-required`；等待 Tob 完成本轮，再发一条新的私聊请求。
+
 委托 Memory Assignment 的每次 Shell 调用只接受一条字面的 `deepseekbot` 命令。受限 Consumer
 仅携带 broker 上下文，在进程内调用随产品交付的 CLI，不执行操作系统 Shell。原始命令、解释器、
 命令替换、重定向、文件工具与 Subagent 均不可用。目标身份在审核前固定，创建时再次比对。
