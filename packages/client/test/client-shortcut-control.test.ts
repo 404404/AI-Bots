@@ -250,3 +250,35 @@ it('the shared persistence owner compares queued revisions before the second wri
     f.owner.dispose();
   }
 });
+
+it('restores the navigation default while preserving browser and navigation restrictions', async () => {
+  const f = await fixture();
+  try {
+    const change = async (patch: Record<string, unknown>) => {
+      const before = (await f.handlers.get('shortcuts')!({})) as { stateFingerprint: string };
+      return f.handlers.get('shortcuts-set')!({
+        scope: 'client-profile',
+        expectedState: before.stateFingerprint,
+        patch: { profile: 'web:macos', ...patch },
+      });
+    };
+    const id = navigationShortcutId('quick-switcher');
+    expect(await change({ id, type: 'disable' })).toMatchObject({ outcome: 'applied' });
+    expect(await change({ id, type: 'reset' })).toMatchObject({ outcome: 'applied' });
+    expect(f.navigation.isDisabled('quick-switcher')).toBe(false);
+    expect(f.navigation.binding('quick-switcher').code).toBe('KeyK');
+    expect(
+      await change({ id, type: 'set', binding: { code: 'KeyR', modifiers: ['primary'] } }),
+    ).toMatchObject({ outcome: 'refused', reason: 'reserved' });
+    expect(
+      await change({
+        id: f.ids[0],
+        type: 'set',
+        binding: { code: 'KeyK', modifiers: ['primary'] },
+      }),
+    ).toMatchObject({ outcome: 'refused', reason: 'unsupported-browser' });
+    expect(f.edit).not.toHaveBeenCalled();
+  } finally {
+    f.owner.dispose();
+  }
+});

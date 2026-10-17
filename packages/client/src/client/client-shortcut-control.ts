@@ -103,7 +103,8 @@ export function createClientShortcutHandlers(
           } catch {
             return refused('unsupported-key');
           }
-          if (check.issue) return refused(check.issue, check.conflicts);
+          if (check.issue && !(legacyId && check.issue === 'unsupported-browser'))
+            return refused(check.issue, check.conflicts);
           const nativeConflicts = check.conflicts.filter((id) => id !== patch.id);
           if (nativeConflicts.length) return refused('conflict', nativeConflicts);
           const normalized = check.binding!;
