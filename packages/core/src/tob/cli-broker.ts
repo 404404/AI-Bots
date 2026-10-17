@@ -87,6 +87,7 @@ const CODES = new Set([
   'git-not-found',
   'memory-unavailable',
   'client-target-required',
+  'client-proof-required',
   'unknown-client-target',
   'no-connected-client',
   'client-target-replaced',

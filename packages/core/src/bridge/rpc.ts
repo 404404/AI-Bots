@@ -592,8 +592,30 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrapAsync(this.methods.messagingSend({ slug, grantId, requestId, text }));
   }
 
-  clientControl(payload: unknown): Promise<unknown> {
-    return unwrapAsync(this.methods.clientControl(payload));
+  clientControl(
+    action: string,
+    target?: unknown,
+    kind?: string,
+    id?: string,
+    result?: unknown,
+    scope?: string,
+    patch?: unknown,
+    expectedState?: string,
+    proof?: string,
+    ownerProof?: string,
+  ): Promise<unknown> {
+    const peerId = this.ctx.invocation?.peer.id;
+    if (['register', 'poll', 'complete'].includes(action) && !peerId)
+      throw toRemoteError({
+        code: 'client-proof-required',
+        message: 'Authenticated Client Peer required',
+      });
+    return unwrapAsync(
+      this.methods.clientControl(
+        { action, target, kind, id, result, scope, patch, expectedState, proof, ownerProof },
+        peerId,
+      ),
+    );
   }
 
   tobHome() {
@@ -1229,21 +1251,28 @@ export class BotharnessBridgeService extends TypertRemoteService {
     grantRequestResolution?: ChannelMessage['grantRequestResolution'],
     assignmentReply?: ChannelMessage['assignmentReply'],
     allBotMention?: AllBotMention,
+    clientTarget?: import('../client-control/contracts.js').ClientTarget,
+    clientProof?: string,
   ): Promise<{ message: ChannelMessage }> {
     return unwrap(
-      await this.methods.channelSend({
-        channelId,
-        body,
-        ...(allBotMention === undefined ? {} : { allBotMention }),
-        ...(replyTo === undefined ? {} : { replyTo }),
-        ...(attachments === undefined ? {} : { attachments }),
-        ...(messageId === undefined ? {} : { messageId }),
-        ...(memorySwitchTarget === undefined ? {} : { memorySwitchTarget }),
-        ...(mentions === undefined ? {} : { mentions }),
-        ...(channelRefs === undefined ? {} : { channelRefs }),
-        ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
-        ...(assignmentReply === undefined ? {} : { assignmentReply }),
-      }),
+      await this.methods.channelSend(
+        {
+          channelId,
+          body,
+          ...(allBotMention === undefined ? {} : { allBotMention }),
+          ...(clientTarget === undefined ? {} : { clientTarget }),
+          ...(clientProof === undefined ? {} : { clientProof }),
+          ...(replyTo === undefined ? {} : { replyTo }),
+          ...(attachments === undefined ? {} : { attachments }),
+          ...(messageId === undefined ? {} : { messageId }),
+          ...(memorySwitchTarget === undefined ? {} : { memorySwitchTarget }),
+          ...(mentions === undefined ? {} : { mentions }),
+          ...(channelRefs === undefined ? {} : { channelRefs }),
+          ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
+          ...(assignmentReply === undefined ? {} : { assignmentReply }),
+        },
+        this.ctx.invocation?.peer.id,
+      ),
     );
   }
 

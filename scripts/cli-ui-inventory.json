@@ -23,7 +23,10 @@
       "id": "client-control-identity",
       "description": "Nonconfigurable per-tab dispatch identity and per-mount generation; not a preference or authorization grant.",
       "scope": "Client tab",
-      "surfaces": ["storage:packages/client/src/client/client-control.ts:setItem(key)"],
+      "surfaces": [
+        "storage:packages/client/src/client/client-control.ts:setItem(key)",
+        "storage:packages/client/src/client/client-control.ts:setItem(secretKey)"
+      ],
       "configurable": false,
       "exemption": "Ephemeral routing identity; preference commands use discovered exact target rather than editing it."
     },

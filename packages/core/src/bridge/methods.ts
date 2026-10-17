@@ -465,7 +465,7 @@ export interface MessagingAppsView {
 }
 
 export interface BridgeMethods {
-  clientControl(payload: unknown): Promise<BridgeResult<unknown>>;
+  clientControl(payload: unknown, clientPeer?: string): Promise<BridgeResult<unknown>>;
   tobHome(
     payload: unknown,
   ): Promise<BridgeResult<TobHome & { attention?: { unreadCount: number; hasAction: boolean } }>>;
@@ -605,7 +605,10 @@ export interface BridgeMethods {
   ): BridgeResult<{ messages: ChannelMessage[]; nextCursor?: string }>;
   channelMessages(payload: unknown): BridgeResult<{ messages: ChannelMessage[]; revision: number }>;
   channelAllBotPreview(payload: unknown): BridgeResult<AllBotPreview>;
-  channelSend(payload: unknown): Promise<BridgeResult<{ message: ChannelMessage }>>;
+  channelSend(
+    payload: unknown,
+    clientPeer?: string,
+  ): Promise<BridgeResult<{ message: ChannelMessage }>>;
   channelSendStatus(payload: unknown): BridgeResult<ChannelSendStatus>;
   botAttention(payload: unknown): BridgeResult<BotAttentionPage>;
   botSourcePolicies(payload: unknown): BridgeResult<{ policies: BotSourcePolicy[] }>;
@@ -1871,17 +1874,28 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         };
       });
     },
-    async clientControl(payload) {
+    async clientControl(payload, clientPeer) {
       if (!deps.clientControl) return unavailable();
       const input = asObject(payload);
       try {
         let value: unknown;
-        if (input['action'] === 'register')
-          value = deps.clientControl.register(input['target'], input['kind']);
-        else if (input['action'] === 'poll') value = deps.clientControl.poll(input['target']);
-        else if (input['action'] === 'complete')
+        if (input['action'] === 'register') {
+          if (typeof input['proof'] !== 'string' || typeof input['ownerProof'] !== 'string')
+            throw new TobError('client-proof-required');
+          value = deps.clientControl.register(
+            input['target'],
+            input['kind'],
+            input['proof'],
+            input['ownerProof'],
+            clientPeer,
+          );
+        } else if (input['action'] === 'poll') {
+          deps.clientControl.requireOrigin(input['target'], input['proof'], clientPeer);
+          value = deps.clientControl.poll(input['target']);
+        } else if (input['action'] === 'complete') {
+          deps.clientControl.requireOrigin(input['target'], input['proof'], clientPeer);
           value = deps.clientControl.complete(input['target'], input['id'], input['result']);
-        else if (input['action'] === 'targets') value = { targets: deps.clientControl.targets() };
+        } else if (input['action'] === 'targets') value = { targets: deps.clientControl.targets() };
         else if (input['action'] === 'preferences')
           value = await deps.clientControl.request(input['target'], 'preferences', {});
         else if (input['action'] === 'preferences-set')
@@ -4230,14 +4244,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const value = deps.channels.humanSendStatus?.(channelId, messageId);
       return value === undefined ? invalidInput('Unknown Human DM request') : { ok: true, value };
     },
-    async channelSend(payload) {
+    async channelSend(payload, clientPeer) {
       const source = asObject(payload);
       const clientTarget = source['clientTarget'];
       if (clientTarget !== undefined) {
         if (!isClientTarget(clientTarget)) return invalidInput('Invalid Client target');
         try {
           if (!deps.clientControl) throw new TobError('client-control-unavailable');
-          deps.clientControl.require(clientTarget);
+          deps.clientControl.requireOrigin(clientTarget, source['clientProof'], clientPeer);
         } catch (error) {
           const code = error instanceof TobError ? error.code : 'client-target-required';
           return { ok: false, error: { code, message: code } };

@@ -18,7 +18,7 @@ afterEach(() => {
 it('requires an explicit live incarnation and routes to one Client', async () => {
   const service = fixture();
   expect(() => service.require(a)).toThrow('no-connected-client');
-  service.register(a, 'web');
+  service.register(a, 'web', 'private-first-proof', 'private-owner-proof');
   service.register(b, 'web');
   const read = service.request(a, 'preferences', {});
   expect(service.poll(b).commands).toEqual([]);
@@ -27,7 +27,7 @@ it('requires an explicit live incarnation and routes to one Client', async () =>
   await expect(read).resolves.toEqual({ selected: 'a' });
   expect(service.poll(a).commands).toEqual([]);
   const newer = { ...a, generation: 'generation-new' };
-  service.register(newer, 'web');
+  service.register(newer, 'web', 'private-next-proof', 'private-owner-proof');
   expect(() => service.require(a)).toThrow('client-target-replaced');
 });
 it('rechecks authority immediately before dispatch and never repeats delivered writes', async () => {
@@ -131,4 +131,48 @@ it('parser rejects implicit targets and model-supplied current generations', asy
       true,
     ),
   ).toMatchObject({ args: { current: true, patch: { notifications: false } } });
+});
+
+it('requires the private mount proof for source attribution without disclosing it in discovery', () => {
+  const service = fixture();
+  const proof = 'private-client-proof';
+  service.register(a, 'web', proof);
+  expect(service.targets()).toEqual([{ ...a, kind: 'web', scope: 'client' }]);
+  expect(() => service.requireOrigin(a, undefined)).toThrow('client-proof-required');
+  expect(() => service.requireOrigin(a, 'wrong-proof')).toThrow('client-proof-required');
+  expect(service.requireOrigin(a, proof)).toEqual(a);
+  expect(() => service.register(a, 'web', 'different-private-proof')).toThrow(
+    'client-proof-required',
+  );
+});
+
+it('rejects discovered-id takeover and old-generation resurrection even with another authenticated registration', () => {
+  const service = fixture();
+  service.register(a, 'web', 'private-first-proof', 'private-owner-proof');
+  const newer = { ...a, generation: 'generation-newer' };
+  expect(() =>
+    service.register(newer, 'web', 'attacker-mount-proof', 'attacker-owner-proof'),
+  ).toThrow('client-proof-required');
+  expect(service.require(a)).toEqual(a);
+  service.register(newer, 'web', 'private-next-proof', 'private-owner-proof');
+  expect(() => service.register(a, 'web', 'private-first-proof', 'private-owner-proof')).toThrow(
+    'client-target-replaced',
+  );
+  expect(service.require(newer)).toEqual(newer);
+});
+
+it('binds current attribution and polling proof to the transport Peer rather than wire-supplied identity', () => {
+  const service = fixture();
+  service.register(a, 'web', 'private-mount-proof', 'private-owner-proof', 'peer-a');
+  expect(() => service.requireOrigin(a, 'private-mount-proof', 'peer-b')).toThrow(
+    'client-proof-required',
+  );
+  expect(() => service.requireOrigin(a, 'private-mount-proof')).toThrow('client-proof-required');
+  expect(service.requireOrigin(a, 'private-mount-proof', 'peer-a')).toEqual(a);
+  expect(() =>
+    service.register(a, 'web', 'private-mount-proof', 'private-owner-proof', 'peer-b'),
+  ).toThrow('client-proof-required');
+  const newer = { ...a, generation: 'generation-newer' };
+  service.register(newer, 'web', 'next-private-proof', 'private-owner-proof', 'peer-b');
+  expect(service.requireOrigin(newer, 'next-private-proof', 'peer-b')).toEqual(newer);
 });
