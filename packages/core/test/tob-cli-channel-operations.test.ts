@@ -432,3 +432,199 @@ describe('reviewed Group settings and member removal', () => {
     ).rejects.toMatchObject({ code: 'not-group-channel' });
   });
 });
+
+describe('reviewed invitation cancellation and join decisions', () => {
+  function decisionFixture() {
+    const f = fixture();
+    const group = f.core.channels.createGroup({ name: 'Decisions', members: ['research'] });
+    const args = (patch: Record<string, unknown>): Record<string, unknown> => ({
+      channelId: group.id,
+      expectedChannel: f.core.channelManagement.snapshot(group.id).channelFingerprint,
+      ...patch,
+    });
+    const invite = () =>
+      f.core.channelManagement.invite({ channelId: group.id, botSlug: 'writer' }).invitation!;
+    const join = () =>
+      f.core.channels.requestGroupJoin({
+        channelId: group.id,
+        requesterBotSlug: 'writer',
+        requesterBotCreatedAt: f.core.registry.get('writer')!.createdAt,
+      });
+    return { ...f, group, args, invite, join };
+  }
+  it('discovers actual join request IDs without reading conversation bodies', async () => {
+    const f = decisionFixture();
+    const request = f.join();
+    const detail = await f.run('channel', { channelId: f.group.id });
+    expect(detail).toMatchObject({
+      channel: {
+        joinRequests: [{ id: request.id, status: 'pending', requesterBotSlug: 'writer' }],
+      },
+    });
+    expect(JSON.stringify(detail)).not.toContain('latestMessage');
+  });
+  it('reviews and cancels one pending invitation without changing membership or invite policy', async () => {
+    const f = decisionFixture();
+    const invitation = f.invite();
+    const input = f.args({ invitationId: invitation.id });
+    const prepared = (await f.prepare('group-invite-cancel', input))!;
+    expect(prepared.proposal).toMatchObject({
+      patch: {
+        changes: {
+          cancelInvitation: { id: invitation.id, status: 'pending', targetBot: { slug: 'writer' } },
+          preservesMembers: true,
+        },
+      },
+    });
+    expect(Object.isFrozen(prepared.proposal!.patch)).toBe(true);
+    input.invitationId = 'unreviewed';
+    const effect = vi.fn();
+    expect(await prepared.run(() => {}, effect)).toMatchObject({
+      channel: { members: ['research'], invitations: [{ id: invitation.id, status: 'cancelled' }] },
+      invitationPolicy: { autoAccept: false },
+    });
+    expect(effect).toHaveBeenCalledOnce();
+    expect(() => prepared.run(() => {}, effect)).toThrow('stale-channel');
+    expect(effect).toHaveBeenCalledOnce();
+  });
+  it('never cancels an automatically accepted invitation or removes its member', async () => {
+    const f = decisionFixture();
+    f.setAutoAccept(true);
+    const invitation = f.invite();
+    const b = await broker(f, vi.fn());
+    expect(
+      await b.invoke('group-invite-cancel', f.args({ invitationId: invitation.id })),
+    ).toMatchObject({
+      ok: false,
+      error: { code: 'invitation-not-pending' },
+    });
+    expect(b.effect).not.toHaveBeenCalled();
+    expect(f.core.channels.get(f.group.id)?.members).toContain('writer');
+  });
+  it.each([true, false])(
+    'reviews a pending join and applies accept=%s only once',
+    async (accept) => {
+      const f = decisionFixture();
+      const request = f.join();
+      const input = f.args({ requestId: request.id, accept });
+      const prepared = (await f.prepare('group-join-decide', input))!;
+      expect(prepared.proposal).toMatchObject({
+        patch: {
+          changes: {
+            joinDecision: {
+              id: request.id,
+              status: 'pending',
+              accept,
+              requester: { slug: 'writer' },
+            },
+          },
+        },
+      });
+      input.accept = !accept;
+      const effect = vi.fn();
+      expect(await prepared.run(() => {}, effect)).toMatchObject({
+        channel: {
+          members: accept ? ['research', 'writer'] : ['research'],
+          joinRequests: [
+            { id: request.id, status: accept ? 'accepted' : 'declined', decidedBy: 'human' },
+          ],
+        },
+      });
+      expect(() => prepared.run(() => {}, effect)).toThrow('stale-channel');
+      await expect(
+        f.run('group-join-decide', f.args({ requestId: request.id, accept })),
+      ).rejects.toMatchObject({ code: 'join-request-not-pending' });
+      expect(effect).toHaveBeenCalledOnce();
+    },
+  );
+  it.each(['group-invite-cancel', 'group-join-decide'])(
+    'denial and revoked source leave %s pending',
+    async (command) => {
+      const f = decisionFixture();
+      const patch =
+        command === 'group-invite-cancel'
+          ? { invitationId: f.invite().id }
+          : { requestId: f.join().id, accept: true };
+      const initial = f.core.channelManagement.snapshot(f.group.id);
+      const b = await broker(f, async () => {
+        throw new TobError('approval-denied');
+      });
+      expect(await b.invoke(command, f.args(patch))).toMatchObject({
+        ok: false,
+        error: { code: 'approval-denied' },
+      });
+      const prepared = (await f.prepare(command, f.args(patch)))!;
+      expect(() =>
+        prepared.run(() => {
+          throw new TobError('human-dm-required');
+        }),
+      ).toThrow('human-dm-required');
+      expect(f.core.channelManagement.snapshot(f.group.id)).toEqual(initial);
+      expect(b.effect).not.toHaveBeenCalled();
+    },
+  );
+  it('does not override a join decision made while Tob review was pending', async () => {
+    const f = decisionFixture();
+    const request = f.join();
+    const prepared = (await f.prepare(
+      'group-join-decide',
+      f.args({ requestId: request.id, accept: true }),
+    ))!;
+    f.core.channelManagement.decideJoin({
+      channelId: f.group.id,
+      requestId: request.id,
+      accept: false,
+    });
+    const effect = vi.fn();
+    expect(() => prepared.run(() => {}, effect)).toThrow('stale-channel');
+    expect(effect).not.toHaveBeenCalled();
+    expect(f.core.channels.get(f.group.id)).toMatchObject({
+      members: ['research'],
+      joinRequests: [{ status: 'declined' }],
+    });
+  });
+  it('refuses a changed requester or revoked Human group access before effects', async () => {
+    const f = decisionFixture();
+    const request = f.join();
+    const prepared = (await f.prepare(
+      'group-join-decide',
+      f.args({ requestId: request.id, accept: true }),
+    ))!;
+    const effect = vi.fn();
+    f.core.registry.update('writer', { displayName: 'Changed after review' });
+    expect(() => prepared.run(() => {}, effect)).toThrow('stale-profile');
+    const renewed = (await f.prepare(
+      'group-join-decide',
+      f.args({ requestId: request.id, accept: true }),
+    ))!;
+    vi.spyOn(f.core.channels, 'listHumanMembers').mockReturnValue([]);
+    expect(() => renewed.run(() => {}, effect)).toThrow('channel-access-denied');
+    expect(effect).not.toHaveBeenCalled();
+    expect(f.core.channels.get(f.group.id)?.joinRequests?.[0]?.status).toBe('pending');
+  });
+  it('rejects missing, foreign and malformed targets before review', async () => {
+    const f = decisionFixture();
+    const request = f.join();
+    const foreign = f.core.channels.createGroup({ name: 'Other', members: [] });
+    await expect(
+      f.run('group-join-decide', {
+        channelId: foreign.id,
+        requestId: request.id,
+        accept: true,
+        expectedChannel: f.core.channelManagement.snapshot(foreign.id).channelFingerprint,
+      }),
+    ).rejects.toMatchObject({ code: 'unknown-join-request' });
+    for (const [command, patch, code] of [
+      ['group-invite-cancel', { invitationId: 'missing' }, 'unknown-invitation'],
+      ['group-join-decide', { requestId: request.id, accept: 'true' }, 'invalid-input'],
+      [
+        'group-join-decide',
+        { requestId: request.id, accept: true, decidedBy: 'human' },
+        'invalid-input',
+      ],
+      ['group-invite-cancel', { invitationId: '' }, 'invalid-input'],
+    ] as const)
+      await expect(f.run(command, f.args(patch))).rejects.toMatchObject({ code });
+    expect(f.core.channels.get(f.group.id)?.joinRequests?.[0]?.status).toBe('pending');
+  });
+});

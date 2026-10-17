@@ -1725,6 +1725,14 @@
       "reason": "Natural Tob Group rename, member attention and removal through rendered approval, denial and stale refusal; independent avatar clearing, canonical readback and actual settings/Members UI, plus same-Profile restart on Web/macOS.",
       "task": 2090,
       "sha256": "61d1770c1471e8a598df11d385585182082e1c8189b591d0814a15e658a543c0"
+    },
+    {
+      "path": "scripts/e2e-tob-group-decisions.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Natural Tob pending-invitation cancellation and join acceptance/decline through rendered approval, denial and concurrent stale refusal; actual ordinary-Bot selected-Group join preconditions, canonical decision history and Members UI, terminal refusal and Web/macOS restart.",
+      "task": 2090,
+      "sha256": "5842bd4d9ec542a7b1428b39f26ac8c3aa356df5e131cd1502b964e40d149038"
     }
   ],
   "native": [

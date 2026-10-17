@@ -154,6 +154,41 @@ describe('Tob scoped CLI broker', () => {
     },
   );
 
+  it.each([
+    ['group-invite-cancel', 'unknown-invitation'],
+    ['group-invite-cancel', 'invitation-not-pending'],
+    ['group-join-decide', 'unknown-join-request'],
+    ['group-join-decide', 'join-request-not-pending'],
+    ['group-join-decide', 'stale-profile'],
+    ['group-join-decide', 'archived-bot'],
+    ['group-join-decide', 'protected-bot'],
+    ['group-join-decide', 'channel-access-denied'],
+  ])('preserves %s refusal %s before and after review', async (command, code) => {
+    const before = await fixture({
+      prepareOperation: () => {
+        throw new TobError(code);
+      },
+    });
+    expect(await before.invoke(command, {})).toMatchObject({
+      ok: false,
+      error: { code, message: code },
+    });
+    expect(before.approve).not.toHaveBeenCalled();
+    const after = await fixture({
+      prepareOperation: () => ({
+        proposal: { command, target: 'group-1', previousValue: null, patch: {} },
+        run: () => {
+          throw new TobError(code);
+        },
+      }),
+    });
+    expect(await after.invoke(command, {})).toMatchObject({
+      ok: false,
+      error: { code, message: code },
+    });
+    expect(after.approve).toHaveBeenCalledOnce();
+  });
+
   it('keeps other commands at 16KiB of received bytes including whitespace', async () => {
     const prepareOperation = vi.fn(() => ({ run: () => ({ accepted: true }) }));
     const f = await fixture({ prepareOperation });

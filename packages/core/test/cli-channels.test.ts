@@ -172,6 +172,9 @@ describe('Channel and group CLI commands', () => {
       ['group-wake-set', 'team', '--bot', 'ada', '--mode', 'mentions'],
       ['group-wake-set', 'team', '--bot', 'ada', '--inherit'],
       ['group-member-remove', 'team', '--bot', 'ada'],
+      ['group-invite-cancel', 'team', '--invitation', 'invite-1'],
+      ['group-join-decide', 'team', '--request', 'request-1', '--accept'],
+      ['group-join-decide', 'team', '--request', 'request-2', '--decline'],
     ];
     for (const argv of commands) {
       expect((await invoke(argv, live.url)).code).toBe(0);
