@@ -16,7 +16,7 @@ theme: paper
 | 布局依赖源码         | `757dad603e814349aac2cd1a2aea115ea200a2da`                   |
 | 布局审阅源码及证据   | `35dcde43749bfe45c3ebd3805bc66ed9e95c2561`                   |
 | 快捷键 PR            | [#2136](https://github.com/BotHarness/DeepSeekBot/pull/2136) |
-| 快捷键审阅源码及证据 | `90df9fd8d3082769cded808f39d983f7a65deaca`                   |
+| 快捷键审阅源码及证据 | `593496f7ba2de677ce50a0e0e259f1f926120125`                   |
 | 实际构建与 Web 验证  | `6eea6b76828c94c7a4dbcab00ff101a2cde16ca1`                   |
 
 构建后只添加了证据并重排提交。产品源码与验证版本相同。
@@ -67,7 +67,7 @@ SerialQueue -> AtomicStorage: 写入被接受的配置
 Web 实测发现默认 Command+K 被误拒绝，现已修复。
 原生面板仍拒绝不支持的浏览器组合。
 
-[快捷键处理实现](https://github.com/BotHarness/DeepSeekBot/blob/90df9fd8d3082769cded808f39d983f7a65deaca/packages/client/src/client/client-shortcut-control.ts)
+[快捷键处理实现](https://github.com/BotHarness/DeepSeekBot/blob/593496f7ba2de677ce50a0e0e259f1f926120125/packages/client/src/client/client-shortcut-control.ts)
 
 ## E 原生保存的取消边界
 
@@ -100,19 +100,28 @@ Electron 按键事件真正打开 Home。此结果不等于物理键盘验证。
 | Web 双 Client 隔离与布局迁移    | 通过                                       |
 | Web 真正按键、禁用、恢复与刷新  | 通过                                       |
 | 原生单 Client 运行与重启        | 嵌套树、比例、间距及快捷键持久化通过       |
-| 物理键盘、IME 与模态边界        | 未验证                                     |
+| 原生 editable、模态与 IME       | 草稿保留、模态拦截、真实组合事件拦截通过   |
+| 物理键盘                        | 未验证                                     |
 | Web Tob 模型审批与读回          | 布局与快捷键通过；拒绝和过期保留原状态     |
 | 完整远端 CI                     | 产品等同版本通过三个测试分片及所有必需检查 |
-| 原生 Tob 模型审批               | 未验证                                     |
+| 原生 Tob 模型审批               | 批准、读回、实际按键与重启通过             |
+| 原生单项恢复默认                | Home 恢复 H；快速切换 K 因上游冲突拒绝     |
 | Human QA 与合并                 | 未批准                                     |
 
 [布局截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/35dcde43749bfe45c3ebd3805bc66ed9e95c2561/.github/pr-screenshots/2096-client-layout/evidence.md)
 
-[快捷键截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/90df9fd8d3082769cded808f39d983f7a65deaca/.github/pr-screenshots/2097-client-shortcuts/evidence.md)
+[快捷键截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/593496f7ba2de677ce50a0e0e259f1f926120125/.github/pr-screenshots/2097-client-shortcuts/evidence.md)
 
 自然语言请求经 Home 进入现有审批卡片。四个模型回合均完成，消息均已处理。
 独立第二个 Client 的布局与快捷键指纹保持不变。
 
-[实际 Tob 审批记录](https://github.com/BotHarness/DeepSeekBot/blob/90df9fd8d3082769cded808f39d983f7a65deaca/.github/pr-screenshots/2097-client-shortcuts/natural-tob-verification.json)
+[实际 Tob 审批记录](https://github.com/BotHarness/DeepSeekBot/blob/593496f7ba2de677ce50a0e0e259f1f926120125/.github/pr-screenshots/2097-client-shortcuts/natural-tob-verification.json)
 
 [原生嵌套树与重启记录](https://github.com/BotHarness/DeepSeekBot/blob/35dcde43749bfe45c3ebd3805bc66ed9e95c2561/.github/pr-screenshots/2096-client-layout/native-verification.json)
+
+原生自然请求经同一审阅流程，批准后仅修改当前桌面配置。
+真实组合事件带有 isComposing=true，切换器未打开。
+Home 恢复默认 H 后，实际按键打开 Home，其他绑定不变。
+快速切换默认 K 已被 DSH session.search 占用，恢复被明确拒绝。
+本次保留上游命令，不改变既有默认值。
+测试清理失败与错误的重置预期均已保留，后续按实际边界补证。

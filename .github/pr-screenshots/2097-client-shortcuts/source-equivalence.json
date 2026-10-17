@@ -1,6 +1,6 @@
 {
   "runtimeSource": "6eea6b76828c94c7a4dbcab00ff101a2cde16ca1",
-  "reviewSource": "90df9fd8d3082769cded808f39d983f7a65deaca",
+  "reviewSource": "593496f7ba2de677ce50a0e0e259f1f926120125",
   "checkedPaths": ["packages", "scripts", "docs", "changes", ".agents"],
   "differences": [],
   "laterCommits": "evidence and review artifacts only",
