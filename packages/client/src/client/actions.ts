@@ -484,6 +484,11 @@ export interface BridgeActions {
   attachActivityCenterPanel(): () => void;
   refreshOverview(): Promise<void>;
   humanActionPage(botSlug: string, cursor?: string): Promise<HumanAttentionPage>;
+  activityPage(
+    category: HumanInboxCategory,
+    filters: HumanInboxFilters & { search?: string; mentionsFirst?: boolean },
+    cursor?: string,
+  ): Promise<HumanAttentionPage>;
   openHumanInbox(): Promise<void>;
   refreshHumanInboxStatus(): Promise<void>;
   refreshHumanInbox(category?: HumanInboxCategory, background?: boolean): Promise<void>;
@@ -1899,6 +1904,8 @@ export function createActions(
       };
     },
     refreshOverview,
+    activityPage: (category, filters, cursor) =>
+      loadHumanAttention(call, category, 50, cursor, filters),
     humanActionPage: (botSlug, cursor) =>
       loadHumanAttention(call, 'action', 50, cursor, {
         botSlug,

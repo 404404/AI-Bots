@@ -1,11 +1,22 @@
-import { ActivityInboxMenu } from './activity-inbox-menu.js';
-import { useClientState } from './bot-sidebar.js';
-import type { ReactElement } from 'react';
+import { ActivityInboxHeader } from './activity-inbox-menu.js';
+import { useMemo, type ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
 import { HumanInboxView } from './human-inbox-view.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { NativeSessionCatalog } from './sessions-entry.js';
+import { activitySectionActions, useActivityFeed, type ActivitySection } from './activity-feed.js';
+import {
+  IconChevronDownOutlineMedium,
+  IconChevronRightOutlineMedium,
+} from '@deepseek-ai/dsh-client-ui-primitives';
+
+const titles = {
+  action: 'activityInbox.needsYou',
+  replies: 'activityInbox.forYou',
+  unread: 'humanInbox.unread',
+  handled: 'humanInbox.handled',
+} as const;
 
 export function ActivityCenterView({
   actions,
@@ -18,20 +29,27 @@ export function ActivityCenterView({
   placement?: 'page' | 'panel';
 }): ReactElement {
   const panel = placement === 'panel';
-  const { humanInbox: inbox } = useClientState();
-  const filterKey = JSON.stringify([
-    inbox.category,
-    inbox.botSlug,
-    inbox.channelId,
-    inbox.sort,
-    inbox.snoozed,
-  ]);
+  const { feed, query, pages, collapsed } = useActivityFeed(actions);
+  const scoped = useMemo(
+    () =>
+      Object.fromEntries(
+        (['action', 'replies', 'unread', 'handled'] as const).map((section) => [
+          section,
+          activitySectionActions(actions, feed, section),
+        ]),
+      ) as Record<ActivitySection, BridgeActions>,
+    [actions, feed],
+  );
+  const filterKey = JSON.stringify(query);
   const mount = useMountedResource<HTMLDivElement>(() => {
     const detach = panel ? actions.attachActivityCenterPanel() : undefined;
     void actions.refreshHumanInboxStatus();
-    void actions.refreshHumanInbox('action');
-    return detach;
-  }, [actions, panel]);
+    const release = feed.acquire();
+    return () => {
+      release();
+      detach?.();
+    };
+  }, [actions, panel, feed]);
   return (
     <div
       ref={mount}
@@ -44,10 +62,50 @@ export function ActivityCenterView({
       {panel ? null : (
         <header className="bh-activity-center-header">
           <h1>{t('activityCenter.title')}</h1>
-          <ActivityInboxMenu actions={actions} t={t} />
+          <ActivityInboxHeader actions={actions} t={t} />
         </header>
       )}
-      <HumanInboxView key={filterKey} actions={actions} t={t} embedded activity />
+      <div className="bh-activity-sections">
+        {feed.visible().map((section) => {
+          const page = pages[section];
+          const count =
+            section === 'unread'
+              ? page.items.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0)
+              : page.items.length;
+          const expanded = !collapsed[section];
+          return (
+            <HumanInboxView
+              key={section + filterKey}
+              actions={scoped[section]}
+              t={t}
+              embedded
+              activity
+              inboxOverride={page}
+              emptyMessage={query.search ? t('activityInbox.noResults') : undefined}
+              collapsed={!expanded}
+              sectionHeading={
+                <button
+                  type="button"
+                  className="bh-activity-section-toggle"
+                  aria-expanded={expanded}
+                  aria-label={t(titles[section])}
+                  onClick={() => feed.toggle(section)}
+                >
+                  {expanded ? <IconChevronDownOutlineMedium /> : <IconChevronRightOutlineMedium />}
+                  <span>{t(titles[section])}</span>
+                  <span
+                    className="bh-activity-section-count"
+                    data-attention={(section === 'action' && count > 0) || undefined}
+                  >
+                    {count}
+                    {page.nextCursor ? '+' : ''}
+                  </span>
+                </button>
+              }
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

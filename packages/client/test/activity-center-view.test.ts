@@ -18,6 +18,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', async () => ({
 import { createActions } from '../src/client/actions.js';
 import type { BridgeCall } from '../src/client/bridge.js';
 import { ActivityCenterView } from '../src/client/activity-center-view.js';
+import { activityFeedFor } from '../src/client/activity-feed.js';
 import { store, type HumanAttentionItem } from '../src/client/store.js';
 
 const item: HumanAttentionItem = {
@@ -53,7 +54,11 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
   const calls: Array<{ endpoint: string; payload: Record<string, unknown> }> = [];
   const call: BridgeCall = async (endpoint, payload) => {
     calls.push({ endpoint, payload });
-    if (endpoint === 'humanAttention') return { ok: true, value: { items: pending ? [item] : [] } };
+    if (endpoint === 'humanAttention')
+      return {
+        ok: true,
+        value: { queryVersion: 1, items: pending && payload.category === 'action' ? [item] : [] },
+      };
     if (endpoint === 'humanAttentionStatus')
       return { ok: true, value: { unreadCount: 0, hasAction: pending } };
     if (endpoint === 'channelTimeline')
@@ -143,17 +148,21 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
         container.querySelector<HTMLButtonElement>('header button[aria-label="通知设置"]')!;
       await act(async () => settings().click());
       await act(async () => button('最新在前')!.click());
-      expect(store.getSnapshot().humanInbox.sort).toBe('newest');
+      expect(activityFeedFor(actions).getSnapshot().query.sort).toBe('newest');
       expect(container.querySelector('.bh-human-inbox-batch')).toBeNull();
       expect(
-        calls.filter((entry) => entry.endpoint === 'humanAttention').at(-1)?.payload.sort,
+        calls
+          .filter(
+            (entry) => entry.endpoint === 'humanAttention' && entry.payload.category === 'action',
+          )
+          .at(-1)?.payload.sort,
       ).toBe('newest');
       await act(async () => settings().click());
       await act(async () => button('已处理')!.click());
-      expect(store.getSnapshot().humanInbox.category).toBe('handled');
+      expect(activityFeedFor(actions).getSnapshot().query.category).toBe('handled');
       await act(async () => settings().click());
       await act(async () => button('需要你处理')!.click());
-      expect(store.getSnapshot().humanInbox.category).toBe('action');
+      expect(activityFeedFor(actions).getSnapshot().query.category).toBe('action');
       expect(container.querySelector('[role="tablist"]')).toBeNull();
       await act(async () => button('选择')!.click());
     }
@@ -182,7 +191,7 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
       if (mode === 'retry') {
         expect(container.textContent).toContain('Try again');
         expect(button('拒绝')?.disabled).toBe(false);
-        expect(store.getSnapshot().humanInbox.items).toHaveLength(1);
+        expect(activityFeedFor(actions).getSnapshot().pages.action.items).toHaveLength(1);
         fail = false;
         await act(async () => button('拒绝')!.click());
       }
@@ -193,7 +202,7 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
         messageId: 'approval-1',
         outcome: placement === 'panel' ? 'rejected' : 'allowed-once',
       });
-      expect(store.getSnapshot().humanInbox.items).toHaveLength(0);
+      expect(activityFeedFor(actions).getSnapshot().pages.action.items).toHaveLength(0);
       expect(container.querySelector('[data-leaving]')).not.toBeNull();
       await act(async () => new Promise((resolve) => setTimeout(resolve, 250)));
       expect(container.querySelector('[data-attention-id]')).toBeNull();

@@ -3558,19 +3558,26 @@ export async function loadHumanAttention(
   category: HumanInboxCategory,
   limit = 50,
   cursor?: string,
-  filters: HumanInboxFilters = { botSlug: undefined, channelId: undefined, sort: 'newest' },
+  filters: HumanInboxFilters & { search?: string; mentionsFirst?: boolean } = {
+    botSlug: undefined,
+    channelId: undefined,
+    sort: 'newest',
+  },
 ): Promise<HumanAttentionPage> {
-  return parseHumanAttentionPage(
-    await unwrap(call, 'humanAttention', {
-      category,
-      limit,
-      cursor,
-      botSlug: filters.botSlug,
-      channelId: filters.channelId,
-      sort: filters.sort,
-      ...(filters.snoozed === true ? { snoozed: true } : {}),
-    }),
-  );
+  const extended = filters.search !== undefined || filters.mentionsFirst === true;
+  const value = await unwrap(call, 'humanAttention', {
+    category,
+    limit,
+    cursor,
+    botSlug: filters.botSlug,
+    channelId: filters.channelId,
+    sort: filters.mentionsFirst ? 'mentions-first' : filters.sort,
+    ...(extended ? { queryVersion: 1, search: filters.search } : {}),
+    ...(filters.snoozed === true ? { snoozed: true } : {}),
+  });
+  if (extended && asRecord(value)?.['queryVersion'] !== 1)
+    throw new Error('Update the Host to search Activity.');
+  return parseHumanAttentionPage(value);
 }
 export async function loadHumanAttentionStatus(
   call: BridgeCall,

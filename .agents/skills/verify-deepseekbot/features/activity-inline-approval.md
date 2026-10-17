@@ -8,8 +8,8 @@
 - A failed submission remains pending and retryable; success removes the inert card with
   a 220ms exit. Removing a focused card cannot approve the next item.
 - Dock decides the card's own Channel request while another Channel remains selected.
-- Batch controls appear only in explicit Select mode. Full three-section composition is
-  subsequent #2026 work, not part of this first slice.
+- Batch controls appear only in explicit Select mode. Needs you, For you and Other unread are independently collapsible sections; initial state is expanded, with browser/Host-origin collapse preferences. History stays in the header menu.
+- Search expands inside the header like the Channel list, uses the Host query across all eligible results (not just loaded rows), and retains section order. Each section paginates independently; failed reads retain existing rows and offer retry.
 
 ## How to get to it (user POV)
 
@@ -67,3 +67,7 @@ own runtime checks before claiming them. Human QA remains a separate gate.
   this fixture uses the existing default workspace and an explicit output path.
 - The retired Overview idle journey is recorded in [activity-center-idle.md](activity-center-idle.md).
   It must not be treated as current Activity Center verification.
+
+## Three-section and search follow-up
+
+Verify all three headers on page and narrow/wide Dock, light/dark. Collapse each independently, reload and reopen the panel to verify persistence; arrivals must not reopen a collapsed section. Open Search notifications in the header, type a matching query and a no-result query, then close with Escape or the clear button. Verify focus returns to the search trigger and browsing never marks read or consumes approvals. Search matches beyond the first page through Host `humanAttention` query version 1; unread summaries search eligible message bodies before grouping. Verify Bot/Channel filters, default/chronological sort, handled history and per-section pagination, including stale responses after a search switch and failed-page retry. The CLI equivalent is `deepseekbot inbox --category replies --search <text> --sort mentions-first`; an old Host must refuse the versioned query instead of silently returning unfiltered data.

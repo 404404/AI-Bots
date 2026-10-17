@@ -65,6 +65,38 @@ function parameterNames(method: (...args: never[]) => unknown): string[] {
 }
 
 describe('bridge typert service', () => {
+  it('exposes Activity query arguments through the gateway service and refuses an unavailable owner', () => {
+    const { service } = setup();
+    expect(parameterNames(service.humanAttention)).toEqual([
+      'category',
+      'botSlug',
+      'channelId',
+      'limit',
+      'cursor',
+      'sort',
+      'snoozed',
+      'kind',
+      'search',
+      'unreadOnly',
+      'queryVersion',
+    ]);
+    expect(() =>
+      service.humanAttention(
+        'replies',
+        undefined,
+        undefined,
+        30,
+        undefined,
+        'mentions-first',
+        undefined,
+        undefined,
+        'budget',
+        true,
+        1,
+      ),
+    ).toThrow('Activity queries are unavailable');
+  });
+
   it('registers under the gateway service key with the botharness namespace', () => {
     const { service } = setup();
 

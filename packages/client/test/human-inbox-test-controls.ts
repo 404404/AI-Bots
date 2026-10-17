@@ -61,3 +61,8 @@ export const IconEllipsisOutlineRegular = (): ReactElement =>
 
 export const IconCloseOutlineRegular = (): ReactElement =>
   createElement('svg', { 'aria-hidden': true });
+
+export const IconSearchOutlineRegular = () => createElement('svg');
+export const IconCloseFillRegular = () => createElement('svg');
+export const IconChevronDownOutlineMedium = () => createElement('svg');
+export const IconChevronRightOutlineMedium = () => createElement('svg');

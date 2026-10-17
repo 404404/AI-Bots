@@ -4276,8 +4276,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     },
     humanAttention(payload) {
       const source = asObject(payload);
+      if (source['queryVersion'] !== undefined && source['queryVersion'] !== 1)
+        return invalidInput('unsupported Activity query version');
+      if (source['queryVersion'] === 1 && deps.humanAttention === undefined)
+        return invalidInput('Activity queries are unavailable');
       const category = source['category'];
       const sort = source['sort'];
+      const search = source['search'];
+      const unreadOnly = source['unreadOnly'];
+      if (search !== undefined && (typeof search !== 'string' || search.length > 200))
+        return invalidInput('search must be at most 200 characters');
+      if (unreadOnly !== undefined && typeof unreadOnly !== 'boolean')
+        return invalidInput('unreadOnly must be a boolean');
       const botSlug = source['botSlug'];
       const channelId = source['channelId'];
       const limit = source['limit'];
@@ -4297,8 +4307,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         category !== 'handled'
       )
         return invalidInput('category must be action, info, unread, replies or handled');
-      if (sort !== undefined && sort !== 'newest' && sort !== 'oldest')
-        return invalidInput('sort must be newest or oldest');
+      if (
+        sort !== undefined &&
+        sort !== 'newest' &&
+        sort !== 'oldest' &&
+        !(sort === 'mentions-first' && category === 'replies')
+      )
+        return invalidInput('sort must be newest, oldest, or mentions-first for replies');
       if (botSlug !== undefined && (typeof botSlug !== 'string' || !isValidSlug(botSlug)))
         return invalidInput('invalid Bot filter');
       if (
@@ -4319,16 +4334,23 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       try {
         return {
           ok: true,
-          value: deps.humanAttention?.list({
-            ...(category === undefined ? {} : { category: category as HumanAttentionCategory }),
-            ...(sort === undefined ? {} : { sort: sort as 'newest' | 'oldest' }),
-            ...(botSlug === undefined ? {} : { botSlug: botSlug as string }),
-            ...(channelId === undefined ? {} : { channelId: channelId as string }),
-            ...(limit === undefined ? {} : { limit: limit as number }),
-            ...(cursor === undefined ? {} : { cursor: cursor as string }),
-            ...(snoozed === true ? { snoozed: true } : {}),
-            ...(kind === undefined ? {} : { kind }),
-          }) ?? { items: [] },
+          value: {
+            ...(deps.humanAttention?.list({
+              ...(category === undefined ? {} : { category: category as HumanAttentionCategory }),
+              ...(sort === undefined
+                ? {}
+                : { sort: sort as 'newest' | 'oldest' | 'mentions-first' }),
+              ...(search === undefined ? {} : { search: search as string }),
+              ...(unreadOnly === true ? { unreadOnly: true } : {}),
+              ...(botSlug === undefined ? {} : { botSlug: botSlug as string }),
+              ...(channelId === undefined ? {} : { channelId: channelId as string }),
+              ...(limit === undefined ? {} : { limit: limit as number }),
+              ...(cursor === undefined ? {} : { cursor: cursor as string }),
+              ...(snoozed === true ? { snoozed: true } : {}),
+              ...(kind === undefined ? {} : { kind }),
+            }) ?? { items: [] }),
+            ...(source['queryVersion'] === 1 ? { queryVersion: 1 } : {}),
+          },
         };
       } catch (error) {
         return invalidInput(String(error));
