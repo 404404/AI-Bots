@@ -826,6 +826,7 @@ window.__ModuleLoader__.load({
 		* PERFORMANCE OF THIS SOFTWARE.
 		*/
 		const glyphs = {
+			"chevron-right": [["path", { d: "m9 18 6-6-6-6" }]],
 			hash: [
 				["line", {
 					x1: "4",
