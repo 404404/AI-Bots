@@ -1700,7 +1700,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Scoped CLI model/runtime discovery and actual Tob approval, denial, stale refusal and settings UI persistence in Web and native Desktop.",
       "task": 2088,
-      "sha256": "5de233d8b1f2d888a348443c036f9caae67f6ed5258560de01e99899d37f6152"
+      "sha256": "36a8175b586ee02ff768f987ab14cd80532bc8a22379ce50a87e718f042ffd49"
     }
   ],
   "native": [

@@ -310,22 +310,24 @@ async function showApproval(message) {
     await page.click('.bh-workspace-rail [data-pinned-panel="bh:home"]');
     await page.waitForFunction(() => !document.querySelector('[data-home-panel]'));
   }
+  mark('approval-current-card');
   const latest = '.bh-timeline-new';
-  if (await page.$(latest)) await page.locator(latest).click();
+  if (await page.$(latest)) await page.locator(latest).setTimeout(5000).click();
   const selector = `[data-message-id=${JSON.stringify(message.id)}] .bh-tool-approval-card`;
-  await page.waitForSelector(selector);
+  await page.waitForSelector(selector, { timeout: 10000 });
   await page.waitForFunction(
     (s) =>
       [...document.querySelectorAll(s + ' button.bh-request-primary')].some((n) => !n.disabled),
-    {},
+    { timeout: 10000 },
     selector,
   );
+  mark('approval-expand');
   const summarySelector = selector + ' .bh-request-summary';
   for (let attempt = 0; attempt < 3; attempt++) {
     const expanded = await page.$eval(summarySelector, (n) => n.getAttribute('aria-expanded'));
     if (expanded === 'true') break;
-    if (await page.$(latest)) await page.locator(latest).click();
-    await page.locator(summarySelector).click();
+    if (await page.$(latest)) await page.locator(latest).setTimeout(5000).click();
+    await page.locator(summarySelector).setTimeout(5000).click();
     try {
       await page.waitForFunction(
         (s) => document.querySelector(s)?.getAttribute('aria-expanded') === 'true',
@@ -342,8 +344,9 @@ async function showApproval(message) {
     {},
     summarySelector,
   );
+  mark('approval-payload');
   const foldSelector = selector + ' .bh-tool-approval-fold[aria-expanded="false"]';
-  if (await page.$(foldSelector)) await page.locator(foldSelector).click();
+  if (await page.$(foldSelector)) await page.locator(foldSelector).setTimeout(5000).click();
   const payload = await page.waitForSelector(selector + ' .bh-tool-approval-input');
   await payload.evaluate((n) => n.scrollIntoView({ block: 'start', inline: 'nearest' }));
   assert.deepEqual(
@@ -351,6 +354,8 @@ async function showApproval(message) {
     JSON.parse(message.toolApprovalRequest.input),
   );
   await pause(300);
+  await dismissBubble();
+  mark('approval-capture');
   const crop = await page.$eval(selector, (card) => {
     const input = card.querySelector('.bh-tool-approval-input').getBoundingClientRect();
     const actions = card.querySelector('.bh-tool-approval-actions').getBoundingClientRect();
