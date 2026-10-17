@@ -19,7 +19,11 @@ const out = resolve(
 mkdirSync(out, { recursive: true });
 const browser = desktop
   ? await puppeteer.connect({ browserURL: desktop, defaultViewport: null })
-  : await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--lang=en-US'] });
+  : await puppeteer.launch({
+      headless: true,
+      ignoreDefaultArgs: ['--hide-scrollbars'],
+      args: ['--no-sandbox', '--lang=en-US'],
+    });
 const page = desktop ? (await browser.pages())[0] : await browser.newPage();
 const errors = [],
   results = [];
@@ -175,6 +179,82 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForSelector('[data-message-id]', { timeout: 20000 });
   await proof('01-default');
+  step = 'scrollbar-activity';
+  await sleep(1100);
+  const scrollGeometry = await page.$eval('.bh-chat-body', (node) => {
+    const box = node.getBoundingClientRect();
+    return {
+      x: box.x + box.width / 2,
+      y: box.y + box.height / 2,
+      right: box.right,
+      width: node.clientWidth,
+      delta: node.scrollTop > 0 ? -25 : 25,
+    };
+  });
+  const thumbOpacity = () =>
+    page.$eval('.bh-chat-body', (node) =>
+      Number(getComputedStyle(node).getPropertyValue('--bh-panel-scrollbar-opacity')),
+    );
+  assert.equal(await thumbOpacity(), 0);
+  await page.evaluate(() => {
+    window.__scrollbarMessageNode = document.querySelector('.bh-chat-body');
+  });
+  await page.mouse.move(scrollGeometry.x, scrollGeometry.y);
+  await page.mouse.wheel({ deltaY: scrollGeometry.delta });
+  await page.waitForFunction(
+    () =>
+      Number(
+        getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+          '--bh-panel-scrollbar-opacity',
+        ),
+      ) === 1,
+  );
+  assert.equal(
+    await page.$eval('.bh-workspace-controls', (node) =>
+      Number(getComputedStyle(node).getPropertyValue('--bh-panel-scrollbar-opacity')),
+    ),
+    0,
+  );
+  const reducedMotion = await page.evaluate(
+    () => document.documentElement.dataset.botharnessMotion === 'reduce',
+  );
+  if (!reducedMotion) {
+    await page.waitForFunction(() => {
+      const opacity = Number(
+        getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+          '--bh-panel-scrollbar-opacity',
+        ),
+      );
+      return opacity > 0 && opacity < 1;
+    });
+    await page.mouse.wheel({ deltaY: -scrollGeometry.delta });
+    await page.waitForFunction(
+      () =>
+        Number(
+          getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+            '--bh-panel-scrollbar-opacity',
+          ),
+        ) === 1,
+    );
+  }
+  await page.waitForFunction(
+    () =>
+      Number(
+        getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+          '--bh-panel-scrollbar-opacity',
+        ),
+      ) === 0,
+  );
+  await page.mouse.move(scrollGeometry.right - 2, scrollGeometry.y);
+  await sleep(100);
+  assert.equal(await thumbOpacity(), 0);
+  assert.equal(await page.$eval('.bh-chat-body', (node) => node.clientWidth), scrollGeometry.width);
+  assert.ok(
+    await page.evaluate(
+      () => window.__scrollbarMessageNode === document.querySelector('.bh-chat-body'),
+    ),
+  );
+  await proof('01a-scrollbars-idle');
   step = 'pointer-menu-position';
   const pointerPositions = [];
   for (const zoom of [1, 1.25]) {

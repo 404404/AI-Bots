@@ -1,8 +1,10 @@
+import { PANEL_SCROLLBAR_CSS } from './ds/panel-scrollbars.js';
 import { DOCKVIEW_CSS } from './dockview-css.js';
 import { border, color, radius, size, space, text } from './ds/tokens.stylex.js';
 
 export const CHANNEL_DOCK_CSS =
   DOCKVIEW_CSS +
+  PANEL_SCROLLBAR_CSS +
   `
 .bh-dock-theme {
   --dv-group-view-background-color: ${color.base};

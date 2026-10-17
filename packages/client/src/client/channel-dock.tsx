@@ -1,3 +1,4 @@
+import { mountPanelScrollbars } from './ds/panel-scrollbars.js';
 import { usePanelMenu } from './panel-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { workspaceColumns, moveWorkspaceRail, isFullHeightRail } from './workspace-layout.js';
@@ -586,6 +587,10 @@ export function ChannelDock({
     setApi(ready);
   };
 
+  const scrollbarsMount = useMountedResource<HTMLSpanElement>((node) => {
+    if (node.parentElement) return mountPanelScrollbars(node.parentElement);
+  }, []);
+
   const registryMount = useMountedResource<HTMLDivElement>(() => {
     if (api === undefined) return;
     for (const panel of [...api.panels]) {
@@ -814,6 +819,7 @@ export function ChannelDock({
         aria-label={t('dock.region')}
       >
         <span ref={layoutMount} hidden />
+        <span ref={scrollbarsMount} hidden />
         {dropX !== undefined && <span className="bh-workspace-drop" style={{ left: dropX }} />}
         <DockviewReact
           key={workspace ? 'workspace' : 'legacy'}
