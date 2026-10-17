@@ -546,9 +546,7 @@ export interface BridgeMethods {
   botImportPreview(
     payload: unknown,
   ): Promise<BridgeResult<Awaited<ReturnType<BotImportsService['previewGit']>>>>;
-  createFromGit(
-    payload: unknown,
-  ): Promise<
+  createFromGit(payload: unknown): Promise<
     BridgeResult<{
       bot: PersonaBotDetail;
       httpsFallback?: HttpsFallback;
