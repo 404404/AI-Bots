@@ -95,7 +95,7 @@ describe('live CLI over the authenticated DSH carrier', () => {
           live.url,
         )
       ).json,
-    ).toMatchObject({ ok: true, value: { readOnly: true, contentRole: 'data' } });
+    ).toMatchObject({ readOnly: true, contentRole: 'data' });
   });
 
   it('classifies an interrupted response body as a transport failure', async () => {
