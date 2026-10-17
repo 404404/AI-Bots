@@ -1,0 +1,74 @@
+{
+  "environment": "native-single-client",
+  "omittedChecks": [
+    "same-origin second tab and storage-event synchronization",
+    "independent browser-context notification isolation",
+    "Host theme rendered in three concurrent Clients",
+    "Human OS permission prompt and actual notification delivery"
+  ],
+  "steps": [
+    "concurrent Home identity converges",
+    "externally restarted same Profile Host and retained browser profile readback; actual notification controls"
+  ],
+  "errors": [],
+  "final": {
+    "scope": "browser-origin",
+    "persistence": "confirmed",
+    "concurrency": "serialized",
+    "value": {
+      "theme": "dark",
+      "locale": "zh",
+      "notifications": {
+        "enabled": true,
+        "permission": "granted"
+      }
+    },
+    "stateFingerprint": "[\"dark\",\"zh\",true,\"granted\"]",
+    "fields": {
+      "theme": {
+        "scope": "host",
+        "owner": "ui-theme",
+        "affectsAllConnectedClients": true
+      },
+      "locale": {
+        "scope": "host",
+        "owner": "locale",
+        "affectsAllConnectedClients": true
+      },
+      "motionPreference": {
+        "scope": "host",
+        "owner": "botharness-client"
+      },
+      "botIcon": {
+        "scope": "host",
+        "owner": "botharness-client"
+      },
+      "sendKey": {
+        "scope": "host",
+        "owner": "botharness-client"
+      },
+      "autoAcceptGroupInvites": {
+        "scope": "host",
+        "owner": "botharness-client"
+      },
+      "defaultHumanName": {
+        "scope": "human-profile",
+        "owner": "humanIdentity"
+      },
+      "messagingDefaults": {
+        "scope": "host-platform",
+        "owner": "messagingDefaults"
+      },
+      "notifications": {
+        "scope": "browser-origin",
+        "owner": "desktop-notifications",
+        "permissionOwner": "human-os",
+        "sharedWithSameOriginTabs": true
+      }
+    }
+  },
+  "sourceHead": "5b4cc293fa2ab661543b0a464a1ada38268d3115",
+  "candidateHead": "6783c8d1823611ea601e18c2599af164aa4aa5e1",
+  "phase": "restart-read",
+  "scopeLimit": "One selected native Client; actual external new process, same absolute home and retained userdata. No new model turn or OS delivery."
+}
