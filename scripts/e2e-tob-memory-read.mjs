@@ -6,6 +6,7 @@ import { resolve, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const native = Boolean(process.env.BH_DESKTOP_CDP);
+const captureOnly = process.env.BH_E2E_MEMORY_CAPTURE_ONLY === '1';
 const retained = process.env.BH_E2E_MEMORY_FIXTURE
   ? JSON.parse(readFileSync(process.env.BH_E2E_MEMORY_FIXTURE))
   : undefined;
@@ -40,6 +41,17 @@ const page = native
 assert.ok(page);
 page.setDefaultTimeout(30000);
 const errors = [];
+const browserConsole = [];
+page.on('console', (entry) => {
+  if (browserConsole.length < 2000)
+    browserConsole.push({
+      type: entry.type(),
+      text: entry
+        .text()
+        .slice(0, 4096)
+        .replace(/([?&]token=)[^&\s]+/gu, '$1<redacted>'),
+    });
+});
 page.on('pageerror', (error) => errors.push(error.message));
 const pause = (milliseconds) => new Promise((done) => setTimeout(done, milliseconds));
 const save = (name, data) =>
@@ -137,6 +149,7 @@ async function shot(label) {
   await page.screenshot({ path: resolve(out, label + '.png') });
   save(label + '.aria', await page.accessibility.snapshot());
   save('console', errors);
+  save('browser-console', browserConsole);
 }
 async function poll(label, read, accept, seconds = 180) {
   for (let attempt = 0; attempt < seconds; attempt++) {
@@ -155,6 +168,178 @@ async function settled(home) {
     (trace) => trace.turns.length === 0 || Boolean(trace.turns.at(-1).endReason),
     240,
   );
+}
+async function finalCompletion(home, assignmentId, { previous, humanMessageId } = {}) {
+  let expectedHuman = humanMessageId;
+  let stableKey;
+  let stableSince = 0;
+  const proof = await poll(
+    'completed revoke turn, handled Human source and idle runtime',
+    async () => {
+      const [channel, trace, activity, detail] = await Promise.all([
+        rpc('channelMessages', { channelId: home.channelId }),
+        rpc('botToolTrace', { slug: home.botSlug, turns: 20 }),
+        rpc('activitySnapshot'),
+        rpc('assignment', { slug: home.botSlug, sessionId: assignmentId }),
+      ]);
+      const human = channel.messages.find(
+        (message) =>
+          message.author.kind === 'human' &&
+          (expectedHuman ? message.id === expectedHuman : !previous?.has(message.id)),
+      );
+      if (human) expectedHuman = human.id;
+      const turn = trace.turns.findLast((item) =>
+        item.calls.some(
+          (call) =>
+            typeof call.args?.command === 'string' &&
+            call.args.command.includes('assignment-memory-revoke') &&
+            call.args.command.includes(assignmentId) &&
+            Date.parse(item.startedAt) >= Date.parse(human?.at ?? '') - 1000,
+        ),
+      );
+      const revoke = turn?.calls.some(
+        (call) =>
+          call.args?.command?.includes('assignment-memory-revoke') &&
+          call.args.command.includes(assignmentId) &&
+          /"revoked"\s*:\s*true/u.test(call.result ?? ''),
+      );
+      const refused = turn?.calls.some(
+        (call) =>
+          call.name === 'send_assignment_request' &&
+          call.args?.session_id === assignmentId &&
+          String(call.result).includes('memory-scope-unavailable'),
+      );
+      const delivered = human?.deliveries?.find((item) => item.botSlug === home.botSlug);
+      const bot = activity.bots.find((item) => item.slug === home.botSlug);
+      const latest = trace.turns.at(-1);
+      const complete =
+        human &&
+        human.body.includes(assignmentId) &&
+        delivered?.state === 'handled' &&
+        turn?.endReason === 'completed' &&
+        latest?.endReason === 'completed' &&
+        revoke &&
+        refused &&
+        bot?.state === 'idle' &&
+        detail.assignment.activity === 'idle';
+      const key = `${human?.id}:${turn?.turn}:${latest?.turn}:${bot?.state}`;
+      if (!complete || key !== stableKey) {
+        stableKey = complete ? key : undefined;
+        stableSince = Date.now();
+      }
+      const value = {
+        checkedAt: new Date().toISOString(),
+        humanMessageId: human?.id,
+        humanDelivery: delivered?.state,
+        revokeTurn: turn?.turn,
+        revokeTurnEnd: turn?.endReason,
+        latestTurn: latest?.turn,
+        latestTurnEnd: latest?.endReason,
+        revoked: Boolean(revoke),
+        continuationRefused: Boolean(refused),
+        botState: bot?.state,
+        assignmentActivity: detail.assignment.activity,
+        stable: Boolean(complete && Date.now() - stableSince >= 2000),
+      };
+      save('closing-last', value);
+      return { ...value, channel, trace, activity, assignment: detail.assignment };
+    },
+    (value) => value.stable,
+    240,
+  );
+  save('closing-proof', proof);
+  return proof;
+}
+async function pressVisible(selector) {
+  for (const element of await page.$$(selector)) {
+    const box = await element.boundingBox();
+    if (box && box.width > 0 && box.height > 0 && box.x >= 0 && box.y >= 0) {
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      return true;
+    }
+  }
+  return false;
+}
+async function captureStableViews(home, assignmentId, closing) {
+  const contact = `[data-channel-id=${JSON.stringify(home.channelId)}]`;
+  await page.waitForFunction(
+    (selector) =>
+      [...document.querySelectorAll(selector)].some(
+        (node) => node.getBoundingClientRect().height > 0,
+      ),
+    {},
+    contact,
+  );
+  assert.ok(await pressVisible(contact), 'Tob DM control missing');
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-dock-panel="bh:channel-body"]')].some(
+      (node) => node.getBoundingClientRect().height > 0,
+    ),
+  );
+  const homeOpen = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-home-panel]')].some(
+      (node) => node.getBoundingClientRect().height > 0,
+    ),
+  );
+  if (homeOpen) await pressVisible('[data-pinned-panel="bh:home"][aria-pressed="true"]');
+  await pause(500);
+  const sessionsOpen = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-sessions]')].some(
+      (node) => node.getBoundingClientRect().height > 0,
+    ),
+  );
+  if (!sessionsOpen)
+    assert.ok(
+      await pressVisible('button[aria-label="Sessions"],button[aria-label="会话"]'),
+      'Sessions control missing',
+    );
+  let box;
+  for (const body of await page.$$('[data-dock-panel="bh:channel-body"]')) {
+    const bounds = await body.boundingBox();
+    if (bounds && bounds.height > 0 && bounds.y >= 0) {
+      box = bounds;
+      break;
+    }
+  }
+  assert.ok(box);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel({ deltaY: 20000 });
+  await pause(300);
+  const finalReply = closing.channel.messages.find(
+    (message) =>
+      message.author.kind === 'bot' &&
+      message.body?.includes(assignmentId) &&
+      message.body.includes('memory-scope-unavailable'),
+  );
+  assert.ok(finalReply, 'Source-grounded final reply missing');
+  for (const button of await page.$$(`[data-message-id=${JSON.stringify(finalReply.id)}] button`))
+    if (
+      await button.evaluate((node) => ['展开全部', 'Show all'].includes(node.textContent?.trim()))
+    ) {
+      const bounds = await button.boundingBox();
+      if (bounds) await button.click();
+    }
+  await page.mouse.wheel({ deltaY: 20000 });
+  await shot('stable-revoked-scope');
+  const row = `[data-flip-key=${JSON.stringify(assignmentId)}] .bh-session-row`;
+  await page.waitForFunction(
+    (selector) =>
+      [...document.querySelectorAll(selector)].some(
+        (node) => node.getBoundingClientRect().height > 0,
+      ),
+    {},
+    row,
+  );
+  await shot('stable-tob-assignment-list');
+  assert.ok(await pressVisible(row), 'Exact owned Assignment row missing');
+  await poll(
+    'native DSH Session refusal visible',
+    () => page.evaluate(() => document.body.innerText),
+    (text) =>
+      text.includes('memory-target-unavailable') &&
+      /返回 Tob 私聊|(?:Back|Return) to Tob/u.test(text),
+  );
+  await shot('stable-assignment-session');
 }
 async function submit(home, prompt) {
   await settled(home);
@@ -261,7 +446,7 @@ async function reply(home, previous) {
     .map((message) => message.body)
     .join('\n');
 }
-try {
+async function runJourney() {
   if (!native) {
     await page.setViewport({ width: 1440, height: 1000 });
     await page.goto(instance.url, { waitUntil: 'domcontentloaded' });
@@ -290,6 +475,32 @@ try {
     await pause(300);
   }
   const home = await rpc('tobHome');
+  if (captureOnly) {
+    assert.ok(
+      retained?.assignmentId && retained.finalHumanMessageId,
+      'Exact capture fixture required',
+    );
+    const closing = await finalCompletion(home, retained.assignmentId, {
+      humanMessageId: retained.finalHumanMessageId,
+    });
+    await captureStableViews(home, retained.assignmentId, closing);
+    save('result', {
+      ok: true,
+      native,
+      captureOnly: true,
+      newModelRequests: false,
+      assignmentId: retained.assignmentId,
+      humanMessageId: closing.humanMessageId,
+      checks: [
+        'actual completed turn',
+        'handled Human delivery',
+        'idle runtime',
+        'stable DM and exact Session capture',
+      ],
+    });
+    console.log(JSON.stringify({ ok: true, captureOnly: true, out }));
+    return;
+  }
   if (
     !(await page.evaluate(() =>
       [...document.querySelectorAll('[data-home-panel] textarea')].some(
@@ -429,6 +640,7 @@ try {
       JSON.stringify(trace).includes('assignment-memory-revoke') &&
       JSON.stringify(trace).includes('memory-scope-unavailable'),
   );
+  const closing = await finalCompletion(home, assignment.sessionId, { previous: revoked });
   await shot('revoked-scope');
   save('fixture', {
     home,
@@ -436,6 +648,7 @@ try {
     assignmentId: assignment.sessionId,
     first: first.latestReport,
     resumed: second.latestReport,
+    finalHumanMessageId: closing.humanMessageId,
   });
   assert.deepEqual(errors, []);
   save('result', {
@@ -450,10 +663,14 @@ try {
       'resumed report',
       'archived target',
       'revoked scope',
+      'completed Human turn and stable idle runtime',
     ],
     nativeGate: native ? 'this run' : 'not run',
   });
   console.log(JSON.stringify({ ok: true, out, assignmentId: assignment.sessionId }));
+}
+try {
+  await runJourney();
 } catch (error) {
   await shot('failure').catch(() => {});
   save('result', { ok: false, error: error.message, errors });
