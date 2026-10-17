@@ -495,6 +495,8 @@ describe('plugin entry', () => {
       'channelHistorySources',
       'channelPurgePreview',
       'channelPurgeConfirm',
+      'tobChannelContent',
+      'tobBotProgress',
       'channelMessages',
       'channelTimeline',
       'channelReadPosition',
