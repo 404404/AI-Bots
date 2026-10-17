@@ -1119,3 +1119,5 @@ Profile 备份的 CLI 输出先写入同目录中新建的 `0600` 私密 `.part`
 受限导出的 `receiptId` 与前一次预览已知的 `planId` 相同。答复丢失后，可用该 ID 检查，或带相同 plan 再调用导出命令，只读回已完成结果；不会再次导出，即使 Host 已重启也如此。首次导出仍需新的 Human 审核。模型授权／激活把审批时的 Model Plan revision 与恢复状态指纹一直绑定到 owner 提交，并在提交前检查当前 Source Event 授权；审核后变化返回 `plan-changed`。Human 在线命令也可传 `profile-recovery` 返回的 `--expected-revision <planRevision> --expected-state <stateFingerprint>`，使用相同 CAS 约束。
 
 恢复保留内容与历史，但在发布新目录前撤销目标本地能力：导入设备均撤销并替换凭据哈希，设备 Host identity 重建，push 目标和已记住的 secret-MCP 执行批准清除，导入的受保护 Tob role 也移除。原 steward 的人格／Memory 保留为暂停的普通 Bot；Home 建立目标本地的新受保护 Tob。设备须重新配对，secret 执行须重新批准。Workspace Grants、工具允许规则、宽泛 Assignment 权限、消息绑定／授权／配对、定时任务和待执行工作继续沿用冷恢复的撤销、暂停或拒绝边界。创建／群管理回执只是协调历史，不能复用旧已准入 Source Event 或复活过期 Shell 能力。源 Profile 不受新目录恢复影响。
+
+导出审批锁定完整 Profile 范围及当前权限，归档在执行屏障处捕获一致状态，其中可以包含审批自身的审计记录。Tob 的同一次原生执行可以增加自己的进度、审批请求及对应决定；其他来源内容、Memory、资料或权限变化仍返回 `preview-stale`。内部范围指纹、已接受来源及调用身份只留在 Host，不进入 CLI 输出。

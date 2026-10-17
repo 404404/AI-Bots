@@ -802,3 +802,162 @@ it('restores content without imported device, push, secret execution or protecte
     });
   }
 });
+
+it.each(['allow', 'other-review', 'different-context', 'revoked-authority'] as const)(
+  'keeps only its own canonical export approval outside scope CAS: %s',
+  async (caseName) => {
+    const core = mount();
+    expect(core.registry.create({ slug: 'keeper', displayName: 'Keeper' }).ok).toBe(true);
+    const channel = core.channels.getOrCreateDm('keeper', 'Keeper')!;
+    core.ownership.claim({
+      sessionId: 'review-session',
+      botSlug: 'keeper',
+      rootRole: 'orchestrator',
+      at: '2026-10-18T00:00:00Z',
+    });
+    await core.channels.appendMessage(channel.id, {
+      id: 'accepted-human',
+      at: '2026-10-18T00:00:01Z',
+      body: 'Export my Profile',
+      author: { kind: 'human' },
+    });
+    const port = attachOperationalModule(core.operationalDatabase, 'backup-review-test');
+    const accepted = String(
+      port.read(
+        (db) =>
+          db
+            .prepare('SELECT source_event_id FROM source_events WHERE message_id = ?')
+            .get('accepted-human')!.source_event_id,
+      ),
+    );
+    const context = {
+      sessionId: 'review-session',
+      sourceEventIds: [accepted],
+      callIds: ['export-call'],
+    };
+    const handler = createProfileBackupHttp(source(core), root(), core.profileRecovery, catalog);
+    const preview = await (
+      await handler(new Request('http://localhost' + PROFILE_BACKUP_PATH), undefined, context)
+    ).json();
+    await core.channels.appendMessage(
+      channel.id,
+      {
+        id: 'export-progress',
+        at: '2026-10-18T00:00:02Z',
+        body: 'Review this complete Profile export',
+        author: { kind: 'bot', slug: 'keeper' },
+      },
+      { sessionId: 'review-session', sourceEventId: accepted },
+    );
+    await core.channels.appendMessage(channel.id, {
+      id: 'export-review',
+      at: '2026-10-18T00:00:03Z',
+      body: 'Review export',
+      author: { kind: 'bot', slug: 'keeper' },
+      toolApprovalRequest: {
+        sessionId: 'review-session',
+        callId: 'export-call',
+        toolName: 'deepseekbot profile-backup-export',
+        role: 'orchestrator',
+        cwd: core.registry.memoryDirFor('keeper')!,
+        input: '{}',
+      },
+    });
+    await core.channels.appendMessage(channel.id, {
+      id: 'export-decision',
+      at: '2026-10-18T00:00:04Z',
+      body: 'Allow once',
+      author: { kind: 'human' },
+      replyTo: 'export-review',
+      toolApprovalDecision: { requestMessageId: 'export-review', outcome: 'allowed-once' },
+    });
+    if (caseName === 'other-review')
+      await core.channels.appendMessage(channel.id, {
+        id: 'unrelated-review',
+        at: '2026-10-18T00:00:05Z',
+        body: 'Different export execution',
+        author: { kind: 'bot', slug: 'keeper' },
+        toolApprovalRequest: {
+          sessionId: 'review-session',
+          callId: 'different-call',
+          toolName: 'deepseekbot profile-backup-export',
+          role: 'orchestrator',
+          cwd: core.registry.memoryDirFor('keeper')!,
+          input: '{}',
+        },
+      });
+    const request = new Request('http://localhost' + PROFILE_BACKUP_PATH, {
+      method: 'POST',
+      body: JSON.stringify({ token: preview.token }),
+    });
+    if (caseName === 'revoked-authority') {
+      await expect(
+        handler(
+          request,
+          () => {
+            throw new Error('current accepted authority revoked');
+          },
+          context,
+        ),
+      ).rejects.toThrow('current accepted authority revoked');
+      return;
+    }
+    const response = await handler(
+      request,
+      undefined,
+      caseName === 'different-context'
+        ? { ...context, sourceEventIds: ['unrelated-source'] }
+        : context,
+    );
+    if (caseName !== 'allow') {
+      expect(await response.json()).toMatchObject({ error: { code: 'preview-stale' } });
+      return;
+    }
+    expect(response.status).toBe(200);
+    const archive = Buffer.from(await response.arrayBuffer());
+    expect(inspectProfileBackup(archive).manifest.counts.bots).toBe(1);
+  },
+);
+
+it.each(['source', 'memory', 'profile', 'grant'] as const)(
+  'refuses a scoped reviewed export after an actual %s change',
+  async (change) => {
+    const core = mount();
+    expect(
+      core.registry.create({ slug: 'keeper', displayName: 'Keeper', persona: 'AAAA' }).ok,
+    ).toBe(true);
+    const channel = core.channels.getOrCreateDm('keeper', 'Keeper')!;
+    const handler = createProfileBackupHttp(source(core), root(), core.profileRecovery, catalog);
+    const preview = await (
+      await handler(new Request('http://localhost' + PROFILE_BACKUP_PATH))
+    ).json();
+    if (change === 'source')
+      await core.channels.appendMessage(channel.id, {
+        id: 'new-human',
+        at: '2026-10-18T00:00:01Z',
+        body: 'Another request',
+        author: { kind: 'human' },
+      });
+    else if (change === 'memory') {
+      const file = join(core.registry.memoryDirFor('keeper')!, 'SOUL.md');
+      const before = readFileSync(file);
+      const after = Buffer.from(before);
+      after[0] = after[0] === 65 ? 66 : 65;
+      writeFileSync(file, after);
+      expect(after.length).toBe(before.length);
+    } else if (change === 'profile') core.registry.update('keeper', { displayName: 'Different' });
+    else
+      attachOperationalModule(core.operationalDatabase, 'workspace-grants').transaction((db) => {
+        db.prepare(
+          'INSERT INTO workspace_grants (id, bot_slug, workspace_id, workspace_path, workspace_title, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run('new-grant', 'keeper', 'workspace', root(), 'Workspace', '2026-10-18T00:00:01Z');
+      });
+    const response = await handler(
+      new Request('http://localhost' + PROFILE_BACKUP_PATH, {
+        method: 'POST',
+        body: JSON.stringify({ token: preview.token }),
+      }),
+    );
+    expect(await response.json()).toMatchObject({ error: { code: 'preview-stale' } });
+  },
+);
