@@ -288,17 +288,15 @@ describe('connector concurrency at the owner boundary', () => {
     });
     const before = f.core.externalMessaging.policyMutations.stamp('research');
     port.transaction((db) =>
-      db
-        .prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?')
-        .run(
-          JSON.stringify({
-            ...body,
-            attempts: 3,
-            privateReply: { token: 'private-traffic' },
-            notifications: [{ key: 'notice', attempts: 1, outcome: 'accepted' }],
-          }),
-          body.id,
-        ),
+      db.prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?').run(
+        JSON.stringify({
+          ...body,
+          attempts: 3,
+          privateReply: { token: 'private-traffic' },
+          notifications: [{ key: 'notice', attempts: 1, outcome: 'accepted' }],
+        }),
+        body.id,
+      ),
     );
     expect(f.core.externalMessaging.policyMutations.stamp('research')).toBe(before);
     port.transaction((db) =>
