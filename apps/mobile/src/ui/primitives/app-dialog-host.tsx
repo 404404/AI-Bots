@@ -120,9 +120,12 @@ export function AppDialogHost() {
                 ))}
               </View>
             ) : null}
-            <View style={{ flexDirection: stacked ? 'column' : 'row', gap: space.x3 }}>
+            <View
+              testID="app-dialog-actions"
+              style={{ flexDirection: stacked ? 'column' : 'row', gap: space.x3 }}
+            >
               {cancel === undefined ? null : (
-                <View style={actionStyle}>
+                <View testID="app-dialog-cancel-cell" style={actionStyle}>
                   <Button
                     label={cancel.text}
                     onPress={dismiss}
@@ -134,7 +137,11 @@ export function AppDialogHost() {
               {menu
                 ? null
                 : choices.map(({ action, index }) => (
-                    <View key={index} style={actionStyle}>
+                    <View
+                      key={index}
+                      testID={`app-dialog-action-cell-${index}`}
+                      style={actionStyle}
+                    >
                       <Button
                         label={action.text}
                         tone={action.style === 'destructive' ? 'danger' : 'primary'}
