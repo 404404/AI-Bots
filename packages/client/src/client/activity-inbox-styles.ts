@@ -11,7 +11,8 @@ export const ACTIVITY_INBOX_CSS = `
 .bh-activity-toolbar h2 { flex: 1; margin: 0; font-size: ${text.titleSize}; line-height: ${text.titleLine}; font-weight: ${text.strong}; }
 .bh-activity-approval { display: grid; grid-template-rows: 1fr; margin-bottom: ${space.x4}; min-width: 0; }
 .bh-activity-approval-clip { min-height: 0; min-width: 0; }
-.bh-activity-approval-content { min-height: 0; min-width: 0; padding: ${space.x5}; border-radius: ${radius.lg}; background: ${color.surface}; }
+.bh-activity-approval-content { min-height: 0; min-width: 0; padding: ${space.x5}; border-radius: ${radius.sm}; background: transparent; }
+.bh-activity-approval-content:hover { background: ${color.hover}; }
 .bh-activity-approval-heading { display: flex; align-items: center; gap: ${space.x3}; margin-bottom: ${space.x4}; }
 .bh-activity-approval-heading > div { display: grid; flex: 1; min-width: 0; }
 .bh-activity-approval-heading strong { font-weight: ${text.strong}; font-size: ${text.bodySize}; line-height: ${text.bodyLine}; }
