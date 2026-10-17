@@ -35,6 +35,9 @@ async function fixture() {
         await action?.(run);
       },
       async runAssignment() {},
+      requestAssignment() {
+        return { delivery: 'followup', accepted: Promise.resolve(), done: Promise.resolve() };
+      },
       async close() {},
     },
   });
@@ -74,7 +77,7 @@ async function fixture() {
       (
         await bridge.channelSend({
           channelId: tob.channelId,
-          messageId: crypto.randomUUID(),
+          messageId: 'human-' + crypto.randomUUID(),
           body: 'Update the selected Bot Memory as reviewed.',
         })
       ).ok,
@@ -205,6 +208,19 @@ describe('Tob reviewed Memory owner operations', () => {
   it('pins Bot incarnation before review and allows an explicitly requested Tob self edit', async () => {
     const f = await fixture();
     await f.human(async (prepare) => {
+      const initial = f.core.memory.snapshot(f.tob.botSlug).head!;
+      await expect(
+        prepare('memory-save', {
+          slug: f.tob.botSlug,
+          path: 'MEMORY.md',
+          body: 'Do not bypass an unaccepted baseline.\n',
+          expectedHead: initial,
+          editId: 'unaccepted-self-edit',
+        }),
+      ).rejects.toMatchObject({ code: 'memory-conflict' });
+      expect(f.core.memory.snapshot(f.tob.botSlug).head).toBe(initial);
+    });
+    await f.human(async (prepare) => {
       const operation = (await prepare('memory-save', f.input()))!;
       const original = f.core.registry.get.bind(f.core.registry);
       const spy = vi.spyOn(f.core.registry, 'get').mockImplementation((slug) => {
@@ -215,6 +231,7 @@ describe('Tob reviewed Memory owner operations', () => {
       });
       expect(() => operation.run(() => {})).toThrow('memory-target-changed');
       spy.mockRestore();
+      expect(f.core.memory.workingChanges(f.tob.botSlug)).toEqual([]);
       const self = (await prepare('memory-save', {
         slug: f.tob.botSlug,
         path: 'MEMORY.md',

@@ -930,6 +930,10 @@ HEAD 时，重试仅经过权限检查读取同一 accepted commit，不重复�
 下次 compaction 生效；正在运行的 Session 仍使用冻结前缀。直接 CLI、真实 Tob、Web 渲染和
 macOS Desktop 应分别验证。
 
+Tob 在自己的 prepared turn 内自编辑，还须准确匹配该 turn 的 owner Orchestrator、干净分支和
+已 accepted 的 HEAD。初始化提交尚 pending 的首个 turn 因此可能安全拒绝；待正常 turn 完成后
+重新读取基线。Assignment 或其他活跃 Orchestrator 不能借用此内部 owner 上下文。
+
 ## Tob Assignment Memory 只读查询
 
 Human 在 Tob 私聊明确要求比较选定 Bot 的 Memory 时，Tob 先运行 `deepseekbot capabilities`，

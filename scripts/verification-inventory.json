@@ -513,6 +513,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/group-send-review.md",
       "task": 2053,
       "gap": null
+    },
+    {
+      "id": "desktop.tob.memory-edit",
+      "label": "Review selected Bot Memory edit, denial, stale review and independent restore",
+      "source": "packages/core/src/tob/cli-memory-operations.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/tob-memory-edit.md",
+      "task": 2092,
+      "gap": null
     }
   ],
   "scripts": [
@@ -1778,9 +1786,17 @@
       "path": "scripts/e2e-tob-memory-read.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Tob-owned real Assignment reads two selected Memory repositories through immutable revision CLI pages; rendered review, denied write, resumed report, archived target and revoked scope. Web and macOS are independent runs.",
+      "reason": "Tob-owned real Assignment reads two selected Memory repositories through immutable revision CLI pages; rendered review, denied write, resumed report, archived target and revoked scope. Web and macOS are independent runs. Valid write syntax remains refused by the broker after Memory edit parser expansion (#2092).",
       "task": 2091,
-      "sha256": "00e686ed0058ea48c225423bd2776e598f4c1bfe7a05922d431a128756344e9d"
+      "sha256": "70ec70a26c8f45e9de1440f667ce469d551ee0dab6e3028a0e601fcc92c6ae10"
+    },
+    {
+      "path": "scripts/e2e-tob-memory-edit.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.memory-edit"],
+      "reason": "Independent Human CLI edit/retry/stale refusal and real Tob edit/deny/stale/restore with rendered approval, canonical Memory and untouched second Bot; Web and macOS are separate runs.",
+      "task": 2092,
+      "sha256": "aa5867dd0a7621e853b84f7758088c3c8d2a21b97b662b4ea783dc4b068ff9c2"
     }
   ],
   "native": [
