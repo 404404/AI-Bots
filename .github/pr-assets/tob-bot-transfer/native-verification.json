@@ -1,0 +1,98 @@
+{
+  "sourceHead": "3095104181d3c6e92ae74ead4c2bbfba6d76f400",
+  "runtime": "parent-run native macOS, same absolute Profile",
+  "nativeDirect": {
+    "passed": true,
+    "run": "desktop-1792279676944"
+  },
+  "nativeImports": {
+    "passed": true,
+    "run": "desktop-1792280197367",
+    "selectedArchive": {
+      "bytes": 3877,
+      "sha256": "a963a12e8135c54a55618c16895ecbc361a53e3f176ca4d981620668665de292"
+    },
+    "entries": [".botharness/banner.png", ".botharness/bot.json", "SOUL.md"],
+    "selectedImport": {
+      "id": "bot-001c4f24dfef464d892135c928f22bcc",
+      "name": "Native selected ZIP QA 1792279927337"
+    },
+    "selectedSoulPreserved": true,
+    "excludedMemoryAbsent": true,
+    "ordinaryImport": {
+      "id": "bot-b74d1e7b3f514872bc7a297c9c5cdf7f",
+      "name": "Native imported ordinary Tob 1792280031550"
+    },
+    "originalProtectedTob": "bot-1181d61372484fd797da071aa1bdc7b2",
+    "ordinaryDeletionPreviewAllowed": true,
+    "pageErrors": [],
+    "actualRenderedDmHeader": true,
+    "captureLimit": "Initial capture retained privately; final focused ordinary DM rendered after same-home restart",
+    "status": "passed"
+  },
+  "privateDriverFailures": [
+    "Excluded missing MEMORY.md dereferenced after successful selected import",
+    "Messages panel closed while verifier waited for its header after successful ordinary import",
+    "First Native transfer inner click did not settle; default native Shell60000ms cancelled inner review, no ZIP. Settled turn was correctly followed by failed artifact assertion. Retained original failure, then explicit fresh Human continuation succeeded after hit-tested canonical decisions and timeoutMs300000."
+  ],
+  "remaining": ["new integrated-stack runtime", "Human QA", "merge authorization", "deployment"],
+  "nativeTransfer": {
+    "passed": true,
+    "run": "desktop-1792281051637",
+    "freshHumanContinuation": "human-3b2f4d0a-4654-47c3-bf87-3e1f0381fe99",
+    "selectedBytes": 3877,
+    "selectedSha256": "a963a12e8135c54a55618c16895ecbc361a53e3f176ca4d981620668665de292",
+    "originalState": "6b2df58fa246fa8e2f13bc8e3b5b504c0ae73b3b17f8a985523ff6c058b65fe3",
+    "refreshedState": "aecf2c31564381e9691584a6ddb4130be252e4273136065844901fec2a0154e4",
+    "approvedInnerCanonical": true,
+    "deniedInnerCanonical": true,
+    "staleRefused": true,
+    "freshProposalOuterDenied": true,
+    "deniedAndStaleOutputsAbsent": true,
+    "sourceUnchangedAfterSuccessfulExport": true,
+    "threeHumanTurnsCompletedHandledIdle": true,
+    "pageErrors": []
+  },
+  "nativeRetry": {
+    "passed": true,
+    "run": "desktop-1792281308777",
+    "humanMessageId": "human-e0a29834-f0c5-4c3b-91fa-841edb305f4f",
+    "turn": 10,
+    "operationKey": "human-qa-mvd11qww",
+    "originalInput": true,
+    "newIdentities": 0,
+    "laterProfileAndMemoryUnchanged": true,
+    "nativeShellApproval": "allowed-once",
+    "creationMutationReview": false,
+    "completedHandledTwoIdleSnapshots": true,
+    "capture": "Actual source DM after replay; complete reply is canonical completion JSON, not this screenshot",
+    "pageErrors": [],
+    "memoryCheckLimit": "Existing SOUL/Memory compared before and after; Native fixture independently edited profile, not Memory content"
+  },
+  "nativeRestart": {
+    "passed": true,
+    "run": "desktop-1792281425132",
+    "newModelRequest": false,
+    "newImport": false,
+    "sameAbsoluteHome": true,
+    "copiedHomeOrSession": false,
+    "threeExactDmHeadersRendered": true,
+    "readback": {
+      "sourceBot": "bot-5b3a509583f04e14a9d7ff05a4ef6787",
+      "selectedImport": {
+        "id": "bot-001c4f24dfef464d892135c928f22bcc",
+        "name": "Native selected ZIP QA 1792279927337"
+      },
+      "selectedSoulPreserved": true,
+      "excludedMemoryAbsent": true,
+      "ordinaryImport": {
+        "id": "bot-b74d1e7b3f514872bc7a297c9c5cdf7f",
+        "name": "Native imported ordinary Tob 1792280031550"
+      },
+      "originalProtectedTob": "bot-1181d61372484fd797da071aa1bdc7b2",
+      "originalProtectedRefusal": "protected-bot",
+      "ordinaryPreviewAllowed": true
+    },
+    "pageErrors": []
+  }
+}
