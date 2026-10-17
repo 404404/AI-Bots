@@ -77,6 +77,8 @@ import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
   sessionTarget: {
+    minWidth: 0,
+    flexShrink: 1,
     maxWidth: '160px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',

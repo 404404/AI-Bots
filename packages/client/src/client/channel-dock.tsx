@@ -67,7 +67,7 @@ const styles = stylex.create({
   flushBody: { paddingTop: 0, paddingBottom: 0, paddingInline: 0 },
   workspaceBody: { paddingTop: space.x1, paddingBottom: space.x1, paddingInline: space.x1 },
   panel: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
-  actions: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
+  actions: { display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: space.x1 },
 });
 
 const DOCK_THEME: DockviewTheme = {

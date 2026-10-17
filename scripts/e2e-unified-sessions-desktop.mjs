@@ -120,6 +120,12 @@ try {
     recorder,
   );
   assert.equal(await page.$('button[aria-label="修改“开关 工作 面板”的快捷键"]'), null);
+  await page.waitForFunction(
+    (selector) => document.querySelector(selector)?.getAttribute('aria-label')?.includes('J'),
+    {},
+    toggle,
+  );
+  await wait(500);
   await page.screenshot({ path: resolve(out, 'custom-shortcut.png') });
   await key('Escape');
   await key('J', ['meta', 'alt', 'shift']);
@@ -151,6 +157,11 @@ try {
     {},
     recorder,
   );
+  await page.waitForFunction(
+    (selector) => document.querySelector(selector)?.getAttribute('aria-label')?.includes('7'),
+    {},
+    toggle,
+  );
   await key('Escape');
   results.push({ customNativeDispatch: true, reload: true, defaultRestored: true });
   await page.locator('::-p-aria(test 暂无消息)').click();
@@ -166,6 +177,16 @@ try {
     ),
   );
   await settledSessions();
+  assert.ok(
+    await page.$eval(header, (node) => {
+      const bounds = node.getBoundingClientRect();
+      const action = node
+        .querySelector('button[aria-label="会话视图选项"]')
+        ?.getBoundingClientRect();
+      return action && action.right <= bounds.right && action.left >= bounds.left;
+    }),
+    'The view-options button remains inside the narrow panel header',
+  );
   await page.screenshot({ path: resolve(out, 'group-bot-scope.png') });
   await page.waitForSelector(`${header} button[aria-label="会话视图选项"]`);
   await page.locator(`${header} button[aria-label="会话视图选项"]`).click();
