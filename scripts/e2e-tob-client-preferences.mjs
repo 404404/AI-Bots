@@ -98,6 +98,7 @@ function mark(step) {
   console.log(JSON.stringify(entry));
 }
 const click = async (name, scope = '', targetPage = page) => {
+  await targetPage.bringToFront();
   const names = {
     Members: ['Members', '成员'],
     More: ['More', '更多'],
@@ -122,8 +123,15 @@ const click = async (name, scope = '', targetPage = page) => {
     for (const label of names) {
       const selector = `${scope} ::-p-aria([name=${JSON.stringify(label)}])`.trim();
       for (const handle of await targetPage.$$(selector)) {
-        if (await handle.isVisible()) {
-          await handle.click();
+        const actionable = await handle.evaluate(
+          (node) =>
+            node.tagName === 'BUTTON' ||
+            node.tagName === 'A' ||
+            node.getAttribute('role') === 'button',
+        );
+        if (actionable && (await handle.isVisible())) {
+          await handle.focus();
+          await handle.press('Enter');
           return;
         }
       }
@@ -133,6 +141,7 @@ const click = async (name, scope = '', targetPage = page) => {
   throw Error('visible accessible action not found: ' + name);
 };
 const shot = async (name) => {
+  await page.bringToFront();
   await page.evaluate(async () => {
     const finite = document
       .getAnimations()
@@ -219,7 +228,33 @@ async function enterClient(tab) {
   }
   throw Error('second Client shell unavailable');
 }
+async function dismissTutorial(tab) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const skip = await tab.evaluate(() =>
+      [...document.querySelectorAll('button')]
+        .filter((node) => node.getBoundingClientRect().width > 0)
+        .find((node) => ['Skip tutorial', '跳过教程'].includes(node.textContent?.trim()))
+        ?.textContent?.trim(),
+    );
+    if (skip) {
+      await click(skip, '', tab);
+      await pause(200);
+    } else return;
+  }
+}
+async function notificationSettings(tab) {
+  await tab.bringToFront();
+  await dismissTutorial(tab);
+  const opened = await tab.evaluate(() =>
+    [...document.querySelectorAll('[data-settings-section]')].some(
+      (node) => node.getBoundingClientRect().width > 0,
+    ),
+  );
+  if (!opened) await click('Bot settings', '', tab);
+  await click('Notifications', '', tab);
+}
 async function captureClient(tab, label) {
+  await tab.bringToFront();
   await tab.screenshot({ path: resolve(out, label + '.png') });
   writeFileSync(
     resolve(out, label + '.aria.json'),
@@ -633,6 +668,8 @@ try {
   );
   steps.push('concurrent Home identity converges');
 
+  await dismissTutorial(page);
+  mark('client-target-discovery');
   const targetId = await page.evaluate(() =>
     sessionStorage.getItem('botharness.client-control-id.v1'),
   );
@@ -663,6 +700,8 @@ try {
     if (!native) {
       otherContext = await browser.createBrowserContext();
       otherPage = await otherContext.newPage();
+      otherPage.on('pageerror', (error) => errors.push('independent-context: ' + error.message));
+      await otherPage.setViewport({ width: 1440, height: 900 });
       await otherPage.goto(instance.url, { waitUntil: 'domcontentloaded' });
       await otherPage.waitForFunction(() =>
         sessionStorage.getItem('botharness.client-control-id.v1'),
@@ -683,6 +722,9 @@ try {
       await peerPage.setViewport({ width: 1440, height: 900 });
       await peerPage.goto(instance.url, { waitUntil: 'domcontentloaded' });
       await enterClient(peerPage);
+      await dismissTutorial(peerPage);
+      await dismissTutorial(page);
+      mark('same-origin-clients-ready');
       await peerPage.waitForFunction(() =>
         sessionStorage.getItem('botharness.client-control-id.v1'),
       );
@@ -690,27 +732,32 @@ try {
         await peerPage.evaluate(() => sessionStorage.getItem('botharness.client-control-id.v1')),
         target.clientId,
       );
+      mark('same-origin-cli-baseline');
       await write({ notifications: false });
       const staleOwnerState = await read();
-      await click('Bot settings', '', peerPage);
-      await click('Notifications', '', peerPage);
+      mark('same-origin-peer-settings');
+      await notificationSettings(peerPage);
       const switchSelector = '[data-bh-setting="desktop-notifications"] [role="switch"]';
       await peerPage.waitForSelector(switchSelector, { visible: true });
       await captureClient(peerPage, 'same-origin-ui-before');
-      await peerPage.click(switchSelector);
+      mark('same-origin-peer-ui-on');
+      await peerPage.focus(switchSelector);
+      await peerPage.keyboard.press('Space');
       await peerPage.waitForFunction(
         (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'true',
-        {},
+        { polling: 100 },
         switchSelector,
       );
+      mark('same-origin-stale-cli-check');
       const stale = await write({ notifications: false }, staleOwnerState.stateFingerprint, true);
       assert.equal(stale.error.code, 'stale-client-preferences');
       assert.equal((await read()).value.notifications.enabled, true);
-      await click('Bot settings');
-      await click('Notifications');
+      await dismissTutorial(page);
+      mark('same-origin-primary-settings');
+      await notificationSettings(page);
       await page.waitForFunction(
         (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'true',
-        {},
+        { polling: 100 },
         switchSelector,
       );
       await shot('same-origin-ui-synchronized');
@@ -718,16 +765,17 @@ try {
       await write({ notifications: false });
       await peerPage.waitForFunction(
         (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'false',
-        {},
+        { polling: 100 },
         switchSelector,
       );
       await page.waitForFunction(
         (selector) => document.querySelector(selector)?.getAttribute('aria-checked') === 'false',
-        {},
+        { polling: 100 },
         switchSelector,
       );
       await shot('same-origin-direct-cli-off');
       await click('Close');
+      mark('host-theme-shared-scope');
       const theme = await humanCli('settings', ['ui-theme']);
       const sharedTheme = theme.value.preference === 'dark' ? 'light' : 'dark';
       await humanCli(
@@ -747,7 +795,7 @@ try {
       for (const tab of [page, peerPage, otherPage].filter(Boolean)) {
         await tab.waitForFunction(
           (dark) => document.body.hasAttribute('data-ds-dark-theme') === dark,
-          {},
+          { polling: 100 },
           sharedTheme === 'dark',
         );
       }
@@ -762,6 +810,7 @@ try {
         'real same-origin peer UI edit; shared notification owner/storage-event synchronization; stale CLI rejection; direct CLI reflected in both tabs; explicit Host theme reflected in all contexts',
       );
     }
+    mark('direct-local-notification');
     const baseline = await read();
     const changed = await write({
       notifications: baseline.value.notifications.permission === 'granted',
@@ -782,11 +831,11 @@ try {
       writeFileSync(resolve(out, 'second-client.json'), JSON.stringify(other, null, 2));
       await otherContext.close();
     }
-    await click('Bot settings');
-    await click('Notifications');
+    await notificationSettings(page);
     await shot('direct-notifications');
     await click('Close');
     if (peerPage) await peerPage.close();
+    mark('reload-persistence');
     const saved = await read();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!document.querySelector('.bh-workspace-rail'));
@@ -816,8 +865,7 @@ try {
     const actual = await read();
     assert.equal(actual.value.notifications.enabled, expected.notifications);
     assert.equal(actual.value.theme, expected.theme);
-    await click('Bot settings');
-    await click('Notifications');
+    await notificationSettings(page);
     await shot('host-and-browser-restart-readback');
     await click('Close');
     steps.push(
