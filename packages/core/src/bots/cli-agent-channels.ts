@@ -1,8 +1,11 @@
+import { attachmentUploadInput } from './cli-attachment-upload.js';
 import type { AgentManagementInvocation } from './cli-agent-management.js';
 import { CliLiveError } from './cli-live-error.js';
 import { channelAvatarDataUrl, channelExpectedState } from './cli-channels.js';
 
 export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> = {
+  'attachment-upload':
+    'deepseekbot attachment-upload --file <canonical-regular-file> --upload-id <stable-UUID-v4>; uploads up to 25 MiB without sending a message',
   'channel-preferences':
     'deepseekbot channel-preferences <channel-id>; current Human preferences and stateFingerprint, not Group settings',
   'channel-pin':
@@ -19,6 +22,8 @@ export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> =
     'deepseekbot channel <group-channel-id>; returns channelFingerprint for reviewed Group changes',
   'channel-rename':
     'deepseekbot channel-rename <group-channel-id> --name <name> --expected-channel <observed-fingerprint>',
+  'group-delete':
+    'deepseekbot group-delete <group-channel-id> --confirm --expected-channel <observed-fingerprint>; ends the Group for every member and preserves history',
   'group-avatar-set':
     'deepseekbot group-avatar-set <group-channel-id> (--avatar-file <PNG/JPEG/WebP-path> | --clear) --expected-channel <observed-fingerprint>',
   'group-wake-policies': 'deepseekbot group-wake-policies <group-channel-id>',
@@ -37,6 +42,7 @@ export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> =
 };
 
 const OPTIONS: Readonly<Record<string, readonly string[]>> = {
+  'attachment-upload': ['file', 'upload-id'],
   'channel-preferences': [],
   'channel-pin': ['off', 'expected-state'],
   'channel-hide': ['off', 'expected-state'],
@@ -45,6 +51,7 @@ const OPTIONS: Readonly<Record<string, readonly string[]>> = {
   channels: ['limit', 'cursor'],
   channel: [],
   'channel-rename': ['name', 'expected-channel'],
+  'group-delete': ['confirm', 'expected-channel'],
   'group-avatar-set': ['avatar-file', 'clear', 'expected-channel'],
   'group-wake-policies': [],
   'group-wake-set': ['bot', 'mode', 'count', 'interval', 'inherit', 'expected-channel'],
@@ -102,8 +109,16 @@ export function parseAgentChannels(
       'agent-scope-denied',
       'This option is not available for the scoped Channel operation.',
     );
-  if (rest.length !== (command === 'channels' ? 0 : 1))
+  if (rest.length !== (command === 'channels' || command === 'attachment-upload' ? 0 : 1))
     usage('This Channel operation has missing or extra positional arguments.');
+  if (command === 'attachment-upload') {
+    const upload = attachmentUploadInput(values.file, values['upload-id'], true);
+    return {
+      command,
+      args: { name: upload.name, uploadId: upload.uploadId, data: upload.bytes.toString('base64') },
+      write: true,
+    };
+  }
   if (command === 'channels') {
     const args: Record<string, unknown> = {};
     if (values.limit !== undefined) {
@@ -154,6 +169,10 @@ export function parseAgentChannels(
       expectedChannel: fingerprint(values['expected-channel']),
     };
     switch (command) {
+      case 'group-delete':
+        if (values.confirm !== true) usage('group-delete requires --confirm.');
+        args.confirm = true;
+        break;
       case 'channel-rename':
         args.name = text(values.name, '--name');
         break;

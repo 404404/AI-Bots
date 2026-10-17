@@ -1121,3 +1121,9 @@ Profile 备份的 CLI 输出先写入同目录中新建的 `0600` 私密 `.part`
 恢复保留内容与历史，但在发布新目录前撤销目标本地能力：导入设备均撤销并替换凭据哈希，设备 Host identity 重建，push 目标和已记住的 secret-MCP 执行批准清除，导入的受保护 Tob role 也移除。原 steward 的人格／Memory 保留为暂停的普通 Bot；Home 建立目标本地的新受保护 Tob。设备须重新配对，secret 执行须重新批准。Workspace Grants、工具允许规则、宽泛 Assignment 权限、消息绑定／授权／配对、定时任务和待执行工作继续沿用冷恢复的撤销、暂停或拒绝边界。创建／群管理回执只是协调历史，不能复用旧已准入 Source Event 或复活过期 Shell 能力。源 Profile 不受新目录恢复影响。
 
 导出审批锁定完整 Profile 范围及当前权限，归档在执行屏障处捕获一致状态，其中可以包含审批自身的审计记录。Tob 的同一次原生执行可以增加自己的进度、审批请求及对应决定；其他来源内容、Memory、资料或权限变化仍返回 `preview-stale`。内部范围指纹、已接受来源及调用身份只留在 Host，不进入 CLI 输出。
+
+## Tob 群组删除与附件上传
+
+`deepseekbot group-delete <channel-id> --confirm [--expected-channel <fingerprint>]` 为所有成员结束群组，取消待处理邀请和申请，保留历史与 Bot。Tob 必须传入 `channel` 返回的最新指纹，仍有 Human 群组权限，并经显式确认与 Host 审批。审核期间发生变化返回 `stale-channel`；结果不确定时先读取当前状态，不得盲目重试删除。
+
+`deepseekbot attachment-upload --file <canonical-regular-file> [--upload-id <UUID-v4>]` 通过现有认证附件服务上传最多 25 MiB 的本地文件，输出元数据和 SHA-256；上传不会发送消息。含符号链接、非常规文件、超限或读取期间变化的文件会被拒绝。Human CLI 可省略 ID 自动生成，需保存返回的 ID 用于重试。Tob 必须提供稳定 UUID-v4，并经仅显示文件名、大小和摘要的审批。Host 接收文件字节，不会按调用者指定的路径读取 Host 文件。相同 ID 携带不同内容或名称会被拒绝；匹配的已保存上传返回同一文件身份。修改原文件、向外部发送仍需原有独立权限。

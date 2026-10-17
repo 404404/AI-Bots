@@ -374,10 +374,10 @@
     },
     {
       "id": "attachments",
-      "description": "Channel attachment upload lacks direct CLI parity; media-download covers the existing download route.",
+      "description": "Channel attachment upload via bounded raw byte transport; retained upload does not send a message.",
       "scope": "Host",
       "surfaces": ["route:packages/core/src/plugin.ts:CHANNEL_ATTACHMENT_UPLOAD_PATH"],
-      "issue": "#2090"
+      "commands": ["attachment-upload"]
     },
     {
       "id": "todo",
