@@ -1,0 +1,563 @@
+{
+  "source": "e6e42ebcb0ecebbb4841466c19416052ab683734",
+  "base": "41637d6652dc28ab08452e1b2a11bb344bc97180",
+  "integration": "ef6e4b81f1fd3c0ced866d8ae464ffed96555bc3",
+  "scope": "Native Android bottom navigation, spatial crops of genuine1220x2712 captures; crop1220x512 at y2200. No reference attachment is published.",
+  "pairs": [
+    {
+      "scheme": "light",
+      "scale": "1",
+      "page": "chats",
+      "before": "before-light-1-chats.png",
+      "after": "after-light-1-chats.png"
+    },
+    {
+      "scheme": "light",
+      "scale": "1",
+      "page": "activity",
+      "before": "before-light-1-activity.png",
+      "after": "after-light-1-activity.png"
+    },
+    {
+      "scheme": "light",
+      "scale": "1-3",
+      "page": "chats",
+      "before": "before-light-1-3-chats.png",
+      "after": "after-light-1-3-chats.png"
+    },
+    {
+      "scheme": "light",
+      "scale": "1-3",
+      "page": "activity",
+      "before": "before-light-1-3-activity.png",
+      "after": "after-light-1-3-activity.png"
+    },
+    {
+      "scheme": "light",
+      "scale": "2",
+      "page": "chats",
+      "before": "before-light-2-chats.png",
+      "after": "after-light-2-chats.png"
+    },
+    {
+      "scheme": "light",
+      "scale": "2",
+      "page": "activity",
+      "before": "before-light-2-activity.png",
+      "after": "after-light-2-activity.png"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1",
+      "page": "chats",
+      "before": "before-dark-1-chats.png",
+      "after": "after-dark-1-chats.png"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1",
+      "page": "activity",
+      "before": "before-dark-1-activity.png",
+      "after": "after-dark-1-activity.png"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1-3",
+      "page": "chats",
+      "before": "before-dark-1-3-chats.png",
+      "after": "after-dark-1-3-chats.png"
+    },
+    {
+      "scheme": "dark",
+      "scale": "1-3",
+      "page": "activity",
+      "before": "before-dark-1-3-activity.png",
+      "after": "after-dark-1-3-activity.png"
+    },
+    {
+      "scheme": "dark",
+      "scale": "2",
+      "page": "chats",
+      "before": "before-dark-2-chats.png",
+      "after": "after-dark-2-chats.png"
+    },
+    {
+      "scheme": "dark",
+      "scale": "2",
+      "page": "activity",
+      "before": "before-dark-2-activity.png",
+      "after": "after-dark-2-activity.png"
+    }
+  ],
+  "nativeInputs": "unchanged from installed SDK58/ExpoUI client; JavaScript-only through Metro",
+  "matrix": [
+    {
+      "name": "nav-final-light-1-chats",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[340,2455][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2455][880,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-light-1-activity",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[340,2455][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2455][880,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-light-1-3-chats",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[262,2439][610,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2439][958,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-light-1-3-activity",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[262,2439][610,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2439][958,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-light-2-chats",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[94,2403][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2403][1126,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-light-2-activity",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[94,2403][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2403][1126,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-dark-1-chats",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[340,2455][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2455][880,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-dark-1-activity",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[340,2455][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2455][880,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-dark-1-3-chats",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[262,2439][610,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2439][958,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-dark-1-3-activity",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[262,2439][610,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2439][958,2656]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-dark-2-chats",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[94,2403][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2403][1126,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "name": "nav-final-dark-2-activity",
+      "pass": true,
+      "tabs": [
+        {
+          "text": "",
+          "desc": "聊天",
+          "id": "",
+          "bounds": "[94,2403][610,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        },
+        {
+          "text": "",
+          "desc": "1, 动态",
+          "id": "",
+          "bounds": "[610,2403][1126,2657]",
+          "clickable": "true",
+          "checkable": "false",
+          "checked": "false",
+          "enabled": "true"
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Human visual acceptance pending",
+    "iOS runtime untested",
+    "Manual TalkBack untested",
+    "No Release/120FPS qualification",
+    "Predictive intra-app preview not shipped: stable Stack retained"
+  ],
+  "nativeSelection": [
+    {
+      "scheme": "light",
+      "font": "1",
+      "page": "chats",
+      "selected": "聊天",
+      "enabled": true
+    },
+    {
+      "scheme": "light",
+      "font": "1",
+      "page": "activity",
+      "selected": "1, 动态",
+      "enabled": true
+    },
+    {
+      "scheme": "light",
+      "font": "1-3",
+      "page": "chats",
+      "selected": "聊天",
+      "enabled": true
+    },
+    {
+      "scheme": "light",
+      "font": "1-3",
+      "page": "activity",
+      "selected": "1, 动态",
+      "enabled": true
+    },
+    {
+      "scheme": "light",
+      "font": "2",
+      "page": "chats",
+      "selected": "聊天",
+      "enabled": true
+    },
+    {
+      "scheme": "light",
+      "font": "2",
+      "page": "activity",
+      "selected": "1, 动态",
+      "enabled": true
+    },
+    {
+      "scheme": "dark",
+      "font": "1",
+      "page": "chats",
+      "selected": "聊天",
+      "enabled": true
+    },
+    {
+      "scheme": "dark",
+      "font": "1",
+      "page": "activity",
+      "selected": "1, 动态",
+      "enabled": true
+    },
+    {
+      "scheme": "dark",
+      "font": "1-3",
+      "page": "chats",
+      "selected": "聊天",
+      "enabled": true
+    },
+    {
+      "scheme": "dark",
+      "font": "1-3",
+      "page": "activity",
+      "selected": "1, 动态",
+      "enabled": true
+    },
+    {
+      "scheme": "dark",
+      "font": "2",
+      "page": "chats",
+      "selected": "聊天",
+      "enabled": true
+    },
+    {
+      "scheme": "dark",
+      "font": "2",
+      "page": "activity",
+      "selected": "1, 动态",
+      "enabled": true
+    }
+  ],
+  "recording": {
+    "sourceDimensions": "1220x2712 encoded native stream (decoder texture was aligned1232x2720)",
+    "crop": "1220x512 at0,2200 scaled to976px wide",
+    "startSeconds": 49.786,
+    "durationSeconds": 23.694000000000003,
+    "timing": "original continuous timing; half-speed uses same frames at0.5x; recordings capped60FPS and are not a120FPS benchmark",
+    "qualifiedEvents": [
+      {
+        "name": "short-chats-keeps-navigation",
+        "ms": 7130
+      },
+      {
+        "name": "tab-动态",
+        "ms": 13525
+      },
+      {
+        "name": "tab-聊天",
+        "ms": 20301
+      },
+      {
+        "name": "tab-动态",
+        "ms": 26836
+      },
+      {
+        "name": "unread-page",
+        "ms": 31724
+      },
+      {
+        "name": "long-activity-nav-hidden",
+        "ms": 43681
+      },
+      {
+        "name": "long-activity-nav-revealed",
+        "ms": 52418
+      }
+    ],
+    "back": "Synthetic reverse-to-edge input unexpectedly committed. A separate ACTION_CANCEL retained the chat, and a continuous swipe returned to Chats once. Human reverse-to-edge cancellation remains unqualified; predictive previous-page preview is not shipped.",
+    "framePolicy": "Variable timestamps preserved with fps_mode=passthrough; original432 frames, same frames at0.5x in the slow clip. No constant120FPS qualification."
+  },
+  "backBaseline": {
+    "preview": "not-supported-by-current-stable-stack",
+    "attempts": [
+      {
+        "input": "ACTION_CANCEL after edge movement",
+        "retainedChat": true
+      },
+      {
+        "input": "continuous input swipe",
+        "returnedToChats": true
+      }
+    ]
+  },
+  "checks": {
+    "mobile": "541 passed,8 skipped; final style guard3 passed",
+    "types": "pass",
+    "lint": "pass",
+    "format": "pass",
+    "changelog": "pass",
+    "ci": "all required exact-head checks green",
+    "screenshots": "12 matched pairs with native centering, target and label-bound assertions",
+    "nativeSelection": "12 selected/enabled-state assertions passed",
+    "scroll": "short Chats keeps nav; long Activity hides/reveals; pushed chat has no global nav"
+  }
+}
