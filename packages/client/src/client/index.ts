@@ -297,24 +297,23 @@ export function apply(ctx: ClientContext): void {
   );
   const botSettings = new BotSettings();
   const desktopNotifications = new DesktopNotificationPrefs(storage, browserNotificationApi());
-  ctx.effect(
-    () => mountNotificationPreferenceSync(desktopNotifications, window),
-    'botharness: shared notification preference sync',
-  );
-  ctx.effect(
-    () =>
-      mountClientControl({
-        call,
-        kind: 'web',
-        target: createClientTarget(sessionStorage),
-        handlers: createClientPreferenceHandlers({
-          readTheme: () => ctx.theme.getTheme().preference,
-          readLocale: () => ctx.locale.getSnapshot().active,
-          notifications: desktopNotifications,
-        }),
+  ctx.effect(() => {
+    if (typeof window === 'undefined') return () => {};
+    return mountNotificationPreferenceSync(desktopNotifications, window);
+  }, 'botharness: shared notification preference sync');
+  ctx.effect(() => {
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return () => {};
+    return mountClientControl({
+      call,
+      kind: 'web',
+      target: createClientTarget(sessionStorage),
+      handlers: createClientPreferenceHandlers({
+        readTheme: () => ctx.theme.getTheme().preference,
+        readLocale: () => ctx.locale.getSnapshot().active,
+        notifications: desktopNotifications,
       }),
-    'botharness: client control',
-  );
+    });
+  }, 'botharness: client control');
   const shortcutBindings = new ShortcutBindings(storage);
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(

@@ -155,6 +155,44 @@ function createScoped(specs: Spec[], disposed: Spec[], withSettings = false, wit
 }
 
 describe('client apply', () => {
+  it('mounts Client control when browser storage is available', async () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal('window', Object.assign(new EventTarget(), { location: { hash: '' } }));
+    vi.stubGlobal('sessionStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    });
+    const cleanups: (() => void)[] = [];
+    const call = vi.fn(async (_path: string, endpoint: string) => ({
+      ok: true,
+      value:
+        endpoint === 'botharness/clientControl' ? { commands: [] } : { bots: [], channels: [] },
+    }));
+    const scoped = createScoped([], []);
+    scoped['connection'] = { rpc: { call } };
+    scoped['effect'] = (callback: () => unknown) => {
+      const cleanup = callback();
+      if (typeof cleanup === 'function') cleanups.push(() => cleanup());
+      return () => undefined;
+    };
+    try {
+      apply(scoped as never);
+      await vi.waitFor(() =>
+        expect(call).toHaveBeenCalledWith(
+          '/api',
+          'botharness/clientControl',
+          expect.objectContaining({
+            args: expect.objectContaining({ action: 'poll' }),
+          }),
+          undefined,
+        ),
+      );
+      expect(values.get('botharness.client-control-id.v1')).toBeTruthy();
+    } finally {
+      for (const cleanup of cleanups.reverse()) cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
   it('mirrors companion health only on transitions and clears stale health when unpinned', async () => {
     const streams: EventTarget[] = [];
     vi.stubGlobal('fetch', async () => Response.json({ profileId: 'qa' }));

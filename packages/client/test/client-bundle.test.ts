@@ -95,6 +95,8 @@ beforeAll(async () => {
   bundleCode = readFileSync(join(tempDir, 'client.js'), 'utf8');
   const sandbox = {
     window: {
+      addEventListener() {},
+      removeEventListener() {},
       matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
       location: { hash: '' },
       __ModuleLoader__: {
