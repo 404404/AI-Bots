@@ -761,7 +761,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <button class="am-btn" type="button" data-am="copy" data-done="已复制 ✓">复制源稿</button>
 </div>
 <main class="am-doc">
-<header class="am-head"><h1>移动端模型设置与键盘避让</h1><p class="am-sub">PR 2073 · 2026-10-18 · head 9cfb8db5bfa234a92b0cb4b5a6bc05def1a0bd2a</p></header>
+<header class="am-head"><h1>移动端模型设置与键盘避让</h1><p class="am-sub">PR 2073 · 2026-10-18 · head e1c0de9637004394b9e8e76e7a0adefba079b050</p></header>
 <div class="am-doc-layout">
 <nav class="am-toc" aria-label="目录"><a href="#panel-A">A · 用户能做什么</a><a href="#panel-B">B · 模型设置的权威</a><a href="#panel-C">C · 继承、复制与保留</a><a href="#panel-D">D · 每个输入场景的键盘布局</a><a href="#panel-E">E · 验证与边界</a></nav><div class="am-doc-body">
 <section class="am-panel" id="panel-A">
@@ -775,6 +775,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 675 205" width="675" height="205" role="img" aria-label="流程图：手机设置、HostClient、全局默认、Bot方案、共享预设、Host设置、手机缓存" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M94.8,102.5 L129.8,102.5 Q164.8,102.5 199.4,102.5 L234.1,102.5" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="136.8" y="93.5" width="56" height="18" rx="3"/><text x="164.8" y="102.5" text-anchor="middle" dominant-baseline="central">认证调用</text></g></g><g data-step="1"><path class="am-edge" d="M322.4,120 L387.6,146.8 Q452.8,173.5 516.5,173.5 L580.2,173.5" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="401.9" y="164.5" width="101.8" height="18" rx="3"/><text x="452.8" y="173.5" text-anchor="middle" dominant-baseline="central">onboardingModel</text></g></g><g data-step="2"><path class="am-edge" d="M325.5,102.5 L389.2,102.5 Q452.8,102.5 517.9,102.5 L583,102.5" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="351.2" y="93.5" width="203.2" height="18" rx="3"/><text x="452.8" y="102.5" text-anchor="middle" dominant-baseline="central">modelPlanSet / Customize / Inherit</text></g></g><g data-step="3"><path class="am-edge" d="M322.4,85 L387.6,58.3 Q452.8,31.5 516.5,31.5 L580.2,31.5" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="349.5" y="22.5" width="206.7" height="18" rx="3"/><text x="452.8" y="31.5" text-anchor="middle" dominant-baseline="central">modelPresetCreate / Update / Apply</text></g></g><g data-step="4"><path class="am-edge" d="M95.6,173.5 L130.2,173.5 Q164.8,173.5 202.3,173.5 L239.8,173.5" marker-end="url(#am1-arrow)"/><g class="am-edge-label"><rect x="119.6" y="164.5" width="90.5" height="18" rx="3"/><text x="164.8" y="173.5" text-anchor="middle" dominant-baseline="central">写入后重新读取</text></g></g></g><g><g class="am-node am-node--rect" data-key="手机设置" data-step="0"><rect class="am-node-shape" x="14.8" y="85" width="80" height="35" rx="3"/><text x="54.8" y="102.5" text-anchor="middle" dominant-baseline="central">手机设置</text></g><g class="am-node am-node--rect" data-key="HostClient" data-step="0"><rect class="am-node-shape" x="234.1" y="85" width="91.4" height="35" rx="3"/><text x="279.8" y="102.5" text-anchor="middle" dominant-baseline="central">HostClient</text></g><g class="am-node am-node--rect" data-key="全局默认" data-step="1"><rect class="am-node-shape" x="580.2" y="156" width="80" height="35" rx="3"/><text x="620.2" y="173.5" text-anchor="middle" dominant-baseline="central">全局默认</text></g><g class="am-node am-node--rect" data-key="Bot方案" data-step="2"><rect class="am-node-shape" x="583" y="85" width="74.3" height="35" rx="3"/><text x="620.2" y="102.5" text-anchor="middle" dominant-baseline="central">Bot方案</text></g><g class="am-node am-node--rect" data-key="共享预设" data-step="3"><rect class="am-node-shape" x="580.2" y="14" width="80" height="35" rx="3"/><text x="620.2" y="31.5" text-anchor="middle" dominant-baseline="central">共享预设</text></g><g class="am-node am-node--rect" data-key="Host设置" data-step="4"><rect class="am-node-shape" x="14" y="156" width="81.6" height="35" rx="3"/><text x="54.8" y="173.5" text-anchor="middle" dominant-baseline="central">Host设置</text></g><g class="am-node am-node--rect" data-key="手机缓存" data-step="4"><rect class="am-node-shape" x="239.8" y="156" width="80" height="35" rx="3"/><text x="279.8" y="173.5" text-anchor="middle" dominant-baseline="central">手机缓存</text></g></g></svg></figure>
 <div class="am-md"><p>Host 保存模型设置。手机缓存按 Host、Bot 和预设隔离，只用于显示。首次显示加载状态；再次打开先显示缓存并刷新。刷新失败保留内容并提供重试。保存失败保留输入。</p>
 <p>现有预设 RPC 增加可选的 Assignment 策略参数，避免静默丢失允许模型、推理强度和备注。在线 CLI 创建预设也支持 <code>--plan-stdin</code>。没有新增 RPC 方法名或数据库迁移。</p>
+<p>完整策略的预设写入需要同时更新 Host。AX 启动配置锁定的全局模型会拒绝修改。可写全局设置使用独立测试 Host 验证，原 Host 模型状态保持不变。Expo UI 原生依赖需要重建 SDK 58 客户端。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-C">
@@ -824,16 +825,17 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <section class="am-panel" id="panel-D">
 <header class="am-panel-head"><span class="am-panel-id">D</span><h2>每个输入场景的键盘布局</h2></header>
 <div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 783 261" width="783" height="261" role="img" aria-label="流程图：文本输入、滚动表单、KeyboardFormScroll、虚拟列表、renderKeyboardFormScroll、固定编辑器、KeyboardAvoidingView、聊天输入" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am2-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M356.1,41.1 L439.4,61 Q522.8,81 522.8,97 L522.8,113" marker-end="url(#am2-arrow)"/><g class="am-edge-label"><rect x="425.8" y="72" width="194" height="18" rx="3"/><text x="522.8" y="81" text-anchor="middle" dominant-baseline="central">配对、问答、预设、外观、定时任务</text></g></g><g data-step="1"><path class="am-edge" d="M522.8,148 L522.8,164 Q522.8,180 522.8,196 L522.8,212" marker-end="url(#am2-arrow)"/><g class="am-edge-label"><rect x="466.1" y="171" width="113.5" height="18" rx="3"/><text x="522.8" y="180" text-anchor="middle" dominant-baseline="central">跟踪焦点与原生键盘</text></g></g><g data-step="2"><path class="am-edge" d="M316.1,49 L316.1,65 Q316.1,81 316.1,97 L316.1,113" marker-end="url(#am2-arrow)"/><g class="am-edge-label"><rect x="238.4" y="72" width="155.4" height="18" rx="3"/><text x="316.1" y="81" text-anchor="middle" dominant-baseline="central">Chats / Activity / 模型预设</text></g></g><g data-step="3"><path class="am-edge" d="M316.1,148 L316.1,164 Q316.1,180 316.1,196 L316.1,212" marker-end="url(#am2-arrow)"/><g class="am-edge-label"><rect x="282.3" y="171" width="67.5" height="18" rx="3"/><text x="316.1" y="180" text-anchor="middle" dominant-baseline="central">保留虚拟化</text></g></g><g data-step="4"><path class="am-edge" d="M276.1,40.7 L188.3,60.8 Q100.5,81 100.5,97 L100.5,113" marker-end="url(#am2-arrow)"/><g class="am-edge-label"><rect x="15" y="72" width="171" height="18" rx="3"/><text x="100.5" y="81" text-anchor="middle" dominant-baseline="central">搜索头部、展开草稿、远程控制</text></g></g><g data-step="5"><path class="am-edge" d="M100.5,148 L100.5,164 Q100.5,180 100.5,196 L100.5,212" marker-end="url(#am2-arrow)"/><g class="am-edge-label"><rect x="38" y="171" width="125" height="18" rx="3"/><text x="100.5" y="180" text-anchor="middle" dominant-baseline="central">跟随键盘调整可用高度</text></g></g><g data-step="6"><path class="am-edge" d="M692.8,49 L692.8,65 Q692.8,81 692.8,97 L692.8,113" marker-end="url(#am2-arrow)"/><g class="am-edge-label"><rect x="641.8" y="72" width="102" height="18" rx="3"/><text x="692.8" y="81" text-anchor="middle" dominant-baseline="central">保留已有同步动画</text></g></g></g><g><g class="am-node am-node--rect" data-key="文本输入" data-step="0"><rect class="am-node-shape" x="276.1" y="14" width="80" height="35" rx="3"/><text x="316.1" y="31.5" text-anchor="middle" dominant-baseline="central">文本输入</text></g><g class="am-node am-node--rect" data-key="滚动表单" data-step="0"><rect class="am-node-shape" x="482.8" y="113" width="80" height="35" rx="3"/><text x="522.8" y="130.5" text-anchor="middle" dominant-baseline="central">滚动表单</text></g><g class="am-node am-node--rect" data-key="KeyboardFormScroll" data-step="1"><rect class="am-node-shape" x="446.8" y="212" width="152" height="35" rx="3"/><text x="522.8" y="229.5" text-anchor="middle" dominant-baseline="central">KeyboardFormScroll</text></g><g class="am-node am-node--rect" data-key="虚拟列表" data-step="2"><rect class="am-node-shape" x="276.1" y="113" width="80" height="35" rx="3"/><text x="316.1" y="130.5" text-anchor="middle" dominant-baseline="central">虚拟列表</text></g><g class="am-node am-node--rect" data-key="renderKeyboardFormScroll" data-step="3"><rect class="am-node-shape" x="221.3" y="212" width="189.5" height="35" rx="3"/><text x="316.1" y="229.5" text-anchor="middle" dominant-baseline="central">renderKeyboardFormScroll</text></g><g class="am-node am-node--rect" data-key="固定编辑器" data-step="4"><rect class="am-node-shape" x="54" y="113" width="93" height="35" rx="3"/><text x="100.5" y="130.5" text-anchor="middle" dominant-baseline="central">固定编辑器</text></g><g class="am-node am-node--rect" data-key="KeyboardAvoidingView" data-step="5"><rect class="am-node-shape" x="15.7" y="212" width="169.7" height="35" rx="3"/><text x="100.5" y="229.5" text-anchor="middle" dominant-baseline="central">KeyboardAvoidingView</text></g><g class="am-node am-node--rect" data-key="聊天输入" data-step="6"><rect class="am-node-shape" x="652.8" y="14" width="80" height="35" rx="3"/><text x="692.8" y="31.5" text-anchor="middle" dominant-baseline="central">聊天输入</text></g><g class="am-node am-node--rect" data-key="KeyboardChatFrame" data-step="6"><rect class="am-node-shape" x="617.3" y="113" width="151" height="35" rx="3"/><text x="692.8" y="130.5" text-anchor="middle" dominant-baseline="central">KeyboardChatFrame</text></g></g></svg></figure>
-<div class="am-md"><p>开发规范覆盖 iOS 和 Android，要求检查真实软键盘、焦点切换、多行增长、失败后的草稿，以及提交、取消和重试是否可达。聊天内的复杂问答复用展开草稿编辑器。</p>
+<div class="am-md"><p>开发规范覆盖 iOS 和 Android，要求检查真实软键盘、焦点切换、多行增长、失败后的草稿，以及提交、取消和重试是否可达。聊天内的复杂问答复用展开草稿编辑器。动态页搜索获得焦点时，列表关闭自己的键盘补偿，由固定搜索头部统一调整高度。</p>
 <p>实机首先复现预设输入框被完整键盘盖住。首轮修复露出了输入框，但保存按钮仍被压住约 6dp。增加随字号增长的操作空间后，输入框和按钮都通过了原生边界检查。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-E">
 <header class="am-panel-head"><span class="am-panel-id">E</span><h2>验证与边界</h2></header>
-<div class="am-panel-body"><div class="am-md"><p>移动端测试 562 通过、8 跳过。模型 RPC 与 CLI 的 35 项相关测试已通过。类型、lint、格式和双语变更片段检查已运行。精确 head 的 CI 结果以 PR 为准。</p>
-<p>Android 预设表单在深浅色、字号 1 / 1.3 / 2 的六组实机检查均通过；配对页也通过完整键盘下的输入框及按钮边界检查。其他原生入口的结果逐项记录在 PR，不能从一个表单推断全部入口通过。</p>
-<p>本机不提供 iOS 原生、TalkBack、Release 120 FPS 或推送送达结论。原有 Material 视觉验收与本轮键盘验收分开记录。PR 在新增交互经过 Human QA 前保持草稿。</p>
-<p>Base: be4a35da8d144b3ca9a7a29121a077a543ef3893。Head: 9cfb8db5bfa234a92b0cb4b5a6bc05def1a0bd2a。解释页仅帮助审阅，不代替原生证据或验收。</p>
+<div class="am-panel-body"><div class="am-md"><p>移动端测试 562 通过、8 跳过。模型 RPC 与 CLI 的 35 项相关测试已通过。此 head 的必需 CI 检查均通过，包括类型、lint、格式、构建、测试、双平台打包、文档与隔离 Host smoke。跳过项仍保留跳过状态。</p>
+<p>Android 预设表单在深浅色、字号 1 / 1.3 / 2 的六组实机检查均通过。配对、Host 名称、定时任务、群组改名、动态页与独立问答页、聊天列表与动态页搜索也通过各自的原生键盘检查。</p>
+<p>展开编辑器关闭后重开，输入内容仍在；任务草稿随后已清空，没有发送消息或回答。聊天输入框动画测到 13 个中间位置，录屏为 30fps。证据逐项标注源码版本；最终运行代码为 c7dc11f，后续 head 只增加规范与证据。</p>
+<p>本机不提供 iOS 原生、TalkBack、Release 120 FPS 或推送送达结论。远程控制、内嵌网页输入、原生保存失败恢复和长文本光标移动仍待专项验证。原有 Material 视觉验收与本轮键盘验收分开记录。PR 在新增交互经过 Human QA 前保持草稿。</p>
+<p>Base: be4a35da8d144b3ca9a7a29121a077a543ef3893。Head: e1c0de9637004394b9e8e76e7a0adefba079b050。解释页仅帮助审阅，不代替原生证据或验收。</p>
 </div></div>
 </section>
 </div>
@@ -854,10 +856,10 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-lightbox-canvas am-diagram"></div>
 </div>
 </div>
-<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-18 02:38 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-18 03:04 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
 title: 移动端模型设置与键盘避让
-subtitle: PR 2073 · 2026-10-18 · head 9cfb8db5bfa234a92b0cb4b5a6bc05def1a0bd2a
+subtitle: PR 2073 · 2026-10-18 · head e1c0de9637004394b9e8e76e7a0adefba079b050
 template: doc
 theme: paper
 lang: zh
@@ -894,6 +896,8 @@ Host 保存模型设置。手机缓存按 Host、Bot 和预设隔离，只用于
 
 现有预设 RPC 增加可选的 Assignment 策略参数，避免静默丢失允许模型、推理强度和备注。在线 CLI 创建预设也支持 `--plan-stdin`。没有新增 RPC 方法名或数据库迁移。
 
+完整策略的预设写入需要同时更新 Host。AX 启动配置锁定的全局模型会拒绝修改。可写全局设置使用独立测试 Host 验证，原 Host 模型状态保持不变。Expo UI 原生依赖需要重建 SDK 58 客户端。
+
 ## C 继承、复制与保留
 
 | 操作 | 影响 | 保留 |
@@ -919,19 +923,21 @@ Bot 与预设写入沿用 Host 的 revision 检查。全局默认仍沿用现有
 聊天输入 -&gt; KeyboardChatFrame: 保留已有同步动画
 ```
 
-开发规范覆盖 iOS 和 Android，要求检查真实软键盘、焦点切换、多行增长、失败后的草稿，以及提交、取消和重试是否可达。聊天内的复杂问答复用展开草稿编辑器。
+开发规范覆盖 iOS 和 Android，要求检查真实软键盘、焦点切换、多行增长、失败后的草稿，以及提交、取消和重试是否可达。聊天内的复杂问答复用展开草稿编辑器。动态页搜索获得焦点时，列表关闭自己的键盘补偿，由固定搜索头部统一调整高度。
 
 实机首先复现预设输入框被完整键盘盖住。首轮修复露出了输入框，但保存按钮仍被压住约 6dp。增加随字号增长的操作空间后，输入框和按钮都通过了原生边界检查。
 
 ## E 验证与边界
 
-移动端测试 562 通过、8 跳过。模型 RPC 与 CLI 的 35 项相关测试已通过。类型、lint、格式和双语变更片段检查已运行。精确 head 的 CI 结果以 PR 为准。
+移动端测试 562 通过、8 跳过。模型 RPC 与 CLI 的 35 项相关测试已通过。此 head 的必需 CI 检查均通过，包括类型、lint、格式、构建、测试、双平台打包、文档与隔离 Host smoke。跳过项仍保留跳过状态。
 
-Android 预设表单在深浅色、字号 1 / 1.3 / 2 的六组实机检查均通过；配对页也通过完整键盘下的输入框及按钮边界检查。其他原生入口的结果逐项记录在 PR，不能从一个表单推断全部入口通过。
+Android 预设表单在深浅色、字号 1 / 1.3 / 2 的六组实机检查均通过。配对、Host 名称、定时任务、群组改名、动态页与独立问答页、聊天列表与动态页搜索也通过各自的原生键盘检查。
 
-本机不提供 iOS 原生、TalkBack、Release 120 FPS 或推送送达结论。原有 Material 视觉验收与本轮键盘验收分开记录。PR 在新增交互经过 Human QA 前保持草稿。
+展开编辑器关闭后重开，输入内容仍在；任务草稿随后已清空，没有发送消息或回答。聊天输入框动画测到 13 个中间位置，录屏为 30fps。证据逐项标注源码版本；最终运行代码为 c7dc11f，后续 head 只增加规范与证据。
 
-Base: be4a35da8d144b3ca9a7a29121a077a543ef3893。Head: 9cfb8db5bfa234a92b0cb4b5a6bc05def1a0bd2a。解释页仅帮助审阅，不代替原生证据或验收。
+本机不提供 iOS 原生、TalkBack、Release 120 FPS 或推送送达结论。远程控制、内嵌网页输入、原生保存失败恢复和长文本光标移动仍待专项验证。原有 Material 视觉验收与本轮键盘验收分开记录。PR 在新增交互经过 Human QA 前保持草稿。
+
+Base: be4a35da8d144b3ca9a7a29121a077a543ef3893。Head: e1c0de9637004394b9e8e76e7a0adefba079b050。解释页仅帮助审阅，不代替原生证据或验收。
 </textarea>
 <script>
 (() => {
