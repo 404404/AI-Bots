@@ -1722,9 +1722,9 @@
       "path": "scripts/e2e-tob-bot-management.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Natural creation/profile/model and exact-key reconciliation, reviewed ZIP transfer with denied/stale/output checks, canonical readback and separate Web/Desktop navigation/restart.",
+      "reason": "Natural creation/profile/model, reviewed ZIP transfer, custom-plus-live-market search and selected Git/ZIP import with original personality, exact-key receipt reconciliation and separate Web/Desktop navigation/restart.",
       "task": 2089,
-      "sha256": "b35034bd3f5056acd6fe58a9038aa29765ee67de846cc02a67f2029c148d09b3"
+      "sha256": "751d7a1991ddea03fa5031a2e0c205c08b9b0ce94db979b795794bc19393ae69"
     },
     {
       "path": "scripts/e2e-llm-scenarios.mjs",

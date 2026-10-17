@@ -89,13 +89,25 @@ export async function runOnlineManagement(
     operationKey !== undefined &&
     (command !== 'create' ||
       !validBotCreationKey(operationKey) ||
-      create?.source.kind !== 'blank' ||
+      create === undefined ||
       create.presetId !== undefined ||
       create.memoryLocation !== undefined)
   )
     usage(
-      '--operation-key requires blank online creation with a valid 8–128 character key, no preset and the managed Memory location.',
+      '--operation-key requires a valid 8–128 character key, no preset and the managed Memory location; imports also require their observed source fingerprint.',
     );
+  if (
+    operationKey !== undefined &&
+    create?.source.kind === 'git' &&
+    !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(values['expected-commit'] ?? '')
+  )
+    usage('Stable Git import requires --expected-commit from bot-import-preview.');
+  if (
+    operationKey !== undefined &&
+    (create?.source.kind === 'zip' || create?.source.kind === 'dir') &&
+    !/^[a-f0-9]{64}$/u.test(values['expected-archive'] ?? '')
+  )
+    usage('Stable archive import requires --expected-archive from bot-import-preview.');
   const noTarget = ['create', 'list', 'model-presets', 'model-preset-create', 'channels'].includes(
     command,
   );
@@ -289,19 +301,29 @@ export async function runOnlineManagement(
             bot: PersonaBotDetail;
             receipt?: BotCreationReceipt;
             httpsFallback?: BotCreateResult['httpsFallback'];
+            source?: unknown;
           }>(bundle!.archive, {
             ...metadata,
+            ...(operationKey === undefined
+              ? {}
+              : { operationKey, expectedArchive: values['expected-archive']! }),
             ...(bundle!.name === undefined ? {} : { name: bundle!.name }),
           })
         : await rpc<{
             bot: PersonaBotDetail;
             receipt?: BotCreationReceipt;
             httpsFallback?: BotCreateResult['httpsFallback'];
+            source?: unknown;
           }>(create.source.kind === 'git' ? 'createFromGit' : 'create', {
             ...metadata,
             ...(operationKey === undefined ? {} : { operationKey }),
             ...(create.source.kind === 'git'
-              ? { gitUrl: create.source.gitUrl }
+              ? {
+                  gitUrl: create.source.gitUrl,
+                  ...(values['expected-commit'] === undefined
+                    ? {}
+                    : { expectedCommit: values['expected-commit'] }),
+                }
               : {
                   ...(create.persona === undefined ? {} : { persona: create.persona }),
                   ...(create.coreMemory === undefined ? {} : { coreMemory: create.coreMemory }),
@@ -349,6 +371,7 @@ export async function runOnlineManagement(
     steps.push({ name: 'dm', status: 'ok' });
     const output: BotCreateResult = {
       bot,
+      ...(result.source === undefined ? {} : { source: result.source }),
       ...(result.receipt === undefined ? {} : { operation: result.receipt }),
       dm: { channelId },
       dataDir: detail.bot.memoryDir,

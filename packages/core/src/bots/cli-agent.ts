@@ -148,12 +148,23 @@ export async function runAgentCli(
   let response: Response;
   let body: unknown;
   try {
-    response = await fetch(new URL('/invoke', base), {
+    const upload = managed?.upload;
+    response = await fetch(new URL(upload ? '/invoke-upload' : '/invoke', base), {
       method: 'POST',
       redirect: 'error',
       signal: AbortSignal.timeout(Math.ceil(seconds * 1000)),
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ command: operation, args }),
+      headers: {
+        'content-type': upload ? 'application/zip' : 'application/json',
+        authorization: `Bearer ${token}`,
+        ...(upload
+          ? {
+              'x-botharness-invocation': Buffer.from(
+                JSON.stringify({ command: operation, args }),
+              ).toString('base64url'),
+            }
+          : {}),
+      },
+      body: upload ? new Uint8Array(upload) : JSON.stringify({ command: operation, args }),
     });
     if (
       operation === 'bot-zip-export' &&

@@ -69,6 +69,7 @@ export type CreatePersonaBotResult =
         | 'invalid-git-url'
         | 'git-clone-failed'
         | 'git-clone-timeout'
+        | 'git-source-changed'
         | 'invalid-zip'
         | 'memory-unavailable';
       detail?: string;
