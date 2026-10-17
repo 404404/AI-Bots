@@ -2512,16 +2512,34 @@
                         </td>
                       </tr>
                       <tr>
-                        <td>Git/ZIP 执行及降级用量状态</td>
+                        <td>Home Git/ZIP 实际提交、身份与内容</td>
                         <td>
-                          <span class="am-status am-status--warn"
-                            ><span class="am-status-icon" aria-hidden="true">!</span>既有导入 owner
-                            的门；用量运行态另验</span
+                          <span class="am-status am-status--ok"
+                            ><span class="am-status-icon" aria-hidden="true">✓</span>无模型
+                            Web，分组与导入字节回读通过</span
                           >
                         </td>
                       </tr>
                       <tr>
-                        <td>Human QA、完整 CI、整合栈</td>
+                        <td>降级用量状态</td>
+                        <td>
+                          <span class="am-status am-status--warn"
+                            ><span class="am-status-icon" aria-hidden="true">!</span
+                            >所有者与渲染测试通过，运行态另验</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>完整 CI</td>
+                        <td>
+                          <span class="am-status am-status--ok"
+                            ><span class="am-status-icon" aria-hidden="true">✓</span
+                            >源码5b的全量检查通过，新证据提交另验</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Human QA、整合栈</td>
                         <td>
                           <span class="am-status am-status--warn"
                             ><span class="am-status-icon" aria-hidden="true">!</span
@@ -2535,6 +2553,11 @@
                 <p>
                   早先提问和审批被通用 Remote 等待截获。 原失败保留；原提问已由 Human CLI 取消。
                   真实 Cordis 先红后绿，修复后真实 Web 问答与审批均完成。 没有为截图伪造待处理数据。
+                </p>
+                <p>
+                  实际 Git 检出版本等于导入前后观察的远端 HEAD。
+                  表单没有提交版本选择器，不能宣称强制固定版本。 ZIP 人格与 Memory
+                  字节不变，两个新身份均在指定分组。
                 </p>
               </div>
             </div>
@@ -2626,7 +2649,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 08:12 ·
+      0.5.0 · 2026-10-18 08:44 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2644,18 +2667,19 @@ pr: 2140
 base: 5d44b7a6507d661415881808ab67e74275d54182
 generated: 2026-10-18
 ---
+
 Home 内嵌简单创建流程，并通过既有数据所有者展示状态。
 说明覆盖源码ffb727860e1fa2ea3423e30ec0d74775d047b481，后续提交仅增加评审证据。
 
 ## A 用户看到什么
 
-| 入口 | 结果 |
-|---|---|
-| Home 创建 Bot | 名称必填，其他配置折叠 |
-| Git、ZIP、空白切换 | 保留分组目标和各自草稿 |
-| Home 四张卡片 | 显示待处理、执行中、用量和最近活动 |
-| 最近活动或事项 | 打开既有对话或任务面板 |
-| Home 输入 | 复用消息编辑器，提交到 Tob 私聊 |
+| 入口               | 结果                               |
+| ------------------ | ---------------------------------- |
+| Home 创建 Bot      | 名称必填，其他配置折叠             |
+| Git、ZIP、空白切换 | 保留分组目标和各自草稿             |
+| Home 四张卡片      | 显示待处理、执行中、用量和最近活动 |
+| 最近活动或事项     | 打开既有对话或任务面板             |
+| Home 输入          | 复用消息编辑器，提交到 Tob 私聊    |
 
 ## B 数据由谁负责
 
@@ -2704,23 +2728,29 @@ Home 不启动轮询或模型报告。
 
 ## E 已有证据与剩余检查
 
-| 检查 | 状态 |
-|---|---|
-| 初始dca的209项测试、类型、策略与构建 | ok 通过 |
-| 当前62的顺序7项、桥接17项、类型与构建 | ok 通过，其他51项 owner 回归通过 |
-| 构建后的 Client 包契约7项 | ok 通过 |
-| Web 四卡片、精确范围和来源跳转 | ok 通过 |
-| Web 简单真实对话、完成投递与正数用量 | ok 通过 |
-| macOS 四卡片、真实对话、创建与重启 | ok 原产品dca独立验证 |
-| 新审批/提问桥接 macOS | ok 真实来源、回答/拒绝与完整 Turn |
-| Web 缺少模型创建、真实提问与审批 | ok 真实来源、回答/拒绝及完成回读 |
-| Git/ZIP 执行及降级用量状态 | warn 既有导入 owner 的门；用量运行态另验 |
-| Human QA、完整 CI、整合栈 | warn 独立检查，尚未通过 |
+| 检查                                  | 状态                                    |
+| ------------------------------------- | --------------------------------------- |
+| 初始dca的209项测试、类型、策略与构建  | ok 通过                                 |
+| 当前62的顺序7项、桥接17项、类型与构建 | ok 通过，其他51项 owner 回归通过        |
+| 构建后的 Client 包契约7项             | ok 通过                                 |
+| Web 四卡片、精确范围和来源跳转        | ok 通过                                 |
+| Web 简单真实对话、完成投递与正数用量  | ok 通过                                 |
+| macOS 四卡片、真实对话、创建与重启    | ok 原产品dca独立验证                    |
+| 新审批/提问桥接 macOS                 | ok 真实来源、回答/拒绝与完整 Turn       |
+| Web 缺少模型创建、真实提问与审批      | ok 真实来源、回答/拒绝及完成回读        |
+| Home Git/ZIP 实际提交、身份与内容     | ok 无模型 Web，分组与导入字节回读通过   |
+| 降级用量状态                          | warn 所有者与渲染测试通过，运行态另验   |
+| 完整 CI                               | ok 源码5b的全量检查通过，新证据提交另验 |
+| Human QA、整合栈                      | warn 独立检查，尚未通过                 |
 
 早先提问和审批被通用 Remote 等待截获。
 原失败保留；原提问已由 Human CLI 取消。
 真实 Cordis 先红后绿，修复后真实 Web 问答与审批均完成。
 没有为截图伪造待处理数据。
+
+实际 Git 检出版本等于导入前后观察的远端 HEAD。
+表单没有提交版本选择器，不能宣称强制固定版本。
+ZIP 人格与 Memory 字节不变，两个新身份均在指定分组。
 
 ## F 代码与复现
 

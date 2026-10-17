@@ -1,0 +1,47 @@
+{
+  "sourceCommit": "256d4356b2d562f11efbae241b94ab1c7c38cd24",
+  "beforeRemote": "256d4356b2d562f11efbae241b94ab1c7c38cd24",
+  "afterRemote": "256d4356b2d562f11efbae241b94ab1c7c38cd24",
+  "gitUrl": "https://github.com/qizhen2021/dsb-bot-research-analyst.git",
+  "archiveHash": "1c7085476f852d77f5a4d657dc546f6f97443184981618156af50e4c291d29f9",
+  "sectionId": "a42874f9-2900-4679-bf82-d8cf2cbb20eb",
+  "git": {
+    "slug": "bot-f0a23981cf8f4b809ee36924537cd161",
+    "displayName": "Home Git Import mvd1lia7",
+    "sectionId": "a42874f9-2900-4679-bf82-d8cf2cbb20eb",
+    "dmChannelId": "dm-bot-f0a23981cf8f4b809ee36924537cd161",
+    "soulBytes": 1665,
+    "soulSha256": "7464549492fe36996716bacb2edf799282a1b7ae1e1aa57ac87a9685c9fa0e4d",
+    "memoryExists": false,
+    "head": "256d4356b2d562f11efbae241b94ab1c7c38cd24",
+    "sourceCommitPresent": true,
+    "sourceCommitIsAncestor": true,
+    "sourceTreeMemoryAbsent": true
+  },
+  "zip": {
+    "slug": "bot-76d247756a374f4bb76fa8c4a6146c49",
+    "displayName": "ZIP source 1792279093309",
+    "sectionId": "a42874f9-2900-4679-bf82-d8cf2cbb20eb",
+    "dmChannelId": "dm-bot-76d247756a374f4bb76fa8c4a6146c49",
+    "soulBytes": 43,
+    "soulSha256": "46a88d1bd26a27d47f274352ca3200e80a94bc2be31aff0cd01da60cd71fb706",
+    "memoryExists": true,
+    "head": "e300e3b76e5443794670b2a32c17ad8ff11ef674",
+    "memoryBytes": 46,
+    "memorySha256": "b23001db9719dce6dcc9d700cc3c8a550b633f591421ee969859a4a9be31d89a"
+  },
+  "modelDefault": {
+    "provider": "home-qa-unavailable",
+    "model": "missing"
+  },
+  "steps": [
+    "Home embedded Git submit created a fresh Bot and DM in the chosen section with exact source SOUL",
+    "Home embedded file picker imported exact selected ZIP into a fresh Bot/DM in the same section with unchanged SOUL and Memory"
+  ],
+  "errors": [],
+  "sourceHead": "5bafc55f0feefbc895565dbb83f07546f03a8b8d",
+  "productBuild": "62e9b9981e138219c8ec2cfe01d435e8510d3221",
+  "surface": "Actual isolated Web, 1440x900, dark, Chinese",
+  "journey": "web-1792280597387",
+  "boundary": "URL-only Git form; no UI commit selector. Remote HEAD observed before/after and imported HEAD exactly matches sourceCommit. No source scripts or dependency installation. Original model route restored and owned Host stopped."
+}
