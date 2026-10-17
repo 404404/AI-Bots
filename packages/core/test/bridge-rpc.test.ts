@@ -139,6 +139,44 @@ describe('bridge typert service', () => {
     ).toBe('declined');
   });
 
+  it('forwards optional reviewed fingerprints for Group name, avatar, wake and member edits', () => {
+    const { service, methods } = setup();
+    const channel = service.channelCreate('Team', []).channel;
+    const response = { ok: true as const, value: { channel } };
+    const rename = vi.spyOn(methods, 'channelRename').mockReturnValue(response);
+    const avatar = vi.spyOn(methods, 'channelGroupAvatarSet').mockReturnValue(response);
+    const wake = vi.spyOn(methods, 'channelGroupWakeSet').mockReturnValue(response);
+    const remove = vi.spyOn(methods, 'channelGroupMemberRemove').mockReturnValue(response);
+    service.channelRename(channel.id, 'New name', 'reviewed');
+    expect(rename).toHaveBeenCalledWith({
+      channelId: channel.id,
+      name: 'New name',
+      expectedChannel: 'reviewed',
+    });
+    service.channelGroupAvatarSet(channel.id, null, 'reviewed');
+    expect(avatar).toHaveBeenCalledWith({
+      channelId: channel.id,
+      avatar: null,
+      expectedChannel: 'reviewed',
+    });
+    service.channelGroupWakeSet(channel.id, 'ada', 'silent', 5, 30, true, 'reviewed');
+    expect(wake).toHaveBeenCalledWith({
+      channelId: channel.id,
+      botSlug: 'ada',
+      mode: 'silent',
+      count: 5,
+      intervalSeconds: 30,
+      inherit: true,
+      expectedChannel: 'reviewed',
+    });
+    service.channelGroupMemberRemove(channel.id, 'ada', 'reviewed');
+    expect(remove).toHaveBeenCalledWith({
+      channelId: channel.id,
+      botSlug: 'ada',
+      expectedChannel: 'reviewed',
+    });
+  });
+
   it('forwards Channel fingerprints and stable operation keys through the named RPC facade', () => {
     const { service, methods } = setup();
     const channel = service.channelCreate('Team', []).channel;
@@ -146,6 +184,7 @@ describe('bridge typert service', () => {
       channel,
       channelFingerprint: 'observed',
       invitationPolicy: { autoAccept: false },
+      wakePolicies: [],
     };
     const get = vi.spyOn(methods, 'channelGet').mockReturnValue({ ok: true, value: snapshot });
     expect(service.channelGet(channel.id)).toEqual(snapshot);
@@ -735,7 +774,7 @@ describe('bridge typert service', () => {
       'operationKey',
       'expectedChannel',
     ]);
-    expect(parameterNames(service.channelRename)).toEqual(['channelId', 'name']);
+    expect(parameterNames(service.channelRename)).toEqual(['channelId', 'name', 'expectedChannel']);
     expect(parameterNames(service.channelMessages)).toEqual(['channelId', 'before', 'limit']);
     expect(parameterNames(service.channelTimeline)).toEqual([
       'channelId',

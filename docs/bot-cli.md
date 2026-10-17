@@ -129,19 +129,19 @@ These commands manage Channels and groups through the same Host owners and check
 ```bash
 deepseekbot channel <group-channel>
 deepseekbot group-create "Skill Lab" [--member <bot-id> ...] [--operation-key <stable-key>]
-deepseekbot channel-rename <channel> --name "Skill Lab"
+deepseekbot channel-rename <channel> --name "Skill Lab" [--expected-channel <channelFingerprint>]
 deepseekbot channel-media-target <channel> --source-event <source-event-id> --attachment <attachment-id>
 deepseekbot channel-media-download <channel> --source-event <source-event-id> --attachment <attachment-id> --out ./original.csv
-deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png
-deepseekbot group-avatar-set <channel> --clear
+deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png [--expected-channel <channelFingerprint>]
+deepseekbot group-avatar-set <channel> --clear [--expected-channel <channelFingerprint>]
 deepseekbot group-invite <channel> --bot <bot-id> [--operation-key <stable-key>] [--expected-channel <channelFingerprint>]
 deepseekbot group-invite-cancel <channel> --invitation <invitation-id>
 deepseekbot group-join-decide <channel> --request <request-id> --accept
 deepseekbot group-join-decide <channel> --request <request-id> --decline
-deepseekbot group-member-remove <channel> --bot <bot-id>
+deepseekbot group-member-remove <channel> --bot <bot-id> [--expected-channel <channelFingerprint>]
 deepseekbot group-wake-policies <channel>
-deepseekbot group-wake-set <channel> --bot <bot-id> --mode digest --count 5 --interval 30
-deepseekbot group-wake-set <channel> --bot <bot-id> --inherit
+deepseekbot group-wake-set <channel> --bot <bot-id> --mode digest --count 5 --interval 30 [--expected-channel <channelFingerprint>]
+deepseekbot group-wake-set <channel> --bot <bot-id> --inherit [--expected-channel <channelFingerprint>]
 deepseekbot group-delete <channel> --confirm
 deepseekbot channel-timeline <channel> [--direction older|newer|around] [--cursor <cursor>] [--around <message-id>] [--limit <n>] [--older-limit <n>] [--newer-limit <n>]
 deepseekbot channel-journal <channel> --through <revision> [--before <position>] [--limit <n>]
@@ -160,7 +160,7 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
 
-`channel <group-channel>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}}` and refuses non-group Channels. Stable creation/invitation inputs and retry semantics are described under [Tob group creation and invitations](#tob-group-creation-and-invitations); Human online commands may use them too.
+`channel <group-channel>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}` and refuses non-group Channels. Stable creation/invitation inputs and retry semantics are described under [Tob group creation and invitations](#tob-group-creation-and-invitations); Human online commands may use them too.
 
 Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply. `channel-unread` lists the unread Bot message count of each Channel that has any; these are the numbers the sidebar shows on each row. `channel-mute` mutes a Channel the way the sidebar menu does: it keeps its row greyed and its unread messages out of the Activity total; `--off` unmutes it. `channel-bot-stop` stops the Bot's current turn, as the Stop button on the working status does: the Bot goes idle, the Channel records that the Human stopped it, and a Bot that is not working is refused with `not-working`. Assignments the Bot delegated keep running. `channel-react` adds your reaction to one message, or removes it with `--remove`, and returns the message's `reactions`; a message holds at most 20 of your reactions, and the emoji must be a single emoji. Bots react through `channel_send` with `react_to` and `reaction`, and an empty `body` when they only react; `bot-tool <bot> channel_send --args-stdin` runs that without the model. `channel-search` matches `--query` without case in the messages you can see, newest first, and pages with the `nextCursor` it returns.
 
@@ -648,7 +648,7 @@ The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist
 
 `deepseekbot tob-home` prepares/reuses the protected local Tob identity, Memory, managed Workspace and DM, returning their IDs and the canonical attention summary. It does not send a message. `deepseekbot home-model-set --provider <id> --model <id>` updates the native Host default; independent Bot plans remain unchanged.
 
-Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the Bot creation/profile/lifecycle, group creation/invitation, model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
+Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the Bot creation/profile/lifecycle, group creation/invitation, group settings/member removal, model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
 
 Tob's Host-supplied system guidance is bundled with the plugin and is installed only for the protected Tob Orchestrator; upgrades do not overwrite the Human's editable personality or Memory. A simple question such as “What can you do?” first discovers the installed CLI capabilities, then describes practical outcomes in the Human's language and offers a concrete next step. Capability questions are read-only: they do not propose a mutation or approval. A later specific change request still goes through the existing authority and approval checks.
 
@@ -714,11 +714,11 @@ deepseekbot group-create "Planning" --operation-key group-planning-001
 deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-research-001 --expected-channel <channelFingerprint>
 ```
 
-Scoped `channels` returns bounded Channel metadata, not message bodies; use `--limit` from 1 to 100 (default 50) and the returned `nextCursor` with `--cursor`. `channel <group-channel-id>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}}` and refuses a non-group target. The scoped projection keeps at most 100 members and the last 100 invitations, with counts for omitted entries. These reads do not admit Tob as a member or authorize group messages as management instructions.
+Scoped `channels` returns bounded Channel metadata, not message bodies; use `--limit` from 1 to 100 (default 50) and the returned `nextCursor` with `--cursor`. `channel <group-channel-id>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}` and refuses a non-group target. The scoped projection keeps at most 100 members and the last 100 invitations, with counts for omitted entries. These reads do not admit Tob as a member or authorize group messages as management instructions.
 
 `group-create` supports an empty group or repeated `--member` values for existing eligible Bots. Explicit initial members join directly, matching the existing Human/UI creation behavior. A later `group-invite` uses the existing invitation owner. With the default `autoAcceptGroupInvites=true`, it records an accepted invitation (`respondedBy: "profile-policy"`) and membership together, without waking the invited Bot for a separate decision. This adds no setting or UI toggle. Only if the Human has already disabled auto-accept does the existing pending-invitation decision flow apply. Tob preserves that choice and reports the returned state.
 
-Scoped writes require a stable `--operation-key` of 8–128 letters, digits, dots, underscores, colons or hyphens, starting with a letter or digit; invitation also requires the `--expected-channel` fingerprint from the preceding read. The reviewed snapshot binds current Channel metadata, membership and invitation policy, plus the target Bot identity. Message arrivals and unread counters do not invalidate that snapshot. Approval and execution recheck the accepted Human DM and current target state. If a relevant setting changes while review is pending, read it again and submit a new proposal rather than refreshing the approved snapshot silently.
+Scoped creation/invitation writes require a stable `--operation-key` of 8–128 letters, digits, dots, underscores, colons or hyphens, starting with a letter or digit; invitation also requires the `--expected-channel` fingerprint from the preceding read. The reviewed snapshot binds current Channel metadata, membership and invitation policy, plus the target Bot identity. Message arrivals and unread counters do not invalidate that snapshot. Approval and execution recheck the accepted Human DM and current target state. If a relevant setting changes while review is pending, read it again and submit a new proposal rather than refreshing the approved snapshot silently.
 
 The keyed result includes a `receipt` with `operationKey`, `kind`, `channelId`, optional `invitationId` and completion `status`, alongside canonical Channel state and the invitation when applicable. The durable operation receipt reserves the Channel or invitation identity. After an uncertain response, repeat the **same command, key and payload** to reconcile that operation instead of selecting another key. A completed scoped replay reads back the existing result without asking for another mutation approval. Changed payloads, unavailable targets or changed Bot incarnations refuse; replay never recreates a deleted group or duplicates an invitation. Current authority is still required after a Shell or Host restart; the receipt does not preserve the expired Shell capability.
 
@@ -726,7 +726,29 @@ The keyed result includes a `receipt` with `operationKey`, `kind`, `channelId`, 
 
 Authenticated Human online `group-create` and `group-invite` also support stable operation keys; the invitation command accepts `--expected-channel` for the observed state. These review/retry inputs are optional for Human commands and mandatory for scoped Tob. Existing unkeyed Human operations retain their owner behavior.
 
-Group rename/avatar, wake settings, invitation cancellation, join decisions, member removal, personal mute/pin/nickname/visibility, group deletion, attachments and external membership remain outside this scoped slice. Some already have Human CLI commands above; that does not grant Tob access. #2090 remains open for its remaining scope. See [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) and the [coverage inventory](agents/cli-ui-coverage.md#2090-group-management-first-slice). Direct CLI, real Tob approval/readback, Web membership/history and macOS Desktop are separate verification gates.
+The following group-settings slice adds group rename/avatar, member wake settings and member removal. Invitation cancellation, join decisions, personal mute/pin/nickname/visibility, group deletion, attachments and external membership remain outside the scoped allowlist. Some already have Human CLI commands above; that does not grant Tob access. #2090 remains open for its remaining scope. See [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) and the [coverage inventory](agents/cli-ui-coverage.md#2090-group-management-scope). Direct CLI, real Tob approval/readback, Web membership/history and macOS Desktop are separate verification gates.
+
+### Tob group settings and member removal
+
+From its accepted Human DM, Tob can use existing approval to change a group name, avatar or member wake policy for ordinary group messages, or remove a Bot member. It reuses the same Channel owner, authority and durable data, with no new model Tool, database migration or UI. Scoped `channel-rename` accepts groups only; it cannot rename a Bot DM.
+
+```bash
+deepseekbot group-wake-policies <channel-id>
+deepseekbot channel-rename <channel-id> --name "Product research" --expected-channel <channelFingerprint>
+deepseekbot group-avatar-set <channel-id> --avatar-file ./avatar.png --expected-channel <channelFingerprint>
+deepseekbot group-avatar-set <channel-id> --clear --expected-channel <channelFingerprint>
+deepseekbot group-wake-set <channel-id> --bot <bot-id> --mode digest --count 5 --interval 30 --expected-channel <channelFingerprint>
+deepseekbot group-wake-set <channel-id> --bot <bot-id> --inherit --expected-channel <channelFingerprint>
+deepseekbot group-member-remove <channel-id> --bot <bot-id> --expected-channel <channelFingerprint>
+```
+
+`group-wake-policies` returns the current group snapshot, `channelFingerprint` and each member's `{botSlug, inherited, policy}`. The fingerprint includes effective wake policies, including inherited Bot defaults: changing a default invalidates an older review. Message traffic and unread changes do not invalidate it. Scoped avatar reads/reviews expose presence, type, size and digest instead of image data.
+
+Every write requires the observed `--expected-channel`; read again after each successful edit before preparing another. Names must be nonempty and at most 120 characters. Avatars use the bounded PNG/JPEG/WebP files described above, or `--clear`. Wake modes are `all`, `mentions`, `digest` and `silent`; `--count` is 1–100 and `--interval` is 1–3600 seconds, defaulting to 5/30. `--inherit` removes the group override and restores the Bot default. Member removal preserves the Bot identity, Memory, other Channels and group history. Removing the group owner clears its ownership, leaving Human management. An archived existing member can be removed; changing wake policy requires an active Bot.
+
+Approval binds the previous state, exact target and proposed values. Execution rechecks the Human's current group access and target Bot identity. Denied/expired approval, a Human who has left, a non-group target, a missing membership or a replaced identity refuses without bypassing checks; Tob still cannot join groups. `stale-channel`/`stale-profile` requires a fresh read and review rather than overwriting a concurrent edit.
+
+These edits do not accept `--operation-key` or add replay receipts. After an uncertain result, inspect `channel`/`group-wake-policies` before doing anything else; do not blindly retry. Any remaining change needs a new proposal against the current snapshot. Existing create/invite receipts and default automatic acceptance are unchanged. Authenticated Human online equivalents may supply `--expected-channel`; omission preserves existing behavior without weakening Tob's mandatory inputs. #2090 remains open for its undelivered scope; these contracts do not claim Web, real-model or macOS verification has passed.
 
 ### Tob model and runtime management
 

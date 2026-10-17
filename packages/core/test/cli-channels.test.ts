@@ -163,6 +163,42 @@ describe('Channel and group CLI commands', () => {
     expect(refused.json.error.code).toBe('stale-channel');
   });
 
+  it('forwards optional observed fingerprints on Human Group changes and preserves unguarded compatibility', async () => {
+    const live = await host(ok);
+    const expectedChannel = 'b'.repeat(64);
+    const commands = [
+      ['channel-rename', 'team', '--name', 'New name'],
+      ['group-avatar-set', 'team', '--clear'],
+      ['group-wake-set', 'team', '--bot', 'ada', '--mode', 'mentions'],
+      ['group-wake-set', 'team', '--bot', 'ada', '--inherit'],
+      ['group-member-remove', 'team', '--bot', 'ada'],
+    ];
+    for (const argv of commands) {
+      expect((await invoke(argv, live.url)).code).toBe(0);
+      const original = live.calls.at(-1)!;
+      expect((await invoke([...argv, '--expected-channel', expectedChannel], live.url)).code).toBe(
+        0,
+      );
+      expect(live.calls.at(-1)).toEqual({
+        ...original,
+        args: { ...original.args, expectedChannel },
+      });
+    }
+    const count = live.calls.length;
+    for (const argv of commands) {
+      for (const invalid of ['', 'old', 'A'.repeat(64)])
+        expect(
+          (await invoke([...argv, '--expected-channel', invalid], live.url)).json.error.code,
+        ).toBe('usage');
+    }
+    for (const command of ['group-wake-policies', 'channel', 'group-delete'])
+      expect(
+        (await invoke([command, 'team', '--expected-channel', expectedChannel], live.url)).json
+          .error.code,
+      ).toBe('usage');
+    expect(live.calls).toHaveLength(count);
+  });
+
   it('downloads exact original bytes with owner authorization without overwriting an existing file', async () => {
     const bytes = Buffer.from('name,quantity\nalpha,17\n');
     const live = await host(ok, { status: 200, body: bytes });
