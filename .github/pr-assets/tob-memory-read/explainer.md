@@ -4,7 +4,7 @@ title: Tob 的跨 Bot Memory 只读委托
 subtitle: 来源、目标、Session 与查询能力保持明确归属
 lang: zh
 cols: 2
-source: 'PR #2128 · issue #2091 · code 1e78373c05243d90f9e0444792419b371432d359 · base 320ab04cd0a4c7ed818fdee997108cfa0590595b · 2026-10-17T21:56:08.447102+00:00'
+source: 'PR #2128 · issue #2091 · code 417c6fc509a1cfdb5730bb068308cc788add82cc · base 6a6cc80b8f8c06c3327e79df025e1be954e50eb0 · runtime 3f29dd4ae · 2026-10-18'
 ---
 
 Human 请求比较选定 Bot 的 Memory。Tob 创建自己的 Assignment，并沿正常报告路径回答。
@@ -26,7 +26,7 @@ Assignment报告 -> Tob私聊: 审阅后回答
 它在进程内运行随产品交付的 CLI，只传入短期 broker 上下文。
 它不启动操作系统 Shell，也不继承 Human 的管理 Host 凭据。
 
-代码：[受限执行](https://github.com/BotHarness/DeepSeekBot/blob/1e78373c05243d90f9e0444792419b371432d359/packages/core/src/tob/cli-shell.ts#L137)、[来源与目标范围](https://github.com/BotHarness/DeepSeekBot/blob/1e78373c05243d90f9e0444792419b371432d359/packages/core/src/runtime/bot-runtime.ts#L3346)。
+代码：[受限执行](https://github.com/BotHarness/DeepSeekBot/blob/417c6fc509a1cfdb5730bb068308cc788add82cc/packages/core/src/tob/cli-shell.ts#L137)、[来源与目标范围](https://github.com/BotHarness/DeepSeekBot/blob/417c6fc509a1cfdb5730bb068308cc788add82cc/packages/core/src/runtime/bot-runtime.ts#L3386)。
 
 | 允许                          | 拒绝                              |
 | ----------------------------- | --------------------------------- |
@@ -51,19 +51,30 @@ Memory 查询固定 Git 修订。后续工作树编辑不改变已固定的页�
 
 ## D 证据与交接
 
-| 类别                                   | 状态                                                   |
-| -------------------------------------- | ------------------------------------------------------ |
-| 范围、安全、审核、调度与数据库集成回归 | 整合后 163 项通过，8 个测试文件                        |
-| TypeScript 与构建                      | 整合后通过；产品构建为 3f，后续仅改验证脚本            |
-| 修复后的 Web 模型与消息                | 已证明读取、拒写、原始 cat 拒绝、续接、归档目标与撤销  |
-| Web Session 视图导航                   | 已见 Tob 所有的 Assignment 列表及原生 DSH Session 内容 |
-| macOS 原生                             | 初次 Assignment 已完成；修复 driver 等待后待续验       |
-| Human QA                               | 未执行                                                 |
-| Draft PR / CI full                     | #2128 已创建；完整 CI 已请求，结果待验                 |
-| 合并和产品发布                         | 未执行                                                 |
+| 类别                       | 状态                                                     |
+| -------------------------- | -------------------------------------------------------- |
+| 原构建 3f 的源码回归       | 163 项、8 个文件与类型检查和构建通过                     |
+| 新整合源码 417 的回归      | 155 项、10 个文件与类型检查和构建通过                    |
+| Web 模型与消息             | 读取、拒写、原始 cat 拒绝、续接、归档目标与撤销通过      |
+| 原构建的 macOS 行为        | 独立创建与同 Session 续接、目标拒绝、撤销通过            |
+| macOS 收尾与截图           | Turn 14 completed；Human handled；Bot 与 Assignment idle |
+| 新整合构建的运行验证       | 待主任务统一验证                                         |
+| Human QA / 合并 / 产品发布 | 均未执行                                                 |
 
 已叠加 schedules 的 generation 100；Memory scope 为 generation 101。
-这是向前迁移。调度分支的凭据启动修复尚待同步，并须验证相关风险。
+新整合源码包含凭据就绪与调度恢复修复。
+源码检查不能代替新构建的运行验证。
 
-本页解释代码提交 1e78373c0；随后提交只保存审阅资产；产品源码仍为 3f。
-本页是审阅辅助，不是测试结果或 Human 批准。
+## E 原生证据怎样收尾
+
+初次 Assignment 已完成，但旧 driver 仍按目的文案等待。
+修复后沿同一 Assignment 的正常生命周期继续。
+撤销阶段成功，首次截图却早于 Human handled。
+
+最终采集只等现有 Turn，不发新模型请求。
+它确认 Turn completed、Human handled 和运行状态 idle。
+界面稳定后才采集完整私聊与指定 Assignment。
+
+三个 driver 问题及修复均保留在证据记录中。
+本页解释代码 417；截图与模型证据对应原构建 3f。
+随后资产提交不改变产品代码。本页不代表 Human 批准。
