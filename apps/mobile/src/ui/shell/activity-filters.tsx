@@ -19,6 +19,7 @@ export type ActivityFilter = {
 };
 export type ActivitySort = 'default' | 'newest' | 'oldest';
 export const ALL_ACTIVITY: ActivityFilter = { section: 'all', bot: undefined };
+export const DEFAULT_ACTIVITY: ActivityFilter = { section: 'action', bot: undefined };
 const SECTIONS: readonly ActivitySection[] = ['all', ...INBOX_SECTIONS];
 
 type Props = {
@@ -273,7 +274,7 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
             <TextAction
               label={t.activityReset}
               onPress={() => {
-                onFilter(ALL_ACTIVITY);
+                onFilter(DEFAULT_ACTIVITY);
                 onSort('default');
               }}
             />

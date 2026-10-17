@@ -135,7 +135,7 @@ const en = {
   fullClientUnreachable: 'The full client could not load from your computer.',
   inbox: 'Inbox',
   inboxSections: {
-    action: 'Needs my action',
+    action: 'Needs you',
     replies: 'For you',
     unread: 'Other unread',
     handled: 'Handled',
@@ -830,7 +830,7 @@ const zh: typeof en = {
   fullClientUnreachable: '完整客户端没能从你的电脑加载出来。',
   inbox: '收件箱',
   inboxSections: {
-    action: '需要我处理',
+    action: '待你处理',
     replies: '与你有关',
     unread: '其他未读',
     handled: '已处理',

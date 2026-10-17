@@ -29,7 +29,6 @@ import {
   type RequestRef,
 } from '../../host/requests';
 import type { HumanAttentionItem } from '../../host/wire';
-import type { SectionCollapse } from '../../host/section-collapse';
 import { BotAvatar } from '../bot-avatar';
 import { ApprovalCard } from '../chat/approval-card';
 import { QuestionCard } from '../chat/question-card';
@@ -37,18 +36,17 @@ import { useDesignTheme } from '../design/theme';
 import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { CountBadge } from '../primitives/count-badge';
-import { ChevronDownIcon, ChevronRightIcon } from './icons';
 import { Loading, Notice } from '../request-parts';
 import { EdgeFade, useChatHeaderHeight } from '../chat/header-chrome';
 import { Button } from '../primitives/button';
 import { ActivityToolbar, type ActivityToolbarHandle } from './activity-toolbar';
-import { t } from '../strings';
+import { ActivityTabs } from './activity-tabs';
 import { useFloatingTabInset } from './floating-tab-inset';
+import { t } from '../strings';
 import {
-  ALL_ACTIVITY,
+  DEFAULT_ACTIVITY,
   ActivityFilters,
   type ActivityFilter,
-  type ActivitySection,
   type ActivitySort,
 } from './activity-filters';
 
@@ -56,7 +54,6 @@ const AVATAR = 32;
 const LOADING: InboxSnapshot = { status: 'loading' };
 
 type FeedRow =
-  | { kind: 'header'; key: string; section: InboxSection; count: number; attention: number }
   | { kind: 'empty'; key: string }
   | { kind: 'more'; key: string; section: InboxSection }
   | { kind: 'post'; key: string; item: HumanAttentionItem; ref: RequestRef }
@@ -91,39 +88,11 @@ function sectionItems(
     : items.filter((item) => item.botSlug === bot);
 }
 
-function sectionCount(section: InboxSection, items: readonly HumanAttentionItem[]): number {
-  return section === 'unread'
-    ? items.reduce((total, item) => total + (item.unreadCount ?? 0), 0)
-    : items.length;
-}
-
-export function activityCounts(
-  snapshot: InboxSnapshot,
-  gone: ReadonlySet<string>,
-  held: readonly HumanAttentionItem[],
-  bot: string | undefined,
-): Record<ActivitySection, number> {
-  const counts: Record<ActivitySection, number> = {
-    all: 0,
-    action: 0,
-    replies: 0,
-    unread: 0,
-    handled: 0,
-  };
-  if (snapshot.status !== 'ready') return counts;
-  for (const section of INBOX_SECTIONS) {
-    counts[section] = sectionCount(section, sectionItems(snapshot, section, gone, held, bot));
-    if (section !== 'handled') counts.all += counts[section];
-  }
-  return counts;
-}
-
 export function feedRows(
   snapshot: InboxSnapshot,
   gone: ReadonlySet<string>,
   held: readonly HumanAttentionItem[],
-  filter: ActivityFilter = ALL_ACTIVITY,
-  collapsed: ReadonlySet<string> = new Set(),
+  filter: ActivityFilter = DEFAULT_ACTIVITY,
   search = '',
 ): FeedRow[] {
   if (snapshot.status !== 'ready') return [];
@@ -133,16 +102,6 @@ export function feedRows(
     if (filter.section !== 'all' && filter.section !== section) continue;
     const items = sectionItems(snapshot, section, gone, held, filter.bot);
     if (search.trim() && items.length === 0 && !snapshot.cursors?.[section]) continue;
-    const count = sectionCount(section, items);
-    const attention =
-      section === 'replies'
-        ? items.filter((item) => item.isUnread).length
-        : section === 'handled'
-          ? 0
-          : count;
-    rows.push({ kind: 'header', key: `header-${section}`, section, count, attention });
-    if (collapsed.has(section)) continue;
-    if (items.length === 0) rows.push({ kind: 'empty', key: `empty-${section}` });
     for (const item of items) {
       const ref = section === 'action' ? decidable(item) : undefined;
       rows.push(
@@ -153,6 +112,8 @@ export function feedRows(
     }
     if (snapshot.cursors?.[section]) rows.push({ kind: 'more', key: `more-${section}`, section });
   }
+  if (rows.length === 0 && !search.trim())
+    rows.push({ kind: 'empty', key: `empty-${filter.section}` });
   return rows;
 }
 
@@ -366,7 +327,6 @@ function Post({
 
 export function ActivityFeed({
   hostId,
-  collapse,
   client,
   inbox,
   snapshot,
@@ -378,7 +338,6 @@ export function ActivityFeed({
   now = Date.now(),
 }: {
   hostId: string;
-  collapse: SectionCollapse;
   client: HostClient | undefined;
   inbox: Inbox | undefined;
   snapshot: InboxSnapshot;
@@ -395,13 +354,14 @@ export function ActivityFeed({
   const [refreshing, setRefreshing] = useState(false);
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
-  const [filter, setFilter] = useState<ActivityFilter>(ALL_ACTIVITY);
+  const [filter, setFilter] = useState<ActivityFilter>(DEFAULT_ACTIVITY);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [sort, setSort] = useState<ActivitySort>('default');
   const [filtering, setFiltering] = useState(false);
   const initialHeight = useChatHeaderHeight();
   const insets = useSafeAreaInsets();
+  const [tabsHeight, setTabsHeight] = useState(theme.touch);
   const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 0 : initialHeight);
   const scoped = useMemo(
     () =>
@@ -432,8 +392,7 @@ export function ActivityFeed({
   );
   const visible = scoped === undefined ? snapshot : scopedSnapshot;
   const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
-  const collapsed = useSyncExternalStore(collapse.subscribe, () => collapse.collapsed(hostId));
-  const rows = feedRows(visible, gone, held, filter, collapsed, search);
+  const rows = feedRows(visible, gone, held, filter, search);
   const slugsWithSelection =
     filter.bot !== undefined && !botSlugs.includes(filter.bot)
       ? [...botSlugs, filter.bot]
@@ -454,25 +413,22 @@ export function ActivityFeed({
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{
           flexGrow: 1,
-          paddingTop: Math.max(0, headerHeight - (Platform.OS === 'ios' ? insets.top : 0)),
+          paddingTop: Platform.OS === 'ios' ? Math.max(0, headerHeight - insets.top) : 0,
           paddingBottom: bottom + space.x6,
         }}
-        scrollIndicatorInsets={{ top: headerHeight }}
+        scrollIndicatorInsets={{ top: tabsHeight }}
+        stickyHeaderIndices={[0]}
         automaticallyAdjustKeyboardInsets={!searchFocused}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        style={{ backgroundColor: theme.color.base }}
-        data={rows}
+        style={{
+          backgroundColor: theme.color.base,
+          marginTop: Platform.OS === 'ios' ? 0 : headerHeight,
+        }}
+        data={[{ kind: 'status', key: 'status' } as const, ...rows]}
         keyExtractor={(row) => row.key}
         itemLayoutAnimation={LinearTransition}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-        ListEmptyComponent={
-          visible.status === 'ready' && search.trim() ? (
-            <Text tone="muted" style={{ padding: space.x5 }}>
-              {t.activityNoResults}
-            </Text>
-          ) : null
-        }
         ListFooterComponentStyle={{ flexGrow: 1 }}
         ListFooterComponent={
           <Pressable
@@ -482,64 +438,50 @@ export function ActivityFeed({
           />
         }
         ListHeaderComponent={
-          <View style={{ gap: space.x3 }}>
-            {header}
-            {visible.status === 'ready' && visible.stale !== undefined ? (
-              <View style={{ paddingHorizontal: space.x5 }}>
-                <Notice tone="warning">{`${t.inboxStale} ${visible.stale}`}</Notice>
-                <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
-              </View>
-            ) : null}
-            {visible.status === 'error' ? (
-              <View style={{ paddingHorizontal: space.x5 }}>
-                <Notice tone="danger">{`${t.inboxFailed} ${visible.error}`}</Notice>
-                <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
-              </View>
-            ) : null}
-            {visible.status === 'loading' ? <Loading /> : null}
-            {visible.status === 'ready' && Object.values(visible.cursors ?? {}).some(Boolean) ? (
-              <Text variant="meta" tone="muted" style={{ paddingHorizontal: space.x5 }}>
-                {t.activityLoaded}
-              </Text>
-            ) : null}
+          <View onLayout={(event) => setTabsHeight(event.nativeEvent.layout.height)}>
+            <ActivityTabs
+              selected={filter.section}
+              onSelect={(section) => {
+                if (section === filter.section) return;
+                setHeld([]);
+                setFilter((current) => ({ ...current, section }));
+              }}
+            />
           </View>
         }
         renderItem={({ item: row }) => {
-          if (row.kind === 'header') {
-            const Chevron = collapsed.has(row.section) ? ChevronRightIcon : ChevronDownIcon;
+          if (row.kind === 'status')
             return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ expanded: !collapsed.has(row.section) }}
-                accessibilityLabel={t.sectionCount(t.inboxSections[row.section], row.count)}
-                onPress={() => collapse.toggle(hostId, row.section)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: space.x3,
-                  minHeight: theme.touch,
-                  paddingHorizontal: space.x5,
-                  paddingTop: space.x6,
-                  paddingBottom: space.x2,
-                  backgroundColor: theme.layer.canvas.fill,
-                }}
-              >
-                <Chevron color={theme.color.muted} size={theme.type.meta.line} />
-                <Text variant="meta" tone="muted" strong style={{ flex: 1 }}>
-                  {t.inboxSections[row.section]}
-                </Text>
-                <Text variant="meta" tone="subtle">
-                  {row.count}
-                </Text>
-                {collapsed.has(row.section) && row.attention > 0 ? (
-                  <CountBadge
-                    count={row.attention}
-                    tone={row.section === 'action' ? 'needs-you' : 'unread'}
-                  />
+              <>
+                <View style={{ gap: space.x3 }}>
+                  {header}
+                  {visible.status === 'ready' && visible.stale !== undefined ? (
+                    <View style={{ paddingHorizontal: space.x5 }}>
+                      <Notice tone="warning">{`${t.inboxStale} ${visible.stale}`}</Notice>
+                      <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
+                    </View>
+                  ) : null}
+                  {visible.status === 'error' ? (
+                    <View style={{ paddingHorizontal: space.x5 }}>
+                      <Notice tone="danger">{`${t.inboxFailed} ${visible.error}`}</Notice>
+                      <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
+                    </View>
+                  ) : null}
+                  {visible.status === 'loading' ? <Loading /> : null}
+                  {visible.status === 'ready' &&
+                  Object.values(visible.cursors ?? {}).some(Boolean) ? (
+                    <Text variant="meta" tone="muted" style={{ paddingHorizontal: space.x5 }}>
+                      {t.activityLoaded}
+                    </Text>
+                  ) : null}
+                </View>
+                {visible.status === 'ready' && rows.length === 0 && search.trim() ? (
+                  <Text tone="muted" style={{ padding: space.x5 }}>
+                    {t.activityNoResults}
+                  </Text>
                 ) : null}
-              </Pressable>
+              </>
             );
-          }
           if (row.kind === 'more')
             return (
               <View style={{ padding: space.x5 }}>
@@ -589,14 +531,28 @@ export function ActivityFeed({
           );
         }}
       />
-      {Platform.OS === 'ios' ? null : <EdgeFade edge="top" height={headerHeight + space.x6} />}
+      {Platform.OS === 'ios' ? null : (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: headerHeight + tabsHeight,
+            left: 0,
+            right: 0,
+            height: space.x6,
+          }}
+        >
+          <EdgeFade edge="top" height={space.x6} />
+        </View>
+      )}
       <ActivityToolbar
         ref={toolbar}
         search={search}
         onSearchFocus={setSearchFocused}
         filtered={
           sort !== 'default' ||
-          filter.section !== 'all' ||
+          filter.section === 'all' ||
+          filter.section === 'handled' ||
           filter.bot !== undefined ||
           filter.channel !== undefined ||
           filter.unreadOnly === true
