@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { zstdCompressSync } from 'node:zlib';
-import { price, providerUsage } from '../e2e-group-send-review.mjs';
+import { price, providerUsage, wholeHistoryGoal } from '../e2e-group-send-review.mjs';
 import {
   auditRun,
   blindRun,
@@ -14,6 +14,27 @@ import {
 import { sumHostRows } from '../e2e-llm-scenarios.mjs';
 
 describe('send review evaluation evidence', () => {
+  it('does not count a DM fallback or cancellation acknowledgement as successful silence', () => {
+    const run = {
+      family: 'cancel-or-revoke',
+      interventionCompletedAt: 'now',
+      group: 'g',
+      legacyGroupGoal: true,
+      transcript: { g: [] },
+    };
+    expect(wholeHistoryGoal(run)).toBe(true);
+    run.transcript['dm-a'] = [
+      { author: { kind: 'bot' }, body: 'Cannot send there, here is the notice' },
+    ];
+    expect(wholeHistoryGoal(run)).toBe(false);
+    run.transcript = { g: [{ author: { kind: 'bot' }, body: 'Cancelled' }] };
+    expect(wholeHistoryGoal(run)).toBe(false);
+  });
+  it('records explicit similarity and uncertainty separately from skipping', () => {
+    for (const winner of ['Left', 'Right', 'tie', 'insufficient'])
+      expect(humanReviewComplete({ reviewMode: 'pairwise-preference-v2', winner })).toBe(true);
+    expect(humanReviewComplete({ reviewMode: 'pairwise-preference-v2', winner: null })).toBe(false);
+  });
   it('accepts one-click preferences without inventing legacy rubric ratings', () => {
     expect(humanReviewComplete({ reviewMode: 'pairwise-preference-v1', winner: 'Left' })).toBe(
       true,

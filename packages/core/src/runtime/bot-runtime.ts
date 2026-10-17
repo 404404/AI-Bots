@@ -1,4 +1,8 @@
-import { GroupSendReview, SendReviewRequired } from '../channels/send-review.js';
+import {
+  GroupReplySourceRevoked,
+  GroupSendReview,
+  SendReviewRequired,
+} from '../channels/send-review.js';
 import { AssignmentInboxAcceptanceUncertainError } from './assignment-delivery.js';
 import {
   AssignmentApprovalCapacity,
@@ -5072,8 +5076,19 @@ class BotRuntimeImplementation implements BotRuntime {
         observations.set(id, this.groupSendReview.observe(reviewOwner, id, [message]));
     }
     const initialObservations = new Map(observations);
+    const reviewSourceChannelId =
+      initial?.channel_id && this.groupSendReview.enabled(String(initial.channel_id))
+        ? String(initial.channel_id)
+        : undefined;
+    const requireReplySource = () => {
+      if (reviewSourceChannelId === undefined) return;
+      const source = this.#channels.get(reviewSourceChannelId);
+      if (!source || !this.#isMember(botSlug, source))
+        throw new GroupReplySourceRevoked(reviewSourceChannelId);
+    };
     const authorize = beforeSend;
     beforeSend = () => {
+      requireReplySource();
       this.#database.read((db) => requireSourceEffects(db, sourceEventId, botSlug));
       authorize();
     };
@@ -5873,6 +5888,7 @@ class BotRuntimeImplementation implements BotRuntime {
         return this.groupSendReview.drop(reviewOwner, input.channelId, input.draftId);
       },
       send: async (input) => {
+        requireReplySource();
         const steered = this.#turnSources.get(botSlug);
         const turnChannelIds =
           steered?.sessionId === sessionId && steered.steeredChannelIds.size > 0
@@ -5973,7 +5989,7 @@ class BotRuntimeImplementation implements BotRuntime {
               complete: bounded.included.length === error.outcome.changedMessageCount,
               observedMessageIds: bounded.included.map((view) => view.message.id),
               responsibility:
-                'These messages join this turn. After handling them, explicitly inbox_resolve their IDs together with the original request if also complete. FYI can be done without a reply. Sending or dropping alone does not resolve Inbox work; keep unfinished work open.',
+                'These messages join this turn. On your recheck or drop, explicitly pass resolve_inbox_ids for these IDs and the original request if complete. They resolve only after a committed send or dropped draft; held/refused never resolve them. Unrelated FYI needs no reply or addition to the original draft. Cancelled work should be dropped silently. Keep unfinished work open.',
             };
             if (JSON.stringify({ ...error.outcome, review }).length > CHANNEL_READ_OUTPUT_LIMIT)
               throw error;

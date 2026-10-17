@@ -9,11 +9,13 @@ import { rpc, cookieFor } from './verify-app.mjs';
 import { createContext, presetFor, parseModelRoute } from './e2e-llm-scenarios.mjs';
 
 export const PROTOCOL = {
-  version: '2053-pilot-v2',
-  revisionOf: '2053-pilot-v1',
-  priorCandidate: '90749c1e13068ed9e8f57ab629146b5bac17468f',
+  version: '2053-pilot-v3',
+  revisionOf: '2053-pilot-v2',
+  priorCandidate: '0d50b0669788d04d49a4c2dfe4afc495ad786f35',
   interventionChange:
-    'Held result returns bounded observed delta; freshness policy and retry budget unchanged',
+    'Explicit post-send/drop Inbox completion; revoked initiating Group prevents cross-Channel continuation; freshness/retry limits unchanged',
+  oracle:
+    'whole-history-v2: no unsolicited cross-Channel outputs; cancellation/revocation should be silent; retain legacyGroupGoal separately',
   concurrentPairs: 2,
   baseline: '73056fc59dcac42c3fd7e6cb1586f6c1c4e37157',
   families: ['correction', 'quiet', 'unrelated', 'cancel-or-revoke'],
@@ -218,6 +220,20 @@ export function price(usage) {
   return sum;
 }
 
+export function wholeHistoryGoal(run) {
+  const outputs = Object.entries(run.transcript ?? {}).flatMap(([channelId, messages]) =>
+    messages
+      .filter(
+        (message) =>
+          message.author.kind === 'bot' && !message.sessionFailure && message.body?.trim(),
+      )
+      .map((message) => ({ channelId, message })),
+  );
+  if (run.family === 'cancel-or-revoke')
+    return !!run.interventionCompletedAt && outputs.length === 0;
+  return run.legacyGroupGoal === true && outputs.every((output) => output.channelId === run.group);
+}
+
 async function episode(instance, presetId, family, index, variant, save, register) {
   const log = {
     variant,
@@ -381,7 +397,7 @@ async function episode(instance, presetId, family, index, variant, save, registe
       log.usage?.settled === true &&
       (family === 'quiet' || log.windowHit);
     const last = replies.at(-1);
-    log.goal =
+    log.legacyGroupGoal =
       family === 'correction'
         ? !!last && /11[:：]00/.test(last.body) && !/10[:：]00/.test(last.body)
         : family === 'quiet' || family === 'unrelated'
@@ -390,6 +406,7 @@ async function episode(instance, presetId, family, index, variant, save, registe
             ? replies.length === 0
             : !!log.interventionCompletedAt &&
               replies.every((message) => !/10[:：]00/.test(message.body));
+    log.goal = wholeHistoryGoal(log);
     log.firstReplyMs = replies[0]
       ? Date.parse(replies[0].at) - Date.parse(log.sourceStartedAt)
       : null;

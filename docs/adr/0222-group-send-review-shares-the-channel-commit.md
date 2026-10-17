@@ -46,3 +46,17 @@ The durable draft shape and purge integration make this more than a prompt exper
 Schema generation 96 is additive; roll back by disabling the opt-in before reverting code.
 The database generation still requires a compatible binary. Acceptance remains separate from
 mechanical regression, real-model outcomes and Human evaluation.
+
+The model can explicitly select `resolve_inbox_ids` on the send/drop Tool. The Consumer
+first awaits a committed send or successful drop, then calls the existing Inbox triage
+Service with those IDs and outcome done. This is opt-in composition of two owners, not
+automatic Inbox completion or a new atomic transaction. A resolution failure is returned
+separately in `inboxResolution`, preserving the successful delivery identity for safe repair.
+Held/refused sends do not resolve anything, and the triage owner still checks observation.
+
+The initiating opted-in Group also supplies a reply-source membership fence for that run.
+The Channel Consumer checks it before sending and before effects; losing membership stops
+cross-Channel continuation, including a DM fallback. It does not revoke the PersonaBot's
+independent DM capability for later requests. Natural-language cancellation remains a model
+decision to drop silently, not a Host keyword classifier. Whole-history evaluation checks
+all Group/DM outputs so destination changes cannot masquerade as successful silence.

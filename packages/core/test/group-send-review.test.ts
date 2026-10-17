@@ -1,10 +1,77 @@
 import { describe, expect, it } from 'vitest';
+import type { OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { createCore } from '../src/plugin.js';
 import { createDshBotAgentAdapter } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { FakeAgentHost } from './dsh-agent-host-fixture.js';
 import { createTempRoot } from './helpers.js';
 import { attachOperationalModule } from '../src/database/owner.js';
 import { GroupSendReview } from '../src/channels/send-review.js';
+
+it('revoking the initiating Group stops cross-Channel continuation but not a later independent DM', async () => {
+  const outcomes: unknown[] = [];
+  let groupId = '';
+  const core = createCore({
+    dshHome: createTempRoot('review-revocation-'),
+    agents: {
+      async runOrchestrator(run: OrchestratorAgentRun) {
+        if (run.inboundChannelId === groupId) {
+          core.channels.removeGroupMember(groupId, 'ada');
+          for (const channelId of [groupId, 'dm-ada']) {
+            try {
+              await run.channels.send({ channelId, body: 'Unsolicited fallback' });
+            } catch (error) {
+              outcomes.push(error);
+            }
+          }
+        } else await run.channels.send({ body: 'Independent DM answered' });
+      },
+      async runAssignment() {},
+      requestAssignment() {
+        throw new Error('unexpected assignment');
+      },
+      async close() {},
+    },
+  });
+  try {
+    core.registry.create({ slug: 'ada', displayName: 'Ada' });
+    core.registry.create({ slug: 'bob', displayName: 'Bob' });
+    const group = core.channels.createGroup({ name: 'Review', members: ['ada', 'bob'] });
+    groupId = group.id;
+    core.runtime.groupSendReview!.configure(groupId, true);
+    core.channels.getOrCreateDm('ada', 'Ada');
+    await core.channels.appendMessage(groupId, {
+      id: 'request',
+      at: new Date().toISOString(),
+      author: { kind: 'human' },
+      body: '@Ada Send here',
+      mentions: [{ botSlug: 'ada', label: 'Ada', start: 0, end: 4 }],
+    });
+    core.runtime.admitGroupMessage(groupId, 'request');
+    await core.runtime.whenIdle();
+    expect(outcomes).toHaveLength(2);
+    for (const error of outcomes)
+      expect(error).toMatchObject({ code: 'group-reply-source-revoked' });
+    expect(core.channels.readMessages('dm-ada')).toHaveLength(0);
+    await core.channels.appendMessage('dm-ada', {
+      id: 'new-dm',
+      at: new Date().toISOString(),
+      author: { kind: 'human' },
+      body: 'New independent request',
+    });
+    const admission = core.runtime.admitDmMessage({
+      channelId: 'dm-ada',
+      messageId: 'new-dm',
+      body: 'New independent request',
+    });
+    if (admission.admitted) await admission.settled;
+    expect(
+      core.channels.readMessages('dm-ada').some((m) => m.body === 'Independent DM answered'),
+    ).toBe(true);
+  } finally {
+    await core.runtime.close();
+    core.operationalDatabase.close();
+  }
+});
 
 async function fixture(
   check: (f: {

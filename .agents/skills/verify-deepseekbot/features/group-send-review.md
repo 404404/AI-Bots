@@ -14,7 +14,7 @@ observed basis. The Human sees only committed replies in canonical history.
 - Refuse: revoked membership, purged source, expired draft or restarted Host cannot auto-send.
 - Review: the pilot retains complete paired histories and separate runtime/judge usage.
 - Human preference: two full-history cards accept one Left/Right choice, save it and advance;
-  dimensions and reasons are not required. Skip leaves the pair unreviewed; undo and changes
+  dimensions and reasons are not required. “两边差不多” and “不好判断” are explicit outcomes; the last-choice button reveals per-arm tokens and known cost only after a choice. Skip leaves the pair unreviewed; undo and changes
   preserve previous choices. Legacy rubric scores retain their original review mode.
 
 ## How to get to it (user POV)
@@ -53,3 +53,13 @@ marked in the exported JSON. Check undo, skipped pairs, full message bodies and 
 - Tool handles cannot cross owners or Groups. Source purge removes derived draft bodies.
 - After one failed recheck, automatic retries stop. This slice does not implement #2054–2056.
 - Human acceptance requires independent review of full histories; no test or LLM signs it.
+
+## Explicit completion and revoked-source regression
+
+Pass `resolve_inbox_ids` on direct `channel_send` and inspect `inboxResolution` separately
+from `status: committed`. A held/refused send must leave the specified work open. A successful
+drop resolves only explicitly selected observed IDs. A failure after delivery is repaired
+through `inbox_resolve`, without resending. In a real Group turn, remove the sending Bot:
+neither the Group nor a DM may receive continuation of that task. A subsequent independent
+DM still works. The fixed pilot retains `legacyGroupGoal` but uses the versioned whole-history
+oracle; cancellation/revocation succeeds only with no public Bot output in any Channel.

@@ -29,6 +29,14 @@ export class SendReviewRequired extends Error {
     super(outcome.reason);
   }
 }
+export class GroupReplySourceRevoked extends Error {
+  readonly code = 'group-reply-source-revoked';
+  constructor(readonly channelId: string) {
+    super(
+      'Group reply source membership was revoked. Stop this task; do not continue in another Channel.',
+    );
+  }
+}
 export type ReviewDraft = {
   id: string;
   owner: string;

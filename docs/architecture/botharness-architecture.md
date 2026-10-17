@@ -55,6 +55,8 @@ Channel 的消息引用（#145）只保存同 Channel 的已提交目标 ID；Hu
 
 应用定义的 `group_leave` Tool 只在规范成员移除提交后返回 `{channelId,left:true,outcome:"changed"}`；Bot 当前不是该群成员时返回 `{channelId,left:false,outcome:"unchanged",reason:"not-member"}`。无变更既包括重复退出，也包括从未加入的群；不推断历史成员身份，不返回未加入群的名称或名单。缺失 Channel 抛出 `group_leave: channel-unavailable`，非群聊目标抛出 `group_leave: group-required`，替代旧的含糊 `left:false` 成功结果；Tool 异常保持为失败。既有 `{channelId,left}` 字段及 Core 返回结构保持兼容，调用方须处理新的无效目标失败。ADR-0073 的同一事务仍承担创建者移交 Human、待处理 Admission 撤销、单条持久离群通知及剩余成员注意力策略；提交后的实时通知警告不否定已提交变更。读写权限立即撤销，因此 Bot 应通过仍可访问的 Channel 向 Human 报告（[#571](https://github.com/BotHarness/BotHarness/issues/571)）。
 
+The reply Consumer can compose an explicit `resolve_inbox_ids` selection with a successful send/drop, using the existing Inbox triage owner afterward; completion failures remain separate from delivery. A revoked initiating opted-in Group prevents that run from continuing in another Channel. A later independent DM remains available (ADR-0222).
+
 ## 原生 Human 等待的验证边界
 
 [#1036 的有界实验](../research/1036-native-wait-experiment.md) 在固定 DSH
