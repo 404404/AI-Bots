@@ -85,6 +85,11 @@ page.on('pageerror', (e) => errors.push(e.message));
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 const click = async (name) => {
   const names = {
+    'Refresh Home': ['刷新 Home', 'Refresh Home'],
+    'Token usage range': ['Token 用量时间范围', 'Token usage range'],
+    'Last 24 hours': ['过去 24 小时', 'Last 24 hours'],
+    'Last 7 days': ['过去 7 天', 'Last 7 days'],
+    'Last 30 days': ['过去 30 天', 'Last 30 days'],
     'Configure model': ['配置模型，开始与 Tob 对话', 'Configure a model to talk to Tob'],
     Close: ['关闭', 'Close'],
     'Bot mode': ['Bot 模式', 'Bot mode'],
@@ -397,6 +402,97 @@ try {
     1,
   );
   steps.push('concurrent Home identity converges');
+  if (phase === 'dashboard') {
+    const beforeMessages = (
+      await rpc('channelMessages', { channelId: home.channelId })
+    ).messages.map((message) => message.id);
+    const cardNames = [
+      ['需要你处理', 'Needs your attention'],
+      ['正在工作的 Bot', 'Working Bots'],
+      ['Token 用量', 'Token usage'],
+      ['最近活跃的频道与任务', 'Recently active Channels and tasks'],
+    ];
+    await page.waitForFunction(() =>
+      document.querySelector('[data-home-panel] [aria-busy="false"]'),
+    );
+    for (const names of cardNames)
+      assert.ok(
+        await page.evaluate(
+          (labels) =>
+            [...document.querySelectorAll('[data-home-panel] section')].some((section) =>
+              labels.includes(section.getAttribute('aria-label')),
+            ),
+          names,
+        ),
+      );
+    const canonical = await rpc('homeDashboard', { range: '24h' });
+    assert.equal(
+      canonical.usage.status,
+      'ready',
+      'usage source must be available for this candidate',
+    );
+    assert.equal(
+      Date.parse(canonical.usage.value.to) - Date.parse(canonical.usage.value.from),
+      86_400_000,
+    );
+    writeFileSync(resolve(out, 'dashboard-24h.json'), JSON.stringify(canonical, null, 2));
+    await shot('dashboard-24h');
+    for (const [label, range, hours] of [
+      ['Last 7 days', '7d', 168],
+      ['Last 30 days', '30d', 720],
+    ]) {
+      await click('Token usage range');
+      await click(label);
+      await page.waitForFunction(() =>
+        document.querySelector('[data-home-panel] [aria-busy="false"]'),
+      );
+      const result = await rpc('homeDashboard', { range });
+      assert.equal(result.usage.status, 'ready');
+      assert.equal(
+        Date.parse(result.usage.value.to) - Date.parse(result.usage.value.from),
+        hours * 3_600_000,
+      );
+      writeFileSync(resolve(out, 'dashboard-' + range + '.json'), JSON.stringify(result, null, 2));
+      await shot('dashboard-' + range);
+    }
+    await click('Refresh Home');
+    await page.waitForFunction(() =>
+      document.querySelector('[data-home-panel] [aria-busy="false"]'),
+    );
+    assert.deepEqual(
+      (await rpc('channelMessages', { channelId: home.channelId })).messages.map(
+        (message) => message.id,
+      ),
+      beforeMessages,
+    );
+    const recent =
+      canonical.recent.status === 'ready'
+        ? canonical.recent.value.find((item) => item.kind === 'channel')
+        : undefined;
+    if (recent) {
+      await page.evaluate(() => {
+        window.__homeDashboardNode = document.querySelector('[data-home-panel]');
+      });
+      const label = await page.evaluate((target) => {
+        const section = [...document.querySelectorAll('[data-home-panel] section')].find((node) =>
+          ['最近活跃的频道与任务', 'Recently active Channels and tasks'].includes(
+            node.getAttribute('aria-label'),
+          ),
+        );
+        return [...section.querySelectorAll('button')]
+          .find((button) => button.textContent.includes(target))
+          ?.textContent.trim();
+      }, recent.label);
+      assert.ok(label, 'canonical recent Channel is visible');
+      await click(label);
+      await page.waitForSelector('[data-dock-header="bh:channel-body"]');
+      assert.ok(await page.evaluate(() => window.__homeDashboardNode?.isConnected));
+      await shot('dashboard-recent-channel');
+    }
+    steps.push(
+      'four owner-backed cards; exact 24h/7d/30d; explicit refresh; no generated Tob report; recent Channel opens alongside mounted Home',
+    );
+  }
   if (phase === 'configure') {
     const desc = await rpc('describe', {}, 'settings');
     const d = desc.namespaces.find((x) => x.ns === 'agent-default-model');

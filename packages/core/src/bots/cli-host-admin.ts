@@ -1,3 +1,4 @@
+import { rollingUsageHours } from '../usage/usage.js';
 import type { AltchaChallenge } from '../marketplace/altcha.js';
 import { parseChallenge, solveChallenge } from '../marketplace/altcha.js';
 import { pairingCapabilities, type PairingCapability } from '../messaging/pairing.js';
@@ -19,6 +20,7 @@ export interface HostAdminValues {
   topic?: string;
   sort?: string;
   cursor?: string;
+  period?: string;
   reason?: string;
   decision?: string;
   capability?: string[];
@@ -29,6 +31,10 @@ export interface HostAdminValues {
 }
 
 export const HOST_ADMIN_COMMANDS = [
+  {
+    command: 'home-dashboard',
+    description: 'read Home facts and precise rolling token usage (--period 24h|7d|30d)',
+  },
   { command: 'pause', description: 'archive a Bot through the Host owner' },
   { command: 'resume', description: 'restore an archived Bot through the Host owner' },
   {
@@ -79,6 +85,7 @@ export function isHostAdminCommand(command: string): command is HostAdminCommand
 }
 
 const POSITIONALS: Record<HostAdminCommand, number> = {
+  'home-dashboard': 0,
   pause: 1,
   resume: 1,
   'tob-home': 0,
@@ -134,6 +141,12 @@ function validate(command: HostAdminCommand, rest: string[], values: HostAdminVa
     );
   if (command === 'telemetry-set' && values.enabled === values.disabled)
     usage('telemetry-set needs exactly one of --enabled or --disabled.');
+  if (
+    command === 'home-dashboard' &&
+    values.period !== undefined &&
+    !Object.hasOwn(rollingUsageHours, values.period)
+  )
+    usage('--period must be 24h, 7d or 30d for home-dashboard.');
   if (command !== 'pairing-review') return undefined;
   const kind = values.decision;
   if (kind !== 'approve' && kind !== 'reject' && kind !== 'revoke')
@@ -220,6 +233,8 @@ export async function runHostAdminCommand(
     case 'pause':
     case 'resume':
       return rpc(command, { slug: rest[0]!.trim() });
+    case 'home-dashboard':
+      return rpc('homeDashboard', { range: values.period ?? '24h' });
     case 'tob-home':
       return rpc('tobHome', {});
     case 'marketplace-list':

@@ -457,3 +457,19 @@ it('routes archive and restore through the Host and retains protected Tob refusa
   expect((await invoke(['pause', 'ordinary'], live.url)).json.bot.paused).toBe(true);
   expect((await invoke(['resume', 'ordinary'], live.url)).json.bot.paused).toBe(false);
 });
+
+it('reads Home facts through the authenticated owner with precise ranges and rejects invalid input before connection', async () => {
+  const live = await host((method, args) => ok({ method, range: args.range }));
+  expect((await invoke(['home-dashboard'], live.url)).json).toEqual({
+    method: 'homeDashboard',
+    range: '24h',
+  });
+  expect((await invoke(['home-dashboard', '--period', '7d'], live.url)).json.range).toBe('7d');
+  expect((await invoke(['home-dashboard', '--period', '30d'], live.url)).json.range).toBe('30d');
+  const before = live.calls.length;
+  expect((await invoke(['home-dashboard', '--period', 'today'], live.url)).json.error.code).toBe(
+    'usage',
+  );
+  expect((await invoke(['home-dashboard', 'unexpected'], live.url)).json.error.code).toBe('usage');
+  expect(live.calls).toHaveLength(before);
+});

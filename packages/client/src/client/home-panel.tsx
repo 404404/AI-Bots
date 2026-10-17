@@ -1,3 +1,4 @@
+import { HomeDashboard } from './home-dashboard.js';
 import { requestCreation, type CreateIntent } from './create-request.js';
 import { WORKSPACE_CHANNELS } from './workspace-context.js';
 import { HomeCreationPanel } from './home-creation-panel.js';
@@ -18,7 +19,7 @@ import { CHANNEL_BODY_PANEL } from './channel-dock-layout.js';
 import { OnboardingModelDialog } from './onboarding-view.js';
 import { openModelsSettingsAndReturn } from './bot-settings-open.js';
 import { errorMessage } from './bridge.js';
-import { color, space, radius, text } from './ds/tokens.stylex.js';
+import { color, space, text } from './ds/tokens.stylex.js';
 
 type Home = Awaited<ReturnType<BridgeActions['tobHome']>>;
 const styles = stylex.create({
@@ -46,15 +47,6 @@ const styles = stylex.create({
     color: color.muted,
     fontSize: text.bodySize,
     lineHeight: text.bodyLine,
-  },
-  card: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.x3,
-    padding: space.x4,
-    backgroundColor: color.hover,
-    borderRadius: radius.sm,
   },
   choices: { display: 'flex', flexWrap: 'wrap', gap: space.x2 },
   error: { color: color.danger, margin: 0, overflowWrap: 'anywhere' },
@@ -396,18 +388,7 @@ export function HomePanel({
             </Button>
           )}
           {creationChoices}
-          <div {...stylex.props(styles.card)}>
-            <span>
-              {!home && !error
-                ? t('modelPreset.loading')
-                : home?.attention
-                  ? t('home.attention', { count: home.attention.unreadCount })
-                  : t('home.unavailable')}
-            </span>
-            <Button variant="ghost" onClick={() => registry.open('activity-center')}>
-              {t('home.activity')}
-            </Button>
-          </div>
+          <HomeDashboard actions={actions} registry={registry} t={t} />
           {error && (
             <p role="alert" {...stylex.props(styles.error)}>
               {error}

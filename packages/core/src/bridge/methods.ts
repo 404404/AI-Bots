@@ -1,3 +1,5 @@
+import { queryHomeDashboard, type HomeDashboard } from '../home/dashboard.js';
+import { rollingUsageHours } from '../usage/usage.js';
 import {
   ChannelPreferencesError,
   type ChannelPreferencesService,
@@ -610,6 +612,7 @@ export interface BridgeMethods {
   botSourcePolicyReset(payload: unknown): BridgeResult<{ policy: BotSourcePolicy }>;
   channelActivityToday(payload: unknown): BridgeResult<ChannelActivityToday>;
   activityOverview(payload: unknown): BridgeResult<ActivityOverview>;
+  homeDashboard(payload: unknown): Promise<BridgeResult<HomeDashboard>>;
   humanAttention(payload: unknown): BridgeResult<HumanAttentionPage>;
   humanAssignmentContext(payload: unknown): BridgeResult<{ context: HumanAssignmentContext }>;
   humanAttentionStatus(payload: unknown): BridgeResult<{ unreadCount: number; hasAction: boolean }>;
@@ -1869,6 +1872,17 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
               : await service.send(slug, grantId, requestId, text),
         };
       });
+    },
+    async homeDashboard(payload) {
+      const input = z
+        .object({ range: z.enum(['24h', '7d', '30d']).default('24h') })
+        .strict()
+        .safeParse(payload);
+      if (!input.success)
+        return invalidInput(
+          `Home usage range must be ${Object.keys(rollingUsageHours).join(', ')}`,
+        );
+      return { ok: true, value: await queryHomeDashboard(deps, input.data.range) };
     },
     async tobHome() {
       if (!deps.tob) return unavailable();

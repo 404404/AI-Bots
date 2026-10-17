@@ -1,3 +1,5 @@
+import type { HomeDashboard } from '../../../core/src/home/dashboard.js';
+import type { RollingUsageRange } from '../../../core/src/usage/usage.js';
 import type { PixelBannerRecipe } from '@botharness/pixel-banner';
 import { onboardingFor } from './onboarding.js';
 import { loadAveragePerf, type AveragePerfView } from './message-perf.js';
@@ -330,6 +332,7 @@ export interface HostDirectoryListing {
 }
 
 export interface BridgeActions {
+  homeDashboard(range?: RollingUsageRange): Promise<HomeDashboard>;
   tobHome(): Promise<
     import('../../../core/src/tob/service.js').TobHome & {
       attention?: { unreadCount: number; hasAction: boolean };
@@ -1512,6 +1515,7 @@ export function createActions(
     return result.value as T;
   };
   const actions: BridgeActions = {
+    homeDashboard: (range = '24h') => invoke('homeDashboard', { range }),
     tobHome: () => invoke('tobHome', {}),
     async sendHome(channelId, body, messageId, attachments) {
       const message = await sendChannelMessage(
