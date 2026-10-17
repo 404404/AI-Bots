@@ -1,0 +1,57 @@
+{
+  "source": "7f72e01ba13ba1e13f672348a3765d50c62cb4ea",
+  "integration": "ebcbe619145de4b18d7c89ff149d15754defadcf",
+  "branch": "qa/windows-activity-2057",
+  "priorSource": "2c15b4ae430d0a039a12a166c93d288b49e0e180",
+  "device": "Redmi Note 14 Pro; Android 16; arm64; SDK58 development client",
+  "capture": "Native full screenshots; same QA Host and pending question. Selected tab adds decorative leading icon and underline. Fixed slots retain label geometry. Six cold-launch theme/font cases. Original font1.0 and night custom_schedule restored.",
+  "matrix": [
+    {
+      "label": "activity-icons-dark-1",
+      "theme": "dark",
+      "font": "1"
+    },
+    {
+      "label": "activity-icons-dark-1.3",
+      "theme": "dark",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-icons-dark-2",
+      "theme": "dark",
+      "font": "2"
+    },
+    {
+      "label": "activity-icons-light-1",
+      "theme": "light",
+      "font": "1"
+    },
+    {
+      "label": "activity-icons-light-1.3",
+      "theme": "light",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-icons-light-2",
+      "theme": "light",
+      "font": "2"
+    }
+  ],
+  "selectedTabs": [
+    "action",
+    "replies",
+    "unread"
+  ],
+  "unreadFrame": "Captured while query loading; proves immediate tab selection, not fetch completion.",
+  "checks": {
+    "focusedTests": 19,
+    "sourceMobileTypes": true,
+    "integrationMobileTypes": true
+  },
+  "limits": [
+    "No iOS native acceptance",
+    "No Human acceptance inferred",
+    "No live theme/font lifecycle or FPS qualification"
+  ],
+  "date": "2026-10-17"
+}
