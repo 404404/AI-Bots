@@ -19,12 +19,14 @@ export function KeyboardRoot({ children }: { children: ReactNode }) {
 export function KeyboardChatFrame({
   children,
   composer,
+  background,
   backgroundColor,
   onMount,
   onComposerLayout,
 }: KeyboardChatFrameProps) {
   return (
     <View ref={onMount} style={{ flex: 1, backgroundColor }}>
+      {background}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {children}
       </KeyboardAvoidingView>

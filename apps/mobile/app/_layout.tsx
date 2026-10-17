@@ -80,6 +80,10 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="chat-background"
+                options={{ title: t.chatBackground.title, ...sheetScreenOptions(design, true) }}
+              />
+              <Stack.Screen
                 name="host-look"
                 options={{
                   title: t.hostLook,
