@@ -1,6 +1,7 @@
 export type DialogAction = {
   text: string;
   style?: 'default' | 'cancel' | 'destructive';
+  icon?: 'person' | 'chat' | 'settings' | 'close' | 'computer';
   onPress?: () => unknown;
 };
 

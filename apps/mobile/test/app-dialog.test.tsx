@@ -33,6 +33,15 @@ describe('app dialogs', () => {
     expect(appDialogs.getSnapshot()).toBeUndefined();
   });
 
+  it('keeps semantic icons in the Android menu but strips them from native iOS alert buttons', () => {
+    showAppDialog('Create', undefined, [{ text: 'New Bot', icon: 'person' }]);
+    expect(appDialogs.getSnapshot()?.actions[0]?.icon).toBe('person');
+    appDialogs.dismiss();
+    platform.OS = 'ios';
+    showAppDialog('Create', undefined, [{ text: 'New Bot', icon: 'person' }]);
+    expect(nativeAlert).toHaveBeenCalledWith('Create', undefined, [{ text: 'New Bot' }]);
+  });
+
   it('cancel, Back and backdrop dismissal never execute a destructive action', async () => {
     const state = createDialogState();
     const remove = vi.fn();

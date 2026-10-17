@@ -32,6 +32,7 @@ export function openCreateMenu(onPick: (target: CreateTarget) => void): void {
     { text: t.cancel, style: 'cancel' },
     ...CREATE_CHOICES.map((choice) => ({
       text: choice.label,
+      icon: choice.target.kind === 'new-bot' ? ('person' as const) : ('chat' as const),
       onPress: () => onPick(choice.target),
     })),
   ]);

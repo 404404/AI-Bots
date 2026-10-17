@@ -12,12 +12,21 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDesignTheme } from '../design/theme';
+import { buttonColors } from '../design/controls';
 import { androidSettings, modalRail, space } from '../design/tokens';
 import { t } from '../strings';
 import { Button } from './button';
 import { appDialogs } from './dialog-state';
-import { SettingsRow } from './settings-row';
 import { Text } from './text';
+import { ChatsIcon, CloseIcon, ComputerIcon, PersonIcon, SettingsIcon } from '../shell/icons';
+
+const ACTION_ICONS = {
+  person: PersonIcon,
+  chat: ChatsIcon,
+  settings: SettingsIcon,
+  close: CloseIcon,
+  computer: ComputerIcon,
+};
 
 export function AppDialogHost() {
   const shown = useSyncExternalStore(
@@ -100,22 +109,33 @@ export function AppDialogHost() {
               </Text>
             )}
             {menu ? (
-              <View>
-                {choices.map(({ action, index }) => (
-                  <SettingsRow
-                    key={index}
-                    title={action.text}
-                    tone={action.style === 'destructive' ? 'danger' : 'fg'}
-                    on="sheet"
-                    onPress={
-                      shown.busy === undefined
-                        ? () => {
-                            void appDialogs.choose(index);
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
+              <View style={{ gap: space.x3 }}>
+                {choices.map(({ action, index }) => {
+                  const Icon = action.icon === undefined ? undefined : ACTION_ICONS[action.icon];
+                  const color =
+                    action.style === 'destructive'
+                      ? theme.color.danger
+                      : buttonColors(theme, 'tonal', 'sheet').label;
+                  return (
+                    <Button
+                      key={index}
+                      label={action.text}
+                      tone={action.style === 'destructive' ? 'danger' : 'tonal'}
+                      variant={action.style === 'destructive' ? 'outlined' : 'filled'}
+                      on="sheet"
+                      icon={
+                        Icon === undefined ? undefined : (
+                          <Icon color={color} size={theme.type.body.line} />
+                        )
+                      }
+                      disabled={shown.busy !== undefined}
+                      busy={shown.busy === index}
+                      onPress={() => {
+                        void appDialogs.choose(index);
+                      }}
+                    />
+                  );
+                })}
               </View>
             ) : null}
             <View
@@ -128,6 +148,7 @@ export function AppDialogHost() {
                     label={cancel.text}
                     onPress={dismiss}
                     on="sheet"
+                    variant="text"
                     disabled={shown.busy !== undefined}
                   />
                 </View>

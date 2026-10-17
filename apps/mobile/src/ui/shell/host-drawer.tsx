@@ -159,13 +159,25 @@ function openHostMenu(row: HostDrawerRow, name: string): void {
   const actions = [
     {
       label: t.hostCustomize,
+      icon: 'settings' as const,
       run: () =>
         closeThen(() => router.push({ pathname: '/host-look', params: { hostId: row.hostId } })),
     },
     ...(row.current
       ? []
-      : [{ label: t.showHost, run: () => closeThen(() => void hostDrawer.select(row.hostId)) }]),
-    { label: t.unpair, run: () => confirmUnpair(row, name), destructive: true },
+      : [
+          {
+            label: t.showHost,
+            icon: 'computer' as const,
+            run: () => closeThen(() => void hostDrawer.select(row.hostId)),
+          },
+        ]),
+    {
+      label: t.unpair,
+      icon: 'close' as const,
+      run: () => confirmUnpair(row, name),
+      destructive: true,
+    },
   ];
   if (Platform.OS === 'ios') {
     ActionSheetIOS.showActionSheetWithOptions(
@@ -183,6 +195,7 @@ function openHostMenu(row: HostDrawerRow, name: string): void {
     { text: t.cancel, style: 'cancel' },
     ...actions.map((action) => ({
       text: action.label,
+      icon: action.icon,
       style: action.destructive === true ? ('destructive' as const) : ('default' as const),
       onPress: action.run,
     })),

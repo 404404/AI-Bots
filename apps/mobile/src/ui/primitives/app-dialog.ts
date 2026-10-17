@@ -15,8 +15,9 @@ export function showAppDialog(
   Alert.alert(
     title,
     message,
-    actions.map(({ onPress, ...action }) => ({
-      ...action,
+    actions.map(({ onPress, text, style }) => ({
+      text,
+      ...(style === undefined ? {} : { style }),
       ...(onPress === undefined
         ? {}
         : {
