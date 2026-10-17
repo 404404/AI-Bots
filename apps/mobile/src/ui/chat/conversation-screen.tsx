@@ -611,7 +611,6 @@ function ChatConversation({
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
           <View>
-            <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
             {botDm ? (
               <View style={{ padding: space.x5, alignItems: 'center' }}>
                 <Text variant="meta" tone="muted">
@@ -776,6 +775,7 @@ function ChatConversation({
               }
             />
           </SpeakerStageContext.Provider>
+          <EdgeFade edge="bottom" height={edgeFade.bottom} />
           {latest.away ? (
             <View
               pointerEvents="box-none"
