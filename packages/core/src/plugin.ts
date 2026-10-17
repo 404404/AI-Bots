@@ -1,3 +1,5 @@
+import { createTobDeviceOperations, TOB_DEVICE_CAPABILITIES } from './tob/cli-device-operations.js';
+import type { PrepareTobOperation } from './tob/cli-operations.js';
 import {
   createTobScheduleOperations,
   TOB_SCHEDULE_CAPABILITIES,
@@ -1035,6 +1037,12 @@ export function createCore(
 }
 
 export function apply(ctx: Context, config: BotHarnessConfig): void {
+  const devicesUnavailable: PrepareTobOperation = (command) => {
+    if (TOB_DEVICE_CAPABILITIES.some((entry) => entry.command === command))
+      throw new TobError('device-unavailable');
+    return undefined;
+  };
+  let tobDeviceOperations = devicesUnavailable;
   if (!config.enabled) return;
   const profile = ctx.get('profileContext') as { installAnchor: string; dir: string } | undefined;
   const releaseAnchors =
@@ -1212,6 +1220,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                 prepareOperation: async (command, args) =>
                   (await tobModelOperations(command, args)) ??
                   (await tobMaintenanceOperations(command, args)) ??
+                  (await tobDeviceOperations(command, args)) ??
                   (await tobBotCreationOperations(command, args)) ??
                   (await tobBotProfileOperations(command, args)) ??
                   (await tobChannelOperations(command, args)) ??
@@ -1240,6 +1249,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   ...TOB_MEMORY_EDIT_CAPABILITIES,
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
+                  ...TOB_DEVICE_CAPABILITIES,
                   ...TOB_BOT_CREATE_CAPABILITIES,
                   ...TOB_BOT_PROFILE_CAPABILITIES,
                   ...TOB_CHANNEL_CAPABILITIES,
@@ -1424,6 +1434,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   ctx.effect(() => () => core.operationalDatabase.close(), 'botharness: operational database');
   ctx.effect(() => () => core.contentPurge.close(), 'botharness: purge ledger');
   const deviceWebUpgrade = mountDevicePairing(ctx, {
+    ready: (pairing, routes) => {
+      const operations = createTobDeviceOperations(pairing, routes);
+      tobDeviceOperations = operations;
+      return () => {
+        if (tobDeviceOperations === operations) tobDeviceOperations = devicesUnavailable;
+      };
+    },
     database: core.operationalDatabase,
     dshHome,
     push: {

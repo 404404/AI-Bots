@@ -94,11 +94,17 @@
       "description": "Device list, offers, revoke and paired-device gateway authorization.",
       "scope": "Profile",
       "surfaces": [
-        "route:packages/core/src/devices/mount.ts:path in [ [DEVICES_PATH, ['GET']], [`${DEVICES_PATH}/offer`, ['POST']], [`${DEVICES_PATH}/revoke`, ['POST']], ] as const",
+        "route:packages/core/src/devices/mount.ts:path in [ [DEVICES_PATH, ['GET']], [`${DEVICES_PATH}/offer`, ['POST']], [`${DEVICES_PATH}/revoke`, ['POST']], [`${DEVICES_PATH}/offer-status`, ['GET']], ] as const",
         "setting:packages/client/src/client/paired-devices.tsx:{device.name}",
         "setting:packages/client/src/client/paired-devices.tsx:{t('devices.pair.title')}"
       ],
-      "issue": "#2098"
+      "commands": [
+        "devices",
+        "device-routes",
+        "device-offer",
+        "device-offer-status",
+        "device-revoke"
+      ]
     },
     {
       "id": "profile-recovery",

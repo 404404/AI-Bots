@@ -198,6 +198,11 @@ Usage:
   deepseekbot telemetry-set (--enabled | --disabled)
   deepseekbot git-status
   deepseekbot git-install
+  deepseekbot devices
+  deepseekbot device-routes
+  deepseekbot device-offer --out <new-private-absolute-file>
+  deepseekbot device-offer-status <receipt-id>
+  deepseekbot device-revoke <device-id> --expected-device <identity> --confirm
   deepseekbot pairing-list <id>
   deepseekbot pairing-review <id> <pairing-id> --decision approve|reject|revoke [--role <role-id> | --capability <c> ...] [--confirm]
   deepseekbot workspace-options

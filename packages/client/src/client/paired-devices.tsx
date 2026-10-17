@@ -138,7 +138,7 @@ export function PairedDevicesSettings({ t }: PropsLocale<'botharness'>): ReactEl
         await fetch(`${PATH}/offer`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ origin: location.origin }),
+          body: JSON.stringify({ origin: location.origin, reuse: true }),
         }),
       );
       known.current = new Set(snapshot?.devices.map((device) => device.id));
