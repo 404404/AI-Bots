@@ -97,3 +97,30 @@ it.each(['default', 'denied', 'unsupported'] as const)(
     expect(f.request).not.toHaveBeenCalled();
   },
 );
+
+it('reports unavailable persistence and never requests permission if the OS state changes during a CLI write', async () => {
+  let reads = 0;
+  const requestPermission = vi.fn(async () => 'granted' as const);
+  const notifications = new DesktopNotificationPrefs(undefined, {
+    permission: () => (++reads < 4 ? 'granted' : 'default'),
+    requestPermission,
+    show: vi.fn(),
+  });
+  const handlers = createClientPreferenceHandlers({
+    readTheme: () => 'system',
+    readLocale: () => 'en',
+    notifications,
+  });
+  const before = (await handlers.get('preferences')!({})) as { stateFingerprint: string };
+  const result = await handlers.get('preferences-set')!({
+    scope: 'browser-origin',
+    expectedState: before.stateFingerprint,
+    patch: { notifications: true },
+  });
+  expect(result).toMatchObject({
+    outcome: 'permission-pending',
+    changed: false,
+    persistence: 'unavailable',
+  });
+  expect(requestPermission).not.toHaveBeenCalled();
+});
