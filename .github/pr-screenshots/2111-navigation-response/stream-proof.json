@@ -1,0 +1,50 @@
+{
+  "head": "6a98dea3af5a41a3f67afcb9a21c8285c33a9d87",
+  "runtimeBehavior": "a481602191efde5da1a89dc5583ad1aa99e6c1a0",
+  "replyCharacters": 21492,
+  "scenario": "Dedicated QA Bot, canonical CLI send, fixed local model replay; SDK58 Android Debug",
+  "samples": {
+    "before": {
+      "historyHeld": false,
+      "offset": 0,
+      "anchor": 733.8461303710938,
+      "cursor": 414,
+      "received": 5316,
+      "coveredActivityFeedRenders": 0
+    },
+    "held": {
+      "historyHeld": true,
+      "offset": 189.53846740722656,
+      "anchor": 600.3076629638672,
+      "cursor": 446,
+      "received": 11839,
+      "coveredActivityFeedRenders": 0
+    },
+    "later": {
+      "historyHeld": true,
+      "offset": 189.53846740722656,
+      "anchor": 600.3076629638672,
+      "cursor": 446,
+      "received": 19751,
+      "coveredActivityFeedRenders": 0
+    },
+    "resumed": {
+      "historyHeld": false,
+      "offset": 0,
+      "anchor": 1657.84619140625,
+      "cursor": 1088,
+      "received": 21492,
+      "coveredActivityFeedRenders": 0
+    }
+  },
+  "result": {
+    "historyPositionHeld": true,
+    "playbackResumed": true,
+    "canonicalReplyCommitted": true
+  },
+  "limits": [
+    "No native UI frame timing or Release120FPS qualification",
+    "Per-bubble redraw probe inconclusive; initial scanner counted reused fibers, corrected probe refused while prior playback remained incomplete",
+    "Not a playback-speed or final-drain qualification"
+  ]
+}
