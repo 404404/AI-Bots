@@ -47,9 +47,10 @@ it('reads canonical actions and message activity without changing read state or 
     const hidden = core.channels.getOrCreateBotDm('ada', 'bea', 'Private Bots')!;
     await core.channels.appendMessage(hidden.id, {
       id: 'hidden',
-      at: '2026-10-19T00:00:00Z',
+      at: '2026-10-17T01:00:00Z',
       author: { kind: 'bot', slug: 'ada' },
       body: 'Private',
+      botCausation: { rootSourceEventId: 'qa-root', parentSourceEventId: 'qa-parent', hop: 1 },
     });
     core.channels.setHumanNickname(older.id, 'Recent visit is not activity');
     const before = core.humanAttention.status();
@@ -115,9 +116,11 @@ it('shows only currently executing roots and keeps unavailable owners distinct f
       value: { working: { status: 'ready', value: [] } },
     });
     const unavailable = createBridgeMethods({
-      ...core,
-      runtime: undefined,
-      humanAttention: undefined,
+      registry: core.registry,
+      channels: core.channels,
+      ownership: core.ownership,
+      states: core.states,
+      roster: core.roster,
     });
     expect(await unavailable.homeDashboard({})).toMatchObject({
       ok: true,

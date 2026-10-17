@@ -1,3 +1,4 @@
+import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { HomeDashboard } from '../../../core/src/home/dashboard.js';
 import type { RollingUsageRange } from '../../../core/src/usage/usage.js';
 import type { PixelBannerRecipe } from '@botharness/pixel-banner';
@@ -6,7 +7,6 @@ import { loadAveragePerf, type AveragePerfView } from './message-perf.js';
 import { invalidateInheritedModelPlans } from './model-plan-store.js';
 import type { ProviderAppSetup } from './provider-app-setup.js';
 import type { OnboardingSnapshot, TutorialAction } from '../../../core/src/onboarding/types.js';
-import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type {
   ChannelHistoryItem,
   PurgeSource,
