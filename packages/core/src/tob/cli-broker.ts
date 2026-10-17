@@ -302,7 +302,7 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
               : { required: ['ns', 'patch', 'expectedRevision', 'previousValue'] }),
             approval: 'existing-host-policy',
             reporting:
-              'Report requested, pending, approved or denied from the actual result. A pending request is not applied; successful policy writes follow Human approval, never direct application without review. A refusal is not success; use canonical read-back and do not attribute another actor\'s change to yourself.',
+              "Report requested, pending, approved or denied from the actual result. A pending request is not applied; successful policy writes follow Human approval, never direct application without review. A refusal is not success; use canonical read-back and do not attribute another actor's change to yourself.",
             scope: 'current-human-dm-shell',
           },
           errors: [...CODES],
