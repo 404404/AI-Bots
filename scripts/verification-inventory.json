@@ -1698,9 +1698,9 @@
       "path": "scripts/e2e-tob-home.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Home model configuration, identity and scoped CLI approval journeys, plus model-free dashboard cards, exact 24h/7d/30d usage, source navigation and canonical no-background-report readback. Web/native remain independent runtime gates.",
+      "reason": "Home configuration and scoped CLI journeys; no-model dashboard ranges/navigation; simple real Home-to-DM turn, live working root, handled delivery and positive usage. Web/native remain independent gates.",
       "task": 2087,
-      "sha256": "f073ab0e0b8b0272a5899f8e265e22673c680588f478c04d1ff35120e1c48e3a"
+      "sha256": "e519680e7e8c8778e7134d45d4b93edafb2f5db3f1ecdb64867f05ed0cfb2ec6"
     },
     {
       "path": "scripts/e2e-tob-model-runtime.mjs",
