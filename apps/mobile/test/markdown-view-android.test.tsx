@@ -27,6 +27,7 @@ vi.mock('react-native', async () => {
   };
 });
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
 vi.mock('react-native-enriched-markdown', () => ({
   EnrichedMarkdownText: ({ markdown }: { markdown: string }) => (
     <pre data-testid="native-markdown">{markdown}</pre>

@@ -48,7 +48,7 @@ const fixtures = {
     '\n最后一段：REPLAY_COMPLETE。\n',
 };
 const record = (value) => {
-  if (log) appendFileSync(log, JSON.stringify(value) + '\n');
+  if (log) appendFileSync(log, JSON.stringify({ ...value, at: Date.now() }) + '\n');
 };
 const consumed = new Set();
 let requestCount = 0;
