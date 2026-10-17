@@ -234,21 +234,21 @@ export function HomePanel({
       <Button
         disabled={creation.isBusy()}
         variant="outline"
-        onClick={() => creation.open({ source: 'empty' })}
+        onClick={() => creation.chooseSource('empty')}
       >
         {t('bot.create.title')}
       </Button>
       <Button
         disabled={creation.isBusy()}
         variant="ghost"
-        onClick={() => creation.open({ source: 'git' })}
+        onClick={() => creation.chooseSource('git')}
       >
         {t('bot.create.gitTitle')}
       </Button>
       <Button
         disabled={creation.isBusy()}
         variant="ghost"
-        onClick={() => creation.open({ source: 'zip' })}
+        onClick={() => creation.chooseSource('zip')}
       >
         {t('botZip.import.title')}
       </Button>

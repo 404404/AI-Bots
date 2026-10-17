@@ -29,6 +29,9 @@ export class HomeCreation {
     this.emit();
     return true;
   }
+  chooseSource(source: HomeCreationSource): boolean {
+    return this.open({ ...this.snapshot, source });
+  }
   back(): void {
     if (this.busy.size > 0) return;
     this.snapshot = undefined;
