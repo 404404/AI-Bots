@@ -59,7 +59,7 @@ import {
   type InboxTriage,
   type OrchestratorInboxTriage,
 } from './inbox-triage.js';
-import { isAbsolute, join } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
 import {
@@ -67,7 +67,7 @@ import {
   personaBotAvatarFromBytes,
   type PersonaBotRecord,
 } from '../bots/persona-bot.js';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import {
   isAssignmentModelChoice,
   isModelRoute,
@@ -684,7 +684,27 @@ export interface TobCliAuthority {
   markSideEffect(): void;
 }
 
+export interface MemoryReadAssignmentInput {
+  purpose: string;
+  grantId: string;
+  targets: string[];
+  operationKey: string;
+  key?: string;
+}
+
+export interface AssignmentMemoryScope {
+  sourceEventId: string;
+  targets: string[];
+  authorize(target?: string): void;
+}
+
 export interface BotRuntime {
+  createMemoryReadAssignment?(
+    sessionId: string,
+    input: MemoryReadAssignmentInput,
+  ): AssignmentCreateOutcome;
+  revokeMemoryReadAssignment?(sessionId: string, assignmentId: string): void;
+  assignmentMemoryScope?(sessionId: string): AssignmentMemoryScope | undefined;
   groupSendReview?: GroupSendReview;
   botCreatePreview?(botSlug: string, args: unknown): BotCreatePreview | undefined;
   captureTobCliAuthority?(sessionId: string): TobCliAuthority;
@@ -3358,6 +3378,168 @@ class BotRuntimeImplementation implements BotRuntime {
       defaultLocation: location.length === 0,
       ...(avatar === undefined ? {} : { avatar }),
       ...(avatarError === undefined ? {} : { avatarError }),
+    };
+  }
+
+  createMemoryReadAssignment(
+    sessionId: string,
+    input: MemoryReadAssignmentInput,
+  ): AssignmentCreateOutcome {
+    const authority = this.captureTobCliAuthority(sessionId);
+    authority();
+    const owner = this.#ownership.resolve(sessionId)!;
+    const turn = this.#turnSources.get(owner.botSlug)!;
+    if (turn.acceptedEventIds.size !== 1) throw new TobError('human-dm-required');
+    const sourceEventId = [...turn.acceptedEventIds][0]!;
+    if (
+      !Array.isArray(input.targets) ||
+      input.targets.length < 1 ||
+      input.targets.length > 10 ||
+      input.targets.some((target) => typeof target !== 'string') ||
+      new Set(input.targets).size !== input.targets.length ||
+      !/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,127}$/u.test(input.operationKey)
+    )
+      throw new TobError('invalid-input');
+    const targets = [...input.targets].sort().map((slug) => {
+      const bot = this.#registry.get(slug);
+      if (!bot || bot.paused) throw new TobError('memory-target-unavailable');
+      return { slug, createdAt: bot.createdAt };
+    });
+    const grant = this.#grants?.requireActive(owner.botSlug, input.grantId);
+    if (!grant) throw new TobError('memory-scope-unavailable');
+    const workspace = realpathSync(grant.workspacePath);
+    const dataRoot = realpathSync(this.#registry.rootDir);
+    const contains = (root: string, path: string) => {
+      const tail = relative(root, path);
+      return tail === '' || (!tail.startsWith('..') && !isAbsolute(tail));
+    };
+    if (
+      contains(workspace, dataRoot) ||
+      contains(dataRoot, workspace) ||
+      this.#registry.list().some((bot) => {
+        const memory = this.#registry.memoryDirFor(bot.slug);
+        return (
+          memory !== undefined &&
+          (contains(workspace, realpathSync(memory)) || contains(realpathSync(memory), workspace))
+        );
+      })
+    )
+      throw new TobError('memory-workspace-denied');
+    const payloadHash = createHash('sha256')
+      .update(JSON.stringify({ ...input, targets }))
+      .digest('hex');
+    const receipt = this.#database.read((db) =>
+      db
+        .prepare('SELECT * FROM assignment_memory_read_scopes WHERE operation_key = ?')
+        .get(input.operationKey),
+    );
+    if (receipt) {
+      if (receipt.source_event_id !== sourceEventId || receipt.payload_hash !== payloadHash)
+        throw new TobError('operation-key-conflict');
+      this.assignmentMemoryScope(String(receipt.session_id))!.authorize();
+      return {
+        outcome: 'reused',
+        assignment: this.#requireAssignmentSummary(owner.botSlug, String(receipt.session_id)),
+      };
+    }
+    const bot = this.#registry.get(owner.botSlug);
+    if (!bot) throw new TobError('tob-authority-required');
+    const outcome = this.#createOrReuseAssignment(bot, sourceEventId, {
+      ...input,
+      memoryRead: { targets, operationKey: input.operationKey, payloadHash },
+    });
+    if (outcome.outcome === 'created' || outcome.outcome === 'reused') authority.markSideEffect();
+    return outcome;
+  }
+
+  revokeMemoryReadAssignment(sessionId: string, assignmentId: string): void {
+    const authority = this.captureTobCliAuthority(sessionId);
+    authority();
+    const owner = this.#ownership.resolve(sessionId)!;
+    const row = this.#assignmentRow(owner.botSlug, assignmentId);
+    if (!row || !this.assignmentMemoryScope(assignmentId))
+      throw new TobError('memory-scope-unavailable');
+    authority.markSideEffect();
+    this.#database.transaction(
+      (db) => {
+        db.prepare(
+          'UPDATE assignment_memory_read_scopes SET revoked_at = COALESCE(revoked_at, ?) WHERE session_id = ?',
+        ).run(this.#now().toISOString(), assignmentId);
+      },
+      ['assignments'],
+    );
+  }
+
+  assignmentMemoryScope(sessionId: string): AssignmentMemoryScope | undefined {
+    const stored = this.#database.read((db) =>
+      db.prepare('SELECT * FROM assignment_memory_read_scopes WHERE session_id = ?').get(sessionId),
+    );
+    if (!stored) return undefined;
+    const targets = JSON.parse(String(stored.targets_json)) as Array<{
+      slug: string;
+      createdAt: string;
+    }>;
+    const authorize = (target?: string) => {
+      const owner = this.#ownership.resolve(sessionId);
+      const row = owner && this.#assignmentRow(owner.botSlug, sessionId);
+      const current = this.#database.read((db) =>
+        db
+          .prepare('SELECT revoked_at FROM assignment_memory_read_scopes WHERE session_id = ?')
+          .get(sessionId),
+      );
+      if (
+        this.#closed ||
+        !owner ||
+        owner.rootRole !== 'assignment' ||
+        owner.parentSessionId !== undefined ||
+        !this.#tob?.isTob(owner.botSlug) ||
+        !this.#ownership.contentAvailable(sessionId) ||
+        !row ||
+        row.stop_state !== 'running' ||
+        row.archived_at ||
+        !current ||
+        current.revoked_at ||
+        row.source_event_id !== stored.source_event_id ||
+        row.permission_mode !== 'workspace-write' ||
+        row.approval_policy !== 'ask'
+      )
+        throw new TobError('memory-scope-unavailable');
+      this.#database.read((db) => {
+        const source = db
+          .prepare('SELECT source_kind, channel_id FROM source_events WHERE source_event_id = ?')
+          .get(String(stored.source_event_id));
+        if (
+          source?.source_kind !== 'human-message' ||
+          source.channel_id !== dmChannelId(owner.botSlug)
+        )
+          throw new TobError('human-dm-required');
+        requireSourceEffects(db, String(stored.source_event_id), owner.botSlug);
+      });
+      const permission = permissionFromRow(row)!;
+      let grant: WorkspaceGrant | undefined;
+      try {
+        grant = this.#grants?.requireActive(owner.botSlug, permission.grantId);
+      } catch {
+        throw new TobError('memory-scope-unavailable');
+      }
+      if (
+        !grant ||
+        grant.workspacePath !== permission.primaryCwd ||
+        grant.workspaceId !== permission.workspaceId
+      )
+        throw new TobError('memory-scope-unavailable');
+      if (target !== undefined) {
+        const selected = targets.find((bot) => bot.slug === target);
+        if (!selected) throw new TobError('memory-target-denied');
+        const bot = this.#registry.get(target);
+        if (!bot || bot.paused || bot.createdAt !== selected.createdAt)
+          throw new TobError('memory-target-unavailable');
+      }
+    };
+    return {
+      sourceEventId: String(stored.source_event_id),
+      targets: targets.map((bot) => bot.slug),
+      authorize,
     };
   }
 
@@ -6734,7 +6916,17 @@ class BotRuntimeImplementation implements BotRuntime {
   #createOrReuseAssignment(
     bot: PersonaBotRecord,
     sourceEventId: string,
-    input: { purpose: string; key?: string; grantId: string; model?: ModelRoute },
+    input: {
+      purpose: string;
+      key?: string;
+      grantId: string;
+      model?: ModelRoute;
+      memoryRead?: {
+        targets: Array<{ slug: string; createdAt: string }>;
+        operationKey: string;
+        payloadHash: string;
+      };
+    },
   ): AssignmentCreateOutcome {
     const purpose = requireNonBlank(input.purpose, 'Assignment purpose');
     const grantId = requireNonBlank(input.grantId, 'Workspace Grant id');
@@ -6755,13 +6947,17 @@ class BotRuntimeImplementation implements BotRuntime {
       grantId: grant.id,
       workspaceId: grant.workspaceId,
       primaryCwd: grant.workspacePath,
-      mode: access.mode,
-      approval: access.mode === 'danger-full-access' ? 'never' : 'ask',
+      mode: input.memoryRead ? 'workspace-write' : access.mode,
+      approval: input.memoryRead || access.mode !== 'danger-full-access' ? 'ask' : 'never',
       presetRevision: access.revision,
     };
     const key = input.key === undefined ? undefined : requireNonBlank(input.key, 'Continuity Key');
     if (key !== undefined) {
       const holder = this.#assignmentByKey(bot.slug, key);
+      if (holder !== undefined) {
+        const prior = this.assignmentMemoryScope(holder.session_id);
+        if (prior || input.memoryRead) throw new TobError('memory-scope-mismatch');
+      }
       if (holder !== undefined && holder.grant_id !== grant.id) {
         throw new Error('Continuity Key belongs to an Assignment with a different Workspace Grant');
       }
@@ -6829,6 +7025,17 @@ class BotRuntimeImplementation implements BotRuntime {
             createdAt,
             createdAt,
           );
+        if (input.memoryRead)
+          database
+            .prepare(`INSERT INTO assignment_memory_read_scopes
+          (session_id, source_event_id, targets_json, operation_key, payload_hash) VALUES (?, ?, ?, ?, ?)`)
+            .run(
+              sessionId,
+              sourceEventId,
+              JSON.stringify(input.memoryRead.targets),
+              input.memoryRead.operationKey,
+              input.memoryRead.payloadHash,
+            );
       },
       ['session-ownership', 'assignments'],
     );
@@ -6890,6 +7097,7 @@ class BotRuntimeImplementation implements BotRuntime {
         `Assignment Session ${input.sessionId} is awaiting Inbox acceptance; inspect it before retrying`,
       );
     }
+    this.assignmentMemoryScope(input.sessionId)?.authorize();
     const text = requireNonBlank(input.text, 'Assignment Request text');
     if (row.activity === 'error') {
       throw new Error(

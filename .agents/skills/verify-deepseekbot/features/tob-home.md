@@ -124,3 +124,22 @@ The schedule verifier binds each reviewed command to its proposal's `parentShell
 - A native turn may already be running when it receives a new Human message. Correlate completion using fresh tool-call IDs, command, handled Human delivery and a real reply; a turn start timestamp earlier than the prompt is not a failed operation.
 - Tool trace arguments/results are bounded summaries. Keep commands short and invoke the CLI directly so discovery, settings and coded refusal checks are visible; record full canonical Session evidence separately if a summary is truncated.
 - `accept` resumes an existing pending approval without sending a new Human message. A new prompt may supersede the original source, so use a fresh phase only after the prior operation settles.
+
+## Tob-owned Assignment Memory comparison (#2091)
+
+`scripts/e2e-tob-memory-read.mjs` uses an existing isolated candidate Host. Web reads
+`BH_E2E_INSTANCE`; macOS reads `BH_DESKTOP_CDP` and `BH_E2E_HUMAN_INSTANCE`. It never launches,
+restarts or stops a Host or Desktop. A usable official model route is required. Evidence goes to
+`BH_E2E_EVIDENCE` or the task-specific ignored verification directory.
+
+The journey creates two disposable Bots through Human CLI, independently reads immutable Memory
+revisions through that CLI, and captures Home before the comparison. A natural request creates
+one Tob-owned Assignment through the scoped CLI. Inspect the target IDs, workspace grant and
+purpose in the rendered review card before approval. Require a real Assignment Report with both
+source preferences and full revision, native Shell read calls, a denied write and an unchanged
+Memory repository. Capture the result in Tob Messages. Continue the same Assignment and require
+a second report without another Assignment; archive one disposable target and require the actual
+`memory-target-unavailable` result. Revoke the scope through Tob, then require refused continuation
+with `memory-scope-unavailable`. Keep direct CLI, real model, canonical records, Web and macOS
+results separate. Native Session navigation and restart persistence require their own captures;
+the script's report/message captures do not by themselves qualify those views.

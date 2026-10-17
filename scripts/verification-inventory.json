@@ -1780,6 +1780,14 @@
       "reason": "Natural Tob schedule creation/edit/pause with rendered review, independent direct CLI, actual planned firing and correct Bot result, canonical history and Web/macOS same-Profile restart.",
       "task": 2093,
       "sha256": "523d7e169feb089d652c3f2a408880807c6613689b0d607425a6bd3650ce954b"
+    },
+    {
+      "path": "scripts/e2e-tob-memory-read.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Tob-owned real Assignment reads two selected Memory repositories through immutable revision CLI pages; rendered review, denied write, resumed report, archived target and revoked scope. Web and macOS are independent runs.",
+      "task": 2091,
+      "sha256": "cd3ea74cb8baf2a6760a2d68f01416a7280b88b234c2ae27e6c204cf8b2a50f1"
     }
   ],
   "native": [
