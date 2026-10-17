@@ -291,6 +291,29 @@ it('keeps scoped preview tokens Host-local and exports/inspects only through pro
   expect(afterRestart?.proposal).toBeUndefined();
   expect(await afterRestart!.run(guard)).toMatchObject({ ...receipt, reconciled: true });
   expect(readdirSync(join(files, 'protected'))).toEqual([view.planId + '.botharness-backup']);
+  // A completed filename is not proof that the retained package is still intact.
+  writeFileSync(receipt.archiveFile, Buffer.alloc(0));
+  const corrupted = await reconnected('profile-backup-export', {
+    planId: view.planId,
+    confirm: true,
+  });
+  expect(corrupted?.proposal).toBeUndefined();
+  await expect(corrupted!.run(guard)).rejects.toMatchObject({ code: 'package-invalid' });
+  const rebuilt = createTobBackupOperations({
+    http,
+    root: join(files, 'protected'),
+    registry: core.registry,
+  });
+  const corruptedAfterRestart = await rebuilt('profile-backup-export', {
+    planId: view.planId,
+    confirm: true,
+  });
+  await expect(corruptedAfterRestart!.run(guard)).rejects.toMatchObject({
+    code: 'package-invalid',
+  });
+  expect(readdirSync(join(files, 'protected'))).toEqual([view.planId + '.botharness-backup']);
+  expect(effect).toHaveBeenCalledOnce();
+
   expect(JSON.stringify([view, operation?.proposal, receipt])).not.toContain(
     'PRIVATE_ARCHIVE_CONTENT',
   );
