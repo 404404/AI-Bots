@@ -16,7 +16,7 @@ const label = flag('--label');
 for (const key of ['--serial', '--owner', '--batch', '--mode', '--title', '--label'])
   assert(args.includes(key) && flag(key) && !flag(key).startsWith('--'), `Missing ${key}`);
 assert(
-  ['profile', 'settings', 'keyboard'].includes(mode) && /^[a-z0-9-]+$/.test(label),
+  ['profile', 'settings', 'keyboard', 'form-keyboard'].includes(mode) && /^[a-z0-9-]+$/.test(label),
   'Invalid mode/label',
 );
 const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
@@ -106,9 +106,35 @@ try {
     assert(field, 'OPEN_DESIGNATED_QA_CHAT_FIRST');
     assert(!field.text || field.text === field['content-desc'], 'EMPTY_QA_COMPOSER_REQUIRED');
   }
-  assert(!handle(initial), 'CLOSE_EXISTING_SHEET_FIRST');
+  if (mode !== 'form-keyboard') assert(!handle(initial), 'CLOSE_EXISTING_SHEET_FIRST');
   const [, , width, height] = bounds(initial[0]);
-  if (mode === 'profile' || mode === 'settings') {
+  if (mode === 'form-keyboard') {
+    capture('hidden');
+    tap(field);
+    await sleep(1000);
+    const shown = capture('shown');
+    const input = shown.find(
+      (node) => node.focused === 'true' && node.class === 'android.widget.EditText',
+    );
+    const top = imeTop();
+    assert(Number.isFinite(top) && top < height * 0.8, 'REAL_SOFT_KEYBOARD_REQUIRED');
+    assert(input && bounds(input)[1] >= 0 && bounds(input)[3] <= top, 'INPUT_UNDER_KEYBOARD');
+    if (args.includes('--action')) {
+      const action = shown.find(
+        (node) => node.clickable === 'true' && node['content-desc'] === flag('--action'),
+      );
+      assert(
+        action && bounds(action)[1] >= 0 && bounds(action)[3] <= top,
+        'FORM_ACTION_UNDER_KEYBOARD',
+      );
+    }
+    proof.push({
+      step: 'focused-form-clearance',
+      keyboardTop: top,
+      inputBounds: bounds(input),
+      actionChecked: args.includes('--action'),
+    });
+  } else if (mode === 'profile' || mode === 'settings') {
     tap(
       initial.find(
         (node) =>

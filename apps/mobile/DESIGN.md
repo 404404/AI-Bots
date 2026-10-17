@@ -275,6 +275,15 @@ This contract applies to new and changed Expo/React Native screens, shared compo
 
 Platform references: [Apple Dynamic Type and adaptive layouts](https://developer.apple.com/videos/play/wwdc2024/10074/) and [Android nonlinear font scaling](https://developer.android.com/about/versions/14/features#non-linear-font-scaling). Follow documentation for the installed SDK/RN versions when choosing concrete APIs.
 
+## Keyboard and text entry
+
+Every editable field on iOS and Android belongs to a layout that responds to the keyboard. Keep the focused caret and the current editing line visible throughout keyboard opening, closing, interactive dismissal, focus changes and multiline growth. The user must be able to reach validation, submit, cancel and retry while editing, including at maximum system text size and in a partially expanded sheet.
+
+- Forms use `KeyboardFormScroll` from `src/ui/primitives/keyboard-form.tsx`. It follows native keyboard frames and automatically reveals the focused field, reserving room for a following action. Put actions in the same scroll owner or a keyboard-tracking footer. Keep the draft and editable-field identity when layout changes.
+- Virtualized forms use its stable `renderKeyboardFormScroll` adapter on the existing list. A virtualized list remains the sole scroll owner. Fixed search headers and full-screen editors use `KeyboardAvoidingView` from `react-native-keyboard-controller`; each screen has one owner for keyboard displacement. Chat retains its dedicated `KeyboardChatFrame` and composer tracking.
+- Root `KeyboardRoot` supplies the keyboard controller on both native platforms. Modal windows and native form sheets need their own bounded layout; test their actual presented geometry. System resize alone and a keyboard-dismiss button do not establish visibility. Use native keyboard tracking instead of a timer or post-show measurement to reposition forms.
+- Verify each changed input path with the real soft keyboard: open it from a low field, type and move the caret through several lines, switch focus while it stays open, reveal and activate the form action, dismiss/reopen, and verify draft preservation after a failed save. Repeat default/intermediate/maximum system text in light/dark on each available platform. Record unavailable native cases explicitly; source tests and hidden or floating keyboards cannot prove soft-keyboard clearance.
+
 ### Reflow the task, not only the text
 
 - Let rows and controls grow using padding and minimum sizes. Wrap essential titles, action labels, validation and request details. Secondary previews may truncate only when complete content remains reachable; never hide the information needed to make an approval or form decision.

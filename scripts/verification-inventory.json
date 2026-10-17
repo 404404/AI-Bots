@@ -1384,9 +1384,9 @@
       "path": "scripts/e2e-mobile-android-interactions.mjs",
       "category": "mapped",
       "behaviors": ["phone.android-interactions"],
-      "reason": "Matching Windows Android lease only: profile/settings content-first scroll and handle gestures, dark-theme 30fps composer pixel regression; scroll selection excludes the underlying dimmed chat. Prepared QA surface, FFmpeg and native build required; no model or iOS claim.",
+      "reason": "Matching Windows Android lease only: profile/settings content-first scroll and handle gestures, dark-theme 30fps composer motion, and focused form/input action clearance against a real soft IME. Form mode accepts prepared sheets and refuses hidden/floating keyboards; it does not submit drafts. Scroll selection excludes the dimmed chat. Prepared QA surface and native build required; FFmpeg for motion only; no model or iOS claim.",
       "task": 2028,
-      "sha256": "6f618d74345592e46f70e4bc5b0e7845df50f57a517e0c448e0a91f47b13afae"
+      "sha256": "e4f38ae305e7f1461421649c91fdcdfac6c7c79c57bd88a75f376fcb8fd77b43"
     },
     {
       "path": "scripts/e2e-mobile-pair-android.mjs",

@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, FlatList, Keyboard, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { applyModelPreset, errorText, sameModel, type ModelRoute } from '../../host/bot-settings';
 import type { HostClient } from '../../host/client';
@@ -21,6 +22,7 @@ import {
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
+import { renderKeyboardFormScroll } from '../primitives/keyboard-form';
 import { SearchField } from '../primitives/search-field';
 import { SettingsGroupItem, SettingsRow, SettingsSection } from '../primitives/settings-row';
 import { SheetPage } from '../primitives/sheet-page';
@@ -150,7 +152,9 @@ function ModelsView({
               : t.modelSettings.title;
   const frame = (body: ReactNode) => (
     <SheetPage title={title}>
-      <View style={{ flex: 1 }}>{body}</View>
+      <KeyboardAvoidingView enabled={picker !== undefined} behavior="padding" style={{ flex: 1 }}>
+        {body}
+      </KeyboardAvoidingView>
     </SheetPage>
   );
   if (value === undefined)
@@ -433,6 +437,7 @@ function ModelsView({
     <FlatList
       style={{ flex: 1 }}
       data={presets}
+      renderScrollComponent={renderKeyboardFormScroll}
       keyExtractor={(preset) => preset.id}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
