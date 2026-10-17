@@ -678,8 +678,13 @@ export type DmMessageAdmission =
   | { admitted: true; settled: Promise<void> }
   | { admitted: false; reason: DmAdmissionFailure };
 
+type TobCliHumanInput = Readonly<{ sourceEventId: string; messageId: string }>;
+type TobCliQuestionInput = { input: TobCliHumanInput; current(): boolean };
+
 export interface TobCliAuthority {
   (): void;
+  readonly humanSourceEventIds: readonly string[];
+  readonly acceptedSourceEventIds: readonly string[];
 
   markSideEffect(): void;
   currentClientTarget?(): import('../client-control/contracts.js').ClientTarget;
@@ -1339,12 +1344,15 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #stopNotices = new Map<string, string>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
   readonly #typingAssignments = new Map<string, MessagingProcessing>();
+  readonly #contextRevisions = new Map<string, number>();
   readonly #turnSources = new Map<
     string,
     {
       sessionId: string;
       eventIds: Set<string>;
       acceptedEventIds: Set<string>;
+      contextRevision: number;
+      tobCliInput: TobCliHumanInput | undefined;
       inboundChannelId: string | undefined;
       steeredChannelIds: Set<string>;
       spokenChannelIds: Set<string>;
@@ -2022,6 +2030,8 @@ class BotRuntimeImplementation implements BotRuntime {
   ): boolean {
     const active = this.#activeTurns.get(botSlug);
     if (active === undefined || this.#agents.steerOrchestrator === undefined) return false;
+    const turn = this.#turnSources.get(botSlug);
+    const revision = turn?.contextRevision;
     const claimed = this.#database.transaction(
       (database) => {
         database
@@ -2090,11 +2100,21 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    const current = this.#turnSources.get(botSlug);
+    if (current !== turn || current === undefined) return true;
+    const latest = current.contextRevision === revision;
     this.#noteSteeredChannel(botSlug, channelId);
     this.#acceptTurnSources(
       botSlug,
       admissions.map((admission) => admission.sourceEventId),
     );
+    if (
+      latest &&
+      reason === 'human-dm' &&
+      this.#tob?.isTob(botSlug) &&
+      channelId === dmChannelId(botSlug)
+    )
+      current.tobCliInput = Object.freeze({ sourceEventId, messageId });
     for (const admission of admissions)
       this.#observeAdmission(admission.sourceEventId, botSlug, channelId, admission.messageId);
     const settlement = active.then(
@@ -3153,9 +3173,18 @@ class BotRuntimeImplementation implements BotRuntime {
       turn.steeredChannelIds.add(channelId);
   }
 
+  #advanceContext(botSlug: string): number {
+    const revision = (this.#contextRevisions.get(botSlug) ?? 0) + 1;
+    this.#contextRevisions.set(botSlug, revision);
+    return revision;
+  }
+
   #acceptTurnSources(botSlug: string, sourceEventIds: readonly string[]): void {
     const turn = this.#turnSources.get(botSlug);
-    for (const id of sourceEventIds) turn?.acceptedEventIds.add(id);
+    if (turn === undefined) return;
+    turn.contextRevision = this.#advanceContext(botSlug);
+    turn.tobCliInput = undefined;
+    for (const id of sourceEventIds) turn.acceptedEventIds.add(id);
   }
 
   #markAdmissionsSideEffect(botSlug: string, sourceEventIds: string[]): void {
@@ -3571,21 +3600,24 @@ class BotRuntimeImplementation implements BotRuntime {
     if (
       this.#closed ||
       !this.#ownership.contentAvailable(sessionId) ||
+      this.#sessionArchived?.(sessionId) === true ||
       owner?.rootRole !== 'orchestrator' ||
       owner.parentSessionId !== undefined ||
       !this.#tob?.isTob(owner.botSlug)
     )
       throw new TobError('tob-authority-required');
     const turn = this.#turnSources.get(owner.botSlug);
-    if (turn?.sessionId !== sessionId || turn.acceptedEventIds.size === 0)
+    if (turn?.sessionId !== sessionId || turn.tobCliInput === undefined)
       throw new TobError('human-dm-required');
+    const input = turn.tobCliInput;
+    const revision = turn.contextRevision;
     const accepted = new Set(turn.acceptedEventIds);
-    const dm = dmChannelId(owner.botSlug);
     const authorize = () => {
       const currentOwner = this.#ownership.resolve(sessionId);
       if (
         this.#closed ||
         !this.#ownership.contentAvailable(sessionId) ||
+        this.#sessionArchived?.(sessionId) === true ||
         currentOwner?.botSlug !== owner.botSlug ||
         currentOwner.rootRole !== 'orchestrator' ||
         currentOwner.parentSessionId !== undefined ||
@@ -3595,23 +3627,19 @@ class BotRuntimeImplementation implements BotRuntime {
 
       if (
         this.#turnSources.get(owner.botSlug) !== turn ||
+        turn.tobCliInput !== input ||
+        turn.contextRevision !== revision ||
+        !turn.acceptedEventIds.has(input.sourceEventId) ||
         turn.acceptedEventIds.size !== accepted.size ||
         [...accepted].some((id) => !turn.acceptedEventIds.has(id))
       )
         throw new TobError('human-dm-required');
-      this.#database.read((db) => {
-        for (const id of accepted) {
-          const event = db
-            .prepare('SELECT source_kind, channel_id FROM source_events WHERE source_event_id = ?')
-            .get(id);
-          if (event?.source_kind !== 'human-message' || event.channel_id !== dm)
-            throw new TobError('human-dm-required');
-          requireSourceEffects(db, id, owner.botSlug);
-        }
-      });
+      this.#requireTobCliSources(owner.botSlug, input, accepted);
     };
     authorize();
     return Object.assign(authorize, {
+      humanSourceEventIds: Object.freeze([input.sourceEventId]),
+      acceptedSourceEventIds: Object.freeze([...accepted]),
       currentClientTarget: () => {
         authorize();
         const targets = this.#database.read((db) =>
@@ -3638,6 +3666,42 @@ class BotRuntimeImplementation implements BotRuntime {
         authorize();
         this.#markAdmissionsSideEffect(owner.botSlug, [...accepted]);
       },
+    });
+  }
+
+  #requireTobCliSources(
+    botSlug: string,
+    input: TobCliHumanInput,
+    accepted: ReadonlySet<string>,
+  ): void {
+    const dm = dmChannelId(botSlug);
+    if (
+      this.#channels.get(dm)?.botSlug !== botSlug ||
+      this.#channels.message(dm, input.messageId)?.author.kind !== 'human'
+    )
+      throw new TobError('human-dm-required');
+    this.#database.read((db) => {
+      const source = db
+        .prepare(`
+          SELECT e.source_kind, e.bot_slug, e.channel_id, e.message_id, a.reason
+            FROM source_events e
+            JOIN inbox_admissions a ON a.source_event_id = e.source_event_id AND a.bot_slug = ?
+           WHERE e.source_event_id = ?
+        `)
+        .get(botSlug, input.sourceEventId);
+      if (
+        source?.source_kind !== 'human-message' ||
+        source.bot_slug !== botSlug ||
+        source.channel_id !== dm ||
+        source.message_id !== input.messageId ||
+        source.reason !== 'human-dm'
+      )
+        throw new TobError('human-dm-required');
+      for (const id of accepted) {
+        if (!db.prepare('SELECT 1 FROM source_events WHERE source_event_id = ?').get(id))
+          throw new TobError('human-dm-required');
+        requireSourceEffects(db, id, botSlug);
+      }
     });
   }
 
@@ -3754,6 +3818,23 @@ class BotRuntimeImplementation implements BotRuntime {
     const sources = turn?.sessionId === sessionId ? turn.acceptedEventIds : undefined;
     const sourceEventId = sources?.values().next().value;
     if (owner?.rootRole !== 'orchestrator' || sourceEventId === undefined) return undefined;
+    const input = turn?.tobCliInput;
+    const revision = turn?.contextRevision;
+    let tobQuestion: TobCliQuestionInput | undefined;
+    if (input && turn && channelId === dmChannelId(owner.botSlug)) {
+      try {
+        this.captureTobCliAuthority(sessionId)();
+        tobQuestion = {
+          input,
+          current: () =>
+            turn.tobCliInput === input &&
+            turn.contextRevision === revision &&
+            this.#contextRevisions.get(owner.botSlug) === revision,
+        };
+      } catch {
+        tobQuestion = undefined;
+      }
+    }
     return this.#nativeQuestionInput(
       owner.botSlug,
       sessionId,
@@ -3761,6 +3842,7 @@ class BotRuntimeImplementation implements BotRuntime {
       sourceEventId,
       [...(sources ?? [])],
       () => this.#markSideEffectStarted(sourceEventId),
+      tobQuestion,
     );
   }
 
@@ -3814,6 +3896,7 @@ class BotRuntimeImplementation implements BotRuntime {
     sourceEventId: string,
     sourceIds: readonly string[],
     markAttemptSideEffect: () => void,
+    tobQuestion?: TobCliQuestionInput,
   ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
     const owner = { botSlug };
     const held = (): boolean => {
@@ -3846,6 +3929,10 @@ class BotRuntimeImplementation implements BotRuntime {
           this.#database.read((db) => {
             for (const id of sourceIds) requireSourceEffects(db, id, owner.botSlug);
           });
+          const questionRevision =
+            tobQuestion?.current() === true
+              ? (this.#contextRevisions.get(owner.botSlug) ?? 0) + 1
+              : undefined;
           await this.#runOrchestratorTurn(
             bot,
             { sessionId, resume: true },
@@ -3876,7 +3963,30 @@ class BotRuntimeImplementation implements BotRuntime {
               this.#database.read((db) => {
                 for (const id of sourceIds) requireSourceEffects(db, id, owner.botSlug);
               });
+              const currentTurn = this.#turnSources.get(owner.botSlug);
+              const revision = currentTurn?.contextRevision;
+              const eligible =
+                tobQuestion !== undefined &&
+                questionRevision !== undefined &&
+                revision === questionRevision &&
+                this.#contextRevisions.get(owner.botSlug) === questionRevision &&
+                this.#tob?.isTob(owner.botSlug) === true;
+              if (eligible)
+                this.#requireTobCliSources(owner.botSlug, tobQuestion!.input, new Set(sourceIds));
               const result = deliver();
+              if (
+                result &&
+                eligible &&
+                tobQuestion !== undefined &&
+                this.#contextRevisions.get(owner.botSlug) === questionRevision &&
+                currentTurn !== undefined &&
+                this.#turnSources.get(owner.botSlug) === currentTurn &&
+                currentTurn.contextRevision === revision
+              ) {
+                this.#requireTobCliSources(owner.botSlug, tobQuestion.input, new Set(sourceIds));
+                currentTurn.contextRevision = this.#advanceContext(owner.botSlug);
+                currentTurn.tobCliInput = Object.freeze({ ...tobQuestion.input });
+              }
               accept(result);
               return result;
             },
@@ -4373,6 +4483,10 @@ class BotRuntimeImplementation implements BotRuntime {
           this.#channels.message(channelId, messageId)?.memorySwitchTarget !== undefined,
           undefined,
           collected.eventIds,
+          undefined,
+          undefined,
+          undefined,
+          { sourceEventId: claim.sourceEventId, messageId },
         );
       });
     } catch (error) {
@@ -4433,6 +4547,7 @@ class BotRuntimeImplementation implements BotRuntime {
     wakeEventIds: readonly string[] = [sourceEventId],
     acceptNativeInput?: () => boolean,
     nativeSourceIds: readonly string[] = [],
+    tobCliInput?: TobCliHumanInput,
   ): Promise<void> {
     const readAdmissions = new Set<string>();
     this.#requireExecution?.(bot.slug);
@@ -4446,6 +4561,8 @@ class BotRuntimeImplementation implements BotRuntime {
       sessionId: orchestrator.sessionId,
       eventIds: turnSources,
       acceptedEventIds: new Set(turnSources),
+      contextRevision: this.#advanceContext(bot.slug),
+      tobCliInput: tobCliInput === undefined ? undefined : Object.freeze({ ...tobCliInput }),
       inboundChannelId: channelId,
       steeredChannelIds: new Set(),
       spokenChannelIds: new Set(),
