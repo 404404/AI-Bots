@@ -13,7 +13,7 @@ export type ApprovalReviewerModelSetting =
 
 export interface ApprovalReviewerSettings {
   model(): ApprovalReviewerModelSetting;
-  setModel(route: ModelRoute | undefined): void;
+  setModel(route: ModelRoute | undefined, expected?: ApprovalReviewerModelSetting): void;
 }
 
 function routeOf(route: ModelRoute): ModelRoute {
@@ -26,7 +26,7 @@ function routeOf(route: ModelRoute): ModelRoute {
 
 export function createApprovalReviewerSettings(dir: string): ApprovalReviewerSettings {
   const file = join(dir, APPROVAL_REVIEWER_SETTINGS_FILE);
-  return {
+  const settings: ApprovalReviewerSettings = {
     model() {
       let parsed: unknown;
       try {
@@ -41,7 +41,9 @@ export function createApprovalReviewerSettings(dir: string): ApprovalReviewerSet
       if (model === undefined || model === null) return { kind: 'bot' };
       return isModelRoute(model) ? { kind: 'model', route: routeOf(model) } : { kind: 'invalid' };
     },
-    setModel(route) {
+    setModel(route, expected) {
+      if (expected !== undefined && JSON.stringify(settings.model()) !== JSON.stringify(expected))
+        throw new Error('stale-policy');
       mkdirSync(dir, { recursive: true });
       atomicWriteFile(
         file,
@@ -49,4 +51,5 @@ export function createApprovalReviewerSettings(dir: string): ApprovalReviewerSet
       );
     },
   };
+  return settings;
 }
