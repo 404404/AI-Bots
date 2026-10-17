@@ -5,18 +5,19 @@ lang: zh
 template: doc
 theme: paper
 ---
+
 只改变选定的实时 Client。布局与快捷键继续由现有所有者保存。
 
 ## A 审阅版本
 
-| 项目 | 固定版本 |
-| --- | --- |
-| 布局 PR | [#2135](https://github.com/BotHarness/DeepSeekBot/pull/2135) |
-| 布局依赖源码 | `5b4cc293fa2ab661543b0a464a1ada38268d3115` |
-| 布局审阅源码及证据 | `953c2e4e4d260e0e98f22de363e3c0469b981c8e` |
-| 快捷键 PR | [#2136](https://github.com/BotHarness/DeepSeekBot/pull/2136) |
-| 快捷键审阅源码及证据 | `ee1e80212b0d4c461794312900935c475d3e9c39` |
-| 实际构建与 Web 验证 | `6eea6b76828c94c7a4dbcab00ff101a2cde16ca1` |
+| 项目                 | 固定版本                                                     |
+| -------------------- | ------------------------------------------------------------ |
+| 布局 PR              | [#2135](https://github.com/BotHarness/DeepSeekBot/pull/2135) |
+| 布局依赖源码         | `5b4cc293fa2ab661543b0a464a1ada38268d3115`                   |
+| 布局审阅源码及证据   | `953c2e4e4d260e0e98f22de363e3c0469b981c8e`                   |
+| 快捷键 PR            | [#2136](https://github.com/BotHarness/DeepSeekBot/pull/2136) |
+| 快捷键审阅源码及证据 | `ee1e80212b0d4c461794312900935c475d3e9c39`                   |
+| 实际构建与 Web 验证  | `6eea6b76828c94c7a4dbcab00ff101a2cde16ca1`                   |
 
 构建后只添加了证据并重排提交。产品源码与验证版本相同。
 本页是审阅说明，不是合并批准。原生覆盖仅限明确列出的用例。
@@ -39,14 +40,14 @@ ClientTarget 包含实时 Client 身份与 generation。
 
 ## C 布局可以改什么
 
-| 操作 | 检查与结果 |
-| --- | --- |
-| 面板移动、尺寸、间距 | 目标必须存在且可用 |
-| 控制栏顺序与位置 | 保留稳定面板 ID |
-| 子面板方向与比例 | 需要明确当前 Channel |
-| 隐藏后恢复 | 保留嵌套树与已保存比例 |
-| 旧布局升级 | 复用原迁移与备份规则 |
-| 保存结果不明 | 返回 uncertain，先读回再决定 |
+| 操作                 | 检查与结果                   |
+| -------------------- | ---------------------------- |
+| 面板移动、尺寸、间距 | 目标必须存在且可用           |
+| 控制栏顺序与位置     | 保留稳定面板 ID              |
+| 子面板方向与比例     | 需要明确当前 Channel         |
+| 隐藏后恢复           | 保留嵌套树与已保存比例       |
+| 旧布局升级           | 复用原迁移与备份规则         |
+| 保存结果不明         | 返回 uncertain，先读回再决定 |
 
 [布局操作实现](https://github.com/BotHarness/DeepSeekBot/blob/953c2e4e4d260e0e98f22de363e3c0469b981c8e/packages/client/src/client/client-layout-control.ts)
 
@@ -70,12 +71,12 @@ Web 实测发现默认 Command+K 被误拒绝，现已修复。
 
 ## E 原生保存的取消边界
 
-| 时刻 | 可承诺的行为 |
-| --- | --- |
-| 调用 owner 前 | 再查授权、signal 与状态指纹 |
-| owner 接受后 | API 没有取消参数，不能承诺撤销保存 |
-| 回包丢失或生命周期失效 | 返回 client-outcome-uncertain |
-| 结果不确定后 | 重新发现 Client 并读回，不自动重放 |
+| 时刻                   | 可承诺的行为                       |
+| ---------------------- | ---------------------------------- |
+| 调用 owner 前          | 再查授权、signal 与状态指纹        |
+| owner 接受后           | API 没有取消参数，不能承诺撤销保存 |
+| 回包丢失或生命周期失效 | 返回 client-outcome-uncertain      |
+| 结果不确定后           | 重新发现 Client 并读回，不自动重放 |
 
 已读安装版 Desktop 0.2.0-rc.2 的实际代码。
 其构建为 `5e9e301dd9dc8923b2762f76dacfc5751f6ca851`。
@@ -88,17 +89,17 @@ Web 实测发现默认 Command+K 被误拒绝，现已修复。
 Electron 按键事件真正打开 Home。此结果不等于物理键盘验证。
 原生布局只覆盖间距保存与重启，不涵盖嵌套面板。
 
-| 证据类别 | 状态 |
-| --- | --- |
-| 19 文件定向覆盖 | 修复初始失败后覆盖 165 个用例 |
-| 最新快捷键回归 | 7 / 7 通过 |
-| TypeScript、lint、format、build | 通过 |
-| Web 双 Client 隔离与布局迁移 | 通过 |
-| Web 真正按键、禁用、恢复与刷新 | 通过 |
-| 原生单 Client 运行与重启 | 间距、Home 按键及禁用持久化通过 |
-| 物理键盘、IME 与模态边界 | 未验证 |
-| 模型驱动的 Tob 批准流程 | 未验证 |
-| Human QA 与合并 | 未批准 |
+| 证据类别                        | 状态                            |
+| ------------------------------- | ------------------------------- |
+| 19 文件定向覆盖                 | 修复初始失败后覆盖 165 个用例   |
+| 最新快捷键回归                  | 7 / 7 通过                      |
+| TypeScript、lint、format、build | 通过                            |
+| Web 双 Client 隔离与布局迁移    | 通过                            |
+| Web 真正按键、禁用、恢复与刷新  | 通过                            |
+| 原生单 Client 运行与重启        | 间距、Home 按键及禁用持久化通过 |
+| 物理键盘、IME 与模态边界        | 未验证                          |
+| 模型驱动的 Tob 批准流程         | 未验证                          |
+| Human QA 与合并                 | 未批准                          |
 
 [布局截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/953c2e4e4d260e0e98f22de363e3c0469b981c8e/.github/pr-screenshots/2096-client-layout/evidence.md)
 
