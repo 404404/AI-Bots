@@ -23,7 +23,10 @@ model-read projection and output budget as `channel_read`. Only complete returne
 extend its explicit observation handle; missing or oversized content still requires a read.
 This removes an unnecessary model read round without classifying arbitrary Human text as
 irrelevant. The next send remains an explicit Bot choice and repeats the atomic checks. A
-returned handle never silently updates the default basis of an already running send.
+returned handle never silently updates the default basis of an already running send. Returned
+message IDs join the same turn consumption set; the Bot still explicitly resolves completed
+Inbox items, preferably together, rather than leaving a redundant cleanup turn. Neither the
+read nor a dropped draft resolves work automatically.
 
 A held send persists its identity, owner, original/current draft, basis, expiry and retry count
 in the existing Operational Database. It produces no public message or downstream Admission.

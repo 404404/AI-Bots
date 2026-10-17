@@ -5971,6 +5971,9 @@ class BotRuntimeImplementation implements BotRuntime {
               observationId: 'x'.repeat(36),
               content: bounded.output,
               complete: bounded.included.length === error.outcome.changedMessageCount,
+              observedMessageIds: bounded.included.map((view) => view.message.id),
+              responsibility:
+                'These messages join this turn. After handling them, explicitly inbox_resolve their IDs together with the original request if also complete. FYI can be done without a reply. Sending or dropping alone does not resolve Inbox work; keep unfinished work open.',
             };
             if (JSON.stringify({ ...error.outcome, review }).length > CHANNEL_READ_OUTPUT_LIMIT)
               throw error;

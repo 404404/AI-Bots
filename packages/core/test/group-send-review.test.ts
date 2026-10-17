@@ -21,7 +21,12 @@ async function fixture(
       messageId: string;
       observationIds: Record<string, string>;
       changedMessageIds?: string[];
-      review?: { observationId: string; content: string; complete: boolean };
+      review?: {
+        observationId: string;
+        content: string;
+        complete: boolean;
+        observedMessageIds: string[];
+      };
     }>;
   }) => Promise<void>,
 ) {
@@ -90,6 +95,7 @@ describe('Group send review through the same direct model tools', () => {
       expect(held.changedMessageIds).toContain('correction');
       expect(core.channels.readMessages(channelId).map((m) => m.id)).toEqual(['correction', 'old']);
       expect(held.review?.complete).toBe(true);
+      expect(held.review?.observedMessageIds).toEqual(['correction']);
       expect(
         JSON.parse(held.review!.content).messages.map(
           (view: { message: { body: string } }) => view.message.body,

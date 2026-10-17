@@ -15,7 +15,13 @@ export type SendReviewOutcome = {
   reason: string;
   changedMessageIds?: string[];
   changedMessageCount?: number;
-  review?: { observationId: string; content: string; complete: boolean };
+  review?: {
+    observationId: string;
+    content: string;
+    complete: boolean;
+    observedMessageIds: string[];
+    responsibility: string;
+  };
   read?: { channel_id: string; limit: number };
 };
 export class SendReviewRequired extends Error {
