@@ -926,4 +926,4 @@ Channel 移动以叶节点为目标，`messages` 是固定内容叶；隐藏子�
 
 通过 `client-shortcuts-set CLIENT_ID --generation GENERATION --scope client-profile --expected-state FINGERPRINT --patch-stdin` 提交 `{ "profile":"web:macos", "id":"DISCOVERED_ID", "type":"set", "binding":{"code":"KeyJ","modifiers":["primary","alt","shift"]} }`。使用不带 `binding` 的 `"type":"disable"` 显式禁用，或 `"type":"reset"` 仅恢复该动作。原生面板组合保留已有的可选 `secondCode`；导航动作沿用单键及 primary／Alt／Shift 限制。
 
-必须匹配目标 profile。面板修改把读取到的原生 revision 交给 Settings、提示文字与按键派发共用的原生 owner；导航修改复用现有 owner 和存储键，将旧覆盖迁入保留其他 profile 的记录，null 禁用重载后仍有效。保留键或冲突返回 `outcome:refused`、原因、冲突稳定 ID 及未变更的有效目录，不抢占已有绑定，也不重置全部配置。导航保存失败保留已接受绑定并明确拒绝，原生保存结果继续由原生 owner 分类。实体按键、输入框／弹窗／IME、Web 重载与 macOS 重启须分别验证。
+必须匹配目标 profile。面板修改把读取到的原生 revision 交给 Settings、提示文字与按键派发共用的原生 owner；导航修改复用现有 owner 和存储键，将旧覆盖迁入保留其他 profile 的记录，null 禁用重载后仍有效。保留键或冲突返回 `outcome:refused`、原因、冲突稳定 ID 及未变更的有效目录，不抢占已有绑定，也不重置全部配置。导航保存失败保留已接受绑定并明确拒绝，原生 revision／冲突拒绝继续由原生 owner 分类。调用原生保存前重新核对授权、Client 生命周期和已审阅状态；原生 owner 在串行队列中、写入前再次比较 revision。请求交给原生 owner 后不能取消保存：回复丢失、Client 生命周期结束或写入失败返回 `client-outcome-uncertain`。重新发现在线 Client 并读取 `client-shortcuts` 后再提出修改，不得自动重放写入。实体按键、输入框／弹窗／IME、Web 重载与 macOS 重启须分别验证。
