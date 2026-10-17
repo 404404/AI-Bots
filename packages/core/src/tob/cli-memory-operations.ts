@@ -54,7 +54,12 @@ export function createTobMemoryOperations(
         args.targets.length > 10
       )
         throw new TobError('invalid-input');
+      if (!runtime.prepareMemoryReadTargets) throw new TobError('memory-scope-unavailable');
+      const expectedTargets = runtime.prepareMemoryReadTargets(sessionId, [
+        ...args.targets,
+      ] as string[]);
       const input = {
+        expectedTargets,
         purpose: args.purpose,
         grantId: args.grantId,
         targets: [...args.targets] as string[],

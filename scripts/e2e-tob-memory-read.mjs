@@ -179,15 +179,34 @@ async function review(home, previous, targets) {
       JSON.stringify([...targets].sort())
     );
   };
-  const message = await poll(
+  const card = await poll(
     'Memory delegation approval',
-    async () => (await rpc('channelMessages', { channelId: home.channelId })).messages,
-    (messages) => messages.some(matches),
+    async () => {
+      const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+      for (const candidate of messages.filter(matches)) {
+        const status = await rpc('toolApprovalStatus', {
+          channelId: home.channelId,
+          messageId: candidate.id,
+        });
+        const input = JSON.parse(candidate.toolApprovalRequest.input);
+        if (
+          status.status === 'pending' &&
+          input.patch?.expectedTargets?.every((target) => typeof target.createdAt === 'string')
+        )
+          return candidate;
+      }
+      return undefined;
+    },
+    (value) => Boolean(value),
   );
-  const card = message.find(matches);
   const proposal = JSON.parse(card.toolApprovalRequest.input);
   save('reviewed-memory-scope', proposal);
   const selector = `[data-message-id=${JSON.stringify(card.id)}] .bh-tool-approval-card`;
+  for (const row of await page.$$(`[data-channel-id=${JSON.stringify(home.channelId)}]`))
+    if (await row.isVisible()) {
+      await row.click();
+      break;
+    }
   await page.waitForSelector(selector, { visible: true });
   const summary = selector + ' .bh-request-summary';
   if ((await page.$eval(summary, (node) => node.getAttribute('aria-expanded'))) !== 'true')
@@ -319,7 +338,11 @@ try {
     (assignments) => assignments.some((item) => bots.every((bot) => item.purpose.includes(bot.id))),
   );
   const assignment = assignments.find((item) => bots.every((bot) => item.purpose.includes(bot.id)));
-  assert.equal(assignment.botSlug, home.botSlug);
+  assert.ok(
+    (await rpc('sessions', { slug: home.botSlug })).sessions.some(
+      (session) => session.sessionId === assignment.sessionId && session.role === 'assignment',
+    ),
+  );
   assert.equal(assignment.permission.mode, 'workspace-write');
   const first = await assignmentResult(home, assignment.sessionId);
   const body = await reply(home, previous);

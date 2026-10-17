@@ -21,6 +21,8 @@ const IMAGE_COMMANDS = new Set([
   'group-avatar-set',
 ]);
 const CODES = new Set([
+  'memory-cli-command-required',
+  'memory-target-changed',
   'memory-workspace-denied',
   'memory-scope-unavailable',
   'memory-scope-mismatch',

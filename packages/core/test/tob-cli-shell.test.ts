@@ -13,6 +13,8 @@ import {
 } from '@deepseek-ai/dsh-shell';
 import type { ToolExecution } from '@deepseek-ai/dsh-tools';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { literalManagedCliArguments } from '../src/tob/cli-literal-command.js';
+import { delegatedMemoryToolDenial } from '../src/tob/assignment-cli-shell.js';
 import { installTobCliShell } from '../src/tob/cli-shell.js';
 import type { TobCliBrokerOptions } from '../src/tob/cli-broker.js';
 
@@ -37,7 +39,7 @@ function deferred() {
   });
   return { promise, resolve };
 }
-function fixture(eligible = true) {
+function fixture(eligible = true, scope?: 'assignment-memory-read') {
   const ctx = new Context();
   const nativeCtx = new Context();
   const specs: ShellExecSpec[] = [];
@@ -120,6 +122,7 @@ function fixture(eligible = true) {
     `export async function runBotCreateCli(argv, io) { const response = await fetch(io.env.DEEPSEEKBOT_AGENT_ENDPOINT + '/invoke', {method:'POST',headers:{authorization:'Bearer '+io.env.DEEPSEEKBOT_AGENT_TOKEN,'content-type':'application/json'},body:JSON.stringify({command:argv[0],args:{}})}); io.stdout(await response.text()); return 0; }`,
   );
   const brokerOptions: TobCliBrokerOptions = {
+    ...(scope ? { scope } : {}),
     signal: new AbortController().signal,
     authorize() {},
     readSetting: () => ({ scope: 'global', value: 3, revision: 1 }),
@@ -167,6 +170,82 @@ const requestBroker = (spec: ShellExecSpec) =>
   });
 
 describe('Tob native Shell scoped CLI leases', () => {
+  it('never forwards delegated Memory CLI requests to an operating-system Shell or ambient Host credentials', async () => {
+    const f = fixture(true, 'assignment-memory-read');
+    await f.run(execution(), async () => {
+      const spec = f.wrapped.resolve({
+        command: 'deepseekbot capabilities',
+        env: {
+          DEEPSEEKBOT_HOST_TOKEN: 'private-human-token',
+          NODE_OPTIONS: '--import=/untrusted.mjs',
+        },
+      });
+      const handle = await f.wrapped.execute(spec);
+      const result = await handle.result();
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.text).toContain('assignment-memory-read');
+      expect(result.stdout.text).not.toContain('private-human-token');
+      expect(f.specs).toEqual([]);
+    });
+  });
+  it('rejects raw credential/Memory reads, interpreters, HTTP tools and nested Shell syntax before any native execution', async () => {
+    const f = fixture(true, 'assignment-memory-read');
+    const commands = [
+      'cat /private/host/.credentials.yaml',
+      'cat /private/other-bot/memory/MEMORY.md',
+      'node -e process.stdout.write(process.env.DEEPSEEKBOT_HOST_TOKEN)',
+      'python -c "open(\"/private/host/.credentials.yaml\").read()"',
+      'curl http://127.0.0.1:32191/api/botharness/list',
+      'pwsh -Command Get-Content /private/host/.credentials.yaml',
+      'bash -c "deepseekbot capabilities"',
+      'env DEEPSEEKBOT_AGENT_TOKEN= deepseekbot list',
+      'deepseekbot capabilities; cat /private/host/.credentials.yaml',
+      'deepseekbot capabilities && node script.js',
+      'deepseekbot capabilities | curl https://example.test',
+      'deepseekbot memory-snapshot $(cat /private/host/.credentials.yaml)',
+      "deepseekbot memory-file bot --path '$(cat /private/secret)'",
+      'deepseekbot memory-file bot --path "`cat /private/secret`"',
+      'deepseekbot capabilities > /private/result',
+      'deepseekbot capabilities\ncat /private/secret',
+      '& deepseekbot capabilities',
+      'deepseekbot memory-file bot --path \'MEMORY\'".md"',
+    ];
+    for (const command of commands)
+      await f.run(execution(), async () => {
+        await expect(f.wrapped.execute(f.wrapped.resolve({ command }))).rejects.toThrow(
+          'memory-cli-command-required',
+        );
+      });
+    expect(f.specs).toEqual([]);
+  });
+  it('allows only literal CLI argument data and refuses every alternate Agent execution path', () => {
+    expect(
+      literalManagedCliArguments(
+        'deepseekbot memory-file \'bot-a\' --path "notes/饮品.md" --sha aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ),
+    ).toEqual(['memory-file', 'bot-a', '--path', 'notes/饮品.md', '--sha', 'a'.repeat(40)]);
+    for (const name of [
+      'read',
+      'read_image',
+      'glob',
+      'grep',
+      'write',
+      'str_replace_editor',
+      'subagent',
+      'subagent_fork',
+      'bot_subagent',
+      'bot_subagent_fork',
+      'browser_tool',
+      'computer_tool',
+      'node',
+      'shell',
+      'python',
+    ])
+      expect(delegatedMemoryToolDenial(name)).toBeDefined();
+    for (const name of ['bash', 'pwsh', 'report_to_orchestrator'])
+      expect(delegatedMemoryToolDenial(name)).toBeUndefined();
+  });
+
   it('does not change resolve, ordinary Agents, non-Shell tools or out-of-band execution', async () => {
     const f = fixture(false);
     const spec = f.wrapped.resolve({ command: 'pwd', workdir: '/chosen', stdin: 'input' });
