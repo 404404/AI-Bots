@@ -4,9 +4,9 @@ Issue [#2092](https://github.com/BotHarness/DeepSeekBot/issues/2092); parent #20
 
 ## Revision boundaries
 
-Code and verifier head: `e3ed175ccd26de4ad980d1059ee7783db8f96bc4`.
-Stack base: `64ecac0afd6358edba9e03bb0f771f2c5067afcf`.
-The sole authorized product build passed at `74c591117`; production source directories are byte-identical to the code head after its rebase and verifier corrections. Later commits add review assets only. This does not claim an exact-final-head rebuild.
+Web-qualified code and verifier head: `e3ed175ccd26de4ad980d1059ee7783db8f96bc4`, originally stacked on `64ecac0afd6358edba9e03bb0f771f2c5067afcf`.
+The sole authorized product build passed at `74c591117`; production source directories are byte-identical through that Web-qualified head.
+The branch was then rebased onto `417c6fc509a1cfdb5730bb068308cc788add82cc`, which inherits the upstream credential-startup fix. Range-diff shows the three #2092 production/test commits unchanged. The inherited startup changes still require integration qualification; the prior Web evidence does not qualify them. This does not claim an exact-final-head rebuild or native pass.
 
 ## Checks actually run
 
