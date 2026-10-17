@@ -47,6 +47,7 @@ import {
   profileWorkspaceDependencies,
 } from '../runtime/profile-restore.js';
 import { createProfileRecovery } from './recovery.js';
+import { profileBackupReviewDatabase, type ProfileBackupReviewContext } from './review.js';
 import {
   digest,
   fixedFile,
@@ -227,12 +228,7 @@ export function inspectProfileBackup(archive: Buffer): {
   }
 }
 
-export function profileBackupPreview(source: ProfileBackupSource) {
-  if (!['0.2.0-rc.1', '0.2.0-rc.2'].includes(source.dshVersion ?? ''))
-    throw new ProfileBackupError(
-      'dependency-incompatible',
-      'Profile Backup requires a verified DSH 0.2.0-rc.1 or 0.2.0-rc.2 runtime',
-    );
+function profileBackupFiles(source: ProfileBackupSource) {
   const memories = profileMemoryFiles(source.registry, source.deletions);
   const memoryFiles = memories.flatMap((repo) => repo.files);
   const memoryBytes = memoryFiles.reduce((sum, file) => sum + statSync(file.path).size, 0);
@@ -255,6 +251,16 @@ export function profileBackupPreview(source: ProfileBackupSource) {
   ];
   const quarantine = join(dirname(source.registry.rootDir), 'recovery-git');
   if (existsSync(quarantine)) files.push(...treeFiles(quarantine));
+  return { memories, files };
+}
+
+export function profileBackupPreview(source: ProfileBackupSource) {
+  if (!['0.2.0-rc.1', '0.2.0-rc.2'].includes(source.dshVersion ?? ''))
+    throw new ProfileBackupError(
+      'dependency-incompatible',
+      'Profile Backup requires a verified DSH 0.2.0-rc.1 or 0.2.0-rc.2 runtime',
+    );
+  const { memories, files } = profileBackupFiles(source);
   const diagnostics = source.database.diagnostics();
   const estimatedBytes =
     diagnostics.databaseBytes +
@@ -273,6 +279,37 @@ export function profileBackupPreview(source: ProfileBackupSource) {
     sessions: { status: 'unsupported', count: source.sessionCount() },
     limits: PROFILE_BACKUP_LIMITS,
   };
+}
+
+export function profileBackupReviewSignature(
+  source: ProfileBackupSource,
+  context?: ProfileBackupReviewContext,
+) {
+  const { memories, files } = profileBackupFiles(source);
+  let bytes = 0;
+  const fingerprints = files.map((file) => {
+    const fixed = fixedFile(file.path, PROFILE_BACKUP_LIMITS.maxTotalBytes - bytes);
+    const identity = lstatSync(file.path);
+    bytes += fixed.data.length;
+    const sha256 = digest(fixed.data);
+    fixed.verify();
+    return [file.path, file.local, identity.dev, identity.ino, sha256];
+  });
+  return digest(
+    Buffer.from(
+      JSON.stringify({
+        policy: 'whole-profile-at-execution-barrier/1',
+        generation: source.database.generation,
+        version: source.version,
+        dshVersion: source.dshVersion,
+        sessions: { status: 'unsupported', count: source.sessionCount() },
+        memories: memories.map(({ files: _files, ...memory }) => memory),
+        files: fingerprints,
+        purge: source.purge.checkpoint(),
+        database: profileBackupReviewDatabase(source.database, context),
+      }),
+    ),
+  );
 }
 
 function space(path: string, required: number, available?: (path: string) => number): void {

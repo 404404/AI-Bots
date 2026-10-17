@@ -1,3 +1,4 @@
+import type { ProfileBackupReviewContext } from '../portability/review.js';
 import { randomUUID } from 'node:crypto';
 import { lstatSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
@@ -31,16 +32,29 @@ function id(raw: unknown): string {
   return raw;
 }
 export function createTobBackupOperations(deps: {
-  http(request: Request, authorize?: () => void): Promise<Response>;
+  http(
+    request: Request,
+    authorize?: () => void,
+    context?: ProfileBackupReviewContext,
+  ): Promise<Response>;
   root: string;
   registry: Pick<PersonaBotRegistry, 'get'>;
-}): PrepareTobOperation {
+}): (
+  command: string,
+  args: Record<string, unknown>,
+  context?: ProfileBackupReviewContext,
+) => ReturnType<PrepareTobOperation> {
   let exporting = false;
   const plans = new Map<
     string,
     { token: string; view: ReturnType<typeof backupPreviewView>; expires: number }
   >();
-  const request = (suffix: string, value?: Record<string, unknown>, authorize?: () => void) =>
+  const request = (
+    suffix: string,
+    value?: Record<string, unknown>,
+    authorize?: () => void,
+    context?: ProfileBackupReviewContext,
+  ) =>
     deps.http(
       new Request(
         'http://localhost' + PROFILE_BACKUP_PATH + suffix,
@@ -53,6 +67,7 @@ export function createTobBackupOperations(deps: {
             },
       ),
       authorize,
+      context,
     );
   const json = async (response: Response) => {
     try {
@@ -85,14 +100,17 @@ export function createTobBackupOperations(deps: {
       throw new TobError('invalid-input');
     return deps.root;
   };
-  return async (command, args) => {
+  return async (command, args, context) => {
     if (!TOB_BACKUP_CAPABILITIES.some((entry) => entry.command === command)) return undefined;
     if (command === 'profile-backup-preview') {
       keys(args, []);
       return {
         async run(guard) {
           guard();
-          const raw = (await json(await request(''))) as Record<string, unknown>;
+          const raw = (await json(await request('', undefined, guard, context))) as Record<
+            string,
+            unknown
+          >;
           guard();
           if (typeof raw.token !== 'string') throw new TobError('unavailable');
           for (const [key, plan] of plans) if (plan.expires < Date.now()) plans.delete(key);
@@ -182,7 +200,7 @@ export function createTobBackupOperations(deps: {
               throw new TobError('too-large');
             beforeEffect?.();
             plans.delete(planId);
-            const response = await request('', { token: plan.token });
+            const response = await request('', { token: plan.token }, guard, context);
             if (!response.ok) await json(response);
             const archive = Buffer.from(await response.arrayBuffer());
             if (
