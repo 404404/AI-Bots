@@ -19,6 +19,7 @@ import {
   type BotCreationService,
   type BotCreationReceipt,
 } from '../bots/creation.js';
+import { createTobContentReader, type TobContentPage } from '../tob/content-read.js';
 import { TobError, type TobService, type TobHome } from '../tob/service.js';
 import type {
   TobImSetupReceipt,
@@ -626,6 +627,8 @@ export interface BridgeMethods {
   channelSearch(
     payload: unknown,
   ): BridgeResult<{ messages: ChannelMessage[]; nextCursor?: string }>;
+  tobChannelContent(payload: unknown): BridgeResult<TobContentPage>;
+  tobBotProgress(payload: unknown): BridgeResult<TobContentPage>;
   channelMessages(payload: unknown): BridgeResult<{ messages: ChannelMessage[]; revision: number }>;
   channelAllBotPreview(payload: unknown): BridgeResult<AllBotPreview>;
   channelSend(
@@ -1240,6 +1243,19 @@ function detail(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBo
 }
 
 export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
+  const contentReader = createTobContentReader(deps);
+  const contentQuery = (
+    kind: 'channel' | 'progress',
+    payload: unknown,
+  ): BridgeResult<TobContentPage> => {
+    try {
+      return { ok: true, value: contentReader[kind](payload) };
+    } catch (error) {
+      if (error instanceof TobError)
+        return { ok: false, error: { code: error.code, message: error.code } };
+      throw error;
+    }
+  };
   const approvalTemplateLibrary = deps.approvalTemplates ?? createApprovalTemplateLibrary();
   const templateUsers = (name: string): string[] =>
     deps.registry
@@ -4270,6 +4286,12 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           return { ok: false, error: { code: error.code, message: error.message } };
         throw error;
       }
+    },
+    tobChannelContent(payload) {
+      return contentQuery('channel', payload);
+    },
+    tobBotProgress(payload) {
+      return contentQuery('progress', payload);
     },
     channelMessages(payload) {
       const source = asObject(payload);

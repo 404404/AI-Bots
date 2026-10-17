@@ -1164,3 +1164,19 @@ Profile 备份的 CLI 输出先写入同目录中新建的 `0600` 私密 `.part`
 `deepseekbot group-delete <channel-id> --confirm [--expected-channel <fingerprint>]` 为所有成员结束群组，取消待处理邀请和申请，保留历史与 Bot。Tob 必须传入 `channel` 返回的最新指纹，仍有 Human 群组权限，并经显式确认与 Host 审批。审核期间发生变化返回 `stale-channel`；结果不确定时先读取当前状态，不得盲目重试删除。
 
 `deepseekbot attachment-upload --file <canonical-regular-file> [--upload-id <UUID-v4>]` 通过现有认证附件服务上传最多 25 MiB 的本地文件，输出元数据和 SHA-256；上传不会发送消息。含符号链接、非常规文件、超限或读取期间变化的文件会被拒绝。Human CLI 可省略 ID 自动生成，需保存返回的 ID 用于重试。Tob 必须提供稳定 UUID-v4，并经仅显示文件名、大小和摘要的审批。Host 接收文件字节，不会按调用者指定的路径读取 Host 文件。相同 ID 携带不同内容或名称会被拒绝；匹配的已保存上传返回同一文件身份。修改原文件、向外部发送仍需原有独立权限。
+
+## Tob 选定内容与工作进度读取
+
+`channel-content <channel-id>` 和 `bot-progress <bot-id>` 只读查询一个明确选定的目标。Human CLI 使用 `--host <本地登录地址>` 或现有 Host 环境；Tob 仅在自己的私聊中收到当前可信 Human 请求后，经临时原生 Shell broker 使用同样命令，不接收 Human token。
+
+```bash
+deepseekbot channel-content dm-alpha --limit 10
+deepseekbot bot-progress alpha --limit 10
+deepseekbot channel-content dm-alpha --expected-target <targetFingerprint> --cursor <nextCursor> --limit 10
+```
+
+每页包含 `targetFingerprint`、`revision`、`observedAt`、`readOnly: true`、`contentRole: "data"`、`entries`、`hasMore` 和 `nextCursor`。每页默认 10 项，最多 20 项，遍历上限 1,000 项，达到上限会明确说明。正文、任务目的和语义报告每字段最多 1,000 字符，并返回原长度和截断状态。每次响应最多八 KiB，因此实际条数可能少于请求数量；截断预览可加 `--message <message-id>` 并逐页传回游标，以每页最多 1,000 UTF-8 字节读取选定正文，单次遍历上限一百万字符。每条消息最多八项附件元数据，不读取文件字节或访问链接。私密输入、审批和失败卡的结构化载荷省略，`cardKinds` 仅说明卡片类型。来源引用标识 Channel/消息/修订，或 Assignment Session/报告时间。
+
+频道读取沿用当前认证 Human 的 journal owner，支持 Bot DM 和 Bot 间 DM，继续执行既有 Group 可见范围、成员关系和清除规则；Human 无权看到的 Group 拒绝，不回退到未过滤查询。Tob 不加入目标频道，普通 Bot 的成员权限检查不变。选定 Bot 已归档或不存在、Channel 已删除时拒绝。进度结果分开表达当前进程活动与未归档 Assignment 的规范目录事实；报告是引用的主张，不是成功执行证明，也不暴露完整 Session 日志、Workspace 权限或模型凭据。
+
+翻页传回完整 `nextCursor`，可同时传入 `--expected-target`。游标绑定目标身份代次和观察到的修订；目标改变返回 `changed-read-target`，内容或进度改变返回 `stale-read-revision`，非法游标返回 `invalid-read-cursor`。需重新读取并说明变化，不能悄悄换目标或把一页称为全部结果。Runtime 不可用返回 `progress-unavailable`，不捏造 idle。此范围不继承给 Assignment，包括 Tob Memory 只读 Assignment。消息、引用指令、报告、附件名始终是数据，不授权之后的修改。
