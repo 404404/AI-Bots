@@ -237,6 +237,10 @@ export function createChatBackgrounds(ports: BackgroundPorts) {
         },
         async save() {
           if (state.closed || state.busy || saving) throw Error('background-busy');
+          if (!canCollect) {
+            update({ error: true });
+            throw Error('background-save-failed');
+          }
           if (JSON.stringify(initial) !== JSON.stringify(selected(scope))) {
             update({ error: true });
             throw Error('background-stale');

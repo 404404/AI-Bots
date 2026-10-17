@@ -64,6 +64,53 @@ it('previews a picked image and only persists it when Done succeeds', async () =
   }
 });
 
+it('keeps an inherited image read-only and follows a later device default after Done', async () => {
+  const backgrounds = createChatBackgrounds({
+    read: async () => undefined,
+    write: async () => {},
+    importImage: async () => ({ id: 'global.jpg', width: 800, height: 1200 }),
+    listImages: async () => [],
+    removeImage: async () => {},
+  });
+  await backgrounds.ready;
+  const global = backgrounds.edit();
+  await global.pick('global');
+  await global.save();
+  const scope = { hostId: 'host', channelId: 'chat' };
+  const edit = backgrounds.edit(scope);
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <ChatBackgroundEditor
+          scoped
+          edit={edit}
+          inherited={backgrounds.resolve()}
+          imageUri={(id) => id}
+          onPickImage={async () => undefined}
+          onDone={() => {}}
+          onCancel={() => {}}
+        />,
+      ),
+    );
+    expect(host.textContent).toContain(t.chatBackground.inherited);
+    expect(host.querySelector(`[aria-label="${t.chatBackground.fit}"]`)).toBeNull();
+    expect(host.querySelector(`[aria-label="${t.chatBackground.fade}"]`)).toBeNull();
+    expect(host.querySelector(`[aria-label="${t.chatBackground.center}"]`)).toBeNull();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>(`button[aria-label="${t.done}"]`)!.click(),
+    );
+    const nextGlobal = backgrounds.edit();
+    nextGlobal.choose({ kind: 'color', color: '#abcdef' });
+    await nextGlobal.save();
+    expect(backgrounds.resolve(scope)).toEqual({ kind: 'color', color: '#abcdef' });
+  } finally {
+    await act(async () => root.unmount());
+    await edit.cancel();
+  }
+});
+
 it('keeps a retryable draft on save failure and discards preview appearance and restoration on cancel', async () => {
   let fail = false;
   const backgrounds = createChatBackgrounds({

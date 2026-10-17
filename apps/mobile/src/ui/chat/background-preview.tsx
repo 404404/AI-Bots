@@ -16,7 +16,7 @@ export function BackgroundPreview({
 }: {
   choice: BackgroundChoice;
   imageUri(id: string): string;
-  onChange(choice: BackgroundChoice): void;
+  onChange: ((choice: BackgroundChoice) => void) | undefined;
   children: ReactNode;
   viewport: { width: number; height: number };
   onViewport(size: { width: number; height: number }): void;
@@ -30,15 +30,16 @@ export function BackgroundPreview({
     return PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gesture) =>
-        (current.current.overflow.x >= 1 && Math.abs(gesture.dx) > space.x2) ||
-        (current.current.overflow.y >= 1 && Math.abs(gesture.dy) > space.x2),
+        current.current.onChange !== undefined &&
+        ((current.current.overflow.x >= 1 && Math.abs(gesture.dx) > space.x2) ||
+          (current.current.overflow.y >= 1 && Math.abs(gesture.dy) > space.x2)),
       onPanResponderGrant: () => {
         if (current.current.choice.kind === 'image') origin = current.current.choice;
       },
       onPanResponderMove: (_, gesture) => {
         const { choice: image, overflow: crop, onChange: change } = current.current;
         if (image.kind === 'image')
-          change({ ...image, ...dragBackground(origin, crop, { x: gesture.dx, y: gesture.dy }) });
+          change?.({ ...image, ...dragBackground(origin, crop, { x: gesture.dx, y: gesture.dy }) });
       },
     });
   }, []);

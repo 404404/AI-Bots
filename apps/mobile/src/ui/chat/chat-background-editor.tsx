@@ -41,6 +41,7 @@ export function ChatBackgroundEditor({
   const [previewScheme, setPreviewScheme] = useState<ColorScheme>(theme.scheme);
   const busy = state.busy || picking;
   const choice = state.choice ?? inherited;
+  const image = state.choice?.kind === 'image' ? state.choice : undefined;
   const overflow =
     choice.kind === 'image' ? backgroundOverflow(choice, viewport, choice.fit) : { x: 0, y: 0 };
   const crop = { x: overflow.x >= 1, y: overflow.y >= 1 };
@@ -107,7 +108,7 @@ export function ChatBackgroundEditor({
             onViewport={setViewport}
             choice={choice}
             imageUri={imageUri}
-            onChange={(next) => edit.choose(next)}
+            onChange={image === undefined ? undefined : (next) => edit.choose(next)}
           >
             <PreviewMessages />
           </BackgroundPreview>
@@ -138,16 +139,16 @@ export function ChatBackgroundEditor({
           </View>
         )}
         <Button label={t.chatBackground.chooseImage} busy={busy} onPress={chooseImage} />
-        {choice.kind !== 'image' ? null : (
+        {image === undefined ? null : (
           <View style={{ gap: space.x3 }}>
             <Segmented
               label={t.chatBackground.fit}
-              value={choice.fit}
+              value={image.fit}
               options={[
                 { value: 'cover', label: t.chatBackground.fill },
                 { value: 'contain', label: t.chatBackground.fit },
               ]}
-              onChange={(fit) => edit.choose({ ...choice, fit })}
+              onChange={(fit) => edit.choose({ ...image, fit })}
             />
             <Text variant="meta" tone="muted">
               {t.chatBackground.drag}
@@ -155,35 +156,35 @@ export function ChatBackgroundEditor({
             <View style={{ gap: space.x2 }}>
               {crop.x ? (
                 <>
-                  <Text>{`${t.chatBackground.horizontal} · ${Math.round(choice.x * 100)}%`}</Text>
+                  <Text>{`${t.chatBackground.horizontal} · ${Math.round(image.x * 100)}%`}</Text>
                   <PercentageSlider
                     label={t.chatBackground.horizontal}
-                    value={Math.round(choice.x * 100)}
-                    onChange={(x) => edit.choose({ ...choice, x: x / 100 })}
+                    value={Math.round(image.x * 100)}
+                    onChange={(x) => edit.choose({ ...image, x: x / 100 })}
                   />
                 </>
               ) : null}
               {crop.y ? (
                 <>
-                  <Text>{`${t.chatBackground.vertical} · ${Math.round(choice.y * 100)}%`}</Text>
+                  <Text>{`${t.chatBackground.vertical} · ${Math.round(image.y * 100)}%`}</Text>
                   <PercentageSlider
                     label={t.chatBackground.vertical}
-                    value={Math.round(choice.y * 100)}
-                    onChange={(y) => edit.choose({ ...choice, y: y / 100 })}
+                    value={Math.round(image.y * 100)}
+                    onChange={(y) => edit.choose({ ...image, y: y / 100 })}
                   />
                 </>
               ) : null}
               <Button
                 label={t.chatBackground.center}
                 disabled={busy}
-                onPress={() => edit.choose({ ...choice, x: 0.5, y: 0.5 })}
+                onPress={() => edit.choose({ ...image, x: 0.5, y: 0.5 })}
               />
             </View>
-            <Text>{`${t.chatBackground.fade} · ${choice.fade}%`}</Text>
+            <Text>{`${t.chatBackground.fade} · ${image.fade}%`}</Text>
             <PercentageSlider
               label={t.chatBackground.fade}
-              value={choice.fade}
-              onChange={(fade) => edit.choose({ ...choice, fade })}
+              value={image.fade}
+              onChange={(fade) => edit.choose({ ...image, fade })}
             />
             <Text variant="meta" tone="muted">
               {t.chatBackground.fadeHint}

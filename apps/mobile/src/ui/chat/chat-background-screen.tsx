@@ -51,15 +51,24 @@ function Editor({ scope }: { scope: BackgroundScope | undefined }) {
   );
 }
 
-export default function ChatBackgroundScreen() {
+export function DeviceBackgroundScreen() {
+  return <ChatBackgroundScreen deviceDefault />;
+}
+
+export default function ChatBackgroundScreen({
+  deviceDefault = false,
+}: {
+  deviceDefault?: boolean;
+}) {
   const params = useLocalSearchParams<{ hostId?: string; channelId?: string }>();
   const { hosts } = useHostSession();
   const state = useChatBackgrounds();
-  const valid =
-    (params.hostId === undefined && params.channelId === undefined) ||
-    (params.hostId !== undefined &&
-      !!params.channelId &&
-      hosts.some((host) => host.hostId === params.hostId));
+  const valid = deviceDefault
+    ? params.hostId === undefined && params.channelId === undefined
+    : typeof params.hostId === 'string' &&
+      typeof params.channelId === 'string' &&
+      params.channelId !== '' &&
+      hosts.some((host) => host.hostId === params.hostId);
   const scope =
     params.hostId && params.channelId
       ? { hostId: params.hostId, channelId: params.channelId }

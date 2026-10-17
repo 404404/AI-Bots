@@ -141,26 +141,39 @@ describe('chat background preferences', () => {
     expect([...assets]).toEqual(['image-2.jpg']);
   });
 
-  it('does not reclaim files when saved metadata cannot be read', async () => {
-    const removed: string[] = [];
-    const owner = createChatBackgrounds({
-      read: async () => {
-        throw Error('unavailable');
-      },
-      write: async () => {},
-      importImage: async () => {
-        throw Error('unused');
-      },
-      listImages: async () => ['saved.jpg'],
-      removeImage: async (id) => {
-        removed.push(id);
-      },
-    });
-    await owner.ready;
-    expect(owner.resolve()).toEqual({ kind: 'default' });
-    expect(owner.getSnapshot().storageError).toBe(true);
-    expect(removed).toEqual([]);
-  });
+  it.each(['read', 'parse'])(
+    'does not overwrite metadata or reclaim files after a %s failure',
+    async (failure) => {
+      const removed: string[] = [];
+      let writes = 0;
+      const owner = createChatBackgrounds({
+        read: async () => {
+          if (failure === 'read') throw Error('unavailable');
+          return { version: 99 };
+        },
+        write: async () => {
+          writes++;
+        },
+        importImage: async () => {
+          throw Error('unused');
+        },
+        listImages: async () => ['saved.jpg'],
+        removeImage: async (id) => {
+          removed.push(id);
+        },
+      });
+      await owner.ready;
+      expect(owner.resolve()).toEqual({ kind: 'default' });
+      expect(owner.getSnapshot().storageError).toBe(true);
+      const edit = owner.edit();
+      edit.choose({ kind: 'color', color: '#abcdef' });
+      await expect(edit.save()).rejects.toThrow('background-save-failed');
+      expect(edit.getSnapshot()).toMatchObject({ error: true, closed: false });
+      await edit.cancel();
+      expect(writes).toBe(0);
+      expect(removed).toEqual([]);
+    },
+  );
 
   it('protects an import that completes while an older cleanup is listing files', async () => {
     let finishList: ((ids: string[]) => void) | undefined;

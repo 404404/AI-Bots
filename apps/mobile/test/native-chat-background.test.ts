@@ -6,6 +6,7 @@ const disk = vi.hoisted(() => ({
   root: 'file:///container-a',
   writeFailure: 'none' as 'none' | 'partial' | 'after',
   copyFailure: false,
+  readFailure: '',
   steps: [] as string[],
   source: { width: 900, height: 1600 },
 }));
@@ -37,6 +38,7 @@ vi.mock('expo-file-system', () => {
       return disk.files.get(this.uri)!;
     }
     async text() {
+      if (this.uri === disk.readFailure) throw Error('injected read failure');
       return this.textSync();
     }
     async copy(target: File) {
@@ -115,8 +117,37 @@ beforeEach(() => {
   disk.root = 'file:///container-a';
   disk.writeFailure = 'none';
   disk.copyFailure = false;
+  disk.readFailure = '';
   disk.steps = [];
   disk.source = { width: 900, height: 1600 };
+});
+
+it('retains every owned image and refuses writes when one journal record cannot be read', async () => {
+  const owner = createChatBackgrounds(nativeBackgroundPorts());
+  await owner.ready;
+  const first = owner.edit();
+  await first.pick('first', disk.source);
+  await first.save();
+  const second = owner.edit({ hostId: 'host', channelId: 'chat' });
+  await second.pick('second', disk.source);
+  await second.save();
+  const before = [...disk.files];
+  disk.readFailure = `${disk.root}/chat-backgrounds/settings/record-2.json`;
+  const restarted = createChatBackgrounds(nativeBackgroundPorts());
+  await restarted.ready;
+  expect(restarted.getSnapshot().storageError).toBe(true);
+  const edit = restarted.edit();
+  edit.choose({ kind: 'default' });
+  await expect(edit.save()).rejects.toThrow('background-save-failed');
+  await edit.cancel();
+  expect([...disk.files]).toEqual(before);
+  disk.readFailure = '';
+  const recovered = createChatBackgrounds(nativeBackgroundPorts());
+  await recovered.ready;
+  expect(recovered.getSnapshot().storageError).toBe(false);
+  expect(recovered.resolve({ hostId: 'host', channelId: 'chat' })).toEqual(
+    owner.resolve({ hostId: 'host', channelId: 'chat' }),
+  );
 });
 
 it('rejects oversized sources before decoding and schedules accepted resizing before the first render', async () => {

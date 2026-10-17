@@ -34,8 +34,14 @@ export function nativeBackgroundPorts() {
       for (const entry of dir.list()) {
         if (!(entry instanceof File) || !/^record-\d+\.json$/u.test(entry.name)) continue;
         found = true;
+        let text: string;
         try {
-          const parsed = JSON.parse(await entry.text()) as {
+          text = await entry.text();
+        } catch {
+          throw Error('background-storage-unreadable');
+        }
+        try {
+          const parsed = JSON.parse(text) as {
             revision?: unknown;
             document?: unknown;
           };
