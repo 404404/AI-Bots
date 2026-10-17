@@ -1,0 +1,6 @@
+{
+  "apps/mobile/package.json": "0a7448cea2e4b05b636a8b3658e4051f2d6e45de9f910f4fc0fdde6859c6dbed",
+  "apps/mobile/app.json": "c99deefd95b39e7495dafb646ee0d8990d5ec2227ebdcd7eb53dc5584297e65a",
+  "apps/mobile/ios/Podfile.lock": "4e3030351a71f793704423e43ff7148e41c292b65b0cbc879ca46c74c8e4a94e",
+  "pnpm-lock.yaml": "df90b1a0e368995f0068ec173a9995b4f5920308bedc840aef9f7c14d7f3d52d"
+}
