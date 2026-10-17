@@ -288,7 +288,7 @@ export interface ChannelMessage {
   author: ChannelMessageAuthor;
   body: string;
 
-  onboardingWelcome?: { version: 1 };
+  onboardingWelcome?: { version: 1; kind?: 'tob' };
 
   memorySwitchTarget?: string;
 

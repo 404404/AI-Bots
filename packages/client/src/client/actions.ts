@@ -330,6 +330,17 @@ export interface HostDirectoryListing {
 }
 
 export interface BridgeActions {
+  tobHome(): Promise<
+    import('../../../core/src/tob/service.js').TobHome & {
+      attention?: { unreadCount: number; hasAction: boolean };
+    }
+  >;
+  sendHome(
+    channelId: string,
+    body: string,
+    messageId: string,
+    attachments?: ChannelAttachmentRef[],
+  ): Promise<void>;
   validateComposerDraft(
     channelId: string,
     attachments: ChannelAttachmentRef[],
@@ -1501,6 +1512,21 @@ export function createActions(
     return result.value as T;
   };
   const actions: BridgeActions = {
+    tobHome: () => invoke('tobHome', {}),
+    async sendHome(channelId, body, messageId, attachments) {
+      const message = await sendChannelMessage(
+        call,
+        channelId,
+        body,
+        undefined,
+        attachments,
+        messageId,
+      );
+      if (message.id !== messageId || message.body !== body || message.author.kind !== 'human')
+        throw new Error('Home message could not be confirmed');
+      await actions.load();
+      await openChannelById(channelId);
+    },
     onboarding: (slug, action) => invoke('onboarding', { slug, action }),
     onboardingModel: async (slug, expectedRevision, route, globalDefault) => {
       const result = await invoke<{ revision: number }>('onboardingModel', {

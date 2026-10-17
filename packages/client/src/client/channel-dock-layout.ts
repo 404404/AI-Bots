@@ -1,3 +1,4 @@
+import { WORKSPACE_HOME } from './workspace-context.js';
 import {
   BOT_WORKSPACE_PANELS,
   parseChannelSplit,
@@ -13,7 +14,7 @@ import type {
 import type { DockPanelPosition } from './dock-panels.js';
 
 export const CHANNEL_DOCK_STORAGE_KEY = 'botharness.bot-mode-layout';
-export const CHANNEL_DOCK_LAYOUT_VERSION = 7;
+export const CHANNEL_DOCK_LAYOUT_VERSION = 8;
 export const DEFAULT_WORKSPACE_GAP = 4;
 export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
@@ -113,7 +114,7 @@ export function readChannelDock(
     const value: unknown = JSON.parse(raw);
     if (
       !isRecord(value) ||
-      ![1, 2, 3, 4, 5, 6, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
+      ![1, 2, 3, 4, 5, 6, 7, CHANNEL_DOCK_LAYOUT_VERSION].includes(value['version'] as number)
     )
       return undefined;
     if (!isLayout(value['layout'])) return undefined;
@@ -174,10 +175,27 @@ export function readChannelDock(
     const normalized = migrateWorkPanel(restored);
     const sessions =
       Number(value['version']) < 4 ? migrateSessionsWorkspace(normalized) : normalized;
-    const migrated = Number(value['version']) >= 6 ? sessions : migrateBotWorkspaces(sessions);
+    const children = Number(value['version']) >= 6 ? sessions : migrateBotWorkspaces(sessions);
+    const migrated =
+      Number(value['version']) < 8
+        ? {
+            ...children,
+            order: [
+              ...new Set([
+                ...(children.order ?? []),
+                'bh:channels',
+                CHANNEL_BODY_PANEL,
+                'activity-center',
+                'generated-files',
+                WORKSPACE_HOME,
+              ]),
+            ],
+          }
+        : children;
     if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
       try {
-        const backups = ['before-channel-splits-v7'];
+        const backups = ['before-home-v8'];
+        if (Number(value['version']) < 7) backups.push('before-channel-splits-v7');
         if (Number(value['version']) < 6) backups.push('before-bot-workspace-v6');
         if (Number(value['version']) < 5) backups.push('before-bot-workspace-v5');
         if (Number(value['version']) < 4) backups.push('before-channel-workspace-v4');
@@ -198,16 +216,27 @@ export function readChannelDock(
 export function writeChannelDock(
   value: Omit<StoredChannelDock, 'version'>,
   storage: ChannelDockStorage | undefined = browserStorage(),
-): void {
+): boolean {
+  if (!storage) return false;
   try {
     const raw = storage?.getItem(CHANNEL_DOCK_STORAGE_KEY);
     if (raw) {
       let previous: unknown;
       try {
         previous = JSON.parse(raw);
-      } catch {}
-      if (!isRecord(previous) || previous['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
-        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-channel-splits-v7`;
+      } catch {
+        return false;
+      }
+      if (
+        !isRecord(previous) ||
+        !isLayout(previous['layout']) ||
+        typeof previous['version'] !== 'number' ||
+        ![1, 2, 3, 4, 5, 6, 7, CHANNEL_DOCK_LAYOUT_VERSION].includes(previous['version'])
+      ) {
+        return false;
+      }
+      if (previous['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
+        const backupKey = `${CHANNEL_DOCK_STORAGE_KEY}.before-home-v8`;
         if (storage?.getItem(backupKey) == null) storage?.setItem(backupKey, raw);
       }
     }
@@ -215,7 +244,10 @@ export function writeChannelDock(
       CHANNEL_DOCK_STORAGE_KEY,
       JSON.stringify({ version: CHANNEL_DOCK_LAYOUT_VERSION, ...value }),
     );
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function clearChannelDock(storage: ChannelDockStorage | undefined = browserStorage()): void {

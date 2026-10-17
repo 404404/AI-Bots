@@ -4,8 +4,49 @@ import { createCore } from '../src/plugin.js';
 import { createDshBotAgentAdapter } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { FakeAgentHost } from './dsh-agent-host-fixture.js';
 import { createTempRoot } from './helpers.js';
-import { attachOperationalModule } from '../src/database/owner.js';
+import { attachOperationalModule, mountOperationalDatabase } from '../src/database/owner.js';
+import { defineSchemaPlan } from '../src/database/schema.js';
+import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 import { GroupSendReview } from '../src/channels/send-review.js';
+
+it('adds review tables after the canonical Tob migration while preserving its identity', () => {
+  const dshHome = createTempRoot('review-tob-upgrade-');
+  const prior = mountOperationalDatabase({
+    dshHome,
+    schemaPlan: defineSchemaPlan(
+      BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 96),
+    ),
+  });
+  try {
+    attachOperationalModule(prior, 'tob-upgrade-test').transaction((db) => {
+      db.prepare('INSERT INTO tob_identity (singleton, bot_slug) VALUES (1, ?)').run(
+        'protected-tob',
+      );
+    });
+  } finally {
+    prior.close();
+  }
+  const upgraded = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+  try {
+    const port = attachOperationalModule(upgraded, 'review-upgrade-test');
+    expect(
+      port.read(
+        (db) => db.prepare('SELECT bot_slug FROM tob_identity WHERE singleton = 1').get()?.bot_slug,
+      ),
+    ).toBe('protected-tob');
+    const review = new GroupSendReview(port);
+    expect(review.enabled('group-a')).toBe(false);
+    review.configure('group-a', true);
+    expect(review.enabled('group-a')).toBe(true);
+    expect(
+      port.read(
+        (db) => db.prepare('SELECT COUNT(*) AS count FROM group_send_review_drafts').get()?.count,
+      ),
+    ).toBe(0);
+  } finally {
+    upgraded.close();
+  }
+});
 
 it('revoking the initiating Group stops cross-Channel continuation but not a later independent DM', async () => {
   const outcomes: unknown[] = [];

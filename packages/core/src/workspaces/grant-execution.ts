@@ -188,6 +188,8 @@ const BOT_TOOL_NAMES = new Set([
   'group_leave',
   'bot_dm_send',
   'bot_create',
+  'tob_assignment_limit_read',
+  'tob_assignment_limit_set',
   'channel_send',
 
   'ask_user_question',
@@ -209,6 +211,7 @@ export function requiresHumanToolApproval(
       args === null ||
       (args as Record<string, unknown>).access !== 'read'
     );
+  if (name === 'tob_assignment_limit_set') return true;
   if (name === 'secret_cli' || name === 'secret_mcp_connect' || name === 'bot_create') return true;
   return isDshGovernedTool(name) && changesApprovalPolicy(policyInput(args), templateInUse);
 }

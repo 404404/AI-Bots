@@ -642,3 +642,9 @@ deepseekbot memory-move <bot-id> --default-location
 ```
 
 仓库会移到 `<absolute-dir>/<bot-id>`；该文件夹必须已存在，且其中还没有这个 Bot。移动前会先归档 Bot 的主会话，下一轮对话会在新文件夹里开启新的主会话；聊天记录、记忆提交和任务都会保留。Bot 正在工作时返回 `bot-busy`，文件夹不存在或已被占用时返回 `invalid-memory-dir`，记忆修复未完成时返回 `memory-conflict`。跨磁盘移动时会先复制、核对 HEAD 与原仓库一致，再删除旧文件夹；结果里若有 `leftover`，表示该旧文件夹未能删除。
+
+## Home 与 Tob
+
+`deepseekbot tob-home` 幂等准备受保护的本地 Tob、Memory、管理 Workspace 与 DM，返回标识及权威 Attention 摘要，不发送消息。`deepseekbot home-model-set --provider <id> --model <id>` 修改原生 Host 默认模型，保留其他 Bot 的独立计划。
+
+`deepseekbot bot-tool <tob-id> tob_assignment_limit_read` 无模型运行同一个管理读取工具。`tob_assignment_limit_set` 接受 `value`、`previous_value`、`expected_revision`，但直接执行返回 `tob-authority-required`／`human-dm-required`，不能伪造已准入的 Human DM。该工具的写入应通过真实 Tob DM 审批验收；Human 管理仍可使用既有认证 settings 命令。非法值拒绝、旧 revision 不覆盖、结果不确定须先读回。Tob 的删除／归档命令返回 `protected-bot`。

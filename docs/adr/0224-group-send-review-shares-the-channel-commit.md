@@ -1,6 +1,6 @@
-# ADR-0223: Group send review shares the Channel commit transaction
+# ADR-0224: Group send review shares the Channel commit transaction
 
-- Status: Proposed; opt-in pilot, pending Human history review
+- Status: Proposed; opt-in pilot, Human history feedback received; quantitative acceptance unresolved
 - Date: 2026-10-17
 - Issue: [#2053](https://github.com/BotHarness/DeepSeekBot/issues/2053)
 - Specification: [#2051](https://github.com/BotHarness/DeepSeekBot/issues/2051)
@@ -43,9 +43,15 @@ decision adds neither a Session manager nor a wake scheduler. Review evidence co
 canonical history and usage; exported pilot files are process evidence, not message authority.
 
 The durable draft shape and purge integration make this more than a prompt experiment.
-Schema generation 96 is additive; roll back by disabling the opt-in before reverting code.
+Schema generation 97 is additive, following main's generation 96 Tob identity reservation;
+roll back behavior by disabling the opt-in before reverting code.
 The database generation still requires a compatible binary. Acceptance remains separate from
 mechanical regression, real-model outcomes and Human evaluation.
+
+Earlier unmerged pilot Profiles used generation 96 for the review tables. Those private QA
+Profiles remain historical QA evidence and must not be opened by the new binary; they are not
+a supported upgrade source for the merged migration order. Integration verification uses a fresh Profile
+and separately checks the canonical main generation 96 to 97 migration without changing Tob.
 
 The model can explicitly select `resolve_inbox_ids` on the send/drop Tool. The Consumer
 first awaits a committed send or successful drop, then calls the existing Inbox triage

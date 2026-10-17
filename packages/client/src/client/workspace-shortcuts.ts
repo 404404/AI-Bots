@@ -3,9 +3,10 @@ import type { Shortcuts, ShortcutCommandId } from '@deepseek-ai/dsh-client-short
 import type { DockPanelRegistry } from './dock-panels.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { CHANNEL_BODY_PANEL } from './channel-dock-layout.js';
-import { WORKSPACE_CHANNELS } from './workspace-context.js';
+import { WORKSPACE_CHANNELS, WORKSPACE_HOME } from './workspace-context.js';
 
 const DEFAULT_KEYS: Readonly<Record<string, string>> = {
+  [WORKSPACE_HOME]: 'KeyH',
   [WORKSPACE_CHANNELS]: 'Digit1',
   [CHANNEL_BODY_PANEL]: 'Digit2',
   'activity-center': 'Digit3',
@@ -65,7 +66,7 @@ export function registerWorkspaceShortcuts(
             ? {
                 'desktop:macos': binding,
                 'desktop:windows': binding,
-                'desktop:linux': binding,
+                'desktop:linux': id === WORKSPACE_HOME ? { ...binding, code: 'KeyO' } : binding,
                 'web:macos': binding,
                 'web:windows': binding,
               }

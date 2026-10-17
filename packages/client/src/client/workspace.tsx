@@ -1,3 +1,5 @@
+import { HomePanel } from './home-panel.js';
+import { WORKSPACE_HOME } from './workspace-context.js';
 import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
 import { resolveChannelSidebarContext } from './channel-sidebar.js';
 import { usePanelMenu, PanelVisibilityLabel } from './panel-menu.js';
@@ -106,8 +108,26 @@ export function Workspace({
         order: 0,
         component: () => null,
       });
+      const unregisterHome = registry.register({
+        id: WORKSPACE_HOME,
+        title: t('workspace.home'),
+        icon: 'house',
+        scope: 'global',
+        order: 1000,
+        defaultPosition: { zone: 'center' },
+        component: function HomeEntry() {
+          const sendKey = useSyncExternalStore(
+            options.prefs.source.subscribe,
+            () => options.prefs.source.getSnapshot().sendKey,
+          );
+          return (
+            <HomePanel actions={options.actions} registry={registry} t={t} sendKey={sendKey} />
+          );
+        },
+      });
       setEnabled(true);
       return () => {
+        unregisterHome();
         unregisterMessages();
         unregister();
         release();

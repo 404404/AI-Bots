@@ -396,7 +396,8 @@ async function shot(options, paths) {
     );
     if (!options.keepOverlays) await dismissOverlays(page);
     if (options.botMode) {
-      if ((await page.$('.bh-root.bh-main')) === null) await page.locator(aria('Bot mode')).click();
+      if ((await page.$('.bh-root.bh-main')) === null)
+        await page.locator(aria(options.locale === 'zh' ? 'Bot 模式' : 'Bot mode')).click();
       await page.waitForSelector('.bh-root.bh-main', { timeout: 30_000 });
       steps.push('entered Bot mode');
       await new Promise((done) => setTimeout(done, 1500));

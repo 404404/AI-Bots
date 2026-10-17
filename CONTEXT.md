@@ -16,6 +16,18 @@ _Avoid_: installed release, latest version, 0.0.0 release
 
 ### PersonaBots
 
+**Steward Bot**:
+A persistent local PersonaBot with its own Memory and read access to the Human's Bot and Channel content, helping the Human manage those identities and application settings under existing approval rules. Its management role does not itself grant authority to approve other Bots' actions.
+_Avoid_: global Orchestrator, Home panel, dashboard
+
+**Tob**:
+The built-in local Steward Bot, with a persistent identity distinct from any ordinary DeepSeek Bot; its name reverses “Bot” and also stands for “Thousands of Bot.” Tob cannot be deleted or archived, while its Soul and Memory remain editable and portable without transferring its local management authority.
+_Avoid_: Home panel, global Orchestrator
+
+**Home**:
+A global Dock panel that presents the Human's cross-Bot overview, Bot creation entry points and an input addressed to Tob. Continuing a conversation uses the same Tob DM in the Messages panel; Home remains an independent overview rather than another conversation history.
+_Avoid_: Tob, Bot Profile, Channel subpanel
+
 **PersonaBot**:
 A first-class bot entity owned by the Host: a durable identity with a Git-backed Memory Repository that spans Sessions, Chats, and Workspaces and can hold several Sessions at once. Its Soul is optional content within Memory, not the identity itself.
 _Avoid_: bot (bare), agent, assistant, robot

@@ -2599,7 +2599,8 @@ export async function runBotCreateCli(
       return 0;
     }
     if (
-      LIVE_COMMANDS.some((entry) => entry.command === command) ||
+      (LIVE_COMMANDS.some((entry) => entry.command === command) &&
+        (!['pause', 'resume'].includes(command) || online)) ||
       (([
         'channel-messages',
         'grants',

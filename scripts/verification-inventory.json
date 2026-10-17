@@ -499,6 +499,14 @@
       "gap": null
     },
     {
+      "id": "desktop.tob.home",
+      "label": "Home model setup and protected Tob DM with approved global concurrency change",
+      "source": "packages/client/src/client/home-panel.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/tob-home.md",
+      "task": 2082,
+      "gap": null
+    },
+    {
       "id": "desktop.group.send-review",
       "label": "Hold stale Group replies and revise or drop with full paired history review",
       "source": "packages/core/src/channels/send-review.ts",
@@ -1301,14 +1309,6 @@
       "sha256": "97a5bdbec53537520a529cc2db50f0f75d4682f1fd61740a1f8c8380d49c474c"
     },
     {
-      "path": "scripts/e2e-llm-scenarios.mjs",
-      "category": "mapped",
-      "behaviors": ["desktop.dm.reply", "desktop.group.mention"],
-      "reason": "Real model DM/mention scenarios; exact committed DM oracle rejects failure cards; retain full histories and unknown usage for paired send-review evaluation.",
-      "task": 2053,
-      "sha256": "4940ba3a8c8e3892b11e01c959efc874a3e12b16527e076db62345f87b4508d6"
-    },
-    {
       "path": "scripts/e2e-local-computer-idle.mjs",
       "category": "historical-regression",
       "behaviors": ["desktop.computer.native"],
@@ -1685,6 +1685,22 @@
       "reason": "Nested sibling drops, narrow headers, stable content, per-Channel topology, reload and shortcut recovery on Web and macOS.",
       "task": 2076,
       "sha256": "b4c12797d82402e181762bd864acfc4b35a927161f090c2b096af31f26f2d0b9"
+    },
+    {
+      "path": "scripts/e2e-tob-home.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Home model configuration, canonical identity, actual reply and approval through the shared Web/native UI.",
+      "task": 2082,
+      "sha256": "7e99a006c12f3fc1b67f07c7a3e7add5f6ec6e7b2dd90648318d0a6980417c5e"
+    },
+    {
+      "path": "scripts/e2e-llm-scenarios.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.dm.reply", "desktop.group.mention"],
+      "reason": "Real model DM/mention scenarios; exact committed DM oracle rejects failure cards; retain full histories and unknown usage for paired send-review evaluation.",
+      "task": 2053,
+      "sha256": "4940ba3a8c8e3892b11e01c959efc874a3e12b16527e076db62345f87b4508d6"
     },
     {
       "path": "scripts/e2e-group-send-review.mjs",
