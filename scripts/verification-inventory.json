@@ -513,6 +513,13 @@
       "guide": ".agents/skills/verify-deepseekbot/features/group-send-review.md",
       "task": 2053,
       "gap": null
+    },
+    {
+      "id": "phone.chat-backgrounds",
+      "label": "Device-local chat backgrounds and transactional native editor",
+      "source": "apps/mobile/src/host/chat-background.ts",
+      "task": 2118,
+      "guide": ".agents/skills/verify-deepseekbot/features/phone-chat-backgrounds.md"
     }
   ],
   "scripts": [
