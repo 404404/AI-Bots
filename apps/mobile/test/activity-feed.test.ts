@@ -217,6 +217,31 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('shows navigable tabs and a skeleton while the initial Host read remains pending', async () => {
+    const fake = host();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const request = fake.carrier.request;
+    fake.carrier.request = async (url, init) => {
+      if (url.includes('humanAttention')) await pending;
+      return request(url, init);
+    };
+    const view = await feed(fake, ready([]), 'slow-host', 5000);
+    expect(view.querySelector('[data-testid="list-skeleton"]')).not.toBeNull();
+    expect(button(view, t.inboxSections.action).getAttribute('aria-selected')).toBe('true');
+    await press(button(view, t.inboxSections.unread));
+    expect(button(view, t.inboxSections.unread).getAttribute('aria-selected')).toBe('true');
+    expect(view.textContent).not.toContain(t.inboxEmpty);
+    await act(async () => release());
+    await settle();
+    expect(
+      [...view.querySelectorAll('[data-testid="list-skeleton"]')].filter(
+        (node) => !node.closest('[hidden]'),
+      ),
+    ).toHaveLength(0);
+  });
   it('bounds the native unread preview while opening the original full item', async () => {
     const unread: HumanAttentionItem = {
       ...reply,
