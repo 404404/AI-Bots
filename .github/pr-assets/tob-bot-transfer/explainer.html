@@ -1944,8 +1944,7 @@
         <h1>Bot ZIP 导出的审核与内容边界</h1>
         <p class="am-sub">受审核的 Bot ZIP 导出与真实 Web 证明</p>
         <div class="am-head-meta">
-          <span><b>PR</b>Draft ·</span
-          ><span><b>base</b>a3e2c4e64d131191e686e33cb207d3db9b3a0937</span
+          <span><b>PR</b>Draft</span><span><b>base</b>a3e2c4e64d131191e686e33cb207d3db9b3a0937</span
           ><span><b>head</b>3095104181d3c6e92ae74ead4c2bbfba6d76f400</span
           ><span><b>date</b>2026-10-18</span>
         </div>
@@ -1954,7 +1953,8 @@
         <nav class="am-toc" aria-label="目录">
           <a href="#panel-A">A · 当前交付状态</a><a href="#panel-B">B · 请求经过哪些 owner</a
           ><a href="#panel-C">C · 内容变化怎样阻止旧提案</a><a href="#panel-D">D · 保留哪些边界</a
-          ><a href="#panel-E">E · 实际 Web 证明与后续边界</a>
+          ><a href="#panel-E">E · 实际 Web 证明与后续边界</a
+          ><a href="#panel-F">F · 原生失败与修正边界</a>
         </nav>
         <div class="am-doc-body">
           <section class="am-panel" id="panel-A">
@@ -1967,6 +1967,7 @@
                 <p>
                   此提交补齐文件列表和受审核 ZIP 导出。 现有 ZIP owner 继续生成归档。 此源码的 233
                   项测试、类型检查和构建已通过。 隔离 Web 的实际 CLI、模型审核、导入与重放也已通过。
+                  同绝对 home 的 macOS 原生 CLI、模型导出和重放也已通过。
                 </p>
               </div>
             </div>
@@ -2291,8 +2292,19 @@
                         <td>身份、DM、Memory 与回执读回通过</td>
                       </tr>
                       <tr>
-                        <td>macOS / 新整合运行 / Human QA / CI</td>
+                        <td>macOS 原生</td>
+                        <td>
+                          CLI、导入、模型导出审核/拒绝/过期和回执重放通过；同 home
+                          重启及三身份读回通过
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>新整合运行 / Human QA</td>
                         <td>尚未执行</td>
+                      </tr>
+                      <tr>
+                        <td>完整 CI</td>
+                        <td>前次资产提交 7bf7d6344 已通过；当前提交见 PR 检查</td>
                       </tr>
                     </tbody>
                   </table>
@@ -2308,6 +2320,30 @@
                   请求，没有重复发模型提示。
                   重放表示答复无法确认后的回执核对，不是注入真实网络丢包。 同 Profile
                   重启、原生及新整合构建的证明分别记录。 本页是实现说明，不代表 Human 批准。
+                </p>
+              </div>
+            </div>
+          </section>
+          <section class="am-panel" id="panel-F">
+            <header class="am-panel-head">
+              <span class="am-panel-id">F</span>
+              <h2>原生失败与修正边界</h2>
+            </header>
+            <div class="am-panel-body">
+              <div class="am-md">
+                <p>
+                  第一次导入后，脚本错误读取了未纳入归档的 Memory。
+                  第二次导入成功后，脚本等待了尚未打开的消息面板。
+                  两次均保留原身份，再从真实检查点续验。
+                </p>
+                <p>
+                  首次原生导出没有成功，不能计为通过。 外层 Shell 获准，内层确认未生效。 Shell
+                  在默认 60 秒后终止，没有生成 ZIP。 模型正确报告失败，Human Turn 已处理并空闲。
+                </p>
+                <p>
+                  私有脚本现在核对实际点击点和持久化审批决定。 再次继续时明确要求 Shell 等待 300
+                  秒。 新的 Human 续接完成了真实导出、拒绝和过期验证。 产品源码保持
+                  309；原失败和重跑证明分别保留。
                 </p>
               </div>
             </div>
@@ -2358,7 +2394,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 08:20 ·
+      0.5.0 · 2026-10-18 08:59 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2369,7 +2405,7 @@ title: Bot ZIP 导出的审核与内容边界
 subtitle: 受审核的 Bot ZIP 导出与真实 Web 证明
 lang: zh
 template: doc
-PR: Draft · #2089 transfer slice
+PR: Draft #2142 · Bot ZIP transfer
 base: a3e2c4e64d131191e686e33cb207d3db9b3a0937
 head: 3095104181d3c6e92ae74ead4c2bbfba6d76f400
 date: 2026-10-18
@@ -2381,6 +2417,7 @@ date: 2026-10-18
 现有 ZIP owner 继续生成归档。
 此源码的 233 项测试、类型检查和构建已通过。
 隔离 Web 的实际 CLI、模型审核、导入与重放也已通过。
+同绝对 home 的 macOS 原生 CLI、模型导出和重放也已通过。
 
 ## B 请求经过哪些 owner
 
@@ -2427,7 +2464,9 @@ ZIP owner -&gt; Private output: 二进制私密输出
 | 重放 | 原 Human 请求与 Turn 4 完成，复用原身份，不改后续资料 |
 | Tob 人格导入 | 新普通 Bot；原受保护 Tob 身份保持不变 |
 | 同 Profile Web 重启 | 身份、DM、Memory 与回执读回通过 |
-| macOS / 新整合运行 / Human QA / CI | 尚未执行 |
+| macOS 原生 | CLI、导入、模型导出审核/拒绝/过期和回执重放通过；同 home 重启及三身份读回通过 |
+| 新整合运行 / Human QA | 尚未执行 |
+| 完整 CI | 前次资产提交 7bf7d6344 已通过；当前提交见 PR 检查 |
 
 原生 Shell 执行确认与内部管理审核是两层确认。
 这里只批准具体命令一次，没有改全局或记住授权规则。
@@ -2439,6 +2478,22 @@ Human 拒绝该新申请，没有再次导出。
 重放表示答复无法确认后的回执核对，不是注入真实网络丢包。
 同 Profile 重启、原生及新整合构建的证明分别记录。
 本页是实现说明，不代表 Human 批准。
+
+## F 原生失败与修正边界
+
+第一次导入后，脚本错误读取了未纳入归档的 Memory。
+第二次导入成功后，脚本等待了尚未打开的消息面板。
+两次均保留原身份，再从真实检查点续验。
+
+首次原生导出没有成功，不能计为通过。
+外层 Shell 获准，内层确认未生效。
+Shell 在默认 60 秒后终止，没有生成 ZIP。
+模型正确报告失败，Human Turn 已处理并空闲。
+
+私有脚本现在核对实际点击点和持久化审批决定。
+再次继续时明确要求 Shell 等待 300 秒。
+新的 Human 续接完成了真实导出、拒绝和过期验证。
+产品源码保持 309；原失败和重跑证明分别保留。
 </textarea>
     <script>
       (() => {
