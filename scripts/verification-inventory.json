@@ -1723,7 +1723,7 @@
       "behaviors": ["desktop.tob.home"],
       "reason": "Scoped CLI model/runtime discovery plus natural telemetry approval/denial, completed native turns, independent privacy UI/CLI readback and explicit same-Profile restart phases for Web and native Desktop.",
       "task": 2088,
-      "sha256": "f5bcf8e372bc7894be9959bae7de9dd4c646e17ffa10c4fab1e8c97abac1de14"
+      "sha256": "5fa147b464a9f05aea281ae17a3935e40fa517e22fc4fab840c12e27f1ee28b2"
     },
     {
       "path": "scripts/e2e-tob-bot-management.mjs",

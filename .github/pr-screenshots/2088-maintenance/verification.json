@@ -1,0 +1,472 @@
+{
+  "issue": 2088,
+  "sourceHead": "8962d221307fb46b114dd47b4f0b38bd5f9dab4c",
+  "base": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
+  "surface": "Web Chromium1440x900",
+  "dsh": "0.2.0-rc.2",
+  "date": "2026-10-18 Asia/Tokyo",
+  "sourceChecks": {
+    "priorFocused": "74 passed in prior public handoff; not repeated",
+    "currentBuild": "passed own worktree9.271seconds",
+    "driver": "syntax,format,source-policy,feature-map passed"
+  },
+  "web": {
+    "intro": {
+      "prompt": "你能做什么？",
+      "reply": "我是 Tob，你在本地的 Bot 管家。这版能做的事分五类：\n\n**1. 建 Bot、养 Bot**\n帮你创建新 Bot（写清人格设定和初始记忆），之后改名字、简介、标签，换头像 / 横幅 / 外观配色，暂停或恢复，以及删除（删除时会明确问你记忆要不要一起抹掉，默认保留）。\n\n**2. 调模型与算力**\n看可用模型清单和 Host 默认模型；给某个 Bot 单独指定 Orchestrator 模型、Assignment 默认模型和可选模型范围；管理模型预设并一键套用到 Bot；调整能同时跑几个 Assignment。\n\n**3. 建群、管群**\n建群并直接拉 Bot 进群、邀请或取消邀请、处理入群申请、改群名和群头像、单独调某个 Bot 在这个群里的唤醒策略（全部消息 / 仅 @ / 摘要 / 静默）、移除成员。我不进群，只替你管理群本身。\n\n**4. 你自己的频道偏好**\n免打扰、置顶、隐藏某个频道，以及设置「你」在该频道的昵称。隐藏只是列表里看不见，不影响成员身份和历史。\n\n**5. 运行与维护**\n运行时开关（开发者模式、是否显示 Bot 会话等）、遥测开关、Git 运行时、版本检查与安装 / 重启。\n\n**两点边界**：我能读改的是受支持的配置项，不会翻别的 Bot 的对话内容；涉及删除、安装、重启这类操作，我会先把当前状态读给你看，再由你确认。\n\n想从哪儿开始？比如我可以先列出现在的 Bot 和可用模型给你过一眼，或者你直接说「建一个什么用途的 Bot」，我先把方案和人格设定写给你确认。",
+      "completedTurn": "completed",
+      "delivery": "handled",
+      "capabilitiesViaOrdinaryShell": true,
+      "newApprovals": 0,
+      "settingsAndPlanUnchanged": true,
+      "modelToolRecovery": "first channel_send with empty resolve_inbox_ids refused; one corrected send and inbox_resolve completed in same turn; no duplicate final reply"
+    },
+    "directTransitions": [
+      {
+        "label": "off",
+        "expected": false,
+        "actual": {
+          "enabled": false,
+          "preference": false
+        }
+      },
+      {
+        "label": "on",
+        "expected": true,
+        "actual": {
+          "enabled": true,
+          "preference": true
+        }
+      },
+      {
+        "label": "restore",
+        "expected": true,
+        "actual": {
+          "enabled": true,
+          "preference": true
+        }
+      }
+    ],
+    "approve": {
+      "reviewed": {
+        "scope": "global",
+        "command": "telemetry-set",
+        "target": "telemetry",
+        "previousValue": {
+          "enabled": true,
+          "preference": true
+        },
+        "patch": {
+          "enabled": false
+        }
+      },
+      "current": {
+        "enabled": false,
+        "preference": false
+      },
+      "completion": {
+        "turn": 4,
+        "endReason": "completed",
+        "delivery": "handled",
+        "reply": "已关闭。读回确认：匿名使用统计现在是关闭状态（enabled: false），也没有环境变量锁定它，随时可以再打开。"
+      }
+    },
+    "deny": {
+      "reviewed": {
+        "scope": "global",
+        "command": "telemetry-set",
+        "target": "telemetry",
+        "previousValue": {
+          "enabled": false,
+          "preference": false
+        },
+        "patch": {
+          "enabled": true
+        }
+      },
+      "current": {
+        "enabled": false,
+        "preference": false
+      },
+      "completion": {
+        "turn": 5,
+        "endReason": "completed",
+        "delivery": "handled",
+        "reply": "这次没成功：开启的操作被审批拒绝（approval-denied），所以我停在这里，没有重试。读回确认匿名使用统计仍然是关闭状态。\n\n如果刚才是误点了拒绝，跟我说一声，我可以重新发起一次；确认后你在卡片上允许就行。"
+      }
+    },
+    "restart": {
+      "actualNewHostProcess": true,
+      "sameAbsoluteHome": true,
+      "sameBrowserProfile": true,
+      "readBeforeWrites": {
+        "enabled": false,
+        "preference": false
+      }
+    },
+    "pageErrors": [],
+    "HumanCliProvenance": {
+      "selection": "checkout-build",
+      "filename": "deepseekbot.mjs",
+      "sha256": "2b8b068e2c4ce3cbb0f6e31f267064686adee46772e96420294e1a7b10a084f7"
+    },
+    "modelRoute": "isolated Tob only deepseek-official/deepseek-flash high; Host default unchanged"
+  },
+  "managedGit": {
+    "receipt": "docs/assets/pr/2088-maintenance/managed-git.json",
+    "scope": "previous real owner/artifact download, checksum/extract, Git2.53.0 commit/readback and second service recovery; not repeated",
+    "notProven": "Tob Git install UI/Host CLI or OS reboot"
+  },
+  "startupFailures": {
+    "first": "partial task-owned AX DSH cache lacked entry; only own link repaired to same pinned intact package, hashes retained",
+    "second": "old recorded Host still owned port and candidate lacked dist; exact old task Host stopped with home retained, then own source built",
+    "noStoreFilesEdited": true,
+    "noProfileOrSessionHomeAliasing": true
+  },
+  "packaging": {
+    "state": "qualified pinned local-artifact consumer reproduction",
+    "applicationBuildHead": "8962d221307fb46b114dd47b4f0b38bd5f9dab4c",
+    "artifactInventory": {
+      "productVersion": "0.0.0",
+      "dsh": "0.2.0-rc.2",
+      "providerRuntime": {
+        "runtimeFiles": 422,
+        "runtimeSha256": "302dfdcca0d36f93fe02098d13764ba4eccd11ce324ffb0c415c3f971a7d0275"
+      },
+      "artifacts": [
+        {
+          "name": "@botharness/core",
+          "version": "0.0.0",
+          "filename": "botharness-core-0.0.0.tgz",
+          "integrity": "sha512-CRu9Vh/kzyAfNrirKc/ys67iyFm/wcFWhj9Tl4tNdJ8cFPsYF2Cr+n533OhAFUqZ26i3LZzifmGylHGsUh/++Q=="
+        },
+        {
+          "name": "@botharness/ui",
+          "version": "0.0.0",
+          "filename": "botharness-ui-0.0.0.tgz",
+          "integrity": "sha512-vH4TFUnFFIqBD6vfbZMw7x4HDaVgJAoZUWOsBuxabpm9BVu5rMYbhUMD9hfdqgEL25m0QKY7R4Ag7ZO4eeAXwQ=="
+        },
+        {
+          "name": "@botharness/browser",
+          "version": "0.0.0",
+          "filename": "botharness-browser-0.0.0.tgz",
+          "integrity": "sha512-EEE7focktGBicFXq6F5qkI9CjGuPoG9Iui8prxoW6zZiMEsMiRHibAryjON05CIKauoN95e7UHZJH9F5U5JAKA=="
+        },
+        {
+          "name": "@botharness/computer",
+          "version": "0.0.0",
+          "filename": "botharness-computer-0.0.0.tgz",
+          "integrity": "sha512-sogcwSX10UufxkUNcIlDoPg/9R5Qx1Xfh4WoYE5a+HOwiAXmVmWG9E7qcqbC8vAyYmwO34KL4V/88DLUiilVCQ=="
+        },
+        {
+          "name": "@botharness/im-provider",
+          "version": "4.32.0-botharness.21",
+          "filename": "botharness-im-provider-4.32.0-botharness.21.tgz",
+          "integrity": "sha512-7FqHt1er/sVN4L8l663SYxoscynGjyuwYTCw8zppxekBiAAZjxETQe8vkiRVht53Uvg/e6cLicz8AfFTcW8a7w=="
+        },
+        {
+          "name": "deepseekbot",
+          "version": "0.0.0",
+          "filename": "deepseekbot-0.0.0.tgz",
+          "integrity": "sha512-7+tw0Y1/yoDWRPPlksYML0K0vd+jWp7V/kBUm7hGN/DBoFrbvF5Jzwm8L4MCQOUq774T9dT0u9DAvTZikX/s3g=="
+        }
+      ]
+    },
+    "ordinaryFreshProfileInstall": {
+      "productVersion": "0.0.0",
+      "ordinaryBundlePluginAdd": true,
+      "freshIsolatedProfile": true,
+      "reusedOwnedNativeCliOnly": "0.2.0-rc.2",
+      "installedCliSha256": "2b8b068e2c4ce3cbb0f6e31f267064686adee46772e96420294e1a7b10a084f7",
+      "installedCliOutsideCheckout": true,
+      "componentArtifactsVerified": 6,
+      "offlineDependencyInstall": true,
+      "pinnedConsumerReproduction": true,
+      "consumerDockviewPins": ["dockview8.4.1", "dockview-core8.4.1"],
+      "defaultRangeResolutionNotQualified": ["dockview8.6.0", "dockview-core8.6.0"],
+      "genuinePublishedNpaInstall": false,
+      "productSourceModified": false
+    },
+    "nativeRuntimeIsolation": {
+      "nativeDshVersion": "0.2.0-rc.2",
+      "physicalPrivateInstallAnchor": true,
+      "nativePackageManifestSha256": "0a85203e3e907dd2e3bec34324a2494758ca6cdee234b07090a7c8df0b11acac",
+      "nativeCliEntrySha256": "1a03dee18683483ff6a1b27b2a1e650230da6bcca9a0f55f7d81b3308c3f307f",
+      "sourceBytesUnchanged": true,
+      "onlyNativeDirectDependenciesReused": true,
+      "originalRuntimeUntouched": true,
+      "productProfileSourceLinks": false
+    },
+    "installedIntro": {
+      "initialHarnessExit": 1,
+      "initialFailure": "Unsupported online Human capabilities fixture after completed model turn",
+      "reconciledWithSupportedInstalledHumanCliOwners": true,
+      "freshScopedCapabilitiesShell": {
+        "outcome": "ok"
+      },
+      "reply": "我是 Tob，你的本地 Bot 管家。现在这个版本我能帮你做这些事：\n\n• **创建与管理 Bot**：新建 Bot（名字、人设、初始记忆、头像），修改资料/头像/外观配色，暂停、恢复，以及按确认范围删除（默认保留记忆）。\n• **模型配置**：查看可用模型和每个 Bot 的模型方案；给 Bot 换编排模型或任务模型、设置可选模型与默认档位、创建并套用模型预设，也能调整全局默认模型。\n• **群聊管理**：帮你建群并拉 Bot 进去、邀请或撤销邀请、处理加入申请、改群名和群头像、设置某个 Bot 在该群的唤醒策略、把成员移出群。\n• **频道偏好**：针对某个私聊或群设置静音、置顶、隐藏，或设置你在这个频道里的昵称。\n• **环境与版本**：查看运行版本、检查更新、安装并重启（这类操作都会先请你确认），以及全局的并发上限、开发者模式等设置开关；遥测偏好也能读和改。\n\n需要说明的边界：我能管的是这些\"受支持的设置\"，并不能随意翻看其他 Bot 的私有对话或记忆；它们内部的工作只能通过各自对外暴露的进度来了解。\n\n想先看看什么？比如\"列出我所有的 Bot\"或者\"看看某个 Bot 现在用的什么模型\"，你说一声我就去查。",
+      "newApprovals": 0,
+      "modelPlanUnchanged": true,
+      "settingsRevision": 0,
+      "noScopedMutationCalls": true,
+      "newModelPromptSubmitted": false,
+      "actualInstalledCliSelected": true,
+      "pageErrors": [],
+      "readOnlyRenderedCapture": true
+    },
+    "humanCliProvenance": {
+      "selection": "explicit-artifact",
+      "filename": "deepseekbot.mjs",
+      "sha256": "2b8b068e2c4ce3cbb0f6e31f267064686adee46772e96420294e1a7b10a084f7"
+    },
+    "scopeLimit": "consumer pins for exact local artifacts/dependencies and producer-qualified dockview/core8.4.1; default8.6 resolution not qualified; genuine publishedNPA install/update/restart not run",
+    "buildInputs": {
+      "lockedBuildClosurePackages": 109,
+      "totalFiles": 2716,
+      "materializedBytes": 73628741,
+      "installerLifecycleScripts": false,
+      "originalSourceLockSha256": "3476c34c7d4515000d2617beaf2568b2a794b60de9b350cd8eafb7a2bf21adef",
+      "downloadedExactMissingPackages": 14,
+      "compressedBytes": 2516031,
+      "unpackedBytes": 11527052,
+      "allOriginalLockIntegritiesVerified": true
+    },
+    "publishedRegistryObservation": {
+      "observedAt": "2026-10-17T23:21:41.251Z",
+      "package": "deepseekbot",
+      "distTags": {
+        "next": "1.3.1",
+        "latest": "1.3.1"
+      },
+      "latestPublishedAt": "2026-10-14T15:06:33.226Z",
+      "latestVersion": "1.3.1",
+      "latestDependencies": {
+        "@botharness/ui": "1.3.1",
+        "@botharness/core": "1.3.1",
+        "@botharness/browser": "1.3.1",
+        "@botharness/computer": "1.3.1",
+        "@botharness/im-provider": "4.32.0-botharness.20"
+      },
+      "latestIntegrity": "sha512-/pQW54a7aXWyFf059SB3oleHfChPxML+0x1thbpRjeacTBth3aeAMz4l5xcOpB/vwbXKbP6JARU1RowNp5HAMQ=="
+    }
+  },
+  "unrun": [
+    "genuine published artifact containing current Tob release-install/restart",
+    "default unpinned dependency resolution (dockview/core8.6)",
+    "Tob Git-install UI/Host CLI and OS reboot",
+    "multiple native windows",
+    "final corrected monolithic intro invocation (actual completed turns reconciled separately)",
+    "exact-head CI",
+    "Human QA",
+    "merge",
+    "deployment"
+  ],
+  "images": [
+    {
+      "file": "web-natural-intro.png",
+      "width": 1440,
+      "height": 900,
+      "sha256": "f44876bac2698eb686b9e9598586862cf13410ec96dd632f3bfe481decf06e4e"
+    },
+    {
+      "file": "web-direct-off.png",
+      "width": 1440,
+      "height": 900,
+      "sha256": "7f119b5ed17c717b6c6a46f9e8e69972a1b396cee124ec9fd2db83ef428a713a"
+    },
+    {
+      "file": "web-direct-on.png",
+      "width": 1440,
+      "height": 900,
+      "sha256": "ecf33f59a33d58c179da58baf28abeedf34f449402213644f54894d5c9f1486a"
+    },
+    {
+      "file": "web-approve-review.png",
+      "width": 532,
+      "height": 495,
+      "sha256": "4c97bd1cce5579f8a09c3b097de808cd20f3c4b31de120885c712dea378ff310"
+    },
+    {
+      "file": "web-approve-result.png",
+      "width": 1440,
+      "height": 900,
+      "sha256": "be3818b3b65711259a1799dd00d7ced2f7c9901c5906b7984c388fc8bfc4600c"
+    },
+    {
+      "file": "web-deny-result.png",
+      "width": 1440,
+      "height": 900,
+      "sha256": "ff73b050eda1e6ea76e0c97ecbd5c34ead30c9f99e5844e5ff5a64db03af0d76"
+    },
+    {
+      "file": "web-restart-readback.png",
+      "width": 1440,
+      "height": 900,
+      "sha256": "82f62c1fa9b258a53bd87c34287b0d37b11ebef72df83d3bf000e4c716e05c3c"
+    },
+    {
+      "file": "native-direct-off.png",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "2f5de50ad9340281b70c5629cd4563059f15588902df942cee1c8e934f840cd2"
+    },
+    {
+      "file": "native-direct-on.png",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "b40d2ba0a8a04f49c865d05c1a080c19a409f7136b3ef94b232349b992d55c0b"
+    },
+    {
+      "file": "native-approve-review.png",
+      "width": 1000,
+      "height": 990,
+      "sha256": "c84177978f28132b70507e3db02cbad630d8f35630161b5822d25135e1a39846"
+    },
+    {
+      "file": "native-approve-result.png",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "f6a757ee252bd1d6f5fa0a8bcd92b3e3f6a58ed1e38f28cdf4c820d7a7a12944"
+    },
+    {
+      "file": "native-deny-result.png",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "cb22037a171908530f19f3f2c583cde2d74663281800be7b3fe4d6a5bbc74b3a"
+    },
+    {
+      "file": "native-restart-readback.png",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "e2c910fb5382fdca5d93bc552d19ed059853e2ee7929b38e1d234c9385e50415"
+    },
+    {
+      "file": "installed-product-intro.png",
+      "width": 1440,
+      "height": 900,
+      "sha256": "17749c75659425cfbb11304bb628031d5120276ab44b57448de6bf2f68fd177a"
+    }
+  ],
+  "comparison": "candidate action states, not base-version screenshots",
+  "native": {
+    "surface": "macOS Desktop, one selected Client",
+    "runtimeOwner": "parent serialized runner; main Desktop restored after each run",
+    "intro": {
+      "originalHarnessExit": 1,
+      "originalAssertion": "capability result missing",
+      "classification": "overstrict stdout substring assertion; actual CLI succeeded and model printed parsed command summary",
+      "freshNativeShell": {
+        "outcome": "ok",
+        "capturedExit": 0,
+        "parsedCommandCount": 52,
+        "fullOutputBytes": 18471,
+        "fullOutputSha256": "0ce64304ec216e2d08b044533fb47be5c45aef2a8c80d86794815f2853697b19",
+        "originalOutputMtimeWithinFreshTurn": true
+      },
+      "actualRenderedReply": "简单说，我是你本地的 Bot 管家，能替你做的事分五块： • **建 Bot、养 Bot** —— 新建 Bot 并写好人格和初始记忆；改名称/简介/标签；换头像、横幅、外观配色；暂停、恢复、删除（删除时默认保留记忆，除非你明确要抹掉）。 • **调模型和算力** —— 看可选模型和 Host 默认；给某个 Bot 单独指定模型与推理强度；管理模型预设并套用；调能同时跑几个任务。 • **建群、管群** —— 建群拉 Bot 进群、邀请/取消邀请、处理入群申请、改群名和群头像、调某个 Bot 在该群的唤醒策略、移除成员。我不进群，只替你管群。 • **频道个人偏好** —— 免打扰、置顶、隐藏，以及设置「你」在某个频道里的昵称。 • **运行与维护** —— 运行时开关、遥测开关、Git 运行时、版本检查与安装/重启。 边界：我改的是受支持的配置项，不会去翻别的 Bot 的对话内容；删除、安装、重启这类操作我都会先读给你看再由你确认。 想先看点什么？比如「列出现在的 Bot 和可用模型」，或者直接说想建一个什么用途的 Bot，我先把方案写给你确认。",
+      "pageErrors": [],
+      "offlineReconciliation": true,
+      "newPromptSubmitted": false,
+      "sameHostIndependentFullOutputParse": true,
+      "limits": "Full source output parsed independently from original native Shell file after process stop, not a second Human API call on that terminated process. New driver uses explicit Human CLI canonical readback."
+    },
+    "directTransitions": [
+      {
+        "label": "off",
+        "expected": false,
+        "actual": {
+          "enabled": false,
+          "preference": false
+        }
+      },
+      {
+        "label": "on",
+        "expected": true,
+        "actual": {
+          "enabled": true,
+          "preference": true
+        }
+      },
+      {
+        "label": "restore",
+        "expected": false,
+        "actual": {
+          "enabled": false,
+          "preference": false
+        }
+      }
+    ],
+    "approve": {
+      "reviewed": {
+        "scope": "global",
+        "command": "telemetry-set",
+        "target": "telemetry",
+        "previousValue": {
+          "enabled": false,
+          "preference": false
+        },
+        "patch": {
+          "enabled": true
+        }
+      },
+      "current": {
+        "enabled": true,
+        "preference": true
+      },
+      "completion": {
+        "turn": 7,
+        "endReason": "completed",
+        "delivery": "handled",
+        "reply": "已开启。读回确认：匿名使用统计现在是开启状态（enabled: true），也没有环境变量锁定它。要关随时说一声。"
+      }
+    },
+    "deny": {
+      "reviewed": {
+        "scope": "global",
+        "command": "telemetry-set",
+        "target": "telemetry",
+        "previousValue": {
+          "enabled": true,
+          "preference": true
+        },
+        "patch": {
+          "enabled": false
+        }
+      },
+      "current": {
+        "enabled": true,
+        "preference": true
+      },
+      "completion": {
+        "turn": 8,
+        "endReason": "completed",
+        "delivery": "handled",
+        "reply": "这次没关成：关闭的操作被审批拒绝了（approval-denied），我按规则停在这里，没有重试。读回确认匿名使用统计仍是开启状态。\n\n如果是刚才误点了拒绝，跟我说一句，我再发起一次，你在卡片上允许就行。"
+      }
+    },
+    "externalRestart": {
+      "actualNewProcess": true,
+      "beforePid": 13477,
+      "afterPid": 17609,
+      "sameAbsoluteHomeProfileAndUserdata": true,
+      "readBeforeWrites": {
+        "enabled": true,
+        "preference": true
+      }
+    },
+    "pageErrors": [],
+    "remainingPhaseExitCodes": [0, 0],
+    "limits": "one selected native Client; intro reconciled offline from original completed turn, original harness exit1 preserved; multiple native windows not tested"
+  },
+  "driverFollowup": {
+    "changes": "privacy navigation/transition captures; explicit installed-CLI provenance; fresh successful scoped Shell +supported Human settings/model owner reads instead of stdout field match or unsupported Human capabilities",
+    "productCodeChanged": false,
+    "originalFailuresRetained": [
+      "native intro stdout field assertion after actualcompletedturn",
+      "installed intro unsupported Human capabilities fixture after actualcompletedturn"
+    ],
+    "reconciledWithoutNewModelPrompts": true,
+    "finalCorrectedMonolithicIntroRerun": false,
+    "independentSupportedOwnerReadback": "installed Human settings revision0 and32modelentries passed; actual modelplan unchanged and no scoped mutation calls/approvals verified"
+  }
+}
