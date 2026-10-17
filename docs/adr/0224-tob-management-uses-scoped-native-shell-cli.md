@@ -24,6 +24,8 @@ A write carries the parsed namespace, patch, expected revision and previous valu
 
 Human `settings-set` also accepts explicit previous-value/revision inputs for a reviewed patch. Both flags are optional together for the existing Human flow and mandatory for scoped Tob writes. This keeps one command vocabulary without equating Human and Agent authority.
 
+The selected-import extension (#2100) keeps that same broker and approval boundary. Its private binary request accepts only the exact `bot-import-preview` and imported `create` commands with archive source metadata. The broker authenticates and checks current source authority before buffering, refuses oversized declared length immediately, enforces the existing 100 MiB archive limit while reading, and checks authority again after buffering and approval. Metadata has a separate bounded header. Archive bytes are never base64 JSON or model-facing output. Local ZIP/directory reads happen in the native Shell/CLI execution environment; the Host accepts uploaded bytes and does not gain a caller-selected directory-read endpoint. Source inspection and import receipts follow ADR-0225; broker restart does not revive authority.
+
 ## Security and lifecycle limits
 
 The child environment contains a bearer capability. Arbitrary Shell code can inspect or copy it, and this design is not isolation against another process controlled by the same OS user. Its protection is narrow operation scope, actual Host-side source checks, existing approval, revision guards and revocation. The capability must not be logged or stored as an administrator credential; its expiry does not make arbitrary Shell output safe to publish. Diagnostics omit endpoint/token values and record bounded operation outcomes.
@@ -34,6 +36,6 @@ A broker is a live transport adapter, not a new durable settings store, approval
 
 Per-setting management Tools would preserve duplicated discovery and require more Tool Registrations as coverage grows. Reusing a Human login token would bypass the accepted-DM and operation-scope boundaries. A CLI argument carrying a Session ID would let the caller nominate its own authority. None is used.
 
-Tob can discover and perform the first management journey through CLI while preserving the same Settings and approval owners. This does not yet grant access to other Bots, Memory, groups, models, client preferences or Marketplace commands. The UI/CLI inventory records those gaps and distinguishes an existing Human command from an operation supported in scoped Tob execution.
+Tob can discover and perform the first management journey through CLI while preserving the same Settings and approval owners. Later slices extend only their named operations, including selected Marketplace reads/imports under #2100; unsupported commands remain refused. The UI/CLI inventory records delivered contracts and remaining gaps and distinguishes an existing Human command from an operation supported in scoped Tob execution.
 
 Verification must exercise the actual Shell → CLI → Host path, including denial, stale revision, cancellation, source revocation, read-back and restart. Web rendering and macOS Desktop operation are separate gates; the architecture decision itself is not runtime evidence.

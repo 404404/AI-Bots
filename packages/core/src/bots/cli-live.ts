@@ -1,4 +1,9 @@
 import {
+  BOT_IMPORT_PREVIEW_COMMANDS,
+  runBotImportPreview,
+  type BotImportPreviewValues,
+} from './cli-import-preview.js';
+import {
   BOT_TRANSFER_COMMANDS,
   BOT_TRANSFER_OPTIONS,
   runBotTransfer,
@@ -191,6 +196,7 @@ const CONTROL_COMMANDS = [
 
 export const LIVE_COMMANDS = [
   ...BOT_TRANSFER_COMMANDS,
+  ...BOT_IMPORT_PREVIEW_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -362,7 +368,8 @@ interface LiveValues
     TodoValues,
     ApprovalTemplateValues,
     ApprovalReviewerValues,
-    BotTransferValues {
+    BotTransferValues,
+    BotImportPreviewValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -549,10 +556,23 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
   };
   const importBotZip = async <T>(
     archive: Uint8Array,
-    metadata: { name?: string; displayName?: string; roles?: string[]; description?: string },
+    metadata: {
+      name?: string;
+      displayName?: string;
+      roles?: string[];
+      description?: string;
+      operationKey?: string;
+      expectedArchive?: string;
+    },
   ): Promise<T> => {
     const url = new URL('/api/botharness/bot-zip/import', base);
-    for (const key of ['name', 'displayName', 'description'] as const) {
+    for (const key of [
+      'name',
+      'displayName',
+      'description',
+      'operationKey',
+      'expectedArchive',
+    ] as const) {
       if (metadata[key] !== undefined) url.searchParams.set(key, metadata[key]);
     }
     if (metadata.roles !== undefined) url.searchParams.set('roles', JSON.stringify(metadata.roles));
@@ -669,6 +689,8 @@ export async function runLiveCli(
   values: LiveValues,
   io: BotCreateCliIo,
 ): Promise<unknown> {
+  if (command === 'bot-import-preview')
+    return runBotImportPreview(rest, values, io, connectLiveHost);
   if (BOT_TRANSFER_COMMANDS.some((entry) => entry.command === command))
     return runBotTransfer(command, rest, values, io, connectLiveHost);
   if (IM_COMMANDS.some((entry) => entry.command === command)) {

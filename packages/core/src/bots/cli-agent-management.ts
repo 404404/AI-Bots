@@ -1,3 +1,4 @@
+import { parseAgentMarketplace, TOB_MARKETPLACE_USAGE } from './cli-agent-marketplace.js';
 import { parseBotTransfer, BOT_TRANSFER_USAGE } from './cli-bot-transfer.js';
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
 import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
@@ -14,11 +15,13 @@ export interface AgentManagementInvocation {
   command: string;
   args: Record<string, unknown>;
   write: boolean;
+  upload?: Uint8Array;
 }
 
 export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
   ...TOB_AGENT_BOT_COMMAND_USAGE,
   ...BOT_TRANSFER_USAGE,
+  ...TOB_MARKETPLACE_USAGE,
   ...TOB_AGENT_CHANNEL_COMMAND_USAGE,
   list: 'deepseekbot list',
   'model-catalog': 'deepseekbot model-catalog',
@@ -207,6 +210,8 @@ export async function parseAgentManagement(
   values: Record<string, unknown>,
   io: BotCreateCliIo,
 ): Promise<AgentManagementInvocation | undefined> {
+  const marketplace = await parseAgentMarketplace(command, rest, values, io);
+  if (marketplace) return marketplace;
   const transfer = parseBotTransfer(command, rest, values, true);
   if (transfer) return transfer;
   const channel = parseAgentChannels(command, rest, values);

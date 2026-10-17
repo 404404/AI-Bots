@@ -22,7 +22,7 @@ export const TOB_BOT_CREATE_CAPABILITIES: readonly TobCliCapability[] = [
   {
     command: 'create',
     description:
-      'Create one Bot with personality and initial Memory; retry the same operation key and payload to recover its identity and DM',
+      'Create the chosen custom Bot or import an explicitly selected inspected Git/ZIP/directory source; use the stable operation key and exact payload to recover the same identity and DM',
     write: true,
   },
 ];

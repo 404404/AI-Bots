@@ -1,3 +1,4 @@
+import { createBotImports, type BotImportsService } from '../bots/imports.js';
 import {
   ChannelPreferencesError,
   type ChannelPreferencesService,
@@ -542,9 +543,20 @@ export interface BridgeMethods {
   create(
     payload: unknown,
   ): BridgeResult<{ bot: PersonaBotDetail; channelId?: string; receipt?: BotCreationReceipt }>;
+  botImportPreview(
+    payload: unknown,
+  ): Promise<BridgeResult<Awaited<ReturnType<BotImportsService['previewGit']>>>>;
   createFromGit(
     payload: unknown,
-  ): Promise<BridgeResult<{ bot: PersonaBotDetail; httpsFallback?: HttpsFallback }>>;
+  ): Promise<
+    BridgeResult<{
+      bot: PersonaBotDetail;
+      httpsFallback?: HttpsFallback;
+      receipt?: BotCreationReceipt;
+      channelId?: string;
+      source?: unknown;
+    }>
+  >;
   update(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   deletionPreview(payload: unknown): BridgeResult<{ preview: PersonaBotDeletionPreview }>;
   deletionConfirm(payload: unknown): Promise<BridgeResult<{ deletion: PersonaBotDeletion }>>;
@@ -782,6 +794,7 @@ export interface BridgeMethodsDeps {
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
   creations?: BotCreationService;
+  imports?: BotImportsService;
   channelManagement?: ChannelManagementService;
   channelPreferences?: ChannelPreferencesService;
   approvalTemplates?: ApprovalTemplateLibrary;
@@ -1124,6 +1137,15 @@ function createFailure(
         error: {
           code: 'git-clone-failed',
           message: 'Git clone failed. Check the URL and Host Git credentials.',
+        },
+      };
+    case 'git-source-changed':
+      return {
+        ok: false,
+        error: {
+          code: 'git-source-changed',
+          message:
+            'The repository commit changed after inspection; inspect again before a new reviewed import.',
         },
       };
     case 'git-clone-timeout':
@@ -2636,6 +2658,24 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (!result.ok) return createFailure(slug, result);
       return { ok: true, value: detailOf(result.record) };
     },
+    async botImportPreview(payload) {
+      const gitUrl = asObject(payload)['gitUrl'];
+      if (typeof gitUrl !== 'string') return invalidInput('gitUrl is required');
+      const imports =
+        deps.imports ?? (deps.creations ? createBotImports(deps.creations) : undefined);
+      if (!imports) return unavailable();
+      try {
+        return { ok: true, value: await imports.previewGit(gitUrl) };
+      } catch (error) {
+        return {
+          ok: false,
+          error: {
+            code: error instanceof BotCreationError ? error.code : 'import-unavailable',
+            message: 'The selected source could not be inspected.',
+          },
+        };
+      }
+    },
     async createFromGit(payload) {
       const source = asObject(payload);
       const displayName = source['displayName'];
@@ -2649,11 +2689,50 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const roles = parseRoles(source);
       const description = parseOptional(source, 'description');
       if (!roles.ok || !description.ok) return invalidInput('invalid create payload');
+      if (source['operationKey'] !== undefined) {
+        const imports =
+          deps.imports ?? (deps.creations ? createBotImports(deps.creations) : undefined);
+        if (
+          !imports ||
+          typeof source['operationKey'] !== 'string' ||
+          typeof source['expectedCommit'] !== 'string'
+        )
+          return invalidInput('Stable Git import needs operationKey and expectedCommit');
+        try {
+          const input = imports.gitInput({
+            gitUrl,
+            expectedCommit: source['expectedCommit'],
+            displayName,
+            ...(roles.value === undefined ? {} : { roles: roles.value }),
+            ...(description.value === undefined ? {} : { description: description.value }),
+          });
+          const created = await imports.create(source['operationKey'], input);
+          return {
+            ok: true,
+            value: {
+              ...detailOf(created.record),
+              receipt: created.receipt!,
+              channelId: created.channelId,
+              source: input.source,
+              ...(created.httpsFallback === undefined
+                ? {}
+                : { httpsFallback: created.httpsFallback }),
+            },
+          };
+        } catch (error) {
+          if (error instanceof BotCreationError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
       const slug = createBotId();
       const result = await deps.registry.createFromGit({
         slug,
         displayName,
         gitUrl,
+        ...(typeof source['expectedCommit'] === 'string'
+          ? { expectedCommit: source['expectedCommit'] }
+          : {}),
         ...(roles.value === undefined ? {} : { roles: roles.value }),
         ...(description.value === undefined ? {} : { description: description.value }),
       });

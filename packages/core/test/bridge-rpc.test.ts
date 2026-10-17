@@ -543,6 +543,7 @@ describe('bridge typert service', () => {
       'get',
       'create',
       'createFromGit',
+      'botImportPreview',
       'update',
       'deletionPreview',
       'deletionConfirm',
@@ -771,7 +772,10 @@ describe('bridge typert service', () => {
       'gitUrl',
       'roles',
       'description',
+      'operationKey',
+      'expectedCommit',
     ]);
+    expect(parameterNames(service.botImportPreview)).toEqual(['gitUrl']);
     expect(parameterNames(service.marketplaceList)).toEqual(['query']);
     expect(parameterNames(service.marketplaceTopics)).toEqual([]);
     expect(parameterNames(service.marketplaceDetail)).toEqual(['id']);
