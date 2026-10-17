@@ -475,7 +475,7 @@ export interface BridgeActions {
   refreshRoster(signal?: AbortSignal): Promise<void>;
   refreshGit(signal?: AbortSignal): Promise<void>;
   installGit(): Promise<void>;
-  openBot(slug: string, view?: 'profile'): Promise<void>;
+  openBot(slug: string, view?: 'profile' | 'inbox'): Promise<void>;
   refreshBotInbox(slug: string): Promise<void>;
   openActivityCenter(): Promise<void>;
   attachActivityCenterPanel(): () => void;
@@ -1769,6 +1769,13 @@ export function createActions(
         kind: 'bot',
         slug,
         ...(view === 'profile' ? { profile: true } : {}),
+        ...(view === 'inbox'
+          ? {
+              inboxRequest:
+                (snapshot.selection?.kind === 'bot' ? (snapshot.selection.inboxRequest ?? 0) : 0) +
+                1,
+            }
+          : {}),
       };
       clientStore.select(selection);
       const active = currentSelection();

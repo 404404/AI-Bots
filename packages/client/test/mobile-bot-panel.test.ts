@@ -277,6 +277,7 @@ describe('Mobile Bot navigation', () => {
     const onBack = vi.fn();
     const onSettings = vi.fn();
     const onFiles = vi.fn();
+    const onInbox = vi.fn();
     const title = 'A deliberately long Group name';
     act(() =>
       root.render(
@@ -287,6 +288,8 @@ describe('Mobile Bot navigation', () => {
           settingsOpen: true,
           onFiles,
           filesOpen: true,
+          onInbox,
+          inboxOpen: true,
           t: enTranslate,
         }),
       ),
@@ -300,6 +303,11 @@ describe('Mobile Bot navigation', () => {
         .querySelector('[aria-controls="bh-channel-sidebar"]')
         ?.getAttribute('aria-expanded'),
     ).toBe('true');
+    click('Bot Inbox');
+    expect(onInbox).toHaveBeenCalledOnce();
+    expect(container.querySelector('[aria-label="Bot Inbox"]')?.getAttribute('aria-expanded')).toBe(
+      'true',
+    );
     click('Channel files');
     expect(onFiles).toHaveBeenCalledOnce();
     expect(

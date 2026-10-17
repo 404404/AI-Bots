@@ -148,17 +148,18 @@ describe('desktop Bot mode dock', () => {
     entry('members', 'channel'),
   ];
 
-  it('opens the Channel body with Sessions above Bot Inbox, and the rest closed', async () => {
+  it('opens the Channel body with Sessions and keeps Bot Inbox out of the Dock', async () => {
     await render(builtins);
     expect(host.textContent).toContain('channel body');
     expect(host.querySelector('[data-body="sessions"]')).not.toBeNull();
-    expect(host.querySelector('[data-body="bot-inbox"]')).not.toBeNull();
+    expect(host.querySelector('[data-body="bot-inbox"]')).toBeNull();
     expect(host.querySelector('[data-body="schedules"]')).toBeNull();
-    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions', 'bot-inbox']);
-    const column = (readChannelDock(storage)!.layout.grid.root.data as { data: unknown }[])[1]!;
-    expect((column.data as { data: { views: string[] } }[]).map((node) => node.data.views)).toEqual(
-      [['sessions'], ['bot-inbox']],
-    );
+    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions']);
+    expect(
+      JSON.stringify(readChannelDock(storage)!.layout.grid, (key, value) =>
+        key === 'size' ? undefined : value,
+      ),
+    ).not.toContain('bot-inbox');
     expect(host.querySelector('[data-dock-close="sessions"]')).not.toBeNull();
     expect(host.querySelector(`[data-dock-close="${CHANNEL_BODY_PANEL}"]`)).toBeNull();
     expect(host.querySelector('[data-dock-float]')).toBeNull();
@@ -167,33 +168,34 @@ describe('desktop Bot mode dock', () => {
   it('shows an empty state for a panel the active Channel has nothing for', async () => {
     await render(builtins, 'channel');
     expect(host.querySelector('[data-body="sessions"]')).toBeNull();
-    expect(host.querySelectorAll('[data-panel-empty]')).toHaveLength(2);
+    expect(host.querySelectorAll('[data-panel-empty]')).toHaveLength(1);
   });
 
   it('restores the saved layout after a reload', async () => {
     await render(builtins);
-    await click('[data-dock-close="bot-inbox"]');
-    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions']);
+    await click('[data-dock-close="sessions"]');
+    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL]);
     act(() => root.unmount());
     root = createRoot(host);
     await render(builtins);
     expect(host.querySelector('[data-body="bot-inbox"]')).toBeNull();
-    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions']);
+    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL]);
   });
 
   it('reopens a closed panel where it was, from the Panels menu', async () => {
     await render(builtins);
     await click('[data-dock-close="sessions"]');
     expect(readChannelDock(storage)!.parked['sessions']).toEqual({
-      neighbor: 'bot-inbox',
-      direction: 'above',
+      neighbor: CHANNEL_BODY_PANEL,
+      direction: 'right',
     });
     await click('[data-dock-menu] button');
     await click('[data-menu-item="sessions"]');
-    const column = (readChannelDock(storage)!.layout.grid.root.data as { data: unknown }[])[1]!;
-    expect((column.data as { data: { views: string[] } }[]).map((node) => node.data.views)).toEqual(
-      [['sessions'], ['bot-inbox']],
-    );
+    expect(
+      JSON.stringify(readChannelDock(storage)!.layout.grid, (key, value) =>
+        key === 'size' ? undefined : value,
+      ),
+    ).not.toContain('bot-inbox');
   });
 
   it('parks a panel whose plugin is gone and brings it back when it registers again', async () => {
@@ -206,7 +208,7 @@ describe('desktop Bot mode dock', () => {
     await render(builtins);
     expect(Object.keys(panels())).not.toContain('computer');
     expect(readChannelDock(storage)!.parked['computer']).toMatchObject({
-      neighbor: 'bot-inbox',
+      neighbor: 'sessions',
       direction: 'below',
       missing: true,
     });
@@ -220,7 +222,7 @@ describe('desktop Bot mode dock', () => {
     await click('[data-dock-close="sessions"]');
     await click('[data-dock-menu] button');
     await click('[data-menu-item="bh:dock-reset"]');
-    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions', 'bot-inbox']);
+    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions']);
     expect(values.has(CHANNEL_DOCK_STORAGE_KEY)).toBe(true);
   });
 
@@ -245,7 +247,7 @@ describe('desktop Bot mode dock', () => {
     await settle();
     expect(host.querySelector('[data-menu-item="sessions"]')).toBeNull();
     expect(disconnect).toHaveBeenCalledOnce();
-    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions', 'bot-inbox']);
+    expect(Object.keys(panels())).toEqual([CHANNEL_BODY_PANEL, 'sessions']);
     await click('[data-dock-menu] button');
     expect(host.querySelector('[data-menu-item="sessions"]')).not.toBeNull();
   });
@@ -294,7 +296,9 @@ describe('dockPanels Service in the dock', () => {
     ).toBe('global');
     expect(host.querySelector('[data-dock-panel="example:todo"] [data-todo-action]')).toBeNull();
     expect(registry.isOpen('example:todo')).toBe(true);
-    const layout = JSON.stringify(readChannelDock(storage)!.layout.grid);
+    const layout = JSON.stringify(readChannelDock(storage)!.layout.grid, (key, value) =>
+      key === 'size' ? undefined : value,
+    );
 
     act(() => root.unmount());
     root = createRoot(host);
@@ -306,7 +310,11 @@ describe('dockPanels Service in the dock', () => {
         ?.getAttribute('data-todo-action'),
     ).toBe('global');
     expect(host.querySelector('[data-dock-panel="example:todo"] [data-todo-action]')).toBeNull();
-    expect(JSON.stringify(readChannelDock(storage)!.layout.grid)).toBe(layout);
+    expect(
+      JSON.stringify(readChannelDock(storage)!.layout.grid, (key, value) =>
+        key === 'size' ? undefined : value,
+      ),
+    ).toBe(layout);
   });
 
   it('hands a channel panel the active Channel and opens it at its default position', async () => {
@@ -337,13 +345,13 @@ describe('dockPanels Service in the dock', () => {
     const seen: string[][] = [];
     registry.subscribe(() => seen.push([...registry.openPanels()]));
     await render(registry.panels(), 'personabot', { channel: dm, registry });
-    expect(registry.openPanels()).toEqual(['sessions', 'bot-inbox']);
-    act(() => registry.toggle('bot-inbox'));
+    expect(registry.openPanels()).toEqual(['sessions']);
+    act(() => registry.toggle('sessions'));
     await settle();
-    expect(registry.isOpen('bot-inbox')).toBe(false);
-    act(() => registry.toggle('bot-inbox'));
+    expect(registry.isOpen('sessions')).toBe(false);
+    act(() => registry.toggle('sessions'));
     await settle();
-    expect(registry.isOpen('bot-inbox')).toBe(true);
+    expect(registry.isOpen('sessions')).toBe(true);
     act(() => root.unmount());
     root = createRoot(host);
     expect(registry.openPanels()).toEqual([]);
@@ -639,4 +647,84 @@ it('opens Channel files inside Messages for DMs and Groups and switches with Mem
   expect(host.querySelector('[data-channel-files]')).toBeNull();
   expect(host.querySelector('aside [data-body="members"]')).not.toBeNull();
   expect(draft.value).toBe('unsent');
+});
+
+it('opens Bot Inbox only inside DM Messages, supports registry navigation and switches with files', async () => {
+  const { WorkspaceContext } = await import('../src/client/workspace-context.js');
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  registry.registerEntry(entry('bot-inbox'));
+  registry.registerEntry(entry('sessions'));
+  let detail: 'inbox' | 'files' | undefined;
+  let group = false;
+  const view = () =>
+    createElement(
+      WorkspaceContext.Provider,
+      { value: { rail: () => createElement('nav') } },
+      createElement(ChannelDock, {
+        body: createElement('input', { 'data-message-draft': '' }),
+        inbox: group
+          ? undefined
+          : {
+              open: detail === 'inbox',
+              setOpen: (open: boolean) => {
+                detail = open ? 'inbox' : undefined;
+                root.render(view());
+              },
+            },
+        files: {
+          open: detail === 'files',
+          setOpen: (open: boolean) => {
+            detail = open ? 'files' : undefined;
+            root.render(view());
+          },
+          content: createElement('div', { 'data-files': '' }),
+        },
+        panels: registry.panels(),
+        registry,
+        channel: {
+          id: group ? 'group' : 'dm',
+          type: group ? 'group' : 'dm',
+          botSlug: group ? undefined : 'ada',
+        },
+        entryProps,
+        shows: () => !group,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view()));
+  await settle();
+  const draft = host.querySelector<HTMLInputElement>('[data-message-draft]')!;
+  draft.value = 'unsent';
+  expect(host.querySelector('[data-body="bot-inbox"]')).toBeNull();
+  await click('[data-dock-header] button[aria-label="Bot 收件箱"]');
+  expect(host.querySelector('aside [data-body="bot-inbox"]')).not.toBeNull();
+  expect(Object.keys(panels())).not.toContain('bot-inbox');
+  expect(registry.isOpen('bot-inbox')).toBe(true);
+  await click('[data-dock-header] button[aria-label="频道文件"]');
+  expect(host.querySelector('aside [data-files]')).not.toBeNull();
+  expect(host.querySelector('[data-body="bot-inbox"]')).toBeNull();
+  expect(registry.isOpen('bot-inbox')).toBe(false);
+  act(() => registry.open('bot-inbox'));
+  await settle();
+  expect(host.querySelector('aside [data-body="bot-inbox"]')).not.toBeNull();
+  expect(host.querySelector('[data-files]')).toBeNull();
+  expect(host.querySelector('[data-message-draft]')).toBe(draft);
+  expect(draft.value).toBe('unsent');
+  act(() => registry.close('bot-inbox'));
+  await settle();
+  expect(host.querySelector('[data-body="bot-inbox"]')).toBeNull();
+  group = true;
+  act(() => root.render(view()));
+  await settle();
+  expect(host.querySelector('button[aria-label="Bot 收件箱"]')).toBeNull();
+  act(() => registry.open('bot-inbox'));
+  await settle();
+  expect(Object.keys(panels())).not.toContain('bot-inbox');
 });

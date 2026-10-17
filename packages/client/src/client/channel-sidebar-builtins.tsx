@@ -45,6 +45,7 @@ import { MemoryRecovery } from './memory-recovery.js';
 import { cachedMemory, invalidateMemory } from './memory-read-cache.js';
 import { MemoryFilesEntry } from './memory-files-entry.js';
 import { Note } from './ds/note.js';
+import { PanelEmptyState } from './ds/empty-state.js';
 import { PanelDialog } from './ds/panel-dialog.js';
 import { ExternalSourceContent } from './external-source-content.js';
 import { externalPlatformLabel, externalSenderLabel } from './bridge-source-label.js';
@@ -794,7 +795,13 @@ function BotInboxEntry({ actions, t, botSlug, flush }: ChannelSidebarEntryProps)
       {inbox.status === 'error' ? (
         <div className="bh-error" role="alert">
           {t('inbox.error', { error: inbox.error ?? '' })}
+          <button type="button" onClick={() => botSlug && void actions.refreshBotInbox(botSlug)}>
+            {t('inbox.retry')}
+          </button>
         </div>
+      ) : null}
+      {inbox.status === 'ready' && inbox.items.length === 0 ? (
+        <PanelEmptyState icon="inbox">{t('inbox.empty')}</PanelEmptyState>
       ) : null}
       {layout === 'time' ? (
         <>
@@ -1187,10 +1194,6 @@ export function createChannelSidebarBuiltins(
       component: BotInboxEntry,
       badge: BotInboxBadge,
       headerAction: BotInboxHeaderAction,
-      visible: (state) =>
-        state.botInbox.status === 'loading' ||
-        state.botInbox.status === 'error' ||
-        state.botInbox.items.length > 0,
     },
     {
       id: 'schedules',

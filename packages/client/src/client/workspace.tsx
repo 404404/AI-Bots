@@ -190,7 +190,7 @@ function WorkspaceRail({
     items: [
       { type: 'label', id: 'controls', text: t('workspace.visibleControls') },
       ...panels
-        .filter((panel) => panel.id !== 'members')
+        .filter((panel) => panel.id !== 'members' && panel.id !== 'bot-inbox')
         .map((panel) => ({
           id: panel.id,
           icon: <ChannelSidebarIcon name={panel.icon} />,
@@ -242,7 +242,7 @@ function WorkspaceRail({
             registry={options.dockPanels}
             order={order}
             onOrderChange={setOrder}
-            hiddenIds={['members', ...hiddenControls]}
+            hiddenIds={['members', 'bot-inbox', ...hiddenControls]}
             shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
             collapsed
             t={t}

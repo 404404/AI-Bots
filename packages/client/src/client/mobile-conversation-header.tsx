@@ -63,6 +63,8 @@ export function MobileConversationHeader({
   settingsOpen,
   onFiles,
   filesOpen = false,
+  onInbox,
+  inboxOpen = false,
   t,
 }: {
   title: string;
@@ -71,6 +73,8 @@ export function MobileConversationHeader({
   settingsOpen: boolean;
   onFiles?: (() => void) | undefined;
   filesOpen?: boolean | undefined;
+  onInbox?: (() => void) | undefined;
+  inboxOpen?: boolean | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
   return (
@@ -88,6 +92,17 @@ export function MobileConversationHeader({
         {title}
       </h1>
       <div {...stylex.props(styles.actions)}>
+        {onInbox && (
+          <button
+            type="button"
+            {...stylex.props(styles.button)}
+            onClick={onInbox}
+            aria-label={t('entry.botInbox')}
+            aria-expanded={inboxOpen}
+          >
+            <ChannelSidebarIcon name="inbox" size={22} />
+          </button>
+        )}
         {onFiles && (
           <button
             type="button"
