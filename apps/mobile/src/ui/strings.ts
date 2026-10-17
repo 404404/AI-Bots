@@ -16,6 +16,11 @@ const en = {
     title: 'Cloud services',
     hint: 'Import the UAT configuration supplied by your deployer. Cloud sign-in is separate from pairing a computer.',
     scan: 'Scan configuration',
+    paste: 'Paste configuration',
+    pasteHint:
+      'Paste the complete public JSON supplied by your deployer. Do not paste API keys or login credentials.',
+    configurationText: 'Public configuration JSON',
+    reviewConfig: 'Review configuration',
     camera: 'Allow camera',
     cancel: 'Cancel',
     trust:
@@ -51,7 +56,7 @@ const en = {
       'Sign-in is required. Sign out locally before starting again if a saved session remains.',
     storage: 'Secure storage could not be updated. The operation is not complete.',
     invalid:
-      'This is not a supported cloud configuration. Scan the QR code supplied by the deployer.',
+      'This is not a supported cloud configuration. Use the public configuration supplied by the deployer.',
   },
   activityRow: {
     dm: (recipient: string) => `sent a direct message to ${recipient}`,
@@ -756,6 +761,10 @@ const zh: typeof en = {
     title: '云服务',
     hint: '导入部署者提供的 UAT 配置。云服务登录与电脑配对相互独立。',
     scan: '扫描配置二维码',
+    paste: '粘贴配置',
+    pasteHint: '粘贴部署者提供的完整公开 JSON 配置。不要粘贴 API key 或登录凭证。',
+    configurationText: '公开 JSON 配置',
+    reviewConfig: '核对配置',
     camera: '允许使用相机',
     cancel: '取消',
     trust: '请确认这个服务地址属于你信任的实例。公开配置一致并不能证明服务运营者的身份。',
@@ -785,7 +794,7 @@ const zh: typeof en = {
     expired: '登录已过期，请重新开始。',
     required: '需要重新登录。如果仍有已保存的会话，请先退出本机登录。',
     storage: '安全存储未能更新，此操作尚未完成。',
-    invalid: '这不是支持的云服务配置，请扫描部署者提供的二维码。',
+    invalid: '这不是支持的云服务配置，请使用部署者提供的公开配置。',
   },
   activityRow: {
     dm: (recipient: string) => `向 ${recipient} 发送了私聊消息`,

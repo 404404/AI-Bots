@@ -11,7 +11,7 @@ Scope: [#2101](https://github.com/BotHarness/DeepSeekBot/issues/2101), [TOB T1](
 ## Observable path
 
 - From an unpaired launch, open **Cloud services** on the pairing screen. A paired user reaches the same screen from the Host drawer. Host pairing/active Host stays unchanged.
-- Scan the trusted operator QR. Check server/instance/UAT and confirm import. An ordinary URL, wrong callback or malformed QR is refused without credential exchange. Deny camera permission and verify the retry/settings path.
+- Scan the trusted operator QR, or use **Paste configuration** with the same complete public JSON. On Simulator, pasted import validates the real UI and session path; it does not qualify physical camera scanning. Check server/instance/UAT and confirm import. An ordinary URL, wrong callback or malformed QR is refused without credential exchange. Deny camera permission and verify the retry/settings path.
 - Tap **Sign in**. Human completes WorkOS login in the system browser. Return to the app; only the initialized admin is admitted. Screenshot the resulting status with unrelated/private data cropped.
 - Tap **Refresh session** and **Check session**. Verify the same admitted identity. Cold restart restores a saved session but requires verification before showing the signed-in status.
 - Tap **Sign out**. Confirm local removal and reported remote result; independently read back the WorkOS session, confirm the separate CLI session still works. Do not claim already-issued access JWTs are immediately invalidated.

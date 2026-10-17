@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, View } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, Linking, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError, configurationChanges, parseCloudQr } from '../../cloud/client';
 import { connectionKey, type InstanceConfig } from '../../cloud/instance-contract';
@@ -10,6 +10,7 @@ import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
+import { TextInput } from '../primitives/system-text';
 import { t } from '../strings';
 
 function errorMessage(code: string) {
@@ -36,6 +37,8 @@ export function CloudServicesScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const scanned = useRef(false);
+  const [pasting, setPasting] = useState(false);
+  const [configurationText, setConfigurationText] = useState('');
   const [candidate, setCandidate] = useState<{ raw: string; config: InstanceConfig }>();
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
@@ -56,10 +59,14 @@ export function CloudServicesScreen() {
     if (scanned.current) return;
     scanned.current = true;
     setScanning(false);
+    setCandidate(undefined);
     setNotice(undefined);
     setError(undefined);
     try {
       setCandidate({ raw, config: parseCloudQr(raw) });
+      setPasting(false);
+      setConfigurationText('');
+      Keyboard.dismiss();
     } catch (e) {
       setError(cloudError(e));
     }
@@ -74,6 +81,8 @@ export function CloudServicesScreen() {
     <FlatList
       style={{ flex: 1, backgroundColor: theme.color.base }}
       contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
       contentContainerStyle={{
         padding: space.x5,
         paddingBottom: insets.bottom + space.x6,
@@ -102,9 +111,61 @@ export function CloudServicesScreen() {
               setCandidate(undefined);
               setError(undefined);
               scanned.current = false;
+              setPasting(false);
               setScanning(true);
             }}
           />
+          <Button
+            label={t.cloud.paste}
+            disabled={!snapshot.ready || snapshot.busy}
+            onPress={() => {
+              setCandidate(undefined);
+              setError(undefined);
+              setScanning(false);
+              setPasting(true);
+            }}
+          />
+          {pasting && (
+            <View style={box}>
+              <Text>{t.cloud.pasteHint}</Text>
+              <TextInput
+                value={configurationText}
+                onChangeText={setConfigurationText}
+                accessibilityLabel={t.cloud.configurationText}
+                placeholder={t.cloud.configurationText}
+                placeholderTextColor={theme.color.subtle}
+                autoCapitalize="none"
+                autoCorrect={false}
+                multiline
+                maxLength={4097}
+                editable={!snapshot.busy}
+                style={{
+                  minHeight: theme.touch,
+                  padding: space.x4,
+                  borderRadius: radius.md,
+                  backgroundColor: theme.color.base,
+                  color: theme.color.fg,
+                  fontSize: theme.type.body.size,
+                }}
+              />
+              <Button
+                label={t.cloud.reviewConfig}
+                disabled={snapshot.busy || !configurationText.trim()}
+                onPress={() => {
+                  scanned.current = false;
+                  scan(configurationText);
+                }}
+              />
+              <Button
+                label={t.cloud.cancel}
+                onPress={() => {
+                  setPasting(false);
+                  setConfigurationText('');
+                  Keyboard.dismiss();
+                }}
+              />
+            </View>
+          )}
           {scanning && (
             <View style={box}>
               {permission?.granted ? (
