@@ -62,6 +62,32 @@ export interface MemoryAcceptedCommit {
   acceptedAt: string;
 }
 
+export interface MemoryHumanSave {
+  botSlug: string;
+  path: string;
+  body: string;
+  expectedHead: string;
+  editId: string;
+}
+
+export interface MemoryHumanRestore {
+  botSlug: string;
+  sha: string;
+  expectedHead: string;
+  restoreId: string;
+  name?: string;
+}
+
+export interface MemoryHumanReview {
+  head: string;
+  branch: string;
+  acceptedHead: string | null;
+  repositoryFingerprint: string;
+  diff: string;
+  previousBody?: string;
+  replayed?: MemoryAcceptedCommit;
+}
+
 export interface MemoryRepairEvent {
   id: string;
   botSlug: string;
@@ -238,20 +264,13 @@ export interface MemoryAcceptance {
     expectedHead: string;
     repairId: string;
   }): MemoryRepairEvent;
-  saveHuman(input: {
-    botSlug: string;
-    path: string;
-    body: string;
-    expectedHead: string;
-    editId: string;
-  }): MemoryAcceptedCommit;
-  restoreCommitHuman(input: {
-    botSlug: string;
-    sha: string;
-    expectedHead: string;
-    restoreId: string;
-    name?: string;
-  }): {
+  reviewHumanSave(input: MemoryHumanSave, reviewingSessionId?: string): MemoryHumanReview;
+  reviewHumanRestore(input: MemoryHumanRestore, reviewingSessionId?: string): MemoryHumanReview;
+  saveHuman(input: MemoryHumanSave, reviewingSessionId?: string): MemoryAcceptedCommit;
+  restoreCommitHuman(
+    input: MemoryHumanRestore,
+    reviewingSessionId?: string,
+  ): {
     head: string;
     backup: string | null;
     version: MemoryVersionName | null;
@@ -1122,6 +1141,84 @@ export function createMemoryAcceptance(options: {
         .get(botSlug, branch) as { head_sha: string } | undefined;
       return row?.head_sha ?? null;
     });
+
+  const priorHumanEdit = (root: string, input: MemoryHumanSave) => {
+    const prior = database.read(
+      (db) =>
+        db
+          .prepare(`SELECT * FROM memory_accepted_commits
+      WHERE bot_slug = ? AND cause_kind = 'human-edit' AND cause_id = ?`)
+          .get(input.botSlug, input.editId) as AcceptedRow | undefined,
+    );
+    if (!prior) return undefined;
+    const path = toMemoryRelativePath(input.path);
+    const paths = run(root, ['diff-tree', '--no-commit-id', '--name-only', '-r', '-z', prior.sha])
+      .toString('utf8')
+      .split('\0')
+      .filter(Boolean);
+    if (
+      head(root) !== prior.sha ||
+      prior.parent_sha !== input.expectedHead ||
+      paths.length !== 1 ||
+      paths[0] !== path ||
+      run(root, ['show', `${prior.sha}:${path}`], MAX_FILE_BYTES + 1).toString('utf8') !==
+        input.body
+    )
+      throw new MemoryAcceptError('memory-conflict', 'Human edit identity was already used');
+    return rowToCommit(prior);
+  };
+
+  // Scoped reviews deliberately require a clean current branch. Human restore keeps its
+  // existing checkpoint/dirty-work backup path; no review is allowed to discard that work.
+  const requireWritableTurn = (root: string, botSlug: string, reviewingSessionId?: string) => {
+    const flight = inFlight.get(botSlug);
+    if (!flight) return;
+    // Only the same prepared owning Orchestrator may apply its reviewed Human edit.
+    // This is an internal owner argument, never a caller-supplied RPC/CLI identity.
+    if (
+      !reviewingSessionId ||
+      flight.sessionId !== reviewingSessionId ||
+      flight.branch !== branchOf(root)
+    )
+      throw new MemoryAcceptError('memory-conflict', 'Another Memory turn is active');
+    requireOwned(botSlug, reviewingSessionId);
+    if (dirty(root) || acceptedHead(botSlug, flight.branch) !== head(root))
+      throw new MemoryAcceptError(
+        'memory-conflict',
+        'Prepared Memory must be clean at its accepted HEAD',
+      );
+  };
+  const reviewRepository = (
+    botSlug: string,
+    expectedHead: string,
+    replayHead?: string,
+    reviewingSessionId?: string,
+  ) => {
+    const root = repository(registry, botSlug);
+    requireWritableTurn(root, botSlug, reviewingSessionId);
+    bootstrap(botSlug, root);
+    if (pendingRepair(botSlug) || dirty(root) || head(root) !== (replayHead ?? expectedHead))
+      throw new MemoryAcceptError(
+        'memory-conflict',
+        'Memory changed, is busy or has unfinished work; preserve it before reviewing a change',
+      );
+    const branch = branchOf(root);
+    const accepted = acceptedHead(botSlug, branch);
+    if (inFlight.has(botSlug) && accepted !== head(root))
+      throw new MemoryAcceptError(
+        'memory-conflict',
+        'Memory HEAD is not accepted; preserve it for its owner',
+      );
+    return {
+      root,
+      head: head(root),
+      branch,
+      acceptedHead: accepted,
+      repositoryFingerprint: createHash('sha256')
+        .update(JSON.stringify([root, repositoryIdentity(root), branch, head(root), accepted]))
+        .digest('hex'),
+    };
+  };
 
   const accept = (
     botSlug: string,
@@ -2107,7 +2204,102 @@ export function createMemoryAcceptance(options: {
         ),
       );
     },
-    saveHuman(input) {
+    reviewHumanSave(input, reviewingSessionId) {
+      const root = repository(registry, input.botSlug);
+      const replayed = priorHumanEdit(root, input);
+      const state = reviewRepository(
+        input.botSlug,
+        input.expectedHead,
+        replayed?.sha,
+        reviewingSessionId,
+      );
+      const review = {
+        head: state.head,
+        branch: state.branch,
+        acceptedHead: state.acceptedHead,
+        repositoryFingerprint: state.repositoryFingerprint,
+      };
+      const path = toMemoryRelativePath(input.path);
+      resolveMemoryPath(root, path);
+      if (Buffer.byteLength(input.body, 'utf8') > 32000 || input.body.includes('\0'))
+        throw new MemoryAcceptError(
+          'memory-invalid',
+          'Reviewed Memory edits are bounded to 32000 UTF-8 bytes',
+        );
+      let previousBody = '';
+      const before = replayed?.parentSha ?? input.expectedHead;
+      const files = run(root, ['ls-tree', '-r', '--name-only', '-z', before])
+        .toString('utf8')
+        .split('\0');
+      if (files.includes(path)) {
+        const bytes = run(root, ['cat-file', 'blob', `${before}:${path}`], 32001);
+        try {
+          previousBody = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        } catch {
+          throw new MemoryAcceptError('memory-invalid', 'Cannot review a binary Memory file');
+        }
+        if (bytes.includes(0) || bytes.length > 32000)
+          throw new MemoryAcceptError(
+            'memory-invalid',
+            'Cannot review a binary or oversized Memory file',
+          );
+      }
+      if (previousBody === input.body)
+        throw new MemoryAcceptError('memory-conflict', 'Memory edit did not change the file');
+      const lines = (body: string, prefix: string) =>
+        body.length === 0
+          ? ''
+          : body
+              .split('\n')
+              .slice(0, body.endsWith('\n') ? -1 : undefined)
+              .map((line) => prefix + line + '\n')
+              .join('') + (body.endsWith('\n') ? '' : '\\ No newline at end of file\n');
+      const count = (body: string) =>
+        body.length === 0 ? 0 : body.split('\n').length - (body.endsWith('\n') ? 1 : 0);
+      const removed = count(previousBody),
+        added = count(input.body);
+      const diff =
+        `--- a/${path}\n+++ b/${path}\n@@ -${removed ? 1 : 0},${removed} +${added ? 1 : 0},${added} @@\n` +
+        lines(previousBody, '-') +
+        lines(input.body, '+');
+      return { ...review, previousBody, diff, ...(replayed ? { replayed } : {}) };
+    },
+    reviewHumanRestore(input, reviewingSessionId) {
+      const { root, ...review } = reviewRepository(
+        input.botSlug,
+        input.expectedHead,
+        undefined,
+        reviewingSessionId,
+      );
+      if (!/^[0-9a-f]{40}$/u.test(input.sha))
+        throw new MemoryAcceptError('memory-invalid', 'An exact restore revision is required');
+      try {
+        run(root, ['cat-file', '-e', `${input.sha}^{commit}`]);
+      } catch {
+        throw new MemoryAcceptError(
+          'memory-unknown-commit',
+          'Memory restore revision is unavailable',
+        );
+      }
+      if (input.name !== undefined) validVersionName(input.name);
+      const diff = run(
+        root,
+        [
+          'diff',
+          '--no-ext-diff',
+          '--no-textconv',
+          '--no-renames',
+          input.expectedHead,
+          input.sha,
+          '--',
+        ],
+        128 * 1024,
+      ).toString('utf8');
+      if (!diff)
+        throw new MemoryAcceptError('memory-conflict', 'Memory restore would not change content');
+      return { ...review, diff };
+    },
+    saveHuman(input, reviewingSessionId) {
       if (pendingRepair(input.botSlug) !== undefined) {
         throw new MemoryAcceptError(
           'memory-conflict',
@@ -2115,28 +2307,11 @@ export function createMemoryAcceptance(options: {
         );
       }
       const root = repository(registry, input.botSlug);
-      const priorEdit = database.read(
-        (db) =>
-          db
-            .prepare(`SELECT * FROM memory_accepted_commits
-          WHERE bot_slug = ? AND cause_kind = 'human-edit' AND cause_id = ?`)
-            .get(input.botSlug, input.editId) as AcceptedRow | undefined,
-      );
-      if (priorEdit !== undefined) {
-        const current = head(root);
-        const path = toMemoryRelativePath(input.path);
-        const previousBody = run(
-          root,
-          ['show', `${priorEdit.sha}:${path}`],
-          MAX_FILE_BYTES + 1,
-        ).toString('utf8');
-        if (current !== priorEdit.sha || previousBody !== input.body) {
-          throw new MemoryAcceptError('memory-conflict', 'Human edit identity was already used');
-        }
-        return rowToCommit(priorEdit);
-      }
+      requireWritableTurn(root, input.botSlug, reviewingSessionId);
+      const priorEdit = priorHumanEdit(root, input);
+      if (priorEdit !== undefined) return priorEdit;
       const baseline = head(root);
-      if (inFlight.has(input.botSlug) || baseline !== input.expectedHead || dirty(root)) {
+      if (baseline !== input.expectedHead || dirty(root)) {
         throw new MemoryAcceptError('memory-conflict', 'Memory changed since the Human opened it');
       }
       const path = toMemoryRelativePath(input.path);
@@ -2193,10 +2368,11 @@ export function createMemoryAcceptance(options: {
       }
       return accepted;
     },
-    restoreCommitHuman(input) {
-      if (inFlight.has(input.botSlug) || pendingRepair(input.botSlug) !== undefined)
+    restoreCommitHuman(input, reviewingSessionId) {
+      if (pendingRepair(input.botSlug) !== undefined)
         throw new MemoryAcceptError('memory-conflict', 'Memory is busy');
       const root = repository(registry, input.botSlug);
+      requireWritableTurn(root, input.botSlug, reviewingSessionId);
       const branch = branchOf(root);
       const baseline = head(root);
       if (baseline !== input.expectedHead)

@@ -310,6 +310,87 @@ describe('current Git working tree is Memory', () => {
     }
   });
 
+  it.each(['complete', 'abort'] as const)(
+    'preserves a reviewed own-Orchestrator Human edit through turn %s without reattribution or prefix replacement',
+    (outcome) => {
+      const { database, memory, root, ownership, addSource } = fixture();
+      try {
+        const expectedHead = memory.snapshot('atlas').head!;
+        const frozen = memory.personaForSession('session-atlas');
+        addSource('reviewed-own-edit');
+        memory.prepareTurn('atlas', 'session-atlas');
+        const input = {
+          botSlug: 'atlas',
+          path: 'MEMORY.md',
+          body: 'Human reviewed own Memory.\n',
+          expectedHead,
+          editId: 'own-human-edit',
+        };
+        expect(() => memory.reviewHumanSave(input)).toThrow('Another Memory turn is active');
+        expect(() => memory.saveHuman(input)).toThrow('Another Memory turn is active');
+        ownership.claim({
+          sessionId: 'foreign-assignment',
+          botSlug: 'atlas',
+          rootRole: 'assignment',
+          at: FIXED_NOW().toISOString(),
+        });
+        expect(() => memory.reviewHumanSave(input, 'foreign-assignment')).toThrow(
+          'Another Memory turn is active',
+        );
+        const review = memory.reviewHumanSave(input, 'session-atlas');
+        expect(review.head).toBe(expectedHead);
+        const saved = memory.saveHuman(input, 'session-atlas');
+        expect(saved).toMatchObject({
+          actorKind: 'human',
+          causeKind: 'human-edit',
+          causeId: 'own-human-edit',
+          parentSha: expectedHead,
+        });
+        expect(memory.personaForSession('session-atlas')).toBe(frozen);
+        if (outcome === 'complete') {
+          expect(
+            memory.reconcileTurn({
+              botSlug: 'atlas',
+              sessionId: 'session-atlas',
+              sourceEventId: 'reviewed-own-edit',
+            }),
+          ).toEqual([]);
+        } else {
+          writeFileSync(join(root, 'unfinished.md'), 'Keep failed-turn work.\n');
+          memory.abortTurn('atlas', 'session-atlas');
+          expect(readFileSync(join(root, 'unfinished.md'), 'utf8')).toBe(
+            'Keep failed-turn work.\n',
+          );
+        }
+        expect(memory.snapshot('atlas').head).toBe(saved.sha);
+        expect(memory.readAccepted('atlas', 'MEMORY.md')?.body).toBe(input.body);
+        addSource('after-reviewed-edit');
+        memory.prepareTurn('atlas', 'session-atlas');
+        expect(
+          memory.reconcileTurn({
+            botSlug: 'atlas',
+            sessionId: 'session-atlas',
+            sourceEventId: 'after-reviewed-edit',
+          }),
+        ).toEqual([]);
+        expect(
+          memory.history('atlas').filter((commit) => commit.causeId === 'own-human-edit'),
+        ).toEqual([saved]);
+        expect(
+          memory.history('atlas').some((commit) => commit.causeId === 'reviewed-own-edit'),
+        ).toBe(false);
+        expect(memory.snapshot('atlas').head).toBe(saved.sha);
+        expect(memory.personaForSession('session-atlas')).toBe(frozen);
+        expect(memory.refreshPersonaAfterCompaction('atlas', 'session-atlas')).toEqual({
+          refreshed: true,
+        });
+        expect(memory.personaForSession('session-atlas')).toContain(input.body.trim());
+      } finally {
+        database.close();
+      }
+    },
+  );
+
   it('lets the Human edit a code file on a raw branch and records the resulting commit', () => {
     const { home, database, memory, root } = fixture();
     try {

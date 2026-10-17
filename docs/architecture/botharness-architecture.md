@@ -1083,3 +1083,16 @@ unavailable。见 [ADR-0231](../adr/0231-tob-assignments-read-selected-memory-th
 委托 Memory Assignment 的每次 Shell 调用只接受一条字面的 `deepseekbot` 命令。受限 Consumer
 仅携带 broker 上下文，在进程内调用随产品交付的 CLI，不执行操作系统 Shell。原始命令、解释器、
 命令替换、重定向、文件工具与 Subagent 均不可用。目标身份在审核前固定，创建时再次比对。
+
+### Tob 审核 Memory 编辑（#2092）
+
+明确的 Home／Tob Human 私聊请求下，Tob Orchestrator 作为 Consumer，通过既有 scoped CLI
+调用 Memory owner 的固定修订查询、`saveHuman` 与 `restoreCommitHuman`；明确指定 Tob 自身时
+同样允许。Assignment 仍仅能分析和报告补丁，不能写 Memory。内部 review query 从同一 owner
+读取原文／目标 diff，固定目标 incarnation、仓库位置指纹、分支与 HEAD，既有审批展示准确差异，
+保存与单独恢复每次均需 Human 新作决定，full access 和自动审批不能替代。审批后重验原始来源、
+目标活跃状态和同一干净工作区，HEAD 未变而工作区变脏也拒绝；不绕过 owner 直接写文件。
+稳定 edit ID 的同目标／路径／全文／原始预期 HEAD 重放仅在原提交仍为当前 HEAD 时返回原 accepted
+commit，不重复写入。受限恢复拒绝脏工作区，保留 Human 原有 owner 的检查点与备份能力，
+恢复通过新提交保留历史而不回退分支。SOUL／Core Memory 文件变更在新 Session 和下次 compaction
+生效，运行中的冻结前缀保持不变。本片不新增 RPC、schema、Tool 或持久 authority。

@@ -109,6 +109,23 @@ Personal preference commands read a separate `stateFingerprint` and submit it as
 
 This is partial delivery of #2090, so implementation PRs reference rather than close it. Source mappings and contracts are not runtime evidence: direct CLI, real Tob approval/readback, Web members/history after reload and macOS Desktop require independent results. The earlier generation-98 receipt schema is forward-only; older Hosts cannot read a Profile after its schema has advanced.
 
+## #2092 reviewed Memory edits
+
+| User action                               | Reused CLI / owner                                         | Scoped contract                                                                                                                                                       |
+| ----------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read a selected Bot's Memory              | `memory-snapshot/file/history/diff`; Memory revision owner | Active target incarnation and original Human Home/private-DM authority; immutable bounded pages.                                                                      |
+| Edit Soul, Core Memory or one Memory file | `memory-save`; `saveHuman`                                 | Complete old/new diff, target, branch, expected HEAD and stable edit ID; fresh Human decision; clean repository; canonical Git readback.                              |
+| Restore selected historical content       | `memory-restore-commit`; `restoreCommitHuman`              | Its own fresh review, selected SHA and expected HEAD; scoped dirty restore refuses without discarding work. Human direct restore retains checkpoint/backup semantics. |
+| Let an Assignment prepare a change        | Existing read-scoped Assignment and report                 | Read/analysis only; writes remain with the eligible Tob Orchestrator. No file, native Shell provider, Subagent or tool bypass.                                        |
+
+Tob itself is eligible when explicitly requested; its deletion/archive protection is unchanged.
+Review pins target incarnation and repository location/branch as well as HEAD. A same-HEAD dirty
+worktree change during review refuses. A successful save's exact identity/payload replay returns
+its still-current original commit without another write; uncertain restore requires readback.
+No new RPC, migration, authority store or model tool is introduced. Soul/Core Memory edits affect
+new Sessions and the next compaction, while a running prefix stays frozen. Source regression,
+direct CLI, real Tob, Web and native macOS evidence remain independent gates.
+
 ## Updating the inventory
 
 For each new UI setting or action, identify its durable owner and scope first. Reuse its existing CLI command when equivalent; otherwise record the smallest delivery issue. A combined group is acceptable only while all recorded members share the same mapping or gap. Split a group when one operation becomes covered, remove stale mappings, and preserve precise nonconfigurable exceptions.

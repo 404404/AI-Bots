@@ -211,7 +211,7 @@ export async function parseAgentManagement(
 ): Promise<AgentManagementInvocation | undefined> {
   const schedule = parseAgentSchedules(command, rest, values);
   if (schedule) return schedule;
-  const memory = parseAgentMemory(command, rest, values);
+  const memory = await parseAgentMemory(command, rest, values, io);
   if (memory) return memory;
   const channel = parseAgentChannels(command, rest, values);
   if (channel) return channel;
