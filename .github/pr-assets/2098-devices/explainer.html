@@ -1946,8 +1946,9 @@
         <div class="am-head-meta">
           <span><b>source</b>Issue 2098 · Draft PR 2129</span
           ><span><b>base</b>a3e2c4e64d131191e686e33cb207d3db9b3a0937</span
-          ><span><b>source-head</b>e734b55dc6b74fa07ec9b0e8d1a9e6b762b67f51</span
-          ><span><b>runtime</b>8bde3340afb8ba4a23f3f715851f83da188168d2</span
+          ><span><b>source-head</b>f69a80a9d7148d4f6e8d80cc562590997ef19c6d</span
+          ><span><b>runtime</b>f69a80a9d7148d4f6e8d80cc562590997ef19c6d</span
+          ><span><b>capture</b>e734b55dc6b74fa07ec9b0e8d1a9e6b762b67f51</span
           ><span><b>generated</b>2026-10-18</span>
         </div>
         <div class="am-intro am-md">
@@ -2186,9 +2187,123 @@
               </div>
             </div>
           </section>
-          <section class="am-panel am-span-wide" id="panel-E" style="grid-column: span 2">
+          <section class="am-panel" id="panel-E">
             <header class="am-panel-head">
               <span class="am-panel-id">E</span>
+              <h2>新的人类指令如何获得权限？</h2>
+            </header>
+            <div class="am-panel-body">
+              <figure class="am-diagram am-flow">
+                <svg
+                  viewBox="0 0 160 360"
+                  width="160"
+                  height="360"
+                  role="img"
+                  aria-label="流程图：新Human私信、私有输入身份、回合与上下文版本、既有审批"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <marker
+                      id="am2-arrow"
+                      viewBox="0 0 10 10"
+                      refX="9"
+                      refY="5"
+                      markerWidth="7"
+                      markerHeight="7"
+                      orient="auto-start-reverse"
+                    >
+                      <path class="am-arrow" d="M0,0 L10,5 L0,10 z" />
+                    </marker>
+                  </defs>
+                  <g></g>
+                  <g>
+                    <g data-step="0">
+                      <path
+                        class="am-edge"
+                        d="M80,49 L80,65 Q80,81 80,97 L80,113"
+                        marker-end="url(#am2-arrow)"
+                      />
+                      <g class="am-edge-label">
+                        <rect x="24.9" y="72" width="110.3" height="18" rx="3" />
+                        <text x="80" y="81" text-anchor="middle" dominant-baseline="central">
+                          实际受保护DM送达
+                        </text>
+                      </g>
+                    </g>
+                    <g data-step="1">
+                      <path
+                        class="am-edge"
+                        d="M80,148 L80,164 Q80,180 80,196 L80,212"
+                        marker-end="url(#am2-arrow)"
+                      />
+                      <g class="am-edge-label">
+                        <rect x="17.5" y="171" width="125" height="18" rx="3" />
+                        <text x="80" y="180" text-anchor="middle" dominant-baseline="central">
+                          固定来源与完整上下文
+                        </text>
+                      </g>
+                    </g>
+                    <g data-step="2">
+                      <path
+                        class="am-edge"
+                        d="M80,247 L80,263 Q80,279 80,295 L80,311"
+                        marker-end="url(#am2-arrow)"
+                      />
+                      <g class="am-edge-label">
+                        <rect x="40.5" y="270" width="79" height="18" rx="3" />
+                        <text x="80" y="279" text-anchor="middle" dominant-baseline="central">
+                          变更前后重验
+                        </text>
+                      </g>
+                    </g>
+                  </g>
+                  <g>
+                    <g class="am-node am-node--rect" data-key="新Human私信" data-step="0">
+                      <rect
+                        class="am-node-shape"
+                        x="25.6"
+                        y="14"
+                        width="108.9"
+                        height="35"
+                        rx="3"
+                      />
+                      <text x="80" y="31.5" text-anchor="middle" dominant-baseline="central">
+                        新Human私信
+                      </text>
+                    </g>
+                    <g class="am-node am-node--rect" data-key="私有输入身份" data-step="0">
+                      <rect class="am-node-shape" x="27" y="113" width="106" height="35" rx="3" />
+                      <text x="80" y="130.5" text-anchor="middle" dominant-baseline="central">
+                        私有输入身份
+                      </text>
+                    </g>
+                    <g class="am-node am-node--rect" data-key="回合与上下文版本" data-step="1">
+                      <rect class="am-node-shape" x="14" y="212" width="132" height="35" rx="3" />
+                      <text x="80" y="229.5" text-anchor="middle" dominant-baseline="central">
+                        回合与上下文版本
+                      </text>
+                    </g>
+                    <g class="am-node am-node--rect" data-key="既有审批" data-step="2">
+                      <rect class="am-node-shape" x="40" y="311" width="80" height="35" rx="3" />
+                      <text x="80" y="328.5" text-anchor="middle" dominant-baseline="central">
+                        既有审批
+                      </text>
+                    </g>
+                  </g>
+                </svg>
+              </figure>
+              <div class="am-md">
+                <p>
+                  Memory 整理可以接收一条新的人类指令。 历史来源、其他 Bot
+                  或外部输入不会授予管理权限。 后续输入会撤销旧执行的权限。
+                  澄清回答必须绑定原问题，并且实际送达成功。 期间其他回合会使旧问题的管理权限失效。
+                </p>
+              </div>
+            </div>
+          </section>
+          <section class="am-panel" id="panel-F">
+            <header class="am-panel-head">
+              <span class="am-panel-id">F</span>
               <h2>当前证据与边界</h2>
             </header>
             <div class="am-panel-body">
@@ -2203,10 +2318,10 @@
                     </thead>
                     <tbody>
                       <tr>
-                        <td>聚焦设备与清单回归</td>
+                        <td>新源码聚焦权限与设备回归</td>
                         <td>
                           <span class="am-status am-status--ok"
-                            ><span class="am-status-icon" aria-hidden="true">✓</span>25 项通过</span
+                            ><span class="am-status-icon" aria-hidden="true">✓</span>79 项通过</span
                           >
                         </td>
                       </tr>
@@ -2249,7 +2364,7 @@
                         <td>
                           <span class="am-status am-status--warn"
                             ><span class="am-status-icon" aria-hidden="true">!</span
-                            >父任务串行验证</span
+                            >旧源码第二条指令失败；修复后待父任务重跑</span
                           >
                         </td>
                       </tr>
@@ -2265,8 +2380,8 @@
                         <td>Draft PR</td>
                         <td>
                           <span class="am-status am-status--ok"
-                            ><span class="am-status-icon" aria-hidden="true">✓</span>已创建 2129；CI
-                            已请求</span
+                            ><span class="am-status-icon" aria-hidden="true">✓</span>已创建
+                            2129；新提交需重新核对 CI</span
                           >
                         </td>
                       </tr>
@@ -2282,7 +2397,11 @@
                   </table>
                 </div>
                 <p>测试客户端只能证明协议与网关行为。 它不能证明手机相机、Keychain 或原生网络。</p>
-                <p>产物提交只保存解释页和验证入口。 产品源码绑定 runtime 所示提交。</p>
+                <p>
+                  产品源码绑定 runtime 所示提交。 旧截图绑定 capture 所示提交与原始 8bde 源码。
+                  首次原生失败保留，不能当作新源码通过。 新源码完整 Web 旅程已通过。 新 Human
+                  指令进入实际 Memory 整理回合的 Web 验证也已通过。
+                </p>
                 <p>
                   <a href="https://github.com/BotHarness/DeepSeekBot/pull/2129">Draft PR 2129</a>
                 </p>
@@ -2335,7 +2454,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 06:57 ·
+      0.5.0 · 2026-10-18 07:57 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2349,8 +2468,9 @@ title: 已配对设备的 CLI 管理
 subtitle: Tob 只接收安全收据，配对链接交给人工界面
 source: Issue 2098 · Draft PR 2129
 base: a3e2c4e64d131191e686e33cb207d3db9b3a0937
-source-head: e734b55dc6b74fa07ec9b0e8d1a9e6b762b67f51
-runtime: 8bde3340afb8ba4a23f3f715851f83da188168d2
+source-head: f69a80a9d7148d4f6e8d80cc562590997ef19c6d
+runtime: f69a80a9d7148d4f6e8d80cc562590997ef19c6d
+capture: e734b55dc6b74fa07ec9b0e8d1a9e6b762b67f51
 generated: 2026-10-18
 ---
 CLI 现在可以查看设备与路由、创建配对邀请、核对收据并撤销设备。
@@ -2396,24 +2516,39 @@ Tob 还需经过现有审批。
 撤销由现有管理模块落库并关闭已打开的连接。
 后续请求返回 `device-revoked`。
 
-## E 当前证据与边界
+## E 新的人类指令如何获得权限？
+```flow TB
+新Human私信 -&gt; 私有输入身份: 实际受保护DM送达
+私有输入身份 -&gt; 回合与上下文版本: 固定来源与完整上下文
+回合与上下文版本 -&gt; 既有审批: 变更前后重验
+```
+Memory 整理可以接收一条新的人类指令。
+历史来源、其他 Bot 或外部输入不会授予管理权限。
+后续输入会撤销旧执行的权限。
+澄清回答必须绑定原问题，并且实际送达成功。
+期间其他回合会使旧问题的管理权限失效。
+
+## F 当前证据与边界
 | 检查 | 状态 |
 | --- | --- |
-| 聚焦设备与清单回归 | ok 25 项通过 |
+| 新源码聚焦权限与设备回归 | ok 79 项通过 |
 | 较早的相关 CLI 回归 | ok 97 项通过 |
 | 来源策略、CLI 覆盖、变更记录 | ok 通过 |
 | 独立 CLI 与 Web 路径 | ok 完整通过；连接关闭码为现有 1006 |
 | 类型检查、构建与官方模型 Tob 旅程 | ok 通过；配对交接与撤销均已核对 |
-| macOS Desktop | warn 父任务串行验证 |
+| macOS Desktop | warn 旧源码第二条指令失败；修复后待父任务重跑 |
 | 物理手机 | warn 尚未验证 |
-| Draft PR | ok 已创建 2129；CI 已请求 |
+| Draft PR | ok 已创建 2129；新提交需重新核对 CI |
 | 合并、部署 | warn 尚未执行 |
 
 测试客户端只能证明协议与网关行为。
 它不能证明手机相机、Keychain 或原生网络。
 
-产物提交只保存解释页和验证入口。
 产品源码绑定 runtime 所示提交。
+旧截图绑定 capture 所示提交与原始 8bde 源码。
+首次原生失败保留，不能当作新源码通过。
+新源码完整 Web 旅程已通过。
+新 Human 指令进入实际 Memory 整理回合的 Web 验证也已通过。
 
 [Draft PR 2129](https://github.com/BotHarness/DeepSeekBot/pull/2129)
 </textarea>
