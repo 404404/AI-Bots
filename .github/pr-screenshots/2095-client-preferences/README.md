@@ -1,6 +1,6 @@
 # #2095 review evidence
 
-Application source frozen at `eb0f85116d934d56d8c60b92e88117e6f2b18725`, based on `a3e2c4e64d131191e686e33cb207d3db9b3a0937` (unmerged #2119). The source build is `50d998e7c8104cb0b34c12e84787c8fcd8e10cd0`; later commits change verification and review material only. Captures: 2026-10-18 Asia/Tokyo, DSH 0.2.0-rc.2, Chromium Web, 1440×900 except the intentionally cropped Host review payload. Native macOS captures are 2522×1640 image pixels, except its cropped Host review payload.
+Runtime evidence source `eb0f85116d934d56d8c60b92e88117e6f2b18725`, based on `a3e2c4e64d131191e686e33cb207d3db9b3a0937` (unmerged #2119). The runtime source build is `50d998e7c8104cb0b34c12e84787c8fcd8e10cd0`. Later CI fix `5b4cc293fa2ab661543b0a464a1ada38268d3115` adds browser-absence bootstrap guards and updates contract fixtures; it passes focused bootstrap/owner checks, root/mobile typecheck and build, but Web/native runtime was not rerun after that fix. Captures: 2026-10-18 Asia/Tokyo, DSH 0.2.0-rc.2, Chromium Web, 1440×900 except the intentionally cropped Host review payload. Native macOS captures are 2522×1640 image pixels, except its cropped Host review payload.
 
 | Artifact                            | Actual observation                                                                                                                             |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -30,3 +30,7 @@ The parent ran the existing direct/model/model-theme phases, then externally res
 | native-restart-notification-readback.png | Actual native Notifications control off after process restart; theme dark                 |
 
 This is one selected native Client. It does not test multiple native windows, peer storage events or independent native profiles. OS permission was observed as granted; no Human OS permission prompt or actual OS notification delivery was tested. The original main Desktop was restored by the parent after each run. No app source changed for these captures.
+
+## Exact-head CI follow-up
+
+Full CI on a11d32279 failed9 deterministic tests: the plugin method fixture omitted clientControl, a CLI fixture omitted Host scope metadata, six intentionally headless apply tests referenced absent window, and the bundle sandbox lacked browser event APIs. There is no OOM/timeout cause in those failures. The source fix guards only absent browser facilities; production browser APIs remain required. An apply integration test with actual EventTarget/session storage requires the real Client-control poll. Five focused files passed48/48; after the Cordis effect-disposer typing adjustment the two affected bootstrap files passed14/14, followed by root/mobile typecheck and one build. New full CI remains separate. Historical screenshots were not recaptured and must not be labeled as runtime qualification of the later guard patch.

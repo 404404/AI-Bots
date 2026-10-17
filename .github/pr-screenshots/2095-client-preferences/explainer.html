@@ -1944,7 +1944,7 @@
         <h1>Tob 偏好控制：目标、范围与现有 owner</h1>
         <p class="am-sub">Draft PR 2126 · Issue 2095 · 2026-10-18</p>
         <div class="am-head-meta">
-          <span><b>source</b>应用源码 eb0f85116d934d56d8c60b92e88117e6f2b18725</span>
+          <span><b>source</b>CI 修复源码 5b4cc293fa2ab661543b0a464a1ada38268d3115</span>
         </div>
       </header>
       <div class="am-doc-layout">
@@ -2279,11 +2279,11 @@
                     </thead>
                     <tbody>
                       <tr>
-                        <td>focused source checks</td>
+                        <td>原运行源码 focused checks</td>
                         <td>187/188；修正新增 RPC 清单后相关 33/33 通过</td>
                       </tr>
                       <tr>
-                        <td>typecheck、lint、build</td>
+                        <td>原运行源码 typecheck、lint、build</td>
                         <td>通过；lint 保留原有 warnings</td>
                       </tr>
                       <tr>
@@ -2318,6 +2318,12 @@
                   </table>
                 </div>
                 <p>
+                  CI 的 9 个失败来自准确清单和无浏览器启动假设。 没有 OOM 或 timeout 失败证据。
+                  修复后五个 focused 文件通过 48/48。 cleanup 返回值修正后，相关两个文件通过 14/14。
+                  最终 root/mobile typecheck 和 build 通过。
+                  实际浏览器挂载与无浏览器启动都有回归覆盖。
+                </p>
+                <p>
                   最初 Go provider 返回 429。 保留失败后，使用已授权官方 provider 和全新 Human
                   请求。 成功 Web journeys 的 page-error 列表为空。
                   截图展示真实动作前后，不代表基线版本的像素差异。
@@ -2344,9 +2350,11 @@
                   proof、generation、审批重检与原有 owner。
                 </p>
                 <p>
-                  基线为 a3e2c4e64d131191e686e33cb207d3db9b3a0937。 应用源码冻结于
-                  eb0f85116d934d56d8c60b92e88117e6f2b18725。 之后的 review assets
-                  提交不改变应用源码。 本页是 review 说明，不是 native 验收或 Human 批准。
+                  基线为 a3e2c4e64d131191e686e33cb207d3db9b3a0937。 运行图像和模型证据来自
+                  eb0f85116d934d56d8c60b92e88117e6f2b18725。 CI 修复为
+                  5b4cc293fa2ab661543b0a464a1ada38268d3115。 它加入无浏览器环境的启动 guard。
+                  该修复之后未重跑 Web 或 native。 本页是 review 说明，不是 native 验收或 Human
+                  批准。
                 </p>
               </div>
             </div>
@@ -2397,7 +2405,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 06:52 ·
+      0.5.0 · 2026-10-18 07:12 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2409,7 +2417,7 @@ template: doc
 theme: paper
 title: Tob 偏好控制：目标、范围与现有 owner
 subtitle: Draft PR 2126 · Issue 2095 · 2026-10-18
-source: 应用源码 eb0f85116d934d56d8c60b92e88117e6f2b18725
+source: CI 修复源码 5b4cc293fa2ab661543b0a464a1ada38268d3115
 ---
 
 ## A 用户能做什么
@@ -2470,8 +2478,8 @@ owner 先刷新真实存储，再比较 expectedState。
 
 | 检查 | 结果与边界 |
 | --- | --- |
-| focused source checks | 187/188；修正新增 RPC 清单后相关 33/33 通过 |
-| typecheck、lint、build | 通过；lint 保留原有 warnings |
+| 原运行源码 focused checks | 187/188；修正新增 RPC 清单后相关 33/33 通过 |
+| 原运行源码 typecheck、lint、build | 通过；lint 保留原有 warnings |
 | Web 真实双 tab | UI 同步、旧 CLI 拒绝、新 CLI 两端可见 |
 | 独立 browser context | 通知值隔离，Host 主题共同变化 |
 | 自然 Tob 通知请求 | 来源、审批、普通 Shell trace、owner readback 通过 |
@@ -2479,6 +2487,13 @@ owner 先刷新真实存储，再比较 expectedState。
 | Host 与浏览器进程重启 | 同 Profile、保留浏览器存储，先读后写验证通过 |
 | 原生单 Client | 实际通知控件、普通 CLI、自然 Tob 审批与 Host 主题通过 |
 | 原生进程重启 | 同绝对 Profile 与 userdata，通知和主题先读后写验证通过 |
+
+CI 的 9 个失败来自准确清单和无浏览器启动假设。
+没有 OOM 或 timeout 失败证据。
+修复后五个 focused 文件通过 48/48。
+cleanup 返回值修正后，相关两个文件通过 14/14。
+最终 root/mobile typecheck 和 build 通过。
+实际浏览器挂载与无浏览器启动都有回归覆盖。
 
 最初 Go provider 返回 429。
 保留失败后，使用已授权官方 provider 和全新 Human 请求。
@@ -2499,8 +2514,10 @@ CI、Human QA、合并与部署也不属于本地通过项。
 重点审查 proof、generation、审批重检与原有 owner。
 
 基线为 a3e2c4e64d131191e686e33cb207d3db9b3a0937。
-应用源码冻结于 eb0f85116d934d56d8c60b92e88117e6f2b18725。
-之后的 review assets 提交不改变应用源码。
+运行图像和模型证据来自 eb0f85116d934d56d8c60b92e88117e6f2b18725。
+CI 修复为 5b4cc293fa2ab661543b0a464a1ada38268d3115。
+它加入无浏览器环境的启动 guard。
+该修复之后未重跑 Web 或 native。
 本页是 review 说明，不是 native 验收或 Human 批准。
 </textarea>
     <script>
