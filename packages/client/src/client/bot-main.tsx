@@ -64,7 +64,8 @@ import {
   type ChannelComposerStop,
   type ChannelComposerUpload,
 } from './channel-composer.js';
-import { GeneratedFilesContext } from './generated-files-panel.js';
+import { PanelDialog } from './ds/panel-dialog.js';
+import { ChannelFiles, GeneratedFilesContext } from './generated-files-panel.js';
 import { attachmentIdentity } from '../../../core/src/attachments/ref.js';
 import { stoppableBots } from './composer-stop.js';
 import type { SelectedMention } from './mentions.js';
@@ -1007,6 +1008,8 @@ function ConversationView({
 }): ReactElement {
   const sidebar = useChannelSidebar(state);
   const docked = useChannelDockActive();
+  const workspaceEnabled = useContext(WorkspaceContext) !== undefined;
+  const [filesOpen, setFilesOpen] = useScopedState(scopeKey, false);
   const dockBotEntries = useSyncExternalStore(
     channelSidebar.subscribe,
     () => channelSidebar.entries('personabot'),
@@ -2308,6 +2311,8 @@ function ConversationView({
             title={title}
             onBack={onMobileBack}
             onSettings={sidebar.toggle}
+            onFiles={channelId === undefined ? undefined : () => setFilesOpen(!filesOpen)}
+            filesOpen={filesOpen}
             settingsOpen={sidebar.mode !== 'hidden'}
             t={t}
           />
@@ -2422,6 +2427,17 @@ function ConversationView({
                 </button>
               ),
             )}
+          </span>
+        )}
+        {!workspaceEnabled && onMobileBack === undefined && channelId !== undefined && (
+          <span className="bh-channel-island-wrap">
+            <IconButton
+              aria-label={t('generatedFiles.title')}
+              aria-expanded={filesOpen}
+              onClick={() => setFilesOpen(!filesOpen)}
+            >
+              <ChannelSidebarIcon name="file" />
+            </IconButton>
           </span>
         )}
       </div>
@@ -3117,6 +3133,22 @@ function ConversationView({
           {docked ? (
             <ChannelDock
               body={chatPane}
+              files={
+                workspaceEnabled && channelId !== undefined
+                  ? {
+                      open: filesOpen,
+                      setOpen: setFilesOpen,
+                      content: (
+                        <ChannelFiles
+                          key={channelId}
+                          channelId={channelId}
+                          actions={actions}
+                          t={t}
+                        />
+                      ),
+                    }
+                  : undefined
+              }
               revealBody={state.selection?.kind === 'bot' && state.selection.profile === true}
               panels={dockPanelList}
               channel={dockChannel}
@@ -3127,6 +3159,16 @@ function ConversationView({
             />
           ) : (
             chatPane
+          )}
+          {!workspaceEnabled && filesOpen && channelId !== undefined && (
+            <PanelDialog
+              title={t('generatedFiles.title')}
+              closeLabel={t('dock.close', { label: t('generatedFiles.title') })}
+              onClose={() => setFilesOpen(false)}
+              scroll
+            >
+              <ChannelFiles key={channelId} channelId={channelId} actions={actions} t={t} />
+            </PanelDialog>
           )}
         </GeneratedFilesContext.Provider>
         <ChannelSettingsDialog registry={channelSidebar} state={state} actions={actions} t={t} />

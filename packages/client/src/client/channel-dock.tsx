@@ -108,8 +108,15 @@ interface EntryRuntime {
   expandable: boolean;
 }
 
+interface ChannelFilesView {
+  open: boolean;
+  setOpen(open: boolean): void;
+  content: ReactNode;
+}
+
 interface DockContextValue {
   body: ReactNode;
+  files?: ChannelFilesView | undefined;
   rail?: ReactNode;
   channelsHeader: HTMLSpanElement | null;
   setChannelsHeader(node: HTMLSpanElement | null): void;
@@ -154,6 +161,9 @@ function useEntryProps(entryId: string): ChannelSidebarEntryProps | undefined {
 function ChannelBodyPanel(): ReactElement {
   const dock = useDock();
   const members = dock.members;
+  const filesOpen = dock.channel !== undefined && dock.files?.open === true;
+  const detailLabel = dock.t(filesOpen ? 'generatedFiles.title' : 'entry.members');
+  const closeDetail = () => (filesOpen ? dock.files?.setOpen(false) : members?.setOpen(false));
   const memberProps = useEntryProps('members');
   const MemberActions = dock.panels.get('members')?.entry?.headerAction;
   return (
@@ -162,13 +172,13 @@ function ChannelBodyPanel(): ReactElement {
         {dock.body}
         {dock.menu}
       </div>
-      {dock.channel?.type === 'group' && members?.open && (
+      {members && (filesOpen || (dock.channel?.type === 'group' && members.open)) && (
         <>
           <div
             className="bh-message-member-divider"
             role="separator"
             tabIndex={0}
-            aria-label={dock.t('entry.members')}
+            aria-label={detailLabel}
             aria-orientation="vertical"
             aria-valuemin={20}
             aria-valuemax={60}
@@ -191,22 +201,26 @@ function ChannelBodyPanel(): ReactElement {
                 event.currentTarget.releasePointerCapture(event.pointerId);
             }}
           />
-          <aside className="bh-message-members" style={{ width: `${members.ratio * 100}%` }}>
+          <aside
+            className="bh-message-members"
+            aria-label={detailLabel}
+            style={{ width: `${members.ratio * 100}%` }}
+          >
             <PanelHeader
-              label={dock.t('entry.members')}
+              label={detailLabel}
               action={
                 <>
-                  {MemberActions && memberProps && <MemberActions {...memberProps} />}
+                  {!filesOpen && MemberActions && memberProps && <MemberActions {...memberProps} />}
                   <IconButton
-                    aria-label={dock.t('dock.close', { label: dock.t('entry.members') })}
-                    onClick={() => members.setOpen(false)}
+                    aria-label={dock.t('dock.close', { label: detailLabel })}
+                    onClick={closeDetail}
                   >
                     <ChannelSidebarIcon name="x" />
                   </IconButton>
                 </>
               }
             />
-            <ChannelEntryContent entryId="members" />
+            {filesOpen ? dock.files?.content : <ChannelEntryContent entryId="members" />}
           </aside>
         </>
       )}
@@ -309,6 +323,20 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
             onPointerDown={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
           >
+            {entryId === CHANNEL_BODY_PANEL && dock.channel && dock.files && (
+              <Tooltip label={dock.t('generatedFiles.title')} side="bottom" delayMs={500}>
+                <IconButton
+                  aria-label={dock.t('generatedFiles.title')}
+                  aria-expanded={dock.files.open}
+                  onClick={() => {
+                    if (!dock.files?.open) dock.members?.setOpen(false);
+                    dock.files?.setOpen(!dock.files.open);
+                  }}
+                >
+                  <ChannelSidebarIcon name="file" />
+                </IconButton>
+              </Tooltip>
+            )}
             {entryId === CHANNEL_BODY_PANEL && dock.channel?.type === 'group' && dock.members && (
               <IconButton
                 aria-label={dock.t('entry.members')}
@@ -423,6 +451,7 @@ function buildDefaultLayout(api: DockviewApi, entries: ReadonlyMap<string, DockP
 
 export interface ChannelDockProps {
   body: ReactNode;
+  files?: ChannelFilesView | undefined;
   revealBody?: boolean | undefined;
   panels: readonly DockPanelRegistration[];
   channel?: DockPanelChannel | undefined;
@@ -435,6 +464,7 @@ export interface ChannelDockProps {
 
 export function ChannelDock({
   body,
+  files,
   revealBody = false,
   panels,
   channel,
@@ -642,6 +672,7 @@ export function ChannelDock({
   const open = (panelId: string): void => {
     if (workspace && panelId === 'members') {
       if (channel?.type !== 'group' || !api) return;
+      files?.setOpen(false);
       membersRef.current = { ...membersRef.current, open: true };
       updateMembers(membersRef.current);
       const message = byId.get(CHANNEL_BODY_PANEL);
@@ -690,6 +721,7 @@ export function ChannelDock({
   const reset = () => {
     if (!api) return;
     parked.current = {};
+    files?.setOpen(false);
     gapRef.current = DEFAULT_WORKSPACE_GAP;
     updateGap(DEFAULT_WORKSPACE_GAP);
     orderRef.current = [];
@@ -711,12 +743,14 @@ export function ChannelDock({
   };
   const value: DockContextValue = {
     body,
+    files,
     channelsHeader,
     setChannelsHeader,
     members: workspace
       ? {
           ...members,
           setOpen: (open) => {
+            if (open) files?.setOpen(false);
             membersRef.current = { ...members, open };
             updateMembers(membersRef.current);
             if (api) save(api);
