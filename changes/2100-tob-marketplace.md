@@ -8,4 +8,4 @@ section: Added
 
 ## zh
 
-- Tob 可同时提供定制 Bot 方案和真实市场搜索，在审核后导入选定的 Git／GitHub 或 ZIP／目录来源，保留原人格，并通过原创建回执核对响应不确定的结果（[#2100](https://github.com/BotHarness/DeepSeekBot/issues/2100)、[CLI 指南](../docs/bot-cli.zh.md#tob-市场方案与选定来源导入)）。
+- Tob 可同时提供定制 Bot 方案和真实市场搜索，在审核后导入选定的 Git／GitHub 或 ZIP／目录来源，保留原人格，并通过原创建回执核对响应不确定的结果（[#2100](https://github.com/BotHarness/DeepSeekBot/issues/2100)、[CLI 指南](../docs/bot-cli.md#tob-marketplace-proposal-and-selected-import)）。
