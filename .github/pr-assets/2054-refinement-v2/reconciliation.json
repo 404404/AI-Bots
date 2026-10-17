@@ -1,0 +1,406 @@
+[
+  {
+    "pair": "redundant-1",
+    "arm": "baseline",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "redundant-1",
+    "arm": "candidate",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "redundant-2",
+    "arm": "candidate",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "redundant-2",
+    "arm": "baseline",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "independent-1",
+    "arm": "baseline",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "independent-1",
+    "arm": "candidate",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "independent-2",
+    "arm": "candidate",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "independent-2",
+    "arm": "baseline",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "new-question-1",
+    "arm": "baseline",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "new-question-1",
+    "arm": "candidate",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "new-question-2",
+    "arm": "candidate",
+    "lateCompletedResponses": [],
+    "transcript": {
+      "group-llm-e2e-peer-new-question-2-1792270310614": [],
+      "dm-bot-1684e29bf4194841aea4560f9ceaf74e": [
+        {
+          "id": "35b3c38f-e258-43be-845c-49ea6602601e",
+          "at": "2026-10-17T20:52:20.480Z",
+          "author": {
+            "kind": "bot",
+            "slug": "bot-1684e29bf4194841aea4560f9ceaf74e"
+          },
+          "body": "确认事实：10月20日 09:00 UTC 发布，材料 R3。",
+          "channelRevision": 2
+        },
+        {
+          "id": "9aab7b3f-5faa-4503-8344-cd5bf8e14c93",
+          "at": "2026-10-17T20:51:50.690Z",
+          "author": {
+            "kind": "human"
+          },
+          "body": "稍后会在群里讨论发布安排。已知事实：10月20日 09:00 UTC 发布，材料 R3。不要添加未知细节，不创建任务、不找其他 Bot。现在在此私聊用一句话确认事实，暂不去群里发言。",
+          "channelRevision": 1,
+          "deliveries": [
+            {
+              "botSlug": "bot-1684e29bf4194841aea4560f9ceaf74e",
+              "state": "handled"
+            }
+          ]
+        }
+      ],
+      "dm-bot-c9a44687b5b54132aa29258deced6d6c": []
+    },
+    "host": {
+      "routes": [
+        "deepseek-official/deepseek-flash"
+      ],
+      "inputTokens": 24826,
+      "outputTokens": 213,
+      "cacheReadTokens": 51712,
+      "cacheWriteTokens": 0,
+      "totalTokens": 76751
+    },
+    "costEstimateUSD": 0.004006836,
+    "providerUsage": [
+      {
+        "sessionId": "botharness-4e7887c0-223b-44ff-8252-9b751e5c87c4",
+        "botSlug": "bot-1684e29bf4194841aea4560f9ceaf74e",
+        "attempts": [
+          {
+            "seq": 18,
+            "at": 1792270336047,
+            "turn": 1,
+            "step": 1,
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "off",
+              "maxTokens": 256000
+            },
+            "usage": {
+              "inputTokens": 24320,
+              "outputTokens": 55,
+              "cacheReadTokens": 1024,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25399
+            }
+          },
+          {
+            "seq": 24,
+            "at": 1792270342944,
+            "turn": 1,
+            "step": 2,
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "off",
+              "maxTokens": 256000
+            },
+            "usage": {
+              "inputTokens": 293,
+              "outputTokens": 120,
+              "cacheReadTokens": 25216,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25629
+            }
+          },
+          {
+            "seq": 30,
+            "at": 1792270344221,
+            "turn": 1,
+            "step": 3,
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "off",
+              "maxTokens": 256000
+            },
+            "usage": {
+              "inputTokens": 213,
+              "outputTokens": 38,
+              "cacheReadTokens": 25472,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25723
+            }
+          }
+        ],
+        "auxiliary": [
+          {
+            "seq": 14,
+            "at": 1792270333239,
+            "kind": "session/title-llm-request",
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash"
+            },
+            "usage": null
+          }
+        ],
+        "toolCalls": [
+          {
+            "seq": 19,
+            "at": 1792270336052,
+            "callId": "call_00_sdUmzokRdi7LRZvAhdf49005",
+            "name": "channel_send",
+            "arguments": "{\"body\": \"确认事实：10月20日 09:00 UTC 发布，材料 R3。\"}",
+            "finishedAt": 1792270340486,
+            "isError": false,
+            "result": "{\"channelId\":\"dm-bot-1684e29bf4194841aea4560f9ceaf74e\",\"messageId\":\"35b3c38f-e258-43be-845c-49ea6602601e\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"not-requested\",\"instruction\":\"This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open.\"}}"
+          },
+          {
+            "seq": 25,
+            "at": 1792270342948,
+            "callId": "call_00_Fn7DGzE6OdknTpDTX9uS5376",
+            "name": "inbox_resolve",
+            "arguments": "{\"ids\": [\"9aab7b3f-5faa-4503-8344-cd5bf8e14c93\"], \"outcome\": \"done\", \"note\": \"已在私聊用一句话确认两点事实，未创建任务、未联系其他 Bot、未在群里发言。\"}",
+            "finishedAt": 1792270342956,
+            "isError": false,
+            "result": "{\"outcome\":\"resolved\",\"resolved\":[\"3e7b77e3-f6e3-4fee-b90d-12cfbe4f79f8\"],\"alreadyResolved\":[]}"
+          }
+        ],
+        "modelSteps": [
+          {
+            "seq": 6,
+            "at": 1792270333216,
+            "turn": 1,
+            "step": 1
+          },
+          {
+            "seq": 22,
+            "at": 1792270340507,
+            "turn": 1,
+            "step": 2
+          },
+          {
+            "seq": 28,
+            "at": 1792270342968,
+            "turn": 1,
+            "step": 3
+          }
+        ],
+        "providerRetryCoverage": "Session events expose completed model responses; unreported provider retries remain unknown"
+      }
+    ]
+  },
+  {
+    "pair": "new-question-2",
+    "arm": "baseline",
+    "lateCompletedResponses": [],
+    "transcript": {
+      "group-llm-e2e-peer-new-question-2-1792270377661": [],
+      "dm-bot-c9e3c31ca2dc4d0992b566e91090e1c1": [
+        {
+          "id": "eb2fe483-4833-4981-983c-8e4ad80aad98",
+          "at": "2026-10-17T20:53:20.127Z",
+          "author": {
+            "kind": "bot",
+            "slug": "bot-c9e3c31ca2dc4d0992b566e91090e1c1"
+          },
+          "body": "确认：发布安排在 10月20日 09:00 UTC，材料为 R3。",
+          "channelRevision": 2
+        },
+        {
+          "id": "1bf4d60a-6aac-4762-b10a-7cf5d7e9f0ff",
+          "at": "2026-10-17T20:52:57.730Z",
+          "author": {
+            "kind": "human"
+          },
+          "body": "稍后会在群里讨论发布安排。已知事实：10月20日 09:00 UTC 发布，材料 R3。不要添加未知细节，不创建任务、不找其他 Bot。现在在此私聊用一句话确认事实，暂不去群里发言。",
+          "channelRevision": 1,
+          "deliveries": [
+            {
+              "botSlug": "bot-c9e3c31ca2dc4d0992b566e91090e1c1",
+              "state": "handled"
+            }
+          ]
+        }
+      ],
+      "dm-bot-6a0989fdc22446638027ef6ee6caf240": []
+    },
+    "host": {
+      "routes": [
+        "deepseek-official/deepseek-flash"
+      ],
+      "inputTokens": 24599,
+      "outputTokens": 239,
+      "cacheReadTokens": 51712,
+      "cacheWriteTokens": 0,
+      "totalTokens": 76550
+    },
+    "costEstimateUSD": 0.003988386,
+    "providerUsage": [
+      {
+        "sessionId": "botharness-2da3e95c-d1de-400e-95db-770e8d6c421c",
+        "botSlug": "bot-c9e3c31ca2dc4d0992b566e91090e1c1",
+        "attempts": [
+          {
+            "seq": 18,
+            "at": 1792270398062,
+            "turn": 1,
+            "step": 1,
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "off",
+              "maxTokens": 256000
+            },
+            "usage": {
+              "inputTokens": 24238,
+              "outputTokens": 56,
+              "cacheReadTokens": 1024,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25318
+            }
+          },
+          {
+            "seq": 24,
+            "at": 1792270401719,
+            "turn": 1,
+            "step": 2,
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "off",
+              "maxTokens": 256000
+            },
+            "usage": {
+              "inputTokens": 217,
+              "outputTokens": 129,
+              "cacheReadTokens": 25216,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25562
+            }
+          },
+          {
+            "seq": 30,
+            "at": 1792270402951,
+            "turn": 1,
+            "step": 3,
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "off",
+              "maxTokens": 256000
+            },
+            "usage": {
+              "inputTokens": 144,
+              "outputTokens": 54,
+              "cacheReadTokens": 25472,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25670
+            }
+          }
+        ],
+        "auxiliary": [
+          {
+            "seq": 14,
+            "at": 1792270395730,
+            "kind": "session/title-llm-request",
+            "route": {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash"
+            },
+            "usage": null
+          }
+        ],
+        "toolCalls": [
+          {
+            "seq": 19,
+            "at": 1792270398067,
+            "callId": "call_00_4XBEZpEK9k9a8HUdwBbM7386",
+            "name": "channel_send",
+            "arguments": "{\"body\": \"确认：发布安排在 10月20日 09:00 UTC，材料为 R3。\"}",
+            "finishedAt": 1792270400133,
+            "isError": false,
+            "result": "{\"channelId\":\"dm-bot-c9e3c31ca2dc4d0992b566e91090e1c1\",\"messageId\":\"eb2fe483-4833-4981-983c-8e4ad80aad98\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"not-requested\",\"instruction\":\"This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open.\"}}"
+          },
+          {
+            "seq": 25,
+            "at": 1792270401724,
+            "callId": "call_00_8dz5BNo9kr0nH3MQdt7b4143",
+            "name": "inbox_resolve",
+            "arguments": "{\"ids\": [\"1bf4d60a-6aac-4762-b10a-7cf5d7e9f0ff\"], \"outcome\": \"done\", \"note\": \"私聊一句话确认了发布事实（10月20日 09:00 UTC，材料 R3），未建任务、未去群里发言。\"}",
+            "finishedAt": 1792270401736,
+            "isError": false,
+            "result": "{\"outcome\":\"resolved\",\"resolved\":[\"c30bbae6-cf65-4d79-a4c3-9486081fa2c8\"],\"alreadyResolved\":[]}"
+          }
+        ],
+        "modelSteps": [
+          {
+            "seq": 6,
+            "at": 1792270395646,
+            "turn": 1,
+            "step": 1
+          },
+          {
+            "seq": 22,
+            "at": 1792270400174,
+            "turn": 1,
+            "step": 2
+          },
+          {
+            "seq": 28,
+            "at": 1792270401754,
+            "turn": 1,
+            "step": 3
+          }
+        ],
+        "providerRetryCoverage": "Session events expose completed model responses; unreported provider retries remain unknown"
+      }
+    ]
+  },
+  {
+    "pair": "fyi-control-1",
+    "arm": "baseline",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "fyi-control-1",
+    "arm": "candidate",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "fyi-control-2",
+    "arm": "candidate",
+    "lateCompletedResponses": []
+  },
+  {
+    "pair": "fyi-control-2",
+    "arm": "baseline",
+    "lateCompletedResponses": []
+  }
+]

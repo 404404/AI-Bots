@@ -1,0 +1,15 @@
+{
+  "runtimeRevision": "d53b71e43",
+  "localChecks": {
+    "focusedRuntimeTests": {"files": 2, "passed": 81},
+    "reportTests": {"files": 2, "passed": 17, "framework": "vitest"},
+    "typecheck": "passed",
+    "lint": "passed with existing warnings",
+    "formatTouched": "passed",
+    "build": "passed",
+    "cli": "held, unobserved peer refusal, explicit peer yield, later new answer committed",
+    "web": "matched 1440x900 before/after both show unwanted no-addition replies; zero console issues"
+  },
+  "retainedFailures": ["Mistaken node --test invocation cannot load Vitest suite; corrected invocation passed without source changes"],
+  "limitations": ["Existing historical native Client lifecycle findings are not claimed fixed", "No deployment", "No external judge calls"]
+}

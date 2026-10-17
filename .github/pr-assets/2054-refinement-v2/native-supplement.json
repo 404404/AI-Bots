@@ -1,0 +1,941 @@
+[
+  {
+    "pair": "fyi-control-2",
+    "arm": "baseline",
+    "botSlug": "bot-1671a7b3a91044e6baba741dfa721158",
+    "sessionId": "botharness-42d7c1d5-53f8-4b9a-94b2-c6958b7d6356",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 24,
+        "at": 1792270675908,
+        "text": [
+          "已在私聊中确认：10月20日 09:00 UTC 发布，材料 R3；没有添加其他细节，也没有创建任务或联系其他 Bot，且未在群里发言。"
+        ]
+      },
+      {
+        "seq": 39,
+        "at": 1792270699471,
+        "text": [
+          "我已在群里按要求给出简短复述：10月20日，09:00 UTC，材料 R3；没有做其他动作，也没有联系同事。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-2",
+    "arm": "baseline",
+    "botSlug": "bot-1d0eb0f1c5274e70a452950ba928fa67",
+    "sessionId": "botharness-50475295-a09f-4d6d-8899-c12ca2b0ec86",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269834675,
+        "text": [
+          "已私聊你确认：“确认：10月20日 09:00 UTC 发布，材料 R3。” 没有发到群里，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 51,
+        "at": 1792269857666,
+        "text": [
+          "我已在群里简短回答：“日期：10月20日；UTC 时间：09:00；材料：R3。” 我没有添加任何未知细节，也没有联系其他同事。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-2",
+    "arm": "baseline",
+    "botSlug": "bot-3f3cb96a38e24cdcb6eb2df915969c1d",
+    "sessionId": "botharness-1d00e364-87d1-407d-a2e6-8fa0a2d7eb62",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270108909,
+        "text": [
+          "已在私聊中用一句话确认了事实（10月20日 09:00 UTC 发布，材料 R3）；没有去群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792270130774,
+        "text": [
+          "已在群里简短确认：10月20日 09:00 UTC 发布，材料 R3。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "fyi-control-2",
+    "arm": "baseline",
+    "botSlug": "bot-43747e7b92254cd89d44a733253e76bd",
+    "sessionId": "botharness-1e75f61c-0a40-4fdf-b13a-0fbd6438f3fa",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270684915,
+        "text": [
+          "已在私聊用一句话确认：10月20日 09:00 UTC 发布，材料 R3。未添加其他细节，未建任务、未联系其他 Bot、未在群里发言。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792270697834,
+        "text": [
+          "按要求保持沉默，仅作背景知悉。"
+        ]
+      },
+      {
+        "seq": 66,
+        "at": 1792270717228,
+        "text": [
+          "已在群里简短复述：10月20日，09:00 UTC，材料 R3。未额外添加细节，未找同事、未私聊。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-2",
+    "arm": "baseline",
+    "botSlug": "bot-4b4a7434e92f48529d7df3b20f8e2214",
+    "sessionId": "botharness-12654492-d8a1-46ef-814c-57a162a6a56a",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269843631,
+        "text": [
+          "我已在私聊中确认：10月20日 09:00 UTC 发布，材料 R3。没有去群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 63,
+        "at": 1792269862773,
+        "text": [
+          "已在群里回复：Atlas 已给出日期、UTC 时间和材料，我这里没有更多已知信息可以补充，只说明发布安排为10月20日 09:00 UTC 发布、材料 R3，其余按既有事实执行。未联系其他同事，也未创建任务。"
+        ]
+      },
+      {
+        "seq": 78,
+        "at": 1792269867433,
+        "text": [
+          "我已处理掉遗留的这一条：Atlas 的简短确认只作为上下文，我已经在群里给出说明，所以不需要再回复。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "new-question-1",
+    "arm": "baseline",
+    "botSlug": "bot-4e01bcae284244e6a70a118ce0278210",
+    "sessionId": "botharness-af1d7343-313b-48df-a183-d17050954c9b",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270185862,
+        "text": [
+          "已按你的要求，只在私聊里回了一句确认：10月20日 09:00 UTC 发布、材料 R3。没有添加其他细节，没有创建任务，也没有联系其他 Bot，更没有去群里发言。"
+        ]
+      },
+      {
+        "seq": 60,
+        "at": 1792270202386,
+        "text": [
+          "我已在群里回答：10月20日 09:00 UTC 换算成东京时间是 10月20日 18:00 JST（UTC+9，无夏令时），材料仍为 R3。Atlas 已用简短回答给出了日期、UTC 时间和材料，我这条只补充了换算后的当地时间和时差依据，没有引入未知细节，也没有联系其他同事。相关 Inbox 项已全部结算完成。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "fyi-control-1",
+    "arm": "baseline",
+    "botSlug": "bot-5870216b8b6a4b999e6384bc5b92eca8",
+    "sessionId": "botharness-242705f2-d79d-4858-aba1-fc503c850f9d",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270447478,
+        "text": [
+          "我已在私聊回复确认：10 月 20 日 09:00 UTC 发布，材料 R3，暂不去群里发言。没有创建任务，也没有联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792270460158,
+        "text": [
+          "已按群内说明处理：这条 FYI 仅作背景知悉，我未在群里发言，也没有联系同事或私聊任何人。"
+        ]
+      },
+      {
+        "seq": 60,
+        "at": 1792270476181,
+        "text": [
+          "我已经在群里回复了：确认发布日期是 10 月 20 日，时间是 09:00 UTC，材料是 R3。我没有添加其他细节，也没有联系同事或私聊。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-2",
+    "arm": "baseline",
+    "botSlug": "bot-68939069e6c941beb66331051470aaaf",
+    "sessionId": "botharness-61bd3441-5020-41eb-b19a-df1cbbadc835",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270117953,
+        "text": [
+          "我已在私聊回复确认。发布事实为：10月20日 09:00 UTC、材料 R3。另有独立核验记录 QA-317 指出，R3 的导出有阻断缺陷，发布前必须改用 R2。我也记住了：等群里问到发布安排时，再把这条记录分享出去；我暂不在群里发言，也不创建任何任务。"
+        ]
+      },
+      {
+        "seq": 57,
+        "at": 1792270136166,
+        "text": [
+          "已在群里回复。Atlas 已经给出日期和 UTC 时间，并写明材料是 R3。我在此基础上补充了独立核验记录：QA-317 指出 R3 的导出有阻断缺陷，发布前必须改用 R2，也就是说，发布时间不变，但发布材料应从 R3 改为 R2。除这条记录外，我没有添加其他细节；全程只在群内交流，也没有联系其他同事。"
+        ]
+      },
+      {
+        "seq": 72,
+        "at": 1792270141349,
+        "text": [
+          "已处理完这条：Atlas 发布的「10月20日 09:00 UTC 发布，材料 R3」我作为已知事实采纳。我已在群里补充 QA-317 的 R2 核验记录，群内不再需要额外回复。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-1",
+    "arm": "baseline",
+    "botSlug": "bot-7ea7f8ea2c4246bc9f653a30fa3b9eac",
+    "sessionId": "botharness-5d5b1f53-5b6c-47f5-a8ef-987e3322389f",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269902542,
+        "text": [
+          "已在私聊确认这一句事实；群聊和任务都没有改动。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792269927968,
+        "text": [
+          "已在群里简短确认：10月20日 09:00 UTC，材料 R3。"
+        ]
+      },
+      {
+        "seq": 66,
+        "at": 1792269935518,
+        "text": [
+          "已在群里回应 Aura 的补充：发布时间仍为 10月20日 09:00 UTC，发布材料按 QA-317 从 R3 改为 R2。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-1",
+    "arm": "baseline",
+    "botSlug": "bot-9cdaea2db460456e82b68d87a7b6b706",
+    "sessionId": "botharness-a6f2662c-2035-43aa-8cf9-aa83e241b557",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 24,
+        "at": 1792269625486,
+        "text": [
+          "我已在私聊中确认事实，没有去群里发言，也没有添加未知细节或创建任务。"
+        ]
+      },
+      {
+        "seq": 33,
+        "at": 1792269641598,
+        "text": [
+          "已完成：私聊回复了一句确认：“确认：10月20日 09:00 UTC 发布，材料 R3。”未在群里发言，未创建任务，也未联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 54,
+        "at": 1792269660349,
+        "text": [
+          "已在本群回复：没有需要补充的内容，只以两点已知事实为准；未做额外猜测，也未联系其他同事。"
+        ]
+      },
+      {
+        "seq": 69,
+        "at": 1792269670344,
+        "text": [
+          "Atlas 的确认与我回复的事实一致，我已将该条目标记为完成；无需在群里再次发言。"
+        ]
+      }
+    ],
+    "failedAttempts": [
+      {
+        "seq": 29,
+        "at": 1792269639805,
+        "turn": 1,
+        "step": 3,
+        "finishes": [
+          {
+            "at": 1792269639805,
+            "reason": {
+              "kind": "error",
+              "failure": {
+                "message": "DeepSeek Messages transport failed",
+                "code": "TRANSPORT"
+              }
+            }
+          }
+        ],
+        "usage": null
+      }
+    ],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-1",
+    "arm": "baseline",
+    "botSlug": "bot-a1dc8c261ec24c02b0c5149d5c9c016f",
+    "sessionId": "botharness-110a76b5-e541-4b8d-aaac-4bbddcda236f",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 24,
+        "at": 1792269909589,
+        "text": [
+          "我在私聊中回复了一句话确认：10月20日 09:00 UTC 发布、材料 R3，并附上 QA-317 的核验记录（R3 导出有阻断性缺陷，发布前需改用 R2）。按照要求，我没有在群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 39,
+        "at": 1792269915640,
+        "text": [
+          "这条已在私聊确认，并标记为完成：10月20日 09:00 UTC 发布、材料 R3；QA-317 的核验记录显示 R3 的导出存在阻断性缺陷，发布前须改用 R2。群内暂不发言，等群里问发布安排时再分享这条记录。"
+        ]
+      },
+      {
+        "seq": 66,
+        "at": 1792269932470,
+        "text": [
+          "已在群里发出一条一段式补充说明：Atlas 已确认 10月20日 09:00 UTC、材料 R3，我补充的只是自己的独立核验记录 QA-317（R3 的导出存在阻断性缺陷，发布前必须改用 R2），没有添加其他细节，也没有联系其他同事。"
+        ]
+      },
+      {
+        "seq": 81,
+        "at": 1792269938464,
+        "text": [
+          "Atlas 在群里的确认消息我已读作背景信息，无需再回复，已标记完成。群里现在信息齐全：10月20日 09:00 UTC、材料 R3，另有 QA-317 的记录要求发布前改用 R2。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "new-question-1",
+    "arm": "baseline",
+    "botSlug": "bot-a3e9bfcb00ca4383a34c93b8c88275b9",
+    "sessionId": "botharness-f92e34df-54e2-479d-b9d4-79d66cb49cb0",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270176732,
+        "text": [
+          "已在私聊中用一句话确认：发布时间为 10月20日 09:00 UTC，材料版本为 R3。这条消息已处理完毕；我没有向群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 51,
+        "at": 1792270199405,
+        "text": [
+          "已在群里按你的要求简短回答：日期为 10月20日，UTC 时间为 09:00，材料版本为 R3。没有添加任何未知细节，只在本群交流，也没有联系其他同事。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "new-question-2",
+    "arm": "baseline",
+    "botSlug": "bot-c9e3c31ca2dc4d0992b566e91090e1c1",
+    "sessionId": "botharness-2da3e95c-d1de-400e-95db-770e8d6c421c",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270402951,
+        "text": [
+          "已在私聊发送一句话确认：发布安排在 10月20日 09:00 UTC，材料为 R3。未添加未知细节，未创建任务，未联系其他 Bot，也未在群里发言；该私聊消息已标记为处理完毕。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "fyi-control-1",
+    "arm": "baseline",
+    "botSlug": "bot-da21ded129a74d2eab227cfc5e4413fc",
+    "sessionId": "botharness-846df15e-da1a-4656-89ec-5c7f027f1fea",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270437806,
+        "text": [
+          "已在私聊里用一句话确认了：10月20日 09:00 UTC 发布，材料 R3；没去群里发言，也没创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792270459990,
+        "text": [
+          "已在群里简短复述发布日期、UTC 时间和材料版本，没有额外联系其他同事，也没有私聊。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-1",
+    "arm": "baseline",
+    "botSlug": "bot-efa08dfbe94a4a579bb119669d4a9b62",
+    "sessionId": "botharness-056c5681-b343-4c05-8969-d3412548b27c",
+    "refinementV2PromptPresent": false,
+    "refinementV2ToolDescriptionPresent": false,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269617791,
+        "text": [
+          "已在私聊发送确认，并结束这条消息的处理：10 月 20 日 09:00 UTC 发布，材料 R3。未去群里发言，也没有建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 51,
+        "at": 1792269660214,
+        "text": [
+          "已在群里简短回复确认：10 月 20 日 09:00 UTC 发布，材料 R3。未添加其他细节，也未联系其他同事。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "new-question-2",
+    "arm": "candidate",
+    "botSlug": "bot-1684e29bf4194841aea4560f9ceaf74e",
+    "sessionId": "botharness-4e7887c0-223b-44ff-8252-9b751e5c87c4",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270344221,
+        "text": [
+          "已在私聊确认：10月20日 09:00 UTC 发布，材料 R3。未添加其他细节，也未创建任务、联系其他 Bot 或在群里发言。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "new-question-1",
+    "arm": "candidate",
+    "botSlug": "bot-192ac1d226964ea39dbb7990f821be56",
+    "sessionId": "botharness-a9bd393f-39b7-4d78-bb10-fb9db2e3da60",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270237927,
+        "text": [
+          "已在私聊确认：10月20日 09:00 UTC 发布，材料 R3。没有添加未知细节，没有创建任务或联系其他 Bot，也没有在群里发言。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792270258279,
+        "text": [
+          "已在群里按要求简短回复：日期 10月20日、时间 09:00 UTC、材料 R3。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "new-question-1",
+    "arm": "candidate",
+    "botSlug": "bot-227afb170280426c874f76c57623a2d4",
+    "sessionId": "botharness-4953afca-a184-4aec-8610-f0e99fcbf795",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 24,
+        "at": 1792270245388,
+        "text": [
+          "已在私聊中确认：10月20日 09:00 UTC 发布，材料 R3。没有创建任务，没有联系其他 Bot，也没有去群里发言。"
+        ]
+      },
+      {
+        "seq": 54,
+        "at": 1792270261694,
+        "text": [
+          "我已在群里回复两件事：\n\n- **需要补充的内容**：确认发布安排与已有事实一致，没有补充内容；日期为 10月20日，时间为 09:00 UTC，材料为 R3。\n- **新问题**：东京 JST 的对应时间是 **10月20日 18:00**（日本标准时间比 UTC 快 9 小时）。\n\n两条 Inbox 消息都已处理完毕。"
+        ]
+      },
+      {
+        "seq": 69,
+        "at": 1792270266904,
+        "text": [
+          "已处理：Atlas 的简短确认与已有事实一致，我已在本群说明无需补充并给出 JST 换算，因此这条 Inbox 记录以 done 方式结束并处理完毕，不再需要回复。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "fyi-control-1",
+    "arm": "candidate",
+    "botSlug": "bot-4b2a206ac691429d8c1de1d5da073f1f",
+    "sessionId": "botharness-7e8068eb-f33d-4c33-ad58-65bceb027d47",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 24,
+        "at": 1792270509578,
+        "text": [
+          "我已在私聊中确认这条消息并送达：确认 10月20日 09:00 UTC 发布，材料 R3，暂不在群里发言。未创建任务，也未联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 39,
+        "at": 1792270530582,
+        "text": [
+          "我已在群里按要求简短复述：日期是 10月20日，UTC 时间是 09:00，材料是 R3；没有额外找同事，也没有私聊。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "fyi-control-2",
+    "arm": "candidate",
+    "botSlug": "bot-6608782de21b41c58fec5e7727f3e44d",
+    "sessionId": "botharness-ec8e8ab7-ef4a-41c8-a2f2-d374684e3f77",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270610506,
+        "text": [
+          "我已在私聊中用一句话确认了这些事实，没有去群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792270623468,
+        "text": [
+          "群里的这条消息是通知性质：它明确说明美工 Aura 只需了解背景，不必回应。我已经记录下其中的事实（10月20日 09:00 UTC 发布，材料 R3），并把它标记为已处理，没有在群里发言，也没有联系其他同事。"
+        ]
+      },
+      {
+        "seq": 60,
+        "at": 1792270640263,
+        "text": [
+          "已按群里明确要求，用一句话复述了发布安排：10月20日 09:00 UTC 发布，材料 R3。没有额外联系同事，也没有发私聊。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-2",
+    "arm": "candidate",
+    "botSlug": "bot-6becbc6e44dc4464816fde1fad77378c",
+    "sessionId": "botharness-cac25d4e-9d49-4da2-a50a-0a58cdaa13a6",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270039042,
+        "text": [
+          "已在私聊确认：发布安排在 10月20日 09:00 UTC，材料 R3。未在群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 51,
+        "at": 1792270063815,
+        "text": [
+          "已在群里简短确认：10月20日 09:00 UTC 发布，材料 R3。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-1",
+    "arm": "candidate",
+    "botSlug": "bot-73222c3d9d7b4313b0f7f3650b1bd147",
+    "sessionId": "botharness-a4999e06-6446-4c20-804e-c7fdefd6a82a",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269706312,
+        "text": [
+          "已在私聊里用一句话确认了事实，没有创建任务、没有联系其他 Bot，也没有在群里发言。"
+        ]
+      },
+      {
+        "seq": 51,
+        "at": 1792269729055,
+        "text": [
+          "已在群里简短确认：10月20日、09:00 UTC、材料 R3。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-2",
+    "arm": "candidate",
+    "botSlug": "bot-af93ec40aae742cfa61d250f1e9ecc4a",
+    "sessionId": "botharness-d78bf2c6-54ed-4453-8f81-b48643d4d0a7",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269771702,
+        "text": [
+          "已在私聊用一句话确认了事实：发布定于 10 月 20 日 09:00 UTC，材料为 R3。没有添加其他细节，也没有创建任务、联系其他 Bot，暂未在群里发言。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792269792475,
+        "text": [
+          "已在群中按你的要求简短确认：10 月 20 日发布，09:00 UTC，材料 R3。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-2",
+    "arm": "candidate",
+    "botSlug": "bot-be138897ed3e47f6952cc62ee0a786b4",
+    "sessionId": "botharness-eda54e7e-7fc8-4467-bb4e-08ea38de540e",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270049187,
+        "text": [
+          "已在私聊回复确认：10月20日 09:00 UTC 发布，材料 R3；同时记下了 QA-317 这条独立核验记录（R3 导出有阻断缺陷，发布前须改用 R2），等群里讨论发布安排时再分享。现在没有去群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 63,
+        "at": 1792270067523,
+        "text": [
+          "发布安排已在本群确认：Atlas 回答了日期、UTC 时间和材料（10月20日 09:00 UTC，R3）；我按 Human 的要求检查后，用一段说明做了补充：QA-317 指出 R3 导出存在阻断缺陷，发布前必须改用 R2。全程只在本群交流，未联系其他同事，也未创建任务。"
+        ]
+      },
+      {
+        "seq": 78,
+        "at": 1792270072730,
+        "text": [
+          "Atlas 发的那条简短确认，我已经读过并作为上下文处理，没有未完成的事项，所以它的 Inbox 条目已经结清，不需要再发消息。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "fyi-control-2",
+    "arm": "candidate",
+    "botSlug": "bot-ca4f2d5cf6614d029322c25936b344b6",
+    "sessionId": "botharness-25c6d361-404b-4559-865b-9a06c00678a5",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792270596900,
+        "text": [
+          "我已在私聊中用一句话确认：10月20日 09:00 UTC 发布，材料 R3。我没有创建任务，没有找其他 Bot，也没有去群里发言。"
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792270623390,
+        "text": [
+          "已在群里简短复述：10月20日 09:00 UTC 发布，材料 R3。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-1",
+    "arm": "candidate",
+    "botSlug": "bot-d23445768daf4d44bdc5af12a262bbdb",
+    "sessionId": "botharness-9b4497fe-700b-49f0-9736-4327b0e02ba0",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269714696,
+        "text": [
+          "已在私聊确认：“10月20日 09:00 UTC 发布，材料 R3。”没有创建任务、没有联系其他 Bot，也没有去群里发言。"
+        ]
+      },
+      {
+        "seq": 57,
+        "at": 1792269732654,
+        "text": [
+          "在群里，我已作出确认：Atlas 给出了日期、UTC 时间与材料，我补充了一段说明，提醒文案里凡出现具体时间都需标注 UTC（对应北京时间 10月20日 17:00），不添加其他未知细节，只在本群交流。"
+        ]
+      },
+      {
+        "seq": 72,
+        "at": 1792269737295,
+        "text": [
+          "该条已结清：Atlas 的确认与我的补充说明都已提交，无需再做什么。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "redundant-2",
+    "arm": "candidate",
+    "botSlug": "bot-d7698e230d9b45db8513ece433af0779",
+    "sessionId": "botharness-940c1aac-ff6f-4062-9042-150d6a8a0bb1",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 30,
+        "at": 1792269780070,
+        "text": [
+          "已在私聊发送一句话确认，并且没有在群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 51,
+        "at": 1792269795346,
+        "text": [
+          "我读了 Atlas 在群里的已提交答复，确认其已准确覆盖日期、UTC 时间和材料三项事实；我在群里补充说明：没有可补充的内容，之后不再展开，之后不再添加任何未知细节。"
+        ]
+      },
+      {
+        "seq": 66,
+        "at": 1792269799454,
+        "text": [
+          "Atlas 在群里的回答与已知事实一致，即 10 月 20 日、09:00 UTC、材料 R3，因此不需要再回复。我已将这条 Inbox 记录标记为完成，本群当前没有待办。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "fyi-control-1",
+    "arm": "candidate",
+    "botSlug": "bot-db7f3e55e1f645a4ae61a924ef47f60a",
+    "sessionId": "botharness-737dd70e-87c3-40ba-a8dc-309ab09817e0",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 24,
+        "at": 1792270517407,
+        "text": [
+          "我已在私聊中回复了那一句确认，没有去群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 39,
+        "at": 1792270530748,
+        "text": [
+          "已作为背景知悉，并结清条目，没有在群里回复。"
+        ]
+      },
+      {
+        "seq": 63,
+        "at": 1792270560570,
+        "text": [
+          "我已在群里用一句话复述了发布事实：10月20日、UTC 09:00、材料 R3。Atlas 的消息我已作为背景知悉，两个条目都已结清。"
+        ]
+      }
+    ],
+    "failedAttempts": [
+      {
+        "seq": 59,
+        "at": 1792270558919,
+        "turn": 3,
+        "step": 3,
+        "finishes": [
+          {
+            "at": 1792270558919,
+            "reason": {
+              "kind": "error",
+              "failure": {
+                "message": "DeepSeek Messages transport failed",
+                "code": "TRANSPORT"
+              }
+            }
+          }
+        ],
+        "usage": null
+      }
+    ],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-1",
+    "arm": "candidate",
+    "botSlug": "bot-e5e21fa29fef49edb4000a2a3a6b6abc",
+    "sessionId": "botharness-f4f95044-ab87-4d86-81cd-97cab611b01a",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 18,
+        "at": 1792269978972,
+        "text": [
+          "I'll confirm the facts in one sentence in the DM."
+        ]
+      },
+      {
+        "seq": 30,
+        "at": 1792269981754,
+        "text": [
+          "已在私聊用一句话确认：10月20日 09:00 UTC 发布、材料 R3，并带上 QA-317 那条核验记录（R3 导出有阻断缺陷，发布前须改用 R2），按你的要求暂时没有去群里发言。"
+        ]
+      },
+      {
+        "seq": 39,
+        "at": 1792269995064,
+        "text": [
+          "I'll check whether Atlas has already answered in the group before deciding."
+        ]
+      },
+      {
+        "seq": 45,
+        "at": 1792269998112,
+        "text": [
+          "Atlas 只给出了日期、时间和材料；我手上的 QA-317 记录是独立的阻断信息，日期、时间和材料都不包含它，因此这里确实有必要补充。"
+        ]
+      },
+      {
+        "seq": 51,
+        "at": 1792269999696,
+        "text": [
+          "已在群里补充了 QA-317 这条记录：时间仍是 10月20日 09:00 UTC，但 R3 导出有阻断缺陷，发布前须改用 R2。核对过 Atlas 的回复只含日期、时间和材料，因此这段补充是必要的，也没有添加你给的事实之外的细节。"
+        ]
+      },
+      {
+        "seq": 66,
+        "at": 1792270004295,
+        "text": [
+          "这是 Atlas 已读到的简短确认，我已核对过内容；我的补充也已发在群里，无需再回应。该条 Inbox 已结清。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  },
+  {
+    "pair": "independent-1",
+    "arm": "candidate",
+    "botSlug": "bot-f716457e007442fda069a47eaedd4638",
+    "sessionId": "botharness-ba667fef-4bd9-4ac1-9af1-a73cb9fc3f04",
+    "refinementV2PromptPresent": true,
+    "refinementV2ToolDescriptionPresent": true,
+    "assistantText": [
+      {
+        "seq": 24,
+        "at": 1792269972062,
+        "text": [
+          "已在私聊确认：10月20日 09:00 UTC 发布，材料 R3，没有去群里发言，也没有创建任务或联系其他 Bot。"
+        ]
+      },
+      {
+        "seq": 39,
+        "at": 1792269996301,
+        "text": [
+          "已在群里简短确认：10月20日 09:00 UTC 发布，材料 R3。"
+        ]
+      }
+    ],
+    "failedAttempts": [],
+    "extraTools": []
+  }
+]

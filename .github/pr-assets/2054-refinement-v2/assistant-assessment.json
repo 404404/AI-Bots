@@ -1,0 +1,469 @@
+{
+  "protocol": {
+    "version": "2054-assistant-refinement-v2",
+    "subjectRuntime": "DSH 0.2.0-rc.2 native Sessions",
+    "candidate": "d53b71e4301c79271b8344acd04994b1b963cbd5",
+    "baseline": "c9a2f9d51e8196085b00049ef5675bc0ebc84cb4",
+    "baselineNote": "Previous #2054 revision, loaded into isolated peer-review-2054-attachments before rebuild. This comparison isolates prompt and tool-description refinement; not the original Bi/B0 cohort.",
+    "families": [
+      "redundant",
+      "independent",
+      "new-question",
+      "fyi-control"
+    ],
+    "pairsPerFamily": 2,
+    "totalPairs": 8,
+    "maximumSubjectEpisodes": 16,
+    "maximumParallelPairs": 1,
+    "replacementRuns": 0,
+    "judge": "Current GPT-6 Astra assistant reads all full histories, native Session tool calls/results and usages; no external judge requests",
+    "blindness": "Unblinded diagnostic engineering assessment, not independent Human evaluation",
+    "runner": "Existing 2054-peer-v1 family fixtures and mechanical oracles retained, including their known semantic limitations. Separate manifest overrides legacy reviewer/baseline/comparison metadata for this diagnostic only.",
+    "route": "deepseek-official/deepseek-flash@off",
+    "pricing": "Use existing frozen 2026-10-17 price version; estimates not invoices; retain unknown billing",
+    "claims": "Per-case diagnosis only; no p95 or statistically established improvement from n=2 per family",
+    "priorData": "Original 120 episodes and 160 judge attempts remain immutable",
+    "runnerHash": "f39b2cdc6af7be38ee79867702c22a3947bb961a38346afdaf9ed3167f4719d7"
+  },
+  "reviewer": "Current GPT-6 Astra assistant in this thread",
+  "method": "Direct unblinded reading of complete Group/DM histories, native Tool calls/results and assistant text. No external judge. Not Human acceptance.",
+  "reviews": [
+    {
+      "pairId": "redundant-1",
+      "winner": "tie",
+      "matchedWindowValid": true,
+      "reason": "Neither meets the intended silent behavior. Baseline publishes a no-addition recap. Candidate holds then submits an unsolicited timezone/design-policy paragraph, including an unrequested Beijing conversion and a no-addition ending. It contains no false release fact, but is not a necessary addition. Candidate has no yield parameter misuse, yet this does not establish an interaction improvement. Baseline has a native TRANSPORT failed attempt with unknown usage, so full cost comparison is unavailable.",
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792269609024",
+          "messageId": "0513e549-5c33-4a1a-9550-25b3243f3aba"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792269609024",
+          "messageId": "bot-dca4657bd2c4da20360e085bf94649801fe5d9b4a8c49fcaa80b27c22125d999"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792269609024",
+          "messageId": "bot-9e32dcfaa56840041e4917f88226746ff2ebb53710c4a782beff63bcff6e9c3a"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792269699279",
+          "messageId": "05e79af6-f2eb-4016-9323-6811427c658f"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792269699279",
+          "messageId": "bot-bf5cfec09849767b06a5d67acb15d4ff347ace3475d9d4a1aca4650e23c6a4f9"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-1-1792269699279",
+          "messageId": "bot-178117950b9249cbe1d017a56b31c8f2d78880acfa6e8a4121983e1805a9437a"
+        }
+      ]
+    },
+    {
+      "pairId": "redundant-2",
+      "winner": "tie",
+      "matchedWindowValid": true,
+      "reason": "Both publish no-addition replies after observing the peer answer. Candidate reads the peer first and then directly sends; baseline attempts a send, is held, observes the peer and still commits its recap. Candidate is shorter and has fewer calls, but neither achieves the requested silent completion. Candidate Atlas also self-labels @Atlas in body; no extra colleague is contacted.",
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792269764850",
+          "messageId": "42a9678e-5c68-416d-ae2a-6189d49f68d0"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792269764850",
+          "messageId": "bot-2b1a6b37bc11f33b76658355ddef61df6b79289797092141799f9a7af8f88a43"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792269764850",
+          "messageId": "bot-79f6569a4e1b098bb7cf0aff84d38c54395c220314a7ea204c3880afcc3db339"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792269827349",
+          "messageId": "2f13abd0-584b-49b2-975c-350a9311bf1e"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792269827349",
+          "messageId": "bot-42536dae6c478a56242e7e3e81a8945999972500e29033db620a18451b75a296"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-redundant-2-1792269827349",
+          "messageId": "bot-9da132e30f4933f8b4e4f7a277580d08157a9ca8c377eab7df8fd4ca2b42fbed"
+        }
+      ]
+    },
+    {
+      "pairId": "independent-1",
+      "winner": "candidate",
+      "matchedWindowValid": true,
+      "reason": "Both contribute QA-317 and mandatory R2 while preserving date/time. Candidate supplies the necessary correction directly without a mention-driven recap; baseline mentions Atlas, prompting another recap with an unnecessary final-confirmation qualifier. Candidate avoids that extra exchange and does not weaken the correction. Its R3-fix prerequisite is an inference from the stated blocking defect, not evidence that a fix was performed.",
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-1-1792269896180",
+          "messageId": "b38dd2e9-1fac-4f10-82b1-dc5f05107f4a"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-1-1792269896180",
+          "messageId": "bot-f1acec088cb37cfe2e5f8ceb63ed22c6ccb37beeb503e2df56a6219c43f3e662"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-1-1792269896180",
+          "messageId": "bot-2c6ab9b5d55518e925c67ced1642a0d72658cb29e09cde068b67452e013e3b13"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-1-1792269896180",
+          "messageId": "bot-20f761c0c5e24e44c8cde7ae6dafc974c0a991ee9706d81f07c89892367db48c"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-1-1792269966678",
+          "messageId": "ccff41e1-0f13-4b92-98b6-fea9b14b2d17"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-1-1792269966678",
+          "messageId": "bot-a9b0b30b2bc19545731a51b50b21a9180dc278c33cd26cf37014f0cd370c3133"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-1-1792269966678",
+          "messageId": "bot-fb759af5741dd9789cd315d4031b438aa95bf631f28857c8334d85e9576c273a"
+        }
+      ]
+    },
+    {
+      "pairId": "independent-2",
+      "winner": "candidate",
+      "matchedWindowValid": true,
+      "reason": "Both preserve QA-317 and mandatory R2. Candidate states the correction directly; baseline first calls the stale R3 statement correct and adds a no-other-facts ending, making the correction less clear. Candidate still performs two reads and omits the returned observation on the first send, causing an avoidable hold; baseline also omits it. This clarity preference is not a cost win: candidate uses more whole-episode tokens.",
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-2-1792270032400",
+          "messageId": "ab1c5523-d3b1-4dc7-8298-7ea9305bae91"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-2-1792270032400",
+          "messageId": "bot-cc18ff05295a2b1ec2191c75cc772daffca2963df284042b806eebb7d6a9914e"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-independent-2-1792270032400",
+          "messageId": "bot-aac80708e37637d79cdb4e0f5649da9de439fb5fd940ba859002e3114bdbdd9f"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-2-1792270101040",
+          "messageId": "4373b9a0-3502-402b-a408-0bb68960d352"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-2-1792270101040",
+          "messageId": "bot-2d4c87168d3f19fc9c4b71bd2956d555b06793b4788114832d4771fe1eb02435"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-independent-2-1792270101040",
+          "messageId": "bot-7b62fde47d85e62e5048dafa3dd6f9a992613c260dea1d671a1d607e246e1635"
+        }
+      ]
+    },
+    {
+      "pairId": "new-question-1",
+      "winner": "baseline",
+      "matchedWindowValid": true,
+      "reason": "Both answer October 20 18:00 JST correctly. Baseline keeps the explanation about the requested timezone conversion. Candidate first drafts a no-addition recap, is held by the newly arrived Human question, then answers correctly but appends that Atlas needs no supplement. The guard preserves correctness; the irrelevant no-addition prose remains and makes baseline the clearer response. No direct question was suppressed.",
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270169599",
+          "messageId": "33adec5e-054a-45de-968a-e53b242c50fc"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270169599",
+          "messageId": "bot-59e2409637fcf362dc1c044105f852808ec318269e71419db8215625d4525b1e"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270169599",
+          "messageId": "10b416b1-1995-4740-92ca-2ff9a73fff76"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270169599",
+          "messageId": "bot-7c4ed10af7a6ab1ce0e19eab07c7651da574dce0f67f832de88da56b55824688"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270231581",
+          "messageId": "bf74edd6-f6c1-4022-833a-6304ba16cf0a"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270231581",
+          "messageId": "bot-0a122fa224678de83caa958ef8e3019bb931aae9c4140af8b1c8ca2cbbcfa568"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270231581",
+          "messageId": "47407c40-7278-4b0a-bddb-f25621480cac"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-new-question-1-1792270231581",
+          "messageId": "bot-537b471c179c35f166214b2d2adfb516ddfefe051e0b06f02b15185ad1ea7158"
+        }
+      ]
+    },
+    {
+      "pairId": "new-question-2",
+      "winner": "inconclusive",
+      "matchedWindowValid": false,
+      "reason": "Both arms failed with fetch failed during preparation, before any Group request or new question. Only Atlas preparatory DM replies are present. Do not score the absent answers as silence, a tie, or a model correctness failure; retain both charged attempts without replacement. Subsequent authenticated Host health checks passed; transient fetch root cause is not established.",
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "dm-bot-1684e29bf4194841aea4560f9ceaf74e",
+          "messageId": "9aab7b3f-5faa-4503-8344-cd5bf8e14c93"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "dm-bot-1684e29bf4194841aea4560f9ceaf74e",
+          "messageId": "35b3c38f-e258-43be-845c-49ea6602601e"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "dm-bot-c9e3c31ca2dc4d0992b566e91090e1c1",
+          "messageId": "1bf4d60a-6aac-4762-b10a-7cf5d7e9f0ff"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "dm-bot-c9e3c31ca2dc4d0992b566e91090e1c1",
+          "messageId": "eb2fe483-4833-4981-983c-8e4ad80aad98"
+        }
+      ]
+    },
+    {
+      "pairId": "fyi-control-1",
+      "winner": "tie",
+      "matchedWindowValid": true,
+      "reason": "Both stay silent on the explicit FYI, resolve it, then correctly answer the later explicit request with date, UTC time and R3. No necessary answer is lost. Candidate whole-episode usage is unknown, so its shorter execution path cannot establish a full-cost saving.",
+      "evidence": [
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270431570",
+          "messageId": "636f17fe-e2ab-4bcb-a9b0-5b88602f52fd"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270431570",
+          "messageId": "bot-adcf476f341cffb33e5b8c39fdbdf32d8a780d70c73397334deed3781f6cae44"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270431570",
+          "messageId": "a9a1eaaa-a2dc-44f6-8485-d70a2e480950"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270431570",
+          "messageId": "bot-7eb6a65ae6f2d496ccaca314268e6bdbadfe83fa5fca32850084ca7089cb80a0"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270504400",
+          "messageId": "ad69dd03-0a6d-48ae-b153-8bec5fdfa956"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270504400",
+          "messageId": "bot-b66c028644396bdb2cad7b5bb19af73aaf87f7b80562538f709e75dc54912c59"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270504400",
+          "messageId": "7ec6f677-2b8f-473a-a083-15dccc74a4a5"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-1-1792270504400",
+          "messageId": "bot-d56a0757782fd06de4dff829e422e2fcb0c43daa1cec7424aadb9309a26ce8b9"
+        }
+      ]
+    },
+    {
+      "pairId": "fyi-control-2",
+      "winner": "tie",
+      "matchedWindowValid": true,
+      "reason": "Both remain silent for FYI and then correctly deliver the explicit confirmation without extra protocol prose. Candidate combines completion with send; baseline uses a separate inbox_resolve. Whole-episode token totals are nearly identical, so this is not an observed interaction or token improvement.",
+      "evidence": [
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270589638",
+          "messageId": "b0697fd7-49d6-48e1-bc0d-054e9f6b676d"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270589638",
+          "messageId": "bot-e50726d2f59a04000ad82c29ff0934623a159f567299c174ab3aca396a72f8de"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270589638",
+          "messageId": "1f9f1d25-ef3d-4ee1-b07b-90470438e74b"
+        },
+        {
+          "arm": "candidate",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270589638",
+          "messageId": "bot-8970d638ebc67addf255f2bc516be11e7b88a5415415efcf94648000fae6e8b3"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270670026",
+          "messageId": "4aeb0899-c1c5-46e8-90c0-7a11b907305c"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270670026",
+          "messageId": "bot-aaf27a57f24d52f2b3b58ddd48c7796da53293921f2b935e2fb19db5cb2e32b8"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270670026",
+          "messageId": "14fbaa0d-7510-4542-aa37-d5053498ce63"
+        },
+        {
+          "arm": "baseline",
+          "channelId": "group-llm-e2e-peer-fyi-control-2-1792270670026",
+          "messageId": "bot-fe9a4247b2e0e1c8f791e5cedaa15f3b0b7509de121d45b4dc84247cac904c9b"
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "pairs": 8,
+    "subjectEpisodes": 16,
+    "validMatchedPairs": 7,
+    "tie": 4,
+    "candidate": 2,
+    "baseline": 1,
+    "inconclusive": 1
+  },
+  "costLedger": {
+    "knownHostCostUSD": 0.122433006,
+    "unknownHostEpisodes": 2,
+    "unknownAuxiliaryCalls": 30,
+    "failedNativeAttempts": 2,
+    "externalJudgeCalls": 0,
+    "assistantPlatformCost": "unknown; separate from Bot usage",
+    "unreportedProviderRetries": "unknown; not zero",
+    "metrics": {
+      "redundant": {
+        "baseline": {
+          "knownEpisodeCostUSD": 0.009912077999999998,
+          "unknownCostEpisodes": 1,
+          "knownTokens": 424347,
+          "unknownTokenEpisodes": 1,
+          "valid": 2
+        },
+        "candidate": {
+          "knownEpisodeCostUSD": 0.018987204,
+          "unknownCostEpisodes": 0,
+          "knownTokens": 737941,
+          "unknownTokenEpisodes": 0,
+          "valid": 2
+        },
+        "matchedKnownPairs": 1,
+        "matchedTokenComparison": {
+          "baseline": 424347,
+          "candidate": 340997,
+          "relativeChange": -0.19641943975095855
+        }
+      },
+      "independent": {
+        "baseline": {
+          "knownEpisodeCostUSD": 0.020160324,
+          "unknownCostEpisodes": 0,
+          "knownTokens": 853101,
+          "unknownTokenEpisodes": 0,
+          "valid": 2
+        },
+        "candidate": {
+          "knownEpisodeCostUSD": 0.019207733999999997,
+          "unknownCostEpisodes": 0,
+          "knownTokens": 744450,
+          "unknownTokenEpisodes": 0,
+          "valid": 2
+        },
+        "matchedKnownPairs": 2,
+        "matchedTokenComparison": {
+          "baseline": 853101,
+          "candidate": 744450,
+          "relativeChange": -0.1273600663930765
+        }
+      },
+      "new-question": {
+        "baseline": {
+          "knownEpisodeCostUSD": 0.013629822,
+          "unknownCostEpisodes": 0,
+          "knownTokens": 419344,
+          "unknownTokenEpisodes": 0,
+          "valid": 1
+        },
+        "candidate": {
+          "knownEpisodeCostUSD": 0.013506756,
+          "unknownCostEpisodes": 0,
+          "knownTokens": 422331,
+          "unknownTokenEpisodes": 0,
+          "valid": 1
+        },
+        "matchedKnownPairs": 1,
+        "matchedTokenComparison": {
+          "baseline": 342794,
+          "candidate": 345580,
+          "relativeChange": 0.008127330116629805
+        }
+      },
+      "fyi-control": {
+        "baseline": {
+          "knownEpisodeCostUSD": 0.018027018,
+          "unknownCostEpisodes": 0,
+          "knownTokens": 622661,
+          "unknownTokenEpisodes": 0,
+          "valid": 2
+        },
+        "candidate": {
+          "knownEpisodeCostUSD": 0.009002070000000001,
+          "unknownCostEpisodes": 1,
+          "knownTokens": 311918,
+          "unknownTokenEpisodes": 1,
+          "valid": 2
+        },
+        "matchedKnownPairs": 1,
+        "matchedTokenComparison": {
+          "baseline": 311822,
+          "candidate": 311918,
+          "relativeChange": 0.00030786795030501857
+        }
+      }
+    }
+  }
+}

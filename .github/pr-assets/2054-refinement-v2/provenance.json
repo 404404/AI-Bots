@@ -1,0 +1,32 @@
+{
+  "candidate": "d53b71e4301c79271b8344acd04994b1b963cbd5",
+  "baseline": "c9a2f9d51e8196085b00049ef5675bc0ebc84cb4",
+  "prHead": "2f7ed758370d9de2e6b2299145dc0a2f1c865222",
+  "model": {
+    "route": "deepseek-official/deepseek-flash@off",
+    "advertisedVersion": "DeepSeek-V4.1-Flash-1017",
+    "modelRevision": "provider alias; serving revision not independently attested",
+    "sampling": "Host/provider defaults, reasoning off; identical A/B",
+    "cache": "new Bots and Sessions; no guarantee of cold provider cache; alternating run order",
+    "seed": "not supported by Host preset",
+    "prices": {
+      "currency": "USD",
+      "frozenAt": "2026-10-17",
+      "perMillion": {
+        "inputTokens": 0.15,
+        "outputTokens": 0.6,
+        "cacheReadTokens": 0.003,
+        "cacheWriteTokens": null
+      },
+      "condition": "off-peak (Saturday); estimate, not invoice"
+    },
+    "deadlineSeconds": 240,
+    "usageStableSeconds": 12
+  },
+  "runnerSHA256": "f39b2cdc6af7be38ee79867702c22a3947bb961a38346afdaf9ed3167f4719d7",
+  "protocolSHA256": "354772667795dac22208b3524cc2c59dfc43155a4d0e2c5d4bff389db91509b8",
+  "baselineLoadedBeforeCandidateBuild": true,
+  "candidateFreshProfile": true,
+  "noSourceEditsDuringCohort": true,
+  "headDelta": "Screenshots and their README only after frozen model/CLI runtime"
+}

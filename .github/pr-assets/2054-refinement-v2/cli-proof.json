@@ -1,0 +1,472 @@
+{
+  "group": "group-2054-final-peer-yield-cli-proof",
+  "bots": {
+    "Ada Peer QA": "bot-6631326832264a40b71108100aaabf2b",
+    "Bob Peer QA": "bot-6b403fbcd0a0423fb2d61191425c942b"
+  },
+  "enabled": {
+    "enabled": true
+  },
+  "aRead": {
+    "outputLimit": 12000,
+    "messages": [
+      {
+        "channelId": "group-2054-final-peer-yield-cli-proof",
+        "channelName": "2054 final peer-yield CLI proof",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {}
+        },
+        "message": {
+          "id": "67efbd46-c502-4265-bf2e-699490f0003f",
+          "at": "2026-10-17T20:48:01.982Z",
+          "author": {
+            "kind": "human"
+          },
+          "body": "请确认发布安排：10月20日 09:00 UTC，材料 R3。"
+        }
+      }
+    ],
+    "observationIds": {
+      "group-2054-final-peer-yield-cli-proof": "e572ab41-2a9e-4fba-91c3-eb199b16e73e"
+    }
+  },
+  "bRead": {
+    "outputLimit": 12000,
+    "messages": [
+      {
+        "channelId": "group-2054-final-peer-yield-cli-proof",
+        "channelName": "2054 final peer-yield CLI proof",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {}
+        },
+        "message": {
+          "id": "67efbd46-c502-4265-bf2e-699490f0003f",
+          "at": "2026-10-17T20:48:01.982Z",
+          "author": {
+            "kind": "human"
+          },
+          "body": "请确认发布安排：10月20日 09:00 UTC，材料 R3。"
+        }
+      }
+    ],
+    "observationIds": {
+      "group-2054-final-peer-yield-cli-proof": "e8c0f317-b6fd-489c-8a68-699b18303429"
+    }
+  },
+  "peer": {
+    "channelId": "group-2054-final-peer-yield-cli-proof",
+    "messageId": "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96",
+    "status": "committed",
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "held": {
+    "status": "held",
+    "channelId": "group-2054-final-peer-yield-cli-proof",
+    "draftId": "bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4",
+    "reason": "read-new-context-then-revise-or-drop",
+    "changedMessageIds": [
+      "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96"
+    ],
+    "changedMessageCount": 1,
+    "read": {
+      "channel_id": "group-2054-final-peer-yield-cli-proof",
+      "limit": 20
+    },
+    "review": {
+      "observationId": "575d4a36-95d0-47e4-af4f-41444f6abdd8",
+      "content": "{\"outputLimit\":12000,\"messages\":[{\"channelId\":\"group-2054-final-peer-yield-cli-proof\",\"channelName\":\"2054 final peer-yield CLI proof\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{\"bot-6b403fbcd0a0423fb2d61191425c942b\":\"Bob Peer QA\"}},\"message\":{\"id\":\"bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96\",\"at\":\"2026-10-17T20:48:02.673Z\",\"author\":{\"kind\":\"bot\",\"slug\":\"bot-6b403fbcd0a0423fb2d61191425c942b\"},\"botCausation\":{\"rootSourceEventId\":\"941b9401-f940-4e32-a55c-8308f152c69e\",\"parentSourceEventId\":\"941b9401-f940-4e32-a55c-8308f152c69e\",\"hop\":1},\"body\":\"10月20日 09:00 UTC 发布，材料 R3。\"}}]}",
+      "complete": true,
+      "observedMessageIds": [
+        "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96"
+      ],
+      "peerMessageIds": [
+        "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96"
+      ],
+      "responsibility": "These messages join this turn. Internally compare committed peer replies with your remaining responsibility; do not include this protocol or task-ownership explanation in the Channel reply. If they fully answer it, drop silently with yield_to_message_ids and observation_id; no agreement message is needed. Otherwise send the missing fact, independent evidence or requested second opinion. A new Human question is separate work even with the same words. Peer IDs identify observed messages, not proof of semantic completion. Explicitly resolve_inbox_ids only for work you judge complete after send/drop. Held/refused never resolve work. Unrelated FYI needs no reply. Cancelled work should be dropped silently. Keep unfinished work open."
+    }
+  },
+  "refused": {
+    "status": "refused",
+    "channelId": "group-2054-final-peer-yield-cli-proof",
+    "draftId": "bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4",
+    "reason": "peer-answer-not-observed"
+  },
+  "yield": {
+    "status": "dropped",
+    "channelId": "group-2054-final-peer-yield-cli-proof",
+    "draftId": "bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4",
+    "reason": "explicit-peer-yield",
+    "yieldedToMessageIds": [
+      "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96"
+    ],
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "afterYield": {
+    "messages": [
+      {
+        "id": "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96",
+        "at": "2026-10-17T20:48:02.673Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-6b403fbcd0a0423fb2d61191425c942b"
+        },
+        "botCausation": {
+          "rootSourceEventId": "941b9401-f940-4e32-a55c-8308f152c69e",
+          "parentSourceEventId": "941b9401-f940-4e32-a55c-8308f152c69e",
+          "hop": 1
+        },
+        "body": "10月20日 09:00 UTC 发布，材料 R3。",
+        "channelRevision": 2,
+        "deliveries": [
+          {
+            "botSlug": "bot-6631326832264a40b71108100aaabf2b",
+            "state": "pending"
+          }
+        ],
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "67efbd46-c502-4265-bf2e-699490f0003f",
+        "at": "2026-10-17T20:48:01.982Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "请确认发布安排：10月20日 09:00 UTC，材料 R3。",
+        "channelRevision": 1,
+        "deliveries": [
+          {
+            "botSlug": "bot-6631326832264a40b71108100aaabf2b",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-6b403fbcd0a0423fb2d61191425c942b",
+            "state": "pending"
+          }
+        ]
+      }
+    ],
+    "revision": 2
+  },
+  "newRead": {
+    "outputLimit": 12000,
+    "messages": [
+      {
+        "channelId": "group-2054-final-peer-yield-cli-proof",
+        "channelName": "2054 final peer-yield CLI proof",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {}
+        },
+        "message": {
+          "id": "0f3ab455-4d03-4f61-9034-7713dbd689b2",
+          "at": "2026-10-17T20:48:03.461Z",
+          "author": {
+            "kind": "human"
+          },
+          "body": "新的直接问题：发布安排换算为东京 JST 是几点？"
+        }
+      },
+      {
+        "channelId": "group-2054-final-peer-yield-cli-proof",
+        "channelName": "2054 final peer-yield CLI proof",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {
+            "bot-6b403fbcd0a0423fb2d61191425c942b": "Bob Peer QA"
+          }
+        },
+        "message": {
+          "id": "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96",
+          "at": "2026-10-17T20:48:02.673Z",
+          "author": {
+            "kind": "bot",
+            "slug": "bot-6b403fbcd0a0423fb2d61191425c942b"
+          },
+          "botCausation": {
+            "rootSourceEventId": "941b9401-f940-4e32-a55c-8308f152c69e",
+            "parentSourceEventId": "941b9401-f940-4e32-a55c-8308f152c69e",
+            "hop": 1
+          },
+          "body": "10月20日 09:00 UTC 发布，材料 R3。"
+        }
+      },
+      {
+        "channelId": "group-2054-final-peer-yield-cli-proof",
+        "channelName": "2054 final peer-yield CLI proof",
+        "actorNames": {
+          "humans": {
+            "local-human": "Human"
+          },
+          "bots": {}
+        },
+        "message": {
+          "id": "67efbd46-c502-4265-bf2e-699490f0003f",
+          "at": "2026-10-17T20:48:01.982Z",
+          "author": {
+            "kind": "human"
+          },
+          "body": "请确认发布安排：10月20日 09:00 UTC，材料 R3。"
+        }
+      }
+    ],
+    "observationIds": {
+      "group-2054-final-peer-yield-cli-proof": "323b4950-2cdc-4006-bc50-0679587cc99b"
+    }
+  },
+  "newAnswer": {
+    "channelId": "group-2054-final-peer-yield-cli-proof",
+    "messageId": "bot-8bc6506d0e0cb29b81d4ad594d920af40df46251e7a4f4bbacf865b54358d444",
+    "status": "committed",
+    "inboxResolution": {
+      "outcome": "not-requested",
+      "instruction": "This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open."
+    }
+  },
+  "history": {
+    "messages": [
+      {
+        "id": "bot-8bc6506d0e0cb29b81d4ad594d920af40df46251e7a4f4bbacf865b54358d444",
+        "at": "2026-10-17T20:48:03.933Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-6631326832264a40b71108100aaabf2b"
+        },
+        "botCausation": {
+          "rootSourceEventId": "38ab0d27-b601-4be0-974a-7446c6057339",
+          "parentSourceEventId": "38ab0d27-b601-4be0-974a-7446c6057339",
+          "hop": 1
+        },
+        "body": "10月20日 18:00 JST。",
+        "channelRevision": 4,
+        "deliveries": [
+          {
+            "botSlug": "bot-6b403fbcd0a0423fb2d61191425c942b",
+            "state": "pending"
+          }
+        ],
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "0f3ab455-4d03-4f61-9034-7713dbd689b2",
+        "at": "2026-10-17T20:48:03.461Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "新的直接问题：发布安排换算为东京 JST 是几点？",
+        "channelRevision": 3,
+        "deliveries": [
+          {
+            "botSlug": "bot-6631326832264a40b71108100aaabf2b",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-6b403fbcd0a0423fb2d61191425c942b",
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "id": "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96",
+        "at": "2026-10-17T20:48:02.673Z",
+        "author": {
+          "kind": "bot",
+          "slug": "bot-6b403fbcd0a0423fb2d61191425c942b"
+        },
+        "botCausation": {
+          "rootSourceEventId": "941b9401-f940-4e32-a55c-8308f152c69e",
+          "parentSourceEventId": "941b9401-f940-4e32-a55c-8308f152c69e",
+          "hop": 1
+        },
+        "body": "10月20日 09:00 UTC 发布，材料 R3。",
+        "channelRevision": 2,
+        "deliveries": [
+          {
+            "botSlug": "bot-6631326832264a40b71108100aaabf2b",
+            "state": "pending"
+          }
+        ],
+        "humanReceipts": [
+          {
+            "humanId": "local-human",
+            "displayName": "Human",
+            "state": "unread"
+          }
+        ]
+      },
+      {
+        "id": "67efbd46-c502-4265-bf2e-699490f0003f",
+        "at": "2026-10-17T20:48:01.982Z",
+        "author": {
+          "kind": "human"
+        },
+        "body": "请确认发布安排：10月20日 09:00 UTC，材料 R3。",
+        "channelRevision": 1,
+        "deliveries": [
+          {
+            "botSlug": "bot-6631326832264a40b71108100aaabf2b",
+            "state": "pending"
+          },
+          {
+            "botSlug": "bot-6b403fbcd0a0423fb2d61191425c942b",
+            "state": "pending"
+          }
+        ]
+      }
+    ],
+    "revision": 4
+  },
+  "trace": {
+    "slug": "bot-6631326832264a40b71108100aaabf2b",
+    "sessionId": "direct",
+    "turns": [
+      {
+        "turn": 1,
+        "startedAt": "2026-10-17T20:48:02.186Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_read",
+            "callId": "direct-c753ab2c-0700-4c00-9daa-2fdf1729b8c6",
+            "args": {
+              "channel_id": "group-2054-final-peer-yield-cli-proof"
+            },
+            "outcome": "ok",
+            "result": "{\"outputLimit\":12000,\"messages\":[{\"channelId\":\"group-2054-final-peer-yield-cli-proof\",\"channelName\":\"2054 final peer-yield CLI proof\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"67efbd46-c502-4265-bf2e-699490f0003f\",\"at\":\"2026-10-17T20:48:01.982Z\",\"author\":{\"kind\":\"hum…"
+          }
+        ]
+      },
+      {
+        "turn": 2,
+        "startedAt": "2026-10-17T20:48:02.916Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_send",
+            "callId": "direct-2e1d9720-0725-40c5-84d4-0d223dc6d2cc",
+            "args": {
+              "channel_id": "group-2054-final-peer-yield-cli-proof",
+              "body": "确认：10月20日 09:00 UTC 发布，材料 R3。",
+              "observation_id": "e572ab41-2a9e-4fba-91c3-eb199b16e73e"
+            },
+            "outcome": "ok",
+            "result": "{\"status\":\"held\",\"channelId\":\"group-2054-final-peer-yield-cli-proof\",\"draftId\":\"bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4\",\"reason\":\"read-new-context-then-revise-or-drop\",\"changedMessageIds\":[\"bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96\"],\"changedM…"
+          }
+        ]
+      },
+      {
+        "turn": 3,
+        "startedAt": "2026-10-17T20:48:03.146Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_send",
+            "callId": "direct-8d0f2f6e-c023-46c3-b11a-7fb2df22664a",
+            "args": {
+              "channel_id": "group-2054-final-peer-yield-cli-proof",
+              "body": "",
+              "drop": true,
+              "draft_id": "bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4",
+              "observation_id": "e572ab41-2a9e-4fba-91c3-eb199b16e73e",
+              "yield_to_message_ids": [
+                "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96"
+              ]
+            },
+            "outcome": "ok",
+            "result": "{\"status\":\"refused\",\"channelId\":\"group-2054-final-peer-yield-cli-proof\",\"draftId\":\"bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4\",\"reason\":\"peer-answer-not-observed\"}"
+          }
+        ]
+      },
+      {
+        "turn": 4,
+        "startedAt": "2026-10-17T20:48:03.393Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_send",
+            "callId": "direct-b268f37c-3508-47ce-9746-beeb190d9ecd",
+            "args": {
+              "channel_id": "group-2054-final-peer-yield-cli-proof",
+              "body": "",
+              "drop": true,
+              "draft_id": "bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4",
+              "observation_id": "575d4a36-95d0-47e4-af4f-41444f6abdd8",
+              "yield_to_message_ids": [
+                "bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96"
+              ]
+            },
+            "outcome": "ok",
+            "result": "{\"status\":\"dropped\",\"channelId\":\"group-2054-final-peer-yield-cli-proof\",\"draftId\":\"bot-c1252c9155835059c35cf244270af4f1caeb3be77f95ef87335610b94d4153c4\",\"reason\":\"explicit-peer-yield\",\"yieldedToMessageIds\":[\"bot-cd56742ad1d2167bf810be421843cba770d0ba55d34413ad1a3742162f541a96\"],\"inboxResolution\":{\"o…"
+          }
+        ]
+      },
+      {
+        "turn": 5,
+        "startedAt": "2026-10-17T20:48:03.664Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_read",
+            "callId": "direct-3c30f8ca-edfc-4475-96d0-0c83a0f02924",
+            "args": {
+              "channel_id": "group-2054-final-peer-yield-cli-proof"
+            },
+            "outcome": "ok",
+            "result": "{\"outputLimit\":12000,\"messages\":[{\"channelId\":\"group-2054-final-peer-yield-cli-proof\",\"channelName\":\"2054 final peer-yield CLI proof\",\"actorNames\":{\"humans\":{\"local-human\":\"Human\"},\"bots\":{}},\"message\":{\"id\":\"0f3ab455-4d03-4f61-9034-7713dbd689b2\",\"at\":\"2026-10-17T20:48:03.461Z\",\"author\":{\"kind\":\"hum…"
+          }
+        ]
+      },
+      {
+        "turn": 6,
+        "startedAt": "2026-10-17T20:48:03.931Z",
+        "endReason": "direct",
+        "noToolCalls": false,
+        "calls": [
+          {
+            "name": "channel_send",
+            "callId": "direct-b3589f0a-042d-4fc8-aa49-9c72860ca4b2",
+            "args": {
+              "channel_id": "group-2054-final-peer-yield-cli-proof",
+              "body": "10月20日 18:00 JST。",
+              "observation_id": "323b4950-2cdc-4006-bc50-0679587cc99b"
+            },
+            "outcome": "ok",
+            "result": "{\"channelId\":\"group-2054-final-peer-yield-cli-proof\",\"messageId\":\"bot-8bc6506d0e0cb29b81d4ad594d920af40df46251e7a4f4bbacf865b54358d444\",\"status\":\"committed\",\"inboxResolution\":{\"outcome\":\"not-requested\",\"instruction\":\"This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items…"
+          }
+        ]
+      }
+    ]
+  }
+}
