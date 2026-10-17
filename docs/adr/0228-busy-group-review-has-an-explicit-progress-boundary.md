@@ -27,6 +27,14 @@ context and verify the condition before answering. Or it may explicitly send wit
 answer is still necessary. Dropping a draft never implicitly completes Inbox responsibility.
 The draft owner does not schedule a wake or interpret natural-language conditions.
 
+The existing Inbox timer must retain that responsibility when ordinary Group context arrives
+without waking the Bot. A later Admission ends snooze early only after the Bot has observed
+it. Merely persisting an unobserved, mentions-only Group message cannot cancel the deadline
+wake. The first cohort exposed this pre-existing failure in both the accepted baseline and
+candidate: an unmentioned material confirmation silently suppressed the scheduled return.
+The fix stays in the shared Inbox attention predicate, with the existing timer and no new
+wake policy or scheduler.
+
 The override is one action for the original owner, Group and expected draft version. Its
 observation must cover all content required at the exhausted review boundary. Reading a
 later revision of the same message counts; an older merged observation does not. The final

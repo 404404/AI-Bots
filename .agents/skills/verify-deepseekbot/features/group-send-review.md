@@ -148,5 +148,9 @@ expiry and purge must refuse without a new message.
 To defer, drop the draft without completing the Inbox item, then use the existing
 `inbox_snooze` with a note and bounded time. Provide the awaited fact within the episode,
 observe the actual resume/read/reply and count all prelude, triage and resume usage. Snoozed
-work alone is not a successful task. Human history remains committed messages, with decision
+work must still wake at its deadline when the awaited fact arrives without a mention and
+has not otherwise been observed; ordinary context alone cannot cancel the return timer.
+Verify that a later genuinely observed message still returns the item early without a
+duplicate deadline wake.
+Snoozed work alone is not a successful task. Human history remains committed messages, with decision
 diagnostics separate. Capture the real Group history in the Web Client and inspect console.
