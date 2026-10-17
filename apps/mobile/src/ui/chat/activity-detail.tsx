@@ -187,16 +187,18 @@ function TokenCard({ detail, range }: { detail: ActivityDetail; range: string })
             )}
           </Text>
         )}
-        {detail.total.status === 'partial' || detail.total.status === 'unknown' ? (
-          <View
-            style={{
-              padding: space.x4,
-              borderRadius: radius.sm,
-              backgroundColor: theme.color.warningSoft,
-            }}
-          >
-            <Text variant="meta">{t.activityPartial}</Text>
-          </View>
+        {detail.total.status === 'partial' ||
+        detail.total.status === 'unknown' ||
+        detail.models.some(
+          (model) =>
+            model.input === null ||
+            model.output === null ||
+            model.cacheRead === null ||
+            model.cacheWrite === null,
+        ) ? (
+          <Text variant="meta" tone="muted">
+            {t.usagePartial}
+          </Text>
         ) : null}
       </Card>
       {detail.models.length === 0 ? null : (

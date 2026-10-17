@@ -134,6 +134,14 @@ describe('Bot activity', () => {
     ).toEqual({ status: 'partial', total: 300 });
   });
 
+  it('does not mark an exact reported total as a lower bound just because a split is unknown', () => {
+    expect(
+      tokenTotal({ modelUsageStatus: 'ready' }, [
+        { ...row('2026-10-15', 1000), cacheReadTokens: null },
+      ]),
+    ).toEqual({ status: 'ready', total: 1000 });
+  });
+
   it('keeps reported partial totals and treats zero plus unknown calls as unknown', () => {
     const reported = parseProfileActivity({
       today: '2026-10-15',

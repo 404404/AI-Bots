@@ -122,12 +122,7 @@ export function tokenTotal(
   if (activity.modelUsageStatus !== 'ready') return { status: 'unavailable', total: null };
   if (rows.length > 0 && rows.every((row) => row.totalTokens === null))
     return { status: 'unknown', total: null };
-  const partial = rows.some(
-    (row) =>
-      row.partial === true ||
-      row.totalTokens === null ||
-      BUCKETS.some((bucket) => row[bucket] === null),
-  );
+  const partial = rows.some((row) => row.partial === true || row.totalTokens === null);
   const total = rows.reduce((sum, row) => sum + (row.totalTokens ?? 0), 0);
   if (total === 0 && rows.some((row) => row.totalTokens === null))
     return { status: 'unknown', total: null };

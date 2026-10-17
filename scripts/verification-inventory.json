@@ -1368,9 +1368,9 @@
       "path": "scripts/e2e-mobile-routines-web.mjs",
       "category": "mapped",
       "behaviors": ["phone.routines"],
-      "reason": "Own task Host and Expo Web export; routine mutations/history through the same Host ports. Re-audited nested routine detail/Edit/Create and browser back from advanced schedules; native drawer gestures and scheduler/model execution are separate evidence. Export uses the platform-aware package-manager adapter on Windows.",
+      "reason": "Own task Host and Expo Web export; routine mutations/history through the same Host ports. Re-audited DM-header entry, nested detail/Edit/Create and browser back; pins English for selectors and uses the platform-aware exporter on Windows. Native gestures and scheduler/model execution remain separate evidence.",
       "task": 2028,
-      "sha256": "a9d65333911207d48b19c7fa8623f9b92dac4aa74e595d257e8d60b218c25758"
+      "sha256": "412ca65975064064872181b85a6b8936ee2eb9fe072e56d753291a80c83f95c8"
     },
     {
       "path": "scripts/e2e-mobile-android-interactions.mjs",

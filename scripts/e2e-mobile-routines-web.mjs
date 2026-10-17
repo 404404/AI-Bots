@@ -247,6 +247,8 @@ async function main() {
     const link = `deepseekbot://pair?p=${Buffer.from(JSON.stringify(payload)).toString('base64url')}`;
 
     page = await browser.newPage();
+    const localeSession = await page.createCDPSession();
+    await localeSession.send('Emulation.setLocaleOverride', { locale: 'en-US' });
     await page.emulate({
       viewport: { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
       userAgent:
@@ -311,7 +313,22 @@ async function main() {
     await text(displayName);
     steps.push('paired the app by pasting the link');
 
-    await page.goto(`${origin}/bot/${bot.slug}`, { waitUntil: 'networkidle0' });
+    await page.goto(`${origin}/dm/${bot.slug}`, { waitUntil: 'networkidle0' });
+    await page.waitForFunction(
+      (name) =>
+        [...document.querySelectorAll('[aria-label]')].some((node) =>
+          node.getAttribute('aria-label')?.startsWith(`${name},`),
+        ),
+      { timeout: 30_000 },
+      displayName,
+    );
+    await page.evaluate(
+      (name) =>
+        [...document.querySelectorAll('[aria-label]')]
+          .find((node) => node.getAttribute('aria-label')?.startsWith(`${name},`))
+          ?.click(),
+      displayName,
+    );
     await text('Morning digest');
     await page.evaluate(() => {
       const target = [...document.querySelectorAll('[aria-label]')].find((node) =>
