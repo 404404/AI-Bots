@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Fixed header and final row reachable",
+    "passed": true
+  },
+  {
+    "name": "Handle drag dismisses sheet",
+    "passed": true
+  },
+  {
+    "name": "Immediate preference survives swipe and cold restart",
+    "passed": true
+  },
+  {
+    "name": "Close dismisses from scrolled content",
+    "passed": true
+  },
+  {
+    "name": "Handle dismisses from child page",
+    "passed": true
+  },
+  {
+    "name": "Live default to maximum to default and close",
+    "passed": true
+  }
+]

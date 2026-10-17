@@ -1,0 +1,56 @@
+[
+  {
+    "variant": "before",
+    "appearance": "light",
+    "size": "large",
+    "contentVisible": false,
+    "notificationsVisible": false,
+    "returned": false,
+    "closed": false
+  },
+  {
+    "variant": "before",
+    "appearance": "light",
+    "size": "accessibility-large",
+    "contentVisible": false,
+    "notificationsVisible": false,
+    "returned": false,
+    "closed": false
+  },
+  {
+    "variant": "before",
+    "appearance": "light",
+    "size": "accessibility-extra-extra-extra-large",
+    "contentVisible": false,
+    "notificationsVisible": false,
+    "returned": false,
+    "closed": false
+  },
+  {
+    "variant": "before",
+    "appearance": "dark",
+    "size": "large",
+    "contentVisible": false,
+    "notificationsVisible": false,
+    "returned": false,
+    "closed": false
+  },
+  {
+    "variant": "before",
+    "appearance": "dark",
+    "size": "accessibility-large",
+    "contentVisible": false,
+    "notificationsVisible": false,
+    "returned": false,
+    "closed": false
+  },
+  {
+    "variant": "before",
+    "appearance": "dark",
+    "size": "accessibility-extra-extra-extra-large",
+    "contentVisible": false,
+    "notificationsVisible": false,
+    "returned": false,
+    "closed": false
+  }
+]

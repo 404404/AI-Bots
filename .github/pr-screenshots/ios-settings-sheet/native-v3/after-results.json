@@ -1,0 +1,56 @@
+[
+  {
+    "variant": "final",
+    "appearance": "light",
+    "size": "large",
+    "contentVisible": true,
+    "notificationsVisible": true,
+    "returned": true,
+    "closed": true
+  },
+  {
+    "variant": "final",
+    "appearance": "light",
+    "size": "accessibility-large",
+    "contentVisible": true,
+    "notificationsVisible": true,
+    "returned": true,
+    "closed": true
+  },
+  {
+    "variant": "final",
+    "appearance": "light",
+    "size": "accessibility-extra-extra-extra-large",
+    "contentVisible": true,
+    "notificationsVisible": true,
+    "returned": true,
+    "closed": true
+  },
+  {
+    "variant": "final",
+    "appearance": "dark",
+    "size": "large",
+    "contentVisible": true,
+    "notificationsVisible": true,
+    "returned": true,
+    "closed": true
+  },
+  {
+    "variant": "final",
+    "appearance": "dark",
+    "size": "accessibility-large",
+    "contentVisible": true,
+    "notificationsVisible": true,
+    "returned": true,
+    "closed": true
+  },
+  {
+    "variant": "final",
+    "appearance": "dark",
+    "size": "accessibility-extra-extra-extra-large",
+    "contentVisible": true,
+    "notificationsVisible": true,
+    "returned": true,
+    "closed": true
+  }
+]
