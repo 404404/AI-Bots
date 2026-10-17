@@ -46,7 +46,6 @@ For native macOS, install the task Bundle into a separate rc.2 Desktop Profile a
 
 - `channel-switch-stability`: Alt+1/2 and roster clicks change the active Channel without replacing the control rail, Channel list or Activity Center DOM. Channel-specific transient search/menu/profile state resets; per-Channel drafts stay separate. Test loading → ready and repeated store updates as well as switching back.
 
-
 - `settings-navigation`: the rail gear opens Bot Settings. Search its sidebar for “spacing” / “间距” from General, select the result, and verify Appearance scrolls to the highlighted slider. Search results must only reference registered pages. Repeat at 600px using the same search above the page picker; no horizontal overflow.
 - `settings-preferences`: Appearance owns the DSH-native Light/Dark/System preference and language, plus motion, Bot icon and layout. Change theme/language and reload to verify native persistence. Messaging owns default name, Enter/Shift+Enter/Ctrl-or-Command+Enter send behavior, and IM defaults; it no longer repeats Channel sorting. Notifications has its own page. Browser/Computer navigation is 浏览器控制/电脑控制 in Chinese.
 - `settings-shortcuts`: open Keyboard shortcuts, filter Panel and conversation commands, edit a Panel binding, reload and verify its keycaps and dispatch, then reset. Conflicts/reserved keys and failed saves must retain the accepted binding. Bot help shortcut opens this page without a second modal. Native recorder interception still requires actual Desktop qualification.
@@ -68,15 +67,14 @@ The unified Sessions journey uses `scripts/e2e-channel-sessions.mjs` with `BH_E2
 Default-following Sessions headers omit a redundant scope label. Group scope choices live in the existing view-options menu; only an explicit member-Bot override shows `Bot · name` in the header.
 
 The rc.2 native navigator clears archived Sessions. If the real Orchestrator auto-archives the completed QA Assignment, use the existing explicit Restore action in Bot scope first, then assert the same native `session/follow` identity and report from both scopes. This is not evidence that direct archived navigation works.
+
 - `channel-files`: select a DM, then open Channel files from the Messages header. It is a transient inner split, not a Dock panel or rail switch. Verify Human and Bot attachments, older history, preview and Reference/Unreference with a preserved draft. Repeat in a Group with files from multiple authors, without selecting a Bot; switch between Members and Channel files and resize the shared divider. Closing the list stops history loading. Switch Channels and verify the list closes and reopens with only that Channel's files. At a narrow width or in the legacy shell, the chat header opens the same list in a dismissible dialog. Check empty, retry and purged-file states; restoring a saved layout with the old `generated-files` panel must remove that panel without discarding other panel geometry.
 
 - `channel-files-compact`: the file list body has zero padding and each row owns its content inset. File name/size and icon actions share one row when space permits; narrow the inner split until the whole action group wraps to a second row, still aligned to the trailing edge. Verify Reference/Unreference accessible names and selected state, image preview, download, keyboard focus and both themes.
 
-
 - `bot-inbox-header`: select a PersonaBot DM and open Bot Inbox from the Messages header. The transient inner split has no outer body padding and preserves grouping, count, source navigation and pagination. It is the selected Bot's complete Inbox, including admitted Group/system sources. Verify empty/loading/error-retry states, preserved composer drafts, files/Inbox exclusivity, old `bot-inbox` layout pruning and the existing Inbox shortcut reopening Messages. Selecting a Group removes the entry and closes the split. Narrow Web opens the same Inbox in a dismissible dialog. Activity Center repair fallback requests the Inbox view of that Bot directly. Cross-check a real DM reply with the matching canonical Bot Inbox Admission; no Group Inbox is introduced.
 
 - `channel-header-profile`: the desktop Messages header reads Messages → Channel name using a Lucide ChevronRight; long names truncate with a full title. Profile and Channel settings are direct trailing icon buttons, with settings last. No floating profile chip remains over the conversation. Verify DM and Group profile opening and Back/Escape, files/Inbox/Members, keyboard focus, narrow panel layout, both themes and unsent drafts. Open Channel settings → My nickname; Enter/blur saves only this Channel, Restore default clears it, failure keeps the draft and shows an error. Reload and cross-check the canonical Channel nickname. DM activity visibility is available in the settings navigation; narrow/legacy Web retains its existing header.
-
 
 ## Channel workspace Sessions slice (#2049)
 
@@ -88,7 +86,6 @@ Prepare the Web browser profile with the pre-v4 UI and a visible Sessions panel,
 - `channel-session-scope`: DM and Group retain separate open states and geometry. Group remains on its existing Assignment query; explicit member-Bot scope must not enable Memory files, Memory evolution, Schedules, Browser, Computer or Bot Profile controls. Opening or closing Sessions changes no Host execution or permission. No-Channel commands are unavailable.
 
 The former flat Sessions scripts are retained only as historical evidence; the new scripts are the maintained entry points. The first slice does not move all other panels, qualify Windows/Linux Desktop, or claim improvements to Browser/Computer empty states. Review captures before publication: test prompts can include local authorization identifiers and must be cropped out.
-
 
 ## Bot Memory and Schedules workspace (#2067)
 
@@ -121,11 +118,9 @@ Run `scripts/e2e-nested-channel-panels.mjs` with the task-owned Web profile (`BH
 
 The maintained continuous-resize journey now compares every visible tree branch axis and the persisted tree, replacing the legacy fixed-wrapper selectors. Channel split geometry is version-7 tree authority; the older per-child ratio field is only a migration seed.
 
-
 ## Explicit Client CLI layout (#2096)
 
 Discover the exact Client id/generation, then read `client-layout` while the Workspace is mounted. Apply one `client-layout-set` with the observed fingerprint, explicit browser-origin scope and current Channel ID for child edits. Verify gap/rail order/location/hidden controls, one nested move/axis/resize, hide/show, Channel switch, closed-parent restore, reload and native restart. Compare live branch axes/percentages, parked geometry and canonical version-8 storage. Keep v1–v7 upgrade backups and malformed/future-storage failures. Attempt a stale fingerprint, wrong Channel, ineligible Group child and failed storage; require coded refusals or uncertain outcome, with a fresh read before retry. Reuse existing two-Bot/Group fixtures and geometry/draft identity probes; direct CLI, real Tob request, Web geometry and physical native input remain separate evidence.
-
 
 ## Explicit Client CLI shortcuts (#2097)
 

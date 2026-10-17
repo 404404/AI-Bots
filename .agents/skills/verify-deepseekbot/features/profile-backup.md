@@ -28,7 +28,6 @@ For actual macOS, the `target` and `tob` phases can connect through `BH_DESKTOP_
 - Recovery has no credential migration or automatic activation; model readiness may be unavailable until credentials and an explicit Model Plan are selected on the target.
 - Source tests prove guarded owner behavior; direct CLI, real Web, real Tob, restart, macOS and Human checks remain separate evidence categories.
 
-
 ## Repair regression gates (#2099)
 
 Retain the source candidate's first Web selector failure as a failure; a seeded Bot and loaded Client do not prove export UI behavior. Before qualification, run the focused source suites and build the exact candidate in the shared resource queue. Check scoped `preview-stale`, `too-large`, `package-invalid` and `plan-changed` through the actual broker/CLI, and mutate the reviewed Model Plan after the adapter snapshot but before HTTP owner capture. Require no new authorization/session. Also change recovery activation state or revoke current accepted-source authority during asynchronous model validation; the owner must refuse before commit.
