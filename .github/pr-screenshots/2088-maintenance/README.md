@@ -1,0 +1,19 @@
+# #2088 maintenance qualification evidence
+
+The Web captures use source8962d221307fb46b114dd47b4f0b38bd5f9dab4c and its own incremental build, DSH0.2.0-rc.2, Chromium1440×900, Chinese locale, 2026-10-18 Asia/Tokyo. They show candidate action states; no base-version capture or pixel comparison was performed. This PR changes qualification scripts/docs rather than the existing product controls.
+
+The simple question “你能做什么？” caused ordinary CLI capabilities discovery, a completed native turn and handled Human message, with an actual local Bot steward reply and a next-step invitation. It proposed no mutation or approval and preserved settings/model revisions. One invalid empty Inbox-ID send was refused and corrected within that same turn; the successful final reply was not duplicated.
+
+Direct Human CLI telemetry off/on/restore matched the actual Data & privacy switch. A fresh natural request approved true→false with exact old-value/patch review and owner readback. Another fresh request to enable was denied, returned approval-denied without retry, completed its turn and retained false. A real new Host process in the same absolute home and retained browser profile read false before writes. All five successful journeys had empty page-error lists. The direct-off capture includes an opening animation; the switch state remains visible and independently asserted.
+
+The Human CLI here is a checkout build, explicitly recorded by its artifact hash. This is not an npm package-install proof. Separate local production-artifact installation and installed-CLI proof now preserves actual version0.0.0 as described below; it cannot replace a genuine published current-Tob update/restart gate. Native/model/restart requires its own parent-run evidence. Prior actual managed-Git owner/artifact execution is recorded separately in docs/assets/pr/2088-maintenance/managed-git.json and was not rerun.
+
+Private login URLs, credentials, cookie jars, Client proofs, homes and unrelated data are not published. Test message/call identifiers are not authentication authority. The generated HTML is review prose, not runtime evidence or Human approval.
+
+## Actual native and installed-product evidence
+
+The parent ran the native telemetry direct/approve/deny phases and an actual new-process restart in the same absolute home/Profile/userdata. Approved false→true, denied true→false and retained true, with actual privacy controls and empty page-error lists. Main Desktop was restored after each batch. Native intro was an actual completed/handled capability reply; its original harness exit1 came from requiring one arbitrary field in a valid command-summary stdout preview. Full native output and the rendered reply were reconciled offline without resubmission.
+
+The product was packed at actual0.0.0 through the standard six-artifact path and installed through ordinary Bundle plugin add into a fresh Profile. The reproduction explicitly pins the consumer to local component/exact dependency inputs and qualified dockview/core8.4.1. Default resolution selecting8.6.0 remains unqualified. A private identical native CLI package isolates DSH's installation-first Bundle lookup from workspace shadowing; all six installed component paths, versions, Provider provenance and authenticated API passed. The actual installed CLI was selected and hashed.
+
+The installed-product model turn completed with a fresh scoped CLI call and actual local-steward reply before an unsupported Human capabilities fixture failed. Supported installed Human settings/model reads, unchanged plan, no mutation/approval and the same canonical reply were then reconciled; installed-product-intro.png is a new read-only rendering of that retained reply, without another model prompt. The original failure and screenshot remain private. This is not an original harness exit0 or genuine published-NPA update/restart. verification.json records these boundaries separately. No product runtime changed.
