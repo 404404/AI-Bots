@@ -163,7 +163,7 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 `group-send-review <channel> --accept` 在本地 Group 启用发送复核；`--off` 关闭，无标志时读取状态。
 该设置不修改唤醒策略。直接调用 `bot-tool <bot> channel_read --args-stdin`，从 `observationIds`
 取得目标群的观察凭据，作为 `observation_id` 传给 `channel_send`。`held` 表示尚未发送：读取变化后，
-携带 `draft_id`、新观察凭据和改写（或保持原文）的 `body` 再提交一次。`drop: true` 配合 `draft_id`
+携带 `draft_id`、新观察凭据和改写（或保持原文）的 `body` 复核，最多两次。`drop: true` 配合 `draft_id`
 和空 `body` 放弃草稿，不会解决 Inbox 事项。`expired`、`refused`、`requires-review` 停止自动发送。
 凭据不能跨 Bot owner 或 Group 使用。
 主动让话使用同一条 `bot-tool <bot> channel_send --args-stdin`，传入
@@ -183,6 +183,19 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 `group-delete` 和 `channel-purge-confirm` 无法撤销，必须带 `--confirm`。`channel-history` 列出已删除、内容仍可清除的群组。清除与历史页面一样分两步：`channel-purge-preview` 列出所选 Source Event 将删除的消息、Bot 受理记录、文件和后续效果，并返回短时有效的 `token`；`channel-purge-confirm` 从标准输入读取 `{"token": …}`，针对同一组 Source Event 执行，范围变化时以错误码拒绝。Source Event 从 `channel-history-sources` 中选取，它用返回的 `before` 游标分页。
 
 `channel-media-target` 通过当前 Human Channel 授权取得受检来源媒体，返回其 canonical Host 文件目标。`channel-media-download` 使用与卡片相同的认证附件路径，将原件字节写入新的本地 `--out` 文件，并在 JSON 中返回大小、MIME 和 SHA-256；目标已存在时拒绝覆盖。两条命令只使用 Channel、Source Event 和 attachment，不选择 Bot，也不调用模型；来源撤销仍返回明确错误码。默认上限为 25 MiB。
+
+忙群的草稿初次 held 后最多复核两次。预算耗尽返回 `requires-review`、`budget.exhausted`、
+`draftVersion` 和可选动作；新来源消息不能重置已有草稿预算。需要延后时，不带
+`resolve_inbox_ids` 放弃草稿，再通过既有 `inbox_snooze` 为已观察且未完成的事项设置时间和说明。
+等待中的事项不能标为完成。
+
+读全要求的上下文后，仍有必要发送的答案可通过同一直接 CLI 传入
+`freshness_override: {"draftVersion":3,"reason":"复核后仍有必要回答"}`，同时传原群的
+`channel_id`、`draft_id`、`observation_id` 和实际 `body`。版本必须使用结果返回的值，不能猜。
+每条预算耗尽草稿只能显式继续一次；成员、停止/归档、过期、purge 和 owner 检查始终生效。
+`draft-version-changed`、`override-context-not-observed`、`override-requires-exhausted-draft`
+是拒绝结果，不是发送成功。正式 message ID 证明结果，工具 trace 留下选择理由。
+Human 要求等待或取消时不得使用 override。
 
 ### Bot 资料、侧边栏与部件库
 

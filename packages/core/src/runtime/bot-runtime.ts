@@ -563,6 +563,7 @@ export interface OrchestratorChannelAccess {
   send(input: {
     observationId?: string;
     draftId?: string;
+    freshnessOverride?: import('../channels/send-review.js').FreshnessOverride;
     body: string;
     channelId?: string;
     replyTo?: string;
@@ -3972,6 +3973,7 @@ class BotRuntimeImplementation implements BotRuntime {
     ].filter((run): run is Promise<void> => run !== undefined);
     if (this.#agents.stopBot === undefined && active.length > 0)
       throw new Error('Agent adapter cannot stop this Bot safely');
+    this.groupSendReview.stop(botSlug);
     this.#database.transaction(
       (database) => {
         database
@@ -4005,6 +4007,7 @@ class BotRuntimeImplementation implements BotRuntime {
     const sessionId = this.#agents.stopOrchestratorTurn?.(botSlug);
     if (sessionId === undefined) return undefined;
     this.#stoppedTurns.add(botSlug);
+    this.groupSendReview.stop(botSlug);
     this.#stopNotices.set(
       botSlug,
       `[Host: the Human stopped your previous turn at ${this.#now().toISOString()} before it finished. Do not resume that work unless they ask again.]\n\n`,
@@ -6020,6 +6023,8 @@ class BotRuntimeImplementation implements BotRuntime {
               )}. Call channel_send again with channel_id for the Channel this reply belongs to, or with reply_to set to the message ID you are answering.`,
           );
         const channel = resolve(input.channelId);
+        if (input.freshnessOverride && channel.type !== 'group')
+          throw new Error('Freshness override requires the original Group draft');
         if (input.mentionBotIds?.length && channel.type !== 'group')
           throw new Error('Bot mentions require a Group Channel');
         if (input.mentionHumanIds?.length && channel.type !== 'group')
@@ -6049,6 +6054,7 @@ class BotRuntimeImplementation implements BotRuntime {
             reviewOwner,
             observationId: input.observationId ?? initialObservations.get(channel.id),
             draftId: input.draftId,
+            freshnessOverride: input.freshnessOverride,
             botSlug,
             channel,
             sourceEventId,
@@ -6063,7 +6069,10 @@ class BotRuntimeImplementation implements BotRuntime {
             mentionHumanIds: input.mentionHumanIds,
             deliveryKey: input.deliveryKey,
           }).catch((error: unknown) => {
-            if (!(error instanceof SendReviewRequired) || error.outcome.status !== 'held')
+            if (
+              !(error instanceof SendReviewRequired) ||
+              (error.outcome.status !== 'held' && error.outcome.status !== 'requires-review')
+            )
               throw error;
             const changed = error.outcome.changedMessageIds;
             if (!changed?.length) throw error;
@@ -6145,6 +6154,7 @@ class BotRuntimeImplementation implements BotRuntime {
     reviewOwner?: string | undefined;
     observationId?: string | undefined;
     draftId?: string | undefined;
+    freshnessOverride?: import('../channels/send-review.js').FreshnessOverride | undefined;
     botSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
@@ -6254,7 +6264,7 @@ class BotRuntimeImplementation implements BotRuntime {
       (db) => {
         this.#requireMembership(botSlug, channel.id);
         const current = this.#registry.get(botSlug);
-        if (this.#closed || !current || current.paused)
+        if (this.#closed || !current || current.paused || this.#stoppedTurns.has(botSlug))
           throw new Error('Bot Group sender is unavailable');
         if (
           !input.sessionId.startsWith('direct-') &&
@@ -6281,6 +6291,9 @@ class BotRuntimeImplementation implements BotRuntime {
             message,
             ...(input.observationId === undefined ? {} : { observationId: input.observationId }),
             ...(input.draftId === undefined ? {} : { draftId: input.draftId }),
+            ...(input.freshnessOverride === undefined
+              ? {}
+              : { freshnessOverride: input.freshnessOverride }),
           });
           if (reviewOutcome) return false;
         }

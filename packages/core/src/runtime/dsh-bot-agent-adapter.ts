@@ -3460,7 +3460,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'channel_send',
         description:
-          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: when a reply is needed, use this Tool for the actual answer, including a requested acknowledgment, greeting, clarification or image answer. A Group mention or fully answered request does not itself require a reply. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent. Read review.content when present: it contains newly observed messages. If review.complete is true, use review.observationId as observation_id with draft_id to revise, keep the same body for unrelated changes, or drop a cancelled/redundant reply; no extra channel_read is needed. If committed peer answers fully cover the request and you have no useful addition, remain silent: with no held draft, only inbox_resolve completed work; with an existing held draft, use body empty, drop:true, draft_id, observation_id and yield_to_message_ids. Never create a draft merely to drop it. Preserve independent evidence and new direct questions. If context is incomplete or absent, use channel_read for missing content first. A second change returns requires-review: stop this automatic attempt and keep unfinished Inbox responsibility open. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
+          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: when a reply is needed, use this Tool for the actual answer, including a requested acknowledgment, greeting, clarification or image answer. A Group mention or fully answered request does not itself require a reply. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent. Read review.content when present: it contains newly observed messages. If review.complete is true, use review.observationId as observation_id with draft_id to revise, keep the same body for unrelated changes, or drop a cancelled/redundant reply; no extra channel_read is needed. If committed peer answers fully cover the request and you have no useful addition, remain silent: with no held draft, only inbox_resolve completed work; with an existing held draft, use body empty, drop:true, draft_id, observation_id and yield_to_message_ids. Never create a draft merely to drop it. Preserve independent evidence and new direct questions. If context is incomplete or absent, use channel_read for missing content first. After at most two rechecks, requires-review with budget.exhausted stops automatic retries. Do not create another draft to reset the budget. If waiting for information, drop the draft without resolving work and use inbox_snooze with a bounded time and note; read fresh context when that responsibility returns. If no reply is needed, drop silently. Only when the answer remains necessary after reading all required context, use freshness_override with the returned draftVersion, a short reason and observation_id; this is one explicit freshness-only override for that draft. Never override a Human request to wait or cancel. Keep internal decisions out of the reply. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
         parameters: {
           resolve_inbox_ids: {
             type: 'array',
@@ -3476,7 +3476,17 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           draft_id: {
             type: 'string',
             description:
-              'The held draftId to revise or drop. One explicit recheck is allowed; unchanged body is valid.',
+              'The held draftId to revise or drop. At most two rechecks; unchanged body is valid. Reuse this ID rather than creating a new budget.',
+          },
+          freshness_override: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              draftVersion: { type: 'integer', required: true },
+              reason: { type: 'string', required: true },
+            },
+            description:
+              'Only after budget.exhausted: one explicit freshness-only override for this draft_id and its returned draftVersion. Read all required context and pass observation_id; explain why the answer is still necessary. It never bypasses ownership, permissions, stop, expiry or purge. Do not combine with drop or reactions; do not use when Human requested waiting or cancellation.',
           },
           drop: {
             type: 'boolean',
@@ -3556,6 +3566,20 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           if (active?.role !== 'orchestrator') {
             throw new Error('channel_send: Orchestrator run is unavailable');
           }
+          if (
+            args.freshness_override !== undefined &&
+            (!args.draft_id ||
+              !args.observation_id ||
+              args.drop === true ||
+              args.react_to !== undefined ||
+              !Number.isSafeInteger(args.freshness_override.draftVersion) ||
+              args.freshness_override.draftVersion < 1 ||
+              !args.freshness_override.reason.trim() ||
+              args.freshness_override.reason.length > 500)
+          )
+            throw new Error(
+              'channel_send: freshness_override requires draft_id, observation_id, a draftVersion and a reason; no drop or reaction',
+            );
           if (
             args.yield_to_message_ids !== undefined &&
             (args.drop !== true ||
@@ -3655,6 +3679,9 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             message = await active.run.channels.send({
               ...(args.observation_id === undefined ? {} : { observationId: args.observation_id }),
               ...(args.draft_id === undefined ? {} : { draftId: args.draft_id }),
+              ...(args.freshness_override === undefined
+                ? {}
+                : { freshnessOverride: args.freshness_override }),
               body: args.body,
               ...(exec.callId === undefined ? {} : { deliveryKey: String(exec.callId) }),
               ...(args.attachments === undefined ? {} : { attachments: args.attachments }),

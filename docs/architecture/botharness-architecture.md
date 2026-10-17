@@ -6,6 +6,10 @@
 原始依据与修订草稿归同一 owner，purge 清除派生内容。默认关闭，按群 opt-in；CLI 与模型使用同一契约。
 held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0227](../adr/0227-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
 
+忙群最多进行两次复核，耗尽后明确 drop、既有 Inbox snooze 或一次显式 freshness override。
+Override 绑定 owner、原 Group、当前草稿版本与实际观察；只跳过新鲜度检查，保留停止、权限、过期与 purge fence。
+选择理由、观察与提交 ID 留在原草稿记录；不新增 wake scheduler 或公开系统消息。见 [ADR-0228](../adr/0228-busy-group-review-has-an-explicit-progress-boundary.md)。
+
 Group composer 的 `/workspace` 和工作区 chip 复用 DM 的目录选择器与授权确认组件。默认选中当前未暂停、未删除的全部 Bot；Human 可以取消勾选，只授权指定几个。Group 只是逐 Bot 授权的入口，不持有权限；预览固定确认目标，后来加入的 Bot 不自动继承 Grant。共享目录预览相对于权限是只读的：native Workspace controller 可以登记、解析一个 DSH Workspace，但确认前不会建立任何 Workspace Grant。确认展示每个 Bot、canonical 目录、既有 Assignment mode 和 Orchestrator 写入状态；这些权限设置保持不变。逐 Bot 调用既有 `grantCreate`，可选的 application-defined Group scope 仅约束当前 Channel 成员与确认目录，并在异步 Workspace status 检查后、没有后续 await 的实际写入边界再次校验。SQLite `workspace_grants` 仍是唯一授权权威；无 Channel Workspace Binding、Group Grant 或统一 cwd。成功、有效 Grant 复用、拒绝和未知结果分别展示；失败/未知成员重试前通过同一个 `grants` readback 验证成员、撤销状态与当前目录，读回失败不发起写入。原侧栏与 chip 使用既有逐 Bot 变更通知刷新，正常委派仍通过原 Channel、Orchestrator 与 Assignment seam（#1433）。
 
 #1386 已在 Human 授权的隔离 Linux Profile 中复验既有 QA2 PersonaBot：真实 Lark → Owner Web 多字段输入 → 既有审批 → 固定 CLI/MCP 引用认证 → 原私聊回帖；普通容器 CLI/MCP、真实 Spill、跨 Bot 拒绝、轮换／撤销及停止活跃使用、重启与自然到期 Schedule 均保留 native／canonical 证据。模型 wire 正文及运行记录扫描未发现私密 canary；结论限于记录的实际安装版本和两个固定消费者，不推导任意 CLI/MCP。Linux 接收器已停止并恢复原 Windows QA2，正常回帖已核对。当前仍为 opt-in，Linux 工作区文件权限需显式准备。详见[复验记录](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/research/2026-10-12-private-input-linux-qualification.md)与[双语 Linux 指南](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/dev/guides/private-input-linux.md)。

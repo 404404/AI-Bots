@@ -150,7 +150,10 @@ async function fixture(
       bot?: string,
     ): Promise<{
       status?: string;
+      reason?: string;
       draftId?: string;
+      draftVersion?: number;
+      budget?: { used: number; limit: number; exhausted: boolean };
       messageId: string;
       observationIds: Record<string, string>;
       changedMessageIds?: string[];
@@ -483,7 +486,7 @@ describe('Group send review through the same direct model tools', () => {
         draft_id: held.draftId,
         observation_id: held.review!.observationId,
       });
-      expect(retry.status).toBe('requires-review');
+      expect(retry.status).toBe('held');
       expect(retry.changedMessageIds).toContain('new-0');
     });
   });
@@ -560,7 +563,7 @@ describe('Group send review through the same direct model tools', () => {
         draft_id: held.draftId,
         observation_id: held.review!.observationId,
       });
-      expect(recheck.status).toBe('requires-review');
+      expect(recheck.status).toBe('held');
       expect(recheck.changedMessageIds).toContain('correction');
       const other = await tool(
         'channel_send',
@@ -589,7 +592,7 @@ describe('Group send review through the same direct model tools', () => {
         draft_id: held.draftId,
         observation_id: held.review!.observationId,
       });
-      expect(recheck.status).toBe('requires-review');
+      expect(recheck.status).toBe('held');
       expect(recheck.changedMessageIds).toContain('large');
     });
   });
@@ -610,11 +613,11 @@ describe('Group send review through the same direct model tools', () => {
         draft_id: held.draftId,
         observation_id: partial.observationIds[channelId],
       });
-      expect(skipped.status).toBe('requires-review');
+      expect(skipped.status).toBe('held');
       expect(skipped.changedMessageIds).toContain('gap');
       expect(
         (await tool('channel_send', { body: 'forged', observation_id: 'invented' })).status,
-      ).toBe('requires-review');
+      ).toBe('held');
       expect(
         (
           await tool(
@@ -643,8 +646,9 @@ describe('Group send review through the same direct model tools', () => {
         draft_id: held.draftId,
         observation_id: fresh.observationIds[channelId],
       });
-      expect(stopped.status).toBe('requires-review');
+      expect(stopped.status).toBe('held');
       const newest = await tool('channel_read', {});
+      await human('third-change', 'One more unrelated change');
       expect(
         (
           await tool('channel_send', {
@@ -653,7 +657,7 @@ describe('Group send review through the same direct model tools', () => {
             observation_id: newest.observationIds[channelId],
           })
         ).status,
-      ).toBe('refused');
+      ).toBe('requires-review');
       expect(
         (await tool('channel_send', { body: '', drop: true, draft_id: held.draftId })).status,
       ).toBe('dropped');
@@ -727,4 +731,163 @@ it('serializes two sends with the same observation and treats only the first as 
       core.channels.readMessages(channelId).filter((m) => m.author.kind === 'bot'),
     ).toHaveLength(1);
   });
+});
+
+async function exhaustReview(f: Parameters<Parameters<typeof fixture>[0]>[0]) {
+  await f.human('busy-question', 'Meet at 11:00');
+  const initial = await f.tool('channel_read', {});
+  await f.human('busy-0', 'Coffee is ready');
+  let outcome = await f.tool('channel_send', {
+    body: 'Meet at 11:00',
+    observation_id: initial.observationIds[f.channelId],
+  });
+  for (let i = 1; i <= 2; i++) {
+    const read = await f.tool('channel_read', {});
+    await f.human(`busy-${i}`, `Unrelated chatter ${i}`);
+    outcome = await f.tool('channel_send', {
+      body: 'Meet at 11:00',
+      draft_id: outcome.draftId,
+      observation_id: read.observationIds[f.channelId],
+    });
+    expect(outcome.budget).toEqual({ used: i, limit: 2, exhausted: i === 2 });
+  }
+  expect(outcome.status).toBe('requires-review');
+  return outcome;
+}
+
+describe('busy Group progress through the direct tool', () => {
+  it('holds two rechecks, keeps its budget across new source messages, and audits one explicit override', async () => {
+    await fixture(async (f) => {
+      const exhausted = await exhaustReview(f);
+      await f.human('later-chatter', 'Tea is ready');
+      const replacement = await f.tool('channel_send', {
+        body: 'New draft cannot reset the budget',
+      });
+      expect(replacement).toMatchObject({
+        status: 'requires-review',
+        draftId: exhausted.draftId,
+        budget: { used: 2, limit: 2, exhausted: true },
+      });
+      const read = await f.tool('channel_read', {});
+      const ordinary = await f.tool('channel_send', {
+        body: 'Meet at 11:00',
+        draft_id: exhausted.draftId,
+        observation_id: read.observationIds[f.channelId],
+      });
+      expect(ordinary.reason).toBe('retry-budget-exhausted');
+      expect(ordinary.draftVersion).toBe(exhausted.draftVersion);
+      const override = {
+        body: 'Meet at 11:00',
+        draft_id: exhausted.draftId,
+        observation_id: read.observationIds[f.channelId],
+        freshness_override: {
+          draftVersion: exhausted.draftVersion,
+          reason: 'Only unrelated chatter changed; the requested time remains 11:00.',
+        },
+      };
+      await f.human('last-chatter', 'Coffee cups are on the table');
+      const committed = await f.tool('channel_send', override);
+      expect(committed.status).toBe('committed');
+      expect(
+        f.core.runtime.groupSendReview!.inspect('direct:ada', f.channelId, exhausted.draftId!),
+      ).toMatchObject({
+        state: 'committed',
+        attempts: 2,
+        override: {
+          count: 1,
+          actor: 'direct:ada',
+          messageId: committed.messageId,
+          reason: override.freshness_override.reason,
+          draftVersion: exhausted.draftVersion,
+        },
+      });
+      const repeated = await f.tool('channel_send', override);
+      expect(repeated.status).toBe('refused');
+      expect(
+        f.core.channels.readMessages(f.channelId).filter((m) => m.author.kind === 'bot'),
+      ).toHaveLength(1);
+    });
+  });
+
+  it('requires the current version and actual complete observation before overriding', async () => {
+    await fixture(async (f) => {
+      const exhausted = await exhaustReview(f);
+      const args = {
+        body: 'Meet at 11:00',
+        draft_id: exhausted.draftId,
+        observation_id: 'invented',
+        freshness_override: { draftVersion: exhausted.draftVersion, reason: 'Still necessary' },
+      };
+      expect((await f.tool('channel_send', args)).reason).toBe('override-context-not-observed');
+      const partial = await f.tool('channel_read', { limit: 1 });
+      expect(
+        (
+          await f.tool('channel_send', {
+            ...args,
+            observation_id: partial.observationIds[f.channelId],
+          })
+        ).reason,
+      ).toBe('override-context-not-observed');
+      const full = await f.tool('channel_read', {});
+      args.observation_id = full.observationIds[f.channelId]!;
+      expect((await f.tool('channel_send', args, 'bob')).reason).toBe('draft-unavailable');
+      expect(
+        (
+          await f.tool('channel_send', {
+            ...args,
+            freshness_override: { draftVersion: 1, reason: 'Stale version' },
+          })
+        ).reason,
+      ).toBe('draft-version-changed');
+      expect((await f.tool('channel_send', args)).status).toBe('committed');
+    });
+  });
+
+  it.each(['membership', 'archive', 'expiry', 'purge', 'stop'] as const)(
+    'override cannot bypass %s',
+    async (fault) => {
+      await fixture(async (f) => {
+        const exhausted = await exhaustReview(f);
+        const read = await f.tool('channel_read', {});
+        const draft = f.core.runtime.groupSendReview!.inspect(
+          'direct:ada',
+          f.channelId,
+          exhausted.draftId!,
+        )!;
+        if (fault === 'membership') f.core.channels.removeGroupMember(f.channelId, 'ada');
+        if (fault === 'archive') f.core.registry.setPaused('ada', true);
+        if (fault === 'stop') {
+          await f.core.runtime.stopBot!('ada');
+          expect(
+            f.core.runtime.groupSendReview!.inspect('direct:ada', f.channelId, draft.id),
+          ).toMatchObject({ state: 'dropped', terminationReason: 'stopped' });
+        }
+        if (fault === 'expiry') {
+          attachOperationalModule(f.core.operationalDatabase, 'test').transaction((db) => {
+            db.prepare('UPDATE group_send_review_drafts SET record_json = ? WHERE id = ?').run(
+              JSON.stringify({ ...draft, expires: 0 }),
+              draft.id,
+            );
+          });
+        }
+        if (fault === 'purge') {
+          f.core.channels.deleteGroup(f.channelId);
+          const preview = f.core.contentPurge.preview(f.channelId, [draft.sourceEventId]);
+          f.core.contentPurge.confirm(f.channelId, preview.sourceEventIds, preview.token);
+        }
+        const attempt = f.tool('channel_send', {
+          body: 'Meet at 11:00',
+          draft_id: exhausted.draftId,
+          observation_id: read.observationIds[f.channelId],
+          freshness_override: { draftVersion: exhausted.draftVersion, reason: 'Necessary' },
+        });
+        if (fault === 'membership' || fault === 'archive' || fault === 'purge' || fault === 'stop')
+          await expect(attempt).rejects.toThrow();
+        else expect((await attempt).status).toBe(fault === 'expiry' ? 'expired' : 'refused');
+        expect(
+          f.core.channels.readMessages(f.channelId).filter((m) => m.author.kind === 'bot'),
+        ).toHaveLength(0);
+      });
+    },
+  );
 });

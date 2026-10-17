@@ -9,7 +9,7 @@ observed basis. The Human sees only committed replies in canonical history.
 - Hold: changed content returns `held`, clears the preview and creates no formal message.
   A bounded `review.content` delta supplies full newly observed messages and an explicit
   `review.observationId`; `review.complete` indicates whether an extra read is needed.
-- Recheck: explicit `draft_id` and `observation_id` allow one revision or unchanged recheck.
+- Recheck: explicit `draft_id` and `observation_id` allow two revisions or unchanged rechecks.
 - Drop: `drop: true` abandons the draft independently of Inbox resolution.
 - Refuse: revoked membership, purged source, expired draft or restarted Host cannot auto-send.
 - Review: the pilot retains complete paired histories and separate runtime/judge usage.
@@ -58,7 +58,7 @@ marked in the exported JSON. Check undo, skipped pairs, full message bodies and 
 - A successful tool call returning `held` is not delivery. Missing usage remains unknown.
 - Draft previews are public temporary content; they are retained separately in reports.
 - Tool handles cannot cross owners or Groups. Source purge removes derived draft bodies.
-- After one failed recheck, automatic retries stop. Busy-group policies and recovery (#2055–2056) remain separate.
+- After two failed rechecks, automatic retries stop. Recovery after restart remains #2056.
 - Human acceptance requires independent review of full histories; no test or LLM signs it.
 
 ## Explicit completion and revoked-source regression
@@ -121,3 +121,25 @@ resolves completed Inbox work without creating a no-addition draft or reaction. 
 drafts still use explicit drop with observed peer evidence. Useful replies contain the answer,
 not an explanation of task ownership or the yielding protocol. Inspect native Tool records
 as well as the final silence: a refused no-addition send followed by drop is not a clean path.
+
+
+## Busy Group progress (#2055)
+
+`node scripts/e2e-group-busy-review.mjs --baseline-instance <accepted-2054-json>
+--candidate-instance <candidate-json> --original-instance <B0-json> --report <json>` runs
+the busy-Group diagnostic. `--formal` freezes four families of ten triplets; retain timing
+misses and every failure, then directly assess all full histories without external judges.
+
+Use the same direct send Tool to hold a draft, then inject more messages before each of two
+rechecks. Verify `budget.used` reaches two and `requires-review` reports the current
+`draftVersion`; new ordinary sends must return the existing draft and cannot replenish the
+budget. A full read plus `freshness_override` with that version and a reason can commit once
+despite later chatter. Inspect the one canonical reply and durable decision/Tool trace.
+Wrong owner, wrong version, incomplete observation, revoked membership, stopped/archived Bot,
+expiry and purge must refuse without a new message.
+
+To defer, drop the draft without completing the Inbox item, then use the existing
+`inbox_snooze` with a note and bounded time. Provide the awaited fact within the episode,
+observe the actual resume/read/reply and count all prelude, triage and resume usage. Snoozed
+work alone is not a successful task. Human history remains committed messages, with decision
+diagnostics separate. Capture the real Group history in the Web Client and inspect console.

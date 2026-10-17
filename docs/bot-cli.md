@@ -172,7 +172,7 @@ Pass the target's handle as `observation_id` to `channel_send`. A `held` result 
 message: read `review.content` when present. If `review.complete` is true, pass its
 `review.observationId` as `observation_id` without another `channel_read`; otherwise read the
 missing content first. Then pass `draft_id` with the new observation and revised
-(or unchanged) `body`. Only one recheck is allowed. Send `drop: true`, `draft_id` and an empty
+(or unchanged) `body`. At most two rechecks are allowed. Send `drop: true`, `draft_id` and an empty
 `body` to abandon the draft without resolving its Inbox item. `expired`, `refused` and
 `requires-review` are terminal for automatic sending. Handles cannot cross Bot owners or Groups.
 
@@ -192,6 +192,20 @@ Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a
 `group-delete` and `channel-purge-confirm` cannot be undone and need `--confirm`. `channel-history` lists deleted groups whose content can still be purged. Purging works in two steps like the history page: `channel-purge-preview` lists the messages, Bot admissions, files and effects the chosen Source Events would remove and returns a short-lived `token`; `channel-purge-confirm` reads `{"token": …}` from stdin for the same Source Events and fails coded when the scope changed. Pick Source Events from `channel-history-sources`, which pages with the `before` cursor it returns.
 
 `channel-media-target` acquires checked source media through current Human Channel authorization and returns its canonical Host file target. `channel-media-download` uses the same authenticated attachment route as the card, writes the original bytes to a new local `--out` file and returns size, MIME and SHA-256 in its JSON result. It refuses an existing output instead of overwriting it. Both commands use `channel + source-event + attachment` without a Bot selector or model call; source revocation remains a coded refusal. The default bound is 25 MiB.
+
+Busy Groups allow an initial hold and at most two rechecks. `budget.exhausted` returns
+`requires-review`, `draftVersion` and choices; new source messages do not reset the existing
+draft. To defer, drop without `resolve_inbox_ids`, then use `inbox_snooze` for the observed
+unfinished work with a time and note. Do not mark waiting work done.
+
+After reading all required content, an answer that remains necessary may use the same direct
+command with `freshness_override: {"draftVersion":3,"reason":"Necessary after review"}`,
+`draft_id`, `observation_id`, original `channel_id` and the actual `body`. Use the returned
+version, never a guessed constant. This explicit override is permitted once per exhausted
+draft; it does not bypass membership, stopped/archived state, expiry, purge or ownership.
+`draft-version-changed`, `override-context-not-observed` and `override-requires-exhausted-draft`
+are coded refusals, not delivery. A committed message ID proves the result; tool traces retain
+the selected reason. Human requests to wait or cancel must never be overridden.
 
 ### Bot profile, roster and Part Library
 

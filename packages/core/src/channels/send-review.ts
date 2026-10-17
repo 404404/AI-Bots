@@ -6,13 +6,18 @@ import type { ChannelMessage } from './channel.js';
 import { isChannelNotice } from './channel-notice.js';
 
 const TTL = 10 * 60_000;
-type Seen = { id: string; revision: number; hash: string };
+const MAX_RECHECKS = 2;
+type Seen = { id: string; revision: number; hash: string; readSerial?: number };
 type Observation = { owner: string; channelId: string; seen: Seen[]; expires: number };
+export type FreshnessOverride = { draftVersion: number; reason: string };
 export type SendReviewOutcome = {
   status: 'held' | 'dropped' | 'expired' | 'refused' | 'requires-review';
   channelId: string;
   draftId: string;
   reason: string;
+  draftVersion?: number;
+  budget?: { used: number; limit: number; exhausted: boolean };
+  choices?: ('drop' | 'snooze-inbox' | 'freshness-override')[];
   changedMessageIds?: string[];
   changedMessageCount?: number;
   yieldedToMessageIds?: string[];
@@ -53,11 +58,26 @@ export type ReviewDraft = {
   basis: Seen[];
   initialBasis: Seen[];
   yieldedToMessageIds?: string[];
+  version?: number;
+  requiredReview?: Seen[];
+  requiredObservationSerial?: number;
+  terminationReason?: 'stopped';
+  override?: {
+    actor: string;
+    reason: string;
+    observationId: string;
+    observedMessageIds: string[];
+    draftVersion: number;
+    count: 1;
+    at: string;
+    messageId: string;
+  };
 };
 
 export class GroupSendReview {
   readonly #boot = randomUUID();
   readonly #observations = new Map<string, Observation>();
+  #observationSerial = 0;
   constructor(
     readonly database: OperationalDatabaseModulePort,
     readonly now: () => Date = () => new Date(),
@@ -87,6 +107,7 @@ export class GroupSendReview {
 
   observe(owner: string, channelId: string, messages: ChannelMessage[], previous?: string): string {
     const now = this.now().getTime();
+    const readSerial = ++this.#observationSerial;
     for (const [id, value] of this.#observations)
       if (value.expires <= now) this.#observations.delete(id);
     const prior = previous === undefined ? undefined : this.#observations.get(previous);
@@ -99,6 +120,7 @@ export class GroupSendReview {
         id: message.id,
         revision: message.channelRevision,
         hash: fingerprint(message),
+        readSerial,
       });
     }
     const id = randomUUID();
@@ -112,6 +134,22 @@ export class GroupSendReview {
     return this.database.read((db) => this.#load(db, owner, channelId, draftId));
   }
 
+  stop(botSlug: string): void {
+    this.database.transaction((db) => {
+      const rows = db
+        .prepare(`SELECT record_json FROM group_send_review_drafts
+        WHERE json_extract(record_json, '$.original.author.slug') = ?
+        AND json_extract(record_json, '$.state') IN ('held', 'requires-review')`)
+        .all(botSlug);
+      for (const row of rows) {
+        const draft = JSON.parse(String(row.record_json)) as ReviewDraft;
+        draft.state = 'dropped';
+        draft.terminationReason = 'stopped';
+        this.#save(db, draft);
+      }
+    });
+  }
+
   drop(
     owner: string,
     channelId: string,
@@ -122,6 +160,11 @@ export class GroupSendReview {
       const draft = this.#load(db, owner, channelId, draftId);
       if (!draft || draft.state === 'committed')
         return { status: 'refused', channelId, draftId, reason: 'draft-unavailable' };
+      if (draft.expires <= this.now().getTime()) {
+        draft.state = 'expired';
+        this.#save(db, draft);
+        return { status: 'expired', channelId, draftId, reason: 'draft-expired' };
+      }
       if (evidence && draft.state !== 'dropped') {
         const observation = this.#observations.get(evidence.observationId);
         const botSlug = draft.original.author.kind === 'bot' ? draft.original.author.slug : '';
@@ -189,6 +232,7 @@ export class GroupSendReview {
       message: ChannelMessage;
       observationId?: string;
       draftId?: string;
+      freshnessOverride?: FreshnessOverride;
     },
   ): SendReviewOutcome | undefined {
     const { owner, channelId, message } = input;
@@ -201,12 +245,14 @@ export class GroupSendReview {
     });
     const previous = this.#load(db, owner, channelId, id);
     if (input.draftId && !previous) return fail('refused', 'draft-unavailable');
+    if (input.freshnessOverride && !previous)
+      return fail('refused', 'override-requires-exhausted-draft');
     if (!input.draftId) {
       const pending = db
         .prepare(`SELECT record_json FROM group_send_review_drafts
-        WHERE owner = ? AND channel_id = ? AND source_event_id = ?
+        WHERE owner = ? AND channel_id = ?
         AND json_extract(record_json, '$.state') IN ('held', 'requires-review') LIMIT 1`)
-        .get(owner, channelId, input.sourceEventId);
+        .get(owner, channelId);
       if (pending) {
         const held = JSON.parse(String(pending.record_json)) as ReviewDraft;
         if (held.expires <= this.now().getTime()) {
@@ -226,6 +272,7 @@ export class GroupSendReview {
           channelId,
           draftId: held.id,
           reason: 'use-existing-draft-no-new-retry-budget',
+          ...this.#progress(held),
         };
       }
     }
@@ -236,9 +283,21 @@ export class GroupSendReview {
         return fail('expired', 'draft-expired');
       }
       if (previous.boot !== this.#boot) return fail('requires-review', 'host-restarted');
-      if (previous.state !== 'held') return fail('refused', 'draft-terminal');
+      if (previous.state !== 'held' && previous.state !== 'requires-review')
+        return fail('refused', 'draft-terminal');
       if (!input.draftId) return fail('held', 'use-explicit-draft-id');
-      if (previous.attempts >= 1) return fail('requires-review', 'retry-budget-exhausted');
+      if (input.freshnessOverride) {
+        if (previous.attempts < MAX_RECHECKS || previous.override)
+          return fail('refused', 'override-requires-exhausted-draft');
+        if (input.freshnessOverride.draftVersion !== (previous.version ?? 1))
+          return fail('refused', 'draft-version-changed');
+        if (!input.freshnessOverride.reason.trim() || input.freshnessOverride.reason.length > 500)
+          return fail('refused', 'override-reason-required');
+      } else if (previous.attempts >= MAX_RECHECKS)
+        return {
+          ...fail('requires-review', 'retry-budget-exhausted'),
+          ...this.#progress(previous),
+        };
     }
     const observation =
       input.observationId === undefined ? undefined : this.#observations.get(input.observationId);
@@ -257,12 +316,28 @@ export class GroupSendReview {
       expires: this.now().getTime() + TTL,
       state: 'held',
       attempts: 0,
+      version: 1,
       original: message,
       current: message,
       basis,
       initialBasis: basis,
     };
-    if (previous) draft.attempts += 1;
+    if (input.freshnessOverride) {
+      if (
+        !basis.length ||
+        !previous?.requiredReview?.every((required) =>
+          basis.some(
+            (item) =>
+              item.id === required.id &&
+              (item.hash === required.hash ||
+                (item.readSerial ?? 0) >
+                  (previous.requiredObservationSerial ?? Number.MAX_SAFE_INTEGER)),
+          ),
+        )
+      )
+        return fail('refused', 'override-context-not-observed');
+    } else if (previous) draft.attempts += 1;
+    if (previous) draft.version = (draft.version ?? 1) + 1;
     draft.current = message;
     const priorBasis = draft.basis;
     draft.basis = basis;
@@ -282,33 +357,57 @@ export class GroupSendReview {
       ORDER BY p.revision DESC ${allBasis.length === 0 ? 'LIMIT 20' : ''}`)
       .all(channelId, floor);
     const seen = new Map(basis.map((item) => [item.id, item]));
-    const changed = rows
+    const currentBasis: Seen[] = rows.flatMap((row) => {
+      const content = {
+        ...JSON.parse(String(row.payload_json)),
+        body: String(row.body),
+      } as ChannelMessage;
+      return isChannelNotice(content) ||
+        (content.author?.kind !== 'human' && content.author?.kind !== 'bot')
+        ? []
+        : [
+            {
+              id: String(row.message_id),
+              revision: Number(row.revision),
+              hash: fingerprint(
+                this.projectMessageAttachments(String(row.source_event_id), content),
+              ),
+            },
+          ];
+    });
+    const changed = currentBasis
       .filter((row) => {
-        const content = {
-          ...JSON.parse(String(row.payload_json)),
-          body: String(row.body),
-        } as ChannelMessage;
-        if (
-          isChannelNotice(content) ||
-          (content.author?.kind !== 'human' && content.author?.kind !== 'bot')
-        )
-          return false;
-        return (
-          seen.get(String(row.message_id))?.hash !==
-          fingerprint(this.projectMessageAttachments(String(row.source_event_id), content))
-        );
+        return seen.get(row.id)?.hash !== row.hash;
       })
-      .map((row) => String(row.message_id));
+      .map((row) => row.id);
+    if (input.freshnessOverride) {
+      draft.state = 'committed';
+      draft.override = {
+        actor: owner,
+        reason: input.freshnessOverride.reason.trim(),
+        observationId: input.observationId!,
+        observedMessageIds: basis.map((item) => item.id),
+        draftVersion: input.freshnessOverride.draftVersion,
+        count: 1,
+        at: this.now().toISOString(),
+        messageId: message.id,
+      };
+      this.#save(db, draft);
+      return undefined;
+    }
     if (basis.length === 0 || changed.length > 0) {
-      draft.state = previous ? 'requires-review' : 'held';
+      draft.state = draft.attempts >= MAX_RECHECKS ? 'requires-review' : 'held';
+      draft.requiredReview = currentBasis;
+      draft.requiredObservationSerial = this.#observationSerial;
       this.#save(db, draft);
       return {
         ...fail(
-          previous ? 'requires-review' : 'held',
-          previous
-            ? 'changed-again-stop-and-keep-responsibility-open'
+          draft.state as 'held' | 'requires-review',
+          draft.attempts >= MAX_RECHECKS
+            ? 'retry-budget-exhausted'
             : 'read-new-context-then-revise-or-drop',
         ),
+        ...this.#progress(draft),
         changedMessageIds: changed.slice(0, 20).reverse(),
         changedMessageCount: changed.length,
         read: { channel_id: channelId, limit: 20 },
@@ -318,6 +417,23 @@ export class GroupSendReview {
       'DELETE FROM group_send_review_drafts WHERE id = ? AND owner = ? AND channel_id = ?',
     ).run(id, owner, channelId);
     return undefined;
+  }
+
+  #progress(draft: ReviewDraft): Pick<SendReviewOutcome, 'draftVersion' | 'budget' | 'choices'> {
+    const choices: NonNullable<SendReviewOutcome['choices']> = [
+      'drop',
+      'snooze-inbox',
+      'freshness-override',
+    ];
+    return {
+      draftVersion: draft.version ?? 1,
+      budget: {
+        used: draft.attempts,
+        limit: MAX_RECHECKS,
+        exhausted: draft.attempts >= MAX_RECHECKS,
+      },
+      ...(draft.attempts >= MAX_RECHECKS ? { choices } : {}),
+    };
   }
 
   #load(db: DatabaseSync, owner: string, channelId: string, id: string): ReviewDraft | undefined {
