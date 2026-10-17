@@ -599,14 +599,26 @@ try {
       'memory-other-' + suffix,
     ]);
     const initial = await humanCli('memory-snapshot', [created.bot.id, '--limit', '20']);
+    const initialFile = await humanCli('memory-file', [
+      created.bot.id,
+      '--sha',
+      initial.sha,
+      '--path',
+      'MEMORY.md',
+      '--limit',
+      '32000',
+    ]);
+    const otherFile = await humanCli('memory-file', [other.bot.id, '--path', 'MEMORY.md']);
     fixture = {
       home,
       bot: created.bot,
       channelId: created.dm.channelId,
       unaffected: other.bot.id,
       originalSha: initial.sha,
+      originalBody: initialFile.body,
+      unaffectedBody: otherFile.file.body,
       expectedHead: initial.sha,
-      expectedBody: 'Original green tea preference.\n',
+      expectedBody: initialFile.body,
     };
   }
   const persist = () =>
@@ -630,16 +642,26 @@ try {
     assert.equal(current.head, fixture.expectedHead);
     assert.equal(current.body, fixture.expectedBody);
     const other = await humanCli('memory-file', [fixture.unaffected, '--path', 'MEMORY.md']);
-    assert.equal(other.file.body, 'Independent coffee preference.\n');
+    assert.equal(other.file.body, fixture.unaffectedBody);
     writeFileSync(resolve(out, label + '-canonical.json'), JSON.stringify(current, null, 2));
     await setHomeVisible(false);
-    await page
-      .locator('.bh-mode-sidebar button[data-channel-id=' + JSON.stringify(fixture.channelId) + ']')
-      .click();
-    const selector = '::-p-aria([name="MEMORY.md"][role="treeitem"])';
+    await (
+      await visibleElement('button[data-channel-id=' + JSON.stringify(fixture.channelId) + ']')
+    ).click();
+    const messages = await page.$('[data-dock-header="bh:channel-body"]');
+    if (!messages || !(await messages.isVisible()))
+      await page.locator('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]').click();
+    const selector = '[role="treeitem"][data-path="MEMORY.md"]';
     const file = await page.$(selector);
     if (!file || !(await file.isVisible())) await click('Memory files');
-    await page.locator(selector).click();
+    await page.waitForSelector(selector, { visible: true });
+    const findMemory = (node) =>
+      node.role === 'treeitem' && node.name.startsWith('MEMORY.md')
+        ? node.name
+        : (node.children ?? []).map(findMemory).find(Boolean);
+    const fileName = findMemory(await page.accessibility.snapshot());
+    assert.ok(fileName, 'Memory file accessible name missing');
+    await click(fileName);
     await page.waitForFunction(
       (body) =>
         [...document.querySelectorAll('.bh-memory-commit-view')].some(
@@ -718,7 +740,7 @@ try {
   persist();
   if (runs('direct')) {
     const before = await read(),
-      body = 'Direct CLI jasmine tea.\n';
+      body = 'Direct CLI jasmine tea ' + suffix + '.\n';
     const argv = [
       fixture.bot.id,
       '--path',
@@ -767,7 +789,7 @@ try {
     steps.push('independent direct CLI edit, exact retry, stale refusal and supported restore');
   }
   const savePrompt = (body) =>
-    `请将 ${fixture.bot.name}（${fixture.bot.id}）的 MEMORY.md 全文准确替换为以下文本（含末尾换行），只改这个 Bot。准备差异供我审核，通过受支持的操作保存并报告真实 Git revision；不要新建任务或直接写仓库。文本：\n${body}`;
+    `请将 ${fixture.bot.name}（${fixture.bot.id}）的 MEMORY.md 全文准确替换为此 JSON 字符串解码后的文本（含末尾换行）：${JSON.stringify(body)}。只改这个 Bot。准备差异供我审核，通过受支持的操作保存并报告真实 Git revision；不要新建任务或直接写仓库。`;
   if (runs('journey') || runs('edit'))
     await reviewed(
       'memory-save',
@@ -792,7 +814,7 @@ try {
     await reviewed(
       'memory-restore-commit',
       `请将 ${fixture.bot.name}（${fixture.bot.id}）的 Memory 恢复为历史提交 ${fixture.originalSha} 的内容，保留历史，通过支持的恢复操作准备差异让我单独审核；不要强制重置或直接写仓库。报告新 Git revision 并解释 Soul/Core Memory 对已有会话何时生效。`,
-      'Original green tea preference.\n',
+      fixture.originalBody,
     );
     const graph = await humanCli('memory-graph', [fixture.bot.id]);
     const checkpoints = await humanCli('memory-checkpoints', [fixture.bot.id]);
