@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError } from '../../cloud/client';
 import type { CloudChannel, CloudMessage } from '../../cloud/channel-contract';
@@ -8,10 +8,23 @@ import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
-import { renderKeyboardFormScroll } from '../primitives/keyboard-form';
+import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { Text } from '../primitives/text';
 import { TextInput } from '../primitives/system-text';
 import { t } from '../strings';
+
+function ChannelFormScroll(props: ScrollViewProps) {
+  const theme = useDesignTheme();
+  return (
+    <KeyboardFormScroll
+      {...props}
+      bottomOffset={Math.max(theme.touch, theme.type.body.line * theme.fontScale * 2) + space.x6 * 2}
+    />
+  );
+}
+function renderChannelFormScroll(props: ScrollViewProps) {
+  return <ChannelFormScroll {...props} />;
+}
 
 export function CloudChannelsScreen() {
   const { instanceId, organizationId } = useLocalSearchParams<{
@@ -110,7 +123,7 @@ function ChannelWorkspace({
     <FlatList<CloudChannel | CloudMessage>
       style={{ flex: 1, backgroundColor: theme.color.base }}
       contentInsetAdjustmentBehavior="automatic"
-      renderScrollComponent={renderKeyboardFormScroll}
+      renderScrollComponent={renderChannelFormScroll}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         padding: space.x5,
