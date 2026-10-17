@@ -33,6 +33,16 @@ export const TOB_CHANNEL_CAPABILITIES: readonly TobCliCapability[] = [
     write: true,
   },
   {
+    command: 'group-invite-cancel',
+    description: 'Cancel a reviewed pending invitation without removing any existing member',
+    write: true,
+  },
+  {
+    command: 'group-join-decide',
+    description: 'Accept or decline a reviewed pending Bot join request',
+    write: true,
+  },
+  {
     command: 'channel-rename',
     description: 'Rename a reviewed Group, preserving other settings',
     write: true,
@@ -100,6 +110,7 @@ function imageView(value: string) {
 }
 function channelView(channel: ChannelRecord) {
   const invitations = channel.invitations ?? [];
+  const joinRequests = channel.joinRequests ?? [];
   return {
     id: channel.id,
     type: channel.type,
@@ -112,6 +123,8 @@ function channelView(channel: ChannelRecord) {
     ...(channel.ownerBotSlug === undefined ? {} : { ownerBotSlug: channel.ownerBotSlug }),
     invitations: invitations.slice(-100).map((invitation) => ({ ...invitation })),
     ...(invitations.length > 100 ? { invitationsOmitted: invitations.length - 100 } : {}),
+    joinRequests: joinRequests.slice(-100).map((request) => ({ ...request })),
+    ...(joinRequests.length > 100 ? { joinRequestsOmitted: joinRequests.length - 100 } : {}),
     createdAt: channel.createdAt,
     updatedAt: channel.updatedAt,
   };
@@ -176,6 +189,77 @@ export function createTobChannelOperations(deps: {
         run(guard) {
           guard();
           return view(owner(() => deps.management.snapshot(channelId)));
+        },
+      };
+    }
+    if (command === 'group-invite-cancel' || command === 'group-join-decide') {
+      keys(args, [
+        'channelId',
+        'expectedChannel',
+        ...(command === 'group-invite-cancel' ? ['invitationId'] : ['requestId', 'accept']),
+      ]);
+      const channelId = text(args.channelId);
+      const expectedChannel = text(args.expectedChannel);
+      if (!/^[a-f0-9]{64}$/u.test(expectedChannel)) throw new TobError('invalid-input');
+      const previous = structuredClone(owner(() => deps.management.wakePolicies(channelId)));
+      if (previous.channelFingerprint !== expectedChannel) throw new TobError('stale-channel');
+      const target = (slug: string, createdAt: string) => {
+        if (deps.isProtectedBot(slug)) throw new TobError('protected-bot');
+        const record = deps.registry.get(slug);
+        if (!record) throw new TobError('unknown-bot');
+        if (record.createdAt !== createdAt) throw new TobError('stale-profile');
+        if (command === 'group-join-decide' && record.paused) throw new TobError('archived-bot');
+        return {
+          slug,
+          displayName: record.displayName,
+          createdAt: record.createdAt,
+          profileFingerprint: botProfileFingerprint(record),
+        };
+      };
+      let targetBot: ReturnType<typeof target>;
+      let changes: unknown;
+      let apply: () => ReturnType<ChannelManagementService['snapshot']>;
+      if (command === 'group-invite-cancel') {
+        const invitationId = text(args.invitationId);
+        const invitation = previous.channel.invitations?.find((item) => item.id === invitationId);
+        if (!invitation) throw new TobError('unknown-invitation');
+        if (invitation.status !== 'pending') throw new TobError('invitation-not-pending');
+        targetBot = target(invitation.targetBotSlug, invitation.targetBotCreatedAt);
+        changes = { cancelInvitation: { ...invitation, targetBot }, preservesMembers: true };
+        apply = () => deps.management.cancelInvite({ channelId, invitationId, expectedChannel });
+      } else {
+        const requestId = text(args.requestId);
+        const { accept } = args;
+        if (typeof accept !== 'boolean') throw new TobError('invalid-input');
+        const request = previous.channel.joinRequests?.find((item) => item.id === requestId);
+        if (!request) throw new TobError('unknown-join-request');
+        if (
+          request.status !== 'pending' ||
+          previous.channel.members.includes(request.requesterBotSlug)
+        )
+          throw new TobError('join-request-not-pending');
+        targetBot = target(request.requesterBotSlug, request.requesterBotCreatedAt);
+        changes = { joinDecision: { ...request, accept, requester: targetBot } };
+        apply = () => deps.management.decideJoin({ channelId, requestId, accept, expectedChannel });
+      }
+      return {
+        proposal: freeze({
+          command,
+          target: channelId,
+          previousValue: view(previous),
+          patch: { expectedChannel, changes },
+        }),
+        run(guard, beforeEffect) {
+          guard();
+          if (
+            owner(() => deps.management.wakePolicies(channelId)).channelFingerprint !==
+            expectedChannel
+          )
+            throw new TobError('stale-channel');
+          if (!isDeepStrictEqual(target(targetBot.slug, targetBot.createdAt), targetBot))
+            throw new TobError('stale-profile');
+          beforeEffect?.();
+          return view(owner(apply));
         },
       };
     }

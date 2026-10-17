@@ -177,6 +177,38 @@ describe('bridge typert service', () => {
     });
   });
 
+  it('forwards optional fingerprints for invitation cancellation and join decisions', () => {
+    const { service, methods } = setup();
+    const channel = service.channelCreate('Team', []).channel;
+    const cancel = vi
+      .spyOn(methods, 'channelGroupInviteCancel')
+      .mockReturnValue({ ok: true, value: { channel } });
+    const decide = vi
+      .spyOn(methods, 'channelGroupJoinDecide')
+      .mockReturnValue({ ok: true, value: { channel } });
+    service.channelGroupInviteCancel(channel.id, 'invitation', 'observed');
+    expect(cancel).toHaveBeenCalledWith({
+      channelId: channel.id,
+      invitationId: 'invitation',
+      expectedChannel: 'observed',
+    });
+    service.channelGroupJoinDecide(channel.id, 'request', false, 'observed');
+    expect(decide).toHaveBeenCalledWith({
+      channelId: channel.id,
+      requestId: 'request',
+      accept: false,
+      expectedChannel: 'observed',
+    });
+    service.channelGroupJoinDecide(channel.id, 'request', true);
+    expect(decide).toHaveBeenLastCalledWith({
+      channelId: channel.id,
+      requestId: 'request',
+      accept: true,
+    });
+    service.channelGroupInviteCancel(channel.id, 'invitation');
+    expect(cancel).toHaveBeenLastCalledWith({ channelId: channel.id, invitationId: 'invitation' });
+  });
+
   it('forwards Channel fingerprints and stable operation keys through the named RPC facade', () => {
     const { service, methods } = setup();
     const channel = service.channelCreate('Team', []).channel;

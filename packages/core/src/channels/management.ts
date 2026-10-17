@@ -39,6 +39,13 @@ export interface ChannelManagementWakeInput extends ChannelManagementMemberInput
   intervalSeconds: number;
   inherit?: boolean;
 }
+export interface ChannelManagementCancelInviteInput extends ChannelManagementEditInput {
+  invitationId: string;
+}
+export interface ChannelManagementDecideJoinInput extends ChannelManagementEditInput {
+  requestId: string;
+  accept: boolean;
+}
 export interface ChannelManagementReceipt {
   operationKey: string;
   kind: 'create' | 'invite';
@@ -63,6 +70,8 @@ export interface ChannelManagementService {
   setAvatar(input: ChannelManagementAvatarInput): ChannelManagementSnapshot;
   setWake(input: ChannelManagementWakeInput): ChannelManagementSnapshot;
   removeMember(input: ChannelManagementMemberInput): ChannelManagementSnapshot;
+  cancelInvite(input: ChannelManagementCancelInviteInput): ChannelManagementSnapshot;
+  decideJoin(input: ChannelManagementDecideJoinInput): ChannelManagementSnapshot;
   create(input: ChannelManagementCreateInput, operationKey?: string): ChannelManagementResult;
   invite(input: ChannelManagementInviteInput, operationKey?: string): ChannelManagementResult;
   lookupCreate(
@@ -164,6 +173,7 @@ export function createChannelManagement(options: {
   isProtectedBot: (slug: string) => boolean;
   autoAcceptGroupInvitations?: () => boolean;
   onInvitation?: (dmChannelId: string, invitationId: string) => void;
+  onJoinDecision?: (dmChannelId: string, requestId: string) => void;
 }): ChannelManagementService {
   const { database, channels, registry } = options;
   const identity = (slug: string): TargetIdentity => {
@@ -235,6 +245,30 @@ export function createChannelManagement(options: {
   const current = (before: ChannelManagementSnapshot): void => {
     if (humanSnapshot(before.channel.id).channelFingerprint !== before.channelFingerprint)
       throw new ChannelManagementError('stale-channel');
+  };
+  const decisionTarget = (
+    slug: string,
+    createdAt: string,
+    allowPaused = false,
+    allowProtected = false,
+  ) => {
+    if (!allowProtected && options.isProtectedBot(slug))
+      throw new ChannelManagementError('protected-bot');
+    const record = registry.get(slug);
+    if (!record) throw new ChannelManagementError('unknown-bot');
+    if (record.createdAt !== createdAt) throw new ChannelManagementError('stale-profile');
+    if (!allowPaused && record.paused) throw new ChannelManagementError('archived-bot');
+    return record;
+  };
+  const decisionId = (value: unknown): void => {
+    if (
+      typeof value !== 'string' ||
+      !value.trim() ||
+      value !== value.trim() ||
+      value.length > 512 ||
+      [...value].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
+    )
+      throw new ChannelManagementError('invalid-input');
   };
   const read = (operationKey: string): OperationRow | undefined => {
     key(operationKey);
@@ -401,6 +435,57 @@ export function createChannelManagement(options: {
       member(before.channel, input.botSlug);
       current(before);
       channels.removeGroupMember(input.channelId, input.botSlug);
+      return snapshot(input.channelId);
+    },
+    cancelInvite(input) {
+      decisionId(input.invitationId);
+      const before = edit(input, ['invitationId']);
+      const invitation = before.channel.invitations?.find((item) => item.id === input.invitationId);
+      if (!invitation) throw new ChannelManagementError('unknown-invitation');
+      if (invitation.status !== 'pending')
+        throw new ChannelManagementError('invitation-not-pending');
+      decisionTarget(invitation.targetBotSlug, invitation.targetBotCreatedAt, true);
+      current(before);
+      channels.cancelGroupInvite(input.channelId, input.invitationId);
+      return snapshot(input.channelId);
+    },
+    decideJoin(input) {
+      decisionId(input.requestId);
+      if (typeof input.accept !== 'boolean') throw new ChannelManagementError('invalid-input');
+      const before = edit(input, ['requestId', 'accept']);
+      const request = before.channel.joinRequests?.find((item) => item.id === input.requestId);
+      if (!request) throw new ChannelManagementError('unknown-join-request');
+      if (input.accept && options.isProtectedBot(request.requesterBotSlug))
+        throw new ChannelManagementError('protected-bot');
+      if (request.status !== 'pending') {
+        if (
+          input.expectedChannel === undefined &&
+          request.status === (input.accept ? 'accepted' : 'declined')
+        )
+          return before;
+        throw new ChannelManagementError('join-request-not-pending');
+      }
+      if (before.channel.members.includes(request.requesterBotSlug))
+        throw new ChannelManagementError('join-request-not-pending');
+      const requester = decisionTarget(
+        request.requesterBotSlug,
+        request.requesterBotCreatedAt,
+        false,
+        !input.accept,
+      );
+      const dm = channels.getOrCreateDm(requester.slug, requester.displayName);
+      if (!dm) throw new ChannelManagementError('channel-operation-unavailable');
+      decisionTarget(request.requesterBotSlug, request.requesterBotCreatedAt, false, !input.accept);
+      current(before);
+      const decided = channels.decideGroupJoin({
+        channelId: input.channelId,
+        requestId: input.requestId,
+        accept: input.accept,
+        decidedBy: 'human',
+        requesterBotCreatedAt: requester.createdAt,
+        requesterDmChannelId: dm.id,
+      });
+      if (decided.notified) options.onJoinDecision?.(dm.id, request.id);
       return snapshot(input.channelId);
     },
     lookupCreate(operationKey, input) {

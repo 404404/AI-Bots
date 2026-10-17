@@ -135,9 +135,9 @@ deepseekbot channel-media-download <channel> --source-event <source-event-id> --
 deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png [--expected-channel <channelFingerprint>]
 deepseekbot group-avatar-set <channel> --clear [--expected-channel <channelFingerprint>]
 deepseekbot group-invite <channel> --bot <bot-id> [--operation-key <stable-key>] [--expected-channel <channelFingerprint>]
-deepseekbot group-invite-cancel <channel> --invitation <invitation-id>
-deepseekbot group-join-decide <channel> --request <request-id> --accept
-deepseekbot group-join-decide <channel> --request <request-id> --decline
+deepseekbot group-invite-cancel <channel> --invitation <invitation-id> [--expected-channel <channelFingerprint>]
+deepseekbot group-join-decide <channel> --request <request-id> --accept [--expected-channel <channelFingerprint>]
+deepseekbot group-join-decide <channel> --request <request-id> --decline [--expected-channel <channelFingerprint>]
 deepseekbot group-member-remove <channel> --bot <bot-id> [--expected-channel <channelFingerprint>]
 deepseekbot group-send-review <channel> [--accept | --off]
 deepseekbot group-wake-policies <channel>
@@ -664,7 +664,7 @@ The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist
 
 `deepseekbot tob-home` prepares/reuses the protected local Tob identity, Memory, managed Workspace and DM, returning their IDs and the canonical attention summary. It does not send a message. `deepseekbot home-model-set --provider <id> --model <id>` updates the native Host default; independent Bot plans remain unchanged.
 
-Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the Bot creation/profile/lifecycle, group creation/invitation, group settings/member removal, model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
+Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the Bot creation/profile/lifecycle, group creation/invitation, group settings/member removal, invitation cancellation/join decisions, model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
 
 Tob's Host-supplied system guidance is bundled with the plugin and is installed only for the protected Tob Orchestrator; upgrades do not overwrite the Human's editable personality or Memory. A simple question such as “What can you do?” first discovers the installed CLI capabilities, then describes practical outcomes in the Human's language and offers a concrete next step. Capability questions are read-only: they do not propose a mutation or approval. A later specific change request still goes through the existing authority and approval checks.
 
@@ -730,7 +730,7 @@ deepseekbot group-create "Planning" --operation-key group-planning-001
 deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-research-001 --expected-channel <channelFingerprint>
 ```
 
-Scoped `channels` returns bounded Channel metadata, not message bodies; use `--limit` from 1 to 100 (default 50) and the returned `nextCursor` with `--cursor`. `channel <group-channel-id>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}` and refuses a non-group target. The scoped projection keeps at most 100 members and the last 100 invitations, with counts for omitted entries. These reads do not admit Tob as a member or authorize group messages as management instructions.
+Scoped `channels` returns bounded Channel metadata, not message bodies; use `--limit` from 1 to 100 (default 50) and the returned `nextCursor` with `--cursor`. `channel <group-channel-id>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}` and refuses a non-group target. The scoped projection keeps at most 100 members, the last 100 invitations and the last 100 join requests, with counts for omitted entries. These reads do not admit Tob as a member or authorize group messages as management instructions.
 
 `group-create` supports an empty group or repeated `--member` values for existing eligible Bots. Explicit initial members join directly, matching the existing Human/UI creation behavior. A later `group-invite` uses the existing invitation owner. With the default `autoAcceptGroupInvites=true`, it records an accepted invitation (`respondedBy: "profile-policy"`) and membership together, without waking the invited Bot for a separate decision. This adds no setting or UI toggle. Only if the Human has already disabled auto-accept does the existing pending-invitation decision flow apply. Tob preserves that choice and reports the returned state.
 
@@ -742,7 +742,7 @@ The keyed result includes a `receipt` with `operationKey`, `kind`, `channelId`, 
 
 Authenticated Human online `group-create` and `group-invite` also support stable operation keys; the invitation command accepts `--expected-channel` for the observed state. These review/retry inputs are optional for Human commands and mandatory for scoped Tob. Existing unkeyed Human operations retain their owner behavior.
 
-The following group-settings slice adds group rename/avatar, member wake settings and member removal. Invitation cancellation, join decisions, personal mute/pin/nickname/visibility, group deletion, attachments and external membership remain outside the scoped allowlist. Some already have Human CLI commands above; that does not grant Tob access. #2090 remains open for its remaining scope. See [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) and the [coverage inventory](agents/cli-ui-coverage.md#2090-group-management-scope). Direct CLI, real Tob approval/readback, Web membership/history and macOS Desktop are separate verification gates.
+The following slices add group rename/avatar, member wake settings, member removal, cancellation of pending invitations and decisions on pending join requests. Personal mute/pin/nickname/visibility, group deletion, attachments and external membership remain outside the scoped allowlist. Some already have Human CLI commands above; that does not grant Tob access. #2090 remains open for its remaining scope. See [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) and the [coverage inventory](agents/cli-ui-coverage.md#2090-group-management-scope). Direct CLI, real Tob approval/readback, Web membership/history and macOS Desktop are separate verification gates.
 
 ### Tob group settings and member removal
 
@@ -765,6 +765,27 @@ Every write requires the observed `--expected-channel`; read again after each su
 Approval binds the previous state, exact target and proposed values. Execution rechecks the Human's current group access and target Bot identity. Denied/expired approval, a Human who has left, a non-group target, a missing membership or a replaced identity refuses without bypassing checks; Tob still cannot join groups. `stale-channel`/`stale-profile` requires a fresh read and review rather than overwriting a concurrent edit.
 
 These edits do not accept `--operation-key` or add replay receipts. After an uncertain result, inspect `channel`/`group-wake-policies` before doing anything else; do not blindly retry. Any remaining change needs a new proposal against the current snapshot. Existing create/invite receipts and default automatic acceptance are unchanged. Authenticated Human online equivalents may supply `--expected-channel`; omission preserves existing behavior without weakening Tob's mandatory inputs. #2090 remains open for its undelivered scope; these contracts do not claim Web, real-model or macOS verification has passed.
+
+### Tob invitation cancellation and join decisions
+
+From its accepted Human DM, Tob can use existing approval to cancel one **pending** group invitation or accept/decline one **pending** join request. First read `channel <channel-id>` for the exact invitation/request ID, status and `channelFingerprint`, then propose the operation:
+
+```bash
+deepseekbot channel <channel-id>
+deepseekbot group-invite-cancel <channel-id> --invitation <invitation-id> --expected-channel <channelFingerprint>
+deepseekbot group-join-decide <channel-id> --request <request-id> --accept --expected-channel <channelFingerprint>
+deepseekbot group-join-decide <channel-id> --request <request-id> --decline --expected-channel <channelFingerprint>
+```
+
+Scoped commands require the observed `--expected-channel`; a join decision requires exactly one of `--accept` or `--decline`. Approval binds the current group snapshot, exact pending record, target Bot incarnation and requested decision. Before execution, the Host rechecks the accepted Human DM, current Human membership, fingerprint, target identity and pending status. Denied/expired approval, a Human who has left, a concurrent decision or an unavailable/replaced target cannot authorize a mutation or silently refresh approved inputs.
+
+`unknown-invitation`/`unknown-join-request` refuses an absent record; `invitation-not-pending`/`join-request-not-pending` refuses an already settled target. `stale-channel`/`stale-profile` requires another read and review. These refusals do not authorize a replacement target or a different action.
+
+The default `autoAcceptGroupInvites=true` is unchanged: invited Bots normally join immediately, so cancellation cannot undo an already accepted invitation and never removes an existing member. Cancellation only applies to a still-pending invitation, such as one created after the Human opted out of automatic acceptance. Removing an existing member requires a separate reviewed `group-member-remove`; a failed cancellation must not fall back to removal.
+
+The existing Channel owner persists membership and accepted status together for acceptance; decline does not add membership. It records the existing decision notification once. Tob does not join the group or accept its content as management authority. This slice reuses canonical status and notification handling without another model Tool, schema migration or operation receipt.
+
+Authenticated Human online equivalents may provide `--expected-channel`; `group-join-decide` without it retains existing same-decision idempotent readback of a completed result. Scoped Tob entry points accept pending records only and cannot bypass fresh review by omitting the fingerprint or repeating a terminal decision. After an uncertain response, read the exact record's status and membership first. If it remains pending and action is still needed, propose against a fresh snapshot instead of blindly retrying. Personal presentation, group deletion and external membership remain separate delivery; this slice does not close #2090.
 
 ### Tob model and runtime management
 

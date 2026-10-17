@@ -18,6 +18,10 @@ export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> =
     'deepseekbot group-member-remove <group-channel-id> --bot <bot-slug> --expected-channel <observed-fingerprint>',
   'group-create':
     'deepseekbot group-create <name> --operation-key <stable-key> [--member <bot-slug> ...]; explicit initial members join directly, matching Human group creation',
+  'group-invite-cancel':
+    'deepseekbot group-invite-cancel <group-channel-id> --invitation <invitation-id> --expected-channel <observed-fingerprint>; cancel a pending invitation only',
+  'group-join-decide':
+    'deepseekbot group-join-decide <group-channel-id> --request <join-request-id> (--accept | --decline) --expected-channel <observed-fingerprint>; decide one pending join request',
   'group-invite':
     'deepseekbot group-invite <channel-id> --bot <bot-slug> --operation-key <stable-key> --expected-channel <observed-fingerprint>; preserves the existing invitation acceptance policy',
 };
@@ -32,6 +36,8 @@ const OPTIONS: Readonly<Record<string, readonly string[]>> = {
   'group-member-remove': ['bot', 'expected-channel'],
   'group-create': ['member', 'operation-key'],
   'group-invite': ['bot', 'operation-key', 'expected-channel'],
+  'group-invite-cancel': ['invitation', 'expected-channel'],
+  'group-join-decide': ['request', 'accept', 'decline', 'expected-channel'],
 };
 function usage(message: string): never {
   throw new CliLiveError('usage', message);
@@ -115,6 +121,19 @@ export function parseAgentChannels(
           values.clear === true
             ? null
             : channelAvatarDataUrl(text(values['avatar-file'], '--avatar-file'));
+        break;
+      case 'group-invite-cancel':
+        args.invitationId = text(values.invitation, '--invitation');
+        break;
+      case 'group-join-decide':
+        if (
+          (values.accept !== undefined && typeof values.accept !== 'boolean') ||
+          (values.decline !== undefined && typeof values.decline !== 'boolean') ||
+          (values.accept === true) === (values.decline === true)
+        )
+          usage('group-join-decide needs exactly one of --accept or --decline.');
+        args.requestId = text(values.request, '--request');
+        args.accept = values.accept === true;
         break;
       case 'group-member-remove':
         args.botSlug = text(values.bot, '--bot');

@@ -212,6 +212,8 @@ Usage:
   deepseekbot channel <channel-id>
   deepseekbot group-create <name> [--member <bot-id> ...] [--operation-key <key>]
   deepseekbot group-invite <channel-id> --bot <bot-id> [--operation-key <key>] [--expected-channel <fingerprint>]
+  deepseekbot group-invite-cancel <channel-id> --invitation <invitation-id> [--expected-channel <fingerprint>]
+  deepseekbot group-join-decide <channel-id> --request <join-request-id> (--accept | --decline) [--expected-channel <fingerprint>]
   deepseekbot channel-rename <channel-id> --name <name> [--expected-channel <fingerprint>]
   deepseekbot group-avatar-set <channel-id> (--avatar-file <path> | --clear) [--expected-channel <fingerprint>]
   deepseekbot group-wake-policies <channel-id>
@@ -2594,6 +2596,8 @@ export async function runBotCreateCli(
       values['expected-channel'] !== undefined &&
       ![
         'group-invite',
+        'group-invite-cancel',
+        'group-join-decide',
         'channel-rename',
         'group-avatar-set',
         'group-wake-set',

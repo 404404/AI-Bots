@@ -979,16 +979,34 @@ export class BotharnessBridgeService extends TypertRemoteService {
     );
   }
 
-  channelGroupInviteCancel(channelId: string, invitationId: string): { channel: ChannelRecord } {
-    return unwrap(this.methods.channelGroupInviteCancel({ channelId, invitationId }));
+  channelGroupInviteCancel(
+    channelId: string,
+    invitationId: string,
+    expectedChannel?: string,
+  ): { channel: ChannelRecord } {
+    return unwrap(
+      this.methods.channelGroupInviteCancel({
+        channelId,
+        invitationId,
+        ...(expectedChannel === undefined ? {} : { expectedChannel }),
+      }),
+    );
   }
 
   channelGroupJoinDecide(
     channelId: string,
     requestId: string,
     accept: boolean,
+    expectedChannel?: string,
   ): { channel: ChannelRecord } {
-    return unwrap(this.methods.channelGroupJoinDecide({ channelId, requestId, accept }));
+    return unwrap(
+      this.methods.channelGroupJoinDecide({
+        channelId,
+        requestId,
+        accept,
+        ...(expectedChannel === undefined ? {} : { expectedChannel }),
+      }),
+    );
   }
 
   channelGroupMemberRemove(

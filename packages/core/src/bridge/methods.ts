@@ -3532,6 +3532,27 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const invitationId = asNonBlank(source, 'invitationId');
       if (channelId === undefined || invitationId === undefined)
         return invalidInput('channelId and invitationId are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.cancelInvite({
+            channelId,
+            invitationId,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       try {
         return {
           ok: true,
@@ -3548,6 +3569,28 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const accept = source['accept'];
       if (channelId === undefined || requestId === undefined || typeof accept !== 'boolean')
         return invalidInput('channelId, requestId and accept are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.decideJoin({
+            channelId,
+            requestId,
+            accept,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       const channel = deps.channels.get(channelId);
       const request = channel?.joinRequests?.find((item) => item.id === requestId);
       if (channel?.type !== 'group' || request === undefined)
