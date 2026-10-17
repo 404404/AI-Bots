@@ -1,0 +1,126 @@
+{
+  "source": "895583ed97be15fa6551b7e950087ec2dd7ad896",
+  "integration": "21870071cfbe2d157c7bf9ed4eb1f8f0204d6aa4",
+  "parentSource": "fdca077473ad5838f65869449a5960cea2065dc2",
+  "native": "Existing SDK58 client: pager9.0.7, tab-view4.3.4; Redmi Note14Pro Android16 arm64. JavaScript-only icon motion follow-up; no native dependency changed.",
+  "motion": "All icons stay mounted. Native pager position drives opacity, scale and group/icon translation, shared with indicator. Reduced motion uses settled static icons; runtime reduced-motion/iOS untested.",
+  "proof": {
+    "before": {
+      "selected": "action"
+    },
+    "positionMeasurement": "Native indicator pixels; Animated native-driver values do not emit JS listener samples in this environment",
+    "results": [
+      {
+        "label": "mid-swipe",
+        "selected": "action",
+        "position": 0.4279,
+        "indicator": {
+          "left": 174,
+          "right": 580,
+          "width": 407
+        }
+      },
+      {
+        "label": "replies-settled",
+        "selected": "replies",
+        "position": 0.9984,
+        "indicator": {
+          "left": 406,
+          "right": 813,
+          "width": 408
+        }
+      },
+      {
+        "label": "mid-cancel",
+        "selected": "replies",
+        "position": 1.1828,
+        "indicator": {
+          "left": 481,
+          "right": 887,
+          "width": 407
+        }
+      },
+      {
+        "label": "cancel-returned",
+        "selected": "replies",
+        "position": 0.9984,
+        "indicator": {
+          "left": 406,
+          "right": 813,
+          "width": 408
+        }
+      },
+      {
+        "label": "unread-settled",
+        "selected": "unread",
+        "position": 1.9992,
+        "indicator": {
+          "left": 813,
+          "right": 1219,
+          "width": 407
+        }
+      },
+      {
+        "label": "action-returned",
+        "selected": "action",
+        "position": 0,
+        "indicator": {
+          "left": 0,
+          "right": 406,
+          "width": 407
+        }
+      }
+    ]
+  },
+  "matrix": [
+    {
+      "label": "activity-icon-motion-dark-1",
+      "theme": "dark",
+      "font": "1"
+    },
+    {
+      "label": "activity-icon-motion-dark-1.3",
+      "theme": "dark",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-icon-motion-dark-2",
+      "theme": "dark",
+      "font": "2"
+    },
+    {
+      "label": "activity-icon-motion-light-1",
+      "theme": "light",
+      "font": "1"
+    },
+    {
+      "label": "activity-icon-motion-light-1.3",
+      "theme": "light",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-icon-motion-light-2",
+      "theme": "light",
+      "font": "2"
+    }
+  ],
+  "video": {
+    "originalSeconds": 19.667911,
+    "focusedStrip": "First10s cropped from native capture; original speed retained; no synthetic UI or time remapping"
+  },
+  "checks": {
+    "focusedSource": 23,
+    "focusedIntegration": 23,
+    "sourceTypes": true,
+    "integrationTypes": true,
+    "lint": true,
+    "format": true,
+    "changelog": true
+  },
+  "limits": [
+    "No iOS/Human acceptance claim",
+    "No FPS or live system-config lifecycle claim",
+    "Reduced-motion runtime untested"
+  ],
+  "date": "2026-10-17"
+}
