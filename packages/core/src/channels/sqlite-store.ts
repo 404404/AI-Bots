@@ -1806,9 +1806,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         throw new Error('Group member not found');
       const policy =
         channel.wakePolicies?.[botSlug] ??
-        database.transaction((db) =>
-          defaultGroupWakePolicy(sourcePolicy.resolveIn(db, botSlug, 'group-ordinary')),
-        );
+        defaultGroupWakePolicy(sourcePolicy.readGroupOrdinary(botSlug));
       const audit = database.read((db) =>
         db
           .prepare(`

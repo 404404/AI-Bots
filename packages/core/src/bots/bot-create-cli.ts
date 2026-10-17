@@ -212,6 +212,11 @@ Usage:
   deepseekbot channel <channel-id>
   deepseekbot group-create <name> [--member <bot-id> ...] [--operation-key <key>]
   deepseekbot group-invite <channel-id> --bot <bot-id> [--operation-key <key>] [--expected-channel <fingerprint>]
+  deepseekbot channel-rename <channel-id> --name <name> [--expected-channel <fingerprint>]
+  deepseekbot group-avatar-set <channel-id> (--avatar-file <path> | --clear) [--expected-channel <fingerprint>]
+  deepseekbot group-wake-policies <channel-id>
+  deepseekbot group-wake-set <channel-id> --bot <bot-id> (--mode all|mentions|digest|silent | --inherit) [--count <n>] [--interval <seconds>] [--expected-channel <fingerprint>]
+  deepseekbot group-member-remove <channel-id> --bot <bot-id> [--expected-channel <fingerprint>]
   deepseekbot im-app-add <discord|slack|qq|dingtalk|wecom|matrix> --credentials-stdin
   deepseekbot im-app-status <platform>
   deepseekbot im-app-remove <platform> --app <app-id>
@@ -2585,8 +2590,17 @@ export async function runBotCreateCli(
       throw usageError(
         '--operation-key is supported only for online Bot creation, group creation or group invitation.',
       );
-    if (values['expected-channel'] !== undefined && command !== 'group-invite')
-      throw usageError('--expected-channel is supported only for group-invite.');
+    if (
+      values['expected-channel'] !== undefined &&
+      ![
+        'group-invite',
+        'channel-rename',
+        'group-avatar-set',
+        'group-wake-set',
+        'group-member-remove',
+      ].includes(command)
+    )
+      throw usageError('--expected-channel is supported only for reviewed group changes.');
     if (
       DIAGNOSTIC_COMMANDS.some((entry) => entry.command === command) ||
       LIFECYCLE_COMMANDS.some((entry) => entry.command === command) ||

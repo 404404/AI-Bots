@@ -124,19 +124,19 @@ deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 ```bash
 deepseekbot channel <group-channel>
 deepseekbot group-create "Skill Lab" [--member <bot-id> ...] [--operation-key <stable-key>]
-deepseekbot channel-rename <channel> --name "Skill Lab"
+deepseekbot channel-rename <channel> --name "Skill Lab" [--expected-channel <channelFingerprint>]
 deepseekbot channel-media-target <channel> --source-event <source-event-id> --attachment <attachment-id>
 deepseekbot channel-media-download <channel> --source-event <source-event-id> --attachment <attachment-id> --out ./original.csv
-deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png
-deepseekbot group-avatar-set <channel> --clear
+deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png [--expected-channel <channelFingerprint>]
+deepseekbot group-avatar-set <channel> --clear [--expected-channel <channelFingerprint>]
 deepseekbot group-invite <channel> --bot <bot-id> [--operation-key <stable-key>] [--expected-channel <channelFingerprint>]
 deepseekbot group-invite-cancel <channel> --invitation <invitation-id>
 deepseekbot group-join-decide <channel> --request <request-id> --accept
 deepseekbot group-join-decide <channel> --request <request-id> --decline
-deepseekbot group-member-remove <channel> --bot <bot-id>
+deepseekbot group-member-remove <channel> --bot <bot-id> [--expected-channel <channelFingerprint>]
 deepseekbot group-wake-policies <channel>
-deepseekbot group-wake-set <channel> --bot <bot-id> --mode digest --count 5 --interval 30
-deepseekbot group-wake-set <channel> --bot <bot-id> --inherit
+deepseekbot group-wake-set <channel> --bot <bot-id> --mode digest --count 5 --interval 30 [--expected-channel <channelFingerprint>]
+deepseekbot group-wake-set <channel> --bot <bot-id> --inherit [--expected-channel <channelFingerprint>]
 deepseekbot group-delete <channel> --confirm
 deepseekbot channel-timeline <channel> [--direction older|newer|around] [--cursor <cursor>] [--around <message-id>] [--limit <n>] [--older-limit <n>] [--newer-limit <n>]
 deepseekbot channel-journal <channel> --through <revision> [--before <position>] [--limit <n>]
@@ -155,7 +155,7 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
 
-`channel <group-channel>` 返回 `{channel, channelFingerprint, invitationPolicy:{autoAccept}}`，拒绝非群频道。稳定创建／邀请参数及重试语义见 [Tob 建群与邀请](#tob-建群与邀请)，Human 在线命令也可使用。
+`channel <group-channel>` 返回 `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}`，拒绝非群频道。稳定创建／邀请参数及重试语义见 [Tob 建群与邀请](#tob-建群与邀请)，Human 在线命令也可使用。
 
 与 Web 界面一样，重命名 Bot 私聊会同时重命名该 Bot。`group-avatar-set` 读取不超过 96 KiB 的 PNG、JPEG 或 WebP 文件。邀请 ID 和入群申请 ID 位于群组的 `invitations` 和 `joinRequests` 中，`channels` 和每个群组命令都会返回。`group-wake-set` 设置成员 Bot 对普通群消息何时唤醒：`all`、`mentions`、`digest`（累计 `--count` 条消息或经过 `--interval` 秒后唤醒，默认 5 和 30）或 `silent`；`--inherit` 让该成员恢复其 Bot 的默认设置。`channel-timeline` 和 `channel-journal` 按聊天视图的方式分页读取消息；`channel-journal` 的 `--through` 取 `channel-timeline` 返回的 `revision`。`channel-retry` 在 Bot 回复失败后让它重新回答一条 Human 私聊消息。`channel-unread` 列出每个有未读的频道的 Bot 未读消息数，即侧边栏每行显示的数字。`channel-mute` 与侧边栏菜单一样把频道设为免打扰：该行变灰，未读消息不计入活动中心的未读总数；`--off` 取消免打扰。`channel-bot-stop` 停止 Bot 当前这一轮工作，与工作状态条上的“停止”按钮相同：Bot 回到空闲，Channel 里记录 Human 停止了它；Bot 没在工作时以 `not-working` 拒绝。Bot 已委派的 Assignment 继续运行。`channel-react` 给一条消息加上你的表情回应，带 `--remove` 则撤回，并返回该消息的 `reactions`；每条消息最多保留你的 20 个回应，表情必须是单个 emoji。Bot 通过 `channel_send` 的 `react_to` 和 `reaction` 回应，只回应时 `body` 留空；`bot-tool <bot> channel_send --args-stdin` 可以不经过模型执行它。`channel-search` 在你可见的消息中不区分大小写地匹配 `--query`，按时间从新到旧返回，并用返回的 `nextCursor` 翻页。
 
@@ -643,7 +643,7 @@ deepseekbot memory-move <bot-id> --default-location
 
 `deepseekbot tob-home` 幂等准备受保护的本地 Tob、Memory、管理 Workspace 与 DM，返回标识及权威 Attention 摘要，不发送消息。`deepseekbot home-model-set --provider <id> --model <id>` 修改原生 Host 默认模型，保留其他 Bot 的独立计划。
 
-Tob 通过普通原生 bash／pwsh Tool 调用 `deepseekbot`；专用的 `tob_assignment_limit_read`、`tob_assignment_limit_set` Tool 及直接运行入口已移除。既有 Assignment Tools 不变。受限 CLI 流程支持下方列出的 Bot 创建／资料／生命周期、建群／邀请、模型、运行、隐私、Git 和更新操作；这是明确的允许清单，不代表开放全部 Human CLI 命令或其他 Bot 的数据。
+Tob 通过普通原生 bash／pwsh Tool 调用 `deepseekbot`；专用的 `tob_assignment_limit_read`、`tob_assignment_limit_set` Tool 及直接运行入口已移除。既有 Assignment Tools 不变。受限 CLI 流程支持下方列出的 Bot 创建／资料／生命周期、建群／邀请、群设置／成员移除、模型、运行、隐私、Git 和更新操作；这是明确的允许清单，不代表开放全部 Human CLI 命令或其他 Bot 的数据。
 
 在具备权限的 Tob Shell 执行中：
 
@@ -709,11 +709,11 @@ deepseekbot group-create "计划" --operation-key group-planning-001
 deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-research-001 --expected-channel <channelFingerprint>
 ```
 
-受限 `channels` 返回有界频道元数据，不返回消息正文；`--limit` 为 1–100，默认 50，将返回的 `nextCursor` 传入 `--cursor` 继续读取。`channel <group-channel-id>` 返回 `{channel, channelFingerprint, invitationPolicy:{autoAccept}}`，拒绝非群频道。受限投影最多保留 100 个成员及最近 100 条邀请，并报告被省略的数量。这些读取不会让 Tob 加入群聊，也不把群消息变成管理指令来源。
+受限 `channels` 返回有界频道元数据，不返回消息正文；`--limit` 为 1–100，默认 50，将返回的 `nextCursor` 传入 `--cursor` 继续读取。`channel <group-channel-id>` 返回 `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}`，拒绝非群频道。受限投影最多保留 100 个成员及最近 100 条邀请，并报告被省略的数量。这些读取不会让 Tob 加入群聊，也不把群消息变成管理指令来源。
 
 `group-create` 支持空群，或用重复的 `--member` 指定现有可用 Bot。明确指定的初始成员直接加入，与现有 Human／UI 创建行为一致。之后的 `group-invite` 复用现有邀请 owner。默认 `autoAcceptGroupInvites=true` 时，同一事务记录已接受邀请（`respondedBy: "profile-policy"`）和成员关系，不唤醒受邀 Bot 单独决定。本片不新增设置或 UI 开关。仅当 Human 已主动关闭自动接受时，才沿用待处理邀请的原有决定流程；Tob 保留这一选择并报告实际状态。
 
-受限写入必须提供稳定的 `--operation-key`：长度 8–128，以字母或数字开头，只含字母、数字、点、下划线、冒号或连字符；邀请还必须传入前一次读取的 `--expected-channel` 指纹。审核快照绑定当前频道元数据、成员、邀请策略及目标 Bot 身份；消息到达和未读计数不会使其过期。审批和执行重新检查已准入 Human DM 与当前目标状态。审核期间相关设置发生变化时，应重新读取并提案，不能悄悄刷新已批准的快照。
+受限建群／邀请写入必须提供稳定的 `--operation-key`：长度 8–128，以字母或数字开头，只含字母、数字、点、下划线、冒号或连字符；邀请还必须传入前一次读取的 `--expected-channel` 指纹。审核快照绑定当前频道元数据、成员、邀请策略及目标 Bot 身份；消息到达和未读计数不会使其过期。审批和执行重新检查已准入 Human DM 与当前目标状态。审核期间相关设置发生变化时，应重新读取并提案，不能悄悄刷新已批准的快照。
 
 带 key 的结果包含 `receipt`，字段为 `operationKey`、`kind`、`channelId`、可选 `invitationId` 及完成 `status`，同时返回规范频道状态及适用的邀请。持久操作回执预留频道或邀请身份。响应不确定时，使用**相同命令、key 和 payload**重试以核对原操作，不要换新 key。已完成的受限重放读回原结果，不再次请求变更审批。输入变化、目标不可用或 Bot 身份代次变化均拒绝；重放不会重建已删除群或重复邀请。Shell／Host 重启后仍须具备当前权限；回执不保留已过期的 Shell capability。
 
@@ -721,7 +721,29 @@ deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-resea
 
 已认证 Human 的在线 `group-create` 和 `group-invite` 也支持稳定 operation key；邀请支持 `--expected-channel` 绑定已读取状态。这些审核／重试参数对 Human 命令可选，对受限 Tob 必需。原有不带 key 的 Human 操作保持既有 owner 行为。
 
-群名称／头像、唤醒设置、取消邀请、入群决定、移除成员、个人免打扰／置顶／昵称／显隐、删除群、附件和外部成员管理均不在本受限切片内。部分已有上文的 Human CLI 命令，不等于已向 Tob 开放。#2090 保留未完成范围，不因本切片关闭。详见 [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) 和[覆盖清单](agents/cli-ui-coverage.md#2090-group-management-first-slice)。直接 CLI、真实 Tob 审批／读回、Web 成员／历史和 macOS Desktop 分别验收。
+后续群设置切片已加入下节所述的群名称／头像、成员唤醒设置和移除成员；取消邀请、入群决定、个人免打扰／置顶／昵称／显隐、删除群、附件和外部成员管理仍不在受限允许清单内。部分已有上文的 Human CLI 命令，不等于已向 Tob 开放。#2090 保留未完成范围，不因本切片关闭。详见 [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) 和[覆盖清单](agents/cli-ui-coverage.md#2090-group-management-scope)。直接 CLI、真实 Tob 审批／读回、Web 成员／历史和 macOS Desktop 分别验收。
+
+### Tob 群设置与成员移除
+
+从已准入的 Human DM，Tob 可经现有审批修改群名称、头像和成员的普通群消息唤醒策略，或将 Bot 移出群聊。它沿用相同 Channel owner、权限和持久数据，不新增模型 Tool、数据库迁移或 UI。受限 `channel-rename` 仅接受群频道，不能通过此命令重命名 Bot 私聊。
+
+```bash
+deepseekbot group-wake-policies <channel-id>
+deepseekbot channel-rename <channel-id> --name "产品研究" --expected-channel <channelFingerprint>
+deepseekbot group-avatar-set <channel-id> --avatar-file ./avatar.png --expected-channel <channelFingerprint>
+deepseekbot group-avatar-set <channel-id> --clear --expected-channel <channelFingerprint>
+deepseekbot group-wake-set <channel-id> --bot <bot-id> --mode digest --count 5 --interval 30 --expected-channel <channelFingerprint>
+deepseekbot group-wake-set <channel-id> --bot <bot-id> --inherit --expected-channel <channelFingerprint>
+deepseekbot group-member-remove <channel-id> --bot <bot-id> --expected-channel <channelFingerprint>
+```
+
+`group-wake-policies` 返回当前群快照、`channelFingerprint`，以及每个成员的 `{botSlug, inherited, policy}`。指纹包含有效唤醒策略，包括从 Bot 继承的默认值；默认值变化也会使旧审核过期。消息到达和未读变化不会使审核过期。受限头像读取／审批仅展示存在状态、类型、大小及摘要，不展开图像数据。
+
+这些写入都必须传入刚读取的 `--expected-channel`；每次成功修改后重新读取，再准备下一次修改。群名为非空文本，最多 120 个字符；头像使用上述有界 PNG／JPEG／WebP 或 `--clear`。唤醒模式为 `all`、`mentions`、`digest`、`silent`；`--count` 为 1–100，`--interval` 为 1–3600 秒，默认 5／30；`--inherit` 移除该群覆盖并恢复 Bot 默认值。移除成员保留 Bot 身份、Memory、其他频道与该群历史；若被移除的是群 owner，清除其群管理身份，群改由 Human 管理。可移除已归档的现有成员；修改唤醒策略要求目标 Bot 活跃。
+
+审批绑定旧状态、准确目标及新值，执行前重验当前 Human 的群访问权限和目标 Bot 身份。已拒绝／过期审批、Human 已离群、非群目标、目标非成员、身份被替换均拒绝，不绕过检查；Tob 仍不能入群。`stale-channel`／`stale-profile` 要求重新读取和审核，不自动覆盖并发修改。
+
+这些编辑不接受 `--operation-key`，不新增重放回执。结果不确定时，先用 `channel`／`group-wake-policies` 核对实际状态，不能盲目重试；仍需修改时按最新快照重新提案。原建群／邀请回执和默认自动入群行为不变。已认证 Human 的对应在线命令可选 `--expected-channel`，省略时保留现有行为；这不放宽 Tob 的必需输入。#2090 仍保留未交付范围；命令说明不是 Web、真实模型或 macOS 验收通过的证据。
 
 ### Tob 模型与运行设置
 

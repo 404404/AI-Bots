@@ -161,7 +161,7 @@ function required(value: string | undefined, flag: string): string {
   return trimmed;
 }
 
-function avatarDataUrl(path: string): string {
+export function channelAvatarDataUrl(path: string): string {
   let bytes: Buffer;
   try {
     bytes = readFileSync(path);
@@ -244,7 +244,7 @@ export async function runChannelCommand(
       method = 'channelGroupAvatarSet';
       if ((values['avatar-file'] === undefined) === (values.clear !== true))
         usage('group-avatar-set needs exactly one of --avatar-file <path> or --clear.');
-      args.avatar = values.clear === true ? null : avatarDataUrl(values['avatar-file']!);
+      args.avatar = values.clear === true ? null : channelAvatarDataUrl(values['avatar-file']!);
       break;
     case 'group-invite':
       method = 'channelGroupInvite';
@@ -392,6 +392,13 @@ export async function runChannelCommand(
       break;
     }
   }
+  if (values['expected-channel'] !== undefined && command !== 'group-invite') {
+    const fingerprint = required(values['expected-channel'], '--expected-channel');
+    if (!/^[a-f0-9]{64}$/u.test(fingerprint))
+      usage('--expected-channel must be the observed Channel fingerprint.');
+    args.expectedChannel = fingerprint;
+  }
+
   const host = await connect(values, io, AbortSignal.timeout(Math.ceil(seconds * 1000)));
   if (command === 'channel-media-download') {
     const { bytes, response } = await host.http(

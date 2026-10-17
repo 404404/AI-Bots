@@ -2,7 +2,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { PersonaBotRegistry } from '../bots/registry.js';
 import { isValidSlug } from '../bots/slug.js';
 import type { OperationalDatabaseModulePort } from '../database/owner.js';
-import type { ChannelRecord, GroupInvitation } from './channel.js';
+import {
+  isGroupAvatar,
+  LOCAL_HUMAN_ID,
+  type ChannelRecord,
+  type GroupInvitation,
+  type GroupMemberWakePolicy,
+} from './channel.js';
 import type { ChannelStore } from './store.js';
 
 export interface ChannelManagementCreateInput {
@@ -13,6 +19,25 @@ export interface ChannelManagementInviteInput {
   channelId: string;
   botSlug: string;
   expectedChannel?: string;
+}
+export interface ChannelManagementEditInput {
+  channelId: string;
+  expectedChannel?: string;
+}
+export interface ChannelManagementRenameInput extends ChannelManagementEditInput {
+  name: string;
+}
+export interface ChannelManagementAvatarInput extends ChannelManagementEditInput {
+  avatar: string | null;
+}
+export interface ChannelManagementMemberInput extends ChannelManagementEditInput {
+  botSlug: string;
+}
+export interface ChannelManagementWakeInput extends ChannelManagementMemberInput {
+  mode: 'all' | 'mentions' | 'digest' | 'silent';
+  count: number;
+  intervalSeconds: number;
+  inherit?: boolean;
 }
 export interface ChannelManagementReceipt {
   operationKey: string;
@@ -25,6 +50,7 @@ export interface ChannelManagementSnapshot {
   channel: ChannelRecord;
   channelFingerprint: string;
   invitationPolicy: { autoAccept: boolean };
+  wakePolicies: GroupMemberWakePolicy[];
 }
 export interface ChannelManagementResult extends ChannelManagementSnapshot {
   receipt?: ChannelManagementReceipt;
@@ -32,6 +58,11 @@ export interface ChannelManagementResult extends ChannelManagementSnapshot {
 }
 export interface ChannelManagementService {
   snapshot(channelId: string): ChannelManagementSnapshot;
+  wakePolicies(channelId: string): ChannelManagementSnapshot;
+  rename(input: ChannelManagementRenameInput): ChannelManagementSnapshot;
+  setAvatar(input: ChannelManagementAvatarInput): ChannelManagementSnapshot;
+  setWake(input: ChannelManagementWakeInput): ChannelManagementSnapshot;
+  removeMember(input: ChannelManagementMemberInput): ChannelManagementSnapshot;
   create(input: ChannelManagementCreateInput, operationKey?: string): ChannelManagementResult;
   invite(input: ChannelManagementInviteInput, operationKey?: string): ChannelManagementResult;
   lookupCreate(
@@ -81,12 +112,17 @@ function hash(value: unknown): string {
     .update(JSON.stringify(canonical(value)))
     .digest('hex');
 }
-export function channelManagementFingerprint(channel: ChannelRecord, autoAccept = false): string {
+export function channelManagementFingerprint(
+  channel: ChannelRecord,
+  autoAccept = false,
+  wakePolicies?: GroupMemberWakePolicy[],
+): string {
   const { updatedAt: _updatedAt, avatar, ...state } = channel;
   return hash({
     ...state,
     ...(avatar === undefined ? {} : { avatarHash: hash(avatar) }),
     invitationPolicy: { autoAccept },
+    ...(wakePolicies === undefined ? {} : { wakePolicies }),
   });
 }
 function key(value: string): void {
@@ -156,11 +192,49 @@ export function createChannelManagement(options: {
   const snapshot = (id: string): ChannelManagementSnapshot => {
     const channel = group(id);
     const autoAccept = options.autoAcceptGroupInvitations?.() === true;
+    const wakePolicies = channel.members.map((botSlug) => ({
+      botSlug,
+      inherited: channel.wakePolicies?.[botSlug] === undefined,
+      policy: channels.getGroupWakePolicy(channel.id, botSlug),
+    }));
     return {
       channel,
-      channelFingerprint: channelManagementFingerprint(channel, autoAccept),
+      channelFingerprint: channelManagementFingerprint(channel, autoAccept, wakePolicies),
       invitationPolicy: { autoAccept },
+      wakePolicies,
     };
+  };
+  const humanSnapshot = (channelId: string): ChannelManagementSnapshot => {
+    const result = snapshot(channelId);
+    if (!channels.listHumanMembers(channelId).some((member) => member.humanId === LOCAL_HUMAN_ID))
+      throw new ChannelManagementError('channel-access-denied');
+    return result;
+  };
+  const edit = (input: ChannelManagementEditInput, fields: string[]) => {
+    if (
+      Object.keys(input).some(
+        (field) => !['channelId', 'expectedChannel', ...fields].includes(field),
+      ) ||
+      typeof input.channelId !== 'string' ||
+      !input.channelId.trim() ||
+      (input.expectedChannel !== undefined && !/^[a-f0-9]{64}$/u.test(input.expectedChannel))
+    )
+      throw new ChannelManagementError('invalid-input');
+    const before = humanSnapshot(input.channelId);
+    if (input.expectedChannel !== undefined && before.channelFingerprint !== input.expectedChannel)
+      throw new ChannelManagementError('stale-channel');
+    return before;
+  };
+  const member = (channel: ChannelRecord, slug: string): void => {
+    if (typeof slug !== 'string' || !isValidSlug(slug))
+      throw new ChannelManagementError('invalid-input');
+    if (options.isProtectedBot(slug)) throw new ChannelManagementError('protected-bot');
+    if (!channel.members.includes(slug)) throw new ChannelManagementError('not-group-member');
+    if (!registry.get(slug)) throw new ChannelManagementError('unknown-bot');
+  };
+  const current = (before: ChannelManagementSnapshot): void => {
+    if (humanSnapshot(before.channel.id).channelFingerprint !== before.channelFingerprint)
+      throw new ChannelManagementError('stale-channel');
   };
   const read = (operationKey: string): OperationRow | undefined => {
     key(operationKey);
@@ -269,6 +343,66 @@ export function createChannelManagement(options: {
   };
   return {
     snapshot,
+    wakePolicies: humanSnapshot,
+    rename(input) {
+      if (
+        typeof input.name !== 'string' ||
+        !input.name.trim() ||
+        input.name.length > 120 ||
+        [...input.name].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
+      )
+        throw new ChannelManagementError('invalid-input');
+      const before = edit(input, ['name']);
+      current(before);
+      if (!channels.rename(input.channelId, input.name.trim()))
+        throw new ChannelManagementError('unknown-channel');
+      return snapshot(input.channelId);
+    },
+    setAvatar(input) {
+      if (input.avatar !== null && !isGroupAvatar(input.avatar))
+        throw new ChannelManagementError('invalid-input');
+      const before = edit(input, ['avatar']);
+      current(before);
+      channels.setGroupAvatar(input.channelId, input.avatar);
+      return snapshot(input.channelId);
+    },
+    setWake(input) {
+      if (
+        !['all', 'mentions', 'digest', 'silent'].includes(input.mode) ||
+        !Number.isSafeInteger(input.count) ||
+        input.count < 1 ||
+        input.count > 100 ||
+        !Number.isSafeInteger(input.intervalSeconds) ||
+        input.intervalSeconds < 1 ||
+        input.intervalSeconds > 3600 ||
+        (input.inherit !== undefined && typeof input.inherit !== 'boolean')
+      )
+        throw new ChannelManagementError('invalid-input');
+      const before = edit(input, ['botSlug', 'mode', 'count', 'intervalSeconds', 'inherit']);
+      member(before.channel, input.botSlug);
+      const bot = registry.get(input.botSlug)!;
+      if (bot.paused) throw new ChannelManagementError('archived-bot');
+      current(before);
+      channels.setGroupWakePolicy(
+        input.channelId,
+        input.botSlug,
+        {
+          mode: input.mode,
+          count: input.count,
+          intervalSeconds: input.intervalSeconds,
+          ...(input.inherit === undefined ? {} : { inherit: input.inherit }),
+        },
+        { kind: 'human' },
+      );
+      return snapshot(input.channelId);
+    },
+    removeMember(input) {
+      const before = edit(input, ['botSlug']);
+      member(before.channel, input.botSlug);
+      current(before);
+      channels.removeGroupMember(input.channelId, input.botSlug);
+      return snapshot(input.channelId);
+    },
     lookupCreate(operationKey, input) {
       createInput(input);
       const row = checked(operationKey, 'create', input);
