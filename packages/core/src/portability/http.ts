@@ -85,6 +85,7 @@ export function createProfileBackupHttp(
           ? Object.freeze({
               sessionId: reviewContext.sessionId,
               sourceEventIds: Object.freeze([...reviewContext.sourceEventIds]),
+              humanSourceEventIds: Object.freeze([...reviewContext.humanSourceEventIds]),
               ...(reviewContext.callIds
                 ? { callIds: Object.freeze([...reviewContext.callIds]) }
                 : {}),
@@ -172,6 +173,8 @@ export function createProfileBackupHttp(
         if (
           !reviewContext ||
           context.sessionId !== reviewContext.sessionId ||
+          JSON.stringify([...context.humanSourceEventIds].sort()) !==
+            JSON.stringify([...reviewContext.humanSourceEventIds].sort()) ||
           JSON.stringify([...context.sourceEventIds].sort()) !==
             JSON.stringify([...reviewContext.sourceEventIds].sort())
         )
