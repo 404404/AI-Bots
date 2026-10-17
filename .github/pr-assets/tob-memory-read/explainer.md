@@ -4,7 +4,7 @@ title: Tob 的跨 Bot Memory 只读委托
 subtitle: 来源、目标、Session 与查询能力保持明确归属
 lang: zh
 cols: 2
-source: 'PR #2128 · issue #2091 · code 302861d6707a4bfa6df0cbac0259d5e5ca041638 · base 320ab04cd0a4c7ed818fdee997108cfa0590595b · 2026-10-17T21:56:08.447102+00:00'
+source: 'PR #2128 · issue #2091 · code 1e78373c05243d90f9e0444792419b371432d359 · base 320ab04cd0a4c7ed818fdee997108cfa0590595b · 2026-10-17T21:56:08.447102+00:00'
 ---
 
 Human 请求比较选定 Bot 的 Memory。Tob 创建自己的 Assignment，并沿正常报告路径回答。
@@ -26,7 +26,7 @@ Assignment报告 -> Tob私聊: 审阅后回答
 它在进程内运行随产品交付的 CLI，只传入短期 broker 上下文。
 它不启动操作系统 Shell，也不继承 Human 的管理 Host 凭据。
 
-代码：[受限执行](https://github.com/BotHarness/DeepSeekBot/blob/302861d6707a4bfa6df0cbac0259d5e5ca041638/packages/core/src/tob/cli-shell.ts#L137)、[来源与目标范围](https://github.com/BotHarness/DeepSeekBot/blob/302861d6707a4bfa6df0cbac0259d5e5ca041638/packages/core/src/runtime/bot-runtime.ts#L3346)。
+代码：[受限执行](https://github.com/BotHarness/DeepSeekBot/blob/1e78373c05243d90f9e0444792419b371432d359/packages/core/src/tob/cli-shell.ts#L137)、[来源与目标范围](https://github.com/BotHarness/DeepSeekBot/blob/1e78373c05243d90f9e0444792419b371432d359/packages/core/src/runtime/bot-runtime.ts#L3346)。
 
 | 允许                          | 拒绝                              |
 | ----------------------------- | --------------------------------- |
@@ -57,12 +57,13 @@ Memory 查询固定 Git 修订。后续工作树编辑不改变已固定的页�
 | TypeScript 与构建                      | 整合后通过；产品构建为 3f，后续仅改验证脚本            |
 | 修复后的 Web 模型与消息                | 已证明读取、拒写、原始 cat 拒绝、续接、归档目标与撤销  |
 | Web Session 视图导航                   | 已见 Tob 所有的 Assignment 列表及原生 DSH Session 内容 |
-| macOS 原生与 Human QA                  | 未执行，由父任务串行安排                               |
+| macOS 原生                             | 初次 Assignment 已完成；修复 driver 等待后待续验       |
+| Human QA                               | 未执行                                                 |
 | Draft PR / CI full                     | #2128 已创建；完整 CI 已请求，结果待验                 |
 | 合并和产品发布                         | 未执行                                                 |
 
 已叠加 schedules 的 generation 100；Memory scope 为 generation 101。
 这是向前迁移。调度分支的凭据启动修复尚待同步，并须验证相关风险。
 
-本页解释代码提交 302861d67；后续证据提交只保存本页、截图与验证记录。
+本页解释代码提交 1e78373c0；随后提交只保存审阅资产；产品源码仍为 3f。
 本页是审阅辅助，不是测试结果或 Human 批准。
