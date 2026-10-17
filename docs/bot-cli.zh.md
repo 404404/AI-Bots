@@ -897,3 +897,25 @@ printf '%s' '{"notifications":false}' | deepseekbot client-preferences-set CLIEN
 `no-connected-client`、`unknown-client-target`、`client-target-stale`、`client-target-replaced` 区分无在线目标、未知目标、过期租约与已替换实例。刷新保留标签页 id，但替换 generation。未派发请求超时返回 `client-unresponsive`；已派发写入未确认完成返回 `client-outcome-uncertain`，必须重新读取 owner 进行核对，不能盲目重试。待执行命令有界、仅存于进程内，Host 重启后不重放；偏好继续由选中 Client 的现有 owner 持久化。
 
 通知 owner 在读回／比较前刷新真实同源存储，并通过 storage 事件同步其他标签页。浏览器支持 Web Locks 时，UI 与 CLI 都通过同一个 owner 锁写入；CLI 在锁内再次核对状态和 Host 来源授权。缺少 Web Locks 时受限修改拒绝 client-concurrency-unavailable，普通 UI 仍可使用。原生连接 Provider 的认证 HTTP 请求共享 OperatorPeer；私有 mount／tab-owner proof 提供 Client 实例隔离，不能把 Peer id 当作浏览器身份。
+
+### 指定 Client 的布局
+
+`client-layout CLIENT_ID --generation GENERATION` 读取已挂载的 Bot 模式 Workspace owner：当前 `channelId`、稳定面板 ID 与可用性、全局与停放几何、控制项顺序／显示、间距、各 Channel 分割树及 SHA-256 `stateFingerprint`。窄屏没有该 owner 时明确拒绝；不会为了修改而切换 Channel。仅 Tob 的已认证 Human 私聊来源可以使用 `current`。
+
+通过 `client-layout-set CLIENT_ID --generation GENERATION --scope browser-origin --expected-state FINGERPRINT --patch-stdin` 提交一条 JSON 修改：
+
+| `type` | 字段 |
+| --- | --- |
+| `gap` | 整数 `gap`：0–16 |
+| `rail-order` | 不重复的稳定面板 ID 数组 `order` |
+| `rail-location` | `before`：left、right 或发现的 Dockview 列组 ID |
+| `control` | `panel`、`visible`；Channel 子面板须传 `channelId` |
+| `visibility` | `panel`、`open`；Channel 子面板须传 `channelId` |
+| `move` | `panel`、`target`、`direction`（left/right/above/below）；Channel 子面板须传 `channelId` |
+| `size` | 全局 `panel`、`width`、`height`：0.05–1 的比例 |
+| `child-resize` | `channelId`、二进制分割 `path`（根为空字符串）、`ratio`：0.2–0.8 |
+| `child-axis` | `channelId`、`path`、`axis`（horizontal/vertical） |
+
+Channel 移动以叶节点为目标，`messages` 是固定内容叶；隐藏子面板保留分割树及百分比。全局移动要求源与目标在可见的独立面板组；不支持的组合拓扑、隐藏目标与不适用的 Bot 子面板均返回明确拒绝。应用时必须仍处于指定 Channel。既有 v1–v8 迁移及备份继续由布局 owner 负责。不可读／更高版本存储拒绝并要求恢复；保存失败返回 `client-outcome-uncertain`，再次修改前须重新读取。同源标签页共享持久化，精确运行代次选择实际执行的 owner。原生重启、实体几何与 UI 证据仍须单独验证。
+
+同源其他标签页替换布局存储后，旧 owner 拒绝 `stale-client-layout` 并停止保存，重载后再操作，保留其他标签页已接受的状态。

@@ -93,6 +93,7 @@ import {
 import { openHumanAttentionSource } from './human-attention-source.js';
 import { mountTabTitle } from './tab-title.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
+import { createClientLayoutHandlers } from './client-layout-control.js';
 import { createDockPanelRegistry } from './dock-panels.js';
 import { createActivityCenterPanel } from './activity-center-panel.js';
 import { createProfileCardBuiltins } from './profile-cards-builtins.js';
@@ -296,6 +297,7 @@ export function apply(ctx: ClientContext): void {
     ),
   );
   const botSettings = new BotSettings();
+  const dockPanels = createDockPanelRegistry();
   const desktopNotifications = new DesktopNotificationPrefs(storage, browserNotificationApi());
   ctx.effect(() => {
     if (typeof window === 'undefined') return () => {};
@@ -307,11 +309,14 @@ export function apply(ctx: ClientContext): void {
       call,
       kind: 'web',
       target: createClientTarget(sessionStorage),
-      handlers: createClientPreferenceHandlers({
-        readTheme: () => ctx.theme.getTheme().preference,
-        readLocale: () => ctx.locale.getSnapshot().active,
-        notifications: desktopNotifications,
-      }),
+      handlers: new Map([
+        ...createClientPreferenceHandlers({
+          readTheme: () => ctx.theme.getTheme().preference,
+          readLocale: () => ctx.locale.getSnapshot().active,
+          notifications: desktopNotifications,
+        }),
+        ...createClientLayoutHandlers(dockPanels),
+      ]),
     });
   }, 'botharness: client control');
   const shortcutBindings = new ShortcutBindings(storage);
@@ -420,7 +425,6 @@ export function apply(ctx: ClientContext): void {
       visibility.dispose();
     };
   }, 'botharness: Bot Session visibility');
-  const dockPanels = createDockPanelRegistry();
   ctx.provide('dockPanels', dockPanels);
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
   const workspace = {

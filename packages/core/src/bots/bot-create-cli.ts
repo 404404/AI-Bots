@@ -2598,6 +2598,7 @@ export async function runBotCreateCli(
           'channel-mute',
           'channel-human-name-set',
           'client-preferences-set',
+          'client-layout-set',
         ].includes(command))
     )
       throw usageError(

@@ -904,3 +904,25 @@ The supplemental inventory still tracks local file-open choices, composer-footer
 `no-connected-client`, `unknown-client-target`, `client-target-stale` and `client-target-replaced` distinguish absent, unknown, expired and replaced targets. A reload retains the tab id but replaces its generation. Unresponsive undelivered requests refuse `client-unresponsive`; a delivered write without confirmed completion refuses `client-outcome-uncertain`. Read the owner again before deciding what happened; never blindly retry an uncertain mutation. Pending commands are process-local, bounded and never replay after Host restart. The selected Client retains preference persistence through its existing owner.
 
 The notification owner refreshes actual shared storage before reads/comparisons and follows storage events. Where Web Locks are available, both UI and CLI writes use the same owner lock; scoped writes recheck state and Host source authorization inside it. Without Web Locks, scoped mutations refuse client-concurrency-unavailable, while the ordinary UI remains usable. The pinned connection Provider shares one OperatorPeer across authenticated HTTP requests: private mount/tab-owner proofs provide Client incarnation separation, and a Peer id is not a browser identity.
+
+### Selected Client layout
+
+`client-layout CLIENT_ID --generation GENERATION` reads the mounted Bot-mode Workspace owner, its active `channelId`, stable panel IDs and eligibility, global geometry, parked geometry, control order/visibility, gap, per-Channel trees and SHA-256 `stateFingerprint`. It refuses an unavailable narrow-screen owner; it never switches Channels to satisfy an edit. `current` is available only through Tob's authenticated originating Human DM.
+
+Use `client-layout-set CLIENT_ID --generation GENERATION --scope browser-origin --expected-state FINGERPRINT --patch-stdin` with one JSON edit:
+
+| `type` | Fields |
+| --- | --- |
+| `gap` | `gap`: integer 0–16 |
+| `rail-order` | `order`: unique stable panel IDs |
+| `rail-location` | `before`: `left`, `right` or a discovered Dockview column group ID |
+| `control` | `panel`, `visible`; Channel children require `channelId` |
+| `visibility` | `panel`, `open`; Channel children require `channelId` |
+| `move` | `panel`, `target`, `direction`: left/right/above/below; Channel children require `channelId` |
+| `size` | Global `panel`, `width`, `height`: fractions 0.05–1 |
+| `child-resize` | `channelId`, binary split `path` (root is empty), `ratio`: 0.2–0.8 |
+| `child-axis` | `channelId`, `path`, `axis`: horizontal/vertical |
+
+Channel moves target a sibling leaf (`messages` is the fixed content leaf). Hidden children retain their tree and saved percentages. Global moves require visible separate panel groups; unsupported grouped topology, hidden targets and ineligible Bot-only children return coded refusals. The selected Channel must still match when applying the edit. Existing layout v1–v8 migration and backup storage remain authoritative. Unreadable/newer layout storage refuses recovery-required; a save failure reports `client-outcome-uncertain`, requiring a fresh read before another write. Same-origin tabs share persistence; runtime identity selects the live owner that applies the edit. Native restart, physical geometry and UI evidence require separate qualification.
+
+A layout owner whose same-origin storage was replaced by another tab refuses `stale-client-layout` and stops saving until reload, preserving the other tab's accepted state.

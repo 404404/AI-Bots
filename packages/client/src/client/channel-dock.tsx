@@ -2,8 +2,11 @@ import {
   legacyChannelSplit,
   MESSAGE_LEAF,
   moveChannelSplit,
+  resizeChannelSplit,
+  splitPanels,
   type ChannelSplit,
 } from './channel-split-layout.js';
+import type { ClientLayoutEdit } from '../../../core/src/client-control/layout.js';
 import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
 import { ChannelWorkspace } from './channel-workspace.js';
 import { workspaceShortcutId } from './workspace-shortcuts.js';
@@ -44,6 +47,7 @@ import type { ChannelSidebarEntry, ChannelSidebarEntryProps } from './channel-si
 import type { DockPanelChannel, DockPanelHost, DockPanelRegistration } from './dock-panels.js';
 import {
   allowsDockDrop,
+  CHANNEL_DOCK_STORAGE_KEY,
   CHANNEL_BODY_COMPONENT,
   CHANNEL_BODY_PANEL,
   DEFAULT_WORKSPACE_GAP,
@@ -839,6 +843,8 @@ export function ChannelDock({
     ]);
   };
 
+  const persisted = useRef(false);
+  const persistedRaw = useRef<string | null | undefined>(undefined);
   const save = (target: DockviewApi): void => {
     hideBodyHeader(target);
     if (workspace)
@@ -856,7 +862,19 @@ export function ChannelDock({
     setOpenIds(ids);
     reportOpen(target);
     if (workspace || !readChannelDock(storage)?.layout.panels[WORKSPACE_RAIL]) {
-      const persisted = writeChannelDock(
+      try {
+        const raw = (storage ?? localStorage).getItem(CHANNEL_DOCK_STORAGE_KEY);
+        if (persistedRaw.current !== undefined && raw !== persistedRaw.current) {
+          persisted.current = false;
+          setStorageFailed(true);
+          return;
+        }
+      } catch {
+        persisted.current = false;
+        setStorageFailed(true);
+        return;
+      }
+      const saved = writeChannelDock(
         {
           layout: {
             ...target.toJSON(),
@@ -875,7 +893,12 @@ export function ChannelDock({
         },
         storage,
       );
-      setStorageFailed(!persisted);
+      persisted.current = saved;
+      if (saved) {
+        try { persistedRaw.current = (storage ?? localStorage).getItem(CHANNEL_DOCK_STORAGE_KEY); }
+        catch { persisted.current = false; }
+      }
+      setStorageFailed(!persisted.current);
     }
   };
 
@@ -1192,11 +1215,114 @@ export function ChannelDock({
     addEntryPanel(api, panel, remembered);
   };
 
-  const layout = useRef({ open, close, canOpen });
-  layout.current = { open, close, canOpen };
+  const readLayout = () => {
+    if (!api || !workspace) throw new Error('client-layout-unavailable');
+    let raw: string | null;
+    try { raw = (storage ?? localStorage).getItem(CHANNEL_DOCK_STORAGE_KEY); }
+    catch { throw new Error('client-layout-storage-unavailable'); }
+    if (raw !== null && !readChannelDock(storage)) throw new Error('client-layout-recovery-required');
+    if (persistedRaw.current !== undefined && raw !== persistedRaw.current) throw new Error('stale-client-layout');
+    return {
+      channelId: channelRef.current?.id ?? null,
+      panels: [...known.current.values()].map(({ id, scope }) => ({ id, scope, eligible: canOpen(id) })),
+      layout: api.toJSON(), parked: parked.current, gap: gapRef.current,
+      order: orderRef.current, hiddenControls: hiddenControlsRef.current,
+      members: membersRef.current, botPanelSeeds: botSeeds.current,
+      botWorkspaces: botWorkspacesRef.current, sessionSeed: seed.current,
+      channelWorkspaces: channelWorkspacesRef.current, channelSplits: channelSplitsRef.current,
+      childTree: channelRef.current ? (channelSplitsRef.current[channelRef.current.id] ?? legacyChannelSplit({ ...botStatesRef.current, sessions: sessionStateRef.current })) : null,
+      persisted: persisted.current, storage: raw,
+    };
+  };
+  const editLayout = (patch: ClientLayoutEdit, expected: string) => {
+    if (!api || !workspace) throw new Error('client-layout-unavailable');
+    if (JSON.stringify(readLayout()) !== expected) throw new Error('stale-client-layout');
+    let outcome: 'applied' | 'constrained' = 'applied';
+    const current = channelRef.current;
+    const child = 'panel' in patch && CHANNEL_WORKSPACE_PANELS.includes(patch.panel);
+    const channelScoped = 'panel' in patch && known.current.get(patch.panel)?.scope === 'channel';
+    if (('channelId' in patch && patch.channelId !== undefined) || child || channelScoped || patch.type.startsWith('child-')) {
+      if (!current || !('channelId' in patch) || patch.channelId !== current.id) throw new Error('client-layout-channel-mismatch');
+    }
+    const knownPanel = (id: string) => {
+      if (!known.current.has(id) || id === WORKSPACE_RAIL) throw new Error('unknown-layout-panel');
+      if (!canOpen(id)) throw new Error('layout-panel-ineligible');
+    };
+    const setTree = (tree: ChannelSplit) => {
+      if (!current) throw new Error('client-layout-channel-mismatch');
+      channelSplitsRef.current = { ...channelSplitsRef.current, [current.id]: tree };
+      updateChannelSplits(channelSplitsRef.current);
+    };
+    const tree = () => current && (channelSplitsRef.current[current.id] ?? legacyChannelSplit({ ...botStatesRef.current, sessions: sessionStateRef.current }));
+    if ('panel' in patch) knownPanel(patch.panel);
+    if (patch.type === 'gap') { gapRef.current = patch.gap; updateGap(patch.gap); }
+    else if (patch.type === 'rail-order') {
+      for (const id of patch.order) knownPanel(id);
+      orderRef.current = patch.order; updateOrder(patch.order);
+    } else if (patch.type === 'rail-location') {
+      if (!['left', 'right', ...workspaceColumns(api).map(column => column.id)].includes(patch.before)) throw new Error('invalid-layout-target');
+      moveWorkspaceRail(api, patch.before);
+    } else if (patch.type === 'control') {
+      if (child) setSubpanelState(patch.panel, { ...subpanelState(patch.panel), hiddenControl: !patch.visible });
+      else {
+        hiddenControlsRef.current = patch.visible ? hiddenControlsRef.current.filter(id => id !== patch.panel) : [...new Set([...hiddenControlsRef.current, patch.panel])];
+        updateHiddenControls(hiddenControlsRef.current);
+      }
+      if (!patch.visible) close(patch.panel);
+    } else if (patch.type === 'visibility') {
+      if (patch.panel === 'bot-inbox' || patch.panel === 'members') throw new Error('unsupported-layout-panel');
+      if (patch.open) open(patch.panel); else close(patch.panel);
+    } else if (patch.type === 'move') {
+      if (child) {
+        const next = tree();
+        if (!next || !splitPanels(next).includes(patch.target) || patch.panel === MESSAGE_LEAF) throw new Error('invalid-layout-target');
+        setTree(moveChannelSplit(next, patch.panel, patch.target, patch.direction));
+      } else {
+        knownPanel(patch.target);
+        if (CHANNEL_WORKSPACE_PANELS.includes(patch.target)) throw new Error('invalid-layout-target');
+        const panel = api.getPanel(patch.panel), target = api.getPanel(patch.target);
+        if (!panel || !target) throw new Error('layout-panel-hidden');
+        if (panel.group === target.group || panel.group.panels.length !== 1) throw new Error('layout-topology-constrained');
+        for (const visible of api.panels) delete parked.current[visible.id];
+        panel.api.moveTo({ group: target.group, position: patch.direction === 'above' ? 'top' : patch.direction === 'below' ? 'bottom' : patch.direction, skipSetActive: true });
+      }
+    } else if (patch.type === 'size') {
+      if (child) throw new Error('invalid-layout-edit');
+      const panel = api.getPanel(patch.panel);
+      if (!panel || api.width <= 0 || api.height <= 0) throw new Error('layout-panel-hidden');
+      for (const visible of api.panels) delete parked.current[visible.id];
+      panel.group.api.setSize({ width: api.width * patch.width, height: api.height * patch.height });
+      if (Math.abs(panel.group.api.width / api.width - patch.width) > 0.01 || Math.abs(panel.group.api.height / api.height - patch.height) > 0.01) outcome = 'constrained';
+    } else {
+      const next = tree();
+      if (!next) throw new Error('client-layout-channel-mismatch');
+      let node = next;
+      for (const side of patch.path) {
+        if ('panel' in node) throw new Error('invalid-layout-target');
+        node = side === '0' ? node.first : node.second;
+      }
+      if ('panel' in node) throw new Error('invalid-layout-target');
+      if (patch.type === 'child-resize') setTree(resizeChannelSplit(next, patch.path, patch.ratio));
+      else {
+        const axis = (branch: ChannelSplit, path: string): ChannelSplit => {
+          if ('panel' in branch) throw new Error('invalid-layout-target');
+          if (!path) return { ...branch, axis: patch.axis };
+          return path[0] === '0' ? { ...branch, first: axis(branch.first, path.slice(1)) } : { ...branch, second: axis(branch.second, path.slice(1)) };
+        };
+        setTree(axis(next, patch.path));
+      }
+    }
+    save(api);
+    if (!persisted.current) throw new Error('client-outcome-uncertain');
+    return outcome;
+  };
+  const layout = useRef({ open, close, canOpen, readLayout, editLayout });
+  layout.current = { open, close, canOpen, readLayout, editLayout };
   const layoutMount = useMountedResource<HTMLSpanElement>(() => {
     if (api === undefined || registry === undefined) return;
     return registry.attach({
+      readLayout: () => layout.current.readLayout(),
+      editLayout: (patch, expected) => layout.current.editLayout(patch, expected),
       canOpen: (id) => layout.current.canOpen(id),
       open: (id) => layout.current.open(id),
       close: (id) => layout.current.close(id),

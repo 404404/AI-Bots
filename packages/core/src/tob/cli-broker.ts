@@ -112,6 +112,18 @@ const CODES = new Set([
   'one-preference-required',
   'unsupported-client-preference',
 
+  'invalid-layout-edit',
+  'stale-client-layout',
+  'client-layout-unavailable',
+  'client-layout-storage-unavailable',
+  'client-layout-recovery-required',
+  'client-layout-channel-mismatch',
+  'unknown-layout-panel',
+  'layout-panel-ineligible',
+  'unsupported-layout-panel',
+  'invalid-layout-target',
+  'layout-panel-hidden',
+  'layout-topology-constrained',
   'invalid-memory-dir',
 ]);
 
