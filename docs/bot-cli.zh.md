@@ -1113,3 +1113,9 @@ deepseekbot profile-recovery-activate <bot-slug> --confirm --acknowledge-split-b
 恢复的 Bot 必须在目标端明确配置 Model Plan 和凭据，逐个授权并确认同身份双活风险。先检查就绪状态，再授权或激活一个 Bot。Plan 变化会使授权失效。Browser／Computer access、外部绑定、Workspace 和其他导入权限保持挂起，需要通过原有路径独立授权。
 
 在 Tob 经过认证的 Home／私聊 Shell 中，先发现当前 capabilities。`profile-backup-preview` 只返回安全的 `planId`，导出 bearer token 留在 Host 内。`profile-backup-export --plan <planId> --confirm` 经过新的 Human 审核，仅写入 Host 受保护档案；回执只返回 `receiptId`、文件位置、字节数和 hash。`profile-backup-inspect --receipt <receiptId>` 返回有界元数据。Tob 不能提供 `--host`、`--token-file`、任意输入／输出路径或档案内容。模型授权与激活同样需要 Human 审核、当前就绪状态和显式标志。写入结果不确定时通过回执及当前状态核对，不自动重试。这些导出是手动文件，没有自动保留 catalog；使用后通过可信本地文件管理清理。Host 将该导出目录限制为八个文件和总计 512 MiB。
+
+Profile 备份的 CLI 输出先写入同目录中新建的 `0600` 私密 `.part` 文件，完整下载的哈希与 Host 回执一致后，才以不覆盖的原子操作发布最终文件。已有或并发创建的目标文件保持不变。下载中进程被杀时可能留下仅供可信本地人工清理的 staging 文件，不会把半包暴露为请求的最终文件名。Tob 受限路径保留 `preview-stale`、`too-large`、`package-invalid`、`plan-changed` 等明确拒绝码。
+
+受限导出的 `receiptId` 与前一次预览已知的 `planId` 相同。答复丢失后，可用该 ID 检查，或带相同 plan 再调用导出命令，只读回已完成结果；不会再次导出，即使 Host 已重启也如此。首次导出仍需新的 Human 审核。模型授权／激活把审批时的 Model Plan revision 与恢复状态指纹一直绑定到 owner 提交，并在提交前检查当前 Source Event 授权；审核后变化返回 `plan-changed`。Human 在线命令也可传 `profile-recovery` 返回的 `--expected-revision <planRevision> --expected-state <stateFingerprint>`，使用相同 CAS 约束。
+
+恢复保留内容与历史，但在发布新目录前撤销目标本地能力：导入设备均撤销并替换凭据哈希，设备 Host identity 重建，push 目标和已记住的 secret-MCP 执行批准清除，导入的受保护 Tob role 也移除。原 steward 的人格／Memory 保留为暂停的普通 Bot；Home 建立目标本地的新受保护 Tob。设备须重新配对，secret 执行须重新批准。Workspace Grants、工具允许规则、宽泛 Assignment 权限、消息绑定／授权／配对、定时任务和待执行工作继续沿用冷恢复的撤销、暂停或拒绝边界。创建／群管理回执只是协调历史，不能复用旧已准入 Source Event 或复活过期 Shell 能力。源 Profile 不受新目录恢复影响。
