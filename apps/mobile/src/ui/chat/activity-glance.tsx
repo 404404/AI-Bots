@@ -30,7 +30,7 @@ function Glance({ activity, onOpen }: { activity: ProfileActivity; onOpen(): voi
   );
   const tokens = t.activityTokens(tokenTotalText(glance.total));
   const times = t.activityCount(glance.activity.reduce((sum, value) => sum + value, 0));
-  const empty = theme.layer.sheet.inset;
+  const empty = theme.layer.raised.inset;
   return (
     <Pressable
       accessibilityRole="button"
@@ -41,7 +41,7 @@ function Glance({ activity, onOpen }: { activity: ProfileActivity; onOpen(): voi
         gap: space.x4,
         padding: space.x5,
         borderRadius: radius.md,
-        backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
       })}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>

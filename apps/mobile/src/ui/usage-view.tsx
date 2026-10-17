@@ -165,9 +165,10 @@ function UsageSummary({
       </View>
       {usage === undefined ? null : (
         <View style={{ paddingHorizontal: space.x5 }}>
-          <SettingsSection title={t.usageKinds}>
+          <SettingsSection on="raised" title={t.usageKinds}>
             {USAGE_SPLIT.map((kind) => (
               <SettingsRow
+                on="raised"
                 key={kind}
                 title={t.usageKind[kind]}
                 trailing={
@@ -242,6 +243,7 @@ function UsageRow({
     const share = usageShare(bot.totalTokens, row.total);
     body = (
       <SettingsRow
+        on="raised"
         title={bot.displayName}
         {...(!bot.current
           ? { detail: t.usageRemoved }
@@ -264,6 +266,7 @@ function UsageRow({
     const { bot } = row;
     body = (
       <SettingsRow
+        on="raised"
         title={bot.displayName}
         detail={bot.state === 'ready' ? t.memoryChanges(bot.total) : t.memoryUnavailable}
         trailing={
@@ -283,7 +286,7 @@ function UsageRow({
     );
   }
   return (
-    <SettingsGroupItem first={row.first} last={row.last}>
+    <SettingsGroupItem on="raised" first={row.first} last={row.last}>
       {body}
     </SettingsGroupItem>
   );

@@ -66,7 +66,7 @@ function Card({ children }: { children: ReactNode }) {
         paddingHorizontal: space.x5,
         paddingVertical: space.x4,
         borderRadius: radius.md,
-        backgroundColor: theme.layer.sheet.fill,
+        backgroundColor: theme.layer.raised.fill,
       }}
     >
       {children}
@@ -142,7 +142,7 @@ function ModelRow({ model, last }: { model: ModelUsage; last: boolean }) {
 
 function TokenCard({ detail, range }: { detail: ActivityDetail; range: string }) {
   const theme = useDesignTheme();
-  const tones = seriesTones(theme, 3, theme.layer.sheet.fill);
+  const tones = seriesTones(theme, 3, theme.layer.raised.fill);
   const total = tokenTotalText(detail.total, false);
   const read = detail.split.cached + detail.split.uncached;
   const label = t.activityTokens(total);
@@ -159,7 +159,7 @@ function TokenCard({ detail, range }: { detail: ActivityDetail; range: string })
           }))}
           colors={tones}
           height={chart.plot}
-          empty={theme.layer.sheet.inset}
+          empty={theme.layer.raised.inset}
           accessibilityLabel={t.activityChart(t.activityTokensLabel, range, label)}
         />
         <View style={{ gap: space.x3 }}>
@@ -229,7 +229,7 @@ function EventsCard({ detail, range }: { detail: ActivityDetail; range: string }
           }))}
           colors={[theme.color.accent]}
           height={chart.spark}
-          empty={theme.layer.sheet.inset}
+          empty={theme.layer.raised.inset}
           accessibilityLabel={t.activityChart(t.activityEvents, range, total)}
         />
         {detail.reasons.length === 0 ? (
@@ -272,7 +272,7 @@ function MemoryCard({ detail, range }: { detail: ActivityDetail; range: string }
           first={detail.first}
           last={detail.last}
           counts={detail.commitDays}
-          tones={heatTones(theme, theme.layer.sheet.fill, theme.layer.sheet.inset)}
+          tones={heatTones(theme, theme.layer.raised.fill, theme.layer.raised.inset)}
           accessibilityLabel={t.activityChart(t.activityMemory, range, total)}
         />
         {detail.commits === 0 ? <Text tone="muted">{t.activityEmpty}</Text> : null}
