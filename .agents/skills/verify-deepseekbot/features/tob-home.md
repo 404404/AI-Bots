@@ -191,6 +191,8 @@ The `creation` phase creates a unique synthetic section through the Human owner,
 
 After an external same-Profile Host restart, run `restart-read` with `BH_E2E_HOME_FIXTURE` pointing to the earlier creation-readback.json. It requires the exact Bot and section identities, same DM placement and positive retained usage. Optional `BH_E2E_HOME_USAGE_FIXTURE` accepts a prior simple-model.json or dashboard snapshot and requires the same recent token total, detecting lost or duplicate receipt folding. This phase never launches or restarts a Host itself.
 
+`question` asks a real native question, opens its actionable Home source, answers through the canonical Human owner, and waits for the real replying Turn to complete. `pending-approval` proposes a supported scoped settings change, opens its exact Home source, denies it, and checks the coded refusal, unchanged value/revision and completed Turn. These phases require an isolated working Tob model route; they do not fabricate dashboard items. Run each explicitly; never substitute a dashboard-only capture for these checks.
+
 ## Group end and local attachment upload (#2090)
 
 Run `scripts/e2e-tob-channel-transfer.mjs` on a task-owned Web Host through `BH_E2E_INSTANCE`; Desktop runs require the parent-coordinated `BH_DESKTOP_CDP` and private `BH_E2E_HUMAN_INSTANCE`. Phases `delete`, `deny`, `stale`, `upload`, `direct` can be run independently, or `journey` covers all. `BH_E2E_TRANSFER_FIXTURE` loads saved `transfer-fixture.json`; after an external same-Profile restart, `restart-read` rechecks retained Groups/history and attachment references.

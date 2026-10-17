@@ -602,6 +602,290 @@ try {
       'same Profile restart retains created Bot identity, target section/DM and positive usage without duplicate receipt folding',
     );
   }
+  if (phase === 'question') {
+    const marker = 'HOMEACTION-' + Date.now();
+    const prompt =
+      '界面验收：请立即使用 ask_user_question 提一个单选问题，标题“' +
+      marker +
+      '”，问“测试选哪个颜色？”，选项“蓝色”和“绿色”。在我回答前等待，不要改设置或创建任务。回答后通过 channel_send 简短报告选择。';
+    await page.click('[data-home-panel] textarea');
+    await page.keyboard.type(prompt);
+    await page.waitForFunction(
+      () =>
+        !document.querySelector('[data-home-panel] .bh-send-btn')?.disabled &&
+        document.querySelector('[data-home-panel] textarea')?.value.includes('HOMEACTION'),
+    );
+    await shot('attention-before-submit');
+    await page.click('[data-home-panel] .bh-send-btn');
+    let request, facts;
+    for (let i = 0; i < 100; i++) {
+      const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+      request = messages.find(
+        (message) =>
+          message.userQuestionRequest &&
+          JSON.stringify(message.userQuestionRequest).includes(marker),
+      );
+      if (request) break;
+      const failure = messages.find(
+        (message) =>
+          message.sessionFailure && Date.parse(message.at) > Number(marker.split('-')[1]),
+      );
+      if (failure) throw Error('question model failure ' + failure.sessionFailure.code);
+      await pause(1000);
+    }
+    assert.ok(request, 'canonical question card missing');
+    facts = await rpc('homeDashboard', { range: '24h' });
+    assert.equal(facts.attention.status, 'ready');
+    const item = facts.attention.value.items.find((item) => item.messageId === request.id);
+    assert.ok(
+      item && facts.attention.value.actionCount >= 1,
+      'pending question must be actionable',
+    );
+    if (await page.$('[data-dock-header="bh:channel-body"]'))
+      await page.click('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]');
+    await click('Refresh Home');
+    await pause(300);
+    await page.evaluate(() =>
+      [...document.querySelectorAll('[data-home-panel] section')]
+        .find((el) =>
+          ['需要你处理', 'Needs your attention'].includes(el.getAttribute('aria-label')),
+        )
+        .scrollIntoView({ block: 'center' }),
+    );
+    await shot('populated-attention');
+    const label = await page.evaluate((id) => {
+      const section = [...document.querySelectorAll('[data-home-panel] section')].find((el) =>
+        ['需要你处理', 'Needs your attention'].includes(el.getAttribute('aria-label')),
+      );
+      return [...section.querySelectorAll('button')]
+        .find((button) => button.textContent.includes(id))
+        ?.textContent.trim();
+    }, item.summary);
+    assert.ok(label);
+    await click(label);
+    await page.waitForSelector('[data-dock-header="bh:channel-body"]');
+    await shot('attention-source-question');
+    writeFileSync(
+      resolve(out, 'attention.json'),
+      JSON.stringify({ request, facts, item }, null, 2),
+    );
+    const answer = {
+      answers: request.userQuestionRequest.questions.map((question) => ({
+        id: question.id,
+        selected: [question.options[0].label],
+      })),
+    };
+    await rpc('userQuestionAnswer', { channelId: home.channelId, messageId: request.id, answer });
+    let handled;
+    for (let i = 0; i < 60; i++) {
+      handled = (await rpc('channelMessages', { channelId: home.channelId })).messages.find(
+        (message) =>
+          message.userQuestionResolution?.requestMessageId === request.id &&
+          message.userQuestionResolution.state === 'answered',
+      );
+      if (handled) break;
+      await pause(500);
+    }
+    assert.ok(
+      handled,
+      'canonical answered resolution required; legacy indefinite status may expire after settlement',
+    );
+    const after = await rpc('homeDashboard', { range: '24h' });
+    assert.ok(!after.attention.value.items.some((item) => item.messageId === request.id));
+    writeFileSync(
+      resolve(out, 'attention-resolved.json'),
+      JSON.stringify({ handled, after }, null, 2),
+    );
+    let completed;
+    const selected = request.userQuestionRequest.questions[0].options[0].label;
+    for (let i = 0; i < 80; i++) {
+      const trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 3 });
+      const turn = trace.turns.find((turn) =>
+        turn.calls.some(
+          (call) => call.name === 'ask_user_question' && JSON.stringify(call.args).includes(marker),
+        ),
+      );
+      const reply = (await rpc('channelMessages', { channelId: home.channelId })).messages.find(
+        (message) =>
+          message.author.kind === 'bot' &&
+          !message.userQuestionRequest &&
+          !message.toolApprovalRequest &&
+          Date.parse(message.at) > Date.parse(request.at) &&
+          message.body.includes(selected),
+      );
+      if (
+        turn?.endReason === 'completed' &&
+        turn.calls.some((call) => call.name === 'channel_send' && call.outcome === 'ok') &&
+        reply
+      ) {
+        completed = { turn, reply };
+        break;
+      }
+      await pause(500);
+    }
+    assert.ok(
+      completed,
+      'question answer must resume a completed native Turn and real Channel reply',
+    );
+    writeFileSync(resolve(out, 'question-completed.json'), JSON.stringify(completed, null, 2));
+    steps.push(
+      'real native question creates actionable Home item; actual source button opens pending question in Messages; canonical answer resolves action and completes the real replying Turn',
+    );
+  }
+  if (phase === 'pending-approval') {
+    const before = (await rpc('describe', {}, 'settings')).namespaces.find(
+      (entry) => entry.ns === 'botharness-client',
+    );
+    const previous = new Set(
+      (await rpc('channelMessages', { channelId: home.channelId })).messages.map(
+        (message) => message.id,
+      ),
+    );
+    const previousCalls = new Set(
+      (await rpc('botToolTrace', { slug: home.botSlug, turns: 20 })).turns
+        .flatMap((turn) => turn.calls)
+        .map((call) => call.callId),
+    );
+    const requestedLimit = before.value.assignmentConcurrencyLimit === 9 ? 10 : 9;
+    const prompt =
+      '请用原生 bash 运行 deepseekbot settings botharness-client 读取当前 revision 和 assignmentConcurrencyLimit。然后用 deepseekbot settings-set botharness-client --patch-stdin --expected-revision 与刚才 revision、--previous-value 与刚才旧值 JSON，提议把 assignmentConcurrencyLimit 改为 ' +
+      requestedLimit +
+      '，先让我审阅。只把 patch JSON 从 stdin 传入。若我拒绝就报告 approval-denied，不要重试，不要更改其他设置。分别用独立 Shell 调用读与写，不要委派。';
+    await page.click('[data-home-panel] textarea');
+    await page.keyboard.type(prompt);
+    await page.waitForFunction(
+      () => !document.querySelector('[data-home-panel] .bh-send-btn')?.disabled,
+    );
+    await page.click('[data-home-panel] .bh-send-btn');
+    let request;
+    const handled = new Set();
+    for (let i = 0; i < 150; i++) {
+      const fresh = (await rpc('channelMessages', { channelId: home.channelId })).messages.filter(
+        (message) => !previous.has(message.id),
+      );
+      writeFileSync(
+        resolve(out, 'attention-current.json'),
+        JSON.stringify(
+          { fresh, trace: await rpc('botToolTrace', { slug: home.botSlug, turns: 3 }) },
+          null,
+          2,
+        ),
+      );
+      const failure = fresh.find((message) => message.sessionFailure);
+      if (failure) throw Error('model failure ' + failure.sessionFailure.code);
+      const outer = fresh.find(
+        (message) =>
+          message.toolApprovalRequest?.toolName === 'bash' &&
+          message.toolApprovalRequest.input.includes('deepseekbot settings-set') &&
+          !handled.has(message.id),
+      );
+      if (
+        outer &&
+        (await rpc('toolApprovalStatus', { channelId: home.channelId, messageId: outer.id }))
+          .status === 'pending'
+      ) {
+        handled.add(outer.id);
+        await rpc('toolApprovalDecide', {
+          channelId: home.channelId,
+          messageId: outer.id,
+          outcome: 'allowed-once',
+        });
+      }
+      request = fresh.find(
+        (message) => message.toolApprovalRequest?.toolName === 'deepseekbot settings-set',
+      );
+      if (request) break;
+      await pause(1000);
+    }
+    assert.ok(request, 'real scoped approval missing');
+    assert.equal(
+      (await rpc('toolApprovalStatus', { channelId: home.channelId, messageId: request.id }))
+        .status,
+      'pending',
+    );
+    const facts = await rpc('homeDashboard', { range: '24h' });
+    assert.equal(facts.attention.status, 'ready');
+    const item = facts.attention.value.items.find((item) => item.messageId === request.id);
+    assert.ok(
+      item && facts.attention.value.actionCount >= 1,
+      'pending approval must be actionable',
+    );
+    if (await page.$('[data-dock-header="bh:channel-body"]'))
+      await page.click('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]');
+    await click('Refresh Home');
+    await pause(300);
+    await page.evaluate(() => {
+      window.__homeActionNode = document.querySelector('[data-home-panel]');
+      const section = [...document.querySelectorAll('[data-home-panel] section')].find((el) =>
+        ['需要你处理', 'Needs your attention'].includes(el.getAttribute('aria-label')),
+      );
+      section.scrollIntoView({ block: 'center' });
+    });
+    await shot('populated-attention');
+    const label = await page.evaluate((summary) => {
+      const section = [...document.querySelectorAll('[data-home-panel] section')].find((el) =>
+        ['需要你处理', 'Needs your attention'].includes(el.getAttribute('aria-label')),
+      );
+      return [...section.querySelectorAll('button')]
+        .find((button) => button.textContent.includes(summary))
+        ?.textContent.trim();
+    }, item.summary);
+    assert.ok(label);
+    await click(label);
+    const selector = `[data-message-id=${JSON.stringify(request.id)}] .bh-tool-approval-card`;
+    await page.waitForSelector(selector);
+    await pause(500);
+    assert.ok(
+      await page.evaluate(() => window.__homeActionNode.isConnected),
+      'Home must stay mounted',
+    );
+    await shot('attention-source-approval');
+    await decideApproval(selector, true);
+    for (let i = 0; i < 30; i++) {
+      if (
+        (await rpc('toolApprovalStatus', { channelId: home.channelId, messageId: request.id }))
+          .status !== 'pending'
+      )
+        break;
+      await pause(500);
+    }
+    const after = await rpc('homeDashboard', { range: '24h' });
+    assert.ok(!after.attention.value.items.some((item) => item.messageId === request.id));
+    const targetAfter = (await rpc('describe', {}, 'settings')).namespaces.find(
+      (entry) => entry.ns === 'botharness-client',
+    );
+    assert.deepEqual(targetAfter.value, before.value);
+    assert.equal(targetAfter.revision, before.revision);
+    writeFileSync(
+      resolve(out, 'attention.json'),
+      JSON.stringify({ request, facts, item, after, targetBefore: before, targetAfter }, null, 2),
+    );
+    let completed;
+    for (let i = 0; i < 80; i++) {
+      const trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 3 });
+      const turn = trace.turns.find((turn) =>
+        turn.calls.some(
+          (call) =>
+            call.name === 'bash' &&
+            !previousCalls.has(call.callId) &&
+            JSON.stringify(call.args).includes('deepseekbot settings-set'),
+        ),
+      );
+      if (
+        turn?.endReason === 'completed' &&
+        turn.calls.some((call) => call.name === 'bash' && call.result?.includes('approval-denied'))
+      ) {
+        completed = turn;
+        break;
+      }
+      await pause(500);
+    }
+    assert.ok(completed, 'denied CLI must finish with the coded refusal and completed Turn');
+    writeFileSync(resolve(out, 'approval-completed.json'), JSON.stringify(completed, null, 2));
+    steps.push(
+      'real model scoped approval populates Home; source button opens exact pending card alongside mounted Home; Human denies; action disappears, canonical setting stays unchanged and the Turn completes with approval-denied',
+    );
+  }
   if (phase === 'configure') {
     const desc = await rpc('describe', {}, 'settings');
     const d = desc.namespaces.find((x) => x.ns === 'agent-default-model');
