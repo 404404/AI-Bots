@@ -97,3 +97,12 @@ it('keeps canonical completed activity after a Human replaces the Channel previe
     ),
   ).toEqual([['completed', at]]);
 });
+
+it('keeps recorded activity through partial profile updates but clears it on authoritative roster replacement', () => {
+  const local = createStore();
+  local.setRoster([{ ...bot('ada'), lastActivityAt: 1000 }], []);
+  local.upsertBot({ ...bot('ada'), displayName: 'Renamed' });
+  expect(homeActiveBots(local.getSnapshot().bots, [])[0]?.at).toBe(1000);
+  local.setRoster([bot('ada')], []);
+  expect(homeActiveBots(local.getSnapshot().bots, [])).toEqual([]);
+});

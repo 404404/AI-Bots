@@ -802,7 +802,13 @@ export function createStore(): ClientStore {
       update({ git });
     },
     upsertBot(incoming) {
-      const bot = withActivity(incoming);
+      const previous = state.bots.find((candidate) => candidate.slug === incoming.slug);
+      const bot = withActivity({
+        ...incoming,
+        ...(incoming.lastActivityAt === undefined && previous?.lastActivityAt !== undefined
+          ? { lastActivityAt: previous.lastActivityAt }
+          : {}),
+      });
       const existing = state.bots.filter((candidate) => candidate.slug !== bot.slug);
       update({ bots: [bot, ...existing], status: 'ready', error: undefined });
     },
