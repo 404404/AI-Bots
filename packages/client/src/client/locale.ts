@@ -4487,7 +4487,7 @@ export const en = {
   'activityCenter.title': 'Activity Center',
   'activityIndicator.scope': 'Indicator scope',
   'activityIndicator.none': 'Off',
-  'activityIndicator.unavailable': 'Attention status unavailable',
+  'activityIndicator.unavailable': 'Notification status unavailable',
   'activityIndicator.saveFailed': 'Preference could not be saved for your next visit',
   'generatedFiles.loading': 'Loading files…',
   'generatedFiles.retry': 'Retry',

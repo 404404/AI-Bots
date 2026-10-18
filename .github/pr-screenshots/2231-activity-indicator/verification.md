@@ -5,7 +5,7 @@ Recorded 2026-10-19. Isolated DSH Host and real Web Client using the pinned `0.2
 ## Revision and screenshots
 
 - Before: `f31e528af83b749b8726e16fec99836626d999ae` (merged Channel-mute slice #2243).
-- After implementation: `545385009976b30ce508c5a4cdb49eb11b32129e` (subsequent evidence commits contain no runtime changes).
+- After implementation: `545385009976b30ce508c5a4cdb49eb11b32129e` (capture revision; a follow-up changes only the English unavailable-state wording, leaving these Chinese captures and behavior unchanged).
 - Before/after: 1440 × 1000, Chinese, light and dark, same Profile, Activity Dock open, identical canonical unread and read-position snapshots. Before uses the existing broad dot; after selects Off. The panel retains five read personal records and the true global unread count remains four.
 - Menu images show all five choices; unknown image deliberately injects an HTTP 503 for the status call. Its ellipsis uses neutral tokens, not the notification color.
 - Screenshots contain only disposable QA data. The floating character can move independently between captures.
@@ -37,5 +37,6 @@ Open Activity, right-click its control-rail button and exercise the five choices
 - Initial browser automation attempts stalled on background-tab animation-frame waits and on second-origin authentication. Bringing pages forward and performing that origin's normal login corrected the harness; neither needed a product bypass.
 - A journey initially expected a declined Group join request in Activity's handled list. The existing handled query does not expose that request type. The corrected assertion checks the canonical declined Channel record and the cleared action dot; this PR does not claim new handled-list behavior.
 - An initial broad related-test run was interrupted after three long-running Channel test failures while browser QA was also active. Those two test files passed all 13 tests in an isolated low-concurrency rerun. The complete final related-run result is recorded in the PR.
+- The full low-concurrency run completed with 3,691 passed, one skipped and one failure: the English copy guard rejected the internal term "Attention". CI reproduced the same failure (3,729 passed, one skipped). The fix uses "Notification status unavailable"; the focused copy check and replacement CI run are recorded in the PR.
 - Source checks, browser journeys and CI are separate proof categories. Native Simulator/device behavior, Human QA and deployment are not claimed. The new preference targets the Web control rail only.
 - A local HTML explanation supplements this record; it is not a reviewer-hosted artifact or runtime proof.
