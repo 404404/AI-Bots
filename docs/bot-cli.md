@@ -176,6 +176,17 @@ missing content first. Then pass `draft_id` with the new observation and revised
 `body` to abandon the draft without resolving its Inbox item. `expired`, `refused` and
 `requires-review` are terminal for automatic sending. Handles cannot cross Bot owners or Groups.
 
+After an interrupted Group send, use the same direct Tool command with
+`{"channel_id":"...","body":"","review_action":"inspect"}`. This returns at most 20 own
+draft/receipt metadata entries (pending first) and `hasMore`; supply `draft_id` for an exact
+older record. It sends nothing and does not resolve Inbox work. After a Host restart, read the
+current Channel, then send `review_action:"recover"`, `draft_id`, the fresh `observation_id`
+and corrected `body`. Old observations, expiry and exhausted retry budgets cannot be reset.
+For a committed receipt, read its canonical `messageId`; resubmitting that `draft_id` with the
+same content returns the same message ID without a new message or Admission. Changed content
+returns `draft-commit-content-changed`. Current membership, owner, source and attachment checks
+still apply; a revoked Group may be refused by the direct runner before Tool execution.
+
 For deliberate yielding, the same direct `bot-tool <bot> channel_send --args-stdin` accepts
 `{"channel_id":"...","body":"","drop":true,"draft_id":"...","observation_id":"...","yield_to_message_ids":["..."]}`.
 Read the cited peer answers first (`review.peerMessageIds` lists fully returned peers).

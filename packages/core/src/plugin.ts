@@ -251,7 +251,15 @@ const runningRelease = {
   ledgers: installedPackage.ledgers(),
 };
 
-export const inject = ['tools', 'systemPrompt', 'sessions', 'agents', 'agentDefaultModel', 'llm'];
+export const inject = [
+  'tools',
+  'systemPrompt',
+  'sessions',
+  'agents',
+  'agentDefaultModel',
+  'llm',
+  'credentials',
+];
 
 export const PERSONA_SECTION_ORDER = 10400;
 
