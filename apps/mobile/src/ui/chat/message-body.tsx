@@ -6,7 +6,6 @@ import type { WireMention } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
 import { botColor } from '../bot-color';
 import { useDesignTheme } from '../design/theme';
-import { radius } from '../design/tokens';
 import { renderMarkdownInline } from '../markdown-inline';
 import { MarkdownView } from '../markdown-view';
 import { InlineText, Text } from '../primitives/text';
@@ -19,15 +18,12 @@ import {
   mentionMarkdownBody,
 } from './message-mentions';
 
-const TINTED = process.env.EXPO_PUBLIC_MENTION_STYLE === 'tint';
-
 function Mention({ mention, background }: { mention: WireMention; background: string }) {
   const theme = useDesignTheme();
   const { bots, openBot } = useContext(MessageIdentities);
   const { label, bot } = mentionIdentity(mention, bots);
   const enabled = bot !== undefined && openBot !== undefined;
   const size = theme.type.body.size * theme.fontScale;
-  const fill = TINTED ? theme.layer.raised.inset : background;
   return (
     <InlineText
       {...(enabled
@@ -38,9 +34,8 @@ function Mention({ mention, background }: { mention: WireMention; background: st
           }
         : {})}
       style={{
-        color: botNameColor(bot === undefined ? theme.color.fg : botColor(bot), fill),
+        color: botNameColor(bot === undefined ? theme.color.fg : botColor(bot), background),
         fontWeight: theme.weight.strong,
-        ...(TINTED ? { backgroundColor: fill, borderRadius: radius.xs } : {}),
       }}
     >
       {bot === undefined ? null : <BotAvatar bot={bot} size={size} ring={false} />}
