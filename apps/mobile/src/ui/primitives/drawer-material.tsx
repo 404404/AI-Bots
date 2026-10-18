@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { edge, radius } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
 
-export function DrawerMaterial() {
+export function DrawerMaterial({ rounded = false }: { rounded?: boolean }) {
   const theme = useDesignTheme();
   return (
     <View
@@ -12,7 +12,7 @@ export function DrawerMaterial() {
       style={[
         StyleSheet.absoluteFill,
         {
-          borderRadius: radius.round,
+          borderRadius: rounded ? radius.lg : radius.round,
           borderWidth: edge.hairline,
           borderColor: theme.layer.raised.edge,
           backgroundColor: theme.layer.raised.fill,

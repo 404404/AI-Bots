@@ -30,10 +30,11 @@ function subscribeTransparency(notify: () => void) {
   };
 }
 
-export function DrawerMaterial() {
+export function DrawerMaterial({ rounded = false }: { rounded?: boolean }) {
   const theme = useDesignTheme();
   const reduceTransparency = useSyncExternalStore(subscribeTransparency, readTransparency);
-  const glass = Number.parseInt(String(Platform.Version), 10) >= 26 && !reduceTransparency;
+  const glass =
+    Number.parseInt(String(Platform.Version), 10) >= 26 && !reduceTransparency && !rounded;
   return (
     <View
       pointerEvents="none"
@@ -41,7 +42,7 @@ export function DrawerMaterial() {
       style={[
         StyleSheet.absoluteFill,
         {
-          borderRadius: radius.round,
+          borderRadius: rounded ? radius.lg : radius.round,
           borderWidth: glass ? 0 : edge.hairline,
           borderColor: theme.layer.raised.edge,
           backgroundColor: glass ? 'transparent' : theme.layer.raised.fill,

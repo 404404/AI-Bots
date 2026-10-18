@@ -44,7 +44,7 @@ export function DrawerHeader({
             paddingVertical: space.x3,
           }}
         >
-          {capsule ? <DrawerMaterial /> : null}
+          {capsule ? <DrawerMaterial rounded={theme.largeText} /> : null}
           {icon === undefined ? null : <View accessible={false}>{icon}</View>}
           <Text variant="title" style={{ flexShrink: 1 }}>
             {title}
