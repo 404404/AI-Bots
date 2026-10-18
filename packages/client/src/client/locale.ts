@@ -3988,7 +3988,7 @@ export const en = {
   'onboarding.restart': 'Restart tutorial',
   'onboarding.settings.title': 'Onboarding tutorial',
   'onboarding.settings.description':
-    'Open the getting-started list or restart the tutorial; Bot identity, memory and existing conversations are not affected.',
+    'Continue or replay the short guide; Bot identity, memory, conversations and layout are not affected.',
   'onboarding.binding.notNow': 'Not now',
   'onboarding.binding.description':
     'Connect with this Bot from an external app. Binding is optional and does not affect your completed conversation.',

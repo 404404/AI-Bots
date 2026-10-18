@@ -22,3 +22,7 @@ Human QA accepted on 2026-10-18: the user explicitly confirmed macOS Desktop dra
 Legacy completed/skipped cases, denial/pending invitation and recovery edges have source coverage; their full native matrix is not claimed. Mobile Web remains a later slice.
 
 Screenshots show synthetic data only. This slice excludes mobile Web. The user authorized merge after CI and review pass; publishing a release is outside this task.
+
+## Final review follow-up
+
+The final review adds deterministic ordering for recovery among multiple replacement Bots and updates the English settings description. A regression test first reproduced the ordering failure; all 40 Host/Client onboarding tests then passed. Native screenshots and Human layout acceptance above precede only these two small follow-ups; the pictured Chinese layout and interaction code are unchanged.

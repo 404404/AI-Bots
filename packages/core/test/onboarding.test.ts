@@ -608,3 +608,22 @@ it('recovers a replacement created before refresh after the original Bot is paus
     expect((await core.onboarding.enter()).journey?.botSlug).toBe(replacement.record.slug);
   });
 });
+
+it('recovers the earliest replacement deterministically, including equal timestamps', async () => {
+  await withCore(async (core) => {
+    await core.onboarding.enter(undefined, 'start');
+    core.onboarding.trackCreation('create', 'original', 'tob-session', Date.now());
+    const original = core.creations.create({ displayName: 'Original' }, 'original');
+    expect((await core.onboarding.enter()).journey?.botSlug).toBe(original.record.slug);
+    core.registry.setPaused(original.record.slug, true);
+    const earliest = Date.now();
+    core.onboarding.trackCreation('create', 'replacement-later', 'tob-session', earliest + 1);
+    core.creations.create({ displayName: 'Later' }, 'replacement-later');
+    core.onboarding.trackCreation('create', 'replacement-early-b', 'tob-session', earliest);
+    core.creations.create({ displayName: 'Early B' }, 'replacement-early-b');
+    core.onboarding.trackCreation('create', 'replacement-early-a', 'tob-session', earliest);
+    const expected = core.creations.create({ displayName: 'Early A' }, 'replacement-early-a');
+    expect((await core.onboarding.enter()).journey?.botSlug).toBe(expected.record.slug);
+    expect((await core.onboarding.enter()).journey?.botSlug).toBe(expected.record.slug);
+  });
+});

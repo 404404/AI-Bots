@@ -152,6 +152,7 @@ export function createBotOnboarding(options: {
       LEFT JOIN bot_creation_operations bot ON pending.kind = 'create' AND bot.operation_key = pending.operation_key AND bot.status = 'created'
       LEFT JOIN channel_management_operations channel ON pending.kind = 'group-create' AND channel.operation_key = pending.operation_key AND channel.status = 'completed' AND channel.kind = 'create'
       WHERE pending.target_id IS NULL OR pending.kind = 'create'
+      ORDER BY pending.recorded_at, pending.operation_key
     `)
         .all(),
     ) as Array<{
