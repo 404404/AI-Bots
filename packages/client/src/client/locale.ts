@@ -20,6 +20,7 @@ export const zh = {
   'home.humanGreeting': '你好 ',
   'home.description': '你的本地总管。了解 Bot 的状态，或告诉我你想调整什么。',
   'home.configure': '配置模型，开始与 Tob 对话',
+  'home.draftStorageError': '草稿暂时无法保存，关闭或重启后可能丢失。请先复制保留。',
   'home.input': '有什么可以帮你？',
   'home.attention': '{count} 条未读通知',
   'home.unavailable': '状态暂不可用',
@@ -3694,6 +3695,8 @@ export const en = {
   'home.description':
     'Your local steward. Check on your Bots or tell me what you’d like to change.',
   'home.configure': 'Configure a model to talk to Tob',
+  'home.draftStorageError':
+    'Your draft could not be saved and may be lost after closing or restarting. Please copy it first.',
   'home.input': 'What can I help you with?',
   'home.attention': '{count} unread notifications',
   'home.unavailable': 'Status unavailable',

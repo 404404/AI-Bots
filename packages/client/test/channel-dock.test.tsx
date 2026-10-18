@@ -1137,6 +1137,19 @@ it('restores Home and nested global panel geometry without remounting surviving 
   await settle();
   expect(grid()).toEqual(before);
   expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  const fromJSON = dock!.fromJSON.bind(dock!);
+  const restore = vi.spyOn(dock!, 'fromJSON').mockImplementationOnce((layout, options) => {
+    fromJSON(layout, options);
+    throw Error('restore interrupted after partial mutation');
+  });
+  act(() => registry.open(WORKSPACE_HOME));
+  await settle();
+  expect(dock!.panels.filter((x) => x.id === WORKSPACE_HOME)).toHaveLength(1);
+  expect(dock!.getPanel(CHANNEL_BODY_PANEL)).toBeDefined();
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  restore.mockRestore();
 });
 
 it('keeps a newly resized column when a hidden lower panel is reopened', async () => {

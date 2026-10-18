@@ -86,6 +86,7 @@ export function homeActiveBots(bots: readonly BotSummary[], channels: readonly C
     .flatMap((bot) => {
       const active = bot.aggregateState === 'thinking' || bot.aggregateState === 'working';
       const at = Math.max(
+        bot.lastActivityAt ?? 0,
         recent.get(bot.slug) ?? 0,
         bot.activity?.startedAt ?? 0,
         ...(bot.sessionActivity ?? []).map((session) => session.at),

@@ -87,3 +87,13 @@ it('opens a current Bot through the existing DM action, reveals Messages, and di
     host.remove();
   }
 });
+
+it('keeps canonical completed activity after a Human replaces the Channel preview', () => {
+  const at = Date.parse('2026-10-18T10:00:00Z');
+  const bots = [{ ...bot('completed'), lastActivityAt: at }, bot('never-worked')];
+  expect(
+    homeActiveBots(bots, [channel('completed', new Date(at + 1000).toISOString(), true)]).map(
+      ({ bot, at }) => [bot.slug, at],
+    ),
+  ).toEqual([['completed', at]]);
+});

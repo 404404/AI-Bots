@@ -903,31 +903,43 @@ export function ChannelDock({
     panel: DockPanelRegistration,
     remembered: DockPosition | undefined,
   ) => {
-    const restored = restoreDockVisibility(visibilityLayout.current, target.toJSON(), panel.id);
-    if (restored && !target.getPanel(panel.id)) {
+    const before = target.toJSON();
+    try {
+      const restored = restoreDockVisibility(visibilityLayout.current, before, panel.id);
+      if (restored && !target.getPanel(panel.id)) {
+        restoringVisibility.current = true;
+        try {
+          target.fromJSON(restored, { reuseExistingPanels: true });
+          hideBodyHeader(target);
+          for (const [id, position] of Object.entries(parked.current)) {
+            const group = target.getPanel(id)?.group;
+            if (!group || !position.size) continue;
+            const offset = dockPanelGap(target.toJSON(), id, workspace ? gapRef.current : 0);
+            group.api.setSize({
+              width: position.size.width * target.width + offset.width,
+              height: position.size.height * target.height + offset.height,
+            });
+          }
+          target.getPanel(panel.id)?.api.setActive();
+        } finally {
+          restoringVisibility.current = false;
+        }
+        if (Object.keys(visibilityLayout.current!.panels).every((id) => target.getPanel(id))) {
+          visibilityLayout.current = undefined;
+          for (const visible of target.panels) delete parked.current[visible.id];
+        }
+        save(target);
+        return;
+      }
+    } catch {
+      visibilityLayout.current = undefined;
       restoringVisibility.current = true;
       try {
-        target.fromJSON(restored, { reuseExistingPanels: true });
+        target.fromJSON(before, { reuseExistingPanels: true });
         hideBodyHeader(target);
-        for (const [id, position] of Object.entries(parked.current)) {
-          const group = target.getPanel(id)?.group;
-          if (!group || !position.size) continue;
-          const offset = dockPanelGap(target.toJSON(), id, workspace ? gapRef.current : 0);
-          group.api.setSize({
-            width: position.size.width * target.width + offset.width,
-            height: position.size.height * target.height + offset.height,
-          });
-        }
-        target.getPanel(panel.id)?.api.setActive();
       } finally {
         restoringVisibility.current = false;
       }
-      if (Object.keys(visibilityLayout.current!.panels).every((id) => target.getPanel(id))) {
-        visibilityLayout.current = undefined;
-        for (const visible of target.panels) delete parked.current[visible.id];
-      }
-      save(target);
-      return;
     }
     visibilityLayout.current = undefined;
     for (const visible of target.panels) delete parked.current[visible.id];

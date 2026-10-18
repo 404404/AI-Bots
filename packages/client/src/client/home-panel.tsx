@@ -70,6 +70,7 @@ export function HomePanel({
   const [configuring, setConfiguring] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [storageFailed, setStorageFailed] = useState(false);
   const [draft, setDraft] = useState('');
   const sending = useRef(false);
   const pending = useRef<{ body: string; id: string }>();
@@ -101,8 +102,13 @@ export function HomePanel({
         try {
           const key = 'botharness/home-draft/' + next.botSlug;
           const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key);
-          if (raw && !localStorage.getItem(key)) localStorage.setItem(key, raw);
-          sessionStorage.removeItem(key);
+          try {
+            if (raw && !localStorage.getItem(key)) localStorage.setItem(key, raw);
+            sessionStorage.removeItem(key);
+            setStorageFailed(false);
+          } catch {
+            setStorageFailed(true);
+          }
           const saved = raw ? JSON.parse(raw) : undefined;
           if (typeof saved?.body === 'string') {
             setDraft(saved.body);
@@ -179,7 +185,10 @@ export function HomePanel({
             })),
           }),
         );
-      } catch {}
+        setStorageFailed(false);
+      } catch {
+        setStorageFailed(true);
+      }
   };
   const updateUploads = (next: ChannelComposerUpload[]) => {
     pending.current = undefined;
@@ -257,7 +266,10 @@ export function HomePanel({
           })),
         }),
       );
-    } catch {}
+      setStorageFailed(false);
+    } catch {
+      setStorageFailed(true);
+    }
     try {
       registry.open(CHANNEL_BODY_PANEL);
       await actions.sendHome(
@@ -338,6 +350,11 @@ export function HomePanel({
           ))}
         </div>
         <HomeOverview actions={actions} registry={registry} t={t} />
+        {storageFailed && (
+          <p role="alert" {...stylex.props(styles.error)}>
+            {t('home.draftStorageError')}
+          </p>
+        )}
         {error && (
           <p role="alert" {...stylex.props(styles.error)}>
             {error}

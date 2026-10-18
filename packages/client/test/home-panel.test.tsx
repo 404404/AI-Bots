@@ -75,10 +75,18 @@ it('migrates the old Home draft, fills starters without sending, and retains it 
   const view = () =>
     createElement(HomePanel, { actions, registry, t, sendKey: 'enter', onEditHumanName: editName });
   sessionStorage.setItem('botharness/home-draft/tob', JSON.stringify({ body: 'old unsent draft' }));
+  let storageFails = true;
+  const originalSetItem = Storage.prototype.setItem;
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (this === localStorage && storageFails)
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    originalSetItem.call(this, key, value);
+  });
   try {
     await act(async () => root.render(view()));
     expect(host.querySelector('textarea')?.value).toBe('old unsent draft');
-    expect(sessionStorage.getItem('botharness/home-draft/tob')).toBeNull();
+    expect(sessionStorage.getItem('botharness/home-draft/tob')).not.toBeNull();
+    expect(host.textContent).toContain(t('home.draftStorageError'));
     expect(host.textContent).not.toContain(t('home.configure'));
     const button = (label: string) =>
       [...host.querySelectorAll('button')].find((x) => x.textContent === label)!;
@@ -87,6 +95,10 @@ it('migrates the old Home draft, fills starters without sending, and retains it 
     expect(send).not.toHaveBeenCalled();
     await act(async () => button('Send').click());
     expect(send).toHaveBeenCalledWith('dm-tob', t('home.starter.status'), expect.any(String), []);
+    expect(host.textContent).toContain(t('home.draftStorageError'));
+    storageFails = false;
+    await act(async () => button(t('home.starter.status')).click());
+    expect(host.textContent).not.toContain(t('home.draftStorageError'));
     expect(host.querySelector('textarea')?.value).toBe(t('home.starter.status'));
     await act(async () => root.unmount());
     catalog.mockResolvedValue({ models: [] });

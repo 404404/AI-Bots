@@ -25,6 +25,7 @@ export interface StandingLimitsView {
 export type BotBannerView = { recipe: PixelBannerRecipe } | { image: string };
 
 export interface BotSummary {
+  lastActivityAt?: number;
   slug: string;
   displayName: string;
   tob?: { defaultName: boolean; defaultAvatar: boolean };

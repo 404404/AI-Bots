@@ -325,6 +325,7 @@ export interface ActivityOverview {
 }
 
 export interface PersonaBotSummary {
+  lastActivityAt?: number;
   tob?: { defaultName: boolean; defaultAvatar: boolean };
   slug: string;
   displayName: string;
@@ -2491,6 +2492,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     list(payload) {
+      const activity = new Map(deps.channels.latestBotActivity?.());
+      for (const [slug, at] of deps.runtime?.latestAssignmentActivity?.() ?? [])
+        activity.set(slug, Math.max(activity.get(slug) ?? 0, at));
       const query = asQuery(payload)?.trim().toLowerCase();
       const bots = deps.registry
         .listHistorical()
@@ -2504,6 +2508,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         })
         .map((record) => ({
           ...summarize(record, deps.states.snapshot(record.slug), deps.tob?.isTob(record.slug)),
+          ...(activity.has(record.slug) ? { lastActivityAt: activity.get(record.slug)! } : {}),
           ...(deps.registry.get(record.slug) === undefined
             ? {
                 deleted: true,

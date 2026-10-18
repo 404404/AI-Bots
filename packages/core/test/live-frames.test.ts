@@ -108,6 +108,34 @@ describe('live frames on the native stream carrier', () => {
     expect((await ended).done).toBe(true);
   });
 
+  it('retains a canonical roster refresh when a slow reader coalesces a Bot reply into a Human preview', async () => {
+    const hub = createChannelLiveHub(createChannelStore({ rootDir: root() }));
+    hubs.push(hub);
+    const abort = new AbortController();
+    const frames = hub.followRoster(abort.signal)[Symbol.asyncIterator]();
+    await frames.next();
+    hub.publishCommitted({
+      channelId: 'a',
+      revision: 1,
+      message: {
+        id: 'bot',
+        at: '2026-10-18T00:00:00Z',
+        author: { kind: 'bot', slug: 'ada' },
+        body: 'Done',
+      },
+    });
+    const human = {
+      id: 'human',
+      at: '2026-10-18T00:00:01Z',
+      author: { kind: 'human' as const },
+      body: 'Thanks',
+    };
+    hub.publishCommitted({ channelId: 'a', revision: 2, message: human });
+    expect((await frames.next()).value).toEqual({ type: 'changed' });
+    expect((await frames.next()).value).toEqual({ type: 'latest', channelId: 'a', message: human });
+    abort.abort();
+  });
+
   it("carries each Channel's latest non-notice message on the roster, newest per Channel", async () => {
     const hub = createChannelLiveHub(createChannelStore({ rootDir: root() }));
     hubs.push(hub);

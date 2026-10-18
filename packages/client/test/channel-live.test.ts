@@ -254,6 +254,55 @@ describe('Roster live Client', () => {
 });
 
 describe('Roster live Client latest messages', () => {
+  it('retains completed Bot activity across newer Human previews and out-of-order commits', () => {
+    const store = createStore();
+    store.setMode('bot');
+    store.setRoster(
+      ['ada', 'bea'].map((slug) => ({
+        slug,
+        displayName: slug,
+        aggregateState: 'idle',
+        roles: [],
+        workspaces: [],
+        createdAt: CHANNEL.createdAt,
+      })),
+      [CHANNEL],
+    );
+    const refreshRoster = vi.fn(async () => undefined);
+    const sources: FakeSource[] = [];
+    const dispose = mountRosterLive(store, { refreshRoster } as unknown as BridgeActions, (url) => {
+      const source = new FakeSource(url);
+      sources.push(source);
+      return source as unknown as EventSource;
+    });
+    const commit = (id: string, at: number, slug?: string, channelId = CHANNEL.id) =>
+      sources[0]?.listeners.get('roster/latest')?.(
+        new MessageEvent('roster/latest', {
+          data: JSON.stringify({
+            channelId,
+            message: {
+              id,
+              at: new Date(at).toISOString(),
+              author: slug ? { kind: 'bot', slug } : { kind: 'human' },
+              body: id,
+            },
+          }),
+        }),
+      );
+    try {
+      commit('ada-done', 10000, 'ada');
+      commit('human', 30000);
+      commit('bea-done-delayed', 20000, 'bea');
+      commit('ada-older', 5000, 'ada');
+      commit('private', 90000, 'ada', 'unknown');
+      expect(store.getSnapshot().bots.find((x) => x.slug === 'ada')?.lastActivityAt).toBe(10000);
+      expect(store.getSnapshot().bots.find((x) => x.slug === 'bea')?.lastActivityAt).toBe(20000);
+      expect(store.getSnapshot().channels[0]?.latestMessage?.id).toBe('human');
+      expect(refreshRoster).not.toHaveBeenCalled();
+    } finally {
+      dispose();
+    }
+  });
   it('moves a listed Channel preview forward without a roster refresh', () => {
     const store = createStore();
     store.setMode('bot');

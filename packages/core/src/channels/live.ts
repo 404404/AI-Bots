@@ -745,6 +745,7 @@ export function createChannelLiveHub(
         for (const subscriber of rosterSubscribers)
           subscriber.latest(commit.channelId, commit.message);
       if (commit.message.author.kind !== 'bot') return;
+      if (!isChannelNotice(commit.message)) this.publishRosterCommitted();
       const botSlug = commit.message.author.slug;
       const candidates = [...(drafts.get(commit.channelId)?.values() ?? [])].filter(
         (draft) => draft.botSlug === botSlug,
