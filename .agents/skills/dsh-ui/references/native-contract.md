@@ -73,3 +73,11 @@ Regression: run `scripts/e2e-panel-workspace.mjs` against an isolated Host. It c
 Panel scroll containers use the shared `ds/panel-scrollbars` activity owner mounted once per Dock. Keep the DSH-native scrollbar dimensions, track, thumb tokens and native dragging; never toggle `overflow` or `scrollbar-width` to hide it. Only the scrolling element's thumb becomes visible. After 800ms without scrolling, its thumb fades over 200ms; further scrolling immediately restores it. Hover alone does not reveal an idle thumb. Native thumb dragging remains visible while pressed. Reduced-motion preference removes the fade.
 
 The owner captures descendant scroll events, including dynamically mounted and nested Panels, without React state updates. It cancels idle timers/animation frames on disposal. Do not add per-Panel listeners, hover-only scrollbar rules or content remounts. Scope this behavior to the Dock so native DSH surfaces and portaled menus/dialogs keep their own scrollbar contract.
+
+## Desktop Panel drag ownership
+
+Only the shared Panel title button (`data-panel-hide`, icon + label) is a Panel drag handle. Channel identity, header tabs and actions remain outside it. Header whitespace and unused Control Rail space use the DSH native window-drag contract; interactive descendants opt out with `data-window-drag-recall`.
+
+Verified against Dockview 8.4.1 and the shipped DSH 0.2.1-rc.2 frontend: Dockview adds a draggable, focusable `role=tab` wrapper outside our React header. A drag starting on that wrapper never traverses the inner header's capture handler. Reject non-title header drag starts at the outer Dock capture boundary, before Dockview's native listener. Regression tests must dispatch on the real `.dv-tab` and `.dv-tabs-and-actions-container` as well as the inner header, and separately prove title drags remain allowed.
+
+DSH marks `[tabindex]` and `[role=tab]` as native `no-drag` regions. On macOS, explicitly restore `drag` on these Dock header wrappers while keeping title, context, tabs and actions `no-drag`. A passing DOM drag test does not prove native window movement: check both blank-header window displacement and title-only Panel drops in a non-fullscreen Desktop.

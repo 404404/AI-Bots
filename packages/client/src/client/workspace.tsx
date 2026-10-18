@@ -281,29 +281,31 @@ function WorkspaceRail({
           </span>
         </button>
       </Tooltip>
-      <div className="bh-workspace-controls">
-        {options.dockPanels && (
-          <PinnedPanelCards
-            registry={options.dockPanels}
-            order={order}
-            onOrderChange={setOrder}
-            hiddenIds={[
-              'members',
-              'bot-inbox',
-              ...CHANNEL_WORKSPACE_PANELS,
-              ...botOnlyHidden,
-              ...hiddenControls,
-            ]}
-            shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
-            collapsed
-            t={t}
-            badge={(id) =>
-              id === 'activity-center'
-                ? { count: state.humanInbox.unreadCount, dot: state.humanInbox.hasAction }
-                : undefined
-            }
-          />
-        )}
+      <div className="bh-workspace-controls" data-window-drag>
+        <div data-window-drag-recall>
+          {options.dockPanels && (
+            <PinnedPanelCards
+              registry={options.dockPanels}
+              order={order}
+              onOrderChange={setOrder}
+              hiddenIds={[
+                'members',
+                'bot-inbox',
+                ...CHANNEL_WORKSPACE_PANELS,
+                ...botOnlyHidden,
+                ...hiddenControls,
+              ]}
+              shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
+              collapsed
+              t={t}
+              badge={(id) =>
+                id === 'activity-center'
+                  ? { count: state.humanInbox.unreadCount, dot: state.humanInbox.hasAction }
+                  : undefined
+              }
+            />
+          )}
+        </div>
       </div>
       <span className="bh-workspace-grip">
         <Menu

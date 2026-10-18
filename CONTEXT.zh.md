@@ -827,7 +827,7 @@ _避免使用_：panel control、panel control sidebar、App Sidebar、频道列
 _避免使用_：Dock panel、widget、view、pane、sidebar、DSH main panel
 
 **Panel header**：
-面板标题栏。内容面板的标题与操作区域，包含图标、名称和该面板的操作；它始终属于对应面板，不随面板位置改变含义。
+面板标题栏。内容面板的标题与操作区域，包含图标、名称和该面板的操作；它始终属于对应面板，不随面板位置改变含义。图标与名称组成随内容宽度自适应的标题操作区：点击关闭面板，拖拽移动面板；频道身份信息、标签页与操作按钮不属于该操作区。在 macOS Desktop 中，标题栏剩余空白区域用于拖动原生窗口。
 _避免使用_：sidebar tab、Channel header（指面板自身标题栏时）
 
 **Panel content**：

@@ -829,7 +829,7 @@ An independently identifiable unit of the Bot workspace with a named purpose and
 _Avoid_: Dock panel, widget, view, pane, sidebar, DSH main panel
 
 **Panel header**:
-The title and action area of a content Panel, containing its icon, name and Panel-specific actions. It belongs to that Panel wherever the Panel is placed.
+The title and action area of a content Panel, containing its icon, name and Panel-specific actions. It belongs to that Panel wherever the Panel is placed. The content-sized icon-and-name title handle closes the Panel on click and moves it on drag; Channel identity, tabs and action controls are outside that handle. In macOS Desktop, unused header space moves the native window.
 _Avoid_: sidebar tab, Channel header (when referring to the Panel's own title bar)
 
 **Panel content**:

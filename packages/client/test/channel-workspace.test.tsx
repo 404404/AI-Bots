@@ -13,6 +13,56 @@ import {
 import { DEFAULT_CHANNEL_WORKSPACE } from '../src/client/channel-dock-layout.js';
 
 describe('nested Channel workspace', () => {
+  it('starts a child-panel drag only from its title handle', () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const setData = vi.fn();
+    const transfer = { setData, effectAllowed: '' };
+    try {
+      act(() =>
+        root.render(
+          createElement(ChannelWorkspace, {
+            channelId: 'dm-ada',
+            tree: legacyChannelSplit({}),
+            setTree: vi.fn(),
+            panels: {
+              messages: { label: 'Messages', content: 'Chat' },
+              sessions: {
+                label: 'Sessions',
+                content: 'Sessions',
+                header: createElement(
+                  'button',
+                  {
+                    'data-panel-hide': '',
+                    draggable: true,
+                  },
+                  'Sessions',
+                ),
+              },
+            },
+          }),
+        ),
+      );
+      const header = host.querySelector('.bh-channel-session-header')!;
+      const drag = (target: Element) => {
+        const event = new Event('dragstart', { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'dataTransfer', { value: transfer });
+        act(() => target.dispatchEvent(event));
+        return event;
+      };
+      expect(drag(header).defaultPrevented).toBe(true);
+      expect(setData).not.toHaveBeenCalled();
+      expect(drag(header.querySelector('button')!).defaultPrevented).toBe(false);
+      expect(setData).toHaveBeenCalledWith(expect.any(String), 'sessions');
+      expect(transfer.effectAllowed).toBe('move');
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+    }
+  });
+
   it('splits a right column into rows and validates stored topology', () => {
     const legacy = legacyChannelSplit({ 'memory-files': DEFAULT_CHANNEL_WORKSPACE });
     const tree = moveChannelSplit(legacy, 'memory-evolution', 'memory-files', 'below');
