@@ -66,13 +66,12 @@
       "passed": 136
     },
     "lint": "passed",
-    "format": "passed for changed source files",
+    "format": "passed repository-wide before evidence follow-up; evidence files rechecked separately",
     "scopedTypecheck": "passed",
     "build": "passed"
   },
   "limits": [
-    "Final old-version model journey not repeated after removing the legacy cwd suffix: provider balance exhausted after successful final new-version result.",
-    "Old-version background delivery: contract tests only, not a live model result.",
+    "The earlier new-Desktop journey delivered its verified tool results before a later provider QUOTA error; that failure remains recorded. The final old-Desktop rerun completed normally after credit was restored.",
     "Browser/Computer settings and registry tested; actual OS/browser control and IM delivery are separate release gates.",
     "Future DSH versions: admission strings tested, runtime unverified."
   ],
@@ -84,9 +83,19 @@
         "background": null
       },
       {
-        "tool": "list_assignments",
+        "tool": "bot_subagent",
         "outcome": "ok",
-        "background": null
+        "background": false
+      },
+      {
+        "tool": "bot_subagent",
+        "outcome": "ok",
+        "background": true
+      },
+      {
+        "tool": "bot_subagent_fork",
+        "outcome": "ok",
+        "background": false
       },
       {
         "tool": "create_assignment",
@@ -109,7 +118,7 @@
         "background": null
       },
       {
-        "tool": "archive_assignment",
+        "tool": "inbox_list",
         "outcome": "ok",
         "background": null
       },
@@ -119,17 +128,7 @@
         "background": null
       },
       {
-        "tool": "bot_subagent_fork",
-        "outcome": "ok",
-        "background": false
-      },
-      {
-        "tool": "bot_subagent",
-        "outcome": "ok",
-        "background": false
-      },
-      {
-        "tool": "channel_send",
+        "tool": "inbox_resolve",
         "outcome": "ok",
         "background": null
       }
@@ -190,6 +189,46 @@
   "fileReadback": {
     "oldEarlierCandidate": "97330de4c2403d5258c95f996993e3c77493d1b8ec72e11d8bf235fbbfd2317e",
     "newFinalCandidate": "97330de4c2403d5258c95f996993e3c77493d1b8ec72e11d8bf235fbbfd2317e",
-    "expectedText": "DSH-COMPAT-42\n"
+    "oldFinalCandidate": {
+      "sha256": "96046e7c4e0bdde3d361edabac7e9af9fd9967e15aa7008921d49fff917e595c",
+      "bytes": 13,
+      "text": "DSH-COMPAT-42"
+    },
+    "earlierAndNewExpectedText": "DSH-COMPAT-42\n"
+  },
+  "finalOldDesktop": {
+    "runtimeSource": "cb2a201d62847977e7329ca9e92d4cccdf7721f2",
+    "version": "0.2.0-rc.2",
+    "entry": "native macOS Desktop DM composer",
+    "result": "passed",
+    "turnEndReasons": ["completed", "completed"],
+    "assignmentSessionId": "botharness-ab91315e-8551-4a88-9494-410edd05cdc8",
+    "foregroundSpawnResult": "64",
+    "foregroundForkResult": "42",
+    "restart": {
+      "sameDmResultRetained": true,
+      "sameAssignmentOpenedInNativeSession": true,
+      "fileReadbackRetained": true
+    }
+  },
+  "backgroundDelivery": {
+    "0.2.0-rc.2": {
+      "parentEventType": "user/message",
+      "sequence": 42,
+      "time": 1792305807226,
+      "sourceKind": "subagent-settled",
+      "childSessionId": "ca200eb1-973e-44a4-b2ca-6205b0569621",
+      "closingMessage": "81",
+      "visibleInDm": true
+    },
+    "0.2.1-rc.2": {
+      "parentEventType": "user/message",
+      "sequence": 42,
+      "time": 1792304717987,
+      "sourceKind": "subagent-settled",
+      "childSessionId": "a1142944-fc2b-4558-8399-e140f3f52479",
+      "closingMessage": "9 * 9 = 81",
+      "visibleInDm": true
+    }
   }
 }

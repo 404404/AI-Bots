@@ -31,4 +31,4 @@ When DSH publishes another 0.2.x version, run installation/startup and critical-
 
 ## Current review evidence
 
-The 2026-10-18 [compatibility record](../../.github/pr-assets/2168-compatibility/README.md) binds the exact local 1.4.0 artifacts and native Desktop checks to their source revisions. Both final fresh installations passed. The final older-Desktop model rerun remains pending after provider credit exhaustion; this candidate is not release-qualified.
+The 2026-10-18 [compatibility record](../../.github/pr-assets/2168-compatibility/README.md) binds the exact local 1.4.0 artifacts and native Desktop checks to their source revisions. Both final fresh installations passed. After provider credit was restored, the final older-Desktop DM, Assignment file write/read, foreground fork/spawn, background parent delivery and post-restart retained results also passed. Actual Browser/Computer operations and external IM delivery remain separate publication gates; this candidate is not release-qualified.
