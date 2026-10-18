@@ -1,4 +1,4 @@
-# ADR-0234: Mobile creation shares the existing tab navigator
+# ADR-0235: Mobile creation shares the existing tab navigator
 
 - Status: Accepted; native qualification tracked in the issue
 - Date: 2026-10-19
