@@ -44,3 +44,11 @@ const subscribe = (listener: () => void) => {
 export function useCloudSnapshot() {
   return useSyncExternalStore(subscribe, cloudClient.getSnapshot, cloudClient.getSnapshot);
 }
+
+// A navigation draft, never an access grant. Keep it through browser return/restart.
+const JOIN_KEY = 'tob.cloud.pending-join.v1';
+export const pendingCloudJoin = {
+  read: () => SecureStore.getItemAsync(JOIN_KEY),
+  save: (link: string) => SecureStore.setItemAsync(JOIN_KEY, link),
+  clear: () => SecureStore.deleteItemAsync(JOIN_KEY),
+};

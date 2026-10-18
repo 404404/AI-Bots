@@ -60,6 +60,7 @@ export default function RootLayout() {
               />
               <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
               <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
+              <Stack.Screen name="cloud-join" options={{ title: t.cloudJoin.title }} />
               <Stack.Screen name="cloud-services" options={{ title: t.cloud.title }} />
               <Stack.Screen
                 name="cloud-organizations"

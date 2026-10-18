@@ -68,7 +68,7 @@ export default function HomeScreen() {
         <ActivityIndicator />
       </View>
     );
-  if (saved === null) return <Redirect href="/pair" />;
+  if (saved === null) return <Redirect href="/cloud-join" />;
 
   const create = (target: CreateTarget) =>
     router.push({ pathname: '/full-client', params: fullClientParams(target) });

@@ -1,4 +1,27 @@
+import * as SecureStore from 'expo-secure-store';
 import { cloudNativeIntent } from '../src/cloud/native-intent';
-export function redirectSystemPath({ path }: { path: string; initial: boolean }) {
-  return cloudNativeIntent(path);
+import { parseInvitationLink } from '../src/cloud/invitation-link';
+export async function redirectSystemPath({ path }: { path: string; initial: boolean }) {
+  const destination = cloudNativeIntent(path);
+  if (destination.startsWith('/cloud-join?link=')) {
+    try {
+      const link = new URL(destination, 'https://native.invalid').searchParams.get('link')!;
+      parseInvitationLink(link);
+      await SecureStore.setItemAsync('tob.cloud.pending-join.v1', link);
+    } catch {
+      /* The route still carries the target if local persistence is unavailable. */
+    }
+    return destination;
+  }
+  if (destination !== '/cloud-services') return destination;
+  try {
+    const pending = await SecureStore.getItemAsync('tob.cloud.pending-join.v1');
+    if (pending) {
+      parseInvitationLink(pending);
+      return '/cloud-join';
+    }
+  } catch {
+    /* Existing login can still return to its neutral service screen. */
+  }
+  return destination;
 }

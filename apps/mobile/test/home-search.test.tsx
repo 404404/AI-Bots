@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { RosterView } from '../src/host/client';
 
-const push = vi.fn();
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 const roster: RosterView = {
   bots: [
     {
@@ -40,7 +40,13 @@ vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 vi.mock('expo-router', () => {
   const Stack = () => null;
   Stack.Screen = () => null;
-  return { Redirect: () => null, Stack, useIsFocused: () => true, useRouter: () => ({ push }) };
+  return {
+    Redirect: () => null,
+    Stack,
+    router: { push },
+    useIsFocused: () => true,
+    useRouter: () => ({ push }),
+  };
 });
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({
@@ -104,7 +110,7 @@ async function type(view: HTMLElement, text: string): Promise<void> {
 
 const rows = (view: HTMLElement) =>
   [...view.querySelectorAll('button')]
-    .filter((node) => node.getAttribute('aria-label') !== t.create)
+    .filter((node) => node.getAttribute('aria-label') !== t.cloudJoin.newOrJoin)
     .map((node) => node.getAttribute('aria-label'));
 
 describe('Search at the top of Chats', () => {
@@ -125,7 +131,7 @@ describe('Search at the top of Chats', () => {
     await type(view, 'launch');
     await act(async () =>
       [...view.querySelectorAll('button')]
-        .find((node) => node.getAttribute('aria-label') !== t.create)!
+        .find((node) => node.getAttribute('aria-label') !== t.cloudJoin.newOrJoin)!
         .click(),
     );
     expect(push).toHaveBeenLastCalledWith({

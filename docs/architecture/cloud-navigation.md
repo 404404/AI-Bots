@@ -1,6 +1,6 @@
 # Cloud navigation and sharing
 
-User-confirmed direction, issue [#2161](https://github.com/BotHarness/DeepSeekBot/issues/2161). This document describes the target UX; the first implementation only marks existing direct-cloud channel titles. UAT only; no merge or Prod.
+User-confirmed direction, issue [#2161](https://github.com/BotHarness/DeepSeekBot/issues/2161). This document describes the target UX; the first implementation only marks existing direct-cloud channel titles. UAT only; no Prod. Prior slices were merged with Human authorization; new slices retain their own acceptance gates.
 
 ## Channel identity
 
@@ -43,3 +43,11 @@ The recipient opens the link/scans → sees service domain, organization/channel
 4. Save/share QR natively, deep-link cold launch, long names, duplicate service names, offline states, light/dark and large text; qualify iOS and Android separately.
 
 The current cloud collaboration goal remains active. This UX work does not claim WebSocket, organization-wide Agent membership, arbitrary local work or enterprise authorization to be complete.
+
+## Invitation URL tracer (in progress)
+
+Recipient-bound invitations use `https://<instance>/join?invitation=<id>`. The URL is a locator, never a membership credential. Its neutral browser landing links to the native join screen without disclosing recipient or target metadata. Mobile and CLI resolve the recipient-only preview endpoint before explicit acceptance; existing acceptance remains the sole membership write. No reusable public bearer invitation is introduced.
+
+The app keeps one pending invitation as a device-local navigation draft across browser return and restart. New service discovery is unauthenticated and redirects are refused; the discovered server must match the URL. Trust confirmation imports the public connection configuration through the existing validation flow. An existing session can only be sent to its imported server; changed configuration requires the existing re-verification path. Wrong accounts can sign out and retry without losing the target. Accepting a channel invitation navigates to that exact channel and uses guest APIs, never organization selection.
+
+The sender can copy/share the same invitation URL. The join screen accepts pasted links and camera QR input, and the existing create menu exposes Join with invitation. With no paired computer, the app opens this neutral entry point and retains Connect a computer. QR rendering/save, the combined workspace drawer and independent iOS/Android native acceptance remain separate unfinished work.

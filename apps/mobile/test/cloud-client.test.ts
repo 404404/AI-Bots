@@ -1000,3 +1000,93 @@ describe('cloud health check requests', () => {
     expect(f.client.getSnapshot().rows[0]?.pendingWork).toBeUndefined();
   });
 });
+
+describe('recipient-bound invitation journey', () => {
+  const invitationId = 'ci_' + 'a'.repeat(64);
+  const link = config.server + '/join?invitation=' + invitationId;
+  it('preserves invitation intent separately from the OAuth callback', () => {
+    expect(
+      cloudNativeIntent(
+        'ai.botharness.deepseekbot.dev:/cloud-join?link=' + encodeURIComponent(link),
+      ),
+    ).toBe('/cloud-join?link=' + encodeURIComponent(link));
+    expect(
+      cloudNativeIntent(
+        'ai.botharness.deepseekbot.dev:/cloud-join?link=' +
+          encodeURIComponent(link) +
+          '&link=other',
+      ),
+    ).toBe('/cloud-services');
+  });
+  it('discovers an invitation service without sending credentials or importing trust', async () => {
+    const f = fixture();
+    expect(await f.client.inspectInvitationService(link)).toEqual(config);
+    expect(f.stored()).toBeNull();
+    expect(f.calls).toHaveLength(1);
+    expect(f.calls[0]!.init?.headers).toBeUndefined();
+    expect(f.calls[0]!.init?.credentials).toBe('omit');
+    expect(f.calls[0]!.init?.redirect).toBe('error');
+  });
+  it('rejects malformed links before network access', async () => {
+    const f = fixture();
+    for (const raw of [
+      link + '#secret',
+      link + '&invitation=invitation_other',
+      link.replace('https:', 'http:'),
+      link.replace('/join?', '/join/../join?'),
+      link + '&redirect=https://other.test',
+    ])
+      await expect(f.client.inspectInvitationService(raw)).rejects.toMatchObject({
+        code: 'INVALID_INVITATION_LINK',
+      });
+    expect(f.calls).toHaveLength(0);
+  });
+  it('previews through the recipient API without accepting, and binds the response to the link', async () => {
+    const f = await loggedIn();
+    const original = f.rt.request;
+    let accepted = false,
+      forged = false;
+    f.rt.request = async (url, init) => {
+      if (url.endsWith('/accept')) accepted = true;
+      if (url.endsWith('/api/channel-invitations/' + invitationId))
+        return Response.json({
+          invitationId: forged ? 'ci_' + 'b'.repeat(64) : invitationId,
+          organizationId: 'org_invited',
+          organizationName: 'Invited workspace',
+          channelId: 'ch_' + 'c'.repeat(64),
+          channelName: 'One channel',
+          email: 'recipient@example.test',
+          role: 'guest',
+          state: 'pending',
+          expiresAt: '2099-01-01T00:00:00Z',
+        });
+      return original(url, init);
+    };
+    expect(await f.client.previewInvitation(config.instanceId, link)).toMatchObject({
+      state: 'pending',
+      role: 'guest',
+      organizationName: 'Invited workspace',
+    });
+    expect(accepted).toBe(false);
+    forged = true;
+    await expect(f.client.previewInvitation(config.instanceId, link)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    const before = f.calls.length;
+    await expect(
+      f.client.previewInvitation(
+        config.instanceId,
+        link.replace(config.server, 'https://other.example'),
+      ),
+    ).rejects.toMatchObject({ code: 'INVITATION_TARGET_MISMATCH' });
+    expect(f.calls).toHaveLength(before);
+  });
+  it('rejects discovery whose advertised origin differs from the invitation', async () => {
+    const f = fixture();
+    f.rt.request = async () => Response.json({ ...config, server: 'https://other.example' });
+    await expect(f.client.inspectInvitationService(link)).rejects.toMatchObject({
+      code: 'INVITATION_TARGET_MISMATCH',
+    });
+    expect(f.stored()).toBeNull();
+  });
+});

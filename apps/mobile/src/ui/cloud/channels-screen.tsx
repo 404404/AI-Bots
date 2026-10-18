@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError } from '../../cloud/client';
@@ -37,17 +37,19 @@ function renderGuestChannelFormScroll(props: ScrollViewProps) {
 }
 
 export function CloudChannelsScreen() {
-  const { instanceId, organizationId, guest } = useLocalSearchParams<{
+  const { instanceId, organizationId, guest, channelId } = useLocalSearchParams<{
     instanceId: string;
     organizationId?: string;
     guest?: string;
+    channelId?: string;
   }>();
   return (
     <ChannelWorkspace
-      key={instanceId + ':' + (guest === 'true' ? 'guest' : organizationId)}
+      key={instanceId + ':' + (guest === 'true' ? 'guest' : organizationId) + ':' + channelId}
       instanceId={instanceId}
       organizationId={organizationId ?? ''}
       guest={guest === 'true'}
+      initialChannelId={channelId}
     />
   );
 }
@@ -55,10 +57,12 @@ function ChannelWorkspace({
   instanceId,
   organizationId,
   guest,
+  initialChannelId,
 }: {
   instanceId: string;
   organizationId: string;
   guest: boolean;
+  initialChannelId?: string | undefined;
 }) {
   const snapshot = useCloudSnapshot(),
     theme = useDesignTheme(),
@@ -77,6 +81,21 @@ function ChannelWorkspace({
     [error, setError] = useState<string>(),
     [notice, setNotice] = useState<string>();
   const busy = working || snapshot.busy;
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!initialChannelId || !snapshot.ready || snapshot.busy || opened.current) return;
+    opened.current = true;
+    void run(async () => {
+      const channel = await cloudClient.openChannel(
+        instanceId,
+        organizationId,
+        initialChannelId,
+        guest,
+      );
+      await history(channel);
+      setSelected(channel);
+    });
+  }, [initialChannelId, instanceId, organizationId, guest, snapshot.ready, snapshot.busy]);
   const pending = row?.pendingChannelAction;
   const pendingHere = (
     guest
@@ -163,6 +182,24 @@ function ChannelWorkspace({
             </Text>
           )}
           {!!notice && <Text accessibilityLiveRegion="polite">{notice}</Text>}
+          {!!initialChannelId && !selected && (
+            <Button
+              label={t.cloudChannels.open}
+              disabled={busy}
+              onPress={() =>
+                void run(async () => {
+                  const channel = await cloudClient.openChannel(
+                    instanceId,
+                    organizationId,
+                    initialChannelId,
+                    guest,
+                  );
+                  await history(channel);
+                  setSelected(channel);
+                })
+              }
+            />
+          )}
           {!allowed ? (
             <Text>{t.cloudChannels.selectWorkspace}</Text>
           ) : selected ? (
