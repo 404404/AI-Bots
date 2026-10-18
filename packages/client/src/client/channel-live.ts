@@ -1,3 +1,4 @@
+import { isChannelNotice } from '../../../core/src/channels/channel-notice.js';
 import {
   subscribeMessagingDefaults,
   openSharedChannel,
@@ -636,7 +637,15 @@ export function mountRosterLive(
     if (typeof channelId !== 'string' || message === undefined) return;
     const channel = store.getSnapshot().channels.find((item) => item.id === channelId);
     const previous = channel?.latestMessage;
-    if (channel === undefined || previous?.id === message.id) return;
+    if (channel === undefined) return;
+    if (message.author.kind === 'bot' && !isChannelNotice(message)) {
+      const slug = message.author.slug;
+      const bot = store.getSnapshot().bots.find((item) => item.slug === slug);
+      const at = Date.parse(message.at);
+      if (bot && Number.isFinite(at) && at > (bot.lastActivityAt ?? 0))
+        store.upsertBot({ ...bot, lastActivityAt: at });
+    }
+    if (previous?.id === message.id) return;
     if (previous !== undefined && previous.at > message.at) return;
     store.upsertChannel({ ...channel, updatedAt: message.at, latestMessage: message });
   };

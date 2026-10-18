@@ -87,8 +87,8 @@ export function createBotOnboarding(options: {
         if (!created.ok) throw new Error(created.reason);
         bot = created.record;
       }
-      if (bot !== undefined && bot.paused !== true && bot.appearance === undefined) {
-        const appearance = registry.setAppearance(id, DEEPSEEKBOT_RECIPE);
+      if (bot !== undefined && bot.paused !== true && !bot.avatar && bot.appearance === undefined) {
+        const appearance = registry.setAppearance(id, DEEPSEEKBOT_RECIPE, 'default');
         if (!appearance.ok) throw new Error('appearance-unavailable');
       }
       database.transaction((db) =>

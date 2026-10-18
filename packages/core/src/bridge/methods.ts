@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+import { DEEPSEEKBOT_RECIPE } from '../onboarding/service.js';
 import { type CloudWork } from '../cloud/work.js';
 import { runCloudWorkDirect } from '../cloud/work-tool.js';
 import {
@@ -323,6 +325,8 @@ export interface ActivityOverview {
 }
 
 export interface PersonaBotSummary {
+  lastActivityAt?: number;
+  tob?: { defaultName: boolean; defaultAvatar: boolean };
   slug: string;
   displayName: string;
   roles: string[];
@@ -1145,10 +1149,25 @@ function createFailure(
   }
 }
 
-function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBotSummary {
+function summarize(
+  record: PersonaBotRecord,
+  snapshot: BotStateSnapshot,
+  protectedTob = false,
+): PersonaBotSummary {
   return {
     slug: record.slug,
     displayName: record.displayName,
+    ...(protectedTob
+      ? {
+          tob: {
+            defaultName: record.displayNameCustomized !== true && record.displayName === 'Tob',
+            defaultAvatar:
+              record.avatarCustomized !== true &&
+              ((!record.avatar?.trim() && record.appearance === undefined) ||
+                isDeepStrictEqual(record.appearance?.recipe, DEEPSEEKBOT_RECIPE)),
+          },
+        }
+      : {}),
     aggregateState: snapshot.state,
     workspaces: [...record.workspaces],
     createdAt: record.createdAt,
@@ -1178,9 +1197,13 @@ function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): Person
   };
 }
 
-function detail(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBotDetail {
+function detail(
+  record: PersonaBotRecord,
+  snapshot: BotStateSnapshot,
+  protectedTob = false,
+): PersonaBotDetail {
   return {
-    ...summarize(record, snapshot),
+    ...summarize(record, snapshot, protectedTob),
     sessions: { ...snapshot.sessions },
     ...(record.model === undefined ? {} : { model: record.model }),
     ...(record.modelPlan === undefined ? {} : { modelPlan: record.modelPlan }),
@@ -1290,7 +1313,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
   };
   const createBotId = deps.createBotId ?? (() => 'bot-' + randomUUID().replaceAll('-', ''));
   const detailOf = (record: PersonaBotRecord): { bot: PersonaBotDetail } => ({
-    bot: detail(record, deps.states.snapshot(record.slug)),
+    bot: detail(record, deps.states.snapshot(record.slug), deps.tob?.isTob(record.slug)),
   });
 
   const rosterWrite = async <T>(operation: () => Promise<T>): Promise<BridgeResult<T>> => {
@@ -2494,6 +2517,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     list(payload) {
+      const activity = new Map(deps.channels.latestBotActivity?.());
+      for (const [slug, at] of deps.runtime?.latestAssignmentActivity?.() ?? [])
+        activity.set(slug, Math.max(activity.get(slug) ?? 0, at));
       const query = asQuery(payload)?.trim().toLowerCase();
       const bots = deps.registry
         .listHistorical()
@@ -2506,7 +2532,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           );
         })
         .map((record) => ({
-          ...summarize(record, deps.states.snapshot(record.slug)),
+          ...summarize(record, deps.states.snapshot(record.slug), deps.tob?.isTob(record.slug)),
+          ...(activity.has(record.slug) ? { lastActivityAt: activity.get(record.slug)! } : {}),
           ...(deps.registry.get(record.slug) === undefined
             ? {
                 deleted: true,

@@ -59,6 +59,7 @@ export interface StoredChannelDock {
   readonly channelSplits?: Readonly<Record<string, ChannelSplit>> | undefined;
   readonly layout: SerializedDockview;
   readonly parked: Readonly<Record<string, DockPosition>>;
+  readonly visibilityLayout?: SerializedDockview | undefined;
 }
 
 export interface ChannelDockStorage {
@@ -170,6 +171,9 @@ export function readChannelDock(
           )
         : {},
       layout: value['layout'],
+      ...(isLayout(value['visibilityLayout'])
+        ? { visibilityLayout: value['visibilityLayout'] }
+        : {}),
       parked: parked as Record<string, DockPosition>,
     };
     const normalized = migrateWorkPanel(restored);
@@ -388,6 +392,22 @@ export function pruneChannelDock(
         : {}),
     },
     parked,
+  };
+}
+
+export function restoreDockVisibility(
+  remembered: SerializedDockview | undefined,
+  current: SerializedDockview,
+  panelId: string,
+): SerializedDockview | undefined {
+  if (!remembered?.panels[panelId]) return undefined;
+  const visible = new Set([...Object.keys(current.panels), panelId]);
+  if ([...visible].some((id) => !remembered.panels[id])) return undefined;
+  const restored = pruneChannelDock(remembered, (id) => visible.has(id), false).layout;
+  if (!restored) return undefined;
+  return {
+    ...restored,
+    panels: { ...restored.panels, ...current.panels },
   };
 }
 

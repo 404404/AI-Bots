@@ -25,8 +25,10 @@ export interface StandingLimitsView {
 export type BotBannerView = { recipe: PixelBannerRecipe } | { image: string };
 
 export interface BotSummary {
+  lastActivityAt?: number;
   slug: string;
   displayName: string;
+  tob?: { defaultName: boolean; defaultAvatar: boolean };
   roles: string[];
   description?: string;
   avatar?: string;
@@ -506,6 +508,7 @@ export interface PersonaBotActivitySnapshot {
 }
 
 export interface ClientStore {
+  setDefaultTobName(name: string): void;
   setComposerIdentity(identity: ClientState['composerIdentity']): void;
   purgeContent(placements: readonly PurgedPlacement[]): void;
   getSnapshot(): ClientState;
@@ -674,6 +677,9 @@ export function createStore(): ClientStore {
     git: undefined,
   };
   const listeners = new Set<() => void>();
+  let defaultTobName = 'Tob';
+  const presentBot = (bot: BotSummary): BotSummary =>
+    bot.tob?.defaultName ? { ...bot, displayName: defaultTobName } : bot;
   let activity: PersonaBotActivitySnapshot | undefined;
   let activityStates = new Map<string, PersonaBotActivitySnapshot['bots'][number]>();
   const withActivity = (bot: BotSummary): BotSummary => {
@@ -683,7 +689,7 @@ export function createStore(): ClientStore {
       sessionActivity: _previousSessions,
       attention: _previousAttention,
       ...rest
-    } = bot;
+    } = presentBot(bot);
     return current === undefined
       ? rest
       : {
@@ -708,10 +714,38 @@ export function createStore(): ClientStore {
         ? {}
         : { humanInbox: redactions.humanInbox(patch.humanInbox) }),
     };
+    const presentChannel = (channel: ChannelSummary): ChannelSummary => {
+      const bot =
+        channel.type === 'dm' && channel.botSlug
+          ? state.bots.find((candidate) => candidate.slug === channel.botSlug && candidate.tob)
+          : undefined;
+      return bot && channel.name !== bot.displayName
+        ? { ...channel, name: bot.displayName }
+        : channel;
+    };
+    if (
+      patch.bots !== undefined ||
+      patch.channels !== undefined ||
+      patch.conversation !== undefined
+    ) {
+      const channels = state.channels.map(presentChannel);
+      if (channels.some((channel, index) => channel !== state.channels[index]))
+        state.channels = channels;
+      if (state.conversation.channel) {
+        const channel = presentChannel(state.conversation.channel);
+        if (channel !== state.conversation.channel)
+          state.conversation = { ...state.conversation, channel };
+      }
+    }
     for (const listener of listeners) listener();
   };
 
   return {
+    setDefaultTobName(name) {
+      if (defaultTobName === name) return;
+      defaultTobName = name;
+      update({ bots: state.bots.map(presentBot) });
+    },
     purgeContent(placements) {
       if (placements.length === 0) return;
       redactions.accept(placements);
@@ -768,7 +802,13 @@ export function createStore(): ClientStore {
       update({ git });
     },
     upsertBot(incoming) {
-      const bot = withActivity(incoming);
+      const previous = state.bots.find((candidate) => candidate.slug === incoming.slug);
+      const bot = withActivity({
+        ...incoming,
+        ...(incoming.lastActivityAt === undefined && previous?.lastActivityAt !== undefined
+          ? { lastActivityAt: previous.lastActivityAt }
+          : {}),
+      });
       const existing = state.bots.filter((candidate) => candidate.slug !== bot.slug);
       update({ bots: [bot, ...existing], status: 'ready', error: undefined });
     },

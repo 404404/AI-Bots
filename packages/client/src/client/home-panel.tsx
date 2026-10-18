@@ -1,3 +1,5 @@
+import { HomeWelcome } from './home-welcome.js';
+import { HomeOverview } from './home-overview.js';
 import { ChannelComposer, type ChannelComposerUpload } from './channel-composer.js';
 import type { ComposerSendKey } from './composer-send-key.js';
 import { uploadChannelAttachment } from './bridge.js';
@@ -14,7 +16,7 @@ import { CHANNEL_BODY_PANEL } from './channel-dock-layout.js';
 import { OnboardingModelDialog } from './onboarding-view.js';
 import { openModelsSettingsAndReturn } from './bot-settings-open.js';
 import { errorMessage } from './bridge.js';
-import { color, space, radius, text } from './ds/tokens.stylex.js';
+import { color, space, text } from './ds/tokens.stylex.js';
 
 type Home = Awaited<ReturnType<BridgeActions['tobHome']>>;
 const styles = stylex.create({
@@ -30,27 +32,23 @@ const styles = stylex.create({
   },
   content: {
     width: '100%',
-    maxWidth: '640px',
+    maxWidth: '1120px',
     display: 'flex',
     flexDirection: 'column',
     gap: space.x5,
     minWidth: 0,
   },
-  title: { margin: 0, fontSize: text.titleSize, fontWeight: text.strong, color: color.fg },
   description: {
     margin: 0,
     color: color.muted,
     fontSize: text.bodySize,
     lineHeight: text.bodyLine,
   },
-  card: {
+  prompts: {
     display: 'flex',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: space.x3,
-    padding: space.x4,
-    backgroundColor: color.hover,
-    borderRadius: radius.sm,
   },
   error: { color: color.danger, margin: 0, overflowWrap: 'anywhere' },
 });
@@ -59,17 +57,20 @@ export function HomePanel({
   registry,
   t,
   sendKey,
+  onEditHumanName,
 }: {
   actions: BridgeActions;
   registry: DockPanelRegistry;
   t: BotHarnessTranslate;
   sendKey: ComposerSendKey;
+  onEditHumanName(): void;
 }): ReactElement {
   const [home, setHome] = useState<Home>();
   const [ready, setReady] = useState<boolean>();
   const [configuring, setConfiguring] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [storageFailed, setStorageFailed] = useState(false);
   const [draft, setDraft] = useState('');
   const sending = useRef(false);
   const pending = useRef<{ body: string; id: string }>();
@@ -99,7 +100,15 @@ export function HomePanel({
       if (restored.current !== next.botSlug) {
         restored.current = next.botSlug;
         try {
-          const raw = sessionStorage.getItem('botharness/home-draft/' + next.botSlug);
+          const key = 'botharness/home-draft/' + next.botSlug;
+          const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key);
+          try {
+            if (raw && !localStorage.getItem(key)) localStorage.setItem(key, raw);
+            sessionStorage.removeItem(key);
+            setStorageFailed(false);
+          } catch {
+            setStorageFailed(true);
+          }
           const saved = raw ? JSON.parse(raw) : undefined;
           if (typeof saved?.body === 'string') {
             setDraft(saved.body);
@@ -163,7 +172,7 @@ export function HomePanel({
     if (pending.current?.body !== body) pending.current = undefined;
     if (home)
       try {
-        sessionStorage.setItem(
+        localStorage.setItem(
           'botharness/home-draft/' + home.botSlug,
           JSON.stringify({
             body,
@@ -176,7 +185,10 @@ export function HomePanel({
             })),
           }),
         );
-      } catch {}
+        setStorageFailed(false);
+      } catch {
+        setStorageFailed(true);
+      }
   };
   const updateUploads = (next: ChannelComposerUpload[]) => {
     pending.current = undefined;
@@ -242,7 +254,7 @@ export function HomePanel({
         : { body, id: 'human-' + crypto.randomUUID() };
     pending.current = request;
     try {
-      sessionStorage.setItem(
+      localStorage.setItem(
         'botharness/home-draft/' + home.botSlug,
         JSON.stringify({
           ...request,
@@ -254,7 +266,10 @@ export function HomePanel({
           })),
         }),
       );
-    } catch {}
+      setStorageFailed(false);
+    } catch {
+      setStorageFailed(true);
+    }
     try {
       registry.open(CHANNEL_BODY_PANEL);
       await actions.sendHome(
@@ -277,7 +292,12 @@ export function HomePanel({
   return (
     <div ref={mount} {...stylex.props(styles.root)} data-home-panel>
       <div {...stylex.props(styles.content)}>
-        <h2 {...stylex.props(styles.title)}>{t('home.greeting')}</h2>
+        <HomeWelcome
+          actions={actions}
+          botSlug={home?.botSlug}
+          t={t}
+          onEditHumanName={onEditHumanName}
+        />
         <p {...stylex.props(styles.description)}>{t('home.description')}</p>
         {ready === undefined ? (
           <Button variant="ghost" onClick={() => void load()}>
@@ -314,23 +334,27 @@ export function HomePanel({
             onSubmit={submit}
           />
         )}
-        {ready && (
-          <Button variant="ghost" onClick={() => setConfiguring(true)}>
-            {t('home.configure')}
-          </Button>
-        )}
-        <div {...stylex.props(styles.card)}>
-          <span>
-            {!home && !error
-              ? t('modelPreset.loading')
-              : home?.attention
-                ? t('home.attention', { count: home.attention.unreadCount })
-                : t('home.unavailable')}
-          </span>
-          <Button variant="ghost" onClick={() => registry.open('activity-center')}>
-            {t('home.activity')}
-          </Button>
+        <div {...stylex.props(styles.prompts)} aria-label={t('home.starters')}>
+          {(['create', 'status', 'action', 'memory'] as const).map((key) => (
+            <Button
+              key={key}
+              variant="ghost"
+              disabled={!ready || busy}
+              onClick={() => {
+                saveDraft(t(`home.starter.${key}`));
+                setFocusSignal((value) => value + 1);
+              }}
+            >
+              {t(`home.starter.${key}`)}
+            </Button>
+          ))}
         </div>
+        <HomeOverview actions={actions} registry={registry} t={t} />
+        {storageFailed && (
+          <p role="alert" {...stylex.props(styles.error)}>
+            {t('home.draftStorageError')}
+          </p>
+        )}
         {error && (
           <p role="alert" {...stylex.props(styles.error)}>
             {error}

@@ -734,6 +734,7 @@ export interface BotRuntime {
   admitGroupJoinRequest?(ownerDmChannelId: string, requestId: string): void;
   admitGroupJoinDecision?(requesterDmChannelId: string, requestId: string): void;
   listAssignments(botSlug: string): AssignmentSummary[];
+  latestAssignmentActivity?(): ReadonlyMap<string, number>;
   currentOrchestratorSessionId?(botSlug: string): string | undefined;
   replaceOrchestrator?<T>(botSlug: string, body: () => T): Promise<OrchestratorReplacement<T>>;
   startFreshOrchestrator?(botSlug: string, assertCurrent?: () => void): Promise<'started' | 'busy'>;
@@ -3763,6 +3764,26 @@ class BotRuntimeImplementation implements BotRuntime {
           this.#ownership.contentAvailable(root.sessionId) &&
           this.#sessionArchived?.(root.sessionId) !== true,
       )?.sessionId;
+  }
+
+  latestAssignmentActivity(): ReadonlyMap<string, number> {
+    return this.#database.read((database) => {
+      const rows = database
+        .prepare(
+          `SELECT bot_slug, MAX(unixepoch(latest_report_at, 'subsec') * 1000) AS at
+         FROM assignments WHERE latest_report_at IS NOT NULL GROUP BY bot_slug`,
+        )
+        .all();
+      return new Map(
+        rows.flatMap((row) =>
+          typeof row['bot_slug'] === 'string' &&
+          typeof row['at'] === 'number' &&
+          Number.isFinite(row['at'])
+            ? [[row['bot_slug'], row['at']]]
+            : [],
+        ),
+      );
+    });
   }
 
   listAssignments(botSlug: string): AssignmentSummary[] {

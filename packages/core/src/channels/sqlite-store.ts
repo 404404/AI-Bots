@@ -2718,6 +2718,32 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       const message = this.message(channelId, messageId);
       if (message !== undefined) options.onAdmissionChanged?.(channelId, messageId, message);
     },
+    latestBotActivity() {
+      const rows = database.read((db) =>
+        db
+          .prepare(`
+        SELECT json_extract(e.payload_json, '$.author.slug') AS slug,
+               MAX(unixepoch(e.created_at, 'subsec') * 1000) AS at
+          FROM channel_placements p
+          JOIN source_events e ON e.source_event_id = p.source_event_id
+          JOIN channel_records c ON c.channel_id = p.channel_id
+          LEFT JOIN channel_human_members m ON m.channel_id = p.channel_id
+            AND m.human_id = ? AND m.left_at IS NULL
+         WHERE json_extract(c.record_json, '$.deletedAt') IS NULL
+           AND json_extract(e.payload_json, '$.author.kind') = 'bot'
+           AND ${notChannelNoticeSql('e.payload_json')}
+           AND ((json_extract(c.record_json, '$.type') = 'dm'
+                 AND json_extract(c.record_json, '$.botSlug') IS NOT NULL)
+             OR (json_extract(c.record_json, '$.type') = 'group'
+                 AND m.human_id IS NOT NULL AND p.revision >= m.visible_from_revision))
+         GROUP BY slug
+      `)
+          .all(LOCAL_HUMAN_ID),
+      ) as Array<{ slug: string; at: number }>;
+      return new Map(
+        rows.filter((row) => Number.isFinite(row.at)).map((row) => [row.slug, row.at]),
+      );
+    },
     humanMessageCounts(from, to) {
       const rows = database.read((db) =>
         db

@@ -1036,3 +1036,175 @@ it('does not reapply Dockview options while geometry changes', async () => {
     expect.objectContaining({ theme: expect.objectContaining({ gap: 12 }) }),
   );
 });
+
+it('restores Home and nested global panel geometry without remounting surviving content', async () => {
+  const { WorkspaceContext, WORKSPACE_CHANNELS, WORKSPACE_HOME } =
+    await import('../src/client/workspace-context.js');
+  let dock: import('dockview-react').DockviewApi | undefined;
+  const registry = createDockPanelRegistry();
+  for (const [id, title] of [
+    [CHANNEL_BODY_PANEL, 'Messages'],
+    [WORKSPACE_CHANNELS, 'Channels'],
+    [WORKSPACE_HOME, 'Home'],
+    ['computer', 'Computer'],
+  ])
+    registry.register({
+      id: id!,
+      title: title!,
+      scope: 'global',
+      component: () => createElement('input', { 'data-content': id, defaultValue: title }),
+    });
+  const view = () =>
+    createElement(
+      WorkspaceContext.Provider,
+      {
+        value: {
+          rail: (api) => {
+            dock = api;
+            return createElement('nav');
+          },
+        },
+      },
+      createElement(ChannelDock, {
+        body: createElement('input', { 'data-message-draft': '' }),
+        panels: registry.panels(),
+        registry,
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view()));
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(CHANNEL_BODY_PANEL);
+    dock!.getPanel(CHANNEL_BODY_PANEL)!.api.moveTo({ position: 'right' });
+    registry.open('computer');
+  });
+  await settle();
+  act(() => {
+    dock!.getPanel('computer')!.api.moveTo({
+      group: dock!.getPanel(CHANNEL_BODY_PANEL)!.group,
+      position: 'bottom',
+    });
+    dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 265 });
+    dock!.getPanel(WORKSPACE_HOME)!.group.api.setSize({ width: 550 });
+    dock!.getPanel('computer')!.group.api.setSize({ height: 330 });
+  });
+  await settle();
+  const grid = () =>
+    JSON.parse(
+      JSON.stringify(dock!.toJSON().grid, (_key, value) =>
+        typeof value === 'number' ? Math.round(value * 1e6) / 1e6 : value,
+      ),
+    );
+  const before = grid();
+  const draft = host.querySelector<HTMLInputElement>('[data-message-draft]')!;
+  draft.value = 'unsent message';
+  const computer = dock!.getPanel('computer');
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  expect(registry.isOpen(WORKSPACE_HOME)).toBe(false);
+  act(() => registry.open(WORKSPACE_HOME));
+  await settle();
+  expect(grid()).toEqual(before);
+  expect(host.querySelector('[data-message-draft]')).toBe(draft);
+  expect(draft.value).toBe('unsent message');
+  expect(dock!.getPanel('computer')).toBe(computer);
+
+  act(() => {
+    registry.close(WORKSPACE_HOME);
+    registry.close(CHANNEL_BODY_PANEL);
+    registry.open(WORKSPACE_HOME);
+    registry.open(CHANNEL_BODY_PANEL);
+  });
+  await settle();
+  expect(grid()).toEqual(before);
+
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  expect(readChannelDock(storage)?.visibilityLayout).toBeDefined();
+  act(() => root.unmount());
+  root = createRoot(host);
+  act(() => root.render(view()));
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(WORKSPACE_HOME);
+  });
+  await settle();
+  expect(grid()).toEqual(before);
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  const fromJSON = dock!.fromJSON.bind(dock!);
+  const restore = vi.spyOn(dock!, 'fromJSON').mockImplementationOnce((layout, options) => {
+    fromJSON(layout, options);
+    throw Error('restore interrupted after partial mutation');
+  });
+  act(() => registry.open(WORKSPACE_HOME));
+  await settle();
+  expect(dock!.panels.filter((x) => x.id === WORKSPACE_HOME)).toHaveLength(1);
+  expect(dock!.getPanel(CHANNEL_BODY_PANEL)).toBeDefined();
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  restore.mockRestore();
+});
+
+it('keeps a newly resized column when a hidden lower panel is reopened', async () => {
+  const { WorkspaceContext, WORKSPACE_CHANNELS, WORKSPACE_HOME } =
+    await import('../src/client/workspace-context.js');
+  let dock: import('dockview-react').DockviewApi | undefined;
+  const registry = createDockPanelRegistry();
+  for (const id of [CHANNEL_BODY_PANEL, WORKSPACE_CHANNELS, WORKSPACE_HOME])
+    registry.register({ id, title: id, scope: 'global', component: () => createElement('div') });
+  act(() =>
+    root.render(
+      createElement(
+        WorkspaceContext.Provider,
+        {
+          value: {
+            rail: (api) => {
+              dock = api;
+              return createElement('nav');
+            },
+          },
+        },
+        createElement(ChannelDock, {
+          body: createElement('div'),
+          panels: registry.panels(),
+          registry,
+          entryProps,
+          shows: () => true,
+          t: zhTranslate,
+          storage,
+        }),
+      ),
+    ),
+  );
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(CHANNEL_BODY_PANEL);
+    dock!.getPanel(CHANNEL_BODY_PANEL)!.api.moveTo({
+      group: dock!.getPanel(WORKSPACE_HOME)!.group,
+      position: 'bottom',
+    });
+    dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 500 });
+  });
+  await settle();
+  act(() => registry.close(CHANNEL_BODY_PANEL));
+  await settle();
+  act(() => {
+    host.querySelector('.dv-sash')!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 280 });
+    window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+  });
+  await settle();
+  const width = dock!.getPanel(WORKSPACE_CHANNELS)!.group.width;
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  act(() => registry.open(CHANNEL_BODY_PANEL));
+  await settle();
+  expect(Math.abs(dock!.getPanel(WORKSPACE_CHANNELS)!.group.width - width)).toBeLessThanOrEqual(4);
+});

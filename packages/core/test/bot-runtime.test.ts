@@ -982,6 +982,10 @@ describe('Bot runtime tracer bullet', () => {
       }),
     ]);
 
+    expect(runtime.latestAssignmentActivity?.().get('ada')).toBe(
+      Date.parse(runtime.listAssignments('ada')[0]!.latestReport!.at),
+    );
+
     await runtime.close();
     owner.close();
 
