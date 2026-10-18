@@ -54,6 +54,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPaperclipOutlineRegular: stub,
     IconPlusOutline16: stub,
     IconRefreshOutlineRegular: stub,
+    IconWrapLinesOutlineRegular: stub,
     IconSearchOutline16: stub,
     IconSendOutline16: stub,
     IconSendOutlineRegular: stub,
@@ -127,6 +128,7 @@ import { zhTranslate } from '../src/client/locale.js';
 import { MemoryEntry } from '../src/client/memory-entry.js';
 import { MemoryFilesEntry } from '../src/client/memory-files-entry.js';
 import { MemoryRecovery } from '../src/client/memory-recovery.js';
+import { MemoryWorkingView } from '../src/client/memory-current-view.js';
 import { MemoryCommitView } from '../src/client/memory-commit-view.js';
 import { inertSubmissionActions } from './inert-submissions.js';
 
@@ -1369,3 +1371,59 @@ describe('Memory Git graph sidebar', () => {
     });
   });
 });
+
+for (const view of ['working', 'commit'] as const) {
+  it(`defaults ${view} diffs to wrapping and toggles all files without reloading`, async () => {
+    const diff = 'diff --git a/note.txt b/note.txt\n@@ -1 +1 @@\n-old\n+' + 'long text '.repeat(80);
+    const detail = {
+      sha: SHA,
+      subject: 'Long lines',
+      files: [
+        { path: 'note.txt', status: 'M' },
+        { path: 'other.txt', status: 'A' },
+      ],
+      diff: diff + '\ndiff --git a/other.txt b/other.txt\n@@ -0,0 +1 @@\n+second',
+    };
+    const actions = {
+      memoryWorkingDiff: vi
+        .fn()
+        .mockResolvedValue({ path: 'note.txt', status: 'M', diff, binary: false }),
+      memoryGitCommitDiff: vi.fn().mockResolvedValue(detail),
+    } as unknown as BridgeActions;
+    await act(async () =>
+      root.render(
+        view === 'commit'
+          ? createElement(MemoryCommitView, {
+              actions,
+              channelId: 'dm-wrap',
+              sha: SHA,
+              onClose: vi.fn(),
+              t: zhTranslate,
+            })
+          : createElement(MemoryWorkingView, {
+              actions,
+              channelId: 'dm-wrap',
+              change: { path: 'note.txt', kind: 'unstaged', status: 'M' },
+              onClose: vi.fn(),
+              t: zhTranslate,
+            }),
+      ),
+    );
+    const tables = () => [...container.querySelectorAll('.bh-memory-diff-table')];
+    const toggle = container.querySelector<HTMLButtonElement>('button[aria-label="自动换行"]');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.getAttribute('aria-pressed')).toBe('true');
+    expect(tables()).toHaveLength(view === 'commit' ? 2 : 1);
+    expect(tables().every((table) => table.getAttribute('data-wrap') === 'true')).toBe(true);
+    const before = container.querySelector('.bh-memory-diff-content')?.textContent;
+    await act(async () => toggle?.click());
+    expect(toggle?.getAttribute('aria-pressed')).toBe('false');
+    expect(tables().every((table) => table.getAttribute('data-wrap') === 'false')).toBe(true);
+    expect(container.querySelector('.bh-memory-diff-content')?.textContent).toBe(before);
+    await act(async () => toggle?.click());
+    expect(tables().every((table) => table.getAttribute('data-wrap') === 'true')).toBe(true);
+    expect(
+      view === 'commit' ? actions.memoryGitCommitDiff : actions.memoryWorkingDiff,
+    ).toHaveBeenCalledTimes(1);
+  });
+}
