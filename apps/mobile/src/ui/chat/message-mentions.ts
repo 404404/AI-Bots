@@ -1,4 +1,16 @@
+import { Lexer } from 'marked';
+import remend from 'remend';
+import { textMarkdownSupported } from '../markdown-blocks';
 import type { WireMention } from '../../host/wire';
+
+export function mentionMarkdownBody(body: string, streaming: boolean) {
+  const normalized = body.replace(/\r\n?/g, '\n');
+  const source = streaming ? remend(normalized) : normalized;
+  const first = Lexer.lex(source, { gfm: true })[0];
+  return first?.type === 'paragraph' && textMarkdownSupported([first])
+    ? { first, rest: source.slice(first.raw.length) }
+    : undefined;
+}
 
 export function messageMentionRuns(body: string, mentions: readonly WireMention[] = []) {
   const runs: { text: string; mention?: WireMention }[] = [];

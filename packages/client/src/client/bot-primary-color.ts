@@ -8,6 +8,7 @@ import {
 import type { BotSummary } from './store.js';
 
 import {
+  botNameColor,
   parseColor,
   toHex,
   contrastRatio,

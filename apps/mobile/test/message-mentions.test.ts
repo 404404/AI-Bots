@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  mentionMarkdownBody,
   leadingMessageMentions,
   messageMentionRuns,
   mentionIdentity,
@@ -8,6 +9,28 @@ import {
 const mention = { botSlug: 'xiaoman-id', label: '小满', start: 0, end: 3 };
 
 describe('native message mentions', () => {
+  it('keeps a CRLF first paragraph and its following Markdown without duplicating text', () => {
+    const body = 'first\r\ncontinued\r\n\r\nsecond';
+    const rendered = mentionMarkdownBody(body, false)!;
+    expect(rendered.first.raw + rendered.rest).toBe('first\ncontinued\n\nsecond');
+  });
+  it('retains strong text and reference links while leaving lists and code blocks on the existing renderer', () => {
+    const rendered = mentionMarkdownBody(
+      '**Ready** [doc][ref]\n\n- item\n\n```ts\nconst x = 1\n```\n\n[ref]: https://example.com',
+      false,
+    )!;
+    expect(rendered.first.tokens).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'strong', text: 'Ready' }),
+        expect.objectContaining({ type: 'link', href: 'https://example.com' }),
+      ]),
+    );
+    expect(rendered.rest).toContain('- item\n\n```ts\nconst x = 1\n```');
+    expect(mentionMarkdownBody('```ts\nconst x = 1\n```', false)).toBeUndefined();
+    expect(mentionMarkdownBody('Hello **there', true)?.first.tokens).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'strong', text: 'there' })]),
+    );
+  });
   it('keeps Markdown intact after canonical leading mentions, matching Web', () => {
     expect(leadingMessageMentions('@小满 **改一版**\n\n- 先列事实', [mention])).toEqual({
       mentions: [mention],

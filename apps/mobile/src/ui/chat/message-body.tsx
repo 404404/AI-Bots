@@ -1,6 +1,4 @@
 import { useContext, useMemo } from 'react';
-import { Lexer } from 'marked';
-import remend from 'remend';
 
 import { botNameColor } from '../../../../../packages/client/src/client/bot-name-color';
 import type { ConversationMessage } from '../../host/conversation';
@@ -9,13 +7,17 @@ import { BotAvatar } from '../bot-avatar';
 import { botColor } from '../bot-color';
 import { useDesignTheme } from '../design/theme';
 import { radius } from '../design/tokens';
-import { textMarkdownSupported } from '../markdown-blocks';
 import { renderMarkdownInline } from '../markdown-inline';
 import { MarkdownView } from '../markdown-view';
 import { InlineText, Text } from '../primitives/text';
 import { t } from '../strings';
 import { MessageIdentities } from './message-identities';
-import { leadingMessageMentions, messageMentionRuns, mentionIdentity } from './message-mentions';
+import {
+  leadingMessageMentions,
+  messageMentionRuns,
+  mentionIdentity,
+  mentionMarkdownBody,
+} from './message-mentions';
 
 const TINTED = process.env.EXPO_PUBLIC_MENTION_STYLE === 'tint';
 
@@ -36,7 +38,7 @@ function Mention({ mention, background }: { mention: WireMention; background: st
           }
         : {})}
       style={{
-        color: bot === undefined ? theme.color.fg : botNameColor(botColor(bot), fill),
+        color: botNameColor(bot === undefined ? theme.color.fg : botColor(bot), fill),
         fontWeight: theme.weight.strong,
         ...(TINTED ? { backgroundColor: fill, borderRadius: radius.xs } : {}),
       }}
@@ -63,11 +65,7 @@ export function MessageBody({
   const text = leading?.text ?? message.body;
   const markdown = useMemo(() => {
     if (human || leading === undefined) return undefined;
-    const source = streaming ? remend(text) : text;
-    const first = Lexer.lex(source, { gfm: true })[0];
-    return first?.type === 'paragraph' && textMarkdownSupported([first])
-      ? { first, rest: source.slice(first.raw.length) }
-      : undefined;
+    return mentionMarkdownBody(text, streaming);
   }, [human, leading === undefined, text, streaming]);
   if (human)
     return (
