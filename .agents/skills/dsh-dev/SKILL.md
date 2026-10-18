@@ -44,6 +44,10 @@ callers that retain cancellation ownership must connect later aborts to the rece
 The old `settleRun` export is gone. `dsh-client-connection` also replaces the shared `operator`
 with per-Peer identity; Owner-only Remote methods check `invocation.peer.principal.kind`.
 
+### Supporting the 0.2.0 floor while building against 0.2.1
+
+Use application adapters for both API generations rather than raising the install floor to the SDK pin. Detect `startActivation` before starting; otherwise use native `start` / `startContinuable`. Never retry a failed modern operation through the legacy path. Owner checks use the trusted native principal when present, otherwise the exact legacy connection operator object, never caller-supplied identity. Resolve native Shell Plugins from the running Host. A bundled scoped file Plugin must retain the reviewed `read_image` injection patch and adapt the missing `workingDirectory` service locally to the legacy Session cwd. Do not discard that patch by blindly externalizing file tools. A preset containing 0.2.1-only Plugins also fails on the old Host before an adapter can help. Qualify the same packed product on both released versions; a SemVer preflight is only admission evidence.
+
 ## Profile model
 
 - Isolated `DSH_HOME` (one directory per worktree/port); profiles live in `$DSH_HOME/profiles/<name>`: `package.json` (`dsh.profile.bundles`), `cordis.yml`, user patch layer `cordis.patch.yml`, `node_modules` (our bundles via `link:`).

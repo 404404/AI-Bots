@@ -45,23 +45,16 @@ describe('DSH native product compatibility preflight', () => {
         expect(evaluatePluginCompatibility(manifest, {}, version), manifest.name).toBeUndefined();
     },
   );
-  it.each([
-    '0.1.7',
-    '0.2.0-rc.1',
-    '0.2.1-alpha.1',
-    '0.2.1-alpha.2',
-    '0.2.0',
-    '0.2.1-rc.1',
-    '0.3.0-alpha.1',
-    '0.3.0',
-    '1.0.0',
-  ])('refuses Host %s, outside the adopted API line', (version) => {
-    expect(semver.satisfies(version, productDshRange, { includePrerelease: true })).toBe(false);
-    for (const manifest of product)
-      expect(evaluatePluginCompatibility(manifest, {}, version)?.exempted, manifest.name).toBe(
-        false,
-      );
-  });
+  it.each(['0.1.7', '0.2.0-rc.1', '0.3.0-alpha.1', '0.3.0', '1.0.0'])(
+    'refuses Host %s, outside the adopted API line',
+    (version) => {
+      expect(semver.satisfies(version, productDshRange, { includePrerelease: true })).toBe(false);
+      for (const manifest of product)
+        expect(evaluatePluginCompatibility(manifest, {}, version)?.exempted, manifest.name).toBe(
+          false,
+        );
+    },
+  );
   it.each(['0.2.0-rc.1', '0.2.1-alpha.2', '1.0.0'])(
     'keeps the separately versioned Provider admissible on Host %s',
     (version) => {

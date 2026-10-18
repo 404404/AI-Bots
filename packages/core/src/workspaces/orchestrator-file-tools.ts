@@ -44,6 +44,15 @@ export async function installOrchestratorFileTools(
   const fiber = scoped.plugin({
     name: 'botharness-orchestrator-file-tools',
     apply(ctx: Context) {
+      if (ctx.get('workingDirectory') === undefined)
+        ctx.provide('workingDirectory', {
+          async ensure(caller: Agent, signal?: AbortSignal) {
+            signal?.throwIfAborted();
+            const cwd = caller.session.header.cwd;
+            if (cwd === undefined) throw new Error('DSH Session working directory is unavailable');
+            return cwd;
+          },
+        });
       ctx.provide('fs', fs);
       if (shellFor === undefined) ctx.provide('shell', shell);
       else shellFor(ctx, shell);

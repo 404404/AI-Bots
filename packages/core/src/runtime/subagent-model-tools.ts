@@ -3,7 +3,7 @@ import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent';
 import type { JobOutcome } from '@deepseek-ai/dsh-jobs';
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import { parentAgentOptionsForDelegation } from '@deepseek-ai/dsh-subagent';
-import type { SubagentActivation, SubagentActivationSpec } from '@deepseek-ai/dsh-subagent';
+import type { SubagentActivationSpec } from '@deepseek-ai/dsh-subagent';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 
 import {
@@ -12,6 +12,7 @@ import {
   type PersonaBotModelPlan,
 } from '../models/presets.js';
 import { resolveSubagentRoute } from '../models/subagent-route.js';
+import { startCallerActivation, startParentActivation, type CallerRun } from './subagent-compat.js';
 
 declare module '@deepseek-ai/dsh-jobs' {
   interface JobKindMap {
@@ -33,29 +34,7 @@ function agentOptions(parent: AgentOptions, route: ModelRoute): AgentOptions {
   };
 }
 
-async function startCallerActivation(
-  subagents: Context['subagents'],
-  spec: Omit<SubagentActivationSpec, 'delivery'>,
-): Promise<SubagentActivation> {
-  const activation = await subagents.startActivation({ ...spec, delivery: 'caller' });
-  let disposal: Promise<void> | undefined;
-  const dispose = () => {
-    spec.signal.removeEventListener('abort', onAbort);
-    return (disposal ??= activation.dispose());
-  };
-  const onAbort = () => {
-    void dispose().catch(() => undefined);
-  };
-  spec.signal.addEventListener('abort', onAbort, { once: true });
-  if (spec.signal.aborted) onAbort();
-  return {
-    ...activation,
-    result: activation.result.finally(() => spec.signal.removeEventListener('abort', onAbort)),
-    dispose,
-  };
-}
-
-async function settleJob(run: SubagentActivation): Promise<JobOutcome> {
+async function settleJob(run: CallerRun): Promise<JobOutcome> {
   let outcome: JobOutcome;
   try {
     const result = await run.result;
@@ -88,7 +67,7 @@ async function settleJob(run: SubagentActivation): Promise<JobOutcome> {
   return outcome;
 }
 
-async function collect(run: SubagentActivation): Promise<string> {
+async function collect(run: CallerRun): Promise<string> {
   const [result] = await Promise.allSettled([run.result]);
   const [disposal] = await Promise.allSettled([run.dispose()]);
   if (result.status === 'rejected') {
@@ -181,17 +160,13 @@ function installOne(
         const notice = decision.notice === undefined ? '' : `${decision.notice}\n`;
         const background = args.run_in_background ?? provider === 'spawn';
         if (background && provider === 'spawn') {
-          const started = await subagents.startActivation({
-            provider,
-            label: args.description,
-            request,
-            signal: exec.signal,
-            delivery: 'parent',
-          });
-          void started.result.catch((error) =>
-            ctx.logger.warn(
-              `botharness: subagent activation ${started.childId} failed: ${String(error)}`,
-            ),
+          const started = await startParentActivation(
+            subagents,
+            { provider, label: args.description, request, signal: exec.signal },
+            (childId, error) =>
+              ctx.logger.warn(
+                `botharness: subagent activation ${childId} failed: ${String(error)}`,
+              ),
           );
           return `${notice}Started Subagent ${started.childId} on ${decision.route.provider}/${decision.route.model}.`;
         }

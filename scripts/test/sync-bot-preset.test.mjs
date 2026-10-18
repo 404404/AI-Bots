@@ -96,6 +96,15 @@ describe('PersonaBot agent preset', () => {
     expect(synced(once, sample)).toBe(once);
   });
 
+  it('keeps the native preset loadable at the older supported floor', () => {
+    const generated = botPreset(standardPresetSource(root));
+    expect(generated).not.toContain('@deepseek-ai/dsh-time-context');
+    expect(generated).not.toContain('@deepseek-ai/dsh-tool-schedule');
+    expect(generated).toContain('Your working directory is {{cwd}}.');
+    expect(generated).toContain('@deepseek-ai/dsh-tool-fs');
+    expect(botPreset(standardPresetSource(root))).toBe(generated);
+  });
+
   it('keeps the committed product patch in sync with the installed DSH standard preset', () => {
     expect(PRODUCT_PATCHES).toEqual(['cordis.patch.yml', 'cordis.im.patch.yml']);
     for (const name of PRODUCT_PATCHES) {

@@ -36,9 +36,9 @@ describe('DSH engine declaration', () => {
       '@deepseek-ai/dsh'
     ];
     const computerUse = manifest('computer').dependencies['@deepseek-ai/dsh-computer-use'];
-    expect(productDshVersions).toEqual([pinned]);
+    expect(productDshVersions).toEqual(['0.2.0-rc.2', pinned]);
     expect(computerUse).toBe(pinned);
-    expect(semver.minVersion(range).version).toBe(pinned);
+    expect(semver.minVersion(range).version).toBe('0.2.0-rc.2');
     for (const version of [
       ...productDshVersions,
       '0.2.1-rc.3',
@@ -50,9 +50,7 @@ describe('DSH engine declaration', () => {
       expect(semver.satisfies(version, range, { includePrerelease: true })).toBe(true);
     for (const version of [
       '0.2.0-rc.1',
-      '0.2.1-alpha.1',
-      '0.2.1-alpha.2',
-      '0.2.0',
+
       '0.3.0-alpha.1',
       '0.3.0-rc.1',
       '0.3.0',

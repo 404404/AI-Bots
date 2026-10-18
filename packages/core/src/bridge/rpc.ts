@@ -1,3 +1,4 @@
+import { isAuthenticatedOwner } from './owner-compat.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
@@ -399,7 +400,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
 
   private requirePrivateOwner(): void {
-    if (this.ctx.invocation?.peer.principal.kind !== 'owner')
+    if (!isAuthenticatedOwner(this.ctx.invocation?.peer, this.ctx.get('connection')))
       throw new RemoteError(
         'forbidden' as RemoteError['code'],
         'Private input requires the authenticated Owner',
