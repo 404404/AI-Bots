@@ -1,3 +1,5 @@
+import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
+import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
 import {
   isAssignmentModelOption,
   isModelRoute,
@@ -14,6 +16,8 @@ export interface AgentManagementInvocation {
 }
 
 export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
+  ...TOB_AGENT_BOT_COMMAND_USAGE,
+  ...TOB_AGENT_CHANNEL_COMMAND_USAGE,
   list: 'deepseekbot list',
   'model-catalog': 'deepseekbot model-catalog',
   'model-plan': 'deepseekbot model-plan <bot-slug>',
@@ -201,6 +205,10 @@ export async function parseAgentManagement(
   values: Record<string, unknown>,
   io: BotCreateCliIo,
 ): Promise<AgentManagementInvocation | undefined> {
+  const channel = parseAgentChannels(command, rest, values);
+  if (channel) return channel;
+  const bot = await parseAgentBots(command, rest, values, io);
+  if (bot) return bot;
   if (!Object.hasOwn(OPTIONS, command)) return undefined;
   const allowed = new Set(['compact', 'help', 'timeout', ...OPTIONS[command]!]);
   if (Object.entries(values).some(([key, value]) => value !== undefined && !allowed.has(key)))

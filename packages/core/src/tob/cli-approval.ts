@@ -18,9 +18,18 @@ export async function approveTobCliOperation(options: {
   const { execution, operation, signal, channelApproval, approval, authorize } = options;
   const actor = execution.agent;
   const command = 'command' in operation ? operation.command : 'settings-set';
-  const requireHumanReview = command === 'release-install' || command === 'release-restart';
+  const requireHumanReview = [
+    'release-install',
+    'release-restart',
+    'bot-delete-confirm',
+    'bot-delete-retry',
+  ].includes(command);
   const scope =
-    'target' in operation && (command.startsWith('model-plan-') || command === 'model-preset-apply')
+    'target' in operation &&
+    (command.startsWith('model-plan-') ||
+      command === 'model-preset-apply' ||
+      command.startsWith('bot-') ||
+      ['update', 'pause', 'resume'].includes(command))
       ? `bot:${operation.target}`
       : 'global';
   authorize();
@@ -54,7 +63,7 @@ export async function approveTobCliOperation(options: {
       toolName: call.name,
       callId: call.callId,
       reason:
-        'Review the actual CLI target, previousValue, patch and expectedRevision. Restart interrupts running work; approve only the requested operation.',
+        'Review the actual CLI target, previousValue, patch and expectedRevision. Restart interrupts running work and deletion may erase Memory; approve only the requested operation.',
       signal,
     });
     if (outcome !== 'allowed-once')

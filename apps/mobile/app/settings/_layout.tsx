@@ -5,6 +5,7 @@ import { t } from '../../src/ui/strings';
 export default function SettingsLayout() {
   return (
     <SheetStack modalGrabber>
+      <Stack.Screen name="chat-background" options={{ title: t.chatBackground.global }} />
       <Stack.Screen
         name="index"
         options={{

@@ -1,3 +1,17 @@
+import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
+import {
+  createTobChannelOperations,
+  TOB_CHANNEL_CAPABILITIES,
+} from './tob/cli-channel-operations.js';
+import { createBotCreation, type BotCreationService } from './bots/creation.js';
+import {
+  createTobBotCreationOperations,
+  TOB_BOT_CREATE_CAPABILITIES,
+} from './tob/cli-bot-create.js';
+import {
+  createTobBotProfileOperations,
+  TOB_BOT_PROFILE_CAPABILITIES,
+} from './tob/cli-bot-profile-operations.js';
 import { followCompanion } from './companions/live.js';
 import {
   createTobService,
@@ -314,6 +328,8 @@ export interface BotHarnessCore {
   rootDir: string;
   onboarding: BotOnboarding;
   tob: TobService;
+  creations: BotCreationService;
+  channelManagement: ChannelManagementService;
   partLibrary: PartLibrary;
   operationalDatabase: OperationalDatabaseOwner;
   registry: PersonaBotRegistry;
@@ -769,6 +785,21 @@ export function createCore(
     ...(options.ensureTobWorkspace ? { ensureWorkspace: options.ensureTobWorkspace } : {}),
     ...(options.tobSettings ? { settings: options.tobSettings } : {}),
   });
+  const creations = createBotCreation({
+    database: attachOperationalModule(operationalDatabase, 'bot-creation'),
+    registry,
+    channels,
+  });
+  const channelManagement = createChannelManagement({
+    database: attachOperationalModule(operationalDatabase, 'channel-management'),
+    channels,
+    registry,
+    isProtectedBot: (slug) => tob.isTob(slug),
+    autoAcceptGroupInvitations: () =>
+      (groupInvitationPolicies.at(-1)?.policy ?? initialGroupInvitationPolicy)(),
+    onInvitation: (dmId, invitationId) => runtime?.admitGroupInvitation(dmId, invitationId),
+    onJoinDecision: (dmId, requestId) => runtime?.admitGroupJoinDecision?.(dmId, requestId),
+  });
   const profileRecovery = createProfileRecovery(operationalDatabase, registry, ownership);
   const orchestratorCwd = (bot: { slug: string }): string | undefined =>
     registry.memoryDirFor(bot.slug);
@@ -904,6 +935,8 @@ export function createCore(
     contentPurge,
     onboarding,
     tob,
+    creations,
+    channelManagement,
     partLibrary,
     rootDir,
     operationalDatabase,
@@ -1118,8 +1151,17 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                 authorize,
                 prepareOperation: async (command, args) =>
                   (await tobModelOperations(command, args)) ??
-                  (await tobMaintenanceOperations(command, args)),
-                capabilities: [...TOB_MODEL_CAPABILITIES, ...TOB_MAINTENANCE_CAPABILITIES],
+                  (await tobMaintenanceOperations(command, args)) ??
+                  (await tobBotCreationOperations(command, args)) ??
+                  (await tobBotProfileOperations(command, args)) ??
+                  (await tobChannelOperations(command, args)),
+                capabilities: [
+                  ...TOB_MODEL_CAPABILITIES,
+                  ...TOB_MAINTENANCE_CAPABILITIES,
+                  ...TOB_BOT_CREATE_CAPABILITIES,
+                  ...TOB_BOT_PROFILE_CAPABILITIES,
+                  ...TOB_CHANNEL_CAPABILITIES,
+                ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
                 writeSetting: (value, revision, guard) =>
@@ -1938,6 +1980,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     modelReadiness,
     onboarding: core.onboarding,
     tob: core.tob,
+    creations: core.creations,
+    channelManagement: core.channelManagement,
     partLibrary: core.partLibrary,
     onboardingNews: (slug) =>
       onboardingNewsAvailable(
@@ -2030,6 +2074,22 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         provider?.resetBot?.(slug);
       },
     },
+  });
+  const tobBotCreationOperations = createTobBotCreationOperations({
+    registry: core.registry,
+    creations: core.creations,
+    bridge: bridgeMethods,
+  });
+  const tobBotProfileOperations = createTobBotProfileOperations({
+    registry: core.registry,
+    bridge: () => bridgeMethods,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
+  });
+  const tobChannelOperations = createTobChannelOperations({
+    management: core.channelManagement,
+    channels: core.channels,
+    registry: core.registry,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
   });
   registerBridge(ctx, bridgeMethods, privateInputs, {
     followRoster: (signal) => core.live.followRoster(signal),

@@ -41,14 +41,14 @@ export default function RootLayout() {
                 name="bot/[slug]"
                 options={{
                   title: t.profile,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, Platform.OS === 'android'),
                 }}
               />
               <Stack.Screen
                 name="group/[id]"
                 options={{
                   title: t.groupInfo,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, Platform.OS === 'android'),
                 }}
               />
               <Stack.Screen
