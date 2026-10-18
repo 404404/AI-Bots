@@ -1,0 +1,47 @@
+{
+  "results": [
+    {
+      "name": "default",
+      "size": "large",
+      "theme": "light",
+      "tabActions": true,
+      "manageAndReopen": true
+    },
+    {
+      "name": "default",
+      "size": "large",
+      "theme": "dark",
+      "tabActions": true,
+      "manageAndReopen": true
+    },
+    {
+      "name": "intermediate",
+      "size": "accessibility-large",
+      "theme": "light",
+      "tabActions": true,
+      "manageAndReopen": true
+    },
+    {
+      "name": "intermediate",
+      "size": "accessibility-large",
+      "theme": "dark",
+      "tabActions": true,
+      "manageAndReopen": true
+    },
+    {
+      "name": "maximum",
+      "size": "accessibility-extra-extra-extra-large",
+      "theme": "light",
+      "tabActions": true,
+      "manageAndReopen": true
+    },
+    {
+      "name": "maximum",
+      "size": "accessibility-extra-extra-extra-large",
+      "theme": "dark",
+      "tabActions": true,
+      "manageAndReopen": true
+    }
+  ],
+  "liveResize": true
+}

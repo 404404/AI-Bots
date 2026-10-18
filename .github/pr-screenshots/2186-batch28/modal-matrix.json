@@ -1,0 +1,38 @@
+[
+  {
+    "name": "default",
+    "size": "large",
+    "theme": "light",
+    "pairToCloudToDrawerAndManage": true
+  },
+  {
+    "name": "default",
+    "size": "large",
+    "theme": "dark",
+    "pairToCloudToDrawerAndManage": true
+  },
+  {
+    "name": "intermediate",
+    "size": "accessibility-large",
+    "theme": "light",
+    "pairToCloudToDrawerAndManage": true
+  },
+  {
+    "name": "intermediate",
+    "size": "accessibility-large",
+    "theme": "dark",
+    "pairToCloudToDrawerAndManage": true
+  },
+  {
+    "name": "maximum",
+    "size": "accessibility-extra-extra-extra-large",
+    "theme": "light",
+    "pairToCloudToDrawerAndManage": true
+  },
+  {
+    "name": "maximum",
+    "size": "accessibility-extra-extra-extra-large",
+    "theme": "dark",
+    "pairToCloudToDrawerAndManage": true
+  }
+]
