@@ -51,8 +51,6 @@ export function DrawerMaterial({ rounded = false }: { rounded?: boolean }) {
     >
       {glass ? (
         <Host
-          // Recreate the glass backdrop when its appearance changes: the native
-          // effect can otherwise retain the previous material after a theme switch.
           key={theme.scheme}
           style={StyleSheet.absoluteFill}
           colorScheme={theme.scheme}
