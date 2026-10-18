@@ -1,0 +1,14 @@
+{
+  "head": "f8f2b839dd6be1aca9b2a1d0f0f53359b5dcd920",
+  "desktop": {
+    "width": 1100,
+    "contentHeight": 2213
+  },
+  "narrow": {
+    "width": 390,
+    "contentHeight": 3032
+  },
+  "visual": "All four panels and complete diagram inspected at both widths; no visible clipping",
+  "console": [],
+  "scope": "Review aid, not runtime or acceptance evidence"
+}
