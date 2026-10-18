@@ -1348,13 +1348,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   );
   core.cloudConnections = cloudConnections;
   ctx.effect(() => () => cloudConnections.close(), 'botharness: cloud connections');
-  ctx.effect(() =>
-    core.externalMessaging.register(
-      createCloudProvider(cloudConnections, (phase, id, code) =>
-        ctx.logger.info('cloud-messaging %j', { phase, id, code }),
+  if (core.operationalDatabase.mode === 'ready')
+    ctx.effect(() =>
+      core.externalMessaging.register(
+        createCloudProvider(cloudConnections, (phase, id, code) =>
+          ctx.logger.info('cloud-messaging %j', { phase, id, code }),
+        ),
       ),
-    ),
-  );
+    );
   ctx.inject(['dshIm'], (child) => {
     for (const platform of ['feishu', 'slack', 'discord', 'weixin', 'qq'] as const) {
       const provider = createDshImProvider(child.get('dshIm'), platform);

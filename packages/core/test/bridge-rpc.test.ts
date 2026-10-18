@@ -512,6 +512,7 @@ describe('bridge typert service', () => {
       'failureAlertsRetry',
       'pairingReview',
       'senderAccess',
+      'cloudConnections',
       'messagingApps',
       'messagingSnapshot',
       'messagingTargets',
