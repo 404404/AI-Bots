@@ -118,9 +118,12 @@ it.each([
   }
   await until(() => conversation.getSnapshot().messages.some((m) => m.id === 'committed-tail'));
   if (mode === 'held-history') {
-    const held = playback.getBubble(playback.rowKey('committed-tail'))?.message.body;
+    const key = playback.rowKey('committed-tail');
+    const bubble = playback.getBubble(key);
+    expect(bubble).toBeDefined();
+    const held = bubble!.message.body;
     await vi.advanceTimersByTimeAsync(10_000);
-    expect(playback.getBubble(playback.rowKey('committed-tail'))?.message.body).toBe(held);
+    expect(playback.getBubble(key)?.message.body).toBe(held);
     playback.setFollowing(true);
   }
   await vi.advanceTimersByTimeAsync(300);
