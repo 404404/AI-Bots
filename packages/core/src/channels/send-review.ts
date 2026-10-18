@@ -82,6 +82,7 @@ export class GroupSendReview {
       sourceEventId: string,
       message: ChannelMessage,
     ) => ChannelMessage = (_sourceEventId, message) => message,
+    readonly attachmentContentVersions: (message: ChannelMessage) => string[] = () => [],
   ) {}
 
   enabled(channelId: string): boolean {
@@ -115,7 +116,7 @@ export class GroupSendReview {
       seen.set(message.id, {
         id: message.id,
         revision: message.channelRevision,
-        hash: fingerprint(message),
+        hash: this.#observedFingerprint(message),
       });
     }
     const id = randomUUID();
@@ -262,8 +263,9 @@ export class GroupSendReview {
               !isChannelNotice(message) &&
               !message.sessionFailure &&
               !!message.body.trim() &&
-              fingerprint(this.projectMessageAttachments(String(row.source_event_id), message)) ===
-                seen.hash
+              this.#observedFingerprint(
+                this.projectMessageAttachments(String(row.source_event_id), message),
+              ) === seen.hash
             );
           });
         if (!validPeers)
@@ -412,7 +414,9 @@ export class GroupSendReview {
           return false;
         return (
           seen.get(String(row.message_id))?.hash !==
-          fingerprint(this.projectMessageAttachments(String(row.source_event_id), content))
+          this.#observedFingerprint(
+            this.projectMessageAttachments(String(row.source_event_id), content),
+          )
         );
       })
       .map((row) => String(row.message_id));
@@ -448,6 +452,12 @@ export class GroupSendReview {
     draft.initialBasis = [];
     this.#save(db, draft);
     return undefined;
+  }
+
+  #observedFingerprint(message: ChannelMessage): string {
+    return createHash('sha256')
+      .update(JSON.stringify([fingerprint(message), this.attachmentContentVersions(message)]))
+      .digest('hex');
   }
 
   #load(db: DatabaseSync, owner: string, channelId: string, id: string): ReviewDraft | undefined {

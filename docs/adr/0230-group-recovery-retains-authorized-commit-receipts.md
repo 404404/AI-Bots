@@ -35,6 +35,14 @@ validation apply before recovery or receipt readback. This matters because the e
 Recovery cannot rely only on that callback for authorization. Direct CLI calls use the existing
 separate Bot-scoped diagnostic owner and execute the same Tool code.
 
+Observation fingerprints also include the attachment owner's current content digest. File identity,
+name, MIME type and size alone miss same-size edits such as `10:00` becoming `11:00`. The attachment
+owner reads an authorized file descriptor in bounded chunks, rejects files above its size limit,
+and refuses a file that changes during that read. Digests stay inside observation evidence; they
+do not add copied file content or another public attachment identity. Rechecking file bytes adds
+local I/O only for attached messages; it adds no model call. This is a snapshot check, not a lock
+on external file writers after the check. Missing or purged files cannot produce fresh evidence.
+
 DSH continues to own Agent lifecycle, Session Persistence and Session Query. There is no new
 Session manager, scheduler, database generation or message store. Compared with deleting all
 draft state after success, retaining a small receipt costs storage but permits an honest answer

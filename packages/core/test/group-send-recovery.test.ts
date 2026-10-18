@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { writeFileSync } from 'node:fs';
 import { createCore } from '../src/plugin.js';
 import { createDshBotAgentAdapter } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { attachOperationalModule } from '../src/database/owner.js';
@@ -85,6 +86,45 @@ async function fixture(
 }
 
 describe('explicit Group draft recovery and commit receipts', () => {
+  it('holds recovery when an attachment changes after the fresh observation', async () => {
+    await fixture(async (f) => {
+      const ref = await f.current().attachments.upload({
+        name: 'agenda.txt',
+        data: (async function* () {
+          yield Buffer.from('Meet at 10:00');
+        })(),
+      });
+      await f.current().channels.appendMessage(f.channelId, {
+        id: 'attachment-request',
+        body: 'Summarize this agenda',
+        author: { kind: 'human' },
+        at: new Date().toISOString(),
+        attachments: [ref],
+      });
+      const held = await f.tool({ body: 'Meet at 10:00' });
+      await f.restart();
+      const observation = await f.read();
+      writeFileSync(f.current().attachments.fileTarget(ref.fileId!).path, 'Meet at 11:00');
+      expect(
+        await f.tool({
+          body: 'Meet at 10:00',
+          review_action: 'recover',
+          draft_id: held.draftId,
+          observation_id: observation,
+        }),
+      ).toMatchObject({
+        status: 'requires-review',
+        changedMessageIds: ['attachment-request'],
+      });
+      expect(
+        f
+          .current()
+          .channels.readMessages(f.channelId)
+          .filter((m) => m.author.kind === 'bot'),
+      ).toHaveLength(0);
+    });
+  });
+
   it.each(['drop', 'stop'] as const)(
     'does not revive a draft after %s and restart',
     async (action) => {
@@ -276,6 +316,35 @@ describe('explicit Group draft recovery and commit receipts', () => {
           .channels.readMessages(f.channelId)
           .filter((m) => m.author.kind === 'bot'),
       ).toHaveLength(1);
+    });
+  });
+
+  it('removes committed receipt authority when the canonical Channel content is purged', async () => {
+    await fixture(async (f) => {
+      await f.human('request', 'Private notice');
+      const committed = await f.tool({ body: 'Private notice', observation_id: await f.read() });
+      const receipt = await f.tool({ body: '', review_action: 'inspect' });
+      const draftId = receipt.drafts[0]!.draftId;
+      const db = attachOperationalModule(f.current().operationalDatabase, 'receipt-purge-test');
+      const source = db.read(
+        (database) =>
+          database
+            .prepare(
+              'SELECT source_event_id FROM channel_placements WHERE channel_id = ? AND message_id = ?',
+            )
+            .get(f.channelId, committed.messageId)!.source_event_id,
+      );
+      f.current().channels.deleteGroup(f.channelId);
+      const preview = f.current().contentPurge.preview(f.channelId, [String(source)]);
+      f.current().contentPurge.confirm(f.channelId, preview.sourceEventIds, preview.token);
+      await f.restart();
+      expect(
+        f.current().runtime.groupSendReview!.inspectRecords('direct:ada', f.channelId, draftId),
+      ).toMatchObject({ status: 'refused', reason: 'draft-unavailable' });
+      expect(f.current().channels.message(f.channelId, committed.messageId)).toMatchObject({
+        body: '',
+        contentPurge: { reason: 'human-request' },
+      });
     });
   });
 

@@ -11,7 +11,14 @@ export function apply(ctx, config) {
     if (exec.name !== 'channel_send' || result.isError || !existsSync(config.stateFile))
       return result;
     const state = JSON.parse(readFileSync(config.stateFile, 'utf8'));
-    const value = result.value;
+    let value = result.value;
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return result;
+      }
+    }
     if (
       state.phase !== 'armed' ||
       !value ||

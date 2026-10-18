@@ -1364,6 +1364,11 @@ class BotRuntimeImplementation implements BotRuntime {
       attachOperationalModule(options.database, 'channel-send-review'),
       options.now,
       options.channels.projectMessageAttachments,
+      (message) =>
+        message.attachments?.map((ref) => {
+          if (!options.attachments) throw new Error('Attachment owner is unavailable for review');
+          return options.attachments.contentVersion(ref);
+        }) ?? [],
     );
     this.#inboxHistory =
       options.inboxHistory ??

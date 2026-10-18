@@ -24,8 +24,13 @@ it('loses exactly one actual committed result for the armed Group, retaining the
   };
   const committed = {
     isError: false,
-    value: { channelId: 'owned-group', messageId: 'canonical-one' },
-    content: [{ type: 'text', text: 'committed' }],
+    value: JSON.stringify({ channelId: 'owned-group', messageId: 'canonical-one' }),
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({ channelId: 'owned-group', messageId: 'canonical-one' }),
+      },
+    ],
   };
   let calls = 0;
   const next = async () => {

@@ -128,6 +128,12 @@ an explicitly armed Group, saves the real outcome separately, honors cancellatio
 bounds an abandoned hold at 20 seconds. It is absent from the product Bundle. A simulated
 Tool-result loss must be labelled separately from an actual HTTP transport loss.
 
+Recovery evidence also covers a same-size attachment edit after the fresh Channel read:
+change `10:00` to `11:00` in the authorized file before the recovery send. The old draft must
+remain uncommitted. Current file-content digests are private observation evidence, not another
+attachment identity; unavailable or oversized files refuse fresh evidence. Tests exercise the
+attachment owner's bounded full-content read and the real Core restart path.
+
 As directed by the Human on 2026-10-18, future cohorts use DSH to run actual Bot Sessions.
 The current GPT-6 Astra assistant reads full Session, conversation and Tool records to assess
 correctness and interaction quality; no external model judge is invoked. Record reviewer and

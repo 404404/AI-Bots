@@ -5,6 +5,7 @@
 待复核草稿保存在现有 Operational Database，仅正式提交进入 Channel/Inbox；仅 drop 不解决 Inbox；显式 `resolve_inbox_ids` 可在 drop 成功后结清所选事项，过期或重启不自动恢复。
 原始依据与修订草稿归同一 owner，purge 清除派生内容。默认关闭，按群 opt-in；CLI 与模型使用同一契约。
 #2056 的显式恢复复用该记录：`review_action: inspect` 只返回当前授权下的有界元数据；重启后通过 `recover` 携带新观察与修正正文，保留原过期时间与预算。成功提交在同一事务留下消息 ID／意图指纹回执并清空草稿正文；重放只确认规范消息，不新增 Inbox 或恢复旧 Tool Promise。权限、来源与附件检查先于回执读回，详见 [ADR-0230](../adr/0230-group-recovery-retains-authorized-commit-receipts.md)；本票真实模型验收仍在进行。
+附件 owner 的有界当前内容摘要参与观察指纹，等长文件修改也会触发重新复核；摘要不进入公开消息，不改变附件身份，也不锁住外部文件写入。
 held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0227](../adr/0227-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
 
 Group composer 的 `/workspace` 和工作区 chip 复用 DM 的目录选择器与授权确认组件。默认选中当前未暂停、未删除的全部 Bot；Human 可以取消勾选，只授权指定几个。Group 只是逐 Bot 授权的入口，不持有权限；预览固定确认目标，后来加入的 Bot 不自动继承 Grant。共享目录预览相对于权限是只读的：native Workspace controller 可以登记、解析一个 DSH Workspace，但确认前不会建立任何 Workspace Grant。确认展示每个 Bot、canonical 目录、既有 Assignment mode 和 Orchestrator 写入状态；这些权限设置保持不变。逐 Bot 调用既有 `grantCreate`，可选的 application-defined Group scope 仅约束当前 Channel 成员与确认目录，并在异步 Workspace status 检查后、没有后续 await 的实际写入边界再次校验。SQLite `workspace_grants` 仍是唯一授权权威；无 Channel Workspace Binding、Group Grant 或统一 cwd。成功、有效 Grant 复用、拒绝和未知结果分别展示；失败/未知成员重试前通过同一个 `grants` readback 验证成员、撤销状态与当前目录，读回失败不发起写入。原侧栏与 chip 使用既有逐 Bot 变更通知刷新，正常委派仍通过原 Channel、Orchestrator 与 Assignment seam（#1433）。
