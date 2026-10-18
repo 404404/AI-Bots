@@ -3,98 +3,60 @@ import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 import { Pressable, View, type ViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { AVATAR_EDGE } from '../chat/conversation-row';
-import { DEFAULT_HOST_LOOK, type HostLook } from '../design/host-look';
 import { useDesignTheme } from '../design/theme';
-import { edgeFade, radius, space } from '../design/tokens';
-import { EdgeFade } from '../chat/header-chrome';
+import { space } from '../design/tokens';
+import { Text } from '../primitives/text';
 import { useMounted } from '../mounted';
 import { t } from '../strings';
-import { HostBandLayer, HostChipFace, useHostBand } from './host-band';
+import { ChevronDownIcon } from './icons';
 import { focusOn, hostDrawer, openHostDrawer, useHostDrawerOpen } from './host-drawer';
 
-export function HomeHeader({
-  hostName,
-  look = DEFAULT_HOST_LOOK,
-  actions,
-  children,
-}: {
-  hostName: string;
-  look?: HostLook;
-  actions?: ReactNode;
-  children: ReactNode;
-}) {
+export function HomeHeader({ actions, children }: { actions?: ReactNode; children: ReactNode }) {
   const theme = useDesignTheme();
+  const focused = useIsFocused();
   const drawerOpen = useHostDrawerOpen();
   const insets = useSafeAreaInsets();
-  const band = useHostBand(look.banner);
   const chip = useMounted<ViewInstance>((node) => {
     hostDrawer.setReturnFocus(() => focusOn(node));
     return () => hostDrawer.setReturnFocus(undefined);
   }, []);
   return (
-    <HostBandLayer
-      band={band}
-      banner={look.banner}
-      header={
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: space.x3,
-            paddingTop: insets.top + space.x4,
-            paddingBottom: space.x5,
-            paddingLeft: space.x5,
-            paddingRight: space.x4,
-          }}
-        >
-          <Pressable
-            ref={chip}
-            onPress={openHostDrawer}
-            accessibilityRole="button"
-            accessibilityLabel={t.switchComputer(hostName)}
-            accessibilityState={{ expanded: drawerOpen }}
-            style={({ pressed }) => ({
-              flex: 1,
-              minWidth: 0,
-              minHeight: theme.touch,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: space.x4,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <HostChipFace hostName={hostName} avatar={look.avatar} band={band} singleLine />
-          </Pressable>
-          {actions === undefined ? null : (
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 0, gap: space.x2 }}
-            >
-              {actions}
-            </View>
-          )}
-        </View>
-      }
-    >
-      <HeaderStatus lightInk={band.lightInk} />
+    <View style={{ flex: 1, backgroundColor: theme.color.base }}>
+      {focused ? <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} /> : null}
       <View
         style={{
-          flex: 1,
-          backgroundColor: theme.color.base,
-          borderTopLeftRadius: radius.md + AVATAR_EDGE,
-          borderTopRightRadius: radius.md + AVATAR_EDGE,
-          overflow: 'hidden',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: space.x2,
+          paddingHorizontal: space.x4,
+          paddingTop: insets.top + space.x2,
+          paddingBottom: space.x2,
         }}
       >
-        {children}
-        <EdgeFade edge="top" height={edgeFade.top} />
+        <Pressable
+          ref={chip}
+          onPress={openHostDrawer}
+          accessibilityRole="button"
+          accessibilityLabel={t.workspaces}
+          accessibilityState={{ expanded: drawerOpen }}
+          style={({ pressed }) => ({
+            flex: 1,
+            minWidth: 0,
+            minHeight: theme.touch,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space.x2,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text variant="title" strong accessibilityRole="header" style={{ flexShrink: 1 }}>
+            {t.chats}
+          </Text>
+          <ChevronDownIcon color={theme.color.muted} size={theme.type.body.line} />
+        </Pressable>
+        {actions}
       </View>
-    </HostBandLayer>
+      {children}
+    </View>
   );
-}
-
-function HeaderStatus({ lightInk }: { lightInk: boolean }) {
-  const focused = useIsFocused();
-  return focused ? <StatusBar style={lightInk ? 'light' : 'dark'} /> : null;
 }

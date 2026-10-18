@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CloudRow } from '../src/cloud/client';
-import type { CloudConversation } from '../src/cloud/conversations';
+import type { CloudConversation, ConversationWorkspace } from '../src/cloud/conversations';
 import { publicInstance, MOBILE_REDIRECT_URI } from '../src/cloud/instance-contract';
 import { cloudViewScope } from '../src/cloud/workspace-directory';
 import type { RosterView } from '../src/host/client';
@@ -17,7 +17,13 @@ const { push, cloudState, directoryState } = vi.hoisted(() => ({
     busy: false,
     rows: [] as CloudRow[],
   },
-  directoryState: { busy: false, rows: [] as CloudConversation[], errors: [] as string[] },
+  directoryState: {
+    busy: false,
+    ready: true,
+    rows: [] as CloudConversation[],
+    workspaces: [] as ConversationWorkspace[],
+    errors: [] as string[],
+  },
 }));
 const roster: RosterView = {
   bots: [
@@ -58,6 +64,7 @@ vi.mock('../src/cloud/native-conversations', () => ({
   cloudConversations: { refresh: async () => {} },
 }));
 vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
+vi.mock('react-native-tab-view', () => import('./tab-view-shim'));
 vi.mock('react-native', () => import('./react-native-shim'));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
@@ -125,6 +132,7 @@ afterEach(() => {
   cloudState.ready = true;
   cloudState.error = undefined;
   directoryState.rows = [];
+  directoryState.workspaces = [];
 });
 
 async function home(): Promise<HTMLElement> {
@@ -148,9 +156,10 @@ async function type(view: HTMLElement, text: string): Promise<void> {
 
 const rows = (view: HTMLElement) =>
   [...view.querySelectorAll('button')]
+    .filter((node) => !node.closest('[hidden]') && !node.dataset.testid)
     .filter(
       (node) =>
-        ![t.cloudJoin.newOrJoin, t.allConversations, 'studio'].includes(
+        ![t.cloudJoin.newOrJoin, t.allEnvironments, 'studio'].includes(
           node.getAttribute('aria-label') ?? '',
         ),
     )
@@ -206,6 +215,7 @@ describe('Search at the top of Chats', () => {
         },
       },
     ];
+    directoryState.workspaces = directoryState.rows;
     const view = await home();
     expect(view.textContent).toContain('Cloud general');
     expect(view.textContent).toContain('Ada');
@@ -227,10 +237,18 @@ describe('Search at the top of Chats', () => {
       },
     });
     await act(async () =>
-      view.querySelector<HTMLButtonElement>('button[aria-label="studio"]')!.click(),
+      view.querySelector<HTMLButtonElement>('[data-testid="pager-next"]')!.click(),
     );
-    expect(view.textContent).not.toContain('Cloud general');
+    expect(rows(view).join(' ')).not.toContain('Cloud general');
     expect(view.textContent).toContain('Ada');
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>('[data-testid="pager-next"]')!.click(),
+    );
+    expect(
+      view.querySelector('[role="tab"][aria-label="Cloud team"]')?.getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(rows(view).join(' ')).not.toContain('Ada, Done');
+    expect(rows(view).join(' ')).toContain('Cloud general');
   });
 
   it('filters the list in place and opens the chat the Human taps', async () => {

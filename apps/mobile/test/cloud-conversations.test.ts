@@ -59,6 +59,7 @@ describe('cloud conversation directory', () => {
     const pending = directory.refresh();
     directory.enroll([{ ...row, sessionUserId: 'user_b' }]);
     expect(directory.getSnapshot().rows).toHaveLength(0);
+    expect(directory.getSnapshot().workspaces).toEqual([]);
     release?.();
     await pending;
     expect(directory.getSnapshot().rows).toHaveLength(0);
@@ -90,5 +91,31 @@ describe('cloud conversation directory', () => {
       ['org_a', false],
       ['org_guest', true],
     ]);
+  });
+  it('lists empty member Organizations before guest-only Organizations without deriving tabs from messages', async () => {
+    const directory = createCloudConversations({
+      listOrganizations: async () => ({
+        organizations: [organization, { ...organization, organizationId: 'empty', name: 'Empty' }],
+        nextCursor: null,
+      }),
+      listConversationChannels: async (_id, org, _after, guest) => ({
+        channels: guest
+          ? [{ ...channel, organizationId: 'guest', organizationName: 'A' }]
+          : org === 'empty'
+            ? []
+            : [channel],
+        nextCursor: null,
+      }),
+    });
+    directory.enroll([row]);
+    await directory.refresh();
+    expect(directory.getSnapshot().ready).toBe(true);
+    expect(directory.getSnapshot().workspaces.map((w) => [w.organizationId, w.guest])).toEqual([
+      ['org_a', false],
+      ['empty', false],
+      ['guest', true],
+    ]);
+    directory.enroll([{ ...row, hasSession: false }]);
+    expect(directory.getSnapshot().workspaces).toEqual([]);
   });
 });

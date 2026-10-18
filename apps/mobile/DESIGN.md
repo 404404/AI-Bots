@@ -28,6 +28,14 @@ References:
 
 References: [Apple toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars), [Apple sheets](https://developer.apple.com/design/human-interface-guidelines/sheets), [Material bottom sheets](https://m3.material.io/components/bottom-sheets/guidelines), [Android radio selection](https://developer.android.com/develop/ui/compose/components/radio-button).
 
+## Chats source navigation (#2194)
+
+Chats uses the same canvas and left-aligned title treatment as Activity. The title/chevron opens the workspace drawer; Settings remains on the right. Directly below, a reusable native pager presents a horizontally scrolling **All → Computer → Organization** strip. Selecting a tab or swiping the list changes only the device-local browsing scope. Stable directory order, including empty member Organizations and channel-only guest Organizations, is independent of message arrival. Labels use local Computer names; keys retain full source/account identity.
+
+This first slice retains one active Computer plus authorized Organizations. It does not implement simultaneous multiple-Computer connections. Search and creation remain in their existing list-header placement until #2195/#2196. Activity inherits scope and keeps action/replies/unread paging; unsupported Cloud scope has an explicit notice and no borrowed Computer badge. All discloses that Cloud activity is not yet included. Source-owned history, credentials, drafts, permissions and send paths stay unchanged.
+
+The older Host-band description below records prior presentation/customization behavior. The Chats Header and environment selector above supersede that entry layout; saved Computer customization remains available in the drawer.
+
 ## Structure
 
 The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-with-settings-and-hosts-in-the-header.md): what the Human does most sits under the thumb, and what they do rarely sits in the header.

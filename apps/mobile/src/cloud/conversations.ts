@@ -13,13 +13,23 @@ export type CloudConversation = {
   channel: CloudChannel;
 };
 type Port = Pick<CloudClient, 'listOrganizations' | 'listConversationChannels'>;
-type Snapshot = { busy: boolean; rows: CloudConversation[]; errors: string[] };
+export type ConversationWorkspace = Pick<
+  CloudConversation,
+  'scope' | 'instanceId' | 'organizationId' | 'organizationName' | 'guest'
+>;
+type Snapshot = {
+  busy: boolean;
+  ready: boolean;
+  rows: CloudConversation[];
+  workspaces: ConversationWorkspace[];
+  errors: string[];
+};
 
 export function createCloudConversations(port: Port) {
   let sources: readonly CloudRow[] = [];
   let signature = '';
   let epoch = 0;
-  let state: Snapshot = { busy: false, rows: [], errors: [] };
+  let state: Snapshot = { busy: false, ready: false, rows: [], workspaces: [], errors: [] };
   let runningEpoch = 0;
   let pending: Promise<void> | undefined;
   const listeners = new Set<() => void>();
@@ -32,12 +42,24 @@ export function createCloudConversations(port: Port) {
   async function collect(source: CloudRow, version: number) {
     const scope = cloudViewScope(source);
     const result = new Map<string, CloudConversation>();
+    const workspaces = new Map<string, ConversationWorkspace>();
+    const addWorkspace = (organizationId: string, organizationName: string, guest: boolean) => {
+      if (!workspaces.has(organizationId))
+        workspaces.set(organizationId, {
+          scope,
+          instanceId: source.config.instanceId,
+          organizationId,
+          organizationName,
+          guest,
+        });
+    };
     const add = (
       channel: CloudChannel,
       organizationId: string,
       organizationName: string,
       guest: boolean,
     ) => {
+      addWorkspace(organizationId, organizationName, guest);
       const key = JSON.stringify(['cloud', scope, organizationId, channel.channelId]);
       if (!result.has(key))
         result.set(key, {
@@ -74,6 +96,7 @@ export function createCloudConversations(port: Port) {
       },
       async (organizations) => {
         for (const org of organizations) {
+          addWorkspace(org.organizationId, org.name, false);
           await pages(
             async (after) => {
               const p = await port.listConversationChannels(
@@ -102,7 +125,7 @@ export function createCloudConversations(port: Port) {
         }
       },
     );
-    return [...result.values()];
+    return { rows: [...result.values()], workspaces: [...workspaces.values()] };
   }
   return {
     getSnapshot: () => state,
@@ -119,7 +142,13 @@ export function createCloudConversations(port: Port) {
       signature = next;
       epoch++;
       const scopes = validScopes();
-      publish({ busy: false, errors: [], rows: state.rows.filter((r) => scopes.has(r.scope)) });
+      publish({
+        busy: false,
+        ready: false,
+        errors: [],
+        rows: state.rows.filter((r) => scopes.has(r.scope)),
+        workspaces: state.workspaces.filter((r) => scopes.has(r.scope)),
+      });
     },
     refresh(): Promise<void> {
       if (pending) return runningEpoch === epoch ? pending : pending.then(() => this.refresh());
@@ -134,7 +163,14 @@ export function createCloudConversations(port: Port) {
           try {
             const rows = await collect(source, version);
             if (version !== epoch || !rows) return;
-            publish({ ...state, rows: [...state.rows.filter((r) => r.scope !== scope), ...rows] });
+            publish({
+              ...state,
+              rows: [...state.rows.filter((r) => r.scope !== scope), ...rows.rows],
+              workspaces: [
+                ...state.workspaces.filter((r) => r.scope !== scope),
+                ...rows.workspaces,
+              ],
+            });
           } catch (error) {
             if (version !== epoch) return;
             const code = cloudError(error);
@@ -142,13 +178,16 @@ export function createCloudConversations(port: Port) {
             publish({
               ...state,
               rows: keep ? state.rows : state.rows.filter((r) => r.scope !== scope),
+              workspaces: keep
+                ? state.workspaces
+                : state.workspaces.filter((r) => r.scope !== scope),
               errors: [...state.errors, code],
             });
           }
         }
       })().finally(() => {
         pending = undefined;
-        if (version === epoch) publish({ ...state, busy: false });
+        if (version === epoch) publish({ ...state, ready: true, busy: false });
       });
       return pending;
     },
