@@ -12,6 +12,7 @@ import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { Text } from '../primitives/text';
 import { TextInput } from '../primitives/system-text';
 import { t } from '../strings';
+import { CloudChannelName } from './channel-name';
 
 function ChannelFormScroll({
   actionLines = 2,
@@ -166,7 +167,7 @@ function ChannelWorkspace({
             <Text>{t.cloudChannels.selectWorkspace}</Text>
           ) : selected ? (
             <>
-              <Text variant="title">{selected.name}</Text>
+              <CloudChannelName name={selected.name} />
               {guest && <Text>{t.cloudGuests.hint}</Text>}
               {!guest && (
                 <Button
@@ -306,7 +307,7 @@ function ChannelWorkspace({
           </View>
         ) : (
           <View style={box}>
-            <Text variant="title">{item.name}</Text>
+            <CloudChannelName name={item.name} />
             <Button
               label={t.cloudChannels.open + ': ' + item.name}
               disabled={busy}
