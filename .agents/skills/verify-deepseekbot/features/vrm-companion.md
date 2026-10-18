@@ -7,6 +7,8 @@
 - Current/live Activity plus committed own-DM output drive independent body and speaking channels.
 - Pause/disconnect/hidden/close cancel playback; reconnect never speaks history.
 - Per-instance renderer disposal, late model loads, reduced motion, resizing and visible fallback on WebGL loss.
+- Full-body Panel canvas with overlay controls, expanded same-renderer dialog, desk/room/portrait cameras, seated keyboard contact and bounded stand/walk/return choreography.
+- Spatial exterior, local-time sky/sun/lamp lighting, explicit sunset/night previews, and reduced-motion-aware ambient movement.
 
 ## How to get to it (user POV)
 
@@ -29,6 +31,10 @@ The journey uses visible Web controls, captures screenshots/ARIA/console and cor
 The lifecycle phase selects the named QA Group, checks the missing contextual entry, emulates reduced motion, loses a WebGL context, retries and deletes one fixed instance while inspecting real context disposal. Separately remove the Bundle with the native CLI, restart only the task-owned Host without deleting its home, run the removed phase, then reinstall and restart again. This path is restart-required; an offline manifest change alone does not qualify live unloading. Confirm current state remains readable, no historical speaking resumes, and other Bot functions work after removal. CLI reads must match the visible Bot and Channel identities.
 
 ## Gotchas
+
+For the room journey, use the authorized browser's visible controls: open Scene controls, select Room view, Stand up, then Walk around; observe actual position changes, choose Sit down, and verify the same chair position. Return to Desk view and compare Local time, Sunset and Night. Expand scene and return/Escape must preserve the same renderer and pose. Send a uniquely marked real DM; capture a nonzero mouth frame and the committed text, then correlate the message ID using the online `channel-messages` CLI. Inspect hands, knees and chair contact in pixels as well as phase attributes.
+
+The canvas must cover its entire Panel content box in both a narrow dock and the expanded dialog. Scene controls and speech are overlays. Keep the Chrome acceptance tab visible for motion/performance sampling: operating-system occlusion may throttle frames even when `document.visibilityState` remains visible. Do not report such a sample as foreground frame rate. Capture fresh pixels after an action settles; a browser accessibility snapshot can update before the next rendered screenshot.
 
 The existing workspace remembers Messages visibility separately from Channel selection. A closed Messages panel must be opened from the rail. Both hidden fallback and visible workspace sidebars can contain the same accessible name; target visible controls. More than two long-lived streams make network-idle waits unsuitable: wait for DOM and the loaded character instead. The generic screenshot helper's old Settings precondition does not match this native shell; use this dedicated journey.
 

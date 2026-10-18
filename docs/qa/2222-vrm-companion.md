@@ -18,9 +18,26 @@ The affected selection (Client, VRM bundle, browser preview, development-model h
 
 The full Windows suite was attempted and **was not green**: 205 failed, 6,966 passed, 40 skipped. Failures included Windows fsync/permission/path assumptions and timeouts; stale assertions caused by this change were corrected and the affected selection rerun. A clean export of the base reproduced 12 failures across the Lark provider contract, iOS voice preflight and links CLI suites (13 passed). That baseline sample does not establish that every full-suite failure is unrelated. Full CI is a separate status on the PR.
 
-## Two-renderer sample
+## Original standing-view two-renderer sample
 
 Both independent renderers held 13 geometries, 28 textures and 20 draw calls each over a five-second observation, with 129 additional rendered frames per instance (about 25.8 fps at a configured 30 fps cap). These are Three.js resource counters, not measured GPU memory. Model loading was below 1.2 seconds in these local observations; it is not a network-download benchmark. The embedded technical sample is 10.28 MiB and the Client bundle is about 16 MB before compression. No mobile/native Desktop or sustained performance qualification is claimed.
+
+## Room iteration — Chrome acceptance
+
+The subsequent Human-authorized scene iteration was verified in the Human-selected Chrome against the same isolated Host. The in-app browser could not reach that Host; Chrome successfully used the normal authenticated session. No authentication or browser security setting was weakened. Screenshots below describe the new room; the earlier counters and captures above describe the original standing view, not its current rendering cost.
+
+- The canvas fills the Panel body, with status, scene controls and committed speech overlaid. Expanding uses a native dialog with the same renderer; returning preserves the current scene. Both the narrow dock and expanded 1559 × 865 viewport were inspected. QA caught a closed-dialog interaction failure after returning: the inline view now stays an open non-modal dialog, switching to modal only while expanded. Expand → Return → Expand and Escape were rechecked through real controls.
+- Self-authored geometry supplies walls, ceiling, floor, window frames, desk, keyboard, chair, books, lamp, cup, plant and headset. The window looks into a 3D exterior: sky sphere, instanced cloud volumes, balloons, sun/moon and stars. Local time drives sky/light color and sun direction; Sunset/Night are explicit previews. Cloud drift, plant sway and steam are bounded ambient animation, paused by reduced motion. This is a view-local room, with no new durable world state.
+- The character starts seated. Hands reach the keyboard through a two-bone IK solve. Stand, bounded walking behind the desk, and return-to-chair were driven through the real controls; the final seat returned to `(0.580, -0.150)` with seated amount `1.000`. Camera presets, sunset/night, expand/return and refresh were exercised. Native skeletal axes are preserved when attaching the original headset.
+- `QA-WORK-1019` ran a real 20-second waiting shell tool. The screenshot showed `working` and a typing pose; the online `bot-activity` command corroborated revision 20, `executing`, `pwsh`, one active tool. Its committed reply then drove head gaze and an open mouth; the DOM observation recorded mouth weight `0.65`. The earlier `QA-MOUTH-1019` independently captured a visible open mouth with weight `0.2`. These are silent text-paced expressions, not audio lip-sync.
+- At the expanded Room view, the renderer reported 151 geometries, 30 textures and 166 draw calls. Counts varied with the frustum and first-use GPU uploads. Chrome window occlusion throttled animation even while document visibility was `visible`; no foreground frame-rate or sustained room-performance claim is made. The current Client bundle is approximately 16.16 MB before compression.
+- The inspected Chrome log contained no errors. Reloads emitted the existing multiple-Three.js-import warning; this is retained as a qualification limit. The room's new disposal path is covered by ownership inspection; the prior standing-view context-loss/deletion journey is not presented as a new room leak test.
+
+The final scene regression selection passed 32 tests in six files, including local motion and wall-clock environment behavior. Repository lint, format check, root/mobile type checking and production build passed. The earlier full Windows-suite failures remain disclosed above; this iteration did not rerun that full suite.
+
+The comparison follows the game's close desk camera, warm window light, seated companion, overlay controls and time-varying exterior. It does not claim identical character art, furniture assets, animation quality or the game's full interaction system. The existing licensed VRM sample remains in use. Research on official game screenshots, Three.js room examples and Tripo limitations is recorded under `docs/research/2026-10-19-*.md`; no game assets were copied and no Tripo credits were spent.
+
+For Human acceptance, open VRM QA Ada → Messages → VRM Companion → Expand scene. Use Scene controls to compare Desk/Room/Portrait, Sunset/Night/Local time, and Stand up/Walk around/Sit down. Send a new DM to inspect the independent Activity and speaking channels. Selected room screenshots live in `.github/pr-screenshots/2222-vrm-companion/room-*.jpg`; raw browser observations and the login link remain private.
 
 ## Acceptance limits and next action
 

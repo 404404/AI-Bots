@@ -58,6 +58,12 @@ Mounting or reconnecting establishes a fresh output checkpoint; it never speaks 
 
 ## Rendering and assets
 
+The canvas fills the Panel body. Status, scene controls and committed speech overlay the scene rather than reserving a separate column or card. **Expand scene** opens the same renderer in a native dialog; **Return to panel** or Escape restores the dock without restarting the character or output clock.
+
+The default pose sits at a desk with hands aligned to the keyboard. **Scene controls** exposes Desk/Room/Portrait views and Reset view, Sit down, Stand up, and opt-in Walk around. Walking stays in a bounded lane and yields to real work or speaking; Sit down cancels wandering and returns to the chair. Each view owns its choreography, with no Host mutation or persistent world simulation. Reduced motion suppresses wandering and ambient motion and resolves requested poses directly.
+
+The room, furniture and exterior are self-authored Three.js geometry. A real window opening reveals layered 3D clouds, balloons, a sun/moon and stars; the same local wall clock drives sky colors and the sun's lighting direction. **Local time** is the default; **Sunset** and **Night** are explicit lighting previews. Clouds, leaves and steam move while visible; hidden views stop frame work and resample current local time on return. The room is a bounded T1 presentation, without weather services, music, timers, room editing or a second durable authority.
+
 The renderer uses `three@0.180.0` and `@pixiv/three-vrm@3.5.5`. Idle/thinking/working/waiting/blocked drive normalized humanoid poses; a separate text clock drives the mouth and limited speaking gestures, so working and speaking can coexist. Reduced motion suppresses repetitive movement. Hidden/zero-sized panels stop drawing; restoration resets the frame delta. Failed loads and WebGL context loss leave readable state/text with a retry action. Disposal releases observers, animation frames, geometry/materials/textures, ImageBitmaps and the renderer, including a model that finishes loading after close.
 
 The bundled technical sample is licensed under the VRM Public License, not the repository's source license. See [asset provenance and permissions](../packages/vrm-companion/assets/README.md). It demonstrates the runtime; it is not the final character art direction or a claim to reproduce Nintendo assets. No model upload, VRMA library, wardrobe, scene editor or TTS settings are included.

@@ -4,24 +4,45 @@ import {
   Clock,
   DirectionalLight,
   PerspectiveCamera,
+  PCFSoftShadowMap,
   Scene,
   Vector3,
   WebGLRenderer,
   Quaternion,
   Euler,
+  Group,
+  Object3D,
+  Color,
+  Mesh,
+  MeshStandardMaterial,
+  TorusGeometry,
+  SphereGeometry,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { VRMLoaderPlugin, VRMUtils, type VRM, type VRMHumanBoneName } from '@pixiv/three-vrm';
 import type { BotPresentationSnapshot } from '@botharness/ui/panels';
+import { RoomMotion, type MotionCommand } from './motion.js';
+import { createRoom, type Mood } from './room.js';
 
+export type CameraView = 'desk' | 'room' | 'portrait';
+export interface SceneState {
+  phase: string;
+  wandering: boolean;
+  ready: boolean;
+}
 export interface Stage {
   update(snapshot: BotPresentationSnapshot): void;
+  command(command: MotionCommand): void;
+  camera(view: CameraView): void;
+  mood(value: Mood): void;
   dispose(): void;
 }
 export function mountStage(
   host: HTMLElement,
   model: string,
   status: (value: string) => void,
+  changed: (state: SceneState) => void,
 ): Stage {
   for (const key of Object.keys(host.dataset))
     if (key !== 'vrmStage' && key.startsWith('vrm')) delete host.dataset[key];
@@ -31,6 +52,15 @@ export function mountStage(
   let frame = 0;
   let visible = true;
   let latest: BotPresentationSnapshot | undefined;
+  const motion = new RoomMotion();
+  let room: ReturnType<typeof createRoom> | undefined;
+  let hipDrop = 0;
+  let floorOffset = 0;
+  let modelScale = 1;
+  let phase = 0;
+  let gait = 0;
+  let cameraView: CameraView = 'desk';
+  let previousState = '';
   let width = 0,
     height = 0,
     last = 0;
@@ -38,18 +68,66 @@ export function mountStage(
     elapsed = 0;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const scene = new Scene();
-  const camera = new PerspectiveCamera(30, 1, 0.05, 100);
+  scene.background = new Color(0x423a42);
+  const actor = new Group();
+  scene.add(actor);
+  const gaze = new Object3D();
+  scene.add(gaze);
+  const camera = new PerspectiveCamera(36, 1, 0.05, 100);
   const renderer = new WebGLRenderer({ alpha: true, antialias: true });
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%';
   renderer.domElement.setAttribute('aria-label', 'VRM character');
   host.append(renderer.domElement);
-  scene.add(new AmbientLight(0xffffff, 1.2));
-  const key = new DirectionalLight(0xffffff, 1.5);
-  key.position.set(1, 2, 3);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enablePan = false;
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.12;
+  controls.minDistance = 0.8;
+  controls.maxDistance = 7;
+  controls.minAzimuthAngle = -Math.PI * 0.45;
+  controls.maxAzimuthAngle = Math.PI * 0.45;
+  controls.minPolarAngle = 0.25;
+  controls.maxPolarAngle = Math.PI * 0.48;
+  const ambient = new AmbientLight(0xffe7cf, 0.55);
+  scene.add(ambient);
+  const key = new DirectionalLight(0xffd8b8, 0.9);
+  key.position.set(-1, 2, 3);
   scene.add(key);
   const clock = new Clock();
   const base = new Map<string, Quaternion>();
+  const fitCamera = (view: CameraView) => {
+    cameraView = view;
+    const portrait = view === 'portrait';
+    const target = portrait
+      ? new Vector3(motion.x, 1.16 - motion.seated * 0.1, motion.z)
+      : new Vector3(camera.aspect < 0.8 ? motion.x : 0.45, 1.03, -0.05);
+    const offset =
+      view === 'room'
+        ? new Vector3(-2.5, 1.5, 4.4)
+        : portrait
+          ? new Vector3(-0.45, 0.12, 1.55)
+          : new Vector3(0.88, 0.12, 1.13);
+    const aspectScale = Math.max(1, Math.min(1.25, 0.75 / camera.aspect));
+    offset.multiplyScalar(aspectScale);
+    controls.target.copy(target);
+    camera.position.copy(target).add(offset);
+    camera.lookAt(target);
+    controls.update();
+    host.dataset.vrmCamera = view;
+  };
+  const notify = () => {
+    const next = `${motion.phase}:${motion.wandering}:${!!vrm}`;
+    if (next !== previousState) {
+      previousState = next;
+      changed({ phase: motion.phase, wandering: motion.wandering, ready: !!vrm });
+    }
+    host.dataset.vrmMotion = motion.phase;
+    host.dataset.vrmSeated = motion.seated.toFixed(3);
+    host.dataset.vrmPosition = `${motion.x.toFixed(3)},${motion.z.toFixed(3)}`;
+  };
   const release = (value: VRM) => {
     value.scene.traverse((object) => {
       const mesh = object as import('three').Mesh;
@@ -90,36 +168,132 @@ export function mountStage(
     if (time - last < 1000 / (reduced.matches ? 10 : 30)) return;
     const delta = Math.min(clock.getDelta(), 0.05);
     last = time;
+    const daylight = room?.update(reduced.matches ? 0 : delta);
+    if (daylight) {
+      ambient.intensity = 0.25 + daylight.daylight * 0.3 + daylight.twilight * 0.15;
+      key.intensity = 0.35 + daylight.daylight * 0.6;
+      host.dataset.vrmHour = daylight.hour.toFixed(3);
+    }
     if (vrm) {
       const moving =
         !reduced.matches && latest?.sync === 'live' && latest.available && !latest.paused;
-      const phase = time / 1000;
+      phase += delta;
       const activity = latest?.activity ?? 'idle';
+      const live = latest?.sync === 'live' && latest.available && !latest.paused;
+      motion.step(delta, {
+        enabled: !!live,
+        idle: activity === 'idle' && !latest?.speaking,
+        reduced: reduced.matches,
+      });
+      gait += delta * 7 * motion.stride;
+      actor.position.set(motion.x, floorOffset - hipDrop * motion.seated, motion.z);
+      actor.rotation.y = motion.yaw;
+      notify();
       const sway = moving ? Math.sin(phase * 1.5) * 0.015 : 0;
       const thinking = activity === 'thinking';
       const working = activity === 'working';
       const blocked = activity === 'blocked';
       const waiting = activity === 'waiting';
       const talking = moving && latest?.speaking;
-      pose('spine', sway, 0, 0, 0.2);
+      const blend = 1 - Math.exp(-delta * 10);
+      const sit = motion.seated;
+      const walk = Math.sin(gait) * 0.28 * motion.stride;
+      pose('spine', sway + (working ? 0.04 : 0), 0, 0, blend);
+      const looking = talking || waiting || blocked;
+      const desiredGaze = looking
+        ? camera.position
+        : new Vector3(-0.36, room?.tableY ? room.tableY + 0.48 : 1.2, 0.78);
+      gaze.position.lerp(desiredGaze, reduced.matches ? 1 : blend);
+      const head = vrm.humanoid.getNormalizedBoneNode('head');
+      const headPosition =
+        head?.getWorldPosition(new Vector3()) ?? new Vector3(motion.x, 1.2, motion.z);
+      const direction = gaze.position.clone().sub(headPosition);
+      const yaw = Math.atan2(
+        Math.sin(Math.atan2(direction.x, direction.z) - motion.yaw),
+        Math.cos(Math.atan2(direction.x, direction.z) - motion.yaw),
+      );
       pose(
         'head',
-        thinking ? -0.12 : blocked ? 0.12 : sway,
-        thinking ? 0.15 : waiting ? -0.2 : 0,
+        thinking ? -0.1 : blocked ? 0.1 : working && !talking ? 0.08 : sway,
+        Math.max(-0.35, Math.min(0.35, yaw * 0.4)) + (waiting ? -0.1 : 0),
         talking ? Math.sin(phase * 5) * 0.025 : 0,
-        0.15,
+        blend,
       );
-      pose('leftUpperArm', working && moving ? Math.sin(phase * 2) * 0.08 : 0, 0, -1.15, 0.2);
-      pose('rightUpperArm', working && moving ? -Math.sin(phase * 2) * 0.08 : 0, 0, 1.15, 0.2);
-      pose('leftLowerArm', thinking ? -0.6 : -0.1, 0, 0, 0.2);
-      pose('rightLowerArm', talking ? -0.35 : -0.1, 0, 0, 0.2);
+      const typing = working && moving ? Math.sin(phase * 8) * 0.025 : 0;
+      pose('leftUpperArm', -sit * 1.05 + walk + typing, 0, -1.4, blend);
+      pose('rightUpperArm', -sit * 1.05 - walk - typing, 0, 1.4, blend);
+      pose('leftLowerArm', -0.12 - sit * 0.28 - (thinking ? 0.15 : 0), 0, 0, blend);
+      pose(
+        'rightLowerArm',
+        -0.12 - sit * 0.28 - (talking ? Math.sin(phase * 2) * 0.06 : 0),
+        0,
+        0,
+        blend,
+      );
+      pose('leftUpperLeg', (-sit * Math.PI) / 2 + walk, 0, 0, blend);
+      pose('rightUpperLeg', (-sit * Math.PI) / 2 - walk, 0, 0, blend);
+      pose('leftLowerLeg', (sit * Math.PI) / 2 + Math.max(0, -walk) * 1.4, 0, 0, blend);
+      pose('rightLowerLeg', (sit * Math.PI) / 2 + Math.max(0, walk) * 1.4, 0, 0, blend);
+      pose('leftFoot', -Math.max(0, -walk) * 0.4, 0, 0, blend);
+      pose('rightFoot', -Math.max(0, walk) * 0.4, 0, 0, blend);
+      if (sit > 0 && room) {
+        for (const side of ['left', 'right'] as const) {
+          const upper = vrm.humanoid.getNormalizedBoneNode(`${side}UpperArm`);
+          const lower = vrm.humanoid.getNormalizedBoneNode(`${side}LowerArm`);
+          const hand = vrm.humanoid.getNormalizedBoneNode(`${side}Hand`);
+          if (!upper || !lower || !hand) continue;
+          actor.updateMatrixWorld(true);
+          const a = upper.getWorldPosition(new Vector3());
+          const b = lower.getWorldPosition(new Vector3());
+          const c = hand.getWorldPosition(new Vector3());
+          const goal = c
+            .clone()
+            .lerp(
+              new Vector3(side === 'left' ? 0.72 : 0.42, room.tableY + 0.1 + typing, 0.16),
+              sit,
+            );
+          const lengthA = a.distanceTo(b),
+            lengthB = b.distanceTo(c);
+          const direction = goal.clone().sub(a).normalize();
+          const distance = Math.max(0.001, Math.min(a.distanceTo(goal), lengthA + lengthB - 0.001));
+          const along =
+            (lengthA * lengthA - lengthB * lengthB + distance * distance) / (2 * distance);
+          const pole = new Vector3(side === 'left' ? 0.5 : -0.5, -1, 0);
+          pole.addScaledVector(direction, -pole.dot(direction)).normalize();
+          const elbow = a
+            .clone()
+            .addScaledVector(direction, along)
+            .addScaledVector(pole, Math.sqrt(Math.max(0, lengthA * lengthA - along * along)));
+          const aim = (bone: Object3D, from: Vector3, to: Vector3) => {
+            const rotation = new Quaternion()
+              .setFromUnitVectors(from.normalize(), to.normalize())
+              .multiply(bone.getWorldQuaternion(new Quaternion()));
+            bone.quaternion.copy(
+              bone.parent!.getWorldQuaternion(new Quaternion()).invert().multiply(rotation),
+            );
+            bone.updateWorldMatrix(false, true);
+          };
+          aim(upper, b.clone().sub(a), elbow.clone().sub(a));
+          const elbowNow = lower.getWorldPosition(new Vector3());
+          aim(lower, hand.getWorldPosition(new Vector3()).sub(elbowNow), goal.sub(elbowNow));
+          const wrist = new Quaternion().setFromEuler(
+            new Euler(0, side === 'left' ? -Math.PI / 2 : Math.PI / 2, 0),
+          );
+          hand.quaternion.slerp(
+            hand.parent!.getWorldQuaternion(new Quaternion()).invert().multiply(wrist),
+            sit,
+          );
+        }
+      }
       const expressions = vrm.expressionManager;
       if (expressions?.getExpression('aa'))
         expressions.setValue('aa', moving ? (latest?.mouth ?? 0) : 0);
       const blink = moving && phase % 4 < 0.16 ? Math.sin(((phase % 4) / 0.16) * Math.PI) : 0;
       if (expressions?.getExpression('blink')) expressions.setValue('blink', blink);
       vrm.update(delta);
+      host.dataset.vrmMouth = String(expressions?.getValue('aa') ?? 0);
     }
+    controls.update();
     renderer.render(scene, camera);
     frames++;
     elapsed += delta;
@@ -144,6 +318,7 @@ export function mountStage(
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
+      fitCamera(cameraView);
     }
     reconcile();
   });
@@ -178,12 +353,60 @@ export function mountStage(
       }
       vrm = loaded;
       VRMUtils.rotateVRM0(loaded);
-      scene.add(loaded.scene);
+      actor.add(loaded.scene);
+      loaded.scene.traverse((object) => {
+        if (object instanceof Mesh) object.castShadow = object.receiveShadow = true;
+      });
       const box = new Box3().setFromObject(loaded.scene);
-      const center = box.getCenter(new Vector3()),
-        size = box.getSize(new Vector3());
-      camera.position.set(center.x, center.y + size.y * 0.12, center.z + size.y * 2.0);
-      camera.lookAt(center.x, center.y + size.y * 0.08, center.z);
+      const size = box.getSize(new Vector3());
+      modelScale = 1.65 / Math.max(size.y, 0.1);
+      actor.scale.setScalar(modelScale);
+      floorOffset = -box.min.y * modelScale;
+      actor.updateMatrixWorld(true);
+      const hips = loaded.humanoid.getNormalizedBoneNode('hips')?.getWorldPosition(new Vector3());
+      const knee = loaded.humanoid
+        .getNormalizedBoneNode('leftLowerLeg')
+        ?.getWorldPosition(new Vector3());
+      const ankle = loaded.humanoid
+        .getNormalizedBoneNode('leftFoot')
+        ?.getWorldPosition(new Vector3());
+      const seatHeight = Math.max(
+        0.32,
+        Math.min(0.58, (knee?.y ?? 0.45) - (ankle?.y ?? 0.05) + 0.04),
+      );
+      hipDrop = (hips?.y ?? 0.9) + floorOffset - seatHeight - 0.07;
+      room = createRoom(seatHeight);
+      scene.add(room.root);
+      actor.position.set(motion.x, floorOffset - hipDrop, motion.z);
+      const rawHead = loaded.humanoid.getRawBoneNode('head');
+      if (rawHead) {
+        const headphones = new Group();
+        const shell = new MeshStandardMaterial({ color: 0x8d3e4c, roughness: 0.7 });
+        const cushion = new MeshStandardMaterial({ color: 0x27333e, roughness: 1 });
+        const band = new Mesh(new TorusGeometry(0.122, 0.018, 8, 32, Math.PI), shell);
+        band.position.y = 0.075;
+        headphones.add(band);
+        for (const side of [-1, 1]) {
+          const cup = new Mesh(new SphereGeometry(0.052, 16, 12), shell);
+          cup.scale.set(0.55, 1, 0.85);
+          cup.position.set(side * 0.122, 0.065, 0);
+          headphones.add(cup);
+          const pad = new Mesh(new SphereGeometry(0.05, 16, 12), cushion);
+          pad.scale.set(0.4, 1, 0.8);
+          pad.position.set(side * 0.105, 0.065, 0);
+          headphones.add(pad);
+        }
+        actor.updateMatrixWorld(true);
+        headphones.position.copy(rawHead.getWorldPosition(new Vector3()));
+        headphones.quaternion.copy(actor.getWorldQuaternion(new Quaternion()));
+        headphones.scale.setScalar(modelScale);
+        scene.add(headphones);
+        rawHead.attach(headphones);
+      }
+      if (loaded.lookAt) loaded.lookAt.target = gaze;
+      gaze.position.copy(camera.position);
+      fitCamera('desk');
+      notify();
       status('');
       host.dataset.vrmLoaded = 'true';
       host.dataset.vrmLoadMs = String(Math.round(performance.now() - started));
@@ -197,6 +420,18 @@ export function mountStage(
     update(snapshot) {
       latest = snapshot;
     },
+    command(command) {
+      if (!vrm || !latest?.available || latest.paused || latest.sync !== 'live') return;
+      motion.command(command);
+      notify();
+    },
+    camera(view) {
+      if (!disposed) fitCamera(view);
+    },
+    mood(value) {
+      room?.setMood(value);
+      host.dataset.vrmMood = value;
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -206,8 +441,11 @@ export function mountStage(
       document.removeEventListener('visibilitychange', reconcile);
       reduced.removeEventListener('change', reconcile);
       renderer.domElement.removeEventListener('webglcontextlost', lost);
+      controls.dispose();
+      key.shadow.dispose();
+      room?.dispose();
       if (vrm) {
-        scene.remove(vrm.scene);
+        actor.remove(vrm.scene);
         release(vrm);
         vrm = undefined;
       }
