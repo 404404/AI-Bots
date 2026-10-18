@@ -405,11 +405,6 @@ export function HomePanel({
               </Button>
             ))}
           </div>
-          {ready && (
-            <Button variant="ghost" onClick={() => setConfiguring(true)}>
-              {t('home.modelSettings')}
-            </Button>
-          )}
           {creationChoices}
           <HomeDashboard actions={actions} registry={registry} t={t} />
           {error && (
@@ -424,7 +419,7 @@ export function HomePanel({
         <OnboardingModelDialog
           actions={actions}
           globalOnly
-          title={t(ready ? 'home.modelSettings' : 'home.configure')}
+          title={t('home.configure')}
           t={t}
           onClose={() => {
             setConfiguring(false);

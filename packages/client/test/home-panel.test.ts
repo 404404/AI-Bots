@@ -78,10 +78,10 @@ async function mount(ownPlan: boolean) {
   return { host, creation, actions, onEditHumanName };
 }
 
-it('uses the effective Tob plan despite an unavailable Host default, with a neutral settings label', async () => {
+it('shows only the composer when the effective Tob plan is usable despite an unavailable Host default', async () => {
   const { host } = await mount(true);
   expect(host.querySelector('[aria-label="Tob composer"]')).not.toBeNull();
-  expect(host.textContent).toContain('模型设置');
+  expect(host.textContent).not.toContain('模型设置');
   expect(host.textContent).not.toContain('配置模型，开始与总管对话');
 });
 
