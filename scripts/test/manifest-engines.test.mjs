@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { productDshRange, productDshVersions } from '../product-artifacts.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const packages = ['core', 'client', 'deepseekbot', 'browser', 'computer'];
+const packages = ['core', 'client', 'deepseekbot', 'browser', 'computer', 'todo'];
 
 function manifest(packageName) {
   return JSON.parse(readFileSync(join(root, 'packages', packageName, 'package.json'), 'utf8'));
@@ -21,7 +21,16 @@ describe('DSH engine declaration', () => {
     expect(ranges[0]).toBe(productDshRange);
   });
 
-  it('supports exactly the DSH release the bundled Computer runtime and the repository pin target', () => {
+  it('uses the product range for Host-provided peers without loosening dev pins', () => {
+    for (const name of packages) {
+      for (const [peer, range] of Object.entries(manifest(name).peerDependencies ?? {})) {
+        if (peer === '@deepseek-ai/dsh' || peer.startsWith('@deepseek-ai/dsh-'))
+          expect(range, `${name}: ${peer}`).toBe(productDshRange);
+      }
+    }
+  });
+
+  it('keeps the exact build baseline separate from forward admission', () => {
     const range = manifest('core').engines.dsh;
     const pinned = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).devDependencies[
       '@deepseek-ai/dsh'
@@ -29,9 +38,26 @@ describe('DSH engine declaration', () => {
     const computerUse = manifest('computer').dependencies['@deepseek-ai/dsh-computer-use'];
     expect(productDshVersions).toEqual([pinned]);
     expect(computerUse).toBe(pinned);
-    for (const version of productDshVersions)
+    expect(semver.minVersion(range).version).toBe(pinned);
+    for (const version of [
+      ...productDshVersions,
+      '0.2.1-rc.3',
+      '0.2.1',
+      '0.2.2-rc.1',
+      '0.2.2',
+      '0.2.99',
+    ])
       expect(semver.satisfies(version, range, { includePrerelease: true })).toBe(true);
-    for (const version of ['0.2.0-rc.1', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.0', '0.3.0-rc.1'])
+    for (const version of [
+      '0.2.0-rc.1',
+      '0.2.1-alpha.1',
+      '0.2.1-alpha.2',
+      '0.2.0',
+      '0.3.0-alpha.1',
+      '0.3.0-rc.1',
+      '0.3.0',
+      '1.0.0',
+    ])
       expect(semver.satisfies(version, range, { includePrerelease: true })).toBe(false);
   });
 });
