@@ -57,6 +57,34 @@ async function invoke(argv: string[], url: string, stdin = '') {
 }
 
 describe('Harness Bot tool runner commands', () => {
+  it('carries an explicit Group freshness decision and returns the owning coded outcome', async () => {
+    const args = {
+      channel_id: 'group',
+      body: 'Corrected answer',
+      draft_id: 'draft',
+      observation_id: 'observed',
+      freshness_override: { draftVersion: 3, reason: 'Necessary answer after review' },
+    };
+    const live = await host(() => ({
+      ok: true,
+      value: {
+        slug: 'ada',
+        tool: 'channel_send',
+        sessionId: 'direct',
+        result: { status: 'refused', reason: 'draft-version-changed' },
+      },
+    }));
+    const result = await invoke(
+      ['bot-tool', 'ada', 'channel_send', '--args-stdin'],
+      live.url,
+      JSON.stringify(args),
+    );
+    expect(result.json.result).toEqual({ status: 'refused', reason: 'draft-version-changed' });
+    expect(live.calls).toEqual([
+      { method: 'botToolRun', args: { slug: 'ada', tool: 'channel_send', args } },
+    ]);
+  });
+
   it('passes Group inspection and explicit recovery to the same direct Tool owner', async () => {
     const live = await host(() => ({
       ok: true,

@@ -569,6 +569,7 @@ export interface OrchestratorChannelAccess {
   send(input: {
     observationId?: string;
     draftId?: string;
+    freshnessOverride?: import('../channels/send-review.js').FreshnessOverride;
     recover?: boolean;
     body: string;
     channelId?: string;
@@ -5169,6 +5170,7 @@ class BotRuntimeImplementation implements BotRuntime {
       ? `direct:${botSlug}`
       : `${botSlug}:${sessionId}`;
     const observations = new Map<string, string>();
+    const exhaustedDrops = new Map<string, string>();
     const recordObservation = (views: ChannelMessageView[]): void => {
       for (const id of new Set(views.map((view) => view.channelId))) {
         if (!this.groupSendReview.enabled(id)) continue;
@@ -6044,7 +6046,7 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       dropDraft: (input) => {
         resolve(input.channelId);
-        return this.groupSendReview.drop(
+        const result = this.groupSendReview.drop(
           reviewOwner,
           input.channelId,
           input.draftId,
@@ -6055,6 +6057,9 @@ class BotRuntimeImplementation implements BotRuntime {
                 messageIds: input.yieldToMessageIds,
               },
         );
+        if (result.status === 'dropped' && result.budget?.exhausted)
+          exhaustedDrops.set(input.channelId, input.draftId);
+        return result;
       },
       send: async (input) => {
         requireReplySource();
@@ -6094,6 +6099,17 @@ class BotRuntimeImplementation implements BotRuntime {
               )}. Call channel_send again with channel_id for the Channel this reply belongs to, or with reply_to set to the message ID you are answering.`,
           );
         const channel = resolve(input.channelId);
+        const exhaustedDraftId = exhaustedDrops.get(channel.id);
+        if (exhaustedDraftId)
+          throw new SendReviewRequired({
+            status: 'requires-review',
+            channelId: channel.id,
+            draftId: exhaustedDraftId,
+            reason: 'dropped-exhausted-draft-defer-turn',
+            choices: ['snooze-inbox'],
+          });
+        if (input.freshnessOverride && channel.type !== 'group')
+          throw new Error('Freshness override requires the original Group draft');
         if (input.mentionBotIds?.length && channel.type !== 'group')
           throw new Error('Bot mentions require a Group Channel');
         if (input.mentionHumanIds?.length && channel.type !== 'group')
@@ -6123,6 +6139,7 @@ class BotRuntimeImplementation implements BotRuntime {
             reviewOwner,
             observationId: input.observationId ?? initialObservations.get(channel.id),
             draftId: input.draftId,
+            freshnessOverride: input.freshnessOverride,
             recover: input.recover,
             botSlug,
             channel,
@@ -6138,7 +6155,10 @@ class BotRuntimeImplementation implements BotRuntime {
             mentionHumanIds: input.mentionHumanIds,
             deliveryKey: input.deliveryKey,
           }).catch((error: unknown) => {
-            if (!(error instanceof SendReviewRequired) || error.outcome.status !== 'held')
+            if (
+              !(error instanceof SendReviewRequired) ||
+              (error.outcome.status !== 'held' && error.outcome.status !== 'requires-review')
+            )
               throw error;
             const changed = error.outcome.changedMessageIds;
             if (!changed?.length) throw error;
@@ -6231,6 +6251,7 @@ class BotRuntimeImplementation implements BotRuntime {
     reviewOwner?: string | undefined;
     observationId?: string | undefined;
     draftId?: string | undefined;
+    freshnessOverride?: import('../channels/send-review.js').FreshnessOverride | undefined;
     recover?: boolean | undefined;
     botSlug: string;
     channel: ChannelRecord;
@@ -6361,7 +6382,7 @@ class BotRuntimeImplementation implements BotRuntime {
       (db) => {
         this.#requireMembership(botSlug, channel.id);
         const current = this.#registry.get(botSlug);
-        if (this.#closed || !current || current.paused)
+        if (this.#closed || !current || current.paused || this.#stoppedTurns.has(botSlug))
           throw new Error('Bot Group sender is unavailable');
         if (
           !input.sessionId.startsWith('direct-') &&
@@ -6382,6 +6403,9 @@ class BotRuntimeImplementation implements BotRuntime {
             message,
             ...(input.observationId === undefined ? {} : { observationId: input.observationId }),
             ...(input.draftId === undefined ? {} : { draftId: input.draftId }),
+            ...(input.freshnessOverride === undefined
+              ? {}
+              : { freshnessOverride: input.freshnessOverride }),
             ...(input.recover === undefined ? {} : { recover: input.recover }),
           });
           if (reviewOutcome) return false;

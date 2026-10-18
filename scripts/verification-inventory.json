@@ -1745,9 +1745,9 @@
       "path": "scripts/e2e-group-send-review.mjs",
       "category": "mapped",
       "behaviors": ["desktop.group.send-review"],
-      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate.",
+      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate. Native export also includes inbox_snooze arguments/results for bounded review and deferred-resume assessment (#2055).",
       "task": 2053,
-      "sha256": "67c155764229bafca82518fa77d2fc314b5ca98197fd30efdd095f90400e8562"
+      "sha256": "5215105fca692ef6e1255c47754f3b81dd01ec7a7a8f172c29f43d9595ada3cf"
     },
     {
       "path": "scripts/e2e-group-peer-review.mjs",
@@ -1772,6 +1772,22 @@
       "reason": "Natural Tob pending-invitation cancellation and join acceptance/decline through rendered approval, denial and concurrent stale refusal; actual ordinary-Bot selected-Group join preconditions, canonical decision history and Members UI, terminal refusal and Web/macOS restart.",
       "task": 2090,
       "sha256": "6998a510585f53ccbe6210f73458fd8c666716df6dbb257c8388f1e345cf916e"
+    },
+    {
+      "path": "scripts/e2e-group-busy-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Real DSH busy-Group triplets with full records and all-Bot costs. v3 bounds outcome time and waits for original, observed and snoozed canonical Inbox responsibility before early settlement; preserves frozen older cohorts, unknown future cost and separate semantic judgment.",
+      "task": 2055,
+      "sha256": "27a142b32d0219d5d7a04f7a6123bfb004881c20a63e8db4a633a96bb05b970b"
+    },
+    {
+      "path": "scripts/e2e-group-responsibility.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Read-only isolated Profile helper for Group episode completion. Counts all unresolved observed/snoozed Admissions plus the acting original across Channels, excludes unopened silent peer copies, bounds evidence not totals, refuses missing canonical facts.",
+      "task": 2055,
+      "sha256": "03b1f454483c43716fd11e784dee3ffaf08d3b1fc4cea2a15d1ca6ca325de5eb"
     }
   ],
   "native": [

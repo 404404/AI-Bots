@@ -9,7 +9,7 @@ observed basis. The Human sees only committed replies in canonical history.
 - Hold: changed content returns `held`, clears the preview and creates no formal message.
   A bounded `review.content` delta supplies full newly observed messages and an explicit
   `review.observationId`; `review.complete` indicates whether an extra read is needed.
-- Recheck: explicit `draft_id` and `observation_id` allow one revision or unchanged recheck.
+- Recheck: explicit `draft_id` and `observation_id` allow two revisions or unchanged rechecks.
 - Drop: `drop: true` abandons the draft independently of Inbox resolution.
 - Refuse: revoked membership, purged source, expired draft or restarted Host cannot auto-send.
 - Recover: `channel_send` with `review_action: inspect` exposes own metadata only. After an actual
@@ -75,7 +75,7 @@ marked in the exported JSON. Check undo, skipped pairs, full message bodies and 
 - A successful tool call returning `held` is not delivery. Missing usage remains unknown.
 - Draft previews are public temporary content; they are retained separately in reports.
 - Tool handles cannot cross owners or Groups. Source purge removes derived draft bodies.
-- After one failed recheck, automatic retries stop. Busy-group policies and recovery (#2055–2056) remain separate.
+- After two failed rechecks, automatic retries stop. Recovery after restart remains #2056.
 - Human acceptance requires independent review of full histories; no test or LLM signs it.
 
 ## Explicit completion and revoked-source regression
@@ -153,7 +153,69 @@ drafts still use explicit drop with observed peer evidence. Useful replies conta
 not an explanation of task ownership or the yielding protocol. Inspect native Tool records
 as well as the final silence: a refused no-addition send followed by drop is not a clean path.
 
-## Revoked active task after restart
+
+## Busy Group progress (#2055)
+
+`node scripts/e2e-group-busy-review.mjs --baseline-instance <accepted-2054-json>
+--candidate-instance <candidate-json> --original-instance <B0-json> --report <json>` runs
+the busy-Group diagnostic. `--formal` freezes four families of ten triplets; retain timing
+misses and every failure, then directly assess all full histories without external judges.
+
+Use the same direct send Tool to hold a draft, then inject more messages before each of two
+rechecks. Verify `budget.used` reaches two and `requires-review` reports the current
+`draftVersion`; new ordinary sends must return the existing draft and cannot replenish the
+budget. A full read plus `freshness_override` with that version and a reason can commit once
+when the observation still covers current content. Insert a correction after that read and
+before submission: require `override-context-changed-defer`, no public append, and only
+drop/snooze choices. A second override must refuse even after another read. Inspect the one
+canonical reply on the unchanged-content path and the durable decision/Tool trace.
+In a native Orchestrator turn, drop the exhausted draft and attempt a fresh send: require
+`dropped-exhausted-draft-defer-turn`. A later independent request must remain answerable.
+Separate direct Tool invocations are separate operations, so verify this turn boundary in
+the native Session path as well as the focused runtime regression.
+Drop an exhausted draft with completion IDs containing its original Source Event, original
+Group Message and completed FYI. Require both original aliases in `keepOpenInboxIds` and
+`inboxResolution.keptOpen`, the original Admission still unresolved, and only the FYI
+resolved. A later explicit completion decision remains possible; observed peer-yield drops
+must still compose normal completion. Check the actual Inbox owner, not only the Tool text.
+Repeat without completion IDs and with only FYI IDs: both return the unfinished-request
+continuation instruction, without resolving the original request.
+Wrong owner, wrong version, incomplete observation, revoked membership, stopped/archived Bot,
+expiry and purge must refuse without a new message.
+
+To defer, drop the draft without completing the Inbox item, then use the existing
+`inbox_snooze` with a note and bounded time. Provide the awaited fact within the episode,
+observe the actual resume/read/reply and count all prelude, triage and resume usage. Snoozed
+work must still wake at its deadline when the awaited fact arrives without a mention and
+has not otherwise been observed; ordinary context alone cannot cancel the return timer.
+Verify that a later genuinely observed message still returns the item early without a
+duplicate deadline wake.
+For freshness-only contention, verify the exhausted/drop result's `suggestedSnoozeUntil`
+is a short future Host time and that the Bot actually resumes within the episode. It is
+not permission to shorten a Human deadline or ignore a condition. The runner records
+the outcome cutoff, pauses only its own episode Bots and stops remaining turns before
+final usage settlement; late output stays visible but cannot change a censored outcome.
+The v3 runner uses `scripts/e2e-group-responsibility.mjs` to read canonical Inbox Admissions before ending early: the acting
+Bot's original request and all episode Bots' observed or snoozed work must be resolved or
+ignored, with 12 seconds of idle, stable usage afterward. An unopened silent peer copy does
+not require completion. A correct reply with an outstanding original snooze is unfinished
+accounting; keep observing until responsibility settles or the 240-second deadline. A failed
+canonical read is unknown, never an empty Inbox. Semantic success remains a separate full
+history judgment. Keep v1/v2 cohorts frozen and label their remaining responsibility and
+unobserved future cost separately; do not pool them with v3 or reactivate their stopped Bots.
+Snoozed work alone is not a successful task. Human history remains committed messages, with decision
+diagnostics separate. Capture the real Group history in the Web Client and inspect console.
+
+## Combined bounded review and restart recovery
+
+Exhaust the two rechecks, restart the isolated Host, edit a required fact, inspect the
+existing draft and read the Group again. A plain recovery remains exhausted. A recovery
+with a current-version, still-unused explicit override can commit only after the fresh
+observation covers every required message and still matches canonical content. A subsequent
+change consumes that override without sending; another restart cannot replenish it.
+Replay a successful override after restart: the same message ID and unchanged canonical
+Source/placement/Admission counts prove deduplication. Inspection with override arguments
+must refuse. Regression: `packages/core/test/group-send-recovery.test.ts`.
 
 During an active Group turn, remove the Bot's membership and interrupt its Host before
 the held result is returned. After restart, send a new neutral Human DM asking only

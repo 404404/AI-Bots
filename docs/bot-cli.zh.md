@@ -163,7 +163,7 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 `group-send-review <channel> --accept` 在本地 Group 启用发送复核；`--off` 关闭，无标志时读取状态。
 该设置不修改唤醒策略。直接调用 `bot-tool <bot> channel_read --args-stdin`，从 `observationIds`
 取得目标群的观察凭据，作为 `observation_id` 传给 `channel_send`。`held` 表示尚未发送：读取变化后，
-携带 `draft_id`、新观察凭据和改写（或保持原文）的 `body` 再提交一次。`drop: true` 配合 `draft_id`
+携带 `draft_id`、新观察凭据和改写（或保持原文）的 `body` 复核，最多两次。`drop: true` 配合 `draft_id`
 和空 `body` 放弃草稿，不会解决 Inbox 事项。`expired`、`refused`、`requires-review` 停止自动发送。
 凭据不能跨 Bot owner 或 Group 使用。
 
@@ -193,6 +193,35 @@ Host 重启后，先读取当前群聊，再用 `review_action:"recover"`、`dra
 `group-delete` 和 `channel-purge-confirm` 无法撤销，必须带 `--confirm`。`channel-history` 列出已删除、内容仍可清除的群组。清除与历史页面一样分两步：`channel-purge-preview` 列出所选 Source Event 将删除的消息、Bot 受理记录、文件和后续效果，并返回短时有效的 `token`；`channel-purge-confirm` 从标准输入读取 `{"token": …}`，针对同一组 Source Event 执行，范围变化时以错误码拒绝。Source Event 从 `channel-history-sources` 中选取，它用返回的 `before` 游标分页。
 
 `channel-media-target` 通过当前 Human Channel 授权取得受检来源媒体，返回其 canonical Host 文件目标。`channel-media-download` 使用与卡片相同的认证附件路径，将原件字节写入新的本地 `--out` 文件，并在 JSON 中返回大小、MIME 和 SHA-256；目标已存在时拒绝覆盖。两条命令只使用 Channel、Source Event 和 attachment，不选择 Bot，也不调用模型；来源撤销仍返回明确错误码。默认上限为 25 MiB。
+
+忙群的草稿初次 held 后最多复核两次。预算耗尽返回 `requires-review`、`budget.exhausted`、
+`draftVersion` 和可选动作；新来源消息不能重置已有草稿预算。需要延后时，不带
+`resolve_inbox_ids` 放弃草稿，再通过既有 `inbox_snooze` 为已观察且未完成的事项设置时间和说明。
+等待中的事项不能标为完成。
+预算耗尽后放弃草稿且没有已观察的同伴让话证据时，`keepOpenInboxIds` 返回原请求的
+Source Event 和群内 Message ID。这些 ID 不会被同次 `resolve_inbox_ids` 顺带结清，
+而会显示在 `inboxResolution.keptOpen`；其它已完成的旁话仍可结清。若选中的 ID 都需保留，
+结果为 `kept-open`。未完成的请求使用 `inbox_snooze` 延后；确已取消或完成的事项可另行
+显式调用 `inbox_resolve`。有依据的同伴让话仍保留正常结清路径，直接 CLI 使用相同检查。
+即使未提供结清 ID 或只结清旁话，也会返回保留原请求并继续处理的指引；结清旁话不代表答案已发送。
+仅因消息持续变化而延后时，`suggestedSnoozeUntil` 提供 Host 当前时间之后 30 秒的
+`inbox_snooze.until_time` 建议值，本身不创建调度；Human 指定的更晚时间或未满足的
+条件优先，取消指令仍终止事项。
+在同一原生 Orchestrator turn 内，放弃耗尽预算的草稿后不能重新发送，返回
+`dropped-exhausted-draft-defer-turn`；后续一轮可以读取最新上下文继续处理。
+独立的直接 CLI 调用不共享原生 turn。
+
+读全要求的上下文后，仍有必要发送的答案可通过同一直接 CLI 传入
+`freshness_override: {"draftVersion":3,"reason":"复核后仍有必要回答"}`，同时传原群的
+`channel_id`、`draft_id`、`observation_id` 和实际 `body`。版本必须使用结果返回的值，不能猜。
+每条预算耗尽草稿只能显式申请继续一次，提交时仍原子核对当前内容。
+`override-context-changed-defer` 表示又有新消息或编辑：尚未发送，本次申请已经用完。
+读完返回内容，不结清未完成事项，放弃草稿后短暂 snooze，恢复时再读最新消息；
+Human 指定的更晚时间或条件仍须遵守。`override-already-attempted-defer` 拒绝重复申请。
+成员、停止/归档、过期、purge 和 owner 检查始终生效。
+`draft-version-changed`、`override-context-not-observed`、`override-requires-exhausted-draft`
+是拒绝结果，不是发送成功。正式 message ID 证明结果，工具 trace 留下选择理由。
+Human 要求等待或取消时不得使用 override。
 
 ### Bot 资料、侧边栏与部件库
 
@@ -850,6 +879,15 @@ deepseekbot release-restart --confirm
 这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
 
 受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。
+
+### 恢复已耗尽复核额度的群聊草稿
+
+Host 重启后先检查草稿、重新读取群聊，再通过同一个
+`bot-tool ... channel_send --args-stdin` 命令同时传入 `review_action: "recover"`、
+`freshness_override`（当前 `draftVersion` 与理由）、新 `observation_id`、原 `draft_id`
+和修正后的正文。恢复不会重置两次复核额度或已消耗的显式继续机会；提交前又有未读变化
+仍会拒绝。成功的显式继续也保留提交回执，重启后以相同意图重试只返回原消息 ID。
+仅检查元数据时不能携带 `freshness_override` 或其他修改参数。
 
 ### 云端 Agent 连接（UAT）
 

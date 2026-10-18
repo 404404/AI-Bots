@@ -61,3 +61,19 @@ The independent #2055 busy-review policy is not introduced by this slice. When c
 must retain its retry/override bounds and explicit stop semantics, with a separate combined
 regression. Mechanical tests and CLI readback do not replace the registered full DSH Session,
 whole-episode cost and conversation evaluation.
+
+## Composition with bounded review
+
+[ADR-0231](0231-busy-group-review-has-an-explicit-progress-boundary.md) persists the
+required observation's Host identity alongside its process-local read serial. Serials
+are compared only within that Host. A fresh observation from a new Host may cover a
+changed required message, but must still include every required ID and pass the same
+canonical content and attachment digest comparison immediately before commit. Recovery
+never resets attempts, version, expiry or the spent-override marker. An exhausted draft
+requires the explicit recovery action and its still-available freshness override together.
+
+An override commit writes the same atomic receipt as an ordinary commit. Returning that
+receipt after response loss consumes no second override and creates no Source Event,
+placement, Admission or action notice. Inspection rejects override arguments: it remains
+a metadata-only operation. Combined runtime qualification is separate from either
+independently frozen model cohort.

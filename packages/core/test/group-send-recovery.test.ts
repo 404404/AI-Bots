@@ -29,12 +29,15 @@ async function fixture(
       bot?: string,
     ): Promise<{
       status?: string;
+      reason?: string;
+      draftVersion: number;
+      budget?: { used: number; limit: number; exhausted: boolean };
       draftId: string;
       messageId: string;
       review: { observationId: string };
       drafts: { state: string; draftId: string; messageId: string }[];
     }>;
-    read(): Promise<string>;
+    read(args?: Record<string, unknown>): Promise<string>;
   }) => Promise<void>,
 ) {
   const home = createTempRoot('group-send-recovery-');
@@ -76,8 +79,8 @@ async function fixture(
         });
       },
       tool: async (args, bot) => JSON.parse(JSON.stringify(await call('channel_send', args, bot))),
-      read: async () =>
-        JSON.parse(JSON.stringify(await call('channel_read', {}))).observationIds[group.id],
+      read: async (args = {}) =>
+        JSON.parse(JSON.stringify(await call('channel_read', args))).observationIds[group.id],
     });
   } finally {
     await core.runtime.close();
@@ -86,6 +89,291 @@ async function fixture(
 }
 
 describe('explicit Group draft recovery and commit receipts', () => {
+  it('recovers an exhausted draft with a fresh post-restart read without resetting its budget', async () => {
+    await fixture(async (f) => {
+      await f.human('request', 'Meet at 10:00');
+      for (let i = 0; i < 12; i++) await f.read();
+      let held = await f.tool({ body: 'Meet at 10:00' });
+      for (let i = 0; i < 2; i++) {
+        const observation = await f.read();
+        await f.human(`chatter-${i}`, `Unrelated context ${i}`);
+        held = await f.tool({
+          body: 'Meet at 10:00',
+          draft_id: held.draftId,
+          observation_id: observation,
+        });
+      }
+      expect(held).toMatchObject({
+        status: 'requires-review',
+        budget: { used: 2, limit: 2, exhausted: true },
+      });
+      const before = f
+        .current()
+        .runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId)!;
+      expect(before.requiredObservationSerial).toBeGreaterThan(10);
+      await f.restart();
+      const db = attachOperationalModule(
+        f.current().operationalDatabase,
+        'recovery-correction-test',
+      );
+      db.transaction((database) =>
+        database
+          .prepare(`UPDATE source_events SET body = 'Meet at 11:00'
+        WHERE source_event_id = (SELECT source_event_id FROM channel_placements WHERE channel_id = ? AND message_id = 'request')`)
+          .run(f.channelId),
+      );
+      const args = {
+        body: 'Meet at 11:00',
+        review_action: 'recover',
+        draft_id: held.draftId,
+        observation_id: await f.read(),
+      };
+      expect(await f.tool(args)).toMatchObject({
+        reason: 'retry-budget-exhausted',
+        draftVersion: held.draftVersion,
+      });
+      const inspection = await f.tool({
+        body: '',
+        review_action: 'inspect',
+        draft_id: held.draftId,
+      });
+      expect(inspection).toMatchObject({
+        drafts: [{ state: 'requires-review', requiresRecovery: true }],
+      });
+      const override = {
+        ...args,
+        freshness_override: {
+          draftVersion: held.draftVersion,
+          reason: 'The corrected notice is still requested.',
+        },
+      };
+      const committed = await f.tool(override);
+      expect(committed.status).toBe('committed');
+      const record = f
+        .current()
+        .runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId)!;
+      expect(record).toMatchObject({
+        expires: before.expires,
+        attempts: 2,
+        version: held.draftVersion + 1,
+        committed: { messageId: committed.messageId },
+        override: { count: 1, messageId: committed.messageId },
+        original: { body: '' },
+        current: { body: '' },
+        basis: [],
+        initialBasis: [],
+      });
+      expect(record.boot).not.toBe(before.boot);
+      expect(record.recoveredAt).toBeDefined();
+      const counts = () =>
+        attachOperationalModule(f.current().operationalDatabase, 'recovery-count-test').read(
+          (database) =>
+            ['source_events', 'channel_placements', 'inbox_admissions'].map(
+              (table) => database.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()!.n,
+            ),
+        );
+      const canonicalCounts = counts();
+      await f.restart();
+      expect(await f.tool(override)).toMatchObject({
+        status: 'committed',
+        messageId: committed.messageId,
+      });
+      expect(counts()).toEqual(canonicalCounts);
+      expect(await f.tool({ ...override, body: 'Different intent' })).toMatchObject({
+        reason: 'draft-commit-content-changed',
+      });
+      expect(counts()).toEqual(canonicalCounts);
+      expect(
+        f.current().runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId)!
+          .override,
+      ).toEqual(record.override);
+    });
+  });
+
+  it('does not replenish a spent override after another restart', async () => {
+    await fixture(async (f) => {
+      await f.human('request', 'Meet at 10:00');
+      let held = await f.tool({ body: 'Meet at 10:00' });
+      for (let i = 0; i < 2; i++) {
+        const observation = await f.read();
+        await f.human(`chatter-${i}`, `Context ${i}`);
+        held = await f.tool({
+          body: 'Meet at 10:00',
+          draft_id: held.draftId,
+          observation_id: observation,
+        });
+      }
+      await f.restart();
+      const observation = await f.read();
+      await f.human('correction', 'Meet at 11:00 instead');
+      const refused = await f.tool({
+        body: 'Meet at 10:00',
+        review_action: 'recover',
+        draft_id: held.draftId,
+        observation_id: observation,
+        freshness_override: {
+          draftVersion: held.draftVersion,
+          reason: 'Notice remains necessary.',
+        },
+      });
+      expect(refused).toMatchObject({
+        reason: 'override-context-changed-defer',
+        budget: { used: 2, limit: 2, exhausted: true },
+      });
+      const spent = f
+        .current()
+        .runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId)!;
+      await f.restart();
+      expect(
+        await f.tool({
+          body: 'Meet at 11:00',
+          review_action: 'recover',
+          draft_id: held.draftId,
+          observation_id: await f.read(),
+          freshness_override: { draftVersion: refused.draftVersion, reason: 'Corrected notice.' },
+        }),
+      ).toMatchObject({ reason: 'override-already-attempted-defer' });
+      expect(
+        f.current().runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId),
+      ).toMatchObject({
+        expires: spent.expires,
+        attempts: 2,
+        version: spent.version,
+        overrideAttemptedAt: spent.overrideAttemptedAt,
+      });
+      expect(
+        f
+          .current()
+          .channels.readMessages(f.channelId)
+          .filter((m) => m.author.kind === 'bot'),
+      ).toHaveLength(0);
+    });
+  });
+
+  it('refuses an incomplete recovery override observation and inspection with mutation arguments', async () => {
+    await fixture(async (f) => {
+      await f.human('request', 'Meet at 10:00');
+      let held = await f.tool({ body: 'Meet at 10:00' });
+      for (let i = 0; i < 2; i++) {
+        const observation = await f.read();
+        await f.human(`chatter-${i}`, `Context ${i}`);
+        held = await f.tool({
+          body: 'Meet at 10:00',
+          draft_id: held.draftId,
+          observation_id: observation,
+        });
+      }
+      await f.restart();
+      const freshness_override = { draftVersion: held.draftVersion, reason: 'Still requested.' };
+      await expect(
+        f.tool({ body: '', review_action: 'inspect', draft_id: held.draftId, freshness_override }),
+      ).rejects.toThrow('draft inspection cannot');
+      expect(
+        await f.tool({
+          body: 'Meet at 10:00',
+          review_action: 'recover',
+          draft_id: held.draftId,
+          observation_id: await f.read({ limit: 1 }),
+          freshness_override,
+        }),
+      ).toMatchObject({ reason: 'override-context-not-observed' });
+      const still = f
+        .current()
+        .runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId)!;
+      expect(still.overrideAttemptedAt).toBeUndefined();
+      expect(still.attempts).toBe(2);
+    });
+  });
+
+  it.each(['stop', 'expiry', 'revoke'] as const)(
+    'cannot use recovery plus override to bypass %s',
+    async (fault) => {
+      await fixture(async (f) => {
+        await f.human('request', 'Meet at 10:00');
+        let held = await f.tool({ body: 'Meet at 10:00' });
+        for (let i = 0; i < 2; i++) {
+          const observation = await f.read();
+          await f.human(`chatter-${i}`, `Context ${i}`);
+          held = await f.tool({
+            body: 'Meet at 10:00',
+            draft_id: held.draftId,
+            observation_id: observation,
+          });
+        }
+        if (fault === 'stop') await f.current().runtime.stopBot!('ada');
+        if (fault === 'expiry')
+          attachOperationalModule(
+            f.current().operationalDatabase,
+            'exhausted-expiry-test',
+          ).transaction((database) =>
+            database
+              .prepare(
+                "UPDATE group_send_review_drafts SET record_json = json_set(record_json, '$.expires', 0) WHERE id = ?",
+              )
+              .run(held.draftId),
+          );
+        if (fault === 'revoke') f.current().channels.removeGroupMember(f.channelId, 'ada');
+        await f.restart();
+        const args = {
+          body: 'Meet at 10:00',
+          review_action: 'recover',
+          draft_id: held.draftId,
+          observation_id: fault === 'revoke' ? 'unavailable' : await f.read(),
+          freshness_override: { draftVersion: held.draftVersion, reason: 'Still requested.' },
+        };
+        if (fault === 'revoke') await expect(f.tool(args)).rejects.toThrow(/not a member/);
+        else
+          expect(await f.tool(args)).toMatchObject({
+            reason: fault === 'expiry' ? 'draft-expired' : 'draft-terminal',
+          });
+        expect(
+          f
+            .current()
+            .channels.readMessages(f.channelId)
+            .filter((m) => m.author.kind === 'bot'),
+        ).toHaveLength(0);
+      });
+    },
+  );
+
+  it('can use its remaining recheck after an incomplete recovery read without replacing the draft', async () => {
+    await fixture(async (f) => {
+      await f.human('request', 'Meet at 10:00');
+      const held = await f.tool({ body: 'Meet at 10:00' });
+      await f.restart();
+      await f.human('correction', 'Meet at 11:00');
+      const partial = await f.read({ text: 'Meet at 10:00' });
+      expect(
+        await f.tool({
+          body: 'Meet at 10:00',
+          review_action: 'recover',
+          draft_id: held.draftId,
+          observation_id: partial,
+        }),
+      ).toMatchObject({
+        status: 'held',
+        draftId: held.draftId,
+        budget: { used: 1, limit: 2, exhausted: false },
+      });
+      const complete = await f.read();
+      const sent = await f.tool({
+        body: 'Meet at 11:00',
+        draft_id: held.draftId,
+        observation_id: complete,
+      });
+      expect(sent.status).toBe('committed');
+      expect(
+        f.current().runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId),
+      ).toMatchObject({ attempts: 2, committed: { messageId: sent.messageId } });
+      expect(
+        f
+          .current()
+          .channels.readMessages(f.channelId)
+          .filter((m) => m.author.kind === 'bot'),
+      ).toEqual([expect.objectContaining({ id: sent.messageId, body: 'Meet at 11:00' })]);
+    });
+  });
+
   it('holds recovery when an attachment changes after the fresh observation', async () => {
     await fixture(async (f) => {
       const ref = await f.current().attachments.upload({
@@ -113,7 +401,8 @@ describe('explicit Group draft recovery and commit receipts', () => {
           observation_id: observation,
         }),
       ).toMatchObject({
-        status: 'requires-review',
+        status: 'held',
+        budget: { used: 1, limit: 2, exhausted: false },
         changedMessageIds: ['attachment-request'],
       });
       expect(
@@ -122,6 +411,15 @@ describe('explicit Group draft recovery and commit receipts', () => {
           .channels.readMessages(f.channelId)
           .filter((m) => m.author.kind === 'bot'),
       ).toHaveLength(0);
+      const sent = await f.tool({
+        body: 'Meet at 11:00',
+        draft_id: held.draftId,
+        observation_id: await f.read(),
+      });
+      expect(sent.status).toBe('committed');
+      expect(
+        f.current().runtime.groupSendReview!.inspect('direct:ada', f.channelId, held.draftId),
+      ).toMatchObject({ attempts: 2, committed: { messageId: sent.messageId } });
     });
   });
 
@@ -166,7 +464,7 @@ describe('explicit Group draft recovery and commit receipts', () => {
           draft_id: held.draftId,
           observation_id: observation,
         }),
-      ).toMatchObject({ status: 'requires-review' });
+      ).toMatchObject({ status: 'held', budget: { used: 1, limit: 2, exhausted: false } });
       expect(
         f
           .current()

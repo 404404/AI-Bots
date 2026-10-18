@@ -113,6 +113,7 @@ export function providerUsage(home, slugs) {
           'inbox_resolve',
           'inbox_read',
           'inbox_list',
+          'inbox_snooze',
         ].includes(data.name);
         toolCalls.push({
           seq: event.seq,
