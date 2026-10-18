@@ -1077,7 +1077,7 @@ Source Event 与选定 Bot 身份。现有 scoped Shell broker 每次调用生�
 owner；Assignment Runtime 保留 Session Ownership、单一 Tob Workspace Grant、正常 Report/
 Request 生命周期与撤销检查。续接保留原目标，每次读取重新检查来源、Assignment、Grant 与
 目标生命周期；读取内容不会扩大权限。结果标明 Bot/文件/完整 SHA、修订状态与 partial/
-unavailable。见 [ADR-0228](../adr/0228-tob-assignments-read-selected-memory-through-scoped-cli.md)
+unavailable。见 [ADR-0231](../adr/0231-tob-assignments-read-selected-memory-through-scoped-cli.md)
 与 [CLI 指南](../bot-cli.zh.md#tob-assignment-memory-只读查询)。
 
 委托 Memory Assignment 的每次 Shell 调用只接受一条字面的 `deepseekbot` 命令。受限 Consumer

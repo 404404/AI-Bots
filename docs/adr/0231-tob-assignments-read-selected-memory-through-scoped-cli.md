@@ -1,4 +1,4 @@
-# ADR-0228: Tob Assignments read selected Memory through a scoped CLI
+# ADR-0231: Tob Assignments read selected Memory through a scoped CLI
 
 - Status: Accepted for the read-only slice in #2091
 - Date: 2026-10-18

@@ -732,7 +732,7 @@ per invocation and no administrative Host token. Memory remains the query owner;
 retains Session Ownership, its single Tob Workspace Grant, normal Report/Request lifecycle and
 revocation checks. Resuming retains the original targets. Every read rechecks source, Assignment,
 Grant and target lifecycle; retrieved text never expands authority. Results name Bot/file/full SHA,
-revision status and partial/unavailable state. See [ADR-0228](../adr/0228-tob-assignments-read-selected-memory-through-scoped-cli.md)
+revision status and partial/unavailable state. See [ADR-0231](../adr/0231-tob-assignments-read-selected-memory-through-scoped-cli.md)
 and the [CLI guide](../bot-cli.md#tob-assignment-memory-reading).
 
 Delegated Memory Assignments accept one literal `deepseekbot` command per Shell call. This restricted
