@@ -68,4 +68,23 @@ class StreamRevealViewTest {
     assertEquals(835, parent.measuredWidth)
     assertEquals(200, parent.measuredHeight)
   }
+
+  @Test fun delayedFinalParagraphKeepsItsReactManagedSize() {
+    val parent = container()
+    parent.layout(0, 0, 835, 0)
+    val text = TextView(RuntimeEnvironment.getApplication()).apply {
+      this.text = "最后一段：REPLAY_COMPLETE。"
+    }
+    parent.addView(text)
+    val width = View.MeasureSpec.makeMeasureSpec(835, View.MeasureSpec.EXACTLY)
+    val height = View.MeasureSpec.makeMeasureSpec(65, View.MeasureSpec.EXACTLY)
+    text.measure(width, height)
+    text.layout(0, 0, 835, 65)
+    // A delayed committed suffix mounts after the rest of the Markdown bubble.
+    parent.measure(width, height)
+    parent.layout(0, 0, 835, 65)
+    assertEquals(Rect(0, 0, 835, 65), Rect(text.left, text.top, text.right, text.bottom))
+    assertEquals(835, text.measuredWidth)
+    assertEquals(65, text.measuredHeight)
+  }
 }

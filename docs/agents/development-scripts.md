@@ -53,6 +53,8 @@ Run `node scripts/ci-plan.mjs --base origin/main` to print the plan and the exac
 | `tsdown*.config.ts`                                                                                       | Full suite          | Yes       | Bundle configs                                               |
 | `scripts/stylex-plugin.mjs`                                                                               | Full suite          | Yes       | StyleX transform used by every test                          |
 | `.github/workflows/verify.yml`                                                                            | Full suite          | Yes       | The verify workflow itself                                   |
+| `.github/workflows/npm-release.yml`                                                                       | Full suite          | Yes       | Release verification and package gates                       |
+| `scripts/published-product-provider.json`                                                                 | Full suite          | Yes       | Published Provider reuse qualification                       |
 | `scripts/ci-plan.mjs`                                                                                     | Full suite          | Yes       | This test plan                                               |
 | `packages/core/src/**`                                                                                    | Related tests       | Yes       | Core source; the docs site also reads it for reference pages |
 | `packages/*/src/**`                                                                                       | Related tests       |           | Package source                                               |
@@ -154,3 +156,30 @@ For `pnpm slides:build`, each deck supplies `apps/presentations/slides/<id>/inde
 - `node scripts/e2e-mobile-sim.mjs` (Mac) installs the phone app on its own erased iOS Simulator (rebuilding only when the native fingerprint changes), pairs it with two isolated Hosts by deep link, switches computers and opens notifications delivered with `xcrun simctl push`, including a real Tool approval (needs a model; `--no-approval` skips it). See [the mobile README](../../apps/mobile/README.md#drive-it-on-the-ios-simulator-mac).
 - The other `scripts/e2e-*.mjs` files are issue-specific installed-profile regressions for Channel, Group, Assignment, roster, composer, and tool approval behavior. Their associated Issue and the [development loop](../client-bridge.md) define prerequisites. `scripts/e2e-harvest.mjs` boots its own Profile and requires a real model; `--keep` leaves the isolated home for inspection.
 - `scripts/probe-computer-*.mjs` exercise Computer export and shared viewing paths against the installed Host. Use isolated Profiles and review the corresponding Issues [#154](https://github.com/BotHarness/BotHarness/issues/154) and [#150](https://github.com/BotHarness/BotHarness/issues/150) before running them.
+
+### Release verification reuse
+
+Main verification is isolated by source commit, so a later main push cannot cancel the commit
+selected for release. PR verification still cancels obsolete runs for the same PR. The concurrency
+key also includes the caller workflow, keeping normal verification separate from release fallback.
+
+The npm release workflow checks tag ancestry and looks for a successful `verify.yml` push run on
+that exact SHA. It waits for an existing run, then calls the same reusable verification workflow if
+no success is available. Tag-push context selects the full three-shard test plan, including the
+normal static, docs, mobile and Host smoke gates. Failed or cancelled verification blocks packing;
+a skipped fallback permits packing only when exact-SHA reuse succeeded.
+
+The package build, frozen release plan, supported-DSH fresh installation checks and Human
+`npm-release` environment approval remain required. Reusing source verification never substitutes
+for qualification of the exact tarballs that will be published.
+
+### Published Provider reuse
+
+Product preparation uses `scripts/published-product-provider.json` to verify an already
+published Provider before reusing its exact registry archive. It records the independently
+verified package integrity, upstream source, runtime file digest/count and qualification run.
+After publishing a new Provider with the product, refresh this record from the frozen inventory
+and registry readback before preparing later product releases. A different runtime or registry
+archive still fails closed; an unpublished Provider continues through first-publication preparation.
+The historical `scripts/provider-release-plan.json` belongs to the separate standalone Provider
+publication workflow and is not the product's reuse authority.

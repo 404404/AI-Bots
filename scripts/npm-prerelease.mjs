@@ -19,7 +19,11 @@ import {
   parseProductComposition,
   verifyProductComposition,
 } from './packaged-profile.mjs';
-import { providerReleasePlan, verifyProviderArchive } from './npm-provider-release.mjs';
+import { verifyProviderArchive } from './npm-provider-release.mjs';
+
+export const publishedProductProvider = Object.freeze(
+  JSON.parse(readFileSync(new URL('./published-product-provider.json', import.meta.url), 'utf8')),
+);
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 export const publicationOrder = [
@@ -303,7 +307,7 @@ export async function reusePublishedProvider(
       if (!response.ok) throw new Error(`Provider archive download failed: ${response.status}`);
       return Buffer.from(await response.arrayBuffer());
     },
-    plan = providerReleasePlan,
+    plan = publishedProductProvider,
   } = {},
 ) {
   const inventory = verifiedProductArtifacts(directory);

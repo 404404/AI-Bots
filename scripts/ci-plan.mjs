@@ -37,6 +37,8 @@ export const RULES = [
   full('tsdown*.config.ts', 'Bundle configs'),
   full('scripts/stylex-plugin.mjs', 'StyleX transform used by every test'),
   full(WORKFLOW, 'The verify workflow itself'),
+  full('.github/workflows/npm-release.yml', 'Release verification and package gates'),
+  full('scripts/published-product-provider.json', 'Published Provider reuse qualification'),
   full('scripts/ci-plan.mjs', 'This test plan'),
   related(
     'packages/core/src/**',

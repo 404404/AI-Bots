@@ -37,8 +37,8 @@ const repo = {
   [DOCS_SITE_TEST]: 'const docs = resolve(ROOT, "apps/docs");',
   'apps/docs/src/pages/index.astro': '',
   'scripts/test/workflow.test.mjs':
-    "const workflow = new URL('../../.github/workflows/npm-release.yml', import.meta.url);",
-  '.github/workflows/npm-release.yml': '',
+    "const workflow = new URL('../../.github/workflows/npm-provider-release.yml', import.meta.url);",
+  '.github/workflows/npm-provider-release.yml': '',
   '.github/workflows/verify.yml': '',
   '.github/pr-screenshots/chip/compare.png': '',
   'changes/1640-chip.md': '',
@@ -140,8 +140,12 @@ describe('CI test plan', () => {
     expect(result.related).toContain('packages/market/test/market-harness.ts');
   });
 
+  it('runs the full plan when release verification gates change', () => {
+    expect(plan(pr('.github/workflows/npm-release.yml')).tests).toBe('full');
+  });
+
   it('selects a test that names a changed file that is not a module', () => {
-    expect(plan(pr('.github/workflows/npm-release.yml')).related).toEqual([
+    expect(plan(pr('.github/workflows/npm-provider-release.yml')).related).toEqual([
       'scripts/test/workflow.test.mjs',
     ]);
   });
