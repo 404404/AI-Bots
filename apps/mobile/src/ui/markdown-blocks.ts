@@ -52,6 +52,7 @@ export function textMarkdownSupported(tokens: Token[]): boolean {
 export interface MarkdownBlock {
   key: number;
   source: string;
+  parsed?: { source: string; tokens: Token[] };
 }
 
 function parseBlocks(source: string, normalized: string) {
@@ -60,7 +61,7 @@ function parseBlocks(source: string, normalized: string) {
     Object.keys(tokens.links).length > 0 ||
     tokens.map((token) => token.raw).join('') !== normalized
   )
-    return { blocks: [{ key: 0, source }], local: false };
+    return { blocks: [{ key: 0, source, parsed: { source, tokens } }], local: false };
   const blocks: MarkdownBlock[] = [];
   let offset = 0;
   let leading = '';
@@ -68,9 +69,17 @@ function parseBlocks(source: string, normalized: string) {
     if (token.type === 'space') {
       const previous = blocks.at(-1);
       if (previous === undefined) leading += token.raw;
-      else previous.source += token.raw;
+      else {
+        previous.source += token.raw;
+        if (previous.parsed !== undefined) previous.parsed.source = previous.source;
+      }
     } else {
-      blocks.push({ key: offset - leading.length, source: leading + token.raw });
+      const source = leading + token.raw;
+      blocks.push({
+        key: offset - leading.length,
+        source,
+        parsed: { source, tokens: [token] },
+      });
       leading = '';
     }
     offset += token.raw.length;
@@ -97,8 +106,13 @@ export function createMarkdownBlocks() {
     else if (offset > 0)
       parsed.blocks = [
         ...blocks.slice(0, retained),
-        ...parsed.blocks.map((block) => ({ key: block.key + offset, source: block.source })),
+        ...parsed.blocks.map((block) => ({ ...block, key: block.key + offset })),
       ];
+    if (local && parsed.local && next.startsWith(normalized))
+      parsed.blocks = parsed.blocks.map((block, index) => {
+        const known = blocks[index];
+        return known?.key === block.key && known.source === block.source ? known : block;
+      });
     previous = source;
     normalized = next;
     blocks = parsed.blocks;

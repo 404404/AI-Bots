@@ -30,7 +30,7 @@ describe('Android Markdown block boundaries', () => {
 
   it('keeps document-wide references together rather than losing definitions', () => {
     const source = '[Read][ref]\n\nAnother paragraph.\n\n[ref]: https://example.com "Title"\n';
-    expect(markdownBlocks(source)).toEqual([{ key: 0, source }]);
+    expect(markdownBlocks(source)).toEqual([expect.objectContaining({ key: 0, source })]);
   });
 
   it('does not split open code, a table, or a loose list at internal blank lines', () => {

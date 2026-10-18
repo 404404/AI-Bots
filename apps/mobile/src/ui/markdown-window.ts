@@ -12,7 +12,11 @@ export function createMarkdownWindow() {
   const fixed = (block: MarkdownBlock) => {
     const known = supported.get(block.key);
     if (known?.source === block.source) return known.supported;
-    const result = textMarkdownSupported(Lexer.lex(block.source, { gfm: true }));
+    const tokens =
+      block.parsed?.source === block.source
+        ? block.parsed.tokens
+        : Lexer.lex(block.source, { gfm: true });
+    const result = textMarkdownSupported(tokens);
     supported.set(block.key, { source: block.source, supported: result });
     return result;
   };

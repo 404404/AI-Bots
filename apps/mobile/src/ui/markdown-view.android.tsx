@@ -2,11 +2,10 @@ import { memo, useMemo, useState } from 'react';
 import { Linking, View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { EnrichedMarkdownText, type LinkPressEvent } from 'react-native-enriched-markdown';
-import { Lexer } from 'marked';
-import remend from 'remend';
 
 import { useDesignTheme } from './design/theme';
-import { createMarkdownBlocks, textMarkdownSupported } from './markdown-blocks';
+import { createMarkdownBlocks, textMarkdownSupported, type MarkdownBlock } from './markdown-blocks';
+import { markdownBlockContent } from './markdown-block-content';
 import { MarkdownText } from './markdown-text';
 import { markdownStyle } from './markdown-style';
 import { space } from './design/tokens';
@@ -17,13 +16,13 @@ const flags = { latexMath: false } as const;
 const openLink = ({ url }: LinkPressEvent) => void Linking.openURL(url).catch(() => undefined);
 
 const MarkdownBlockView = memo(function MarkdownBlockView({
-  source,
+  block,
   color,
   selectable,
   trailing,
   streaming,
 }: {
-  source: string;
+  block: MarkdownBlock;
   color: string;
   selectable: boolean;
   trailing: boolean;
@@ -31,8 +30,10 @@ const MarkdownBlockView = memo(function MarkdownBlockView({
 }) {
   const theme = useDesignTheme();
   const style = useMemo(() => markdownStyle(theme, color), [theme, color]);
-  const markdown = useMemo(() => (streaming ? remend(source) : source), [source, streaming]);
-  const tokens = useMemo(() => Lexer.lex(markdown, { gfm: true }), [markdown]);
+  const { markdown, tokens } = useMemo(
+    () => markdownBlockContent(block, streaming),
+    [block, streaming],
+  );
   if (textMarkdownSupported(tokens))
     return (
       <View style={{ marginBottom: trailing ? space.x3 : 0 }}>
@@ -84,7 +85,7 @@ const MarkdownDocument = memo(function MarkdownDocument({
         {blocks.map((block, index) => (
           <MarkdownBlockView
             key={block.key}
-            source={block.source}
+            block={block}
             color={color ?? theme.color.fg}
             selectable={selectable}
             trailing={index < blocks.length - 1}
@@ -122,7 +123,7 @@ const MarkdownDocument = memo(function MarkdownDocument({
             }}
           >
             <MarkdownBlockView
-              source={part.block.source}
+              block={part.block}
               color={color ?? theme.color.fg}
               selectable={selectable}
               trailing={part.index < blocks.length - 1}

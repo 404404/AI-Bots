@@ -14,6 +14,7 @@ it('relexes only the mutable suffix of a growing document and retains completed 
   expect(after).toEqual(markdownBlocks(prefix + 'Tail grows'));
   expect(lex.mock.calls[0]![0].length).toBeLessThan(100);
   expect(after[0]).toBe(before[0]);
+  expect(after.at(-2)).toBe(before.at(-2));
   expect(after.at(-1)?.key).toBe(before.at(-1)?.key);
 });
 
