@@ -32,3 +32,7 @@ When DSH publishes another 0.2.x version, run installation/startup and critical-
 ## Current review evidence
 
 The 2026-10-18 [compatibility record](../../.github/pr-assets/2168-compatibility/README.md) binds the exact local 1.4.0 artifacts and native Desktop checks to their source revisions. Both final fresh installations passed. After provider credit was restored, the final older-Desktop DM, Assignment file write/read, foreground fork/spawn, background parent delivery and post-restart retained results also passed. Actual Browser/Computer operations and external IM delivery remain separate publication gates; this candidate is not release-qualified.
+
+## Native admission and npm peer matching
+
+The native DSH engine range remains `>=0.2.0-rc.2 <0.3.0-0`; DSH evaluates it with prereleases included. npm peer matching uses different defaults, so product peers additionally declare `|| >=0.2.1-0 <0.3.0-0` for the qualified 0.2.1 prerelease tuple. The separately versioned Provider preserves its broader policy and also names that tuple. The Client Cordis peer is `^4.0.4`, covering both qualified Hosts; development remains pinned to 4.0.5. Tests exercise npm default SemVer separately from native admission. A future unknown prerelease tuple is admitted by native metadata but must have its package-manager peer resolution qualified before release; do not claim a generic npm range proves that gate.

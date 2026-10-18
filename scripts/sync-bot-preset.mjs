@@ -50,7 +50,7 @@ export function botPreset(standard) {
     body = replaceOnce(body, row, `${row}                disabled: true\n`);
   }
   body = body.replace(
-    /          - id: (?:time-context|tool-schedule)\n            name: '[^']+'\n/g,
+    /^ {10}- id: (?:time-context|tool-schedule)\n(?: {12,}[^\n]*(?:\n|$)|[ \t]*\n)*/gm,
     '',
   );
   return body;

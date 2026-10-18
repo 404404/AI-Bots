@@ -96,6 +96,26 @@ describe('PersonaBot agent preset', () => {
     expect(synced(once, sample)).toBe(once);
   });
 
+  it.each(['time-context', 'tool-schedule'])(
+    'removes the complete %s block without modifying neighbors',
+    (id) => {
+      const block = [
+        `          - id: ${id}`,
+        `            name: '@deepseek-ai/dsh-${id}'`,
+        '            config:',
+        '              nested:',
+        '                value: true',
+        '',
+        '            disabled: false',
+        '            isolate:',
+        '              clock: true',
+      ].join('\n');
+      const adjacent = '          - id: tool-ask-user';
+      expect(botPreset(sample.replace(adjacent, `${block}\n${adjacent}`))).toBe(botPreset(sample));
+      expect(botPreset(`${sample}${block}`)).toBe(botPreset(sample) + '\n');
+    },
+  );
+
   it('keeps the native preset loadable at the older supported floor', () => {
     const generated = botPreset(standardPresetSource(root));
     expect(generated).not.toContain('@deepseek-ai/dsh-time-context');

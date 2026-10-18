@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import semver from 'semver';
 import { describe, expect, it } from 'vitest';
-import { productDshRange, productDshVersions } from '../product-artifacts.mjs';
+import { productDshRange, productDshPeerRange, productDshVersions } from '../product-artifacts.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const packages = ['core', 'client', 'deepseekbot', 'browser', 'computer', 'todo'];
@@ -25,9 +25,25 @@ describe('DSH engine declaration', () => {
     for (const name of packages) {
       for (const [peer, range] of Object.entries(manifest(name).peerDependencies ?? {})) {
         if (peer === '@deepseek-ai/dsh' || peer.startsWith('@deepseek-ai/dsh-'))
-          expect(range, `${name}: ${peer}`).toBe(productDshRange);
+          expect(range, `${name}: ${peer}`).toBe(productDshPeerRange);
       }
     }
+  });
+
+  it('accepts qualified native peers under npm default prerelease rules', () => {
+    for (const name of packages) {
+      for (const [peer, range] of Object.entries(manifest(name).peerDependencies ?? {})) {
+        if (peer === '@deepseek-ai/dsh' || peer.startsWith('@deepseek-ai/dsh-')) {
+          for (const version of [...productDshVersions, '0.2.1', '0.2.2'])
+            expect(semver.satisfies(version, range), `${name}: ${peer} ${version}`).toBe(true);
+          for (const version of ['0.2.0-rc.1', '0.3.0-alpha.1', '0.3.0'])
+            expect(semver.satisfies(version, range), `${name}: ${peer} ${version}`).toBe(false);
+        }
+      }
+    }
+    const cordis = manifest('client').peerDependencies['@deepseek-ai/cordis'];
+    for (const version of ['4.0.4', '4.0.5']) expect(semver.satisfies(version, cordis)).toBe(true);
+    expect(semver.satisfies('5.0.0', cordis)).toBe(false);
   });
 
   it('keeps the exact build baseline separate from forward admission', () => {

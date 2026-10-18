@@ -7,6 +7,7 @@ import {
   productDshRange,
   productManifest,
   providerDshRange,
+  providerDshPeerRange,
   providerManifest,
 } from '../product-artifacts.mjs';
 
@@ -66,7 +67,11 @@ describe('DSH native product compatibility preflight', () => {
       peerDependencies: { react: '^18.3.1', '@deepseek-ai/dsh-tools': '0.2.0-rc.1' },
     });
     expect(result.peerDependencies.react).toBe('^18.3.1');
-    expect(result.peerDependencies['@deepseek-ai/dsh-tools']).toBe(providerDshRange);
+    expect(result.peerDependencies['@deepseek-ai/dsh-tools']).toBe(providerDshPeerRange);
+    for (const version of productDshVersions)
+      expect(semver.satisfies(version, result.peerDependencies['@deepseek-ai/dsh-tools'])).toBe(
+        true,
+      );
     expect(result.dsh.compatibility.dsh).toBe(providerDshRange);
   });
 });
