@@ -1,4 +1,12 @@
-import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import {
@@ -85,34 +93,48 @@ export function CreationPanel({
             }}
           >
             <NavigationMaterial rounded />
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ padding: space.x4, gap: space.x4 }}
-            >
-              <Text variant="title" strong>
-                {choosing ? t.chooseCreationTarget : t.createHere}
-              </Text>
-              {!!error && <Text accessibilityRole="alert">{error}</Text>}
-              {choosing ? (
-                <>
-                  {choices.map((target) => (
-                    <Button
-                      key={target.key}
-                      disabled={busy}
-                      label={target.name}
-                      icon={
-                        target.kind === 'computer' ? (
-                          <ComputerIcon color={theme.color.fg} size={theme.type.title.line} />
-                        ) : (
-                          <CloudIcon color={theme.color.fg} size={theme.type.title.line} />
-                        )
-                      }
-                      onPress={() => onPick(choosing, target)}
-                    />
-                  ))}
+            {choosing ? (
+              <FlatList
+                data={choices}
+                keyExtractor={(target) => target.key}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ padding: space.x4, gap: space.x4 }}
+                ListHeaderComponent={
+                  <>
+                    <Text variant="title" strong>
+                      {t.chooseCreationTarget}
+                    </Text>
+                    {!!error && <Text accessibilityRole="alert">{error}</Text>}
+                  </>
+                }
+                ListEmptyComponent={<Text>{t.noCreationTargets}</Text>}
+                ListFooterComponent={
                   <Button label={t.back} disabled={busy} onPress={() => setChoosing(undefined)} />
-                </>
-              ) : (
+                }
+                renderItem={({ item: target }) => (
+                  <Button
+                    disabled={busy}
+                    label={target.name}
+                    icon={
+                      target.kind === 'computer' ? (
+                        <ComputerIcon color={theme.color.fg} size={theme.type.title.line} />
+                      ) : (
+                        <CloudIcon color={theme.color.fg} size={theme.type.title.line} />
+                      )
+                    }
+                    onPress={() => onPick(choosing, target)}
+                  />
+                )}
+              />
+            ) : (
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ padding: space.x4, gap: space.x4 }}
+              >
+                <Text variant="title" strong>
+                  {t.createHere}
+                </Text>
+                {!!error && <Text accessibilityRole="alert">{error}</Text>}
                 <View
                   style={{
                     flexDirection: singleColumn ? 'column' : 'row',
@@ -151,9 +173,10 @@ export function CreationPanel({
                     );
                   })}
                 </View>
-              )}
-              {(choosing ? choices : actions).length === 0 && <Text>{t.noCreationTargets}</Text>}
-            </ScrollView>
+
+                {actions.length === 0 && <Text>{t.noCreationTargets}</Text>}
+              </ScrollView>
+            )}
           </View>
           <Pressable
             accessibilityRole="button"

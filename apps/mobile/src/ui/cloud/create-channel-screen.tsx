@@ -40,7 +40,12 @@ function CreateChannelForm({
   const theme = useDesignTheme();
   const snapshot = useCloudSnapshot();
   const row = snapshot.rows.find((r) => r.config.instanceId === instanceId);
-  const org = row?.organization;
+  // Organization selection publishes an empty slot while refreshing its token.
+  // Keep this source-bound form mounted; the write still requires fresh authority.
+  const [initialOrg] = useState(() =>
+    row?.organization?.organizationId === organizationId ? row.organization : undefined,
+  );
+  const org = row?.organization?.organizationId === organizationId ? row.organization : initialOrg;
   const allowed = org?.organizationId === organizationId && org.role === 'owner';
   const pending = row?.pendingChannelAction;
   const pendingHere =
