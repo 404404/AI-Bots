@@ -116,6 +116,32 @@ describe('shared Memory image format boundary', () => {
     expect(status(svg('', 'width="16385" height="1"'))).toBe('too-large');
     expect(status(svg('', 'width="8000" height="8000"'))).toBe('too-large');
   });
+  it('refuses JPEG marker overflow and empty or incomplete scan headers', () => {
+    expect(status(Uint8Array.of(255, 216, 255, 255, 255, 217))).toBe('unsupported');
+    const jpeg = bytes('blue.jpg');
+    const scan = jpeg.indexOf(Buffer.from([255, 218]));
+    expect(scan).toBeGreaterThan(0);
+    const length = jpeg.readUInt16BE(scan + 2);
+    expect(
+      status(Buffer.concat([jpeg.subarray(0, scan + 2 + length), Buffer.from([255, 217])])),
+    ).toBe('unsupported');
+    const invalid = Buffer.from(jpeg);
+    invalid.writeUInt16BE(2, scan + 2);
+    expect(status(invalid)).toBe('unsupported');
+  });
+  it('bounds CSS fragment expansion across all possible matching elements', () => {
+    const pattern =
+      '<defs><pattern id="p">' + '<rect width="1" height="1"/>'.repeat(150) + '</pattern></defs>';
+    expect(
+      status(
+        svg(
+          '<style>.paint{fill:url(#p)}</style>' +
+            pattern +
+            '<rect class="paint" width="1" height="1"/>'.repeat(150),
+        ),
+      ),
+    ).toBe('too-large');
+  });
   it('refuses truncated raster containers and catches forged dimensions', () => {
     for (const extension of ['png', 'jpg', 'gif', 'webp'])
       expect(status(bytes(`blue.${extension}`).subarray(0, 18))).toBe('unsupported');

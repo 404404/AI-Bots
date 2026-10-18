@@ -289,19 +289,26 @@ try {
       await openFile(`animated.${ext}`);
       await decoded();
       const values = new Set();
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 20; i++) {
         values.add(
           await page.$eval('.bh-memory-commit-view img', (image) => {
             const c = document.createElement('canvas');
-            c.width = c.height = 2;
+            c.width = image.naturalWidth;
+            c.height = image.naturalHeight;
             const x = c.getContext('2d');
             x.drawImage(image, 0, 0);
             return [...x.getImageData(1, 1, 1, 1).data].join(',');
           }),
         );
-        await new Promise((r) => setTimeout(r, 95));
+        await new Promise((r) => setTimeout(r, 65));
       }
-      if (values.size < 2) throw new Error(`Animation did not advance: ${ext}`);
+      const opaque = [...values]
+        .map((value) => value.split(',').map(Number))
+        .filter((pixel) => pixel[3] === 255);
+      if (!opaque.some(([r, , b]) => b > r + 70) || !opaque.some(([r, , b]) => r > b + 70))
+        throw new Error(
+          `Animation did not show both opaque fixture frames: ${ext}: ${[...values]}`,
+        );
       animations[ext] = [...values];
       await capture(`animated-${ext}`);
     }
@@ -416,6 +423,49 @@ try {
       if (!readFileSync(output).equals(fixture('green', ext)))
         throw new Error('Wrong inline bytes');
       exported++;
+    }
+  if (!before)
+    for (const [ext, mime] of formats) {
+      const path = `preview.${ext}`;
+      const git = (...args) => execFileSync('git', ['-C', seed.memory, ...args]);
+      try {
+        git('add', '--', path);
+        writeFileSync(resolve(seed.memory, path), fixture('blue', ext));
+        for (const kind of ['staged', 'unstaged']) {
+          const diff = cli('memory-working-diff', seed.slug, '--path', path, '--kind', kind).images;
+          for (const side of ['before', 'after']) {
+            const image = diff[side];
+            const output = resolve(out, `${kind}-${side}.${ext}`);
+            const receipt = cli(
+              'memory-image',
+              seed.slug,
+              '--path',
+              path,
+              '--image-source',
+              image.source,
+              '--image-revision',
+              image.revision,
+              '--out',
+              output,
+            );
+            const expected =
+              image.source === 'worktree'
+                ? fixture('blue', ext)
+                : git('show', `${image.source === 'index' ? '' : image.source}:${path}`);
+            if (receipt.mime !== mime || !readFileSync(output).equals(expected))
+              throw new Error('Wrong staged/unstaged export');
+            exported++;
+            hashes.push({
+              format: ext,
+              side: `${kind}-${side}`,
+              sha256: createHash('sha256').update(expected).digest('hex'),
+            });
+          }
+        }
+      } finally {
+        git('restore', '--staged', '--', path);
+        writeFileSync(resolve(seed.memory, path), fixture('green', ext));
+      }
     }
   if (forbiddenRequests.length || (await page.evaluate(() => window.svgExecuted === true)))
     throw new Error('SVG escaped image boundary');

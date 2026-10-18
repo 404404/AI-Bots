@@ -2,7 +2,6 @@ import {
   inspectImage,
   ImageFormatError,
   isMemoryImagePath,
-  MAX_SVG_BYTES,
   type ImageMime,
 } from '../media/image-format.js';
 export { isMemoryImagePath };
@@ -152,13 +151,7 @@ export function readMemoryImage(
   git: MemoryGit,
 ): { image: MemoryImage; bytes?: Buffer } {
   const fail = (status: MemoryImage['status']) => ({ image: { source, status } });
-  const result = readMemoryBytes(
-    root,
-    input,
-    source,
-    git,
-    /\.svg$/iu.test(input) ? MAX_SVG_BYTES : MAX_MEMORY_IMAGE_BYTES,
-  );
+  const result = readMemoryBytes(root, input, source, git);
   const bytes = result.bytes;
   if (result.status !== 'ready' || bytes === undefined) return fail(result.status);
   try {

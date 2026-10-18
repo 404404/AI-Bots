@@ -424,6 +424,24 @@ describe('remaining formats through public Memory queries and byte transport', (
     const image = memory.readAccepted('atlas', 'misleading.jpg')!.image!;
     expect(image.mime).toBe('image/gif');
     expect((await get(image, 'misleading.jpg')).headers.get('content-type')).toBe('image/gif');
+    const jpeg = formatFixture('blue.jpg');
+    const padding = Buffer.alloc(65000, 0);
+    const segment = Buffer.alloc(4);
+    segment[0] = 255;
+    segment[1] = 254;
+    segment.writeUInt16BE(padding.length + 2, 2);
+    const large = Buffer.concat([
+      jpeg.subarray(0, 2),
+      ...Array.from({ length: 20 }, () => Buffer.concat([segment, padding])),
+      jpeg.subarray(2),
+    ]);
+    save(large, false, 'misleading.svg');
+    expect(memory.readAccepted('atlas', 'misleading.svg')?.image).toMatchObject({
+      status: 'ready',
+      mime: 'image/jpeg',
+    });
+    save(Buffer.from([255, 216, 255, 255, 255, 217]), false, 'broken.jpg');
+    expect(memory.readAccepted('atlas', 'broken.jpg')?.image?.status).toBe('unsupported');
     writeFileSync(
       join(root, 'unsafe.svg'),
       '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><script>alert(1)</script></svg>',
@@ -431,6 +449,12 @@ describe('remaining formats through public Memory queries and byte transport', (
     expect(memory.readAccepted('atlas', 'unsafe.svg')?.image?.status).toBe('unsupported');
     writeFileSync(join(root, 'huge.svg'), '');
     truncateSync(join(root, 'huge.svg'), 1024 * 1024 + 1);
-    expect(memory.readAccepted('atlas', 'huge.svg')?.image?.status).toBe('too-large');
+    expect(memory.readAccepted('atlas', 'huge.svg')?.image?.status).toBe('unsupported');
+    save(
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg">' + ' '.repeat(1024 * 1024) + '</svg>'),
+      false,
+      'oversize.jpg',
+    );
+    expect(memory.readAccepted('atlas', 'oversize.jpg')?.image?.status).toBe('too-large');
   });
 });

@@ -60,6 +60,7 @@ function svgFormat(bytes: Uint8Array): Pick<ImageFormat, 'width' | 'height'> {
   const nodes: SvgNode[] = [];
   const stack: number[] = [];
   const ids = new Map<string, number>();
+  const stylesheetRefs: string[] = [];
   let dimensions: ReturnType<typeof size> | undefined;
   let cssBytes = 0,
     cssNodes = 0;
@@ -174,7 +175,7 @@ function svgFormat(bytes: Uint8Array): Pick<ImageFormat, 'width' | 'height'> {
   parser.on('cdata', text);
   parser.on('closetag', (tag) => {
     if (tag.local === 'style') {
-      validateCss(css, 'stylesheet', nodes[stack.at(-1)!]!.refs);
+      validateCss(css, 'stylesheet', stylesheetRefs);
       style = false;
     }
     stack.pop();
@@ -206,7 +207,12 @@ function svgFormat(bytes: Uint8Array): Pick<ImageFormat, 'width' | 'height'> {
     memo.set(index, cost);
     return cost;
   };
-  expanded(0, new Set());
+  let expandedNodes = expanded(0, new Set());
+  for (const reference of stylesheetRefs) {
+    const target = ids.get(reference) ?? refuse();
+    expandedNodes += expanded(target, new Set()) * nodes.length;
+    if (expandedNodes > 20000) refuse('too-large');
+  }
   return dimensions;
 }
 
@@ -233,13 +239,27 @@ export function inspectImage(bytes: Uint8Array): ImageFormat {
       dimensions: ImageFormat | undefined;
     while (at + 3 < n) {
       if (b[at++] !== 255) return refuse();
-      while (b[at] === 255) at++;
+      while (at < n && b[at] === 255) at++;
+      if (at + 2 >= n) return refuse();
       const marker = b[at++]!;
-      if (marker === 218) return dimensions ?? refuse();
+      if (marker === 0 || marker === 216 || marker === 217 || (marker >= 208 && marker <= 215))
+        return refuse();
       const length = view.getUint16(at);
-      if (length < 2 || at + length > n) return refuse();
+      if (length < 2 || at + length > n - 2) return refuse();
+      if (marker === 218) {
+        const components = b[at + 2] ?? 0;
+        if (
+          components < 1 ||
+          components > 4 ||
+          length !== 6 + 2 * components ||
+          at + length >= n - 2
+        )
+          return refuse();
+        return dimensions ?? refuse();
+      }
       if (marker >= 192 && marker <= 207 && ![196, 200, 204].includes(marker)) {
-        if (length < 8) return refuse();
+        const components = b[at + 7] ?? 0;
+        if (components < 1 || components > 4 || length !== 8 + 3 * components) return refuse();
         dimensions = format('image/jpeg', 'jpg', view.getUint16(at + 5), view.getUint16(at + 3));
       }
       at += length;
