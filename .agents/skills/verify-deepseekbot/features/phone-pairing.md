@@ -7,6 +7,7 @@ A Human pairs the phone app with their Host by a one-time QR code, and the phone
 - `offer` creates a one-time pairing offer (5 minutes) with a QR code and a `deepseekbot://pair?p=…` link.
 - `pair` redeems the offer once; a second redeem answers `401 offer-invalid`.
 - `manual-input` keeps the empty link field and Pair button above the Android keyboard. A manually scanned or pasted offer registers the phone, loads the Host roster and survives app process restart.
+- `cloud-exit` leaves the native pairing modal before opening Cloud services, so Workspaces exposes a visible, operable drawer.
 - `roster` shows the Host's PersonaBots in the app through the gateway, with the live stream.
 - `restart` keeps the phone connected after a Host restart without pairing again.
 - `devices` lists each phone with its pairing and last-seen time.
@@ -28,6 +29,17 @@ Both journeys own their Host: they launch a fresh instance on a free port, resta
 - **Android (queued Windows runner).** Claim the matching shared lease and open the unpaired development app with Metro running. Run `node scripts/e2e-mobile-pair-android.mjs --serial <serial> --owner <task> --batch <batch> --label keyboard` with an empty field: it focuses the input, asserts that the input and Pair button are above the real IME, and keeps PNG/XML plus JSON proof. Then start an isolated Host, seed a QA Bot and let the Human scan a fresh offer or paste its link. For USB transport, add an explicit ADB reverse mapping and use its phone-side loopback origin in the offer routes; do not expose the operator token. Once paired, run the same journey with `--paired --instance .humanlayer/verify/<name>/instance.json --expect-bot <qa-bot-name> --label paired`. It requires one live device on the isolated Host, checks the visible Host and Bot, restarts the app, and checks both again. No screenshot is taken while a credential field is present. It verifies app restart, not Host restart or revoke. Chinese IMEs may compose injected hardware keys, so the runner does not automate link typing. Never erase a Human's saved pairings to prepare the unpaired check.
 - **Protocol.** `node scripts/e2e-device-pairing.mjs --home <dir> --port <n>` drives the same flow over HTTP and the WebSocket, including a device call under a tailnet Host name and a refused upgrade after revoke.
 - **Web Client.** `node scripts/verify-app.mjs shot devices --name <n> --bot-mode --locale en --click "Bot settings" --click Devices --click-text "Pair a phone" --wait "Pairing QR code"` opens the QR dialog. Without Tailscale both the section and the dialog warn that a physical phone cannot reach the Host.
+
+## Pair modal to Cloud services regression
+
+In the assigned native QA window, use the signed-out app without redeeming a pairing:
+
+1. Cold launch → Join with invitation → Connect a cloud service → Workspaces. Confirm both drawer tabs and a reachable action.
+2. Computers → Pair a new computer → Cloud services → Workspaces. Confirm the drawer is visible above the page; tap Manage cloud services and check it closes the drawer.
+3. Return to Join with invitation, then Connect a computer → Cloud services → Workspaces. This covers the target not already in the stack. Close with a left swipe, then Back must return to Join with invitation without a residual Pair modal.
+4. Capture matched light/dark before/after screenshots. A drawer store reporting `open: true` is insufficient: the native modal can cover the root overlay.
+
+Cloud services exits the pairing form; its unfinished local inputs are not saved. These empty-form navigation checks do not prove in-flight pairing cancellation or return to an already paired Computer. Keep those, Android and physical-device checks separate.
 
 ## Optional phone statistics
 

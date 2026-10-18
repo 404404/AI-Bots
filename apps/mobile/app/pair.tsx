@@ -91,7 +91,7 @@ export default function PairScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
-      <Button label={t.cloud.title} onPress={() => router.push('/cloud-services')} />
+      <Button label={t.cloud.title} onPress={() => router.dismissTo('/cloud-services')} />
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <ConnectionNameField
         value={connectionName}
