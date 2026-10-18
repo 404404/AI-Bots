@@ -4,7 +4,7 @@ Target release: **1.4.0**. This is a preparation plan, not a published release o
 
 ## Admission and qualification are separate
 
-The product declares `>=0.2.0-rc.2 <0.3.0-0` in `engines.dsh`; Host-provided DSH peers use the same range. The development dependencies, lockfile and `productDsh` remain exactly `0.2.1-rc.2`. `productDshVersions` names concrete releases for artifact qualification; it must never be populated with invented future versions or inferred from a broad range.
+The product declares `>=0.2.0-rc.2 <0.3.0-0` in `engines.dsh`; Host-provided DSH peers follow the same admission policy, with an additional explicit 0.2.1 prerelease comparator for npm’s default SemVer matching. The development dependencies, lockfile and `productDsh` remain exactly `0.2.1-rc.2`. `productDshVersions` names concrete releases for artifact qualification; it must never be populated with invented future versions or inferred from a broad range.
 
 DSH's native preflight evaluates ranges with prereleases included. Contract tests therefore exercise representative future 0.2.x RC and stable version strings, without claiming to run those nonexistent releases. Ordinary npm SemVer peer matching may exclude future prerelease tuples; native DSH admission remains the compatibility authority, and real installation through its supported plugin manager is a separate gate. Never recommend `--force`, edits to user compatibility exemptions, or disabling checks as the fix.
 
