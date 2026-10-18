@@ -193,6 +193,7 @@ Source Event 和群内 Message ID。这些 ID 不会被同次 `resolve_inbox_ids
 而会显示在 `inboxResolution.keptOpen`；其它已完成的旁话仍可结清。若选中的 ID 都需保留，
 结果为 `kept-open`。未完成的请求使用 `inbox_snooze` 延后；确已取消或完成的事项可另行
 显式调用 `inbox_resolve`。有依据的同伴让话仍保留正常结清路径，直接 CLI 使用相同检查。
+即使未提供结清 ID 或只结清旁话，也会返回保留原请求并继续处理的指引；结清旁话不代表答案已发送。
 仅因消息持续变化而延后时，`suggestedSnoozeUntil` 提供 Host 当前时间之后 30 秒的
 `inbox_snooze.until_time` 建议值，本身不创建调度；Human 指定的更晚时间或未满足的
 条件优先，取消指令仍终止事项。

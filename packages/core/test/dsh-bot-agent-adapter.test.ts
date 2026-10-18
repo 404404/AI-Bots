@@ -243,6 +243,18 @@ describe('explicit Inbox completion with channel_send', () => {
         keepOpenInboxIds: ['request-source', 'request-message'],
       });
       const args = { body: '', channel_id: 'group', draft_id: 'draft', drop: true };
+      const continuation = {
+        reason: 'exhausted-drop-keeps-original-work-open',
+        instruction: expect.stringContaining('Use inbox_snooze'),
+      };
+      expect(await call(args)).toMatchObject({
+        inboxResolution: { outcome: 'not-requested', ...continuation },
+      });
+      expect(resolve).not.toHaveBeenCalled();
+      expect(await call({ ...args, resolve_inbox_ids: ['fyi'] })).toMatchObject({
+        inboxResolution: { resolved: ['fyi'], ...continuation },
+      });
+      resolve.mockClear();
       expect(
         await call({ ...args, resolve_inbox_ids: ['request-source', 'request-message', 'fyi'] }),
       ).toMatchObject({

@@ -8,11 +8,11 @@ section: Added
 - Deferred Inbox work keeps its deadline wake when new Group context arrives without waking the Bot, so an unobserved update cannot silently cancel recovery ([#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)).
 - Exhausted review offers a short Host-time snooze suggestion for message contention while preserving Human deadlines and conditions, with guidance to batch completed background work ([#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)).
 
-- Dropping an exhausted review keeps its original request open instead of carrying unsuccessful-send completion IDs into the drop; completed FYI and observed peer-yield completion remain available ([#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)).
+- Dropping an exhausted review keeps its original request open instead of carrying unsuccessful-send completion IDs into the drop; completed FYI and observed peer-yield completion remain available. Continuation guidance remains present even when only FYI is completed or no completion IDs are supplied ([#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)).
 
 ## zh
 
 - 群聊回复最多复核两次，随后明确选择放弃、通过 Inbox 延后，或有依据地申请继续一次；期间出现未读消息会拒绝申请，避免发送过时答案，保留原目标、权限检查和决策记录（[#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)）。
 - 未唤醒 Bot 的群聊新消息不再取消 Inbox 延后事项的到期唤醒，避免未读更新使待办无法恢复（[#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)）。
 - 预算耗尽时提供基于 Host 时间的短暂延后建议，保留 Human 的时间和条件约束，并引导批量结清已完成的背景事项（[#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)）。
-- 因复核耗尽而放弃草稿时，保留原请求的待办状态，避免沿用发送参数误将未完成请求结清；已完成旁话与有依据的同伴让话仍可正常结清（[#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)）。
+- 因复核耗尽而放弃草稿时，保留原请求的待办状态，避免沿用发送参数误将未完成请求结清；已完成旁话与有依据的同伴让话仍可正常结清。只结清旁话或未提供结清 ID 时，也保留继续处理原请求的指引（[#2055](https://github.com/BotHarness/DeepSeekBot/issues/2055)）。

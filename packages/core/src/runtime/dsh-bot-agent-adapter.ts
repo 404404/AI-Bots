@@ -3605,6 +3605,13 @@ class DshBotAgentAdapter implements BotAgentAdapter {
               'channel_send: resolve_inbox_ids requires 1–200 IDs, an Inbox, and a send or drop (not a reaction)',
             );
           const resolveCompleted = (keepOpenIds: string[] = []) => {
+            const continuation = keepOpenIds.length
+              ? {
+                  reason: 'exhausted-drop-keeps-original-work-open',
+                  instruction:
+                    'The original request remains open because this draft was not sent. Use inbox_snooze to continue with fresh context. Do not resolve it as done before a later channel_send returns a committed messageId. Only a cancellation or other independently completed responsibility permits resolving without sending.',
+                }
+              : {};
             if (args.resolve_inbox_ids === undefined)
               return active.run.triage === undefined
                 ? {}
@@ -3613,18 +3620,15 @@ class DshBotAgentAdapter implements BotAgentAdapter {
                       outcome: 'not-requested',
                       instruction:
                         'This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open.',
+                      ...continuation,
                     },
                   };
             const ids = args.resolve_inbox_ids.filter((id) => !keepOpenIds.includes(id));
             const keptOpen = args.resolve_inbox_ids.filter((id) => keepOpenIds.includes(id));
-            const preservation = keptOpen.length
-              ? {
-                  keptOpen,
-                  reason: 'exhausted-drop-keeps-original-work-open',
-                  instruction:
-                    'The original request remains open because this draft was not sent. Use inbox_snooze to continue with fresh context. Only if the request is cancelled or otherwise complete, explicitly inbox_resolve it separately.',
-                }
-              : {};
+            const preservation = {
+              ...continuation,
+              ...(keptOpen.length ? { keptOpen } : {}),
+            };
             if (ids.length === 0)
               return { inboxResolution: { outcome: 'kept-open', ...preservation } };
             try {

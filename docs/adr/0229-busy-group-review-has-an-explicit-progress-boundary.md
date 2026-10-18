@@ -66,6 +66,11 @@ still resolves selected completed background work. This guards the send-to-drop 
 it does not classify natural language or forbid a later explicit `inbox_resolve` for work the
 model judges cancelled or complete. Observed peer yield preserves the normal explicit
 completion path. No new Inbox state or scheduler is introduced.
+The continuation instruction also accompanies a drop with no completion IDs or only FYI IDs:
+the model must not mistake successful background cleanup for a delivered original answer.
+It names the later committed Message ID as delivery evidence, while preserving cancellation
+and independently completed work. This guidance does not turn semantic completion into a
+Host-enforced classifier.
 
 The owner records actor, reason, observation, version, count and committed message identity
 in its existing draft JSON in the same transaction as the formal Channel append. A successful

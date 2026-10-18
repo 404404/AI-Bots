@@ -207,6 +207,8 @@ completed FYI items can still resolve. If all selected IDs must stay open, the o
 `kept-open`. Continue unfinished work through `inbox_snooze`; if it is genuinely cancelled
 or otherwise complete, resolve it explicitly with `inbox_resolve`. Peer-yield completion
 remains available. Direct CLI uses the same checks.
+The unfinished-request continuation instruction is returned even when completion IDs are
+omitted or contain only FYI: resolving background work does not prove the answer was sent.
 Inside a native Orchestrator turn, dropping an exhausted draft fences replacement sends
 until the turn ends (`dropped-exhausted-draft-defer-turn`). A later turn can read fresh
 context and proceed. Separate direct CLI invocations do not share a native turn.

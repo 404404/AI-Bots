@@ -147,6 +147,8 @@ Group Message and completed FYI. Require both original aliases in `keepOpenInbox
 `inboxResolution.keptOpen`, the original Admission still unresolved, and only the FYI
 resolved. A later explicit completion decision remains possible; observed peer-yield drops
 must still compose normal completion. Check the actual Inbox owner, not only the Tool text.
+Repeat without completion IDs and with only FYI IDs: both return the unfinished-request
+continuation instruction, without resolving the original request.
 Wrong owner, wrong version, incomplete observation, revoked membership, stopped/archived Bot,
 expiry and purge must refuse without a new message.
 
