@@ -3,6 +3,7 @@ import {
   IconChevronDownOutlineRegular,
   IconChevronLeftOutlineRegular,
   IconRefreshOutlineRegular,
+  IconWrapLinesOutlineRegular,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BotHarnessTranslate } from './locale.js';
@@ -36,6 +37,31 @@ export function MemoryViewIconButton({
   );
 }
 
+export function MemoryDiffWrapButton({
+  wrap,
+  onToggle,
+  t,
+}: {
+  wrap: boolean;
+  onToggle: () => void;
+  t: BotHarnessTranslate;
+}): ReactElement {
+  const label = t('memory.autoWrap');
+  return (
+    <Tooltip label={label} side="bottom" delayMs={500}>
+      <button
+        type="button"
+        className="bh-memory-view-icon-button bh-memory-diff-wrap-button"
+        aria-label={label}
+        aria-pressed={wrap}
+        onClick={onToggle}
+      >
+        <IconWrapLinesOutlineRegular size={16} />
+      </button>
+    </Tooltip>
+  );
+}
+
 export function MemoryDiffFile({
   path,
   status,
@@ -49,6 +75,7 @@ export function MemoryDiffFile({
   oldLineLabel,
   newLineLabel,
   action,
+  wrap = true,
 }: {
   path: string;
   status: string;
@@ -62,6 +89,7 @@ export function MemoryDiffFile({
   oldLineLabel: string;
   newLineLabel: string;
   action?: ReactNode;
+  wrap?: boolean;
 }): ReactElement {
   const model = parseMemoryDiff(diff);
   const added = model.lines.filter((line) => line.kind === 'add').length;
@@ -92,7 +120,7 @@ export function MemoryDiffFile({
         <div className="bh-memory-diff-empty">{emptyLabel}</div>
       ) : (
         <div className="bh-memory-diff-scroll">
-          <table className="bh-memory-diff-table" aria-label={label}>
+          <table className="bh-memory-diff-table" aria-label={label} data-wrap={wrap}>
             <tbody>
               {model.lines.map((line, index) =>
                 line.kind === 'hunk' || line.kind === 'note' ? (

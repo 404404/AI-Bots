@@ -3,7 +3,11 @@ import { useState, type ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
 import type { MemoryWorkingChange, MemoryWorkingDiff } from './bridge.js';
 import type { BotHarnessTranslate } from './locale.js';
-import { MemoryDiffFile, MemoryViewIconButton } from './memory-reader-parts.js';
+import {
+  MemoryDiffFile,
+  MemoryDiffWrapButton,
+  MemoryViewIconButton,
+} from './memory-reader-parts.js';
 import {
   MemoryCurrentFileOpenButton,
   MemoryFileActionButton,
@@ -140,6 +144,7 @@ export function MemoryWorkingView({
 }: CommonProps & { change: MemoryWorkingChange; botSlug?: string | undefined }): ReactElement {
   const [revision, setRevision] = useState(0);
   const [detail, setDetail] = useState<MemoryWorkingDiff>();
+  const [wrap, setWrap] = useState(true);
   const [error, setError] = useState<string>();
 
   const mount = useMountedResource<HTMLDivElement>(() => {
@@ -207,6 +212,7 @@ export function MemoryWorkingView({
       <div className="bh-memory-commit-header">
         <MemoryViewIconButton action="backToChat" onClick={onClose} t={t} />
         <strong>{t('memory.workingDiff')}</strong>
+        <MemoryDiffWrapButton wrap={wrap} onToggle={() => setWrap((value) => !value)} t={t} />
         <MemoryViewIconButton
           action="refresh"
           onClick={() => setRevision((value) => value + 1)}
@@ -241,6 +247,7 @@ export function MemoryWorkingView({
             )
           }
           diff={detail.diff}
+          wrap={wrap}
           label={t('memory.workingDiff')}
           binary={detail.binary}
           binaryLabel={t('memory.binaryPreview')}

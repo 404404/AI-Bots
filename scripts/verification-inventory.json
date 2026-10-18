@@ -538,6 +538,14 @@
       "gap": null
     },
     {
+      "id": "memory.diff-wrap",
+      "label": "Read working and commit diffs with compact gutters and default-on switchable wrapping",
+      "source": "packages/client/src/client/memory-reader-parts.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-diffs.md",
+      "task": 2213,
+      "gap": null
+    },
+    {
       "id": "desktop.memory.png-preview",
       "label": "Read and compare version-bound Memory PNG images with real Web decoding and CLI export",
       "source": "packages/client/src/client/memory-image-view.tsx",
@@ -1804,6 +1812,14 @@
       "reason": "Read-only isolated Profile helper for Group episode completion. Counts all unresolved observed/snoozed Admissions plus the acting original across Channels, excludes unopened silent peer copies, bounds evidence not totals, refuses missing canonical facts.",
       "task": 2055,
       "sha256": "03b1f454483c43716fd11e784dee3ffaf08d3b1fc4cea2a15d1ca6ca325de5eb"
+    },
+    {
+      "path": "scripts/e2e-memory-diff-wrap.mjs",
+      "category": "mapped",
+      "behaviors": ["memory.diff-wrap"],
+      "reason": "Isolated synthetic Memory repository; real Client checks both diff entry points, wrap/scroll switching, five-digit gutters, narrow panes, light/dark themes and browser errors.",
+      "task": 2213,
+      "sha256": "d0777a9dfd7bb30de5a23f03be842de9fde975a391e64a32c61123a44103294e"
     },
     {
       "path": "scripts/e2e-memory-images.mjs",

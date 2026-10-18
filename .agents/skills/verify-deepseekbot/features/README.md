@@ -57,6 +57,7 @@ checks only reference integrity: update and run the affected paths when the prod
 
 | Cloud Agent Host connections | yes for Agent response; no for credential management | isolated Host plus real TOB UAT, two Hosts for collaboration | [cloud-host-connections.md](cloud-host-connections.md) |
 | IM conversation mirroring and forwarding settings | no for settings; yes for a model-generated reply | `verify-app` settings path; real IM destination required for delivery | [im-conversation-mirroring.md](im-conversation-mirroring.md) |
+| Memory working and commit diffs | no | `scripts/e2e-memory-diff-wrap.mjs` | [memory-diffs.md](memory-diffs.md) |
 
 ## Not mapped yet
 

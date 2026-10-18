@@ -5614,11 +5614,15 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 pre.bh-memory-commit-code { padding: ${space.x3} ${space.x5}; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bh-memory-diff-scroll { overflow: auto; background: var(--dsw-alias-bg-base); }
 .bh-memory-diff-table { width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0; font-family: var(--dsw-font-markdown-code-block-font-family); font-size: ${text.metaSize}; line-height: ${text.bodyLine}; white-space: pre; }
+.bh-memory-diff-table[data-wrap="true"] { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bh-memory-diff-wrap-button[aria-pressed="true"] { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); }
+.bh-memory-commit-header > .bh-memory-diff-wrap-button { margin-left: auto; }
+.bh-memory-commit-header > .bh-memory-diff-wrap-button + .bh-memory-view-icon-button { margin-left: 0; }
 .bh-memory-diff-table td { box-sizing: border-box; height: 24px; padding: ${space.x1} 0; vertical-align: top; }
-.bh-memory-diff-number { width: 1%; min-width: 34px; padding: ${space.x1} ${space.x2} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: right; user-select: none; }
+.bh-memory-diff-number { width: 1px; white-space: pre; min-width: 34px; padding: ${space.x1} ${space.x2} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: right; user-select: none; }
 .bh-memory-diff-number:first-child { position: relative; padding-left: ${space.x3} !important; }
 .bh-memory-diff-number:nth-child(2) { border-right: ${border.hairline} solid ${color.divider}; }
-.bh-memory-diff-sign { width: 1%; min-width: 20px; padding: ${space.x1} ${space.x1} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: center; user-select: none; }
+.bh-memory-diff-sign { width: 1px; white-space: pre; min-width: 20px; padding: ${space.x1} ${space.x1} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: center; user-select: none; }
 .bh-memory-diff-content { padding: ${space.x1} ${space.x5} ${space.x1} ${space.x2} !important; color: var(--dsw-alias-label-primary); }
 .bh-memory-diff-hunk td, .bh-memory-diff-note td { padding: ${space.x2} ${space.x4} !important; color: var(--dsw-alias-label-secondary); }
 .bh-memory-diff-hunk { background: color-mix(in srgb, var(--bh-accent) 6%, var(--dsw-alias-bg-base)); }

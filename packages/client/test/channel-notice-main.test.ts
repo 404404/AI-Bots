@@ -53,6 +53,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPaperclipOutlineRegular: stub,
     IconPlusOutline16: stub,
     IconRefreshOutlineRegular: stub,
+    IconWrapLinesOutlineRegular: stub,
     IconSearchOutline16: stub,
     IconSendOutline16: stub,
     IconSendOutlineRegular: stub,
