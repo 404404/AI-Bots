@@ -375,3 +375,25 @@ export function AssignmentConcurrencyRow({
     />
   );
 }
+
+export function AutoFoldLongMessagesSetting({
+  t,
+  useBotModePrefs,
+  setAutoFoldLongMessages,
+}: BotModeSettingRowProps): ReactElement {
+  const enabled = useBotModePrefs((value) => value.autoFoldLongMessages);
+  return (
+    <SettingsRow
+      title={t('message.autoFold.title')}
+      description={t('message.autoFold.description')}
+      data={{ 'data-setting': 'auto-fold-long-messages' }}
+      control={
+        <Switch
+          checked={enabled}
+          onChange={setAutoFoldLongMessages}
+          label={t('message.autoFold.title')}
+        />
+      }
+    />
+  );
+}

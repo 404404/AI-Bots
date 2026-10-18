@@ -905,14 +905,15 @@ deepseekbot model-preset-apply <bot-id> --preset <preset-id> --expected-revision
 
 预设的创建、读取、更新和应用复用既有 preset owner。受限 `model-preset-create --name <name>` 与 `model-preset-update <preset-id> --name <name> --expected-revision <revision>` 必须显式提供 `--orchestrator-provider`、`--orchestrator-model`、`--assignment-provider`、`--assignment-model`；可选 effort 参数和包含 `{"assignmentModels":[...]}` 的 `--plan-stdin` 沿用既有格式。受限更新要求完整的目标名称与模型路由，Human 命令仍可局部更新。应用预设同时校验 Bot 和 preset revision。当前没有预设删除 owner 或命令，本片不新增删除操作，也不宣称完整 preset CRUD。
 
-`settings` 列出支持的命名空间；`settings botharness-client` 只返回以下四个实时运行字段：
+`settings` 列出支持的命名空间；`settings botharness-client` 返回以下实时运行及消息显示字段：
 
-| 字段                         | 接受值      |
-| ---------------------------- | ----------- |
-| `assignmentConcurrencyLimit` | 1–32 的整数 |
-| `showBotSessions`            | 布尔值      |
-| `showApprovalReviewSessions` | 布尔值      |
-| `developerMode`              | 布尔值      |
+| 字段                         | 接受值                                            |
+| ---------------------------- | ------------------------------------------------- |
+| `assignmentConcurrencyLimit` | 1–32 的整数                                       |
+| `showBotSessions`            | 布尔值                                            |
+| `showApprovalReviewSessions` | 布尔值                                            |
+| `developerMode`              | 布尔值                                            |
+| `autoFoldLongMessages`       | 布尔值；默认 `false`，必须显式指定 `--scope host` |
 
 `settings-set botharness-client --patch-stdin` 必须配合成对的审核参数；previous-value JSON 必须与 patch 使用完全一致的字段。`settings agent-default-model` 读取默认模型路由，通过 `home-model-set` 修改。未知字段、受限 allowlist 之外的命名空间和直接 patch 默认模型均拒绝，不绕过 owner 编辑配置文件。#2094 补充的设备命名空间见下文。本片范围不包含动效、主题、语言、快捷键、布局等其他偏好。
 
@@ -1042,6 +1043,7 @@ printf '%s' '{"notifications":false}' | deepseekbot client-preferences-set CLIEN
 | 动效：system／reduce／full                                  | `botharness-client.motionPreference`，Host／Profile       | `settings`／`settings-set botharness-client --scope host`                                                                             |
 | Bot 图标：mascot／simple／blob／bot                         | `botharness-client.botIcon`，Host／Profile                | 同一 settings 路径                                                                                                                    |
 | 发送键：enter／shift-enter／mod-enter                       | `botharness-client.sendKey`，Host／Profile                | 同一 settings 路径                                                                                                                    |
+| 自动折叠长消息（默认关闭）                                  | `botharness-client.autoFoldLongMessages`，Host／Profile   | 同一 settings 路径；经审核的 `settings-set botharness-client --scope host`                                                            |
 | 自动接受群邀请                                              | `botharness-client.autoAcceptGroupInvites`，Host／Profile | 同一 settings 路径                                                                                                                    |
 | Human 默认名称                                              | 现有 Human identity owner，本地 Human／Profile            | `human-name`；受限命令 `human-name-set (--name TEXT                                                                                   | --clear) --expected-state FINGERPRINT` |
 | IM 默认收集、唤醒、阈值、身份启用、微信输入状态及新会话策略 | 现有 messaging owner，Host／Profile 内按平台              | `messaging-defaults PLATFORM`；`messaging-defaults-set PLATFORM --input-stdin`，使用观察到的 `expectedRevision` 与既有完整输入 schema |

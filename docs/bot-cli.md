@@ -914,14 +914,15 @@ deepseekbot model-preset-apply <bot-id> --preset <preset-id> --expected-revision
 
 Preset create/read/update/application reuse the existing preset owner. Scoped `model-preset-create --name <name>` and `model-preset-update <preset-id> --name <name> --expected-revision <revision>` require explicit `--orchestrator-provider`, `--orchestrator-model`, `--assignment-provider` and `--assignment-model`; optional effort flags and `--plan-stdin` with `{"assignmentModels":[...]}` use the existing shapes. Scoped updates require the complete intended name and routes even though the Human command supports partial updates. Applying a preset checks both Bot and preset revisions. There is no preset deletion owner or command; this slice does not invent one or claim complete preset CRUD.
 
-`settings` discovers the supported namespaces; `settings botharness-client` returns exactly four live runtime fields:
+`settings` discovers the supported namespaces; `settings botharness-client` returns the supported live runtime and message-display fields:
 
-| Field                        | Accepted value |
-| ---------------------------- | -------------- |
-| `assignmentConcurrencyLimit` | Integer 1–32   |
-| `showBotSessions`            | Boolean        |
-| `showApprovalReviewSessions` | Boolean        |
-| `developerMode`              | Boolean        |
+| Field                        | Accepted value                                    |
+| ---------------------------- | ------------------------------------------------- |
+| `assignmentConcurrencyLimit` | Integer 1–32                                      |
+| `showBotSessions`            | Boolean                                           |
+| `showApprovalReviewSessions` | Boolean                                           |
+| `developerMode`              | Boolean                                           |
+| `autoFoldLongMessages`       | Boolean; default `false`, explicit `--scope host` |
 
 Use the paired reviewed flags with `settings-set botharness-client --patch-stdin`; the previous-value JSON must name exactly the patched fields. `settings agent-default-model` reads the default route; change it with `home-model-set`. Unknown fields, namespaces outside the explicit scoped allowlist and direct default-model patches refuse rather than editing configuration files. The device namespaces added by #2094 are listed below. Motion, theme, language, shortcuts, layout and other preferences are not implied by this scope.
 
@@ -1066,6 +1067,7 @@ A write changes exactly one preference and compares the current owner snapshot a
 | Motion: system / reduce / full                                                                      | `botharness-client.motionPreference`, Host/Profile                              | `settings` / `settings-set botharness-client --scope host`                                                                                         |
 | Bot icon: mascot / simple / blob / bot                                                              | `botharness-client.botIcon`, Host/Profile                                       | Same settings path                                                                                                                                 |
 | Send key: enter / shift-enter / mod-enter                                                           | `botharness-client.sendKey`, Host/Profile                                       | Same settings path                                                                                                                                 |
+| Automatically fold long messages (off by default)                                                   | `botharness-client.autoFoldLongMessages`, Host/Profile                          | Same settings path; reviewed `settings-set botharness-client --scope host`                                                                         |
 | Automatically accept Group invitations                                                              | `botharness-client.autoAcceptGroupInvites`, Host/Profile                        | Same settings path                                                                                                                                 |
 | Default Human name                                                                                  | Existing Human identity owner, local Human/Profile                              | `human-name`; scoped `human-name-set (--name TEXT                                                                                                  | --clear) --expected-state FINGERPRINT` |
 | IM defaults: collection, wake, thresholds, enabled identity, WeChat typing, new-conversation policy | Existing messaging owner, Host/Profile per platform                             | `messaging-defaults PLATFORM`; `messaging-defaults-set PLATFORM --input-stdin` with observed `expectedRevision` and existing complete input schema |

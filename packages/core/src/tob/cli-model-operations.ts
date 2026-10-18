@@ -57,6 +57,7 @@ const runtimeFields = [
   'botIcon',
   'sendKey',
   'autoAcceptGroupInvites',
+  'autoFoldLongMessages',
 ];
 const routeFields = ['provider', 'model', 'reasoningEffort'];
 function object(value: unknown): Record<string, unknown> {
@@ -141,6 +142,7 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
       value.botIcon ??= 'mascot';
       value.sendKey ??= 'enter';
       value.autoAcceptGroupInvites ??= true;
+      value.autoFoldLongMessages ??= false;
     } else if (ns === 'ui-theme') value.preference ??= 'system';
     else if (ns === 'locale') value.preference ??= null;
     else if (ns === 'agent-default-model') {
@@ -301,7 +303,13 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
       if (
         (appearance ||
           Object.keys(object(args.patch ?? {})).some((key) =>
-            ['motionPreference', 'botIcon', 'sendKey', 'autoAcceptGroupInvites'].includes(key),
+            [
+              'motionPreference',
+              'botIcon',
+              'sendKey',
+              'autoAcceptGroupInvites',
+              'autoFoldLongMessages',
+            ].includes(key),
           )) &&
         args.scope !== 'host'
       )

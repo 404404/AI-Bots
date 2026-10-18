@@ -1036,3 +1036,170 @@ it('does not reapply Dockview options while geometry changes', async () => {
     expect.objectContaining({ theme: expect.objectContaining({ gap: 12 }) }),
   );
 });
+
+it('restores Home and nested global panel geometry without remounting surviving content', async () => {
+  const { WorkspaceContext, WORKSPACE_CHANNELS, WORKSPACE_HOME } =
+    await import('../src/client/workspace-context.js');
+  let dock: import('dockview-react').DockviewApi | undefined;
+  const registry = createDockPanelRegistry();
+  for (const [id, title] of [
+    [CHANNEL_BODY_PANEL, 'Messages'],
+    [WORKSPACE_CHANNELS, 'Channels'],
+    [WORKSPACE_HOME, 'Home'],
+    ['computer', 'Computer'],
+  ])
+    registry.register({
+      id: id!,
+      title: title!,
+      scope: 'global',
+      component: () => createElement('input', { 'data-content': id, defaultValue: title }),
+    });
+  const view = () =>
+    createElement(
+      WorkspaceContext.Provider,
+      {
+        value: {
+          rail: (api) => {
+            dock = api;
+            return createElement('nav');
+          },
+        },
+      },
+      createElement(ChannelDock, {
+        body: createElement('input', { 'data-message-draft': '' }),
+        panels: registry.panels(),
+        registry,
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view()));
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(CHANNEL_BODY_PANEL);
+    dock!.getPanel(CHANNEL_BODY_PANEL)!.api.moveTo({ position: 'right' });
+    registry.open('computer');
+  });
+  await settle();
+  act(() => {
+    dock!.getPanel('computer')!.api.moveTo({
+      group: dock!.getPanel(CHANNEL_BODY_PANEL)!.group,
+      position: 'bottom',
+    });
+    dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 265 });
+    dock!.getPanel(WORKSPACE_HOME)!.group.api.setSize({ width: 550 });
+    dock!.getPanel('computer')!.group.api.setSize({ height: 330 });
+  });
+  await settle();
+  const grid = () =>
+    JSON.parse(
+      JSON.stringify(dock!.toJSON().grid, (_key, value) =>
+        typeof value === 'number' ? Math.round(value * 1e6) / 1e6 : value,
+      ),
+    );
+  const before = grid();
+  const draft = host.querySelector<HTMLInputElement>('[data-message-draft]')!;
+  draft.value = 'unsent message';
+  const computer = dock!.getPanel('computer');
+  await click(`[data-dock-header="${WORKSPACE_HOME}"] [data-panel-hide]`);
+  expect(registry.isOpen(WORKSPACE_HOME)).toBe(false);
+  act(() => registry.open(WORKSPACE_HOME));
+  await settle();
+  expect(grid()).toEqual(before);
+  expect(host.querySelector('[data-message-draft]')).toBe(draft);
+  expect(draft.value).toBe('unsent message');
+  expect(dock!.getPanel('computer')).toBe(computer);
+
+  act(() => {
+    registry.close(WORKSPACE_HOME);
+    registry.close(CHANNEL_BODY_PANEL);
+    registry.open(WORKSPACE_HOME);
+    registry.open(CHANNEL_BODY_PANEL);
+  });
+  await settle();
+  expect(grid()).toEqual(before);
+
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  expect(readChannelDock(storage)?.visibilityLayout).toBeDefined();
+  act(() => root.unmount());
+  root = createRoot(host);
+  act(() => root.render(view()));
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(WORKSPACE_HOME);
+  });
+  await settle();
+  expect(grid()).toEqual(before);
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  act(() =>
+    registry.editLayout(
+      { type: 'size', panel: WORKSPACE_CHANNELS, width: 0.25, height: 1 },
+      JSON.stringify(registry.readLayout()),
+    ),
+  );
+  await settle();
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+});
+
+it('keeps Messages breadcrumb content presentational and profile actions outside its hide control', async () => {
+  const { WorkspaceContext } = await import('../src/client/workspace-context.js');
+  const registry = createDockPanelRegistry();
+  const profile = vi.fn();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  act(() =>
+    root.render(
+      createElement(
+        WorkspaceContext.Provider,
+        { value: { rail: () => createElement('nav') } },
+        createElement(ChannelDock, {
+          body: createElement('p', null, 'Message content'),
+          panels: registry.panels(),
+          registry,
+          entryProps,
+          shows: () => true,
+          t: zhTranslate,
+          storage,
+          header: {
+            title: 'Ada',
+            icon: createElement('span', { role: 'img', 'aria-label': 'Ada avatar' }),
+            actions: createElement(
+              'button',
+              { onClick: profile, 'data-profile-action': '' },
+              'Profile',
+            ),
+          },
+        }),
+      ),
+    ),
+  );
+  await settle();
+  const header = host.querySelector(`[data-dock-header="${CHANNEL_BODY_PANEL}"]`)!;
+  const hide = header.querySelector<HTMLButtonElement>('[data-panel-hide]')!;
+  const profileButton = header.querySelector<HTMLButtonElement>('[data-profile-action]')!;
+  expect(hide.textContent).toContain('Messages');
+  expect(hide.textContent).toContain('Ada');
+  expect(hide.querySelector('button, a, [role="button"]')).toBeNull();
+  expect(hide.contains(profileButton)).toBe(false);
+  act(() => {
+    profileButton.click();
+  });
+  await settle();
+  expect(profile).toHaveBeenCalledOnce();
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+  act(() => hide.click());
+  await settle();
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(false);
+});

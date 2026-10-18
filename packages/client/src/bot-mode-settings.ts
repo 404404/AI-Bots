@@ -32,6 +32,10 @@ export const DEFAULT_BOT_MODE_SHOW_APPROVAL_REVIEW_SESSIONS = false;
 
 export const BOT_MODE_SEND_KEY_FIELD = 'sendKey';
 
+export const BOT_MODE_AUTO_FOLD_LONG_MESSAGES_FIELD = 'autoFoldLongMessages';
+
+export const DEFAULT_BOT_MODE_AUTO_FOLD_LONG_MESSAGES = false;
+
 export const BOT_MODE_SORT_MODES = ['updated', 'manual'] as const;
 
 export const BOT_MODE_SEND_KEYS = ['enter', 'shift-enter', 'mod-enter'] as const;
@@ -77,6 +81,7 @@ export function isBotModeSendKey(value: unknown): value is BotModeSendKey {
 export interface BotModeSettings {
   assignmentConcurrencyLimit?: number;
   autoAcceptGroupInvites?: boolean;
+  autoFoldLongMessages?: boolean;
   developerMode: boolean;
   showBotSessions?: boolean;
   showApprovalReviewSessions?: boolean;

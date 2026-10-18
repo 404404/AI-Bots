@@ -13,6 +13,8 @@ describe('@botharness/ui host half', () => {
     expect(defaults.botIcon.get()).toBe('mascot');
     expect(defaults.developerMode.get()).toBe(false);
     expect(defaults.autoAcceptGroupInvites.get()).toBe(true);
+    expect(defaults.autoFoldLongMessages.get()).toBe(false);
+    expect(Config({ autoFoldLongMessages: true }).autoFoldLongMessages.get()).toBe(true);
     expect(defaults.motionPreference.get()).toBe('system');
     expect(defaults.sortMode.get()).toBe('updated');
     expect(defaults.sortModes.get()).toEqual({});

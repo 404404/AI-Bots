@@ -16,6 +16,7 @@ import {
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import { PersonaBotAvatar } from './avatar.js';
+import { useTobName } from './tob-presentation.js';
 import { attentionCount } from './activity-attention.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -241,6 +242,7 @@ export function WindowCompanionView({
   actions,
 }: WindowCompanionViewProps): ReactElement | null {
   const view = useSyncExternalStore(companion.subscribe, companion.getSnapshot);
+  const botName = useTobName(view.selection?.botId, view.bot?.name ?? '');
   const latest = useRef(view);
   latest.current = view;
   const audio = useRef(sound);
@@ -647,7 +649,7 @@ export function WindowCompanionView({
       ) : null}
       <section
         {...hooked('bh-companion', styles.companion)}
-        aria-label={t('companion.label', { name: bot.name })}
+        aria-label={t('companion.label', { name: botName })}
         data-bh-tour="companion"
         data-reading={view.reading}
         data-static={bot.paused}
@@ -872,7 +874,7 @@ export function WindowCompanionView({
             transform: `scale(${1 + point.squash}, ${1 - point.squash})`,
           }}
           data-facing={facing ?? 'saved'}
-          aria-label={t('companion.drag', { name: bot.name })}
+          aria-label={t('companion.drag', { name: botName })}
           aria-description={condition}
           title={condition}
           onClick={() => {
@@ -942,7 +944,7 @@ export function WindowCompanionView({
         >
           <PersonaBotAvatar
             personaBotId={bot.slug}
-            name={bot.name}
+            name={botName}
             size={96}
             src={bot.avatar}
             appearance={bot.appearance}

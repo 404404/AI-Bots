@@ -110,7 +110,11 @@ export interface PersonaBotRegistry {
   defaultMemoryDirFor(slug: string): string;
   setMemoryDir(slug: string, memoryDir: string | undefined): UpdatePersonaBotResult;
   update(slug: string, patch: PersonaBotPatch): UpdatePersonaBotResult;
-  setAppearance(slug: string, recipe: unknown): UpdatePersonaBotResult;
+  setAppearance(
+    slug: string,
+    recipe: unknown,
+    origin?: 'custom' | 'default',
+  ): UpdatePersonaBotResult;
   setBanner(slug: string, banner: unknown): UpdatePersonaBotResult;
   setPrimaryColor(slug: string, choice: unknown): UpdatePersonaBotResult;
   retainedRecordBody(slug: string): string | undefined;
@@ -196,6 +200,8 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       createdAt: record.createdAt,
     };
     for (const key of [
+      'displayNameCustomized',
+      'avatarCustomized',
       'roles',
       'tag',
       'description',
@@ -675,6 +681,7 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
         const displayName = patch.displayName.trim();
         if (displayName.length === 0) return { ok: false, reason: 'invalid-input' };
         record.displayName = displayName;
+        if (isTob(port, slug)) record.displayNameCustomized = true;
       }
       if (patch.roles !== undefined) {
         if (!Array.isArray(patch.roles) || !patch.roles.every((role) => typeof role === 'string')) {
@@ -689,7 +696,13 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       if (!applyOptionalText(record, 'avatar', patch.avatar)) {
         return { ok: false, reason: 'invalid-input' };
       }
-      if (patch.avatar !== undefined) delete record.appearance;
+      if (patch.avatar !== undefined) {
+        delete record.appearance;
+        if (isTob(port, slug)) {
+          if (record.avatar) record.avatarCustomized = true;
+          else delete record.avatarCustomized;
+        }
+      }
       applyOptionalText(record, 'model', patch.model);
       applyOptionalText(record, 'preset', patch.preset);
       if (patch.workspaces !== undefined) {
@@ -712,12 +725,13 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
         syncDescriptor(record);
       return { ok: true, record };
     },
-    setAppearance(slug, recipe) {
+    setAppearance(slug, recipe, origin = 'custom') {
       const record = active(slug);
       if (record === undefined) return { ok: false, reason: 'not-found' };
       const derived = deriveAvatarAppearance(recipe);
       if (derived === undefined) return { ok: false, reason: 'invalid-input' };
       const updated = { ...record, ...derived };
+      if (isTob(port, slug) && origin === 'custom') updated.avatarCustomized = true;
       write(updated);
       syncDescriptor(updated);
       capture('avatar_edited');

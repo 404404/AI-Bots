@@ -3,6 +3,7 @@ import { AppearanceSection } from './appearance-settings.js';
 import { KeyboardSettings, setWorkShortcutNotice } from './keyboard-settings.js';
 import { DesktopNotificationSetting } from './notification-settings.js';
 import { createElement } from 'react';
+import { bindTobPresentation } from './tob-presentation.js';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
 import { registerWorkspaceShortcuts, migrateWorkShortcut } from './workspace-shortcuts.js';
 import type {} from '@deepseek-ai/dsh-client-shortcuts/client';
@@ -277,6 +278,22 @@ export function apply(ctx: ClientContext): void {
     };
   }, 'botharness: independent Window Companion owner');
   const prefs = new BotModePrefs(storage);
+  ctx.effect(
+    () =>
+      bindTobPresentation({
+        bot: (slug) => store.getSnapshot().bots.find((bot) => bot.slug === slug),
+        icon: () => prefs.source.getSnapshot().botIcon,
+        subscribe(listener) {
+          const offStore = store.subscribe(listener);
+          const offPrefs = prefs.source.subscribe(listener);
+          return () => {
+            offStore();
+            offPrefs();
+          };
+        },
+      }),
+    'botharness: Tob presentation',
+  );
   const botFolderGroups = createSnapshotStore<readonly BotSessionGroup[]>([]);
   const botFolderHost = createSnapshotStore<HTMLElement | null>(null);
   let botFolderMount: NativeBotFolderMount | undefined;
@@ -467,7 +484,7 @@ export function apply(ctx: ClientContext): void {
         ),
       ),
     exitBotMode: () => ctx.layout.selectPanel(null),
-    openBotSettings: () => botSettings.open(),
+    openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
   };
 
   ctx.effect(() =>
@@ -535,6 +552,11 @@ export function apply(ctx: ClientContext): void {
     return mountMotionPolicyAttribute(prefs.source, document.documentElement);
   }, 'botharness: motion policy boundary');
   ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), 'botharness: dictionaries');
+  ctx.effect(() => {
+    const reconcile = () => store.setDefaultTobName(t('tob.defaultName'));
+    reconcile();
+    return ctx.locale.subscribe(reconcile);
+  }, 'botharness: localized Tob name');
   ctx.effect(() => {
     if (typeof document === 'undefined') return () => {};
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -971,7 +993,7 @@ export function apply(ctx: ClientContext): void {
           order: 25,
           label: () => t('settings.nav'),
           locale: LOCALE_NS,
-          inject: () => ({ openBotSettings: () => botSettings.open() }),
+          inject: () => ({ openBotSettings: (sectionId?: string) => botSettings.open(sectionId) }),
         },
         DshBotSettingsItem,
       ),
@@ -1035,7 +1057,7 @@ export function apply(ctx: ClientContext): void {
           workspace,
           ...botModePrefsFace(prefs),
           exitBotMode: () => ctx.layout.selectPanel(null),
-          openBotSettings: () => botSettings.open(),
+          openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
         }),
       },
       MobileBotPanel,
@@ -1121,7 +1143,7 @@ export function apply(ctx: ClientContext): void {
             ...botModePrefsFace(prefs),
             exitBotMode: () => ctx.layout.selectPanel(null),
             toggleSidebar: () => ctx.layout.toggleSidebar(),
-            openBotSettings: () => botSettings.open(),
+            openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
           }),
         },
         BotModeSidebar,

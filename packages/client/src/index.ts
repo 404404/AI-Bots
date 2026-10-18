@@ -5,6 +5,7 @@ import { stampReleaseComponent } from '../../core/src/release/component.js';
 
 import {
   BOT_MODE_ICONS,
+  DEFAULT_BOT_MODE_AUTO_FOLD_LONG_MESSAGES,
   DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT,
   BOT_MODE_MOTION_PREFERENCES,
   BOT_MODE_SEND_KEYS,
@@ -30,6 +31,7 @@ stampReleaseComponent(apply, import.meta.url);
 export interface Config {
   assignmentConcurrencyLimit: Volatile<number>;
   autoAcceptGroupInvites: Volatile<boolean>;
+  autoFoldLongMessages: Volatile<boolean>;
   developerMode: Volatile<boolean>;
   showBotSessions: Volatile<boolean>;
   showApprovalReviewSessions: Volatile<boolean>;
@@ -48,6 +50,9 @@ export const Config: Schema<Partial<BotModeSettings>, Config> = Schema.object({
     .default(DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT)
     .volatile(),
   autoAcceptGroupInvites: Schema.boolean().default(DEFAULT_BOT_MODE_GROUP_AUTO_ACCEPT).volatile(),
+  autoFoldLongMessages: Schema.boolean()
+    .default(DEFAULT_BOT_MODE_AUTO_FOLD_LONG_MESSAGES)
+    .volatile(),
   developerMode: Schema.boolean().default(DEFAULT_BOT_MODE_DEVELOPER).volatile(),
   showBotSessions: Schema.boolean().default(DEFAULT_BOT_MODE_SHOW_BOT_SESSIONS).volatile(),
   showApprovalReviewSessions: Schema.boolean()

@@ -58,6 +58,7 @@ import {
   pruneChannelDock,
   dockPanelGap,
   readChannelDock,
+  restoreDockVisibility,
   resolveDefaultPosition,
   resolveDockPosition,
   writeChannelDock,
@@ -315,7 +316,14 @@ function ChannelMessageContent(): ReactElement {
             style={{ width: `${members.ratio * 100}%` }}
           >
             <PanelHeader
+              icon={
+                <ChannelSidebarIcon
+                  name={filesOpen ? 'file' : dock.panels.get(detailEntryId)?.icon}
+                />
+              }
               label={detailLabel}
+              hideLabel={dock.t('dock.close', { label: detailLabel })}
+              onHide={closeDetail}
               badge={
                 !filesOpen && DetailBadge && detailProps ? (
                   <DetailBadge {...detailProps} />
@@ -487,6 +495,8 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
     <div className="bh-dock-header" data-dock-header={entryId} {...contextMenu.triggerProps}>
       {contextMenu.menu}
       <PanelHeader
+        onHide={dock.rail || entryId !== CHANNEL_BODY_PANEL ? () => dock.close(panelId) : undefined}
+        hideLabel={closeLabel}
         icon={<ChannelSidebarIcon name={panel.icon} />}
         label={
           entryId === CHANNEL_BODY_PANEL && dock.header ? (
@@ -808,6 +818,8 @@ export function ChannelDock({
   const [runtimes, setRuntimes] = useState<ReadonlyMap<string, EntryRuntime>>(new Map());
   const unregistered = useRef<import('dockview-react').SerializedDockview['panels']>({});
   const parked = useRef<Record<string, DockPosition & { missing?: boolean }>>({});
+  const visibilityLayout = useRef<import('dockview-react').SerializedDockview>();
+  const restoringVisibility = useRef(false);
   const byId = useMemo(() => new Map(panels.map((panel) => [panel.id, panel])), [panels]);
   const known = useRef(byId);
   known.current = byId;
@@ -881,6 +893,7 @@ export function ChannelDock({
             panels: { ...unregistered.current, ...target.toJSON().panels },
           },
           parked: parked.current,
+          visibilityLayout: visibilityLayout.current,
           gap: gapRef.current,
           order: orderRef.current,
           hiddenControls: hiddenControlsRef.current,
@@ -920,11 +933,42 @@ export function ChannelDock({
     target: DockviewApi,
     panel: DockPanelRegistration,
     remembered: DockPosition | undefined,
-  ) => restoreEntryPanel(target, panel, remembered, workspace ? gapRef.current : 0);
+  ) => {
+    const restored = restoreDockVisibility(visibilityLayout.current, target.toJSON(), panel.id);
+    if (restored && !target.getPanel(panel.id)) {
+      restoringVisibility.current = true;
+      try {
+        target.fromJSON(restored, { reuseExistingPanels: true });
+        hideBodyHeader(target);
+        for (const [id, position] of Object.entries(parked.current)) {
+          const group = target.getPanel(id)?.group;
+          if (!group || !position.size) continue;
+          const offset = dockPanelGap(target.toJSON(), id, workspace ? gapRef.current : 0);
+          group.api.setSize({
+            width: position.size.width * target.width + offset.width,
+            height: position.size.height * target.height + offset.height,
+          });
+        }
+        target.getPanel(panel.id)?.api.setActive();
+      } finally {
+        restoringVisibility.current = false;
+      }
+      if (Object.keys(visibilityLayout.current!.panels).every((id) => target.getPanel(id))) {
+        visibilityLayout.current = undefined;
+        for (const visible of target.panels) delete parked.current[visible.id];
+      }
+      save(target);
+      return;
+    }
+    visibilityLayout.current = undefined;
+    for (const visible of target.panels) delete parked.current[visible.id];
+    restoreEntryPanel(target, panel, remembered, workspace ? gapRef.current : 0);
+  };
 
   const onReady = ({ api: ready }: DockviewReadyEvent): void => {
     const stored = readChannelDock(storage);
     parked.current = { ...stored?.parked };
+    visibilityLayout.current = stored?.visibilityLayout;
     unregistered.current = Object.fromEntries(
       Object.entries(stored?.layout.panels ?? {}).filter(
         ([id]) =>
@@ -1035,6 +1079,8 @@ export function ChannelDock({
         event.preventDefault();
     });
     ready.onDidMovePanel(() => {
+      if (restoringVisibility.current) return;
+      visibilityLayout.current = undefined;
       for (const panel of ready.panels) delete parked.current[panel.id];
       save(ready);
     });
@@ -1054,6 +1100,7 @@ export function ChannelDock({
       const finish = () => {
         if (!resizing) return;
         resizing = false;
+        visibilityLayout.current = undefined;
         for (const panel of api.panels) delete parked.current[panel.id];
         save(api);
       };
@@ -1158,6 +1205,7 @@ export function ChannelDock({
       (!workspace && panelId === CHANNEL_BODY_PANEL)
     )
       return;
+    visibilityLayout.current ??= api.toJSON();
     for (const visible of api.panels) {
       if (visible.id === WORKSPACE_RAIL || parked.current[visible.id]) continue;
       const position = positionOf(api, visible.id);
@@ -1214,8 +1262,8 @@ export function ChannelDock({
       return;
     }
     const remembered = parked.current[panelId];
-    delete parked.current[panelId];
     addEntryPanel(api, panel, remembered);
+    if (!visibilityLayout.current?.panels[panelId]) delete parked.current[panelId];
   };
 
   const readLayout = () => {
@@ -1334,6 +1382,7 @@ export function ChannelDock({
         if (!panel || !target) throw new Error('layout-panel-hidden');
         if (panel.group === target.group || panel.group.panels.length !== 1)
           throw new Error('layout-topology-constrained');
+        visibilityLayout.current = undefined;
         for (const visible of api.panels) delete parked.current[visible.id];
         panel.api.moveTo({
           group: target.group,
@@ -1350,6 +1399,7 @@ export function ChannelDock({
       if (child) throw new Error('invalid-layout-edit');
       const panel = api.getPanel(patch.panel);
       if (!panel || api.width <= 0 || api.height <= 0) throw new Error('layout-panel-hidden');
+      visibilityLayout.current = undefined;
       for (const visible of api.panels) delete parked.current[visible.id];
       panel.group.api.setSize({
         width: api.width * patch.width,
@@ -1409,6 +1459,7 @@ export function ChannelDock({
         clearChannelDock(storage);
         persistedRaw.current = null;
         parked.current = {};
+        visibilityLayout.current = undefined;
         buildDefaultLayout(
           api,
           new Map([...byId].filter(([id]) => !workspace || !CHANNEL_WORKSPACE_PANELS.includes(id))),
@@ -1421,6 +1472,7 @@ export function ChannelDock({
   const reset = () => {
     if (!api) return;
     parked.current = {};
+    visibilityLayout.current = undefined;
     unregistered.current = {};
     botSeeds.current = {};
     botWorkspacesRef.current = {};

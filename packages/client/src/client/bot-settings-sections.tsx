@@ -6,6 +6,7 @@ import type { BridgeActions } from './actions.js';
 import { ApprovalReviewerModelSetting } from './approval-reviewer-model-setting.js';
 import {
   AssignmentConcurrencyRow,
+  AutoFoldLongMessagesSetting,
   ApprovalReviewSessionsVisibilitySetting,
   BotSessionsVisibilitySetting,
   DeveloperModeSetting,
@@ -94,6 +95,7 @@ export function MessagingSection(props: SectionProps<MessagingSectionFace>): Rea
         t={props.t}
       />
       <SendKeySetting {...props} />
+      <AutoFoldLongMessagesSetting {...props} />
       <SettingsSection>
         <GroupAutoAcceptSetting {...props} />
       </SettingsSection>

@@ -167,17 +167,19 @@
     },
     {
       "id": "tob-runtime-settings",
-      "description": "#2088 reuses native Settings for exactly four live fields: assignmentConcurrencyLimit, developerMode, showBotSessions and showApprovalReviewSessions. Scoped Tob writes add source/approval/revision guards; no new settings owner.",
+      "description": "#2088 runtime settings and #2081 optional long-message folding reuse native Settings. Scoped Tob writes add source/approval/revision guards; autoFoldLongMessages defaults false and requires explicit Host scope; no new settings owner.",
       "scope": "Host / protected Tob Human DM",
       "surfaces": [
         "field:packages/client/src/bot-mode-settings.ts:assignmentConcurrencyLimit",
+        "field:packages/client/src/bot-mode-settings.ts:autoFoldLongMessages",
         "field:packages/client/src/bot-mode-settings.ts:developerMode",
         "field:packages/client/src/bot-mode-settings.ts:showApprovalReviewSessions",
         "field:packages/client/src/bot-mode-settings.ts:showBotSessions",
         "setting:packages/client/src/client/assignment-concurrency-setting.tsx:{t('assignmentLimit.title')}",
         "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('approvalReviewSessions.row.title')}",
         "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('botSessions.row.title')}",
-        "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('developer.row.title')}"
+        "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('developer.row.title')}",
+        "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('message.autoFold.title')}"
       ],
       "commands": ["settings", "settings-set"]
     },

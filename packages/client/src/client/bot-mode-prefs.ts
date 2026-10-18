@@ -2,6 +2,8 @@ import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client
 
 import {
   BOT_MODE_ICON_FIELD,
+  BOT_MODE_AUTO_FOLD_LONG_MESSAGES_FIELD,
+  DEFAULT_BOT_MODE_AUTO_FOLD_LONG_MESSAGES,
   BOT_MODE_ASSIGNMENT_LIMIT_FIELD,
   DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT,
   isAssignmentConcurrencyLimit,
@@ -64,6 +66,7 @@ export interface BotModeScope {
 export interface BotModePrefsSnapshot {
   assignmentConcurrencyLimit: number;
   autoAcceptGroupInvites: boolean;
+  autoFoldLongMessages: boolean;
   developerMode: boolean;
   showBotSessions: boolean;
   showApprovalReviewSessions: boolean;
@@ -94,6 +97,7 @@ export interface BotModePrefsFace {
   setMotionPreference: (preference: BotModeMotionPreference) => void;
   setBotIcon: (icon: BotModeIcon) => void;
   setSendKey: (sendKey: BotModeSendKey) => void;
+  setAutoFoldLongMessages: (enabled: boolean) => void;
   setDeveloperMode: (enabled: boolean) => void;
   setShowBotSessions: (enabled: boolean) => void;
   setShowApprovalReviewSessions: (enabled: boolean) => void;
@@ -113,6 +117,7 @@ export function botModePrefsFace(prefs: BotModePrefs): BotModePrefsFace {
     setBotIcon: (icon) => {
       prefs.setBotIcon(icon);
     },
+    setAutoFoldLongMessages: (enabled) => prefs.setAutoFoldLongMessages(enabled),
     setSendKey: (sendKey) => {
       prefs.setSendKey(sendKey);
     },
@@ -180,6 +185,7 @@ export class BotModePrefs {
     this.source = createSnapshotStore<BotModePrefsSnapshot>({
       assignmentConcurrencyLimit: DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT,
       autoAcceptGroupInvites: DEFAULT_BOT_MODE_GROUP_AUTO_ACCEPT,
+      autoFoldLongMessages: DEFAULT_BOT_MODE_AUTO_FOLD_LONG_MESSAGES,
       motionPreference: DEFAULT_BOT_MODE_MOTION,
       botIcon: DEFAULT_BOT_MODE_ICON,
       sendKey: DEFAULT_BOT_MODE_SEND_KEY,
@@ -253,6 +259,15 @@ export class BotModePrefs {
       draft.botIcon = icon;
     });
     if (this.host !== undefined) this.persist(this.host.set(BOT_MODE_ICON_FIELD, icon));
+  }
+
+  setAutoFoldLongMessages(enabled: boolean): void {
+    if (this.source.getSnapshot().autoFoldLongMessages === enabled) return;
+    this.source.update((draft) => {
+      draft.autoFoldLongMessages = enabled;
+    });
+    if (this.host !== undefined)
+      this.persist(this.host.set(BOT_MODE_AUTO_FOLD_LONG_MESSAGES_FIELD, enabled));
   }
 
   setSendKey(sendKey: BotModeSendKey): void {
@@ -408,6 +423,7 @@ export class BotModePrefs {
         draft.showBotSessions = section.showBotSessions !== false;
         draft.showApprovalReviewSessions = section.showApprovalReviewSessions === true;
         draft.autoAcceptGroupInvites = section.autoAcceptGroupInvites !== false;
+        draft.autoFoldLongMessages = section.autoFoldLongMessages === true;
       }
     });
     this.migrate(scope);

@@ -211,3 +211,77 @@ describe('design-system surfaces', () => {
     expect(summary.textContent).toBe('Snoozed3');
   });
 });
+
+describe('Panel header hide target', () => {
+  it('keeps the icon and label in one hide button and separates right actions', () => {
+    const hide = vi.fn(),
+      action = vi.fn();
+    render(
+      createElement(PanelHeader, {
+        label: 'Home',
+        icon: createElement('svg', { 'data-home-icon': '' }),
+        hideLabel: 'Hide Home',
+        onHide: hide,
+        action: createElement(IconButton, { 'aria-label': 'Settings', onClick: action }, '⚙'),
+      }),
+    );
+    const head = button('Hide Home');
+    expect(head.querySelector('[data-home-icon]')).not.toBeNull();
+    expect(head.querySelector('[data-panel-label]')?.textContent).toBe('Home');
+    act(() => button('Settings').click());
+    expect(action).toHaveBeenCalledOnce();
+    expect(hide).not.toHaveBeenCalled();
+    act(() => head.click());
+    expect(hide).toHaveBeenCalledOnce();
+  });
+
+  it('keeps interactive badges outside the hide button', () => {
+    const hide = vi.fn(),
+      badge = vi.fn();
+    render(
+      createElement(PanelHeader, {
+        label: 'Messages',
+        hideLabel: 'Hide Messages',
+        onHide: hide,
+        badge: createElement('button', { type: 'button', onClick: badge }, 'Unread messages'),
+      }),
+    );
+    const head = button('Hide Messages');
+    expect(head.querySelector('button, a, [role="button"]')).toBeNull();
+    expect(head.contains(button('Unread messages'))).toBe(false);
+    act(() => button('Unread messages').click());
+    expect(badge).toHaveBeenCalledOnce();
+    expect(hide).not.toHaveBeenCalled();
+  });
+
+  it('leaves drag events available to the parent and suppresses the following pointer click', () => {
+    const hide = vi.fn(),
+      drag = vi.fn();
+    render(
+      createElement(
+        'div',
+        { onDragStart: drag },
+        createElement(PanelHeader, {
+          label: 'Home',
+          hideLabel: 'Hide Home',
+          onHide: hide,
+        }),
+      ),
+    );
+    const head = button('Hide Home');
+    act(() => {
+      head.dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }),
+      );
+      head.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, clientX: 30, clientY: 10 }),
+      );
+      head.dispatchEvent(new Event('dragstart', { bubbles: true }));
+      head.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    });
+    expect(drag).toHaveBeenCalledOnce();
+    expect(hide).not.toHaveBeenCalled();
+    act(() => head.click());
+    expect(hide).toHaveBeenCalledOnce();
+  });
+});

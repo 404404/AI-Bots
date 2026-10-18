@@ -28,6 +28,17 @@ The in-harness UI is part of the shell, not a standalone app (ADR-0028): style w
 
 - **Pointer menus have one positioning owner**: use `ds/PointerMenu` for every application right-click menu. Pass unmodified `clientX/clientY`; never add feature-local offsets or construct a coordinate proxy anchor. See the coordinate contract in `references/native-contract.md`. Native anchored dropdowns continue to use `Menu`.
 
+## Panel contract
+
+When adding a Panel, a Panel action, or a visibility entry point:
+
+1. Register the Panel through the shared `dockPanels` registry. Route open, close and toggle through that registry and `ChannelDock`; fixed Channel subpanels use its saved split tree. `ChannelDock` and `channel-dock-layout.ts` own visibility restoration, sibling dimensions and split topology.
+2. Render its presentational icon and label through `ds/PanelHeader` with the shared hide callback. Place profile/breadcrumb actions and interactive badges outside the hide control. Keep right actions independent, and retain the header's drag gesture and keyboard activation.
+3. Extend `packages/client/test/panel-layout-contract.test.tsx` through the production registration surface. Its matrix captures Workspace registrations, the Activity Center factory, Channel builtins and bundled Browser/Computer registrations, then exercises every global Panel and every fixed Channel subpanel. A new registration in a captured surface joins automatically; a new registration surface joins the fixture in the same change.
+4. Require close/reopen to preserve the nested split tree, sibling dimensions and surviving content nodes; require right actions and header drag gestures to keep their own behavior. Explicit resize or move establishes the new geometry. Reuse existing Dockview panels when restoring a saved grid so unsent drafts remain mounted.
+
+Done when the contract test and focused header/drag regressions pass, and `scripts/ci-plan.mjs` selects the contract test for the changed registration and layout sources. Keep Client source tests distinct from the running-Host verification required by step 7 above.
+
 ## Reference
 
 - `references/native-contract.md` — measured sidebar geometry, the shipped-CSS extraction recipe, and the headless measurement script.

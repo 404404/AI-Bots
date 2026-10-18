@@ -39,7 +39,7 @@ vi.mock('../src/client/ds/select.js', () => ({
 }));
 import { HomeDashboard } from '../src/client/home-dashboard.js';
 import { createActions } from '../src/client/actions.js';
-import { createStore } from '../src/client/store.js';
+import { createStore, store } from '../src/client/store.js';
 import { createDockPanelRegistry } from '../src/client/dock-panels.js';
 import { CHANNEL_BODY_PANEL } from '../src/client/channel-dock-layout.js';
 import { zhTranslate } from '../src/client/locale.js';
@@ -123,5 +123,75 @@ it('keeps missing usage distinct from zero and opens the exact activity target w
   } finally {
     await act(async () => root.unmount());
     container.remove();
+  }
+});
+
+it('projects protected Tob names in current dashboard labels without changing stored snapshot text', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const previous = store.getSnapshot();
+  const data = snapshot();
+  if (data.recent.status !== 'ready') throw new Error('fixture');
+  data.recent.value[0]!.label = 'Tob';
+  data.working = {
+    status: 'ready',
+    value: [
+      {
+        slug: 'steward',
+        displayName: 'Tob',
+        sessions: [{ sessionId: 'session', role: 'orchestrator' }],
+      },
+    ],
+  };
+  store.setRoster(
+    [
+      {
+        slug: 'steward',
+        displayName: 'Tob',
+        tob: { defaultName: true, defaultAvatar: true },
+        roles: [],
+        workspaces: [],
+        createdAt: '',
+        aggregateState: 'idle',
+      },
+    ],
+    [
+      {
+        id: 'channel',
+        type: 'dm',
+        botSlug: 'steward',
+        members: ['steward'],
+        name: 'Tob',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ],
+  );
+  store.setDefaultTobName('托布');
+  const actions = createActions(async () => ({ ok: true, value: data }), createStore());
+  const registry = createDockPanelRegistry();
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(createElement(HomeDashboard, { actions, registry, t: zhTranslate })),
+    );
+    expect(container.textContent).toContain('频道 · 托布');
+    expect(container.textContent).toContain('托布 · 主会话');
+    expect(data.recent.value[0]!.label).toBe('Tob');
+    act(() =>
+      store.upsertBot({
+        ...store.getSnapshot().bots[0]!,
+        displayName: '小管家',
+        tob: { defaultName: false, defaultAvatar: true },
+      }),
+    );
+    expect(container.textContent).toContain('频道 · 小管家');
+    expect(container.textContent).toContain('小管家 · 主会话');
+    act(() => store.setDefaultTobName('Tob'));
+    expect(container.textContent).toContain('频道 · 小管家');
+  } finally {
+    act(() => root.unmount());
+    store.setDefaultTobName('Tob');
+    store.setRoster(previous.bots, previous.channels);
   }
 });

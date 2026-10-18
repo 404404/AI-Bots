@@ -182,7 +182,7 @@ import {
   timelineScrollAnchor,
 } from './timeline-position.js';
 import { TimelineUnreadDivider } from './timeline-unread-divider.js';
-import { foldableMessage, MessageFold } from './message-fold.js';
+import { foldableMessage, MessageAutoFoldContext, MessageFold } from './message-fold.js';
 import {
   MessageReactionChips,
   MessageReactionPicker,
@@ -3418,12 +3418,19 @@ export function BotMain({
     () => prefs?.source.getSnapshot().sendKey ?? 'enter',
     () => 'enter' as const,
   );
+  const autoFoldLongMessages = useSyncExternalStore(
+    prefs?.source.subscribe ?? subscribeWithoutPrefs,
+    () => prefs?.source.getSnapshot().autoFoldLongMessages ?? false,
+    () => false,
+  );
   return (
     <MessageDeveloperMode.Provider value={developerMode}>
       <ComposerSendKeyContext.Provider value={sendKey}>
-        <Workspace options={workspace} t={props.t ?? zhTranslate}>
-          <BotMainContent {...props} />
-        </Workspace>
+        <MessageAutoFoldContext.Provider value={autoFoldLongMessages}>
+          <Workspace options={workspace} t={props.t ?? zhTranslate}>
+            <BotMainContent {...props} />
+          </Workspace>
+        </MessageAutoFoldContext.Provider>
       </ComposerSendKeyContext.Provider>
     </MessageDeveloperMode.Provider>
   );

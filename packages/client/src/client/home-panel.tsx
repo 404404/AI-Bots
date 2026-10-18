@@ -1,3 +1,4 @@
+import { HomeWelcome } from './home-welcome.js';
 import { HomeDashboard } from './home-dashboard.js';
 import { requestCreation, type CreateIntent } from './create-request.js';
 import { WORKSPACE_CHANNELS } from './workspace-context.js';
@@ -41,7 +42,6 @@ const styles = stylex.create({
     gap: space.x5,
     minWidth: 0,
   },
-  title: { margin: 0, fontSize: text.titleSize, fontWeight: text.strong, color: color.fg },
   description: {
     margin: 0,
     color: color.muted,
@@ -57,12 +57,14 @@ export function HomePanel({
   t,
   sendKey,
   creation,
+  onEditHumanName,
 }: {
   actions: BridgeActions;
   registry: DockPanelRegistry;
   t: BotHarnessTranslate;
   sendKey: ComposerSendKey;
   creation: HomeCreation;
+  onEditHumanName(): void;
 }): ReactElement {
   const [creationMenu, setCreationMenu] = useState(false);
   const request = useSyncExternalStore(creation.subscribe, creation.getSnapshot);
@@ -345,7 +347,12 @@ export function HomePanel({
         </div>
       ) : (
         <div {...stylex.props(styles.content)}>
-          <h2 {...stylex.props(styles.title)}>{t('home.greeting')}</h2>
+          <HomeWelcome
+            actions={actions}
+            botSlug={home?.botSlug}
+            t={t}
+            onEditHumanName={onEditHumanName}
+          />
           <p {...stylex.props(styles.description)}>{t('home.description')}</p>
           {ready === undefined ? (
             <Button variant="ghost" onClick={() => void load()}>
@@ -382,6 +389,22 @@ export function HomePanel({
               onSubmit={submit}
             />
           )}
+          <div {...stylex.props(styles.choices)} role="group" aria-label={t('home.suggestions')}>
+            {(['create', 'progress', 'attention', 'memory'] as const).map((key) => (
+              <Button
+                key={key}
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  saveDraft(t(`home.suggestion.${key}`));
+                  setFocusSignal((value) => value + 1);
+                }}
+              >
+                {t(`home.suggestion.${key}`)}
+              </Button>
+            ))}
+          </div>
           {ready && (
             <Button variant="ghost" onClick={() => setConfiguring(true)}>
               {t('home.modelSettings')}

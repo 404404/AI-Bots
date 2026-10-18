@@ -133,6 +133,7 @@ export function Workspace({
               t={t}
               sendKey={sendKey}
               creation={creation}
+              onEditHumanName={() => options.openBotSettings('messaging')}
             />
           );
         },
@@ -369,7 +370,7 @@ function WorkspaceRail({
         )}
 
       <Tooltip label={t('panel.settings')} side="right">
-        <button aria-label={t('panel.settings')} onClick={options.openBotSettings}>
+        <button aria-label={t('panel.settings')} onClick={() => options.openBotSettings()}>
           <ChannelSidebarIcon name="settings" />
         </button>
       </Tooltip>

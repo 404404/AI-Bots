@@ -4,6 +4,7 @@ import { Button, MenuItemButton } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 
 import { PersonaBotAvatar } from './avatar.js';
+import { useTobName } from './tob-presentation.js';
 import { BotIcon } from './bot-icon.js';
 import type { SessionBotOwner } from './bridge.js';
 import { LOCALE_NS } from './locale.js';
@@ -84,6 +85,7 @@ export function SessionReturnAction({
     setFailed(false);
   });
   const owner = resolution?.owner;
+  const ownerName = useTobName(owner?.botSlug, owner?.displayName ?? '');
 
   const open = async (): Promise<void> => {
     if (owner === undefined) return;
@@ -116,7 +118,7 @@ export function SessionReturnAction({
           icon={
             <PersonaBotAvatar
               personaBotId={owner.botSlug}
-              name={owner.displayName}
+              name={ownerName}
               src={owner.avatar}
               appearance={owner.appearance}
               avatarSeed={owner.avatarSeed}
@@ -128,9 +130,7 @@ export function SessionReturnAction({
           disabled={busy}
           onClick={() => void open()}
         >
-          {failed
-            ? t('sessions.return.failed')
-            : t('sessions.return.action', { name: owner.displayName })}
+          {failed ? t('sessions.return.failed') : t('sessions.return.action', { name: ownerName })}
         </Button>
       )}
     </>
@@ -144,6 +144,7 @@ export function SessionOwnerLeading({
 }: SessionOwnerLeadingProps): ReactElement | null {
   const { resolution, mount } = useSessionOwner(sessionId, resolveOwner);
   const owner = resolution?.owner;
+  const ownerName = useTobName(owner?.botSlug, owner?.displayName ?? '');
   return (
     <>
       <span ref={mount} hidden aria-hidden="true" />
@@ -152,7 +153,7 @@ export function SessionOwnerLeading({
       ) : (
         <PersonaBotAvatar
           personaBotId={owner.botSlug}
-          name={owner.displayName}
+          name={ownerName}
           src={owner.avatar}
           appearance={owner.appearance}
           avatarSeed={owner.avatarSeed}

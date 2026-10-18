@@ -106,6 +106,7 @@ import {
   inviteGroupBot,
   setGroupAvatar as setGroupAvatarViaBridge,
   setChannelHumanName,
+  loadHumanIdentity,
   setBotAvatar as setBotAvatarViaBridge,
   setBotBanner as setBotBannerViaBridge,
   updateBotProfile as updateBotProfileViaBridge,
@@ -332,6 +333,7 @@ export interface HostDirectoryListing {
 }
 
 export interface BridgeActions {
+  humanIdentity(signal?: AbortSignal): Promise<import('./bridge.js').LocalHumanIdentity>;
   homeDashboard(range?: RollingUsageRange): Promise<HomeDashboard>;
   tobHome(): Promise<
     import('../../../core/src/tob/service.js').TobHome & {
@@ -1517,6 +1519,7 @@ export function createActions(
   const actions: BridgeActions = {
     homeDashboard: (range = '24h') => invoke('homeDashboard', { range }),
     tobHome: () => invoke('tobHome', {}),
+    humanIdentity: (signal) => loadHumanIdentity(call, signal),
     async sendHome(channelId, body, messageId, attachments) {
       const message = await sendChannelMessage(
         call,

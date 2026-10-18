@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+import { DEEPSEEKBOT_RECIPE } from '../onboarding/service.js';
 import { isClientTarget } from '../client-control/contracts.js';
 import type { ClientControlService } from '../client-control/service.js';
 import { queryHomeDashboard, type HomeDashboard } from '../home/dashboard.js';
@@ -335,6 +337,7 @@ export interface ActivityOverview {
 export interface PersonaBotSummary {
   slug: string;
   displayName: string;
+  tob?: { defaultName: boolean; defaultAvatar: boolean };
   roles: string[];
   description?: string;
   avatar?: string;
@@ -1198,10 +1201,25 @@ function createFailure(
   }
 }
 
-function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBotSummary {
+function summarize(
+  record: PersonaBotRecord,
+  snapshot: BotStateSnapshot,
+  protectedTob = false,
+): PersonaBotSummary {
   return {
     slug: record.slug,
     displayName: record.displayName,
+    ...(protectedTob
+      ? {
+          tob: {
+            defaultName: record.displayNameCustomized !== true && record.displayName === 'Tob',
+            defaultAvatar:
+              record.avatarCustomized !== true &&
+              ((!record.avatar?.trim() && record.appearance === undefined) ||
+                isDeepStrictEqual(record.appearance?.recipe, DEEPSEEKBOT_RECIPE)),
+          },
+        }
+      : {}),
     aggregateState: snapshot.state,
     workspaces: [...record.workspaces],
     createdAt: record.createdAt,
@@ -1231,9 +1249,13 @@ function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): Person
   };
 }
 
-function detail(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBotDetail {
+function detail(
+  record: PersonaBotRecord,
+  snapshot: BotStateSnapshot,
+  protectedTob = false,
+): PersonaBotDetail {
   return {
-    ...summarize(record, snapshot),
+    ...summarize(record, snapshot, protectedTob),
     sessions: { ...snapshot.sessions },
     ...(record.model === undefined ? {} : { model: record.model }),
     ...(record.modelPlan === undefined ? {} : { modelPlan: record.modelPlan }),
@@ -1356,7 +1378,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
   };
   const createBotId = deps.createBotId ?? (() => 'bot-' + randomUUID().replaceAll('-', ''));
   const detailOf = (record: PersonaBotRecord): { bot: PersonaBotDetail } => ({
-    bot: detail(record, deps.states.snapshot(record.slug)),
+    bot: detail(record, deps.states.snapshot(record.slug), deps.tob?.isTob(record.slug)),
   });
 
   const rosterWrite = async <T>(operation: () => Promise<T>): Promise<BridgeResult<T>> => {
@@ -2615,7 +2637,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           );
         })
         .map((record) => ({
-          ...summarize(record, deps.states.snapshot(record.slug)),
+          ...summarize(record, deps.states.snapshot(record.slug), deps.tob?.isTob(record.slug)),
           ...(deps.registry.get(record.slug) === undefined
             ? {
                 deleted: true,

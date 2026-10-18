@@ -41,7 +41,7 @@ export interface BotModeSidebarProps {
   setSectionSortMode: (sectionId: string, mode: BotModeSortMode | undefined) => void;
   exitBotMode: () => void;
   toggleSidebar: () => void;
-  openBotSettings: () => void;
+  openBotSettings: (sectionId?: string) => void;
   t: BotHarnessTranslate;
 }
 

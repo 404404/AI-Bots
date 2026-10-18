@@ -405,6 +405,7 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                         developerMode: { type: 'boolean' },
                         showBotSessions: { type: 'boolean' },
                         showApprovalReviewSessions: { type: 'boolean' },
+                        autoFoldLongMessages: { type: 'boolean' },
                       }
                     : {}),
                 },
@@ -419,7 +420,7 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                     TOB_AGENT_COMMAND_USAGE[entry.command] ??
                     (entry.command === 'settings'
                       ? 'deepseekbot settings [botharness-client|agent-default-model|ui-theme|locale]'
-                      : 'deepseekbot settings-set <namespace> --patch-stdin --expected-revision <observed revision> --previous-value <JSON of previous values for patched fields> [--scope host; required for theme, locale, motionPreference, botIcon, sendKey and autoAcceptGroupInvites; affects all connected Clients]'),
+                      : 'deepseekbot settings-set <namespace> --patch-stdin --expected-revision <observed revision> --previous-value <JSON of previous values for patched fields> [--scope host; required for theme, locale, motionPreference, botIcon, sendKey, autoAcceptGroupInvites and autoFoldLongMessages; affects all connected Clients]'),
                 })),
               }
             : {}),

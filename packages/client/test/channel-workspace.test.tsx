@@ -99,3 +99,50 @@ describe('nested Channel workspace', () => {
     }
   });
 });
+
+it('allows dragging from the hide target while keeping header actions out of drag gestures', () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    act(() =>
+      root.render(
+        createElement(ChannelWorkspace, {
+          channelId: 'dm-ada',
+          tree: legacyChannelSplit({}),
+          setTree: vi.fn(),
+          panels: {
+            messages: { label: 'Messages', content: 'Messages' },
+            'memory-files': {
+              label: 'Files',
+              content: 'Files',
+              header: createElement(
+                'div',
+                null,
+                createElement('button', { 'data-panel-hide': '' }, 'Files'),
+                createElement('button', { 'data-panel-action': '' }, 'Settings'),
+              ),
+            },
+          },
+        }),
+      ),
+    );
+    const start = (selector: string) => {
+      const event = new Event('dragstart', { bubbles: true, cancelable: true });
+      const setData = vi.fn();
+      Object.defineProperty(event, 'dataTransfer', { value: { setData, effectAllowed: '' } });
+      act(() => host.querySelector(selector)!.dispatchEvent(event));
+      return { event, setData };
+    };
+    const hide = start('[data-panel-hide]');
+    expect(hide.event.defaultPrevented).toBe(false);
+    expect(hide.setData).toHaveBeenCalledWith('application/x-bh-channel-subpanel', 'memory-files');
+    const action = start('[data-panel-action]');
+    expect(action.event.defaultPrevented).toBe(true);
+    expect(action.setData).not.toHaveBeenCalled();
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+  }
+});

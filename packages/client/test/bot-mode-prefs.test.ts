@@ -32,6 +32,7 @@ function fakeHost(initial: Partial<BotModeScopeSnapshot> = {}) {
       botIcon: 'mascot' as const,
       sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
+      autoFoldLongMessages: false,
       assignmentConcurrencyLimit: 8,
       developerMode: false,
       showBotSessions: false,
@@ -71,6 +72,16 @@ function fakeHost(initial: Partial<BotModeScopeSnapshot> = {}) {
 }
 
 describe('BOT-mode policy store', () => {
+  it('defaults old Host settings without a folding choice to unfolded messages', () => {
+    const prefs = new BotModePrefs();
+    const scope = fakeHost();
+    const { autoFoldLongMessages: _omitted, ...legacyValue } = scope.host.getSnapshot().value!;
+    prefs.attach(fakeHost({ value: legacyValue }).host);
+    expect(prefs.source.getSnapshot().autoFoldLongMessages).toBe(false);
+    prefs.setAutoFoldLongMessages(true);
+    expect(prefs.source.getSnapshot().autoFoldLongMessages).toBe(true);
+  });
+
   it('persists Group auto-accept only through a writable Host and restores a rejected value', async () => {
     const prefs = new BotModePrefs();
     prefs.setAutoAcceptGroupInvites(false);
@@ -94,6 +105,7 @@ describe('BOT-mode policy store', () => {
       botIcon: 'mascot' as const,
       sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
+      autoFoldLongMessages: false,
       assignmentConcurrencyLimit: 8,
       developerMode: false,
       showBotSessions: true,
@@ -128,6 +140,7 @@ describe('BOT-mode policy store', () => {
         botIcon: 'mascot' as const,
         sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
         showBotSessions: false,
@@ -146,6 +159,7 @@ describe('BOT-mode policy store', () => {
       botIcon: 'mascot' as const,
       sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
+      autoFoldLongMessages: false,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
       showBotSessions: false,
@@ -162,6 +176,7 @@ describe('BOT-mode policy store', () => {
         botIcon: 'mascot' as const,
         sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
         showBotSessions: false,
@@ -200,6 +215,7 @@ describe('BOT-mode policy store', () => {
       botIcon: 'mascot' as const,
       sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
+      autoFoldLongMessages: false,
       assignmentConcurrencyLimit: 8,
       developerMode: false,
       showBotSessions: false,
@@ -228,6 +244,7 @@ describe('BOT-mode policy store', () => {
         botIcon: 'mascot',
         sendKey: 'bogus' as never,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
         motionPreference: 'system',
@@ -253,6 +270,7 @@ describe('BOT-mode policy store', () => {
         botIcon: 'mascot',
         sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: true,
         motionPreference: 'system',
@@ -291,6 +309,7 @@ describe('BOT-mode policy store', () => {
       botIcon: 'mascot' as const,
       sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
+      autoFoldLongMessages: false,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
       showBotSessions: false,
@@ -364,6 +383,7 @@ describe('BOT-mode policy store', () => {
         botIcon: 'mascot' as const,
         sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
         showBotSessions: false,
@@ -453,6 +473,7 @@ describe('legacy roster.json sort migration', () => {
         botIcon: 'mascot' as const,
         sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
         showBotSessions: false,
@@ -518,6 +539,7 @@ describe('roster migration sort-mode remap', () => {
         botIcon: 'mascot' as const,
         sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
         showBotSessions: false,
@@ -596,6 +618,7 @@ describe('roster migration sort-mode remap', () => {
         botIcon: 'mascot' as const,
         sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
+        autoFoldLongMessages: false,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
         showBotSessions: false,

@@ -15,6 +15,7 @@ import { CompanionSound } from './companion-sound.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { BotModePrefs } from './bot-mode-prefs.js';
 import { MessageDeveloperMode } from './message-developer-mode.js';
+import { useTobName } from './tob-presentation.js';
 
 const subscribeWithoutPrefs = (): (() => void) => () => {};
 
@@ -31,13 +32,14 @@ export function CompanionPin({
 }): ReactElement {
   const state = useSyncExternalStore(companion.subscribe, companion.getSnapshot);
   const selected = companion.get(botId) !== undefined;
+  const botName = useTobName(botId, name ?? botId);
   const label = t(selected ? 'companion.remove' : 'companion.show');
   return (
     <button
       type="button"
       className="bh-companion-pin"
       disabled={!state.ready}
-      aria-label={`${label} · ${name ?? botId}`}
+      aria-label={`${label} · ${botName}`}
       title={label}
       aria-pressed={selected}
       data-companion-pin={botId}

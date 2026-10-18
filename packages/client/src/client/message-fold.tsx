@@ -1,4 +1,4 @@
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactElement, type ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
 
 import { border, color, radius, space, text } from './ds/tokens.stylex.js';
@@ -8,6 +8,8 @@ import type { ChannelMessage } from './store.js';
 
 export const MESSAGE_FOLD_THRESHOLD_PX = 480;
 export const MESSAGE_FOLD_HEIGHT_PX = 300;
+
+export const MessageAutoFoldContext = createContext(false);
 
 const expanded = new Set<string>();
 
@@ -64,11 +66,13 @@ export function MessageFold({
   t: BotHarnessTranslate;
   children: ReactNode;
 }): ReactElement {
+  const autoFold = useContext(MessageAutoFoldContext);
+  const foldingEnabled = enabled && autoFold;
   const [long, setLong] = useState(false);
   const [open, setOpen] = useState(() => expanded.has(messageId));
   const measure = useMountedResource<HTMLDivElement>(
     (element) => {
-      if (!enabled) {
+      if (!foldingEnabled) {
         setLong(false);
         return;
       }
@@ -80,9 +84,9 @@ export function MessageFold({
       for (const child of Array.from(element.children)) observer.observe(child);
       return () => observer.disconnect();
     },
-    [enabled],
+    [foldingEnabled],
   );
-  const folded = enabled && long && !open;
+  const folded = foldingEnabled && long && !open;
   return (
     <>
       <div
@@ -92,7 +96,7 @@ export function MessageFold({
       >
         {children}
       </div>
-      {enabled && long ? (
+      {foldingEnabled && long ? (
         <button
           type="button"
           data-message-fold-toggle=""

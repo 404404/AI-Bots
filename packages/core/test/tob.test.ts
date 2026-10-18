@@ -1,3 +1,4 @@
+import { DEEPSEEKBOT_RECIPE } from '../src/onboarding/service.js';
 import { ClientControlService } from '../src/client-control/service.js';
 import { describe, expect, it, vi } from 'vitest';
 import { attachOperationalModule } from '../src/database/owner.js';
@@ -97,6 +98,123 @@ describe('Tob canonical identity and settings', () => {
         await next.runtime.close();
         next.operationalDatabase.close();
       }
+    } finally {
+      await f.close();
+    }
+  });
+  it('projects only protected Tob defaults and preserves explicit names and avatars across restart', async () => {
+    const f = fixture();
+    try {
+      const home = await f.core.tob.ensure();
+      await f.core.onboarding.enter();
+      expect(f.core.registry.get(home.botSlug)?.appearance?.recipe).toEqual(DEEPSEEKBOT_RECIPE);
+      expect(f.core.registry.get(home.botSlug)?.avatarCustomized).toBeUndefined();
+      const bridge = createBridgeMethods({ ...f.core });
+      const show = () => bridge.get({ slug: home.botSlug });
+      expect(show()).toMatchObject({
+        ok: true,
+        value: {
+          bot: {
+            displayName: 'Tob',
+            tob: { defaultName: true, defaultAvatar: true },
+          },
+        },
+      });
+      f.core.registry.create({ slug: 'ordinary-tob', displayName: 'Tob' });
+      const ordinary = bridge.get({ slug: 'ordinary-tob' });
+      expect(ordinary.ok && ordinary.value.bot).not.toHaveProperty('tob');
+      expect(bridge.channelRename({ channelId: home.channelId, name: '小管家' })).toMatchObject({
+        ok: true,
+        value: { bot: { displayName: '小管家', tob: { defaultName: false } } },
+      });
+      const png =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
+      expect(bridge.botAvatarSet({ channelId: home.channelId, avatar: png })).toMatchObject({
+        ok: true,
+        value: { bot: { tob: { defaultName: false, defaultAvatar: false } } },
+      });
+      expect(bridge.update({ slug: home.botSlug, patch: { displayName: 'Tob' } })).toMatchObject({
+        ok: true,
+        value: { bot: { displayName: 'Tob', tob: { defaultName: false } } },
+      });
+      expect(f.core.registry.get(home.botSlug)?.displayNameCustomized).toBe(true);
+      await f.close();
+      const next = f.make();
+      try {
+        expect((await next.tob.ensure()).botSlug).toBe(home.botSlug);
+        expect(createBridgeMethods({ ...next }).get({ slug: home.botSlug })).toMatchObject({
+          ok: true,
+          value: { bot: { displayName: 'Tob', tob: { defaultName: false, defaultAvatar: false } } },
+        });
+        expect(next.registry.get(home.botSlug)?.avatar).toBe(png);
+        expect(() => next.registry.setPaused(home.botSlug, true)).toThrow('protected-bot');
+        expect(() => next.deletions.preview(home.botSlug)).toThrow('protected-bot');
+      } finally {
+        await next.runtime.close();
+        next.operationalDatabase.close();
+      }
+    } finally {
+      await f.close();
+    }
+  });
+  it('preserves a legacy custom name without an explicit-choice marker and resets removed avatars to the system icon', async () => {
+    const f = fixture();
+    try {
+      const home = await f.core.tob.ensure();
+      const owner = attachOperationalModule(f.core.operationalDatabase, 'bot-registry');
+      owner.transaction(
+        (db) => {
+          const row = db.prepare('SELECT body FROM persona_bots WHERE slug = ?').get(home.botSlug)!;
+          const record = JSON.parse(String(row['body']));
+          record.displayName = 'My steward';
+          delete record.displayNameCustomized;
+          db.prepare('UPDATE persona_bots SET body = ? WHERE slug = ?').run(
+            JSON.stringify(record),
+            home.botSlug,
+          );
+        },
+        ['bot-registry'],
+      );
+      const bridge = createBridgeMethods({ ...f.core });
+      expect(bridge.get({ slug: home.botSlug })).toMatchObject({
+        ok: true,
+        value: {
+          bot: { displayName: 'My steward', tob: { defaultName: false, defaultAvatar: true } },
+        },
+      });
+      expect(bridge.botAvatarSet({ channelId: home.channelId, avatar: null })).toMatchObject({
+        ok: true,
+        value: { bot: { tob: { defaultAvatar: true } } },
+      });
+      expect((await f.core.tob.ensure()).botSlug).toBe(home.botSlug);
+      expect(f.core.registry.get(home.botSlug)?.displayName).toBe('My steward');
+    } finally {
+      await f.close();
+    }
+  });
+  it('distinguishes the legacy onboarding avatar from an explicit choice of the same design', async () => {
+    const f = fixture();
+    try {
+      const state = await f.core.onboarding.enter();
+      const slug = state.defaultBotSlug!;
+      const bridge = createBridgeMethods({ ...f.core });
+      expect(bridge.get({ slug })).toMatchObject({
+        ok: true,
+        value: { bot: { tob: { defaultAvatar: true } } },
+      });
+      expect(f.core.registry.setAppearance(slug, DEEPSEEKBOT_RECIPE).ok).toBe(true);
+      expect(f.core.registry.get(slug)?.avatarCustomized).toBe(true);
+      expect(bridge.get({ slug })).toMatchObject({
+        ok: true,
+        value: { bot: { tob: { defaultAvatar: false } } },
+      });
+      await f.core.onboarding.enter();
+      expect(f.core.registry.get(slug)?.avatarCustomized).toBe(true);
+      expect(bridge.botAvatarSet({ channelId: state.channelId!, avatar: null })).toMatchObject({
+        ok: true,
+        value: { bot: { tob: { defaultAvatar: true } } },
+      });
+      expect(f.core.registry.get(slug)?.avatarCustomized).toBeUndefined();
     } finally {
       await f.close();
     }

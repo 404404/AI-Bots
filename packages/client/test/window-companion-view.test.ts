@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { createStore } from '../src/client/store.js';
+import { bindTobPresentation } from '../src/client/tob-presentation.js';
 import { act, createElement, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
@@ -1345,6 +1347,85 @@ it('draws the companion bubble and controls from design-system styles by role an
   } finally {
     await act(() => root.unmount());
     companion.dispose();
+    node.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('projects the protected steward name into companion labels through locale and custom-name changes', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  vi.stubGlobal('requestAnimationFrame', () => 1);
+  vi.stubGlobal('cancelAnimationFrame', () => {});
+  const store = createStore();
+  store.setRoster(
+    [
+      {
+        slug: 'steward',
+        displayName: 'Tob',
+        tob: { defaultName: true, defaultAvatar: true },
+        roles: [],
+        workspaces: [],
+        createdAt: '',
+        aggregateState: 'idle',
+      },
+    ],
+    [],
+  );
+  store.setDefaultTobName('托布');
+  const unbind = bindTobPresentation({
+    bot: (slug) => store.getSnapshot().bots.find((bot) => bot.slug === slug),
+    icon: () => 'bot',
+    subscribe: store.subscribe,
+  });
+  const events = new EventTarget();
+  const companion = new WindowCompanion({
+    context: async () => ({ profileId: 'qa' }),
+    source: () => ({ addEventListener: events.addEventListener.bind(events), close() {} }),
+  });
+  await companion.start();
+  companion.select('steward');
+  events.dispatchEvent(
+    new MessageEvent('companion/baseline', {
+      data: JSON.stringify({
+        profileId: 'qa',
+        bot: { slug: 'steward', name: 'Tob', paused: false },
+        activity: { generation: 'host', revision: 0, bots: [] },
+      }),
+    }),
+  );
+  const node = document.createElement('div');
+  document.body.append(node);
+  const root = createRoot(node);
+  try {
+    await act(async () =>
+      root.render(
+        createElement(WindowCompanionView, {
+          companion,
+          openDm() {},
+          openAttention() {},
+          openChannel() {},
+          t: zhTranslate,
+        }),
+      ),
+    );
+    expect(node.querySelector('[aria-label="托布 · 窗口伙伴"]')).not.toBeNull();
+    expect(node.querySelector('[aria-label="拖动 托布；点击打开私聊"]')).not.toBeNull();
+    act(() => store.setDefaultTobName('Tob'));
+    expect(node.querySelector('[aria-label="Tob · 窗口伙伴"]')).not.toBeNull();
+    act(() =>
+      store.upsertBot({
+        ...store.getSnapshot().bots[0]!,
+        displayName: '小管家',
+        tob: { defaultName: false, defaultAvatar: true },
+      }),
+    );
+    act(() => store.setDefaultTobName('托布'));
+    expect(node.querySelector('[aria-label="小管家 · 窗口伙伴"]')).not.toBeNull();
+    expect(companion.getSnapshot().bot?.name).toBe('Tob');
+  } finally {
+    act(() => root.unmount());
+    companion.dispose();
+    unbind();
     node.remove();
     vi.unstubAllGlobals();
   }

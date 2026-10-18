@@ -70,6 +70,53 @@ const fullPlan = {
 };
 
 describe('Tob scoped model and runtime operations', () => {
+  it('reads default unfolded messages and reviews auto folding with explicit Host scope', async () => {
+    const f = fixture();
+    expect(await f.run('settings', { ns: 'botharness-client' })).toMatchObject({
+      value: { autoFoldLongMessages: false },
+    });
+    const args = {
+      ns: 'botharness-client',
+      patch: { autoFoldLongMessages: true },
+      previousValue: { autoFoldLongMessages: false },
+      expectedRevision: 0,
+    };
+    await expect(f.prepare('settings-set', args)).rejects.toThrow('host-scope-required');
+    await expect(
+      f.prepare('settings-set', {
+        ...args,
+        scope: 'host',
+        patch: { autoFoldLongMessages: 'true' },
+      }),
+    ).rejects.toThrow('invalid-setting');
+    await expect(
+      f.prepare('settings-set', {
+        ...args,
+        scope: 'host',
+        previousValue: { autoFoldLongMessages: true },
+      }),
+    ).rejects.toThrow('stale-setting');
+    const operation = (await f.prepare('settings-set', { ...args, scope: 'host' }))!;
+    expect(operation.proposal).toMatchObject({
+      command: 'settings-set',
+      target: 'botharness-client',
+      previousValue: { autoFoldLongMessages: false },
+      patch: { autoFoldLongMessages: true },
+    });
+    expect(await operation.run(() => {})).toMatchObject({
+      revision: 1,
+      value: { autoFoldLongMessages: true },
+    });
+    expect(f.native.update).toHaveBeenCalledWith(
+      'botharness-client',
+      { autoFoldLongMessages: true },
+      0,
+    );
+    await expect(f.prepare('settings-set', { ...args, scope: 'host' })).rejects.toThrow(
+      'stale-setting',
+    );
+  });
+
   it('preserves native appearance owners and requires explicit shared Host scope', async () => {
     const f = fixture();
     f.rows.push(

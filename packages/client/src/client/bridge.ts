@@ -615,6 +615,10 @@ export function parseBotSummary(value: unknown): BotSummary | undefined {
   return {
     slug,
     displayName,
+    ...(typeof asRecord(record['tob'])?.['defaultName'] === 'boolean' &&
+    typeof asRecord(record['tob'])?.['defaultAvatar'] === 'boolean'
+      ? { tob: record['tob'] as { defaultName: boolean; defaultAvatar: boolean } }
+      : {}),
     aggregateState: typeof aggregateState === 'string' ? aggregateState : 'idle',
     workspaces: stringArray(record['workspaces']),
     createdAt: typeof createdAt === 'string' ? createdAt : '',

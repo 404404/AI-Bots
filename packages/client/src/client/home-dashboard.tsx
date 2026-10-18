@@ -1,4 +1,5 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
+import { store } from './store.js';
 import * as stylex from '@stylexjs/stylex';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { HomeDashboard as Dashboard } from '../../../core/src/home/dashboard.js';
@@ -55,6 +56,15 @@ export function HomeDashboard({
   registry: DockPanelRegistry;
   t: BotHarnessTranslate;
 }): ReactElement {
+  const current = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const botLabel = (slug: string | undefined, fallback: string) => {
+    const bot = current.bots.find((candidate) => candidate.slug === slug);
+    return bot?.tob ? bot.displayName : fallback;
+  };
+  const channelLabel = (id: string | undefined, fallback: string) => {
+    const channel = current.channels.find((candidate) => candidate.id === id);
+    return channel?.type === 'dm' ? botLabel(channel.botSlug, fallback) : fallback;
+  };
   const [range, setRange] = useState<RollingUsageRange>('24h');
   const rangeRef = useRef<RollingUsageRange>('24h');
   const [data, setData] = useState<Dashboard>();
@@ -134,8 +144,11 @@ export function HomeDashboard({
                   onClick={() => void open(() => openHumanAttentionSource(actions, item))}
                 >
                   <span {...stylex.props(styles.row)}>
-                    {item.channelName || item.botSlug} ·{' '}
-                    {item.summary || t(`home.attentionKind.${item.kind}`)}
+                    {channelLabel(
+                      item.channelId,
+                      item.channelName || botLabel(item.botSlug, item.botSlug),
+                    )}{' '}
+                    · {item.summary || t(`home.attentionKind.${item.kind}`)}
                   </span>
                 </Button>
               ))}
@@ -165,7 +178,7 @@ export function HomeDashboard({
                   }
                 >
                   <span {...stylex.props(styles.row)}>
-                    {bot.displayName} ·{' '}
+                    {botLabel(bot.slug, bot.displayName)} ·{' '}
                     {bot.sessions
                       .map((session) => session.purpose || t('home.orchestrator'))
                       .join(' · ')}
@@ -244,7 +257,10 @@ export function HomeDashboard({
                     }
                   >
                     <span {...stylex.props(styles.row)}>
-                      {t(`home.recentKind.${item.kind}`)} · {item.label}
+                      {t(`home.recentKind.${item.kind}`)} ·{' '}
+                      {item.kind === 'channel'
+                        ? channelLabel(item.channelId, item.label)
+                        : item.label}
                     </span>
                   </Button>
                   <p {...stylex.props(styles.muted)}>{date(item.at)}</p>
