@@ -216,7 +216,7 @@ function prepare(
     }
     case 'inbox-status':
       positionals(command, rest, 0, '');
-      return { method: 'humanAttentionStatus', args: {} };
+      return { method: 'humanAttentionStatus', args: { messageCounts: true } };
     case 'inbox-dismiss': {
       const [itemId] = positionals(command, rest, 1, 'exactly one inbox item id');
       return {

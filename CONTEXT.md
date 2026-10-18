@@ -656,6 +656,8 @@ _Avoid_: per-event queue, wake storm, batch (bare)
 The Human's Bot-mode entry for cross-PersonaBot and cross-Channel attention, opening directly into the personal Human Inbox. The page and Dock share inline Tool approval cards; operational statistics are outside this entry (#2026). It summarizes existing facts without becoming another authority for messages, usage, or Session activity.
 _Avoid_: Human Inbox (for the whole entry), dashboard list
 
+The Activity control-rail indicator has an independent browser/Host-local display scope. Hiding or narrowing it does not change the Human Inbox query, actual unread state, or pending Human requests.
+
 **Human Inbox**:
 The personal attention view inside Activity Center: unresolved Human actions, mentions and replies, unread Channel activity, informational updates, and handled history. It references the owning facts without copying Channel content or flattening every Bot Inbox event into Human work. Human-muted Channels contribute neither message attention (including mentions and replies) nor global unread reminders; their read positions and explicit Human action requests remain intact.
 _Avoid_: notifications, Bot Inbox, dashboard list

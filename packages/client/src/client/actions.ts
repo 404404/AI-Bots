@@ -1254,7 +1254,12 @@ export function createActions(
   let humanInboxScopeVersion = 0;
   let humanInboxStatusSeq = 0;
   const loadInboxStatus = async (): Promise<
-    Partial<Pick<HumanInboxState, 'unreadCount' | 'hasAction' | 'channelUnread'>>
+    Partial<
+      Pick<
+        HumanInboxState,
+        'unreadCount' | 'hasAction' | 'channelUnread' | 'messageCounts' | 'attentionStatus'
+      >
+    >
   > => {
     const [status, channelUnread] = await Promise.allSettled([
       loadHumanAttentionStatus(call),
@@ -1263,6 +1268,7 @@ export function createActions(
     if (status.status === 'rejected') throw status.reason;
     return {
       ...status.value,
+      attentionStatus: 'ready',
       ...(channelUnread.status === 'fulfilled' ? { channelUnread: channelUnread.value } : {}),
     };
   };
@@ -1272,6 +1278,8 @@ export function createActions(
       const status = await loadInboxStatus();
       if (requestSeq === humanInboxStatusSeq) clientStore.setHumanInbox(status);
     } catch {
+      if (requestSeq === humanInboxStatusSeq)
+        clientStore.setHumanInbox({ attentionStatus: 'error' });
       return;
     }
   };

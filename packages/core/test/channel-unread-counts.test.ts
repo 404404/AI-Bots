@@ -148,6 +148,10 @@ it('filters muted message attention before search and paging without reading mes
     const timeline = methods.channelMessages({ channelId: a.id });
     const before = core.humanAttention.list({ category: 'unread', channelId: a.id }).items[0]!;
     expect(core.humanAttention.status()).toEqual({ unreadCount: 4, hasAction: true });
+    expect(methods.humanAttentionStatus({ messageCounts: true })).toMatchObject({
+      ok: true,
+      value: { unreadCount: 4, hasAction: true, messageCounts: { replies: 1, other: 3 } },
+    });
     expect(core.humanAttention.list({ category: 'replies' }).items).toHaveLength(2);
     await methods.channelMuteSet({ channelId: a.id, muted: true });
     for (const category of ['unread', 'replies'] as const) {
@@ -160,6 +164,7 @@ it('filters muted message attention before search and paging without reading mes
     ).toMatchObject({ items: [{ channelId: b.id, unreadCount: 1 }] });
     expect(core.humanAttention.item(before.id, before.sourceEventId)).toBeUndefined();
     expect(core.humanAttention.status()).toEqual({ unreadCount: 1, hasAction: true });
+    expect(core.humanAttention.status(true).messageCounts).toEqual({ replies: 0, other: 1 });
     expect(core.humanAttention.list({ category: 'action' }).items).toMatchObject([
       { requestId: request.id },
     ]);
@@ -172,6 +177,7 @@ it('filters muted message attention before search and paging without reading mes
     expect(core.humanAttention.list({ category: 'replies' }).items).toEqual([]);
     await methods.channelMuteSet({ channelId: a.id, muted: false });
     expect(core.humanAttention.status()).toEqual({ unreadCount: 5, hasAction: true });
+    expect(core.humanAttention.status(true).messageCounts).toEqual({ replies: 2, other: 3 });
     expect(core.channels.readPosition(a.id)).toEqual(position);
     expect(core.humanAttention.list({ category: 'unread', channelId: a.id }).items).toMatchObject([
       { unreadCount: 2 },
@@ -197,6 +203,36 @@ it('filters muted message attention before search and paging without reading mes
     expect(core.humanAttention.list({ category: 'unread' }).items).toMatchObject([
       { channelId: a.id },
     ]);
+  } finally {
+    await core.runtime.close();
+    core.operationalDatabase.close();
+  }
+});
+
+it('returns complete category counts independent of the first Activity page', async () => {
+  const core = createCore({ dshHome: createTempRoot('attention-summary-'), agents: adapter() });
+  try {
+    core.registry.create({ slug: 'ada', displayName: 'Ada' });
+    const dm = core.channels.createGroup({ name: 'Large', members: ['ada'] });
+    for (let i = 0; i < 55; i++)
+      await core.channels.appendMessage(dm.id, {
+        id: 'message-' + i,
+        at: new Date(Date.UTC(2026, 9, 19, 0, i)).toISOString(),
+        author: { kind: 'bot', slug: 'ada' },
+        body: '@Human message ' + i,
+        botCausation: { rootSourceEventId: 'root', parentSourceEventId: 'parent', hop: 1 },
+        humanMentions: [{ humanId: 'local-human', label: 'Human', start: 0, end: 6 }],
+      });
+    expect(core.humanAttention.list({ category: 'replies', limit: 1 }).items).toHaveLength(1);
+    const methods = createBridgeMethods({ ...core });
+    expect(methods.humanAttentionStatus({ messageCounts: true })).toMatchObject({
+      ok: true,
+      value: { unreadCount: 55, messageCounts: { replies: 55, other: 0 } },
+    });
+    await core.channels.markRead(dm.id, 'message-54');
+    expect(core.humanAttention.list({ category: 'replies', limit: 1 }).items).toHaveLength(1);
+    expect(core.humanAttention.status(true).messageCounts).toEqual({ replies: 0, other: 0 });
+    expect(methods.humanAttentionStatus({ messageCounts: 'true' })).toMatchObject({ ok: false });
   } finally {
     await core.runtime.close();
     core.operationalDatabase.close();

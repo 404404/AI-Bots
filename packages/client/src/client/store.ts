@@ -336,6 +336,8 @@ export interface HumanAttentionPage {
 }
 
 export interface HumanInboxState {
+  messageCounts?: { replies: number; other: number } | undefined;
+  attentionStatus?: 'ready' | 'error' | undefined;
   status: ClientStatus;
   unreadCount: number;
   channelUnread: Readonly<Record<string, number>>;
@@ -856,6 +858,8 @@ export function createStore(): ClientStore {
           ...initialHumanInbox(),
           unreadCount: state.humanInbox.unreadCount,
           hasAction: state.humanInbox.hasAction,
+          messageCounts: state.humanInbox.messageCounts,
+          attentionStatus: state.humanInbox.attentionStatus,
         },
       });
     },
