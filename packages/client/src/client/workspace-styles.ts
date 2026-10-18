@@ -10,6 +10,10 @@ export const WORKSPACE_CSS = `
 [data-bh-workspace-frame] > [data-bh-workspace-main] { grid-column:1 / 3; grid-row:1; border-left:0 !important; }
 [data-bh-workspace-frame] > [data-rightbar-col] { grid-column:3; grid-row:1; }
 .bh-workspace-chrome { display:none; }
+/* The native Windows caption stays owned by DSH; workspace blanks add drag boxes. */
+html[data-windows-titlebar] [data-workspace-dock] :is([data-window-drag], .dv-tabs-and-actions-container, .dv-tab) { -webkit-app-region:drag; }
+html[data-windows-titlebar] [data-workspace-dock] :is([data-window-drag-recall], button, a, input, select, textarea, [contenteditable="true"], [role="menu"], [role="dialog"], [role="tooltip"]) { -webkit-app-region:no-drag; }
+html[data-windows-titlebar]:has([data-workspace-dock]) body > :not(#root) { -webkit-app-region:no-drag; }
 [data-bh-workspace-main] { --dsh-frame-leading-clearance:0px; }
 html[data-platform="darwin"]:not([data-fullscreen]) [data-workspace-enabled] > .bh-workspace-chrome { display:block; position:absolute; top:0; left:0; width:calc(${size.nav} * 2 + ${space.x3}); height:${size.nav}; z-index:10; background:${color.base}; }
 .bh-dock[data-workspace-dock] .dv-groupview { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; }

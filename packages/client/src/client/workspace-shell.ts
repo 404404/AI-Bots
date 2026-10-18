@@ -41,7 +41,6 @@ export function mountWorkspaceShell(
     frame.hasAttribute('data-bh-workspace-frame')
   )
     return;
-  if (document.documentElement.hasAttribute('data-windows-titlebar')) return;
   let releaseCommand: () => void;
   try {
     releaseCommand = claimSidebarCommand(layout, toggle);

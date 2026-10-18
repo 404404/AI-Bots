@@ -655,7 +655,7 @@ _避免使用_：per-event queue、wake storm、batch（单独使用）
 _避免使用_：Human Inbox（指整个入口时）、dashboard list
 
 **Human Inbox**：
-Activity Center 内的个人 attention 视图：未解决的 Human 行动、提及与回复、未读 Channel 活动、信息更新及已处理历史。它引用所属权威事实，不复制 Channel 内容，也不会把每条 Bot Inbox 事件都摊成 Human 工作。
+Activity Center 内的个人 attention 视图：未解决的 Human 行动、提及与回复、未读 Channel 活动、信息更新及已处理历史。它引用所属权威事实，不复制 Channel 内容，也不会把每条 Bot Inbox 事件都摊成 Human 工作。Human 设置免打扰的 Channel 不贡献消息注意力（含提及、回复）或全局未读提醒；真实已读位置和明确 Human 行动请求保持不变。
 _避免使用_：notifications、Bot Inbox、dashboard list
 
 **Channel Attention**：

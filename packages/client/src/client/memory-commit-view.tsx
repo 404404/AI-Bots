@@ -1,3 +1,5 @@
+import { MemoryMarkdownDiff, MemoryMarkdownToggle } from './memory-markdown-view.js';
+import { MemoryImageDiff } from './memory-image-view.js';
 import { useState, type ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
 import type { MemoryGitCommitDiff } from './bridge.js';
@@ -5,6 +7,7 @@ import type { BotHarnessTranslate } from './locale.js';
 import { MemoryCurrentFileOpenButton } from './memory-file-actions.js';
 import {
   MemoryDiffFile,
+  MemoryDiffWrapButton,
   MemoryViewIconButton,
   splitMemoryDiffFiles,
 } from './memory-reader-parts.js';
@@ -25,6 +28,9 @@ export function MemoryCommitView({
   onClose: () => void;
   t: BotHarnessTranslate;
 }): ReactElement {
+  const [revision, setRevision] = useState(0);
+  const [wrap, setWrap] = useState(true);
+  const [preview, setPreview] = useState(false);
   const [detail, setDetail] = useState<MemoryGitCommitDiff>();
   const [error, setError] = useState<string>();
   const mount = useMountedResource<HTMLDivElement>(() => {
@@ -42,7 +48,7 @@ export function MemoryCommitView({
     return () => {
       active = false;
     };
-  }, [actions, channelId, sha]);
+  }, [actions, channelId, sha, revision]);
 
   const diffSections = splitMemoryDiffFiles(detail?.diff ?? '');
 
@@ -50,6 +56,11 @@ export function MemoryCommitView({
     <div className="bh-memory-commit-view" role="region" aria-label={t('memory.diff')} ref={mount}>
       <div className="bh-memory-commit-header">
         <MemoryViewIconButton action="backToChat" onClick={onClose} t={t} />
+        <MemoryViewIconButton
+          action="refresh"
+          onClick={() => setRevision((value) => value + 1)}
+          t={t}
+        />
         <div
           className="bh-memory-commit-title"
           title={detail?.subject ? `${sha}\n${detail.subject}` : sha}
@@ -59,6 +70,15 @@ export function MemoryCommitView({
             <span>{detail.subject}</span>
           )}
         </div>
+        {detail?.files.some((file) => file.markdown !== undefined) ? (
+          <MemoryMarkdownToggle
+            preview={preview}
+            onToggle={() => setPreview((v) => !v)}
+            diff
+            t={t}
+          />
+        ) : null}
+        <MemoryDiffWrapButton wrap={wrap} onToggle={() => setWrap((value) => !value)} t={t} />
       </div>
       {error !== undefined ? (
         <div className="bh-error" role="alert">
@@ -77,7 +97,20 @@ export function MemoryCommitView({
               key={file.path + index}
               path={file.path}
               status={file.status}
+              preview={
+                botSlug !== undefined && file.markdown !== undefined && preview ? (
+                  <MemoryMarkdownDiff
+                    slug={botSlug}
+                    path={file.path}
+                    markdown={file.markdown}
+                    t={t}
+                  />
+                ) : file.images === undefined || botSlug === undefined ? undefined : (
+                  <MemoryImageDiff slug={botSlug} path={file.path} images={file.images} t={t} />
+                )
+              }
               diff={diffSections[index] ?? ''}
+              wrap={wrap}
               label={t('memory.diff')}
               binaryLabel={t('memory.binaryPreview')}
               emptyLabel={t('memory.noTextDiff')}

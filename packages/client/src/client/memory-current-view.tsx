@@ -1,8 +1,18 @@
+import {
+  MemoryMarkdownView,
+  MemoryMarkdownDiff,
+  MemoryMarkdownToggle,
+} from './memory-markdown-view.js';
+import { MemoryImageView, MemoryImageDiff } from './memory-image-view.js';
 import { useState, type ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
 import type { MemoryWorkingChange, MemoryWorkingDiff } from './bridge.js';
 import type { BotHarnessTranslate } from './locale.js';
-import { MemoryDiffFile, MemoryViewIconButton } from './memory-reader-parts.js';
+import {
+  MemoryDiffFile,
+  MemoryDiffWrapButton,
+  MemoryViewIconButton,
+} from './memory-reader-parts.js';
 import {
   MemoryCurrentFileOpenButton,
   MemoryFileActionButton,
@@ -27,6 +37,7 @@ export function MemoryFileView({
   onClose,
   t,
 }: CommonProps & { path: string; botSlug?: string | undefined }): ReactElement {
+  const [preview, setPreview] = useState(true);
   const [revision, setRevision] = useState(0);
   const [file, setFile] = useState<Awaited<ReturnType<BridgeActions['memoryFile']>>>();
   const [error, setError] = useState<string>();
@@ -87,6 +98,9 @@ export function MemoryFileView({
     >
       <div className="bh-memory-commit-header">
         <MemoryViewIconButton action="backToChat" onClick={onClose} t={t} />
+        {file?.markdown === undefined ? null : (
+          <MemoryMarkdownToggle preview={preview} onToggle={() => setPreview((v) => !v)} t={t} />
+        )}
         <strong>
           {botSlug === undefined ? (
             path
@@ -118,6 +132,10 @@ export function MemoryFileView({
         error === undefined ? (
           <div className="bh-note">{t('memory.loading')}</div>
         ) : null
+      ) : file.image !== undefined && botSlug !== undefined ? (
+        <MemoryImageView slug={botSlug} path={path} image={file.image} t={t} />
+      ) : file.markdown !== undefined && preview && botSlug !== undefined ? (
+        <MemoryMarkdownView slug={botSlug} path={path} document={file.markdown} t={t} />
       ) : file.binary ? (
         <div className="bh-note">{t('memory.binaryPreview')}</div>
       ) : (
@@ -137,6 +155,8 @@ export function MemoryWorkingView({
 }: CommonProps & { change: MemoryWorkingChange; botSlug?: string | undefined }): ReactElement {
   const [revision, setRevision] = useState(0);
   const [detail, setDetail] = useState<MemoryWorkingDiff>();
+  const [preview, setPreview] = useState(false);
+  const [wrap, setWrap] = useState(true);
   const [error, setError] = useState<string>();
 
   const mount = useMountedResource<HTMLDivElement>(() => {
@@ -204,6 +224,15 @@ export function MemoryWorkingView({
       <div className="bh-memory-commit-header">
         <MemoryViewIconButton action="backToChat" onClick={onClose} t={t} />
         <strong>{t('memory.workingDiff')}</strong>
+        {detail?.markdown === undefined ? null : (
+          <MemoryMarkdownToggle
+            preview={preview}
+            onToggle={() => setPreview((v) => !v)}
+            diff
+            t={t}
+          />
+        )}
+        <MemoryDiffWrapButton wrap={wrap} onToggle={() => setWrap((value) => !value)} t={t} />
         <MemoryViewIconButton
           action="refresh"
           onClick={() => setRevision((value) => value + 1)}
@@ -232,7 +261,20 @@ export function MemoryWorkingView({
                   ? t('memory.badge.updated')
                   : (badge ?? detail.status)
           }
+          preview={
+            botSlug !== undefined && detail.markdown !== undefined && preview ? (
+              <MemoryMarkdownDiff
+                slug={botSlug}
+                path={change.path}
+                markdown={detail.markdown}
+                t={t}
+              />
+            ) : detail.images === undefined || botSlug === undefined ? undefined : (
+              <MemoryImageDiff slug={botSlug} path={change.path} images={detail.images} t={t} />
+            )
+          }
           diff={detail.diff}
+          wrap={wrap}
           label={t('memory.workingDiff')}
           binary={detail.binary}
           binaryLabel={t('memory.binaryPreview')}
