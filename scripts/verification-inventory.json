@@ -560,6 +560,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
       "task": 2214,
       "gap": "Web Markdown and local PNG only; editor/file-card previews, other local formats and native mobile remain in #2214."
+    },
+    {
+      "id": "desktop.memory.image-formats",
+      "label": "Read and compare original JPEG/GIF/WebP/static SVG bytes with genuine decode, animation and CLI export",
+      "source": "packages/core/src/media/image-format.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
+      "task": 2214,
+      "gap": "Native decoding/sharing remains queued; SVG is the bounded static subset, editor/file-card/mobile diff paths remain #2214."
     }
   ],
   "scripts": [
@@ -1868,6 +1876,14 @@
       "reason": "Task-owned isolated Git/Host fixture; real Markdown rendering and image decode, source/line toggles, historical/index/local bytes, explicit intercepted external load, missing/stale/anonymous refusal and narrow layout.",
       "task": 2214,
       "sha256": "504d4ddc27e5fd5b4f844a044f02c5ea04a05e487c691841dceac97d4e087abf"
+    },
+    {
+      "path": "scripts/e2e-memory-formats.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.image-formats"],
+      "reason": "Matched main/candidate current/Markdown/working/history/narrow images, genuine pixels and animation advancement, version/MIME original-byte exports and rejected SVG external-resource loads.",
+      "task": 2214,
+      "sha256": "b182342def59c7b6edc30c605ee620c7407b0a26b9ee5fdb3a61b600dd114e5e"
     }
   ],
   "native": [

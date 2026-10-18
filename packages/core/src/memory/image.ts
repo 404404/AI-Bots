@@ -1,3 +1,11 @@
+import {
+  inspectImage,
+  ImageFormatError,
+  isMemoryImagePath,
+  MAX_SVG_BYTES,
+  type ImageMime,
+} from '../media/image-format.js';
+export { isMemoryImagePath };
 import { createHash } from 'node:crypto';
 import {
   closeSync,
@@ -12,9 +20,8 @@ import { relative } from 'node:path';
 import { resolveMemoryPath, toMemoryRelativePath } from './jail.js';
 
 export const MAX_MEMORY_IMAGE_BYTES = 25 * 1024 * 1024;
-const MAX_IMAGE_PIXELS = 40_000_000;
 export interface MemoryImage {
-  mime?: 'image/png';
+  mime?: ImageMime;
   source: string;
   status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
   revision?: string;
@@ -145,30 +152,31 @@ export function readMemoryImage(
   git: MemoryGit,
 ): { image: MemoryImage; bytes?: Buffer } {
   const fail = (status: MemoryImage['status']) => ({ image: { source, status } });
-  const result = readMemoryBytes(root, input, source, git);
+  const result = readMemoryBytes(
+    root,
+    input,
+    source,
+    git,
+    /\.svg$/iu.test(input) ? MAX_SVG_BYTES : MAX_MEMORY_IMAGE_BYTES,
+  );
   const bytes = result.bytes;
   if (result.status !== 'ready' || bytes === undefined) return fail(result.status);
-  if (
-    bytes.length < 33 ||
-    !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ||
-    bytes.readUInt32BE(8) !== 13 ||
-    bytes.toString('ascii', 12, 16) !== 'IHDR'
-  )
-    return fail('unsupported');
-  const width = bytes.readUInt32BE(16),
-    height = bytes.readUInt32BE(20);
-  if (!width || !height || width > 16384 || height > 16384 || width * height > MAX_IMAGE_PIXELS)
-    return fail('too-large');
-  return {
-    image: {
-      source,
-      status: 'ready',
-      mime: 'image/png',
-      revision: createHash('sha256').update(bytes).digest('hex'),
-      size: bytes.length,
-      width,
-      height,
-    },
-    bytes,
-  };
+  try {
+    const format = inspectImage(bytes);
+    return {
+      image: {
+        source,
+        status: 'ready',
+        mime: format.mime,
+        revision: createHash('sha256').update(bytes).digest('hex'),
+        size: bytes.length,
+        width: format.width,
+        height: format.height,
+      },
+      bytes,
+    };
+  } catch (error) {
+    if (error instanceof ImageFormatError) return fail(error.status);
+    throw error;
+  }
 }

@@ -2944,7 +2944,7 @@ export const zh = {
   'memory.image.after': '修改后',
   'memory.image.absent': '此版本中不存在',
   'memory.image.missing': '图片已不存在，请刷新视图。',
-  'memory.image.unsupported': '此文件不是受支持的 PNG 图片。',
+  'memory.image.unsupported': '此文件不是受支持的 PNG、JPEG、GIF、WebP 或安全 SVG 图片。',
   'memory.image.too-large': '图片超出预览大小或尺寸上限。',
   'memory.image.stale': '图片发生变化，请刷新视图。',
   'memory.image.loadFailed': '图片加载失败，请刷新视图后重试。',
@@ -6825,7 +6825,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.image.after': 'After',
   'memory.image.absent': 'Not present in this version',
   'memory.image.missing': 'Image is missing. Refresh the view.',
-  'memory.image.unsupported': 'This file is not a supported PNG image.',
+  'memory.image.unsupported':
+    'This file is not a supported PNG, JPEG, GIF, WebP or safe SVG image.',
   'memory.image.too-large': 'Image exceeds the preview byte or dimension limit.',
   'memory.image.stale': 'Image changed. Refresh the view.',
   'memory.image.loadFailed': 'Image could not load. Refresh the view to retry.',

@@ -744,7 +744,8 @@ const en = {
     ({
       'memory-image-missing': 'Image not found. Refresh the document and try again.',
       'memory-image-stale': 'The document or image changed. Refresh the document.',
-      'memory-image-unsupported': 'This image cannot be previewed. This preview supports PNG.',
+      'memory-image-unsupported':
+        'This image cannot be previewed. Supported formats: PNG, JPEG, GIF, WebP and safe SVG.',
       'memory-image-too-large': 'Image exceeds the preview size or dimension limit.',
       'memory-image-invalid': 'This image reference is not allowed.',
       'memory-image-share-failed': 'Could not share this image. Try again.',
@@ -1696,7 +1697,7 @@ const zh: typeof en = {
     ({
       'memory-image-missing': '找不到图片，请刷新文档后重试。',
       'memory-image-stale': '文档或图片已变化，请刷新文档。',
-      'memory-image-unsupported': '无法预览此图片，当前预览支持 PNG。',
+      'memory-image-unsupported': '无法预览此图片，支持 PNG、JPEG、GIF、WebP 和安全的 SVG。',
       'memory-image-too-large': '图片超过预览的大小或尺寸限制。',
       'memory-image-invalid': '不允许访问此图片引用。',
       'memory-image-share-failed': '无法分享此图片，请重试。',

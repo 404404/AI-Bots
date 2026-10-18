@@ -339,3 +339,41 @@ describe('Memory image byte export', () => {
     expect(result.json.error.code).toBe('memory-image-stale');
   });
 });
+
+describe('Memory export format parity', () => {
+  it.each([
+    ['jpg', 'image/jpeg'],
+    ['gif', 'image/gif'],
+    ['webp', 'image/webp'],
+    ['svg', 'image/svg+xml'],
+  ])(
+    'exports original %s bytes with detected MIME in one JSON receipt',
+    async (extension, mime) => {
+      const bytes = readFileSync(
+        new URL(`./fixtures/memory-images/blue.${extension}`, import.meta.url),
+      );
+      const live = await host(() => ({ bytes, headers: { 'content-type': mime } }));
+      const dir = mkdtempSync(join(tmpdir(), 'memory-format-cli-'));
+      dirs.push(dir);
+      const out = join(dir, `preview.${extension}`);
+      const result = await invoke(
+        [
+          'memory-image',
+          'ada',
+          '--path',
+          `preview.${extension}`,
+          '--image-source',
+          'worktree',
+          '--image-revision',
+          'a'.repeat(64),
+          '--out',
+          out,
+        ],
+        live.url,
+      );
+      expect(result.code).toBe(0);
+      expect(result.json).toMatchObject({ mime, bytes: bytes.length, out });
+      expect(readFileSync(out)).toEqual(bytes);
+    },
+  );
+});

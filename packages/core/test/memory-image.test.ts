@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
 import { describe, expect, it } from 'vitest';
@@ -345,5 +345,92 @@ describe('Markdown versions and inline PNGs through the Memory boundary', () => 
     writeFileSync(join(root, 'huge.md'), '');
     truncateSync(join(root, 'huge.md'), 4 * 1024 * 1024 + 1);
     expect(memory.readAccepted('atlas', 'huge.md')?.markdown?.status).toBe('too-large');
+  });
+});
+
+const formatFixture = (name: string) =>
+  readFileSync(new URL(`./fixtures/memory-images/${name}`, import.meta.url));
+describe('remaining formats through public Memory queries and byte transport', () => {
+  it.each([
+    ['jpg', 'image/jpeg'],
+    ['gif', 'image/gif'],
+    ['webp', 'image/webp'],
+    ['svg', 'image/svg+xml'],
+  ])('preserves all selected %s versions, MIME and original bytes', async (extension, mime) => {
+    const { root, memory, git, save, get, http } = fixture();
+    const path = `preview.${extension}`;
+    const blue = formatFixture(`blue.${extension}`),
+      orange = formatFixture(`orange.${extension}`),
+      green = formatFixture(`green.${extension}`);
+    const head = save(blue, true, path);
+    save(orange, false, path);
+    git('add', '--', path);
+    save(green, false, path);
+    const staged = memory.workingDiff('atlas', path, 'staged').images!;
+    const unstaged = memory.workingDiff('atlas', path, 'unstaged').images!;
+    const current = memory.workingDiff('atlas', path, 'current').images!;
+    for (const [image, expected] of [
+      [staged.before, blue],
+      [staged.after, orange],
+      [unstaged.before, orange],
+      [unstaged.after, green],
+      [current.before, blue],
+      [current.after, green],
+    ] as const) {
+      expect(image).toMatchObject({
+        status: 'ready',
+        mime,
+        revision: digest(expected),
+        width: 160,
+        height: 90,
+      });
+      const response = await get(image!, path);
+      expect(response.headers.get('content-type')).toBe(mime);
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(expected);
+    }
+    expect(staged.before?.source).toBe(head);
+    expect(memory.readAccepted('atlas', path)?.image?.revision).toBe(digest(green));
+    git('commit', '-m', 'Stage format image');
+    const selected = git('rev-parse', 'HEAD');
+    const historical = memory
+      .gitCommitDiff('atlas', selected)
+      .files.find((file) => file.path === path)!.images!;
+    rmSync(join(root, path));
+    expect(Buffer.from(await (await get(historical.before!, path)).arrayBuffer())).toEqual(blue);
+    expect(Buffer.from(await (await get(historical.after!, path)).arrayBuffer())).toEqual(orange);
+    mkdirSync(join(root, 'notes'));
+    writeFileSync(join(root, 'notes/a.md'), `# Note\n![Figure](../${path})`);
+    save(green, false, path);
+    const document = memory.readAccepted('atlas', 'notes/a.md')!.markdown!;
+    const response = await http(
+      new Request(
+        'http://host/api/botharness/memory/image?' +
+          new URLSearchParams({
+            slug: 'atlas',
+            path: 'notes/a.md',
+            source: document.source,
+            revision: document.revision!,
+            reference: `../${path}`,
+          }),
+      ),
+    );
+    expect(response.headers.get('content-type')).toBe(mime);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(green);
+  });
+  it('uses actual content for misleading extensions and rejects unsafe/over-budget SVG without altering original downloads', async () => {
+    const { root, memory, save, get } = fixture();
+    const encoded = formatFixture('blue.gif');
+    save(encoded, false, 'misleading.jpg');
+    const image = memory.readAccepted('atlas', 'misleading.jpg')!.image!;
+    expect(image.mime).toBe('image/gif');
+    expect((await get(image, 'misleading.jpg')).headers.get('content-type')).toBe('image/gif');
+    writeFileSync(
+      join(root, 'unsafe.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><script>alert(1)</script></svg>',
+    );
+    expect(memory.readAccepted('atlas', 'unsafe.svg')?.image?.status).toBe('unsupported');
+    writeFileSync(join(root, 'huge.svg'), '');
+    truncateSync(join(root, 'huge.svg'), 1024 * 1024 + 1);
+    expect(memory.readAccepted('atlas', 'huge.svg')?.image?.status).toBe('too-large');
   });
 });

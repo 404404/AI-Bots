@@ -325,7 +325,7 @@ export const LIVE_COMMANDS = [
   {
     command: 'memory-image',
     description:
-      'export version-bound Memory PNG bytes (--path --image-source --image-revision [--image-reference] --out)',
+      'export version-bound Memory image bytes (--path --image-source --image-revision [--image-reference] --out)',
   },
   { command: 'memory-file-target', description: 'resolve a memory file path for a Bot' },
   { command: 'memory-graph', description: "read a Bot's memory commit graph" },
@@ -1548,15 +1548,20 @@ async function runMemoryCommand(
             ...(reference === undefined ? {} : { reference }),
           }),
       );
-      if (response.headers.get('content-type') !== 'image/png')
-        throw new CliLiveError('host-protocol-error', 'Expected a PNG image');
+      const mime = response.headers.get('content-type');
+      if (
+        !['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'].includes(
+          mime ?? '',
+        )
+      )
+        throw new CliLiveError('host-protocol-error', 'Expected a supported Memory image');
       writeFileSync(out, bytes, { flag: 'wx' });
       return {
         path,
         source,
         revision,
         ...(reference === undefined ? {} : { reference }),
-        mime: 'image/png',
+        mime,
         bytes: bytes.length,
         out,
       };

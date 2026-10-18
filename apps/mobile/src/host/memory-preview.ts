@@ -1,3 +1,9 @@
+import {
+  inspectImage,
+  ImageFormatError,
+  MAX_SVG_BYTES,
+  type ImageMime,
+} from '../../../../packages/core/src/media/image-format';
 import type { HostClient, RemoteSource } from './client';
 import type { MemoryImage, MemoryMarkdown } from './wire';
 
@@ -7,11 +13,12 @@ export type PreviewImage = {
   width: number;
   height: number;
   size: number;
+  mime: ImageMime;
   dispose(): void;
 };
 export interface MemoryPreviewIO {
   fetch(source: RemoteSource, signal: AbortSignal): Promise<Response>;
-  store(bytes: Uint8Array): { uri: string; dispose(): void };
+  store(bytes: Uint8Array, extension?: string): { uri: string; dispose(): void };
 }
 
 export function imageReferenceKind(reference: string): 'local' | 'remote' | 'invalid' {
@@ -49,22 +56,6 @@ export function memoryPreviewSource(
   });
   if (reference !== undefined) query.set('reference', reference);
   return client.resource('/api/botharness/memory/image?' + query);
-}
-
-export function pngDimensions(bytes: Uint8Array): { width: number; height: number } {
-  const signature = [137, 80, 78, 71, 13, 10, 26, 10];
-  if (
-    bytes.length < 33 ||
-    signature.some((n, i) => bytes[i] !== n) ||
-    String.fromCharCode(...bytes.subarray(12, 16)) !== 'IHDR'
-  )
-    throw new Error('memory-image-unsupported');
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const width = view.getUint32(16),
-    height = view.getUint32(20);
-  if (!width || !height || width > 16384 || height > 16384 || width * height > 40_000_000)
-    throw new Error('memory-image-too-large');
-  return { width, height };
 }
 
 async function readPreviewBytes(
@@ -130,13 +121,23 @@ export async function loadPreviewImage(
     } catch {}
     throw new Error(code);
   }
-  const bytes = await readPreviewBytes(response, MEMORY_IMAGE_LIMIT, signal);
+  const limit =
+    response.headers.get('content-type')?.split(';', 1)[0] === 'image/svg+xml'
+      ? MAX_SVG_BYTES
+      : MEMORY_IMAGE_LIMIT;
+  const bytes = await readPreviewBytes(response, limit, signal);
   const size = bytes.byteLength;
-  const dimensions = pngDimensions(bytes);
-  const file = io.store(bytes);
+  let format: ReturnType<typeof inspectImage>;
+  try {
+    format = inspectImage(bytes);
+  } catch (error) {
+    if (error instanceof ImageFormatError) throw new Error(`memory-image-${error.status}`);
+    throw error;
+  }
+  const file = io.store(bytes, format.extension);
   if (signal.aborted) {
     file.dispose();
     signal.throwIfAborted();
   }
-  return { ...file, ...dimensions, size };
+  return { ...file, width: format.width, height: format.height, mime: format.mime, size };
 }
