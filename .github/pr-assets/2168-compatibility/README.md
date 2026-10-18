@@ -2,15 +2,15 @@
 
 Recorded 2026-10-18. Final runtime source: `cb2a201d62847977e7329ca9e92d4cccdf7721f2`. The same locally prepared **1.4.0** tarballs were installed on both released DSH versions; their integrity digests are in [qualification.json](qualification.json). Nothing was published.
 
-| Check | DSH 0.2.0-rc.2 | DSH 0.2.1-rc.2 |
-| --- | --- | --- |
-| Final artifacts, fresh Profile, normal plugin install | Passed | Passed |
-| No native compatibility-disabled plugin | Passed | Passed |
-| Host Bot + DM creation and restart persistence | Passed | Passed |
-| Final macOS Desktop Bot mode, settings, restart | Passed | Passed |
-| Native Owner-only secret-list (names only, empty test store) | Passed | Passed |
-| Real DM, Assignment write/read, foreground spawn + fork | Passed on earlier source `511ce4dc2`; final rerun blocked | Passed on final source |
-| Background Subagent result delivery | Contract tests only | Native completion plus visible result 81 |
+| Check                                                        | DSH 0.2.0-rc.2                                            | DSH 0.2.1-rc.2                           |
+| ------------------------------------------------------------ | --------------------------------------------------------- | ---------------------------------------- |
+| Final artifacts, fresh Profile, normal plugin install        | Passed                                                    | Passed                                   |
+| No native compatibility-disabled plugin                      | Passed                                                    | Passed                                   |
+| Host Bot + DM creation and restart persistence               | Passed                                                    | Passed                                   |
+| Final macOS Desktop Bot mode, settings, restart              | Passed                                                    | Passed                                   |
+| Native Owner-only secret-list (names only, empty test store) | Passed                                                    | Passed                                   |
+| Real DM, Assignment write/read, foreground spawn + fork      | Passed on earlier source `511ce4dc2`; final rerun blocked | Passed on final source                   |
+| Background Subagent result delivery                          | Contract tests only                                       | Native completion plus visible result 81 |
 
 The sole runtime delta after the successful older-Desktop journey was removal of the legacy `{{cwd}}` persona suffix: the newer Host no longer registers this variable. The final package installation, startup, restart and settings were rechecked on the older Desktop. Its final model rerun remains pending because the provider returned **QUOTA / Insufficient Balance** after the new-Desktop result was delivered. This is not an all-green runtime qualification.
 
