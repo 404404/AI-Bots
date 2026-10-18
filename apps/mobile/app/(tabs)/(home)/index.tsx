@@ -306,7 +306,11 @@ const HomeContent = memo(function HomeContent({
                 }
                 ListEmptyComponent={
                   directory.busy ||
-                  (saved && !snapshot.roster && snapshot.connection.status === 'connecting') ? (
+                  (saved &&
+                    (environment.key === 'all' ||
+                      environment.key === computerEnvironmentKey(saved.hostId)) &&
+                    !snapshot.roster &&
+                    snapshot.connection.status === 'connecting') ? (
                     <ActivityIndicator />
                   ) : (
                     <Text tone="muted" style={{ padding: space.x6 }}>

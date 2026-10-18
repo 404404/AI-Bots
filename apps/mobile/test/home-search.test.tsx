@@ -9,8 +9,9 @@ import { publicInstance, MOBILE_REDIRECT_URI } from '../src/cloud/instance-contr
 import { cloudViewScope } from '../src/cloud/workspace-directory';
 import type { RosterView } from '../src/host/client';
 
-const { push, cloudState, directoryState } = vi.hoisted(() => ({
+const { push, cloudState, directoryState, hostState } = vi.hoisted(() => ({
   push: vi.fn(),
+  hostState: { connecting: false },
   cloudState: {
     error: undefined as string | undefined,
     ready: true,
@@ -87,7 +88,10 @@ vi.mock('../src/host/host-session', () => ({
     client: undefined,
     inbox: undefined,
   }),
-  useHostSnapshot: () => ({ connection: { status: 'connected', route: '' }, roster }),
+  useHostSnapshot: () => ({
+    connection: { status: hostState.connecting ? 'connecting' : 'connected', route: '' },
+    roster: hostState.connecting ? undefined : roster,
+  }),
   useInbox: () => ({ status: 'loading' }),
 }));
 vi.mock('../src/host/native-section-collapse', () => ({
@@ -128,6 +132,7 @@ afterEach(() => {
   root = undefined;
   push.mockReset();
   vi.unstubAllGlobals();
+  hostState.connecting = false;
   cloudState.rows = [];
   cloudState.ready = true;
   cloudState.error = undefined;
@@ -215,7 +220,10 @@ describe('Search at the top of Chats', () => {
         },
       },
     ];
-    directoryState.workspaces = directoryState.rows;
+    directoryState.workspaces = [
+      ...directoryState.rows,
+      { ...directoryState.rows[0]!, organizationId: 'empty', organizationName: 'Empty workspace' },
+    ];
     const view = await home();
     expect(view.textContent).toContain('Cloud general');
     expect(view.textContent).toContain('Ada');
@@ -249,6 +257,11 @@ describe('Search at the top of Chats', () => {
     ).toBe('true');
     expect(rows(view).join(' ')).not.toContain('Ada, Done');
     expect(rows(view).join(' ')).toContain('Cloud general');
+    hostState.connecting = true;
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>('button[aria-label="Empty workspace"]')!.click(),
+    );
+    expect(view.textContent).toContain(t.cloudChannels.empty);
   });
 
   it('filters the list in place and opens the chat the Human taps', async () => {
