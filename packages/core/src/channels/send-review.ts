@@ -213,6 +213,7 @@ export class GroupSendReview {
       }
       draft.state = 'dropped';
       this.#save(db, draft);
+      const { budget, suggestedSnoozeUntil } = this.#progress(draft);
       return {
         status: 'dropped',
         channelId,
@@ -220,7 +221,8 @@ export class GroupSendReview {
         reason: draft.yieldedToMessageIds
           ? 'explicit-peer-yield'
           : 'explicit-drop-does-not-resolve-inbox',
-        budget: this.#progress(draft).budget,
+        budget,
+        ...(suggestedSnoozeUntil ? { suggestedSnoozeUntil } : {}),
         ...(draft.yieldedToMessageIds ? { yieldedToMessageIds: draft.yieldedToMessageIds } : {}),
       };
     });

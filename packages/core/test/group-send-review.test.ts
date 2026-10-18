@@ -799,6 +799,11 @@ describe('busy Group progress through the direct tool', () => {
           }
           const dropped = run.channels.dropDraft!({ channelId: groupId, draftId: draftId! });
           expect(dropped.budget?.exhausted).toBe(true);
+          expect(Date.parse(dropped.suggestedSnoozeUntil!)).toBeGreaterThan(Date.now());
+          expect(Date.parse(dropped.suggestedSnoozeUntil!)).toBeLessThanOrEqual(
+            Date.now() + 30_000,
+          );
+          expect(dropped.choices).toBeUndefined();
           const fresh = JSON.parse(run.channels.readModel({ channelId: groupId }));
           await expect(
             run.channels.send({
