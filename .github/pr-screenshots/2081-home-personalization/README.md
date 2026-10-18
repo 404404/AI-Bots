@@ -21,3 +21,7 @@ Source head: `30f8953566a4fcd08186bf9feb9d779f8277633c`. Base: `be3f833d3f46cb27
 Native hover-tooltip positioning and final long-message rendering could not be completed reliably: native automation returned stale accessibility snapshots and `noWindowsAvailable`; Dock activation timed out. Do not interpret the screenshot without a tooltip as tooltip-position proof. Review path: hover the Home username, then open the synthetic FoldQA DM and toggle Messages → automatic long-message folding. The latest candidate remains open for Human QA. No browser fallback was used.
 
 Remote CI, Human QA and merge are separate gates. No PR has been merged as part of this change.
+
+## Configured Home model follow-up
+
+Source `f6be7dadf69234990914bcf2ca255d1eaf4c9456`: Desktop at 2560 × 1640 shows the usable Home composer without a model-settings button (`desktop-model-ready.png`). Native AX also exposes the Home input and no model-settings button. The prior native Home images show the removed button at a different window size; this is a labeled viewport difference, not pixel geometry evidence. The existing five Home tests and root TypeScript passed; clean build, feature-map and release-fragment checks passed. The missing-model CTA is covered by the existing source test; no model credentials were removed for native testing.
