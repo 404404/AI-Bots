@@ -17,25 +17,42 @@ export async function approveTobCliOperation(options: {
 }): Promise<() => void> {
   const { execution, operation, signal, channelApproval, approval, authorize } = options;
   const actor = execution.agent;
+  const command = 'command' in operation ? operation.command : 'settings-set';
+  const requireHumanReview = [
+    'release-install',
+    'release-restart',
+    'bot-delete-confirm',
+    'bot-delete-retry',
+  ].includes(command);
+  const scope =
+    'target' in operation &&
+    (command.startsWith('model-plan-') ||
+      command === 'model-preset-apply' ||
+      command.startsWith('bot-') ||
+      ['update', 'pause', 'resume'].includes(command))
+      ? `bot:${operation.target}`
+      : 'global';
   authorize();
   if (!actor || signal.aborted) throw new TobError('agent-context-expired');
-  if (options.fullAccess())
+  if (!requireHumanReview && options.fullAccess())
     return () => {
       authorize();
       if (signal.aborted || !options.fullAccess()) throw new TobError('approval-authority-changed');
     };
   const call = {
     ...execution,
-    name: 'deepseekbot settings-set',
+    name: 'deepseekbot ' + command,
     callId: ToolCallId(`${execution.callId}:cli:${randomUUID()}`),
     arguments: Object.freeze({
       parentShellCallId: execution.callId,
-      scope: 'global',
+      scope,
       ...operation,
     }),
     signal,
   };
-  const untrack = channelApproval?.track(call);
+  const untrack = channelApproval?.track(call, 'operation', false, undefined, undefined, {
+    requireHumanReview,
+  });
   if (!untrack || !approval || !channelApproval) {
     untrack?.();
     throw new TobError('approval-unavailable');
@@ -46,7 +63,7 @@ export async function approveTobCliOperation(options: {
       toolName: call.name,
       callId: call.callId,
       reason:
-        'Review the actual CLI operation: GLOBAL Assignment concurrency, previousValue, patch and expectedRevision. Running Assignments will not be stopped.',
+        'Review the actual CLI target, previousValue, patch and expectedRevision. Restart interrupts running work and deletion may erase Memory; approve only the requested operation.',
       signal,
     });
     if (outcome !== 'allowed-once')

@@ -17,7 +17,7 @@ _Avoid_: installed release, latest version, 0.0.0 release
 ### PersonaBots
 
 **Steward Bot**:
-A persistent local PersonaBot with its own Memory and read access to the Human's Bot and Channel content, helping the Human manage those identities and application settings under existing approval rules. Its management role does not itself grant authority to approve other Bots' actions.
+A persistent local PersonaBot with its own Memory and read access to the Human's Bot and Channel content, helping the Human manage those identities and application settings under existing approval rules. Its primary purpose is to help create and manage other Bots, inspect their progress and surface attention items; conversation is the management interface. Its management role does not itself grant authority to approve other Bots' actions. Conversational handling of a pending approval is a future scoped workflow through the existing approval owner, carrying the Human's explicit decision rather than a blanket self-approval right.
 _Avoid_: global Orchestrator, Home panel, dashboard
 
 **Tob**:

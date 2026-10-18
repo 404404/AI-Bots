@@ -112,24 +112,32 @@
       "issue": "#2090"
     },
     {
-      "id": "native-settings",
-      "description": "Native botharness-client settings including Assignment concurrency, motion, icon, send key, session visibility, invite acceptance and sorting. Generic Human CLI coverage is not Tob permission.",
-      "scope": "Host",
+      "id": "tob-runtime-settings",
+      "description": "#2088 reuses native Settings for exactly four live fields: assignmentConcurrencyLimit, developerMode, showBotSessions and showApprovalReviewSessions. Scoped Tob writes add source/approval/revision guards; no new settings owner.",
+      "scope": "Host / protected Tob Human DM",
       "surfaces": [
         "field:packages/client/src/bot-mode-settings.ts:assignmentConcurrencyLimit",
-        "field:packages/client/src/bot-mode-settings.ts:autoAcceptGroupInvites",
-        "field:packages/client/src/bot-mode-settings.ts:botIcon",
         "field:packages/client/src/bot-mode-settings.ts:developerMode",
-        "field:packages/client/src/bot-mode-settings.ts:motionPreference",
-        "field:packages/client/src/bot-mode-settings.ts:sendKey",
         "field:packages/client/src/bot-mode-settings.ts:showApprovalReviewSessions",
         "field:packages/client/src/bot-mode-settings.ts:showBotSessions",
-        "field:packages/client/src/bot-mode-settings.ts:sortMode",
-        "field:packages/client/src/bot-mode-settings.ts:sortModes",
         "setting:packages/client/src/client/assignment-concurrency-setting.tsx:{t('assignmentLimit.title')}",
         "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('approvalReviewSessions.row.title')}",
         "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('botSessions.row.title')}",
-        "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('developer.row.title')}",
+        "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('developer.row.title')}"
+      ],
+      "commands": ["settings", "settings-set"]
+    },
+    {
+      "id": "native-settings",
+      "description": "Remaining native preferences reuse Human settings/settings-set; these fields are outside scoped Tob #2088 access (follow-ups #2094/#2095).",
+      "scope": "Host",
+      "surfaces": [
+        "field:packages/client/src/bot-mode-settings.ts:autoAcceptGroupInvites",
+        "field:packages/client/src/bot-mode-settings.ts:botIcon",
+        "field:packages/client/src/bot-mode-settings.ts:motionPreference",
+        "field:packages/client/src/bot-mode-settings.ts:sendKey",
+        "field:packages/client/src/bot-mode-settings.ts:sortMode",
+        "field:packages/client/src/bot-mode-settings.ts:sortModes",
         "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('groupAutoAccept.row.title')}",
         "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('icon.row.title')}",
         "setting:packages/client/src/client/bot-mode-setting-rows.tsx:{t('motion.row.title')}",
@@ -189,7 +197,7 @@
     },
     {
       "id": "git",
-      "description": "Git availability and install control.",
+      "description": "#2088 reuses Git status/install in scoped Tob execution; availability and installation only, no global identity editor.",
       "scope": "Host",
       "surfaces": ["setting:packages/client/src/client/git-settings.tsx:{t('git.settings.title')}"],
       "commands": ["git-status", "git-install"]
@@ -205,12 +213,24 @@
     },
     {
       "id": "model",
-      "description": "Existing default-model setup.",
+      "description": "#2088 reuses default-model, Bot plan and preset create/read/update/apply owners with scoped Tob revisions/catalog validation. No preset delete owner; credentials remain native private input.",
       "scope": "Host",
       "surfaces": [
         "setting:packages/client/src/client/onboarding-view.tsx:{t('onboarding.defaultTitle')}"
       ],
-      "commands": ["home-model-set"]
+      "commands": [
+        "home-model-set",
+        "model-catalog",
+        "model-plan",
+        "model-plan-set",
+        "model-plan-customize",
+        "model-plan-inherit",
+        "model-plan-assignments-set",
+        "model-presets",
+        "model-preset-create",
+        "model-preset-update",
+        "model-preset-apply"
+      ]
     },
     {
       "id": "schedule",
@@ -223,7 +243,7 @@
     },
     {
       "id": "telemetry",
-      "description": "Usage statistics opt-in.",
+      "description": "#2088 reuses telemetry status/set in scoped Tob execution; environment-locked values cannot be overridden.",
       "scope": "Host",
       "surfaces": [
         "setting:packages/client/src/client/telemetry-settings.tsx:{t('telemetry.row.title')}"
@@ -338,7 +358,8 @@
       "surfaces": [
         "setting:packages/client/src/client/bot-settings-sections.tsx:{t('build.row.title')}",
         "setting:packages/client/src/client/release-notes-view.tsx:{t('release.row.title')}",
-        "storage:packages/client/src/client/release-notes.ts:setItem(RELEASE_NOTES_SEEN_KEY)"
+        "storage:packages/client/src/client/release-notes.ts:setItem(RELEASE_NOTES_SEEN_KEY)",
+        "storage:packages/client/src/client/release-notes.ts:setItem(key)"
       ],
       "exemption": "Release/build information and seen receipt only, not configurable release controls.",
       "configurable": false

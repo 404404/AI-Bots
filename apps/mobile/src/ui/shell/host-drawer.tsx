@@ -470,6 +470,11 @@ export function HostDrawer() {
               onPress={() => closeThen(() => hostDrawer.pairNew())}
             />
             <FooterRow
+              label={t.cloud.title}
+              icon={<PlusIcon color={theme.color.fg} size={icon} />}
+              onPress={() => closeThen(() => router.push('/cloud-services'))}
+            />
+            <FooterRow
               label={t.notifications}
               icon={<ActivityIcon color={theme.color.fg} size={icon} />}
               onPress={() => closeThen(() => hostDrawer.openNotifications())}

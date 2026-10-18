@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -42,14 +42,14 @@ export default function RootLayout() {
                 name="bot/[slug]"
                 options={{
                   title: t.profile,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, Platform.OS === 'android'),
                 }}
               />
               <Stack.Screen
                 name="group/[id]"
                 options={{
                   title: t.groupInfo,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, Platform.OS === 'android'),
                 }}
               />
               <Stack.Screen
@@ -61,6 +61,17 @@ export default function RootLayout() {
               />
               <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
               <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
+              <Stack.Screen name="cloud-services" options={{ title: t.cloud.title }} />
+              <Stack.Screen
+                name="cloud-organizations"
+                options={{ title: t.cloudOrganizations.title }}
+              />
+              <Stack.Screen
+                name="cloud-invitations"
+                options={{ title: t.cloudInvitations.title }}
+              />
+              <Stack.Screen name="cloud-agents" options={{ title: t.cloudAgents.title }} />
+              <Stack.Screen name="cloud-channels" options={{ title: t.cloudChannels.title }} />
               <Stack.Screen name="notifications" options={{ title: t.notifications }} />
               <Stack.Screen
                 name="browser/[slug]"

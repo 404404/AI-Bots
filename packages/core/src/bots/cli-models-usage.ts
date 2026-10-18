@@ -23,7 +23,8 @@ export const MODELS_USAGE_OPTIONS = {
 export const MODELS_USAGE_COMMANDS = [
   {
     command: 'home-model-set',
-    description: 'set the Host default model for Home and inheriting Bots (--provider, --model)',
+    description:
+      'set the Host default model (--provider, --model, --orchestrator-effort, --expected-revision)',
   },
   {
     command: 'model-catalog',
@@ -206,9 +207,24 @@ export async function runModelsUsage(
 
   if (command === 'home-model-set') {
     if (!values.provider || !values.model) usage('home-model-set requires --provider and --model.');
-    return (await connect())('onboardingModel', {
+    const rpc = await connect();
+    const expectedDefaultRevision =
+      expected ?? (await rpc<{ defaultRevision?: number }>('modelCatalog', {})).defaultRevision;
+    if (!Number.isSafeInteger(expectedDefaultRevision) || Number(expectedDefaultRevision) < 0)
+      throw new CliLiveError(
+        'settings-unavailable',
+        'The Host does not expose its native default model revision.',
+      );
+    return rpc('onboardingModel', {
       expectedRevision: 0,
-      route: { provider: values.provider, model: values.model },
+      expectedDefaultRevision,
+      route: {
+        provider: values.provider,
+        model: values.model,
+        ...(values['orchestrator-effort']
+          ? { reasoningEffort: values['orchestrator-effort'] }
+          : {}),
+      },
       globalDefault: true,
     });
   }

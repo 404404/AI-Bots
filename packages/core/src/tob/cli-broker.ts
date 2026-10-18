@@ -1,10 +1,25 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage } from 'node:http';
+import { TOB_AGENT_COMMAND_USAGE } from '../bots/cli-agent-management.js';
 import { TobError, type TobSetting } from './service.js';
+import type {
+  PrepareTobOperation,
+  TobCliCapability,
+  TobManagementProposal,
+} from './cli-operations.js';
 
 const NAMESPACE = 'botharness-client';
 const FIELD = 'assignmentConcurrencyLimit';
-const MAX_BODY_BYTES = 16 * 1024;
+const MAX_BODY_BYTES = 3 * 1024 * 1024;
+const SMALL_BODY_BYTES = 16 * 1024;
+const GROUP_AVATAR_BODY_BYTES = 256 * 1024;
+const IMAGE_COMMANDS = new Set([
+  'create',
+  'bot-avatar-set',
+  'bot-banner-set',
+  'bot-appearance-set',
+  'group-avatar-set',
+]);
 const CODES = new Set([
   'tob-authority-required',
   'human-dm-required',
@@ -23,8 +38,52 @@ const CODES = new Set([
   'operation-in-progress',
   'unsupported-command',
   'invalid-request',
+  'invalid-input',
+  'unsupported-setting',
+  'stale-revision',
   'request-too-large',
   'unauthorized',
+  'stale-model',
+  'model-unavailable',
+  'unknown-bot',
+  'unknown-preset',
+  'model-plan-required',
+  'preset-name-conflict',
+  'legacy-model-repair-required',
+  'telemetry-locked',
+  'maintenance-unavailable',
+  'confirmation-required',
+  'restart-not-pending',
+  'operation-outcome-uncertain',
+  'readback-mismatch',
+  'protected-bot',
+  'stale-profile',
+  'archived-bot',
+  'unknown-channel',
+  'not-group-channel',
+  'not-group-member',
+  'channel-access-denied',
+  'operation-key-conflict',
+  'channel-operation-unavailable',
+  'stale-channel',
+  'group-invite-unavailable',
+  'invitation-not-pending',
+  'join-request-not-pending',
+  'unknown-invitation',
+  'unknown-join-request',
+  'channel-outcome-uncertain',
+  'creation-key-conflict',
+  'invalid-operation-key',
+  'creation-identity-unavailable',
+  'creation-dm-unavailable',
+  'creation-memory-conflict',
+  'invalid-create-scope',
+  'creation-outcome-uncertain',
+  'creation-recovery-required',
+  'creation-target-unavailable',
+  'git-not-found',
+  'memory-unavailable',
+  'invalid-memory-dir',
 ]);
 
 export interface TobCliProposal {
@@ -33,7 +92,7 @@ export interface TobCliProposal {
   readonly expectedRevision: number;
   readonly previousValue: Readonly<{ assignmentConcurrencyLimit: number }>;
 }
-export type TobCliWriteProposal = TobCliProposal;
+export type TobCliWriteProposal = TobCliProposal | TobManagementProposal;
 
 export interface TobCliBrokerOptions {
   signal: AbortSignal;
@@ -41,7 +100,10 @@ export interface TobCliBrokerOptions {
   authorize(): void;
   readSetting(): TobSetting;
   writeSetting(value: number, expectedRevision: number, authorize: () => void): Promise<TobSetting>;
-  approve(input: TobCliProposal, signal: AbortSignal): Promise<void | (() => void)>;
+  approve(input: TobCliWriteProposal, signal: AbortSignal): Promise<void | (() => void)>;
+  prepareOperation?: PrepareTobOperation;
+  capabilities?: readonly TobCliCapability[];
+  beforeWrite?(): void;
 }
 export interface TobCliBroker {
   endpoint: string;
@@ -96,7 +158,7 @@ function view(setting: TobSetting) {
     value: { assignmentConcurrencyLimit: setting.value },
   };
 }
-async function body(request: IncomingMessage): Promise<unknown> {
+async function body(request: IncomingMessage): Promise<{ value: unknown; bytes: number }> {
   let length = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
@@ -106,7 +168,7 @@ async function body(request: IncomingMessage): Promise<unknown> {
     chunks.push(bytes);
   }
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return { value: JSON.parse(Buffer.concat(chunks).toString('utf8')), bytes: length };
   } catch {
     return refuse('invalid-request');
   }
@@ -156,8 +218,16 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       if (request.headers['content-type']?.split(';')[0]?.trim() !== 'application/json')
         refuse('invalid-request');
       authorize();
-      const input = object(await body(request));
+      const received = await body(request);
+      const input = object(received.value);
       keys(input, ['command', 'args']);
+      const commandBodyLimit =
+        input.command === 'group-avatar-set'
+          ? GROUP_AVATAR_BODY_BYTES
+          : IMAGE_COMMANDS.has(String(input.command))
+            ? MAX_BODY_BYTES
+            : SMALL_BODY_BYTES;
+      if (received.bytes > commandBodyLimit) refuse('request-too-large');
       const args = object(input.args);
       authorize();
       let value: unknown;
@@ -166,19 +236,70 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
         value = {
           scope: 'global',
           ns: NAMESPACE,
-          fields: { assignmentConcurrencyLimit: { type: 'integer', minimum: 1, maximum: 32 } },
-          commands: ['capabilities', 'settings', 'settings-set'],
+          fields: {
+            assignmentConcurrencyLimit: { type: 'integer', minimum: 1, maximum: 32 },
+            ...(options.capabilities
+              ? {
+                  developerMode: { type: 'boolean' },
+                  showBotSessions: { type: 'boolean' },
+                  showApprovalReviewSessions: { type: 'boolean' },
+                }
+              : {}),
+          },
+          commands: options.capabilities
+            ? ['capabilities', ...options.capabilities.map((entry) => entry.command)]
+            : ['capabilities', 'settings', 'settings-set'],
+          ...(options.capabilities
+            ? {
+                operations: options.capabilities.map((entry) => ({
+                  ...entry,
+                  usage:
+                    TOB_AGENT_COMMAND_USAGE[entry.command] ??
+                    (entry.command === 'settings'
+                      ? 'deepseekbot settings [botharness-client|agent-default-model]'
+                      : 'deepseekbot settings-set <namespace> --patch-stdin --expected-revision <observed revision> --previous-value <JSON of previous values for patched fields>'),
+                })),
+              }
+            : {}),
           examples: [
             'deepseekbot settings botharness-client',
-            "printf '%s' '{\"assignmentConcurrencyLimit\":3}' | deepseekbot settings-set botharness-client --patch-stdin --expected-revision 0 --previous-value '{\"assignmentConcurrencyLimit\":8}'",
+            'printf \'%s\' "$PATCH_JSON" | deepseekbot settings-set botharness-client --patch-stdin --expected-revision "$REVISION" --previous-value "$PREVIOUS_JSON"',
           ],
           write: {
-            required: ['ns', 'patch', 'expectedRevision', 'previousValue'],
+            ...(options.capabilities
+              ? {
+                  rule: 'Read the current target and pass its observed revision; follow each command usage. Settings patches also require exact previous values for patched fields.',
+                  maintenance:
+                    'Installation and restart require --confirm plus a fresh Human decision. Never retry an uncertain maintenance write automatically.',
+                }
+              : { required: ['ns', 'patch', 'expectedRevision', 'previousValue'] }),
             approval: 'existing-host-policy',
             scope: 'current-human-dm-shell',
           },
           errors: [...CODES],
         };
+      } else if (options.prepareOperation) {
+        if (typeof input.command !== 'string') refuse('invalid-request');
+        const prepared = await options.prepareOperation(input.command, args);
+        authorize();
+        if (!prepared) refuse('unsupported-command');
+        if (prepared.proposal) {
+          if (writing) refuse('operation-in-progress');
+          writing = true;
+          try {
+            const reviewGuard = await abortable(options.approve(prepared.proposal, signal), signal);
+            const guard = () => {
+              authorize();
+              reviewGuard?.();
+            };
+            guard();
+            value = await prepared.run(guard, options.beforeWrite);
+          } finally {
+            writing = false;
+          }
+        } else {
+          value = await prepared.run(authorize);
+        }
       } else if (input.command === 'settings') {
         keys(args, ['ns']);
         if (args.ns !== NAMESPACE) refuse('unsupported-command');

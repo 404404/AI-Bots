@@ -57,6 +57,20 @@ export function BotSettingsPanel({ client, bot }: { client: HostClient; bot: Ros
           />
         </View>
       </SettingsSection>
+      {saved == null || !bot.dmChannelId ? null : (
+        <SettingsSection title={t.chatBackground.title}>
+          <SettingsRow
+            title={t.chatBackground.title}
+            trailing={chevron}
+            onPress={() =>
+              router.push({
+                pathname: '/bot/[slug]/chat-background',
+                params: { slug: bot.slug, hostId: saved.hostId, channelId: bot.dmChannelId },
+              })
+            }
+          />
+        </SettingsSection>
+      )}
       {saved == null ? null : (
         <DmActivitySettings hostId={saved.hostId} botSlug={bot.slug} name={bot.displayName} />
       )}

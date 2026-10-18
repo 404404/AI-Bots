@@ -1,3 +1,4 @@
+import { prepareCloud, prepareCloudWork } from './cli-cloud.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -8,6 +9,7 @@ import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 import { BOT_TOOL_COMMANDS, runBotToolCommand } from './cli-bot-tool.js';
 import {
+  channelOperationKey,
   CHANNEL_COMMANDS,
   CHANNEL_OPTIONS,
   isChannelCommand,
@@ -184,6 +186,14 @@ const CONTROL_COMMANDS = [
 export const LIVE_COMMANDS = [
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
+  {
+    command: 'cloud',
+    description: 'manage an explicit cloud Agent connection (private JSON through stdin)',
+  },
+  {
+    command: 'cloud-work',
+    description: 'run the cloud_work Tool directly for a Bot using JSON from stdin',
+  },
   ...MODELS_USAGE_COMMANDS,
   ...CHANNEL_COMMANDS,
   ...HOST_ADMIN_COMMANDS,
@@ -250,7 +260,7 @@ export const LIVE_COMMANDS = [
     description: 'patch one live Host settings namespace with JSON from stdin',
   },
   { command: 'workspace-create', description: 'register an absolute folder as a Host workspace' },
-  { command: 'group-create', description: 'create a group Channel with one or more Bots' },
+  { command: 'group-create', description: 'create a group Channel with optional initial Bots' },
   {
     command: 'im-app-add',
     description: 'add a token-based IM app (Discord, Slack, …) with credentials JSON from stdin',
@@ -374,6 +384,7 @@ interface LiveValues
   'patch-stdin'?: boolean;
   'previous-value'?: string;
   member?: string[];
+  'operation-key'?: string;
   app?: string;
   bot?: string;
   conversation?: string;
@@ -686,6 +697,16 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (command === 'cloud-work') {
+    const input = await prepareCloudWork(rest, values, io);
+    const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));
+    return host.rpc('cloudWork', input);
+  }
+  if (command === 'cloud') {
+    const input = await prepareCloud(rest, values, io);
+    const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));
+    return host.rpc('cloudConnections', { input });
+  }
   if (MESSAGING_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareMessaging(command as MessagingCommand, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
@@ -1088,8 +1109,10 @@ async function runControlCommand(
   if (command === 'workspace-create' && !target.startsWith('/') && !/^[A-Za-z]:[\\/]/u.test(target))
     usage('workspace-create needs an absolute folder path.');
   const members = (values.member ?? []).map((member) => member.trim()).filter(Boolean);
-  if (command === 'group-create' && members.length === 0)
-    usage('group-create needs at least one --member <bot-id>.');
+  const operationKey =
+    command === 'group-create' && values['operation-key'] !== undefined
+      ? channelOperationKey(values['operation-key'])
+      : undefined;
   const signal = AbortSignal.timeout(timeoutMs(values.timeout));
   const { rpc } = await connectLiveHost(values, io, signal);
   if (command === 'browser-access-set' || command === 'computer-access-set')
@@ -1106,7 +1129,12 @@ async function runControlCommand(
       ...(values.mode === 'danger-full-access' ? { acknowledgeRisk: true } : {}),
     });
   if (command === 'workspace-create') return rpc('workspace/create', { request: { path: target } });
-  if (command === 'group-create') return rpc('channelCreate', { name: target, members });
+  if (command === 'group-create')
+    return rpc('channelCreate', {
+      name: target,
+      members,
+      ...(operationKey === undefined ? {} : { operationKey }),
+    });
   const described = record(await rpc('settings/describe', {}));
   const namespaces = Array.isArray(described['namespaces']) ? described['namespaces'] : [];
   const found = namespaces.map(record).find((entry) => entry['ns'] === target);

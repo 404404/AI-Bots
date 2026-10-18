@@ -60,6 +60,197 @@ const update = () => ({
 });
 
 describe('Tob scoped CLI broker', () => {
+  it.each([
+    'operation-key-conflict',
+    'stale-channel',
+    'channel-operation-unavailable',
+    'protected-bot',
+  ])('returns the Channel refusal %s without exposing owner diagnostics', async (code) => {
+    const f = await fixture({
+      prepareOperation: () => {
+        throw new TobError(code);
+      },
+    });
+    expect(await f.invoke('group-invite', {})).toMatchObject({
+      ok: false,
+      error: { code, message: code },
+    });
+    expect(f.approve).not.toHaveBeenCalled();
+  });
+
+  it.each(['create', 'bot-avatar-set', 'bot-banner-set', 'bot-appearance-set'])(
+    'accepts a bounded large %s envelope and still delegates validation and approval',
+    async (command) => {
+      const run = vi.fn(() => ({ accepted: true }));
+      const prepareOperation = vi.fn(() => ({
+        proposal: { command, target: 'owned', previousValue: null, patch: { image: 'reviewed' } },
+        run,
+      }));
+      const f = await fixture({ prepareOperation });
+      expect(await f.invoke(command, { image: 'x'.repeat(32 * 1024) })).toMatchObject({
+        ok: true,
+        value: { accepted: true },
+      });
+      expect(prepareOperation).toHaveBeenCalledOnce();
+      expect(f.approve).toHaveBeenCalledOnce();
+      expect(run).toHaveBeenCalledOnce();
+      expect(await f.invoke(command, { image: 'x'.repeat(3 * 1024 * 1024) })).toMatchObject({
+        status: 413,
+        error: { code: 'request-too-large' },
+      });
+      expect(prepareOperation).toHaveBeenCalledOnce();
+    },
+  );
+  it('accepts the maximum Group avatar envelope while retaining a 256KiB transport limit', async () => {
+    const command = 'group-avatar-set';
+    const run = vi.fn(() => ({ accepted: true }));
+    const prepareOperation = vi.fn(() => ({
+      proposal: { command, target: 'group-1', previousValue: null, patch: { avatar: 'reviewed' } },
+      run,
+    }));
+    const f = await fixture({ prepareOperation });
+    const args = {
+      channelId: 'group-1',
+      expectedChannel: 'a'.repeat(64),
+      avatar: 'data:image/png;base64,' + Buffer.alloc(98_304).toString('base64'),
+    };
+    expect(await f.invoke(command, args, 'wrong-token')).toMatchObject({
+      status: 401,
+      error: { code: 'unauthorized' },
+    });
+    expect(prepareOperation).not.toHaveBeenCalled();
+    expect(await f.invoke(command, args)).toMatchObject({ ok: true, value: { accepted: true } });
+    expect(prepareOperation).toHaveBeenCalledWith(command, args);
+    expect(f.approve).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledOnce();
+    expect(await f.invoke(command, { ...args, avatar: 'x'.repeat(256 * 1024) })).toMatchObject({
+      status: 413,
+      error: { code: 'request-too-large' },
+    });
+    expect(prepareOperation).toHaveBeenCalledOnce();
+    prepareOperation.mockImplementationOnce(() => {
+      throw new TobError('invalid-input');
+    });
+    expect(await f.invoke(command, args)).toMatchObject({ error: { code: 'invalid-input' } });
+    expect(f.approve).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['group-member-remove', 'not-group-member'],
+    ['group-wake-policies', 'channel-access-denied'],
+  ])(
+    'preserves the %s authority refusal %s without exposing diagnostics',
+    async (command, code) => {
+      const f = await fixture({
+        prepareOperation: () => {
+          throw new TobError(code);
+        },
+      });
+      expect(await f.invoke(command, { channelId: 'group-1' })).toMatchObject({
+        ok: false,
+        error: { code, message: code },
+      });
+      expect(f.approve).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['group-invite-cancel', 'unknown-invitation'],
+    ['group-invite-cancel', 'invitation-not-pending'],
+    ['group-join-decide', 'unknown-join-request'],
+    ['group-join-decide', 'join-request-not-pending'],
+    ['group-join-decide', 'stale-profile'],
+    ['group-join-decide', 'archived-bot'],
+    ['group-join-decide', 'protected-bot'],
+    ['group-join-decide', 'channel-access-denied'],
+  ])('preserves %s refusal %s before and after review', async (command, code) => {
+    const before = await fixture({
+      prepareOperation: () => {
+        throw new TobError(code);
+      },
+    });
+    expect(await before.invoke(command, {})).toMatchObject({
+      ok: false,
+      error: { code, message: code },
+    });
+    expect(before.approve).not.toHaveBeenCalled();
+    const after = await fixture({
+      prepareOperation: () => ({
+        proposal: { command, target: 'group-1', previousValue: null, patch: {} },
+        run: () => {
+          throw new TobError(code);
+        },
+      }),
+    });
+    expect(await after.invoke(command, {})).toMatchObject({
+      ok: false,
+      error: { code, message: code },
+    });
+    expect(after.approve).toHaveBeenCalledOnce();
+  });
+
+  it('keeps other commands at 16KiB of received bytes including whitespace', async () => {
+    const prepareOperation = vi.fn(() => ({ run: () => ({ accepted: true }) }));
+    const f = await fixture({ prepareOperation });
+    expect(await f.invoke('settings', { ns: 'x'.repeat(16 * 1024) })).toMatchObject({
+      status: 413,
+      error: { code: 'request-too-large' },
+    });
+    const response = await fetch(f.broker.endpoint + '/invoke', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + f.broker.token, 'content-type': 'application/json' },
+      body: ' '.repeat(16 * 1024) + JSON.stringify({ command: 'settings', args: {} }),
+    });
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ error: { code: 'request-too-large' } });
+    expect(prepareOperation).not.toHaveBeenCalled();
+  });
+  it('large image requests cannot bypass authentication or operation validation', async () => {
+    const prepareOperation = vi.fn(() => {
+      throw new TobError('invalid-input');
+    });
+    const f = await fixture({ prepareOperation });
+    const args = { image: 'x'.repeat(32 * 1024) };
+    expect(await f.invoke('create', args, 'wrong-token')).toMatchObject({
+      status: 401,
+      error: { code: 'unauthorized' },
+    });
+    expect(prepareOperation).not.toHaveBeenCalled();
+    expect(await f.invoke('create', args)).toMatchObject({ error: { code: 'invalid-input' } });
+    expect(prepareOperation).toHaveBeenCalledOnce();
+    expect(f.approve).not.toHaveBeenCalled();
+  });
+  it('marks side effects only when a prepared operation reaches its owning mutation', async () => {
+    const beforeWrite = vi.fn();
+    let stale = true;
+    const f = await fixture({
+      beforeWrite,
+      prepareOperation: async () => ({
+        proposal: {
+          command: 'telemetry-set',
+          target: 'telemetry',
+          previousValue: true,
+          patch: false,
+        },
+        run: (guard, beforeEffect) => {
+          guard();
+          if (stale) throw new TobError('stale-setting');
+          beforeEffect?.();
+          return { enabled: false };
+        },
+      }),
+    });
+    expect(await f.invoke('telemetry-set', { enabled: false })).toMatchObject({
+      error: { code: 'stale-setting' },
+    });
+    expect(beforeWrite).not.toHaveBeenCalled();
+    stale = false;
+    expect(await f.invoke('telemetry-set', { enabled: false })).toMatchObject({
+      ok: true,
+      value: { enabled: false },
+    });
+    expect(beforeWrite).toHaveBeenCalledOnce();
+  });
   it('discovers the bounded CLI contract and reads only the permitted field', async () => {
     const f = await fixture();
     expect(await f.invoke('capabilities')).toMatchObject({
@@ -207,7 +398,7 @@ describe('Tob scoped CLI broker', () => {
     const large = await fetch(f.broker.endpoint + '/invoke', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ huge: 'x'.repeat(17 * 1024) }),
+      body: JSON.stringify({ huge: 'x'.repeat(3 * 1024 * 1024) }),
     });
     expect(large.status).toBe(413);
   });

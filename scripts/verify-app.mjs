@@ -151,7 +151,7 @@ export function verifyPaths(name, root = repoRoot) {
   };
 }
 
-function cookieFor(home) {
+export function cookieFor(home) {
   const jar = join(tmpdir(), `dsh-${basename(home).replace(/[^a-zA-Z0-9-]/gu, '-')}.cookies`);
   if (!existsSync(jar)) throw new Error(`no login cookie at ${jar}; relaunch the instance`);
   return readFileSync(jar, 'utf8').split(';')[0];
@@ -190,6 +190,7 @@ export async function rpc(instance, endpoint, args = {}) {
     signal: AbortSignal.timeout(60_000),
     headers: {
       'content-type': 'application/json',
+      connection: 'close',
       cookie: cookieFor(instance.home),
     },
     body: JSON.stringify({

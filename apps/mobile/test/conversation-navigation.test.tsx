@@ -39,6 +39,7 @@ vi.mock('react-native', async () => {
   return { ...shim, KeyboardAvoidingView: shim.View };
 });
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({ client: undefined, inbox: undefined }),
   useHostSnapshot: () => state.host,
@@ -52,6 +53,12 @@ vi.mock('../src/host/native-dm-activity', () => ({ useHiddenDmActivity: () => []
 vi.mock('../src/host/native-message-display', () => ({
   useMessageDisplay: () => state.display,
 }));
+vi.mock('../src/host/native-chat-background', () => ({
+  useChatBackgrounds: () => undefined,
+  chatBackgrounds: { resolve: () => ({ kind: 'default' }) },
+  backgroundImageUri: (id: string) => id,
+}));
+vi.mock('../src/ui/chat/chat-background', () => ({ ChatBackground: () => null }));
 vi.mock('../src/host/pick-files', () => ({ MAX_PICKED: 10, pickFiles: vi.fn() }));
 vi.mock('../src/host/speech', () => ({
   useDictation: () => ({ state: { status: 'idle' }, mountRef: () => undefined }),

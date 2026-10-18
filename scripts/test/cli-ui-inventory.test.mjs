@@ -18,6 +18,13 @@ describe('UI and CLI coverage inventory', () => {
     expect(expected).toHaveLength(2);
     expect(uiSurfacesFrom(client.replaceAll('/', '\\'), source)).toEqual(expected);
   });
+  it('uses the same inventory keys and Client detection for Windows paths', () => {
+    const source = `storage.setItem('theme', value); const ui = <SettingsRow title={t('theme')} />;`;
+    expect(uiSurfacesFrom(client.replaceAll('/', '\\'), source)).toEqual(
+      uiSurfacesFrom(client, source),
+    );
+  });
+
   it('detects new local settings in an already reviewed Client file', () => {
     const old = uiSurfacesFrom(client, `storage?.setItem('theme', value);`);
     const next = uiSurfacesFrom(
