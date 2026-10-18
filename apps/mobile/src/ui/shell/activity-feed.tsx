@@ -353,6 +353,7 @@ function Post({
 }
 
 type ActivityFeedProps = {
+  unavailable?: string | undefined;
   hostId: string;
   client: HostClient | undefined;
   inbox: Inbox | undefined;
@@ -430,29 +431,36 @@ export const ActivityFeed = memo(function ActivityFeed(props: ActivityFeedProps)
             renderTabBar={({ position, jumpTo }) => (
               <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
             )}
-            renderScene={({ route }: { route: ActivityTab }) => (
-              <ActivityPage
-                {...props}
-                section={route.key === ACTIVITY_TABS[index]?.key ? filter.section : route.key}
-                filterBot={filter.bot}
-                filterChannel={filter.channel}
-                filterUnread={filter.unreadOnly}
-                search={search}
-                sort={sort}
-                active={route.key === ACTIVITY_TABS[index]?.key}
-                searchFocused={searchFocused}
-                scrollActive={route.key === ACTIVITY_TABS[index]?.key}
-                pinChrome={searchFocused || filtering}
-                headerTravel={travel}
-                dismissSearch={dismissSearch}
-              />
-            )}
+            renderScene={({ route }: { route: ActivityTab }) =>
+              props.unavailable ? (
+                <View style={{ padding: space.x6 }}>
+                  <Text tone="muted">{props.unavailable}</Text>
+                </View>
+              ) : (
+                <ActivityPage
+                  {...props}
+                  section={route.key === ACTIVITY_TABS[index]?.key ? filter.section : route.key}
+                  filterBot={filter.bot}
+                  filterChannel={filter.channel}
+                  filterUnread={filter.unreadOnly}
+                  search={search}
+                  sort={sort}
+                  active={route.key === ACTIVITY_TABS[index]?.key}
+                  searchFocused={searchFocused}
+                  scrollActive={route.key === ACTIVITY_TABS[index]?.key}
+                  pinChrome={searchFocused || filtering}
+                  headerTravel={travel}
+                  dismissSearch={dismissSearch}
+                />
+              )
+            }
           />
         </DeferredContent>
       </Animated.View>
       <CollapsingToolbar travel={travel} height={top}>
         <ActivityToolbar
           ref={toolbar}
+          unavailable={props.unavailable !== undefined}
           search={search}
           onSearchFocus={setSearchFocused}
           filtered={

@@ -12,6 +12,10 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  allEnvironments: 'All',
+  activityPartialScope: 'Showing this Computer’s activity. Cloud activity is not available yet.',
+  activitySourceUnavailable:
+    'Activity is not available for this environment yet. Choose a Computer in Chats to view its activity.',
   allConversations: 'All conversations',
   computerChannel: 'Computer conversation',
   cloudListUnavailable: 'Some cloud conversations could not be refreshed. Pull to retry.',
@@ -973,6 +977,9 @@ const en = {
 };
 
 const zh: typeof en = {
+  allEnvironments: '全部',
+  activityPartialScope: '当前显示此电脑的动态；云端动态暂不可用。',
+  activitySourceUnavailable: '此环境暂不支持动态。请在聊天页选择电脑以查看它的动态。',
   allConversations: '全部会话',
   computerChannel: '电脑会话',
   cloudListUnavailable: '部分云会话未能刷新，下拉可重试。',

@@ -3,6 +3,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo } from 'react';
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import { View } from 'react-native';
+import { useCloudSnapshot } from '../../../src/cloud/native';
+import { Text } from '../../../src/ui/primitives/text';
+import { space } from '../../../src/ui/design/tokens';
+import { useConversationFilter } from '../../../src/host/native-conversation-filter';
+import { includesComputerActivity } from '../../../src/host/conversation-environments';
 import { cardHref, unreadHref } from '../../../src/host/push';
 import type { HumanAttentionItem } from '../../../src/host/wire';
 import { useDesignTheme } from '../../../src/ui/design/theme';
@@ -16,6 +22,10 @@ export default function ActivityScreen() {
   const focused = useIsFocused();
   const theme = useDesignTheme();
   const { saved, client, inbox } = useHostSession();
+  const [scope] = useConversationFilter();
+  const cloud = useCloudSnapshot();
+  const partial = scope === 'all' && cloud.rows.some((row) => row.hasSession);
+  const available = includesComputerActivity(scope, saved?.hostId);
   const snapshot = useHostSnapshot(client, focused);
   const list = useInbox(inbox, focused);
   const roster = snapshot.roster;
@@ -64,13 +74,20 @@ export default function ActivityScreen() {
   );
   const header = useMemo(
     () => (
-      <ConnectionBanner
-        connection={snapshot.connection}
-        onRetry={() => client?.retryNow()}
-        onPairAgain={() => router.push('/pair')}
-      />
+      <View>
+        {partial ? (
+          <Text tone="muted" style={{ padding: space.x5 }}>
+            {t.activityPartialScope}
+          </Text>
+        ) : null}
+        <ConnectionBanner
+          connection={snapshot.connection}
+          onRetry={() => client?.retryNow()}
+          onPairAgain={() => router.push('/pair')}
+        />
+      </View>
     ),
-    [snapshot.connection, client, router],
+    [partial, snapshot.connection, client, router],
   );
 
   return (
@@ -79,16 +96,17 @@ export default function ActivityScreen() {
       <Stack.Screen options={{ title: t.activity, headerShown: false }} />
       <HostDrawerEdge>
         <ActivityFeed
-          key={saved?.hostId ?? 'no-host'}
+          key={scope + (saved?.hostId ?? 'no-host')}
+          unavailable={available ? undefined : t.activitySourceUnavailable}
           hostId={saved?.hostId ?? ''}
-          client={client}
-          inbox={inbox}
-          snapshot={list}
+          client={available ? client : undefined}
+          inbox={available ? inbox : undefined}
+          snapshot={available ? list : { status: 'idle' }}
           botSlugs={botSlugs}
           channels={channels}
           bot={bot}
           onOpen={open}
-          header={header}
+          header={available ? header : null}
         />
       </HostDrawerEdge>
     </>

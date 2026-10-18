@@ -14,6 +14,7 @@ export type ActivityToolbarHandle = { dismissSearch(): void };
 
 export type ActivityToolbarProps = {
   ref?: Ref<ActivityToolbarHandle>;
+  unavailable?: boolean;
   search: string;
   filtered: boolean;
   onSearch(value: string): void;
@@ -24,6 +25,7 @@ export type ActivityToolbarProps = {
 
 export function ActivityToolbar({
   ref,
+  unavailable = false,
   search,
   filtered,
   onSearch,
@@ -77,13 +79,15 @@ export function ActivityToolbar({
           >
             {t.activity}
           </Text>
-          <ActivityIconButton label={t.activityOptions} onPress={onFilter} selected={filtered}>
-            <ActivityFilterIcon
-              color={filtered ? theme.color.accent : theme.color.fg}
-              size={theme.type.title.size}
-            />
-          </ActivityIconButton>
-          {!searching ? (
+          {!unavailable ? (
+            <ActivityIconButton label={t.activityOptions} onPress={onFilter} selected={filtered}>
+              <ActivityFilterIcon
+                color={filtered ? theme.color.accent : theme.color.fg}
+                size={theme.type.title.size}
+              />
+            </ActivityIconButton>
+          ) : null}
+          {!unavailable && !searching ? (
             <ActivityIconButton
               label={t.activitySearch}
               onPress={() => {
@@ -98,7 +102,7 @@ export function ActivityToolbar({
             </ActivityIconButton>
           ) : null}
         </View>
-        {searching ? (
+        {!unavailable && searching ? (
           <SearchField
             trailing={
               search ? (

@@ -28,6 +28,14 @@ References:
 
 References: [Apple toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars), [Apple sheets](https://developer.apple.com/design/human-interface-guidelines/sheets), [Material bottom sheets](https://m3.material.io/components/bottom-sheets/guidelines), [Android radio selection](https://developer.android.com/develop/ui/compose/components/radio-button).
 
+## Chats source navigation (#2194)
+
+Chats uses the same canvas and left-aligned title treatment as Activity. The title/chevron opens the workspace drawer; Settings remains on the right. Directly below, a reusable native pager presents a horizontally scrolling **All → Computer → Organization** strip. Selecting a tab or swiping the list changes only the device-local browsing scope. Stable directory order, including empty member Organizations and channel-only guest Organizations, is independent of message arrival. Labels use local Computer names; keys retain full source/account identity.
+
+This first slice retains one active Computer plus authorized Organizations. It does not implement simultaneous multiple-Computer connections. Search and creation remain in their existing list-header placement until #2195/#2196. Activity inherits scope and keeps action/replies/unread paging; unsupported Cloud scope has an explicit notice and no borrowed Computer badge. All discloses that Cloud activity is not yet included. Source-owned history, credentials, drafts, permissions and send paths stay unchanged.
+
+The older Host-band description below records prior presentation/customization behavior. The Chats Header and environment selector above supersede that entry layout; saved Computer customization remains available in the drawer.
+
 ## Structure
 
 The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-with-settings-and-hosts-in-the-header.md): what the Human does most sits under the thumb, and what they do rarely sits in the header.
@@ -354,3 +362,5 @@ Every editable field on iOS and Android belongs to a layout that responds to the
 The workspace drawer starts with its category tabs. `DrawerHeader` supplies generic bottom `Sheet` headers: a leading semantic title, optional decorative icon, and an independently accessible trailing close action. The iOS title uses a content-sized capsule with native glass on iOS 26; older iOS and Reduce Transparency use an opaque raised capsule. At accessibility text sizes, the title uses an opaque rounded rectangle so multiline text stays within a readable surface. Android keeps a plain left-aligned title on the opaque overlay. The close target is at least the platform touch minimum. Long titles wrap without changing the font scale; subtitles remain outside the capsule.
 
 Material is a decorative background only: text, focus, hit testing and navigation remain in the existing React Native tree. It must not capture gestures or become another accessibility element. Drawer body and grabber stay opaque and continuous. Header styling does not add dismissal controls to Settings or other native `SheetStack` routes; those retain their established handle/back policy until separately verified.
+
+For same-name Organization tabs, show a collision-only secondary source label (Organization identifier suffix plus service host), with full source/Organization identity in the accessible name. Expand the suffix when needed to distinguish same-service identifiers. Routing and ordering continue to use stable source keys. Unique names stay compact.

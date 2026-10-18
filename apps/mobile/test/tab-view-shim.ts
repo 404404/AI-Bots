@@ -19,6 +19,8 @@ export function TabView({
     'div',
     null,
     renderTabBar({
+      navigationState,
+      layout: { width: 400, height: 800 },
       position: { interpolate: () => 0 },
       jumpTo: (key: string) => onIndexChange(routes.findIndex((route) => route.key === key)),
     }),
@@ -39,5 +41,33 @@ export function TabView({
           renderScene({ route }),
         ),
       ),
+  );
+}
+
+export function TabBar({
+  navigationState,
+  jumpTo,
+  options,
+}: {
+  navigationState: { index: number; routes: Array<{ key: string; title?: string }> };
+  jumpTo(key: string): void;
+  options?: Record<string, { accessibilityLabel?: string }>;
+}) {
+  return createElement(
+    'nav',
+    null,
+    ...navigationState.routes.map((route, index) =>
+      createElement(
+        'button',
+        {
+          key: route.key,
+          role: 'tab',
+          'aria-label': options?.[route.key]?.accessibilityLabel ?? route.title,
+          'aria-selected': index === navigationState.index,
+          onClick: () => jumpTo(route.key),
+        },
+        route.title,
+      ),
+    ),
   );
 }

@@ -662,4 +662,30 @@ describe('Activity feed', () => {
       t.elsewhere(t.cardAnswered),
     );
   });
+  it('keeps category paging but exposes no Computer items or actions in unavailable scope', async () => {
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () =>
+      root!.render(
+        createElement(ActivityFeed, {
+          hostId: '',
+          client: undefined,
+          inbox: undefined,
+          snapshot: ready([question]),
+          botSlugs: [],
+          bot: () => undefined,
+          onOpen: vi.fn(),
+          unavailable: t.activitySourceUnavailable,
+        }),
+      ),
+    );
+    await settle();
+    expect(container.textContent).toContain(t.activitySourceUnavailable);
+    expect(post(container, question)).toBeNull();
+    expect(container.querySelector(`button[aria-label="${t.activityOptions}"]`)).toBeNull();
+    await press(container.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(button(container, t.inboxSections.replies).getAttribute('aria-selected')).toBe('true');
+    expect(post(container, question)).toBeNull();
+  });
 });

@@ -19,10 +19,11 @@ vi.mock('../src/cloud/native', () => ({
   cloudClient: {},
 }));
 vi.mock('../src/cloud/native-conversations', () => ({
-  useCloudConversations: () => ({ busy: false, rows: [], errors: [] }),
+  useCloudConversations: () => ({ busy: false, ready: true, rows: [], workspaces: [], errors: [] }),
   cloudConversations: { refresh: async () => {} },
 }));
 vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
+vi.mock('react-native-tab-view', () => import('./tab-view-shim'));
 vi.mock('react-native', async () => ({
   ...(await import('./react-native-shim')),
   Platform: platform,
