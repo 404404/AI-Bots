@@ -582,3 +582,36 @@ describe('release notes views', () => {
     }
   });
 });
+
+describe('automatic upgrade notice', () => {
+  it('checks on Bot entry and remembers one exact target separately from installed notes', async () => {
+    const storage = memoryStorage({ [RELEASE_NOTES_SEEN_KEY]: '1.3.1' });
+    const call: BridgeCall = async (method) => ({
+      ok: true,
+      value:
+        method === 'releaseInfo'
+          ? {
+              version: '1.3.1',
+              identity: { kind: 'release', version: '1.3.1' },
+              profileId: 'profile-a',
+              releases: [],
+            }
+          : {
+              status: 'available',
+              current: '1.3.1',
+              latest: '1.4.0',
+              installable: true,
+              releases: [],
+              compatibility: { status: 'compatible', dshVersion: '0.2.1-rc.2' },
+            },
+    });
+    const controller = new ReleaseNotesController(call, storage);
+    await controller.enter();
+    expect(controller.source.getSnapshot().updateNotice).toBe(true);
+    controller.dismissUpdate();
+    const restarted = new ReleaseNotesController(call, storage);
+    await restarted.enter();
+    expect(restarted.source.getSnapshot().updateNotice).toBe(false);
+    expect(restarted.source.getSnapshot().update.status).toBe('available');
+  });
+});

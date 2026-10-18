@@ -600,7 +600,7 @@ deepseekbot marketplace-topics
 deepseekbot marketplace-detail <owner/repo>
 deepseekbot marketplace-submit https://github.com/<owner>/<repo>
 deepseekbot marketplace-report <owner/repo> [--reason <text>]
-deepseekbot release-check
+deepseekbot release-check [--force]
 deepseekbot release-install <version> --confirm
 deepseekbot release-restart --confirm
 deepseekbot telemetry-status
@@ -613,6 +613,8 @@ deepseekbot pairing-review <bot-id> <pairing-id> --decision approve --capability
 deepseekbot pairing-review <bot-id> <pairing-id> --decision reject
 deepseekbot pairing-review <bot-id> <pairing-id> --decision revoke --confirm
 ```
+
+`release-check --force` bypasses the Host check cache. `available` includes native DSH compatibility and may expose `blockedLatest` when a newer release is incompatible; `blocked` carries incompatible requirements or an unknown-runtime/metadata reason. Compatibility covers the exact Bundle, first-party components and its pinned IM Provider using the running DSH evaluator. Installation rechecks metadata and still uses the native Plugin Manager for final admission. A cached/offline failure is never “up to date”.
 
 `release-info` includes an optional Host-owned `identity`: `development` with source revision/dirty state, `release` with version, or `unknown` with a metadata/composition reason. Old Hosts omit this field; absence is not verified release identity. The internal source version placeholder remains `0.0.0`; About displays source identity instead. `release-check` can return `unknown`; install/restart then refuse with `release-identity-invalid`. Installed/staged and running versions remain separate until the new Host answers with the exact target version.
 

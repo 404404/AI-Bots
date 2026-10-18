@@ -2005,11 +2005,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   });
   const releaseService = createLoadingReleaseService({
     version: () => runningRelease.version,
+    ...(profile === undefined
+      ? {}
+      : { profileId: createHash('sha256').update(profile.dir).digest('hex').slice(0, 24) }),
     identity: () =>
       installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
     ledgers: () => runningRelease.ledgers,
     installer: () => releaseInstaller.current,
     restarter: () => releaseRestarter.current,
+    warn: (message) => ctx.logger.warn(message),
   });
   const tobModelOperations = createTobModelOperations({
     registry: core.registry,

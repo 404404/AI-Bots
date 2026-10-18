@@ -1,3 +1,4 @@
+import { onboardingFor } from './onboarding.js';
 import { PointerMenu } from './ds/pointer-menu.js';
 import { useScopedRef, useScopedState } from './scoped-state.js';
 import { PanelEmptyState } from './ds/empty-state.js';
@@ -3458,6 +3459,15 @@ export function BotPanel({
   workspace?: WorkspaceOptions | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
+  const onboarding = onboardingFor(actions);
+  const onboardingState = useSyncExternalStore(onboarding.subscribe, onboarding.getSnapshot);
+  const deferRelease =
+    onboardingState.modelOpen ||
+    onboardingState.sendOpen ||
+    onboardingState.guideOpen ||
+    onboardingState.checklistOpen ||
+    onboardingState.sessionsTourOpen ||
+    (onboardingState.receipt === undefined && onboardingState.error === undefined);
   const modeMount = useMountedResource<HTMLSpanElement>(() => {
     store.setMode('bot');
     return () => {
@@ -3469,7 +3479,7 @@ export function BotPanel({
       <span ref={modeMount} hidden aria-hidden="true" />
       <OnboardingOverlay actions={actions} companion={companion} t={t} />
       {releaseNotes === undefined ? null : (
-        <ReleaseNotesAnnouncement controller={releaseNotes} t={t} />
+        <ReleaseNotesAnnouncement controller={releaseNotes} t={t} deferred={deferRelease} />
       )}
       {telemetryNotice === undefined ? null : (
         <TelemetryNotice controller={telemetryNotice} releaseNotes={releaseNotes} t={t} />
