@@ -15,13 +15,13 @@ Captured in an isolated synthetic Profile on official DSH Desktop 0.2.1-rc.2. Al
 
 ## Evidence boundaries
 
-`before-wide.png` is the actual base Desktop before these changes (English, default identity, before the two test replies). After images are Chinese after name/icon editing and genuine model activity. They demonstrate the same entry and its replacement, but are not pixel-identical fixture pairs. Capture dimensions differ after native window resizing.
+`before-wide.jpg` is the actual base Desktop before these changes (English, default identity, before the two test replies). After images are Chinese after name/icon editing and genuine model activity. They demonstrate the same entry and its replacement, but are not pixel-identical fixture pairs. Capture dimensions differ after native window resizing.
 
 Empty usage was observed before generating usage. The final native pass additionally verified:
 
-- Synthetic partial reporting: the native Refresh action shows the partial-data notice while retaining the daily chart (`partial-native.png`).
-- Recoverable synthetic usage-storage failure: Refresh shows the unavailable/stale-data notice and retains the previous chart (`error-native.png`). Restoring the table and original rows restores normal data; all fault fixtures were removed.
-- A valid but unavailable synthetic Tob model route replaces the input with Configure. Opening the native setup dialog and cancelling returns to Home without sending (`model-setup-native.png`). Restoring the route and restarting restores the original unsent draft and hides Configure.
+- Synthetic partial reporting: the native Refresh action shows the partial-data notice while retaining the daily chart (`partial-native.jpg`).
+- Recoverable synthetic usage-storage failure: Refresh shows the unavailable/stale-data notice and retains the previous chart (`error-native.jpg`). Restoring the table and original rows restores normal data; all fault fixtures were removed.
+- A valid but unavailable synthetic Tob model route replaces the input with Configure. Opening the native setup dialog and cancelling returns to Home without sending (`model-setup-native.jpg`). Restoring the route and restarting restores the original unsent draft and hides Configure.
 - Home was customized to Option+Shift+Command+J through native settings. Activity's binding was explicitly disabled in the isolated Desktop shortcut document. After restart, J closes/reopens Home, the Activity tooltip has no shortcut, and its former shortcut does nothing. This tests retained custom/disabled settings, not a newly added unbind UI.
 - The final source build `0e17b61285cabed80a865d6a87baf9ddd4a18652` was restarted in Desktop. Home draft, custom/disabled shortcuts, both recent Bot rows and normal usage were restored. Clicking Fresh install Bot reopens its existing conversation with the Session split still at 70%; closing Messages returns to Home. `list` read-back includes each Bot's canonical `lastActivityAt`.
 
