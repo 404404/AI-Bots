@@ -20,7 +20,7 @@ Runtime: `acfbc581b805a0a6b47687b7f5c23c2ca363cfcf`; signed compatible iOS devel
 `maximum-revoke-reachable` / `maximum-revoked`: action reachability and revoked result.
 Videos retain real steps and waits; reviewer copies are compressed to 402px / 12fps without audio. They use synthetic `example.test` users, no credentials or invitation tokens.
 
-Before the new screen existed, the [base workspace entry](../tob-channel-http/01-workspace-entry.png) exposed cloud channels but no invitation entry. That is a historical entry-point comparison from runtime `5d2ef0fe8a13654a75779ea0320394b13c00764c`, not a claim that the invitation screen existed on the base. Current owner/member captures use the same viewport/theme/locale, with role differences explicitly identified.
+Before the new screen existed, the [base workspace entry](../tob-channel-http/01-workspace-entry.png) exposed cloud channels but no invitation entry. That is a historical entry-point comparison from runtime `7ceab0d27`, not a claim that the invitation screen existed on the base. Current owner/member captures use the same viewport/theme/locale, with role differences explicitly identified.
 
 ## First failures and limits
 
