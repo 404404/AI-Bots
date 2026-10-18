@@ -76,8 +76,13 @@ export function HomeWelcome({
       )}
       <h2 {...stylex.props(styles.heading)}>
         {t('home.greeting')}
-        <Tooltip label={t('home.editHumanName')}>
-          <Button variant="ghost" onClick={onEditHumanName} aria-label={t('home.editHumanName')}>
+        <Tooltip label={t('home.editHumanName')} side="bottom" portal>
+          <Button
+            variant="ghost"
+            style={{ paddingInline: space.x1 }}
+            onClick={onEditHumanName}
+            aria-label={t('home.editHumanName')}
+          >
             <span {...stylex.props(styles.name)}>{name ?? t('home.defaultHumanName')}</span>
           </Button>
         </Tooltip>
