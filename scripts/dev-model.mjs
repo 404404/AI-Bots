@@ -87,7 +87,11 @@ export function resolveAxModel({ path = AX_MODEL_PATH, environment = process.env
   const selection = checkedSelection(stored);
   const override = environment[GO_KEY_REF]?.trim();
   return {
-    ...checkedSelection({ ...selection, apiKey: override || selection.apiKey }),
+    ...checkedSelection({
+      ...selection,
+      model: environment.BOTHARNESS_AX_MODEL?.trim() || selection.model,
+      apiKey: override || selection.apiKey,
+    }),
     source: override ? `$${GO_KEY_REF}` : path,
   };
 }

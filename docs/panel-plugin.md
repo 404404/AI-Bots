@@ -1,0 +1,69 @@
+# VRM Panel: first runnable slice
+
+This is the implementation guide for [T1 #2222](https://github.com/BotHarness/DeepSeekBot/issues/2222), under [ADR-0234](adr/0234-panels-are-native-plugins-with-independent-binding.md). It does not implement the T2 Task Kanban or the later migration tickets. Human acceptance remains the gate before expanding those slices.
+
+## Install and open
+
+Build the repository with the pinned dependencies, then install the independent native Bundle into an isolated DSH Profile:
+
+```sh
+pnpm install
+pnpm build
+dsh plugin --profile web-dev add "link:<absolute-checkout>/packages/vrm-companion"
+```
+
+Use the worktree's pinned DSH CLI and the same DSH_HOME as the running Host. The package has its own manifest, Patch, Host entry and Client entry. The Host entry creates no domain state or worker. It is not included automatically in the DeepSeekBot umbrella. Native bundle activation/deactivation remains DSH-owned. The isolated CLI install/remove path was verified with a Host restart after each Profile mutation; changing the package manifest alone is not proof that a running Host has unloaded it.
+
+In Bot mode, select a Bot DM, open Messages if it is closed, then choose **VRM Companion** in the Messages header. Group Channels have no contextual character entry. **Pin character globally** creates a separately identified, fixed-Bot instance whose title names that Bot. Close/reopen preserves the binding and layout; **Delete instance** removes its metadata. Refresh restores fixed instances even before a Channel is selected. Uninstalling the plugin retains dormant instance metadata for reinstall. A missing/deleted Bot produces an unavailable state.
+
+## Public Client contract
+
+Plugin authors import only types from `@botharness/ui/panels` and inject the application-defined `dockPanels` and `botPresentation` Services. DSH/Cordis still owns Plugin/Fiber disposal and Service injection. These are BotHarness contracts, not native DSH Panel or Activity APIs.
+
+```tsx
+import type { Context } from '@deepseek-ai/cordis';
+import type { DockPanelProps, PanelServices } from '@botharness/ui/panels';
+
+export const inject = ['dockPanels', 'botPresentation'];
+export function apply(ctx: Context & PanelServices) {
+  function View({ channel, botId }: DockPanelProps) {
+    const binding = botId ?? channel?.botSlug;
+    return <div>{binding}</div>;
+  }
+  ctx.effect(() =>
+    ctx.dockPanels.register({
+      id: 'my-character',
+      title: 'My character',
+      scope: 'channel',
+      binding: 'current-bot',
+      component: View,
+    }),
+  );
+}
+```
+
+The complete resource-owning example is `packages/vrm-companion/src/client/index.tsx`. Acquire `botPresentation.acquire(botId)` when a view mounts; use `getSnapshot` and `subscribe`, and call its idempotent `dispose` when it unmounts. Do not acquire resources during React rendering. Subscribers may return a Promise; one failed subscriber is isolated with bounded diagnostics.
+
+A snapshot contains the current Bot name, availability, paused state, connection state, Activity, optional attention, current visible text, speaking flag and mouth weight. Activity is read from the existing ClientStore projection; the presentation Service does not write Activity or own execution. Attention is independent of Activity: waiting alone does not imply a Human response is required.
+
+There is one output clock and one authorized output subscription per Bot per Client. Multiple views share that clock but own independent Three.js scenes, skeletons, expressions, cameras and renderers. Closing the last view releases the output stream and timer. Different Bots have different output clocks. This slice consumes only committed output from that Bot's own DM; it does not expose shared/private group contents, model deltas or hidden reasoning.
+
+## Persistence and failures
+
+Ordinary instance metadata extends the existing version-8 layout document, with no second persistence key or Host store. Metadata contains instance ID, definition ID, fixed Bot ID and display label; at most 16 ordinary instances are retained. Contextual open state and split geometry remain in the existing per-Channel layout owner. Unknown valid split leaves survive plugin reload.
+
+Registration and instance operations throw stable refusal strings: `invalid_panel_definition`, `panel_definition_unavailable`, `invalid_bot_binding`, `panel_instance_limit`, `panel_layout_unavailable`. An unavailable definition cannot create an instance. A failed save leaves the prior instances intact. Disposers are idempotent and cannot unregister a later replacement.
+
+Mounting or reconnecting establishes a fresh output checkpoint; it never speaks baseline/history. Disconnect, hidden document, pause, deletion and final disposal cancel the current output. Deduplication uses connection generation, Channel and message identity, not text equality. Queues and deduplication sets are bounded. The first slice is silent: it does not opt into the old floating companion's audio owner or add TTS.
+
+## Rendering and assets
+
+The renderer uses `three@0.180.0` and `@pixiv/three-vrm@3.5.5`. Idle/thinking/working/waiting/blocked drive normalized humanoid poses; a separate text clock drives the mouth and limited speaking gestures, so working and speaking can coexist. Reduced motion suppresses repetitive movement. Hidden/zero-sized panels stop drawing; restoration resets the frame delta. Failed loads and WebGL context loss leave readable state/text with a retry action. Disposal releases observers, animation frames, geometry/materials/textures, ImageBitmaps and the renderer, including a model that finishes loading after close.
+
+The bundled technical sample is licensed under the VRM Public License, not the repository's source license. See [asset provenance and permissions](../packages/vrm-companion/assets/README.md). It demonstrates the runtime; it is not the final character art direction or a claim to reproduce Nintendo assets. No model upload, VRMA library, wardrobe, scene editor or TTS settings are included.
+
+For this local slice, the sample is embedded in the Client bundle to avoid inventing an asset-serving route. The resulting Client is about 16 MB before transport compression, and each instance owns its mutable GPU resources. Measure cold loading and multiple instances on the target machine; this is an explicit initial-size limitation, not a performance target.
+
+## Verification
+
+The feature map is [VRM companion](../.agents/skills/verify-deepseekbot/features/vrm-companion.md). Activity and committed output use existing CLI parity: `deepseekbot bot-activity <bot>` and `deepseekbot channel-messages <dm-channel>` against the same live Host. This slice adds no Host RPC, route or Bot tool. It does not claim delivery of the separate layout CLI work in #2096.

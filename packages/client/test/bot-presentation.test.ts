@@ -1,0 +1,194 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createBotPresentation } from '../src/client/bot-presentation.js';
+import { createStore, type BotSummary } from '../src/client/store.js';
+const bot = (slug: string): BotSummary => ({
+  slug,
+  displayName: slug,
+  roles: [],
+  workspaces: [],
+  aggregateState: 'idle',
+  createdAt: '2026-10-19',
+});
+class Source extends EventTarget {
+  closed = false;
+  close() {
+    this.closed = true;
+  }
+  emit(kind: string, data: unknown) {
+    this.dispatchEvent(new MessageEvent('companion/' + kind, { data: JSON.stringify(data) }));
+  }
+}
+const output = (botId: string, messageId = 'm1') => ({
+  botId,
+  messageId,
+  channelId: 'dm:' + botId,
+  body: 'Hello there. Working continues.',
+  generation: 'g1',
+  source: 'own-dm',
+});
+function setup() {
+  vi.useFakeTimers();
+  const store = createStore();
+  store.setRoster([bot('a'), bot('b')], []);
+  const sources: Source[] = [];
+  const errors = vi.fn();
+  const provider = createBotPresentation(
+    store,
+    () => {
+      const source = new Source();
+      sources.push(source);
+      return source;
+    },
+    errors,
+  );
+  return { store, sources, provider, errors };
+}
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+describe('public Bot presentation', () => {
+  it('shows current Activity immediately, shares a single timeline, and composes speech with work', () => {
+    const { store, sources, provider } = setup();
+    store.applyActivity({ generation: 'g1', revision: 1, bots: [{ slug: 'a', state: 'working' }] });
+    const a = provider.acquire('a'),
+      second = provider.acquire('a');
+    expect(a.getSnapshot().activity).toBe('working');
+    expect(sources).toHaveLength(1);
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(100);
+    expect(a.getSnapshot()).toMatchObject({ activity: 'working', speaking: true, text: 'He' });
+    expect(second.getSnapshot()).toBe(a.getSnapshot());
+    second.dispose();
+    expect(sources[0]!.closed).toBe(false);
+    a.dispose();
+    expect(sources[0]!.closed).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    provider.dispose();
+  });
+  it('isolates Bots and source visibility, drops duplicate output and callbacks after release', () => {
+    const { sources, provider } = setup();
+    const a = provider.acquire('a'),
+      b = provider.acquire('b');
+    for (const source of sources) source.emit('baseline', { activity: { generation: 'g1' } });
+    sources[0]!.emit('message', { ...output('a'), source: 'shared-group' });
+    sources[0]!.emit('message', output('b'));
+    vi.advanceTimersByTime(100);
+    expect(a.getSnapshot().text).toBe('');
+    sources[0]!.emit('message', output('a'));
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(30000);
+    expect(a.getSnapshot().speaking).toBe(false);
+    expect(b.getSnapshot().text).toBe('');
+    const previous = a.getSnapshot();
+    a.dispose();
+    sources[0]!.emit('message', output('a', 'late'));
+    vi.advanceTimersByTime(100);
+    expect(a.getSnapshot()).toBe(previous);
+    b.dispose();
+    provider.dispose();
+  });
+  it('cancels on disconnect and reconnects without replaying baseline history', () => {
+    const { sources, provider } = setup();
+    const a = provider.acquire('a');
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(100);
+    sources[0]!.dispatchEvent(new Event('error'));
+    expect(a.getSnapshot()).toMatchObject({ sync: 'stale', speaking: false, mouth: 0, text: '' });
+    vi.advanceTimersByTime(2000);
+    expect(sources).toHaveLength(2);
+    sources[1]!.emit('baseline', {
+      activity: { generation: 'g1' },
+      recovered: true,
+      messages: [output('a')],
+    });
+    sources[0]!.emit('message', output('a', 'late'));
+    vi.advanceTimersByTime(100);
+    expect(a.getSnapshot()).toMatchObject({ sync: 'live', speaking: false, text: '' });
+    sources[1]!.emit('message', output('a', 'new'));
+    vi.advanceTimersByTime(100);
+    expect(a.getSnapshot().speaking).toBe(true);
+    a.dispose();
+    provider.dispose();
+  });
+  it('isolates throwing and rejecting consumers with bounded diagnostics', async () => {
+    const { store, provider, errors } = setup();
+    const a = provider.acquire('a');
+    a.subscribe(() => {
+      throw new Error('bad consumer');
+    });
+    a.subscribe(async () => {
+      throw new Error('bad async consumer');
+    });
+    const healthy = vi.fn();
+    a.subscribe(healthy);
+    for (let revision = 1; revision <= 8; revision++)
+      store.applyActivity({
+        generation: 'g1',
+        revision,
+        bots: [{ slug: 'a', state: revision % 2 ? 'working' : 'idle' }],
+      });
+    await Promise.resolve();
+    expect(healthy).toHaveBeenCalledTimes(8);
+    expect(errors).toHaveBeenCalledTimes(5);
+    a.dispose();
+    provider.dispose();
+  });
+  it('cancels paused and deleted Bots and does not replay their old output on resume', () => {
+    const { store, sources, provider } = setup();
+    const view = provider.acquire('a');
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(100);
+    store.setRoster([{ ...bot('a'), paused: true }, bot('b')], []);
+    expect(view.getSnapshot()).toMatchObject({ paused: true, speaking: false, mouth: 0, text: '' });
+    sources[0]!.emit('message', output('a', 'while-paused'));
+    store.setRoster([bot('a'), bot('b')], []);
+    vi.advanceTimersByTime(500);
+    expect(view.getSnapshot()).toMatchObject({ speaking: false, text: '' });
+    store.setRoster([{ ...bot('a'), deleted: true }], []);
+    expect(view.getSnapshot().available).toBe(false);
+    view.dispose();
+    provider.dispose();
+  });
+  it('drops output received while the document is hidden and resumes only new output', () => {
+    const document = Object.assign(new EventTarget(), { hidden: false });
+    vi.stubGlobal('document', document);
+    const { sources, provider } = setup();
+    const view = provider.acquire('a');
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(100);
+    expect(view.getSnapshot().speaking).toBe(true);
+    document.hidden = true;
+    document.dispatchEvent(new Event('visibilitychange'));
+    sources[0]!.emit('message', output('a', 'hidden'));
+    document.hidden = false;
+    document.dispatchEvent(new Event('visibilitychange'));
+    vi.advanceTimersByTime(200);
+    expect(view.getSnapshot()).toMatchObject({ text: '', speaking: false, mouth: 0 });
+    sources[0]!.emit('message', output('a', 'visible'));
+    vi.advanceTimersByTime(100);
+    expect(view.getSnapshot().speaking).toBe(true);
+    view.dispose();
+    provider.dispose();
+  });
+  it('retries construction failures and cancels the retry when the final view closes', () => {
+    vi.useFakeTimers();
+    const store = createStore();
+    store.setRoster([bot('a')], []);
+    const source = vi.fn(() => {
+      throw new Error('offline');
+    });
+    const provider = createBotPresentation(store, source);
+    const view = provider.acquire('a');
+    expect(view.getSnapshot().sync).toBe('stale');
+    vi.advanceTimersByTime(4000);
+    expect(source).toHaveBeenCalledTimes(3);
+    view.dispose();
+    provider.dispose();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,7 +41,10 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
       {
         name: 'botharness:vfile-browser-imports',
         resolveId(id, importer) {
-          if (/^#min(?:path|proc|url)$/u.test(id) && importer?.includes('/node_modules/vfile/lib/'))
+          if (
+            /^#min(?:path|proc|url)$/u.test(id) &&
+            importer?.replaceAll('\\', '/').includes('/node_modules/vfile/lib/')
+          )
             return join(dirname(importer), `${id.slice(1)}.browser.js`);
           return null;
         },
@@ -137,6 +141,21 @@ function sourceBuildStamp(): { revision: string; dirty: boolean } | null {
   }
 }
 
+export const vrmCompanionClientBundleOptions: UserConfig = {
+  ...clientBundle(
+    '@botharness/vrm-companion',
+    ['packages/vrm-companion/src/client/index.tsx'],
+    'packages/vrm-companion/lib',
+  ),
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    __VRM_MODEL__: JSON.stringify(
+      'data:model/gltf-binary;base64,' +
+        readFileSync(join(ROOT_DIR, 'packages/vrm-companion/assets/sample.vrm')).toString('base64'),
+    ),
+  },
+};
+
 export default defineConfig([
   {
     entry: ['packages/core/src/index.ts'],
@@ -161,7 +180,7 @@ export default defineConfig([
   },
   coreCliBundleOptions,
   {
-    entry: ['packages/client/src/index.ts'],
+    entry: ['packages/client/src/index.ts', 'packages/client/src/panel-api.ts'],
     outDir: 'packages/client/dist',
     format: ['esm'],
     platform: 'node',
@@ -220,4 +239,13 @@ export default defineConfig([
   },
   computerClientBundleOptions,
   browserClientBundleOptions,
+  {
+    entry: ['packages/vrm-companion/src/index.ts'],
+    outDir: 'packages/vrm-companion/dist',
+    format: ['esm'],
+    platform: 'node',
+    dts: true,
+    clean: true,
+  },
+  vrmCompanionClientBundleOptions,
 ]);

@@ -219,12 +219,17 @@ function WorkspaceRail({
     () => options.prefs.source.getSnapshot().botIcon,
   );
   const state = useClientState();
-  const botOnlyHidden = resolveChannelSidebarContext(state)?.botSlug ? [] : BOT_ONLY_CHANNEL_PANELS;
   const shortcuts = useSyncExternalStore(
     options.shortcuts.catalog.subscribe,
     options.shortcuts.catalog.getSnapshot,
   );
   const panels = useSyncExternalStore(options.dockPanels!.subscribe, options.dockPanels!.panels);
+  const botOnlyHidden = resolveChannelSidebarContext(state)?.botSlug
+    ? []
+    : [
+        ...BOT_ONLY_CHANNEL_PANELS,
+        ...panels.filter((p) => p.binding === 'current-bot').map((p) => p.id),
+      ];
   const controlMenu = usePanelMenu({
     items: [
       { type: 'label', id: 'controls', text: t('workspace.visibleControls') },
@@ -234,6 +239,7 @@ function WorkspaceRail({
             panel.id !== 'members' &&
             panel.id !== 'bot-inbox' &&
             !CHANNEL_WORKSPACE_PANELS.includes(panel.id) &&
+            panel.binding !== 'current-bot' &&
             !botOnlyHidden.includes(panel.id),
         )
         .map((panel) => ({
@@ -292,6 +298,7 @@ function WorkspaceRail({
                 'members',
                 'bot-inbox',
                 ...CHANNEL_WORKSPACE_PANELS,
+                ...panels.filter((p) => p.binding === 'current-bot').map((p) => p.id),
                 ...botOnlyHidden,
                 ...hiddenControls,
               ]}

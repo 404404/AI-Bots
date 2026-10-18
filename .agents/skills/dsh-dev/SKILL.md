@@ -278,3 +278,8 @@ The Windows 1.4.0 fallback also writes layout version 8 while keeping Sessions a
 ## Additional verified pitfall — #2214
 
 A bundled Markdown dependency can resolve its package-internal condition imports to Node implementations even in a Client build. With `react-markdown` / `vfile` in the pinned tsdown/Rolldown toolchain, the Client required `node:process`, `node:path` and `node:url`; the real DSH loader refused the plugin before Bot mode could mount. Explicit browser export conditions alone did not change vfile's `#minpath` / `#minproc` / `#minurl` resolution. Resolve those three imports only inside vfile to its shipped `.browser.js` implementations in the Client build, retain the native external baseline, and verify both the actual built Bundle and a cold browser boot. Do not add Node modules to the shell baseline or install a global process shim. The browser condition also selects DOM entity decoding; the Bundle execution test needs a real DOM for that browser-only code.
+
+
+## Additional verified pitfall — #2222 Windows Client bundle
+
+The vfile browser-import resolver must normalize Windows backslashes before checking its importer path. A forward-slash-only check let `node:process`, `node:path` and `node:url` enter the built UI on Windows; the real native Client loader refused activation. Normalize only the importer path, retain the existing three explicit browser shims, and verify a cold Host page. Do not expand the native module baseline.

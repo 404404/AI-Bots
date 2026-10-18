@@ -1,3 +1,5 @@
+import { readChannelDock, writeChannelDock } from './channel-dock-layout.js';
+import { createBotPresentation } from './bot-presentation.js';
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client';
 import { AppearanceSection } from './appearance-settings.js';
 import { KeyboardSettings, setWorkShortcutNotice } from './keyboard-settings.js';
@@ -235,7 +237,6 @@ export function apply(ctx: ClientContext): void {
   const companion = new WindowCompanions({
     storage,
     exists: (botId) => botExists(call, botId),
-    onActivity: (snapshot) => store.applyActivity(snapshot),
     context: profileContext,
     source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
@@ -250,23 +251,7 @@ export function apply(ctx: ClientContext): void {
   });
   ctx.effect(() => {
     void companion.start();
-    let mirrored: 'live' | 'stale' | undefined;
-    const off = companion.subscribe(() => {
-      const value = companion.getSnapshot();
-      if (!value.companions.length && mirrored === undefined) return;
-      const sync = !value.companions.length || value.sync === 'live' ? 'live' : 'stale';
-      if (sync === mirrored) return;
-      mirrored = value.companions.length ? sync : undefined;
-      store.setActivitySync(sync);
-      if (typeof document !== 'undefined') {
-        if (sync === 'stale') document.documentElement.dataset['botharnessActivity'] = 'stale';
-        else delete document.documentElement.dataset['botharnessActivity'];
-      }
-    });
-    return () => {
-      off();
-      companion.dispose();
-    };
+    return () => companion.dispose();
   }, 'botharness: independent Window Companion owner');
   const prefs = new BotModePrefs(storage);
   ctx.effect(
@@ -413,7 +398,17 @@ export function apply(ctx: ClientContext): void {
       visibility.dispose();
     };
   }, 'botharness: Bot Session visibility');
-  const dockPanels = createDockPanelRegistry();
+  const presentation = createBotPresentation(store);
+  ctx.provide('botPresentation', presentation);
+  ctx.effect(() => () => presentation.dispose());
+  const dockPanels = createDockPanelRegistry({
+    instances: readChannelDock()?.instances ?? [],
+    saveInstances(instances) {
+      const current = readChannelDock();
+      if (!current || !writeChannelDock({ ...current, instances }))
+        throw new Error('panel_layout_unavailable');
+    },
+  });
   ctx.provide('dockPanels', dockPanels);
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
   const workspace = {
@@ -690,11 +685,7 @@ export function apply(ctx: ClientContext): void {
     };
   }, 'botharness: live streams on the native Remote stream carrier');
   ctx.effect(
-    () =>
-      mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal), {
-        enabled: () => companion.getSnapshot().companions.length === 0,
-        subscribe: companion.subscribe,
-      }),
+    () => mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal)),
     'botharness: PersonaBot activity subscription',
   );
   ctx.effect(() => {
