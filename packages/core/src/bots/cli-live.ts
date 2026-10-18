@@ -110,6 +110,9 @@ export const LIVE_OPTIONS = {
   ...APPROVAL_REVIEWER_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
+  'image-source': { type: 'string' },
+  'image-revision': { type: 'string' },
+  'image-reference': { type: 'string' },
   timeout: { type: 'string' },
   'message-id': { type: 'string' },
   outcome: { type: 'string' },
@@ -319,6 +322,11 @@ export const LIVE_COMMANDS = [
     description:
       'run one Browser tool directly for a Bot, without the model (args JSON from stdin)',
   },
+  {
+    command: 'memory-image',
+    description:
+      'export version-bound Memory PNG bytes (--path --image-source --image-revision [--image-reference] --out)',
+  },
   { command: 'memory-file-target', description: 'resolve a memory file path for a Bot' },
   { command: 'memory-graph', description: "read a Bot's memory commit graph" },
   { command: 'memory-commit-diff', description: 'read the full diff of one memory commit' },
@@ -365,6 +373,9 @@ interface LiveValues
     ApprovalReviewerValues {
   host?: string;
   'token-file'?: string;
+  'image-source'?: string;
+  'image-revision'?: string;
+  'image-reference'?: string;
   timeout?: string;
   'message-id'?: string;
   body?: string;
@@ -1464,6 +1475,7 @@ async function runDeviceCommand(
 const MEMORY_COMMANDS = new Set([
   'memory-snapshot',
   'memory-file',
+  'memory-image',
   'memory-history',
   'memory-diff',
   'memory-save',
@@ -1514,6 +1526,41 @@ async function runMemoryCommand(
     case 'memory-snapshot':
       [method, args] = ['memorySnapshot', { channelId }];
       break;
+    case 'memory-image': {
+      const path = required('path', 'path <file>');
+      const source = required('image-source', 'image-source worktree|index|<commit>');
+      const revision = required('image-revision', 'image-revision <sha256>');
+      const out = required('out', 'out <absolute file>');
+      if (!isAbsolute(out)) usage('--out must be an absolute path.');
+      const host = await connectLiveHost(
+        values,
+        io,
+        AbortSignal.timeout(timeoutMs(values.timeout)),
+      );
+      const reference = values['image-reference'];
+      const { bytes, response } = await host.http(
+        '/api/botharness/memory/image?' +
+          new URLSearchParams({
+            slug,
+            path,
+            source,
+            revision,
+            ...(reference === undefined ? {} : { reference }),
+          }),
+      );
+      if (response.headers.get('content-type') !== 'image/png')
+        throw new CliLiveError('host-protocol-error', 'Expected a PNG image');
+      writeFileSync(out, bytes, { flag: 'wx' });
+      return {
+        path,
+        source,
+        revision,
+        ...(reference === undefined ? {} : { reference }),
+        mime: 'image/png',
+        bytes: bytes.length,
+        out,
+      };
+    }
     case 'memory-file':
       [method, args] = ['memoryFile', { channelId, path: required('path', 'path <file>') }];
       break;

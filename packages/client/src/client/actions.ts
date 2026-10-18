@@ -609,7 +609,17 @@ export interface BridgeActions {
   memoryFile(
     channelId: string,
     path: string,
-  ): Promise<{ path: string; body: string; head: string; binary?: boolean } | undefined>;
+  ): Promise<
+    | {
+        path: string;
+        body: string;
+        head: string;
+        binary?: boolean;
+        image?: import('./bridge.js').MemoryImage;
+        markdown?: import('./bridge.js').MemoryMarkdown;
+      }
+    | undefined
+  >;
   memoryHistory(channelId: string): Promise<MemoryAcceptedCommit[]>;
   memoryDiff(channelId: string, sha: string): Promise<string>;
   memoryGitGraph(channelId: string, offset: number): Promise<MemoryGitGraph>;
@@ -1119,6 +1129,7 @@ export function createActions(
     }
     if (rosterResult.status === 'fulfilled') {
       const snapshot = rosterResult.value;
+      const previousMuted = clientStore.getSnapshot().roster.muted;
       clientStore.setRosterState({
         pins: snapshot.pins,
         hidden: snapshot.hidden,
@@ -1127,6 +1138,8 @@ export function createActions(
         topOrder: snapshot.topOrder,
         readOnly: false,
       });
+      if (!sameIds([...previousMuted].sort(), [...snapshot.muted].sort()))
+        void refreshHumanInboxStatus();
     } else if (
       rosterResult.reason instanceof BridgeCallError &&
       rosterResult.reason.code === 'storage-unavailable'

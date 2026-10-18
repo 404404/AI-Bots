@@ -102,3 +102,103 @@ describe('Channel unread counts', () => {
     }
   });
 });
+
+it('filters muted message attention before search and paging without reading messages or losing requests', async () => {
+  const core = createCore({ dshHome: createTempRoot('mute-inbox-'), agents: adapter() });
+  try {
+    await core.roster.attach(createFakeRosterDomain().facility);
+    core.registry.create({ slug: 'ada', displayName: 'Ada' });
+    const bea = core.registry.create({ slug: 'bea', displayName: 'Bea' });
+    if (!bea.ok) throw new Error('Bot fixture failed');
+    const a = core.channels.createGroup({ name: 'Quiet', members: ['ada'] });
+    const b = core.channels.getOrCreateDm('ada', 'Ada')!;
+    const append = async (channelId: string, id: string, minute: number, personal = false) =>
+      core.channels.appendMessage(channelId, {
+        id,
+        at: new Date(Date.UTC(2026, 9, 19, 0, minute)).toISOString(),
+        author: { kind: 'bot', slug: 'ada' },
+        body: personal ? '@Human needle' : 'needle ' + id,
+        ...(personal
+          ? {
+              replyTo: 'human',
+              botCausation: { rootSourceEventId: 'root', parentSourceEventId: 'parent', hop: 1 },
+              humanMentions: [{ humanId: 'local-human', label: 'Human', start: 0, end: 6 }],
+            }
+          : {}),
+      });
+    await core.channels.appendMessage(a.id, {
+      id: 'human',
+      at: '2026-10-19T00:00:00Z',
+      author: { kind: 'human' },
+      body: 'Review',
+    });
+    await append(a.id, 'already-read-mention', 1, true);
+    await core.channels.markRead(a.id, 'already-read-mention');
+    await append(a.id, 'ordinary-1', 2);
+    await append(a.id, 'ordinary-2', 3);
+    await append(a.id, 'mention-and-reply', 4, true);
+    await append(b.id, 'other-channel', 1);
+    const request = core.channels.requestGroupJoin({
+      channelId: a.id,
+      requesterBotSlug: 'bea',
+      requesterBotCreatedAt: bea.record.createdAt,
+    });
+    const methods = createBridgeMethods({ ...core });
+    const position = core.channels.readPosition(a.id);
+    const timeline = methods.channelMessages({ channelId: a.id });
+    const before = core.humanAttention.list({ category: 'unread', channelId: a.id }).items[0]!;
+    expect(core.humanAttention.status()).toEqual({ unreadCount: 4, hasAction: true });
+    expect(core.humanAttention.list({ category: 'replies' }).items).toHaveLength(2);
+    await methods.channelMuteSet({ channelId: a.id, muted: true });
+    for (const category of ['unread', 'replies'] as const) {
+      expect(
+        methods.humanAttention({ category, channelId: a.id, search: 'needle', limit: 1 }),
+      ).toMatchObject({ ok: true, value: { items: [] } });
+    }
+    expect(
+      core.humanAttention.list({ category: 'unread', search: 'needle', limit: 1 }),
+    ).toMatchObject({ items: [{ channelId: b.id, unreadCount: 1 }] });
+    expect(core.humanAttention.item(before.id, before.sourceEventId)).toBeUndefined();
+    expect(core.humanAttention.status()).toEqual({ unreadCount: 1, hasAction: true });
+    expect(core.humanAttention.list({ category: 'action' }).items).toMatchObject([
+      { requestId: request.id },
+    ]);
+    expect(core.channels.readPosition(a.id)).toEqual(position);
+    expect(methods.channelMessages({ channelId: a.id })).toEqual(timeline);
+    expect(core.humanAttention.unreadByChannel()).toEqual(
+      expect.arrayContaining([{ channelId: a.id, unreadCount: 3 }]),
+    );
+    await append(a.id, 'arrived-muted', 6, true);
+    expect(core.humanAttention.list({ category: 'replies' }).items).toEqual([]);
+    await methods.channelMuteSet({ channelId: a.id, muted: false });
+    expect(core.humanAttention.status()).toEqual({ unreadCount: 5, hasAction: true });
+    expect(core.channels.readPosition(a.id)).toEqual(position);
+    expect(core.humanAttention.list({ category: 'unread', channelId: a.id }).items).toMatchObject([
+      { unreadCount: 2 },
+    ]);
+    const first = core.humanAttention.list({ category: 'replies', search: 'needle', limit: 1 });
+    expect(first.items[0]?.messageId).toBe('arrived-muted');
+    expect(first.nextCursor).toBeDefined();
+    await methods.channelMuteSet({ channelId: a.id, muted: true });
+    expect(
+      core.humanAttention.list({
+        category: 'replies',
+        search: 'needle',
+        limit: 1,
+        cursor: first.nextCursor!,
+      }).items,
+    ).toEqual([]);
+    await methods.channelMuteSet({ channelId: a.id, muted: false });
+    expect(core.humanAttention.list({ category: 'replies', unreadOnly: true }).items).toHaveLength(
+      2,
+    );
+    expect(core.humanAttention.list({ category: 'replies' }).items).toHaveLength(3);
+    await methods.channelMuteSet({ channelId: b.id, muted: true });
+    expect(core.humanAttention.list({ category: 'unread' }).items).toMatchObject([
+      { channelId: a.id },
+    ]);
+  } finally {
+    await core.runtime.close();
+    core.operationalDatabase.close();
+  }
+});

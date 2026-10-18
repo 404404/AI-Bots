@@ -1,6 +1,6 @@
 # Bot mode workspace and dock
 
-At 961px and wider on a qualified rc.2 Web/macOS shell, the workspace contains a full-height control rail, independent Channel list, one closable Messages panel and Dock panels. Unsupported shells and Windows captions keep the legacy sidebar/dock fallback.
+At 961px and wider on a structurally qualified rc.2 Web/macOS/Windows shell, the workspace contains a full-height control rail, independent Channel list, one closable Messages panel and Dock panels. Unsupported shells keep the legacy sidebar/dock fallback. Windows native behavior requires the separate device gate below.
 
 ## Sub-features
 
@@ -123,3 +123,9 @@ Run `scripts/e2e-nested-channel-panels.mjs` with the task-owned Web profile (`BH
 The maintained continuous-resize journey now compares every visible tree branch axis and the persisted tree, replacing the legacy fixed-wrapper selectors. Channel split geometry is version-7 tree authority; the older per-child ratio field is only a migration seed.
 
 Header hit-area regression: in both global and Channel child Panels, the close/drag handle fits only the Panel icon + label. Messages Channel avatar/name and actions are outside it. Click Channel identity without closing Messages; drag header whitespace to move the native window, drag the title to move only its Panel, and confirm release after dragging does not close it. Check long labels truncate and actions remain visible.
+
+## Windows Desktop upgrade gate (#2221)
+
+Use actual packaged Windows Desktop 0.2.0-rc.2 and 0.2.1-rc.2 in separate task-owned Profiles. Install published DSB 1.4.0, resize its legacy flat panels, save a layout observation and close normally before installing the candidate into the same Profile. Retain Electron user data and existing layout configuration. Compare the imported child direction/ratio and the `before-workspace-shell` backup; a fresh Profile is not an upgrade test.
+
+Capture old/new native chrome and Home/control-rail scenes, nested Messages panels, narrow windows, actual Windows display scaling at 100/125/150%, and the layout after reopening panels and restarting Desktop. Test native menus, minimize, maximize/restore, close, caption drag and double-click, blank header/rail window drag, title-only panel drag/click-close, and Channel identity/action isolation. Restore the original OS scaling afterward. Drag proof needs a recording or before/after geometry and screenshots. A source test, browser screenshot or double-click alone cannot pass the drag gate. Exit Bot mode and reenter to verify native shell restoration. Record each untested or blocked action explicitly.
