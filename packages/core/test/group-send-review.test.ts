@@ -761,6 +761,12 @@ describe('busy Group progress through the direct tool', () => {
     let groupId = '';
     let turns = 0;
     let keptOpen: string[] | undefined;
+    const adapter = createDshBotAgentAdapter({
+      agents: new FakeAgentHost(),
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
     const outcomes: string[] = [];
     const core = createCore({
       dshHome: createTempRoot('review-turn-budget-'),
@@ -798,7 +804,22 @@ describe('busy Group progress through the direct tool', () => {
               outcomes.push(error.outcome.status);
             }
           }
-          const dropped = run.channels.dropDraft!({ channelId: groupId, draftId: draftId! });
+          const dropped = JSON.parse(
+            JSON.stringify(
+              await adapter.runDirectTool!(
+                run,
+                'channel_send',
+                {
+                  body: '',
+                  drop: true,
+                  draft_id: draftId,
+                  channel_id: groupId,
+                  resolve_inbox_ids: ['initial-request', 'busy-turn-0'],
+                },
+                new AbortController().signal,
+              ),
+            ),
+          );
           expect(dropped.budget?.exhausted).toBe(true);
           expect(Date.parse(dropped.suggestedSnoozeUntil!)).toBeGreaterThan(Date.now());
           expect(Date.parse(dropped.suggestedSnoozeUntil!)).toBeLessThanOrEqual(
@@ -859,6 +880,18 @@ describe('busy Group progress through the direct tool', () => {
             .get(groupId, 'initial-request')!.source_event_id,
       );
       expect(keptOpen).toContain(source);
+      const admissions = attachOperationalModule(
+        core.operationalDatabase,
+        'drop-admission-test',
+      ).read((db) =>
+        db
+          .prepare(`SELECT e.message_id, a.resolution FROM inbox_admissions a
+          JOIN source_events e ON e.source_event_id = a.source_event_id
+          WHERE a.bot_slug = 'ada' AND e.channel_id = ?`)
+          .all(groupId),
+      );
+      expect(admissions.find((row) => row.message_id === 'initial-request')?.resolution).toBeNull();
+      expect(admissions.find((row) => row.message_id === 'busy-turn-0')?.resolution).toBe('done');
       expect(
         core.channels
           .readMessages(groupId)
@@ -868,6 +901,7 @@ describe('busy Group progress through the direct tool', () => {
     } finally {
       await core.runtime.close();
       core.operationalDatabase.close();
+      await adapter.close();
     }
   });
 
