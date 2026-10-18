@@ -236,3 +236,106 @@ describe('Agent memory commands against a live Host', () => {
     expect(live.calls).toEqual([]);
   });
 });
+
+describe('Memory image byte export', () => {
+  it('exports a document-relative image using the selected Markdown source and content revision', async () => {
+    const bytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    const live = await host(() => ({ bytes, headers: { 'content-type': 'image/png' } }));
+    const dir = mkdtempSync(join(tmpdir(), 'memory-markdown-cli-'));
+    dirs.push(dir);
+    const out = join(dir, 'figure.png');
+    const result = await invoke(
+      [
+        'memory-image',
+        'ada',
+        '--path',
+        'notes/a.md',
+        '--image-source',
+        'index',
+        '--image-revision',
+        'a'.repeat(64),
+        '--image-reference',
+        '../figure.png',
+        '--out',
+        out,
+      ],
+      live.url,
+    );
+    expect(result.code).toBe(0);
+    expect(result.json).toMatchObject({
+      path: 'notes/a.md',
+      source: 'index',
+      reference: '../figure.png',
+    });
+    expect(readFileSync(out)).toEqual(bytes);
+    expect(new URL(live.calls[0]!.path, live.url).searchParams.get('reference')).toBe(
+      '../figure.png',
+    );
+  });
+
+  it('exports only the requested source/revision to a new file and keeps stdout JSON', async () => {
+    const bytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    const live = await host(() => ({ bytes, headers: { 'content-type': 'image/png' } }));
+    const dir = mkdtempSync(join(tmpdir(), 'memory-image-cli-'));
+    dirs.push(dir);
+    const out = join(dir, 'preview.png');
+    const argv = [
+      'memory-image',
+      'ada',
+      '--path',
+      'notes/a.png',
+      '--image-source',
+      'index',
+      '--image-revision',
+      'a'.repeat(64),
+      '--out',
+      out,
+    ];
+    const result = await invoke(argv, live.url);
+    expect(result.code).toBe(0);
+    expect(result.json).toMatchObject({
+      source: 'index',
+      revision: 'a'.repeat(64),
+      mime: 'image/png',
+      bytes: 8,
+      out,
+    });
+    expect(readFileSync(out)).toEqual(bytes);
+    expect(live.calls[0]?.path).toBe(
+      '/api/botharness/memory/image?' +
+        new URLSearchParams({
+          slug: 'ada',
+          path: 'notes/a.png',
+          source: 'index',
+          revision: 'a'.repeat(64),
+        }),
+    );
+    expect((await invoke(argv, live.url)).code).not.toBe(0);
+    expect(readFileSync(out)).toEqual(bytes);
+  });
+  it('returns the same stale-content refusal as the UI without creating a file', async () => {
+    const live = await host(() => ({
+      status: 409,
+      json: { error: { code: 'memory-image-stale', message: 'Image changed; refresh the view' } },
+    }));
+    const dir = mkdtempSync(join(tmpdir(), 'memory-image-cli-'));
+    dirs.push(dir);
+    const result = await invoke(
+      [
+        'memory-image',
+        'ada',
+        '--path',
+        'a.png',
+        '--image-source',
+        'worktree',
+        '--image-revision',
+        'a'.repeat(64),
+        '--out',
+        join(dir, 'a.png'),
+      ],
+      live.url,
+    );
+    expect(result.code).not.toBe(0);
+    expect(result.json.error.code).toBe('memory-image-stale');
+  });
+});

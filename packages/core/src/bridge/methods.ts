@@ -1,3 +1,4 @@
+import { MemoryImageError } from '../memory/image.js';
 import { isDeepStrictEqual } from 'node:util';
 import { DEEPSEEKBOT_RECIPE } from '../onboarding/service.js';
 import { type CloudWork } from '../cloud/work.js';
@@ -681,9 +682,16 @@ export interface BridgeMethods {
   channelMediaTarget(payload: unknown): Promise<BridgeResult<{ target: MemoryFileTarget }>>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memorySnapshot(payload: unknown): BridgeResult<{ snapshot: MemoryAcceptedSnapshot }>;
-  memoryFile(
-    payload: unknown,
-  ): BridgeResult<{ file?: { path: string; body: string; head: string } }>;
+  memoryFile(payload: unknown): BridgeResult<{
+    file?: {
+      path: string;
+      body: string;
+      head: string;
+      binary?: boolean;
+      image?: import('../memory/image.js').MemoryImage;
+      markdown?: import('../memory/markdown.js').MemoryMarkdown;
+    };
+  }>;
   memoryHistory(payload: unknown): BridgeResult<{ commits: MemoryAcceptedCommit[] }>;
   memoryDiff(payload: unknown): BridgeResult<{ sha: string; diff: string }>;
   memoryGitGraph(payload: unknown): BridgeResult<MemoryGitGraph>;
@@ -1355,7 +1363,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     try {
       return { ok: true, value: operation() };
     } catch (error) {
-      if (error instanceof MemoryAcceptError) {
+      if (error instanceof MemoryAcceptError || error instanceof MemoryImageError) {
         return { ok: false, error: { code: error.code, message: error.message } };
       }
       if (error instanceof MemoryFileError)

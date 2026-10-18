@@ -193,7 +193,7 @@ Host 重启后，先读取当前群聊，再用 `review_action:"recover"`、`dra
 
 `channel <group-channel>` 返回 `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}`，拒绝非群频道。稳定创建／邀请参数及重试语义见 [Tob 建群与邀请](#tob-建群与邀请)，Human 在线命令也可使用。
 
-与 Web 界面一样，重命名 Bot 私聊会同时重命名该 Bot。`group-avatar-set` 读取不超过 96 KiB 的 PNG、JPEG 或 WebP 文件。邀请 ID 和入群申请 ID 位于群组的 `invitations` 和 `joinRequests` 中，`channels` 和每个群组命令都会返回。`group-wake-set` 设置成员 Bot 对普通群消息何时唤醒：`all`、`mentions`、`digest`（累计 `--count` 条消息或经过 `--interval` 秒后唤醒，默认 5 和 30）或 `silent`；`--inherit` 让该成员恢复其 Bot 的默认设置。`channel-timeline` 和 `channel-journal` 按聊天视图的方式分页读取消息；`channel-journal` 的 `--through` 取 `channel-timeline` 返回的 `revision`。`channel-retry` 在 Bot 回复失败后让它重新回答一条 Human 私聊消息。`channel-unread` 列出每个有未读的频道的 Bot 未读消息数，即侧边栏每行显示的数字。`channel-mute` 与侧边栏菜单一样把频道设为免打扰：该行变灰，未读消息不计入活动中心的未读总数；`--off` 取消免打扰。`channel-bot-stop` 停止 Bot 当前这一轮工作，与工作状态条上的“停止”按钮相同：Bot 回到空闲，Channel 里记录 Human 停止了它；Bot 没在工作时以 `not-working` 拒绝。Bot 已委派的 Assignment 继续运行。`channel-react` 给一条消息加上你的表情回应，带 `--remove` 则撤回，并返回该消息的 `reactions`；每条消息最多保留你的 20 个回应，表情必须是单个 emoji。Bot 通过 `channel_send` 的 `react_to` 和 `reaction` 回应，只回应时 `body` 留空；`bot-tool <bot> channel_send --args-stdin` 可以不经过模型执行它。`channel-search` 在你可见的消息中不区分大小写地匹配 `--query`，按时间从新到旧返回，并用返回的 `nextCursor` 翻页。
+与 Web 界面一样，重命名 Bot 私聊会同时重命名该 Bot。`group-avatar-set` 读取不超过 96 KiB 的 PNG、JPEG 或 WebP 文件。邀请 ID 和入群申请 ID 位于群组的 `invitations` 和 `joinRequests` 中，`channels` 和每个群组命令都会返回。`group-wake-set` 设置成员 Bot 对普通群消息何时唤醒：`all`、`mentions`、`digest`（累计 `--count` 条消息或经过 `--interval` 秒后唤醒，默认 5 和 30）或 `silent`；`--inherit` 让该成员恢复其 Bot 的默认设置。`channel-timeline` 和 `channel-journal` 按聊天视图的方式分页读取消息；`channel-journal` 的 `--through` 取 `channel-timeline` 返回的 `revision`。`channel-retry` 在 Bot 回复失败后让它重新回答一条 Human 私聊消息。`channel-unread` 列出每个有未读的频道的 Bot 未读消息数，即侧边栏每行显示的数字。`channel-mute` 与侧边栏菜单一样把频道设为免打扰：该行变灰，普通消息、提及和回复在搜索与分页之前退出 Activity 消息列表，也不计入全局未读；`--off` 依原有已读、隐藏和稍后提醒规则恢复资格。真实 Channel 已读位置与待审批、问答等明确 Human 请求保持不变。`channel-bot-stop` 停止 Bot 当前这一轮工作，与工作状态条上的“停止”按钮相同：Bot 回到空闲，Channel 里记录 Human 停止了它；Bot 没在工作时以 `not-working` 拒绝。Bot 已委派的 Assignment 继续运行。`channel-react` 给一条消息加上你的表情回应，带 `--remove` 则撤回，并返回该消息的 `reactions`；每条消息最多保留你的 20 个回应，表情必须是单个 emoji。Bot 通过 `channel_send` 的 `react_to` 和 `reaction` 回应，只回应时 `body` 留空；`bot-tool <bot> channel_send --args-stdin` 可以不经过模型执行它。`channel-search` 在你可见的消息中不区分大小写地匹配 `--query`，按时间从新到旧返回，并用返回的 `nextCursor` 翻页。
 
 `group-delete` 和 `channel-purge-confirm` 无法撤销，必须带 `--confirm`。`channel-history` 列出已删除、内容仍可清除的群组。清除与历史页面一样分两步：`channel-purge-preview` 列出所选 Source Event 将删除的消息、Bot 受理记录、文件和后续效果，并返回短时有效的 `token`；`channel-purge-confirm` 从标准输入读取 `{"token": …}`，针对同一组 Source Event 执行，范围变化时以错误码拒绝。Source Event 从 `channel-history-sources` 中选取，它用返回的 `before` 游标分页。
 
@@ -910,3 +910,23 @@ Host 重启后先检查草稿、重新读取群聊，再通过同一个
 ## Desktop 新手引导
 
 `deepseekbot onboarding` 读取 Profile 引导及实际 Bot／群聊结果引用。`--action start|pause|skip|continue|restart|finish` 控制生命周期；未实际创建 Bot 与群聊时 finish 拒绝。重新开始保留资源、审批、布局和历史。布局教学完成记录属于当前 Client；CLI 不操作界面，也不把模型配置视为执行成功。
+
+### 绑定版本的 Memory PNG 图片
+
+`memory-file`、`memory-working-diff` 和 `memory-commit-diff` 为 PNG 文件返回可选图片元数据。`source` 标识当前工作树、暂存区或确切提交，`revision` 绑定实际字节；JSON 不包含图片正文。
+
+```bash
+deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
+```
+
+`memory-file`、`memory-working-diff` 和 `memory-commit-diff` 对 `.md` / `.markdown` 额外返回 `markdown` 文档（或 `before` / `after` 文档）：包括 `source`、文档字节 SHA-256 `revision`、`status` 和原始 UTF-8 `body`。每个文档最多 4 MiB，单次提交查询返回的文档正文合计最多 4 MiB；原有逐行 diff 限制独立保留。JSON 不携带渲染 HTML 或图片字节。
+
+导出内嵌本地 PNG 时，传入文档版本和原始引用：
+
+```bash
+deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document-source> --image-revision <document-revision> --image-reference ../chart.png --out /absolute/new-chart.png
+```
+
+指定 `--image-reference` 后，`--path` 表示 Markdown 文档，`--image-revision` 表示该文档的版本；回执另含 `reference`。相对路径从文档所在目录解析，`/chart.png` 从 Memory Repository 根解析。支持百分号编码的空格和 Unicode，以及仍在仓库内的上级路径；拒绝根目录越界、`.git`、反斜线、URL 协议和逃逸符号链接。图片读取前后均检查可变文档版本；index 和历史图片不会回退到工作区。图片来自加载时的所选来源，后续可变图片变更通过刷新查看。外部 HTTPS 图片只由 Client 在明确点击后加载，Host 与 CLI 不请求外部 URL。
+
+使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应 PNG 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。首片支持不超过 25 MiB、单边不超过 16,384 像素、总像素不超过 4000 万的 PNG；其余格式沿用原行为。原文件下载与“打开当前文件”仍为独立操作。

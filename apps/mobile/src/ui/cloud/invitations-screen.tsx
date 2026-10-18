@@ -8,7 +8,7 @@ import { cloudError } from '../../cloud/client';
 import type { Invitation } from '../../cloud/invitation-contract';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { useDesignTheme } from '../design/theme';
-import { radius, space } from '../design/tokens';
+import { edge, radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
 import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { Text } from '../primitives/text';
@@ -163,7 +163,16 @@ function InvitationWorkspace({
                     accessibilityLabel={t.cloudInvitations.email}
                     placeholder={t.cloudInvitations.email}
                     placeholderTextColor={theme.color.subtle}
-                    style={{ color: theme.color.fg }}
+                    style={{
+                      minHeight: theme.touch,
+                      padding: space.x3,
+                      borderWidth: edge.hairline,
+                      borderColor: theme.layer.raised.edge,
+                      borderRadius: radius.md,
+                      color: theme.color.fg,
+                      backgroundColor: theme.layer.raised.fill,
+                      fontSize: theme.type.body.size,
+                    }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}

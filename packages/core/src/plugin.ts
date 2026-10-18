@@ -78,6 +78,7 @@ import { installOrchestratorFileTools } from './workspaces/orchestrator-file-too
 import { ProtectedExecution } from './credentials/protected-execution.js';
 import { nativeExecutionRoot } from './workspaces/grant-native-tools.js';
 import { createAttachmentStore, type AttachmentStore } from './attachments/store.js';
+import { createMemoryImageHttp, MEMORY_IMAGE_PATH } from './memory/image-http.js';
 import { createMemoryFileHttp, MEMORY_FILE_DOWNLOAD_PATH } from './memory/file-http.js';
 import {
   BOT_ZIP_EXPORT_PATH,
@@ -2330,6 +2331,16 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           fetch: createMemoryFileHttp(core.memory),
         }),
       'botharness: current Memory file download',
+    );
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: MEMORY_IMAGE_PATH,
+          methods: ['GET'],
+          requestBody: 'buffered',
+          fetch: createMemoryImageHttp(core.memory),
+        }),
+      'botharness: version-bound Memory PNG preview',
     );
     const attachmentHttp = createAttachmentHttp(
       core.attachments,

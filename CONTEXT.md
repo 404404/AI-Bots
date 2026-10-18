@@ -657,7 +657,7 @@ The Human's Bot-mode entry for cross-PersonaBot and cross-Channel attention, ope
 _Avoid_: Human Inbox (for the whole entry), dashboard list
 
 **Human Inbox**:
-The personal attention view inside Activity Center: unresolved Human actions, mentions and replies, unread Channel activity, informational updates, and handled history. It references the owning facts without copying Channel content or flattening every Bot Inbox event into Human work.
+The personal attention view inside Activity Center: unresolved Human actions, mentions and replies, unread Channel activity, informational updates, and handled history. It references the owning facts without copying Channel content or flattening every Bot Inbox event into Human work. Human-muted Channels contribute neither message attention (including mentions and replies) nor global unread reminders; their read positions and explicit Human action requests remain intact.
 _Avoid_: notifications, Bot Inbox, dashboard list
 
 **Channel Attention**:

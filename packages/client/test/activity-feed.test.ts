@@ -6,7 +6,11 @@ import {
   type TypedLive,
 } from '../src/client/messaging-defaults-live.js';
 import { createActivityFeed } from '../src/client/activity-feed.js';
-import type { HumanAttentionItem, HumanAttentionPage } from '../src/client/store.js';
+import {
+  createStore,
+  type HumanAttentionItem,
+  type HumanAttentionPage,
+} from '../src/client/store.js';
 
 const item = (id: string): HumanAttentionItem => ({
   id,
@@ -257,4 +261,55 @@ it('rereads changes received during the initial query and keeps unchanged snapsh
     release();
     live.uninstall();
   }
+});
+
+it('requeries on committed mute changes and rejects late pages without changing the view', async () => {
+  const clientStore = createStore();
+  let oldPage: ((value: HumanAttentionPage) => void) | undefined;
+  let hold = false;
+  const activityPage = vi.fn(async (section: string) => {
+    if (section === 'action') return { items: [item('pending-request')] };
+    if (hold && section === 'replies') {
+      hold = false;
+      return new Promise<HumanAttentionPage>((resolve) => {
+        oldPage = resolve;
+      });
+    }
+    return {
+      items: clientStore.getSnapshot().roster.muted.includes('quiet') ? [] : [item('message')],
+    };
+  });
+  const feed = createActivityFeed({ activityPage }, clientStore);
+  feed.setQuery({ search: 'needle', channelId: 'quiet', sort: 'oldest' });
+  feed.toggle('replies');
+  const releasePage = feed.acquire();
+  const releaseDock = feed.acquire();
+  try {
+    await feed.refresh();
+    const query = feed.getSnapshot().query;
+    hold = true;
+    const old = feed.refresh();
+    await vi.waitFor(() => expect(oldPage).toBeDefined());
+    clientStore.setRosterState({ muted: ['quiet'] });
+    await vi.waitFor(() => expect(feed.getSnapshot().pages.replies.items).toEqual([]));
+    oldPage!({ items: [item('stale-message')] });
+    await old;
+    expect(feed.getSnapshot().pages.replies.items).toEqual([]);
+    expect(feed.getSnapshot().pages.unread.items).toEqual([]);
+    expect(feed.getSnapshot().pages.action.items[0]?.id).toBe('pending-request');
+    expect(feed.getSnapshot().query).toEqual(query);
+    expect(feed.getSnapshot().collapsed.replies).toBe(true);
+    releasePage();
+    clientStore.setRosterState({ muted: [] });
+    await vi.waitFor(() => expect(feed.getSnapshot().pages.replies.items[0]?.id).toBe('message'));
+    const calls = activityPage.mock.calls.length;
+    clientStore.setRosterState({ pins: ['quiet'] });
+    clientStore.setRosterState({ muted: [] });
+    expect(activityPage.mock.calls.length).toBe(calls);
+  } finally {
+    releaseDock();
+  }
+  const calls = activityPage.mock.calls.length;
+  clientStore.setRosterState({ muted: ['quiet'] });
+  expect(activityPage.mock.calls.length).toBe(calls);
 });
