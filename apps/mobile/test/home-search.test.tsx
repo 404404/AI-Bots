@@ -241,7 +241,9 @@ describe('Search at the top of Chats', () => {
     await act(async () => duplicate.click());
     expect(rows(view).join(' ')).not.toContain('Cloud general');
     await act(async () =>
-      view.querySelector<HTMLButtonElement>('[role="tab"][aria-label="All"]')!.click(),
+      view
+        .querySelector<HTMLButtonElement>(`[role="tab"][aria-label="${t.allEnvironments}"]`)!
+        .click(),
     );
     expect(view.textContent).toContain('Cloud general');
     expect(view.textContent).toContain('Ada');
