@@ -1,71 +1,72 @@
 {
   "issue": 2160,
   "base": "810ae5398deda703b9c2840dbdf0d29eb627c9ed",
-  "behavior": "86cf3271e8b0ca577a1fe14003db95fbe65f6b65",
+  "behavior": "06b469860c2faa12adcbd016899c424457f12019",
+  "selectedStyle": "Human selected B: no background; body-sized inline avatar + @ + Web primary-colored current name; visually centered avatar using scaled body leading",
   "nativeClientSource": "47a2fbf4553e7760480fe10f3c47c1bd5cb3ef19",
   "nativeInputs": "unchanged; SDK58/RN0.88 dev client reused",
   "device": "dedicated Android16 API36 emulator;1080x2400;420dpi",
-  "captures": "Actual unmodified native screencaps, same canonical group and messages, Chinese locale. Public-safe QA identities; no series conversations.",
+  "captures": "Actual unmodified native screencaps, same canonical group and messages, Chinese locale. Public-safe QA identities; no series conversations. Before captures retained from baseline; older block-layout After captures replaced.",
   "afterMatrix": [
     {
       "phase": "after",
       "scheme": "light",
       "scale": 1,
-      "source": "86cf3271e8b0ca577a1fe14003db95fbe65f6b65",
+      "source": "06b469860c2faa12adcbd016899c424457f12019",
       "viewport": "1080x2400",
-      "badges": ["[393,1854][968,1980]", "[169,1222][744,1348]"],
+      "badges": ["[425,1932][911,1985]", "[206,1395][692,1448]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T04:43:51.418Z"
+      "captured": "2026-10-18T05:27:45.382Z"
     },
     {
       "phase": "after",
       "scheme": "light",
       "scale": 1.3,
-      "source": "86cf3271e8b0ca577a1fe14003db95fbe65f6b65",
+      "source": "06b469860c2faa12adcbd016899c424457f12019",
       "viewport": "1080x2400",
-      "badges": ["[267,1836][1006,1962]", "[169,1090][836,1224]"],
+      "badges": ["[478,1843][1017,1905]", "[217,1258][834,1320]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T04:44:21.151Z"
+      "captured": "2026-10-18T05:28:15.306Z"
     },
     {
       "phase": "after",
       "scheme": "light",
       "scale": 2,
-      "source": "86cf3271e8b0ca577a1fe14003db95fbe65f6b65",
+      "source": "06b469860c2faa12adcbd016899c424457f12019",
       "viewport": "1080x2400",
-      "badges": ["[267,1413][1018,1603]", "[169,479][836,670]"],
+      "badges": ["[566,1429][1017,1519]", "[243,622][834,712]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T04:44:52.525Z"
+      "captured": "2026-10-18T05:28:43.820Z"
     },
     {
       "phase": "after",
       "scheme": "dark",
       "scale": 1,
-      "source": "86cf3271e8b0ca577a1fe14003db95fbe65f6b65",
+      "source": "06b469860c2faa12adcbd016899c424457f12019",
       "viewport": "1080x2400",
-      "badges": ["[393,1854][968,1980]", "[169,1222][744,1348]"],
+      "badges": ["[425,1932][911,1985]", "[206,1395][692,1448]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T04:45:24.727Z"
+      "captured": "2026-10-18T05:29:10.659Z"
     },
     {
       "phase": "after",
       "scheme": "dark",
       "scale": 1.3,
-      "source": "86cf3271e8b0ca577a1fe14003db95fbe65f6b65",
+      "source": "06b469860c2faa12adcbd016899c424457f12019",
       "viewport": "1080x2400",
-      "badges": ["[267,1836][1006,1962]", "[169,1090][836,1224]"],
+      "badges": ["[478,1843][1017,1905]", "[217,1258][834,1320]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T04:45:56.499Z"
+      "captured": "2026-10-18T05:29:40.531Z"
     },
     {
       "phase": "after",
       "scheme": "dark",
       "scale": 2,
-      "source": "86cf3271e8b0ca577a1fe14003db95fbe65f6b65",
+      "source": "06b469860c2faa12adcbd016899c424457f12019",
       "viewport": "1080x2400",
-      "badges": ["[267,1413][1018,1603]", "[169,479][836,670]"],
+      "badges": ["[566,1429][1017,1519]", "[243,622][834,712]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T04:46:28.915Z"
+      "captured": "2026-10-18T05:30:09.410Z"
     }
   ],
   "beforeMatrix": [
@@ -131,19 +132,19 @@
     }
   ],
   "verification": {
-    "mobileTests": "596 passed,8 skipped",
-    "typecheck": "passed",
-    "lint": "passed",
+    "fullFocusedSuite": "613 passed,8 skipped at533b134cb; preview-removal delta:53 focused tests passed; final alignment delta:9 focused/style-guard tests passed",
+    "typecheck": "passed at final alignment head",
+    "lint": "passed at final alignment head",
     "format": "passed",
     "changelog": "passed",
     "featureMap": "passed",
-    "standardsReview": "0 remaining findings",
-    "specReview": "0 confirmed findings",
+    "standardsReview": "0 remaining findings at selected B head",
+    "specReview": "0 confirmed findings at selected B head",
     "ios": "blocked:no accessible Mac/iOS queue",
     "talkBack": "unrun",
     "liveStreaming": "not measured; existing renderer and playback tests retained"
   },
-  "diagnostics": "Baseline tooling emitted transient Expo duplicate-linking errors during activity/font reload; final captures follow cold opens. After matrix had no JS ERROR logs. Native XML retries on transitions retained privately.",
+  "diagnostics": "Baseline tooling emitted transient Expo duplicate-linking errors during activity/font reload. Selected B captures use cold opens; initial UIAutomator null-root transition was retried. Final Metro log checked separately. Native XML retries retained privately.",
   "files": [
     {
       "name": "before-light-font1.png",
@@ -171,51 +172,51 @@
     },
     {
       "name": "after-light-font1.png",
-      "sha256": "7619dcfc28c1d92f720c8b4f481a80693e81c33107bc52b687f40d401bfdf6b0"
+      "sha256": "df2e2b597d7d79ec4e21011fb4ec08d42261ddb5a44e37f36fc045f2c8c5d4f4"
     },
     {
       "name": "after-light-font1-3.png",
-      "sha256": "5a36462447a0419e079af765625f3119f9d94382454bebdb5ae972cafcbc949a"
+      "sha256": "e478fb76ca72aafd8570e8be4766bea4191113178b1ad4b69d8a8c356d11263d"
     },
     {
       "name": "after-light-font2.png",
-      "sha256": "88302a4fbc08ea13da7fd064c188f3aba54c41e1928de25813355702371c312c"
+      "sha256": "a2e214a1e1e501b0fd4440e8f0caa932ab0a1be0db7aa17642d10eee147975ed"
     },
     {
       "name": "after-dark-font1.png",
-      "sha256": "26d2357f2315eaeb1ceee8f2d68f478afe3d258194c060b7b266e791767a6d81"
+      "sha256": "14476733d88586fb499c914e5e6ef04507d03961e45ca6a41bb15e19319a3f7f"
     },
     {
       "name": "after-dark-font1-3.png",
-      "sha256": "26a9b35b468df9b0a440640297de69fc857a3a6e360bf48db63db3c3df92e66c"
+      "sha256": "c409e8378723a60f11da8fa8fc73cb45a5b915be0f2bb8f1389272ae4fd3956c"
     },
     {
       "name": "after-dark-font2.png",
-      "sha256": "791ad82e435f9bb8bfb4629234031a711e3fe7aa5a07256369eae59b97be6c94"
+      "sha256": "5cf1fdc22c0c030f4b015ff5dd43192796a4f3b56828e212cf77e5a5439e73a8"
     },
     {
       "name": "after-light-font1-dm.png",
-      "sha256": "4365afd8aea9b34af619b9766b269944990eb82e6f795169963de429d686f81c"
+      "sha256": "6c959ffd2b5d120f7f57cc031abf3276c2195e89a9bd4ac5e8ded104c24d8b75"
     },
     {
       "name": "after-light-font1-3-dm.png",
-      "sha256": "a18b90f35745b5e7e8a07d5d2bba1ab5456e3a93e41889b26a2d60ec15f316df"
+      "sha256": "98c8c26ed680e6ee8e42f3e555d8d85f60f28bc8e91cb18cd7dbe2a0dad66f09"
     },
     {
       "name": "after-light-font2-dm.png",
-      "sha256": "d1a77446cc3e6021e52d2af842c0e43a4e95e851db9b396ca7602b738cdf0f9a"
+      "sha256": "d6b0516806bf1efc87e526a0911d065721faf1c26b56043f73b14c3a2cde735e"
     },
     {
       "name": "after-dark-font1-dm.png",
-      "sha256": "bebba3e2d554deef6b01363f232f2445cfc8e063e2cc304d1524e8991c25a031"
+      "sha256": "717e70a58affd15e8b154296c433fb5eba64c0008d2894afbae7605800fb1b7a"
     },
     {
       "name": "after-dark-font1-3-dm.png",
-      "sha256": "437393f5acfdb3092de847d2140704e69d5d8951e95da69de4de34962ce35ebf"
+      "sha256": "8756da719526802e8d9b854ed6280b263a55cb138b17d65ce28708aadf2c61fa"
     },
     {
       "name": "after-dark-font2-dm.png",
-      "sha256": "8d11b5bdbbb5ef9d1e228032740a398a46cce8b31dda82fc50bc9059f11a1121"
+      "sha256": "9638a0d9d6b2c9d3c75f18f439c4422f2208f4982ad198558f7d64367a98f4f5"
     }
   ]
 }
