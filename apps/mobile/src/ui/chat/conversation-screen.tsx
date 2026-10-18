@@ -68,6 +68,7 @@ import {
 } from './mention-draft';
 import { MentionSuggestions } from './mention-suggestions';
 import { PlaybackBubble, type Speaker } from './message-bubble';
+import { MessageIdentities } from './message-identities';
 import { copyMessage, shareText } from './message-menu';
 import type { Rect } from './menu-placement';
 import { chatRows, messageGroups, type ChatRow } from './message-groups';
@@ -102,16 +103,26 @@ export function ConversationScreen({
   const { client } = useHostSession();
   const focused = useIsFocused();
   const roster = useHostSnapshot(client, focused).roster;
+  const router = useRouter();
+  const identities = useMemo(
+    () => ({
+      bots: roster?.bots ?? [],
+      openBot: (slug: string) => router.push({ pathname: '/dm/[slug]', params: { slug } }),
+    }),
+    [roster?.bots, router],
+  );
   const bot =
     place.kind === 'dm' ? roster?.bots.find((entry) => entry.slug === place.slug) : undefined;
   return (
     <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
-      <ChatConversation
-        place={place}
-        focus={focus}
-        latestWindowOnly={latestWindowOnly}
-        focused={focused}
-      />
+      <MessageIdentities.Provider value={identities}>
+        <ChatConversation
+          place={place}
+          focus={focus}
+          latestWindowOnly={latestWindowOnly}
+          focused={focused}
+        />
+      </MessageIdentities.Provider>
     </AccentProvider>
   );
 }
