@@ -1,14 +1,7 @@
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
 import { router } from 'expo-router';
 import { useRef, useState, type ComponentProps } from 'react';
-import {
-  Keyboard,
-  Platform,
-  Pressable,
-  View,
-  useWindowDimensions,
-  type ViewInstance,
-} from 'react-native';
+import { Keyboard, View, useWindowDimensions, type ViewInstance } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hostSession, useHostSession } from '../../host/host-session';
@@ -29,11 +22,9 @@ import { shownHostName } from '../design/host-look';
 import { useDesignTheme } from '../design/theme';
 import { navigationBar, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
-import { NavigationIcon } from './navigation-icon';
 import { NavigationMaterial } from './navigation-material';
-import { Text } from '../primitives/text';
-import { badgeCount } from '../primitives/badge-count';
-import { ChatsIcon, ActivityIcon, PlusIcon } from './icons';
+import { NavigationDestinations } from './navigation-destinations';
+import { NavigationAction } from './navigation-action';
 import { CreationPanel } from './creation-panel';
 import { FloatingTabInset } from './floating-tab-inset';
 import { ScrollChromeProvider, useChromeHidden, useChromeProgress } from './scroll-chrome';
@@ -192,81 +183,33 @@ function ScopedNavigationBar({
           }}
         >
           <NavigationMaterial />
-          {state.routes.map((route, index) => {
-            const focused = state.index === index;
-            const activity = route.name === '(activity)';
-            const Icon = activity ? ActivityIcon : ChatsIcon;
-            return (
-              <Pressable
-                key={route.key}
-                accessibilityRole="tab"
-                accessibilityLabel={
-                  activity && pending > 0
-                    ? `${t.activity}, ${badgeCount(pending)}`
-                    : activity
-                      ? t.activity
-                      : t.chats
-                }
-                accessibilityState={{ selected: focused }}
-                onPress={() => {
-                  const event = emitter.emit({
-                    type: 'tabPress',
-                    target: route.key,
-                    canPreventDefault: true,
-                  });
-                  if (!focused && !event.defaultPrevented) navigateToTab(route.key);
-                }}
-                onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: theme.touch,
-                  borderRadius: radius.round,
-                  backgroundColor:
-                    pressed || (focused && Platform.OS !== 'android')
-                      ? theme.layer.raised.chosen
-                      : 'transparent',
-                })}
-              >
-                <View
-                  style={{
-                    width: '100%',
-                    height: Math.max(navigationBar.indicatorHeight, theme.type.title.line),
-                  }}
-                >
-                  <NavigationIcon
-                    focused={focused}
-                    color={focused ? theme.color.fg : theme.color.muted}
-                    count={activity ? pending : 0}
-                    countVisible={!focused}
-                  >
-                    <Icon
-                      color={focused ? theme.color.fg : theme.color.muted}
-                      size={theme.type.title.line}
-                    />
-                  </NavigationIcon>
-                </View>
-                <Text variant="meta" tone={focused ? 'fg' : 'muted'}>
-                  {activity ? t.activity : t.chats}
-                </Text>
-              </Pressable>
-            );
-          })}
+          <NavigationDestinations
+            items={state.routes.map((route, index) => ({
+              key: route.key,
+              focused: state.index === index,
+              activity: route.name === '(activity)',
+              count: route.name === '(activity)' ? pending : 0,
+              onPress: () => {
+                const event = emitter.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+                if (state.index !== index && !event.defaultPrevented) navigateToTab(route.key);
+              },
+              onLongPress: () => emitter.emit({ type: 'tabLongPress', target: route.key }),
+            }))}
+          />
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.createHere}
+        <NavigationAction
+          size={size}
+          label={t.createHere}
           onPress={() => {
             Keyboard.dismiss();
             setError(undefined);
             setMenu(scope);
           }}
-          style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <NavigationMaterial circle />
-          <PlusIcon color={theme.color.fg} size={theme.type.title.line} />
-        </Pressable>
+        />
       </Animated.View>
       {menu === scope && (
         <CreationPanel

@@ -2,7 +2,6 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { View, type ViewInstance } from 'react-native';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
-import { cloudConversations } from '../../cloud/native-conversations';
 import { cloudViewScope } from '../../cloud/workspace-directory';
 import { prepareCloudCreation } from '../../cloud/prepare-creation';
 import { cloudError } from '../../cloud/client';
@@ -85,7 +84,6 @@ function CreateChannelForm({
         ) !== accountScope
       )
         return;
-      void cloudConversations.refresh();
       router.replace({
         pathname: '/cloud-channels',
         params: { instanceId, organizationId, accountScope, channelId: channel.channelId },

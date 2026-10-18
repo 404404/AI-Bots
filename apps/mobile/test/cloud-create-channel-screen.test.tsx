@@ -121,3 +121,22 @@ it('does not create after the form is dismissed during permission preflight', as
   expect(mocks.create).not.toHaveBeenCalled();
   expect(mocks.replace).not.toHaveBeenCalled();
 });
+
+it('opens the created channel without starting a competing directory request', async () => {
+  await render();
+  mocks.create.mockResolvedValueOnce({ channelId: 'channel_created' });
+  mocks.replace.mockImplementationOnce(() => {
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+  await act(async () => host.querySelector('button')!.click());
+  expect(mocks.create).toHaveBeenCalledExactlyOnceWith('uat', 'org_a', 'Keep my draft');
+  expect(mocks.replace).toHaveBeenCalledExactlyOnceWith({
+    pathname: '/cloud-channels',
+    params: {
+      instanceId: 'uat',
+      organizationId: 'org_a',
+      accountScope: mocks.scope,
+      channelId: 'channel_created',
+    },
+  });
+});

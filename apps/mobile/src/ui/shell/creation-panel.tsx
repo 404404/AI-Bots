@@ -1,3 +1,4 @@
+import { NavigationAction } from './navigation-action';
 import {
   FlatList,
   Modal,
@@ -20,7 +21,7 @@ import { radius, space } from '../design/tokens';
 import { NavigationMaterial } from './navigation-material';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
-import { CloseIcon, ComputerIcon, CloudIcon, PersonIcon, ChatsIcon, ShareIcon } from './icons';
+import { ComputerIcon, CloudIcon, PersonIcon, ChatsIcon, ShareIcon } from './icons';
 import { t } from '../strings';
 
 export const creationLabel = (action: CreationAction) =>
@@ -178,15 +179,7 @@ export function CreationPanel({
               </ScrollView>
             )}
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.close}
-            onPress={onClose}
-            style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <NavigationMaterial circle />
-            <CloseIcon color={theme.color.fg} size={theme.type.title.line} />
-          </Pressable>
+          <NavigationAction size={size} label={t.close} close onPress={onClose} />
         </View>
       </View>
     </Modal>
