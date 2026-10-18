@@ -1895,7 +1895,7 @@
     },
     {
       "path": "scripts/e2e-desktop-zoom-launch.mjs",
-      "sha256": "63e8b451a90f9e2b551a55137f460ec8faac8c65d458c58aac74a261a4f1a81a",
+      "sha256": "1cdca5afdfab3ae03f1abf148d6a28d95b4fe67dffa24426a3a517565d2cdd1c",
       "category": "mapped",
       "reason": "Audited isolated native launcher and readiness probe; feature guide explicitly distinguishes launch from acceptance.",
       "task": 2268,

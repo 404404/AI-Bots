@@ -194,14 +194,16 @@ export function apply(ctx: ClientContext): void {
       : takeHmrView(window as unknown as Record<string, unknown>);
   const t = ctx.locale.bind(LOCALE_NS);
   const zoom = mountWindowZoom({
-    document,
-    window,
+    document: typeof document === 'undefined' ? undefined : document,
+    window: typeof window === 'undefined' ? undefined : window,
     shortcuts: ctx.shortcuts,
     storage,
     onReady: mountWindowZoomControl,
-    compatibility: (
-      window as unknown as { __botharnessWindowZoomCompatibility?: ZoomCompatibility }
-    ).__botharnessWindowZoomCompatibility,
+    compatibility:
+      typeof window === 'undefined'
+        ? undefined
+        : (window as unknown as { __botharnessWindowZoomCompatibility?: ZoomCompatibility })
+            .__botharnessWindowZoomCompatibility,
     t,
   });
   ctx.effect(() => () => zoom.dispose(), 'botharness: device-local window zoom');

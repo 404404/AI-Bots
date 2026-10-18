@@ -17,10 +17,12 @@ export interface ZoomSurface {
   subscribe(listener: () => void): () => void;
 }
 export function mountWindowZoom(options: {
-  document: Document;
-  window: Pick<Window, 'addEventListener' | 'removeEventListener'> & {
-    location: Pick<Location, 'protocol' | 'hostname'>;
-  };
+  document: Document | undefined;
+  window:
+    | (Pick<Window, 'addEventListener' | 'removeEventListener'> & {
+        location: Pick<Location, 'protocol' | 'hostname'>;
+      })
+    | undefined;
   shortcuts: Pick<Shortcuts, 'runtime' | 'platform' | 'register'>;
   storage: ZoomStorage | undefined;
   compatibility: ZoomCompatibility | undefined;
@@ -43,10 +45,13 @@ export function mountWindowZoom(options: {
   };
   let disposed = false;
   const disposers: (() => void)[] = [];
-  const root = doc.documentElement;
-  const oldZoom = root.style.zoom;
+  const root = doc?.documentElement;
+  const oldZoom = root?.style.zoom;
   const ready = (async () => {
     if (
+      !doc ||
+      !win ||
+      !root ||
       win.location.protocol !== 'dsh-app:' ||
       win.location.hostname !== 'app' ||
       shortcuts.runtime !== 'desktop' ||
@@ -67,7 +72,7 @@ export function mountWindowZoom(options: {
         root.style.zoom = String(1.2 ** level);
       });
       disposers.push(() => {
-        root.style.zoom = oldZoom;
+        root.style.zoom = oldZoom ?? '';
       });
       const definitions = [
         ['increase', 'Equal', false, 1],

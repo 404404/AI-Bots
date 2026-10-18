@@ -2301,7 +2301,9 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       }
     ).connection;
     connectionCtx.effect(() => {
-      const control = createWindowZoomControl();
+      const control = createWindowZoomControl(Date.now, (phase, detail) =>
+        ctx.logger.info('window-zoom-control %j', { phase, ...detail }),
+      );
       const off = connection.fetch.register({
         path: WINDOW_ZOOM_CONTROL_PATH,
         methods: ['GET', 'POST'],

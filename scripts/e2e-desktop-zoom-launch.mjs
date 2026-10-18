@@ -54,7 +54,13 @@ function ownedPid() {
     return null;
   }
   if (!Number.isInteger(pid) || pid <= 0) throw Error('Ambiguous debug listener');
-  const cmd = execFileSync('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' });
+  let cmd;
+  try {
+    cmd = execFileSync('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' });
+  } catch (error) {
+    if (error.status === 1) return null;
+    throw error;
+  }
   if (!cmd.includes(`--user-data-dir=${root}/browser`))
     throw Error('Debug port belongs to another task');
   return pid;
@@ -144,8 +150,20 @@ async function ready(probe = false) {
             !document.body.innerText.includes('Loading plugins'),
           probe,
         ))
-      )
+      ) {
+        if (probe)
+          await p.evaluate(() => {
+            const prefix = 'ZOOM S1 #2268 · ';
+            const title = () => {
+              if (!document.title.startsWith(prefix)) document.title = prefix + document.title;
+            };
+            title();
+            new MutationObserver(title).observe(document.querySelector('title'), {
+              childList: true,
+            });
+          });
         return;
+      }
     } catch {
     } finally {
       b?.disconnect();

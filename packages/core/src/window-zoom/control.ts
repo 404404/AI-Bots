@@ -18,15 +18,24 @@ interface Client {
   token: string;
   seen: number;
   poll?: (delivery: Delivery | null) => void;
-  pending?: { delivery: Delivery; finish(response: Response): void };
+  pending?: { delivery: Delivery; finish(response: Response, code?: string): void };
 }
 
-export function createWindowZoomControl(now: () => number = Date.now) {
+export function createWindowZoomControl(
+  now: () => number = Date.now,
+  log: (phase: string, detail: Record<string, string | number>) => void = () => {},
+) {
+  const record = (phase: string, detail: Record<string, string | number>) => {
+    try {
+      log(phase, detail);
+    } catch {}
+  };
   const clients = new Map<string, Client>();
   let disposed = false;
   const drop = (client: Client) => {
     client.poll?.(null);
-    client.pending?.finish(refusal('zoom-client-stale'));
+    client.pending?.finish(refusal('zoom-client-stale'), 'zoom-client-stale');
+    record('disconnected', { clientId: client.id });
     clients.delete(client.id);
   };
   return {
@@ -59,6 +68,7 @@ export function createWindowZoomControl(now: () => number = Date.now) {
         if (clients.size >= 32) return refusal('zoom-client-limit');
         const client: Client = { id: randomUUID(), token: randomUUID(), seen: now() };
         clients.set(client.id, client);
+        record('registered', { clientId: client.id });
         return Response.json({ clientId: client.id, token: client.token });
       }
       if (typeof input.clientId !== 'string') return refusal('zoom-client-required', 400);
@@ -79,19 +89,40 @@ export function createWindowZoomControl(now: () => number = Date.now) {
         };
         return new Promise((resolve) => {
           let settled = false;
-          const finish = (response: Response) => {
+          const startedAt = now();
+          const finish = (response: Response, code = 'completed') => {
             if (settled) return;
             settled = true;
             clearTimeout(timer);
             request.signal.removeEventListener('abort', cancelled);
             if (client.pending?.delivery === delivery) delete client.pending;
+            record('settled', {
+              clientId: client.id,
+              requestId: delivery.id,
+              status: response.status,
+              durationMs: Math.max(0, now() - startedAt),
+              code:
+                /^zoom-[a-z-]{1,64}$/.test(code) || code === 'completed'
+                  ? code
+                  : 'zoom-client-failed',
+            });
             resolve(response);
           };
 
-          const cancelled = () => finish(refusal('zoom-request-cancelled'));
-          const timer = setTimeout(() => finish(refusal('zoom-client-timeout')), 8000);
+          const cancelled = () =>
+            finish(refusal('zoom-request-cancelled'), 'zoom-request-cancelled');
+          const timer = setTimeout(
+            () => finish(refusal('zoom-client-timeout'), 'zoom-client-timeout'),
+            8000,
+          );
           client.pending = { delivery, finish };
           request.signal.addEventListener('abort', cancelled, { once: true });
+          record('delivered', {
+            clientId: client.id,
+            requestId: delivery.id,
+            initiator: 'explicit-client-request',
+            operation: delivery.operation === undefined ? 'read' : 'write',
+          });
           client.poll!(delivery);
         });
       }
@@ -114,6 +145,7 @@ export function createWindowZoomControl(now: () => number = Date.now) {
           return refusal('zoom-invalid-reply', 400);
         client.pending.finish(
           typeof error === 'string' ? refusal(error) : Response.json({ snapshot: result.snapshot }),
+          typeof error === 'string' ? error : 'completed',
         );
         return Response.json({ ok: true });
       }

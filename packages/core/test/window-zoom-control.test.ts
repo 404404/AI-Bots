@@ -10,7 +10,8 @@ const request = (value: unknown, signal?: AbortSignal) =>
 afterEach(() => vi.useRealTimers());
 describe('explicit Client zoom delivery', () => {
   it('delivers to only the selected waiting Client and requires its token for replies', async () => {
-    const c = createWindowZoomControl();
+    const log = vi.fn();
+    const c = createWindowZoomControl(Date.now, log);
     const a = await (await c.fetch(request({ action: 'register' }))).json();
     const b = await (await c.fetch(request({ action: 'register' }))).json();
     const pollA = c.fetch(request({ action: 'poll', ...a }));
@@ -41,6 +42,12 @@ describe('explicit Client zoom delivery', () => {
     expect(await (await result).json()).toEqual({ snapshot: { level: 1 } });
     const listed = await (await c.fetch(new Request('http://localhost'))).json();
     expect(JSON.stringify(listed)).not.toContain(a.token);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(a.token);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(b.token);
+    expect(log).toHaveBeenCalledWith(
+      'settled',
+      expect.objectContaining({ status: 200, code: 'completed' }),
+    );
     c.dispose();
     expect(await (await pollA).json()).toEqual({ delivery: null });
   });
