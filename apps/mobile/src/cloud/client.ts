@@ -1,3 +1,4 @@
+import { parseInvitationLink } from './invitation-link';
 import { parsePendingWork, type PendingWork } from './work-contract';
 import { parseAgent, parseAgentHandoff, validAgentId, type AgentHandoff } from './agent-contract';
 import {
@@ -342,6 +343,54 @@ export class CloudClient {
     if (connectionKey(parseInstance(r.value)) !== connectionKey(config))
       return fail('INSTANCE_CONFIG_CHANGED');
   }
+  inspectInvitationService = (link: string) =>
+    this.lock(async () => {
+      const target = parseInvitationLink(link);
+      const response = await this.json(target.server + '/.well-known/open-cloud-groups');
+      if (!response.ok) return fail('INSTANCE_UNAVAILABLE');
+      const config = parseInstance(response.value);
+      if (config.server !== target.server) return fail('INVITATION_TARGET_MISMATCH');
+      return config;
+    });
+  previewInvitation = (id: string, link: string) =>
+    this.lock(async () => {
+      const target = parseInvitationLink(link);
+      const saved = this.entry(id);
+      if (saved.config.server !== target.server) return fail('INVITATION_TARGET_MISMATCH');
+      const entry = await this.current(saved);
+      const value = parseInvitation(
+        await this.orgRequest(
+          entry,
+          '/' + target.invitationId,
+          {},
+          target.guest ? '/api/channel-invitations' : '/api/invitations',
+        ),
+      );
+      if (value.invitationId !== target.invitationId || (value.role === 'guest') !== target.guest)
+        return fail('INVALID_RESPONSE');
+      return value;
+    });
+  openChannel = (id: string, organizationId: string, channelId: string, guest = false) =>
+    this.lock(async () => {
+      if (!validChannelId(channelId)) return fail('INVALID_CHANNEL');
+      const entry = guest
+        ? await this.current(this.entry(id))
+        : await this.channelEntry(id, organizationId);
+      if (!this.identities.has(id)) await this.me(entry);
+      const raw = await this.orgRequest(
+        entry,
+        (guest ? '' : '/' + organizationId + '/channels') + '/' + channelId,
+        {},
+        guest ? '/api/guest-channels' : '/api/organizations',
+      );
+      const channel = parseChannel(raw);
+      if (
+        channel.channelId !== channelId ||
+        (guest && (raw.access !== 'guest' || channel.organizationId !== organizationId))
+      )
+        return fail('INVALID_RESPONSE');
+      return channel;
+    });
   importConfig = (text: string, replace = false) =>
     this.lock(async () => {
       const config = parseCloudQr(text);
