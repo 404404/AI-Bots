@@ -16,4 +16,4 @@ Creation resolves stable source keys, never display names. All requires an expli
 
 ## Consequences
 
-The iOS tab bar is now app-owned presentation. Native glass support does not prove layout, gestures or accessibility: exact-head shared-queue Simulator checks must qualify adjacent geometry, dismissal, safe area, large text and actual creation. Android, physical-device and screen-reader gates remain independent. The expanded menu uses an opaque readable surface, not an asserted native morph animation. N3 adds Search only with functioning search behavior.
+The iOS tab bar is now app-owned presentation. Native glass support does not prove layout, gestures or accessibility: exact-head shared-queue Simulator checks must qualify adjacent geometry, dismissal, safe area, large text and actual creation. Android, physical-device and screen-reader gates remain independent. The expanded menu uses a native rounded-rectangle glass backdrop on iOS 26, including with large text; Reduce Transparency, older iOS and Android retain opaque surfaces. This is the existing modal fade, not an asserted native glass morph animation. N3 adds Search only with functioning search behavior.
