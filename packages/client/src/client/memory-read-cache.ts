@@ -7,6 +7,7 @@ type MemoryFile = {
   head: string;
   binary?: boolean;
   image?: import('./bridge.js').MemoryImage;
+  markdown?: import('./bridge.js').MemoryMarkdown;
 };
 export interface MemoryReadCache {
   key: number;

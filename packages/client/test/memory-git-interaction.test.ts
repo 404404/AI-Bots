@@ -128,7 +128,7 @@ import { zhTranslate } from '../src/client/locale.js';
 import { MemoryEntry } from '../src/client/memory-entry.js';
 import { MemoryFilesEntry } from '../src/client/memory-files-entry.js';
 import { MemoryRecovery } from '../src/client/memory-recovery.js';
-import { MemoryWorkingView } from '../src/client/memory-current-view.js';
+import { MemoryFileView, MemoryWorkingView } from '../src/client/memory-current-view.js';
 import { MemoryCommitView } from '../src/client/memory-commit-view.js';
 import { inertSubmissionActions } from './inert-submissions.js';
 
@@ -1424,6 +1424,94 @@ for (const view of ['working', 'commit'] as const) {
     expect(tables().every((table) => table.getAttribute('data-wrap') === 'true')).toBe(true);
     expect(
       view === 'commit' ? actions.memoryGitCommitDiff : actions.memoryWorkingDiff,
+    ).toHaveBeenCalledTimes(1);
+  });
+}
+
+for (const view of ['file', 'working', 'commit'] as const) {
+  it(`reads rendered Markdown with a source toggle in ${view} while diffs default to lines`, async () => {
+    const before = {
+      source: SHA,
+      revision: 'b'.repeat(64),
+      status: 'ready',
+      body: '# Before\n\n**Old text**',
+    };
+    const after = {
+      source: 'worktree',
+      revision: 'c'.repeat(64),
+      status: 'ready',
+      body: '# After\n\n**New text**',
+    };
+    const diff = 'diff --git a/note.md b/note.md\n@@ -1 +1 @@\n-# Before\n+# After';
+    const actions = {
+      memoryFile: vi
+        .fn()
+        .mockResolvedValue({ path: 'note.md', head: SHA, body: after.body, markdown: after }),
+      memoryWorkingDiff: vi.fn().mockResolvedValue({
+        path: 'note.md',
+        kind: 'current',
+        status: 'M',
+        diff,
+        binary: false,
+        markdown: { before, after },
+      }),
+      memoryGitCommitDiff: vi.fn().mockResolvedValue({
+        sha: SHA,
+        subject: 'Illustrated note',
+        files: [{ path: 'note.md', status: 'M', markdown: { before, after } }],
+        diff,
+      }),
+    } as unknown as BridgeActions;
+    const common = {
+      actions,
+      channelId: 'dm-markdown',
+      botSlug: 'atlas',
+      onClose: vi.fn(),
+      t: zhTranslate,
+    };
+    await act(async () =>
+      root.render(
+        view === 'file'
+          ? createElement(MemoryFileView, { ...common, path: 'note.md' })
+          : view === 'working'
+            ? createElement(MemoryWorkingView, {
+                ...common,
+                change: { path: 'note.md', kind: 'current', status: 'M' },
+              })
+            : createElement(MemoryCommitView, { ...common, sha: SHA }),
+      ),
+    );
+    const clickText = async (text: string) =>
+      act(async () =>
+        [...container.querySelectorAll<HTMLButtonElement>('button')]
+          .find((b) => b.textContent === text)!
+          .click(),
+      );
+    expect(container.querySelectorAll('.bh-memory-markdown h1')).toHaveLength(
+      view === 'file' ? 1 : 0,
+    );
+    if (view === 'file') {
+      await clickText('查看源码');
+      expect(container.querySelector('pre')?.textContent).toBe(after.body);
+      expect(container.querySelector('.bh-memory-markdown')).toBeNull();
+      await clickText('渲染预览');
+      expect(container.querySelector('strong')?.textContent).toContain('note.md');
+    } else {
+      expect(container.querySelector('.bh-memory-diff-table')).not.toBeNull();
+      await clickText('渲染预览');
+      expect(
+        [...container.querySelectorAll('.bh-memory-markdown h1')].map((e) => e.textContent),
+      ).toEqual(['Before', 'After']);
+      await clickText('逐行对比');
+      expect(container.querySelector('.bh-memory-diff-table')).not.toBeNull();
+      expect(container.querySelector('.bh-memory-markdown')).toBeNull();
+    }
+    expect(
+      view === 'file'
+        ? actions.memoryFile
+        : view === 'working'
+          ? actions.memoryWorkingDiff
+          : actions.memoryGitCommitDiff,
     ).toHaveBeenCalledTimes(1);
   });
 }

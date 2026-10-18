@@ -26,7 +26,9 @@
     "dockview-react": "8.4.1",
     "driver.js": "1.4.0",
     "html-to-image": "1.11.13",
-    "morphicons": "1.7.1"
+    "morphicons": "1.7.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",

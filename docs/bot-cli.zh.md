@@ -916,4 +916,14 @@ Host 重启后先检查草稿、重新读取群聊，再通过同一个
 deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
 ```
 
+`memory-file`、`memory-working-diff` 和 `memory-commit-diff` 对 `.md` / `.markdown` 额外返回 `markdown` 文档（或 `before` / `after` 文档）：包括 `source`、文档字节 SHA-256 `revision`、`status` 和原始 UTF-8 `body`。每个文档最多 4 MiB，单次提交查询返回的文档正文合计最多 4 MiB；原有逐行 diff 限制独立保留。JSON 不携带渲染 HTML 或图片字节。
+
+导出内嵌本地 PNG 时，传入文档版本和原始引用：
+
+```bash
+deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document-source> --image-revision <document-revision> --image-reference ../chart.png --out /absolute/new-chart.png
+```
+
+指定 `--image-reference` 后，`--path` 表示 Markdown 文档，`--image-revision` 表示该文档的版本；回执另含 `reference`。相对路径从文档所在目录解析，`/chart.png` 从 Memory Repository 根解析。支持百分号编码的空格和 Unicode，以及仍在仓库内的上级路径；拒绝根目录越界、`.git`、反斜线、URL 协议和逃逸符号链接。图片读取前后均检查可变文档版本；index 和历史图片不会回退到工作区。图片来自加载时的所选来源，后续可变图片变更通过刷新查看。外部 HTTPS 图片只由 Client 在明确点击后加载，Host 与 CLI 不请求外部 URL。
+
 使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应 PNG 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。首片支持不超过 25 MiB、单边不超过 16,384 像素、总像素不超过 4000 万的 PNG；其余格式沿用原行为。原文件下载与“打开当前文件”仍为独立操作。

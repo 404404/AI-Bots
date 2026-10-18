@@ -1519,6 +1519,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
       head: string;
       binary?: boolean;
       image?: import('../memory/image.js').MemoryImage;
+      markdown?: import('../memory/markdown.js').MemoryMarkdown;
     };
   } {
     return unwrap(this.methods.memoryFile({ channelId, path }));
