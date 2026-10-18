@@ -59,3 +59,7 @@ Public techniques need the same Release device replay plus observable scroll mov
 Two independent primary-source searches returned. The first followed Fabric documentation into Fiber scheduling and FlashList item rendering; the second followed Worklets into Streamdown, Enriched, md4c and the original fast-path change. The parent archived originals and followed Streamdown's Bundle Mode link and Enriched's parser link. Each research question now has a concrete original-text location; applicability gaps remain explicit rather than inferred as passes.
 
 No public SDK58/RN0.88 Android 120 Hz streaming qualification was found for the proposed combination. Skia selection/accessibility tradeoffs, custom native grapheme animation and incremental remend semantics were not qualified. No dependencies, compiler switches or native performance flags were enabled by this research.
+
+The subsequent [applied rendering Arena](2028-stream-arena.md) records the Release
+experiments, rejected candidates and native grapheme drawing implementation.
+Those device results are separate from this source investigation.

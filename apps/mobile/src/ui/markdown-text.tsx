@@ -7,6 +7,7 @@ import { copyMessage } from './chat/message-menu';
 import { edge, radius, space } from './design/tokens';
 import { useDesignTheme } from './design/theme';
 import { Text } from './primitives/text';
+import { StreamReveal, nativeStreamReveal } from './primitives/stream-reveal';
 import { renderMarkdownInline } from './markdown-inline';
 import { MarkdownTable } from './markdown-table';
 import { isMarkdownTable } from './markdown-blocks';
@@ -17,11 +18,13 @@ export function MarkdownText({
   color,
   selectable,
   reveal = false,
+  nativeReveal = nativeStreamReveal,
 }: {
   tokens: Token[];
   color: string;
   selectable: boolean;
   reveal?: boolean;
+  nativeReveal?: boolean;
 }) {
   const theme = useDesignTheme();
   const visible = (entries: Token[]) =>
@@ -124,15 +127,24 @@ export function MarkdownText({
       );
     const children = 'tokens' in token ? token.tokens : undefined;
     const text = 'text' in token && typeof token.text === 'string' ? token.text : token.raw;
-    return (
+    const paragraph = (
       <Text
         key={index}
         selectable={selectable}
         variant={token.type === 'heading' ? 'title' : 'body'}
         style={{ color }}
       >
-        {children === undefined ? decodeHTML(text) : renderMarkdownInline(children, theme, animate)}
+        {children === undefined
+          ? decodeHTML(text)
+          : renderMarkdownInline(children, theme, animate && !nativeReveal)}
       </Text>
+    );
+    return nativeReveal ? (
+      <StreamReveal key={index} active={animate}>
+        {paragraph}
+      </StreamReveal>
+    ) : (
+      paragraph
     );
   };
   return <View style={{ gap: space.x3 }}>{blocks(tokens, reveal)}</View>;
