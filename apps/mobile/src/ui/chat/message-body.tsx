@@ -1,4 +1,5 @@
 import { useContext, useMemo } from 'react';
+import { View } from 'react-native';
 
 import { botNameColor } from '../../../../../packages/client/src/client/bot-name-color';
 import type { ConversationMessage } from '../../host/conversation';
@@ -24,6 +25,7 @@ function Mention({ mention, background }: { mention: WireMention; background: st
   const { label, bot } = mentionIdentity(mention, bots);
   const enabled = bot !== undefined && openBot !== undefined;
   const size = theme.type.body.size * theme.fontScale;
+  const offset = ((theme.type.body.line - theme.type.body.size) * theme.fontScale) / 2;
   return (
     <InlineText
       {...(enabled
@@ -38,7 +40,11 @@ function Mention({ mention, background }: { mention: WireMention; background: st
         fontWeight: theme.weight.strong,
       }}
     >
-      {bot === undefined ? null : <BotAvatar bot={bot} size={size} ring={false} />}
+      {bot === undefined ? null : (
+        <View style={{ width: size, height: size, transform: [{ translateY: offset }] }}>
+          <BotAvatar bot={bot} size={size} ring={false} />
+        </View>
+      )}
       {'\u00a0'}@{label}
       {'\u00a0'}
     </InlineText>
