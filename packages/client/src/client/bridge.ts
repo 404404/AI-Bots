@@ -3590,10 +3590,12 @@ export async function loadHumanAttention(
     throw new Error('Update the Host to search Activity.');
   return parseHumanAttentionPage(value);
 }
-export async function loadHumanAttentionStatus(
-  call: BridgeCall,
-): Promise<{ unreadCount: number; hasAction: boolean }> {
-  const row = asRecord(await unwrap(call, 'humanAttentionStatus', {}));
+export async function loadHumanAttentionStatus(call: BridgeCall): Promise<{
+  unreadCount: number;
+  hasAction: boolean;
+  messageCounts: { replies: number; other: number } | undefined;
+}> {
+  const row = asRecord(await unwrap(call, 'humanAttentionStatus', { messageCounts: true }));
   if (
     row === undefined ||
     !Number.isSafeInteger(row['unreadCount']) ||
@@ -3601,7 +3603,24 @@ export async function loadHumanAttentionStatus(
     typeof row['hasAction'] !== 'boolean'
   )
     throw new Error('invalid Human attention status');
-  return { unreadCount: row['unreadCount'] as number, hasAction: row['hasAction'] };
+  const counts = asRecord(row['messageCounts']);
+  if (
+    row['messageCounts'] !== undefined &&
+    (counts === undefined ||
+      !Number.isSafeInteger(counts['replies']) ||
+      !Number.isSafeInteger(counts['other']) ||
+      (counts['replies'] as number) < 0 ||
+      (counts['other'] as number) < 0 ||
+      (counts['replies'] as number) + (counts['other'] as number) !== row['unreadCount'])
+  )
+    throw new Error('invalid Human attention message counts');
+  return {
+    unreadCount: row['unreadCount'] as number,
+    hasAction: row['hasAction'],
+    messageCounts: counts
+      ? { replies: counts['replies'] as number, other: counts['other'] as number }
+      : undefined,
+  };
 }
 export async function loadChannelUnreadCounts(call: BridgeCall): Promise<Record<string, number>> {
   const channels = asRecord(await unwrap(call, 'channelUnreadCounts', {}))?.['channels'];

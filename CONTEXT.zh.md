@@ -654,6 +654,8 @@ _避免使用_：per-event queue、wake storm、batch（单独使用）
 「活动中心」是 Bot 模式中面向 Human 的跨 PersonaBot、跨 Channel 注意力入口，直接打开个人 Human Inbox。完整页面与 Dock 共用原位工具审批卡，运行统计不再属于此入口（#2026）。它汇总已有权威事实，不成为消息、用量或 Session 活动的另一份权威。
 _避免使用_：Human Inbox（指整个入口时）、dashboard list
 
+Activity control rail 红点有独立的浏览器／Host 本地显示范围；隐藏或缩小红点范围不改变 Human Inbox 查询、实际未读状态或待处理 Human 请求。
+
 **Human Inbox**：
 Activity Center 内的个人 attention 视图：未解决的 Human 行动、提及与回复、未读 Channel 活动、信息更新及已处理历史。它引用所属权威事实，不复制 Channel 内容，也不会把每条 Bot Inbox 事件都摊成 Human 工作。Human 设置免打扰的 Channel 不贡献消息注意力（含提及、回复）或全局未读提醒；真实已读位置和明确 Human 行动请求保持不变。
 _避免使用_：notifications、Bot Inbox、dashboard list
