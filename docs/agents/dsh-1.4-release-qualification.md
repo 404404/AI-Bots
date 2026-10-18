@@ -28,3 +28,7 @@ The native ComputerUseRegistry JavaScript is identical in the two qualified rele
 ## Future 0.2.x updates
 
 When DSH publishes another 0.2.x version, run installation/startup and critical-seam checks against the existing candidate first. Compatible updates should not require a DSB metadata-only release. Record failures by missing capability or changed contract; fix adapters before broadening actual runtime support. Keep the qualification list concrete and the admission range broad. Unknown future behavior is not verified behavior.
+
+## Current review evidence
+
+The 2026-10-18 [compatibility record](../../.github/pr-assets/2168-compatibility/README.md) binds the exact local 1.4.0 artifacts and native Desktop checks to their source revisions. Both final fresh installations passed. The final older-Desktop model rerun remains pending after provider credit exhaustion; this candidate is not release-qualified.
