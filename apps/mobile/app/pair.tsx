@@ -26,6 +26,7 @@ export default function PairScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [error, setError] = useState<PairingFailure | undefined>();
   const lastMethod = useRef<PairingMethod>('paste');
   const pending = useRef<AbortController | undefined>(undefined);
@@ -58,9 +59,13 @@ export default function PairScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setFocused(true);
       if (typeof params.p === 'string' && handled.current === undefined)
         void pair(`deepseekbot://pair?p=${params.p}`, 'deep_link');
-      return () => pending.current?.abort();
+      return () => {
+        setFocused(false);
+        pending.current?.abort();
+      };
     }, [params.p]),
   );
 
@@ -78,6 +83,7 @@ export default function PairScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
+      <Button label={t.cloud.title} onPress={() => router.push('/cloud-services')} />
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <View
         style={{
@@ -90,12 +96,14 @@ export default function PairScreen() {
         }}
       >
         {permission?.granted ? (
-          <CameraView
-            style={{ width: '100%', height: '100%' }}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-            onBarcodeScanned={busy ? undefined : ({ data }) => void pair(data, 'qr')}
-          />
+          focused && (
+            <CameraView
+              style={{ width: '100%', height: '100%' }}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={busy ? undefined : ({ data }) => void pair(data, 'qr')}
+            />
+          )
         ) : (
           <Pressable
             onPress={() => void requestPermission()}

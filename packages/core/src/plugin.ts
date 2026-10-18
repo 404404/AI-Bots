@@ -1,4 +1,8 @@
+import { CloudConnections } from './cloud/connections.js';
+import { createCloudProvider } from './cloud/provider.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
+import { CloudWork } from './cloud/work.js';
+import { createCloudWorkTool } from './cloud/work-tool.js';
 import {
   createTobChannelOperations,
   TOB_CHANNEL_CAPABILITIES,
@@ -377,6 +381,8 @@ export interface BotHarnessCore {
   humanAttentionDecisions: HumanAttentionDecisions;
   grants: WorkspaceGrantStore;
   externalMessaging: OutboundMessaging;
+  cloudConnections?: CloudConnections;
+  cloudWork?: CloudWork;
   toolRules: ToolApprovalRuleStore;
   assignmentAccess: AssignmentAccessStore;
 }
@@ -1345,6 +1351,58 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     secretMcpStore,
   );
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
+  const cloudConnections = new CloudConnections(
+    attachOperationalModule(core.operationalDatabase, 'messaging'),
+    () => ctx.get('credentials'),
+    undefined,
+    (phase, id) => ctx.logger.info('cloud-connection %j', { phase, id }),
+  );
+  core.cloudConnections = cloudConnections;
+  const cloudWork = new CloudWork(
+    attachOperationalModule(core.operationalDatabase, 'messaging'),
+    cloudConnections,
+    core.externalMessaging.inbound,
+    (slug) => {
+      const bot = core.registry.get(slug);
+      return bot !== undefined && bot.paused !== true;
+    },
+    (phase, requestId) => ctx.logger.info('cloud-work %j', { phase, requestId }),
+  );
+  core.cloudWork = cloudWork;
+  ctx.effect(() => () => cloudWork.close(), 'botharness: cloud work');
+  core.hostTools.add('cloud_work');
+  ctx.effect(
+    () => () => {
+      core.hostTools.delete('cloud_work');
+    },
+    'botharness: cloud work tool name',
+  );
+  ctx.effect(
+    () =>
+      core.contributeBotAgentSetup((agentCtx, agent, info) => {
+        if (info.rootRole === 'orchestrator')
+          agentCtx.tools.register(
+            createCloudWorkTool(
+              cloudWork,
+              info.botSlug,
+              (call) =>
+                call.agent === agent &&
+                ctx.agents.get(agent.id) === agent &&
+                core.ownership.resolve(agent.session.id)?.botSlug === info.botSlug,
+            ),
+          );
+      }),
+    'botharness: cloud work tool',
+  );
+  ctx.effect(() => () => cloudConnections.close(), 'botharness: cloud connections');
+  if (core.operationalDatabase.mode === 'ready')
+    ctx.effect(() =>
+      core.externalMessaging.register(
+        createCloudProvider(cloudConnections, (phase, id, code) =>
+          ctx.logger.info('cloud-messaging %j', { phase, id, code }),
+        ),
+      ),
+    );
   ctx.inject(['dshIm'], (child) => {
     for (const platform of ['feishu', 'slack', 'discord', 'weixin', 'qq'] as const) {
       const provider = createDshImProvider(child.get('dshIm'), platform);
@@ -1970,6 +2028,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     release: releaseService,
   });
   const bridgeMethods = createBridgeMethods({
+    cloudConnections,
+    cloudWork,
     approvalReviewer,
     composerIdentity: () =>
       composerRecoveryIdentity(

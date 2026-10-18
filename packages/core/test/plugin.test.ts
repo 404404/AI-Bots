@@ -388,6 +388,8 @@ describe('plugin entry', () => {
       expect(core?.registry).toBeDefined();
       expect(core?.memory).toBeDefined();
       expect(core?.channels).toBeDefined();
+      expect(core?.cloudConnections).toBeDefined();
+      expect(() => core?.cloudConnections?.list()).toThrow(/recovery mode/);
       expect(() =>
         core?.ownership.claim({
           sessionId: 'session-1',
@@ -461,6 +463,8 @@ describe('plugin entry', () => {
       'failureAlertsRetry',
       'pairingReview',
       'senderAccess',
+      'cloudConnections',
+      'cloudWork',
       'messagingApps',
       'messagingSnapshot',
       'messagingTargets',
