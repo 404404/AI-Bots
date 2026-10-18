@@ -4,9 +4,9 @@ Recorded 2026-10-19. Isolated DSH Host and real Web Client using the pinned `0.2
 
 ## Revision and screenshots
 
-- Before: `f31e528af83b749b8726e16fec99836626d999ae` (merged Channel-mute slice #2243).
-- After implementation: `545385009976b30ce508c5a4cdb49eb11b32129e` (capture revision; a follow-up changes only the English unavailable-state wording, leaving these Chinese captures and behavior unchanged).
-- Before/after: 1440 × 1000, Chinese, light and dark, same Profile, Activity Dock open, identical canonical unread and read-position snapshots. Before uses the existing broad dot; after selects Off. The panel retains five read personal records and the true global unread count remains four.
+- Before: `d6775e6ad119e52ddab2bc19b46b22cb94ed5936` (current main, including Channel mute #2243 and live refresh #2232).
+- After implementation: `3fd174a9c5f516bdd000286756206cf5832d5796` (integrated capture revision; the following evidence commit changes no runtime source).
+- Before/after: 1440 × 1000, Chinese, light and dark, same Profile, Activity Dock open, identical canonical unread and read-position snapshots. Before uses the existing broad dot; after selects Off. The panel retains the read personal records and the true global unread count remains four.
 - Menu images show all five choices; unknown image deliberately injects an HTTP 503 for the status call. Its ellipsis uses neutral tokens, not the notification color.
 - Screenshots contain only disposable QA data. The floating character can move independently between captures.
 
@@ -25,6 +25,14 @@ The nine successful cases and status readback are in `results.json`.
 9. An invalid persisted preference falls back to All.
 
 Normal successful journeys recorded no browser console errors. Bridge and CLI `inbox-status` returned matching full message-category summaries. The preceding slice's expanded real DM/Group message matrix also covers ordinary text, literal @ text, canonical mention, reply, combined mention+reply (count once), arrivals while muted, UI/CLI changes, read positions and reload: [#2243 E2E record](https://github.com/BotHarness/DeepSeekBot/pull/2243#issuecomment-6254454580).
+
+## Integration with the newly merged live refresh
+
+During verification, #2232 merged into main. This branch integrates it; conflicts were limited to the feature map, architecture paragraph and bilingual CLI documentation, and both intents were preserved. Typechecking, building and nine focused files (48 tests) passed after integration.
+
+The actual two-window rerun in `integration-results.json` verifies a new Bot-authored canonical mention, mute/unmute, unchanged read position during mute, mark-read with retained personal history, independent header filters, same-origin preferences, and status-failure recovery. Failure injection now uses a real Channel mutation to trigger the existing invalidation stream; it does not depend on the removed healthy-connection polling. No extra transport or polling was added. A first integration attempt hit a background-window click timeout; explicitly foregrounding that window corrected the harness, and the rerun passed all three journeys without page errors.
+
+The paired screenshots were recaptured from the new main baseline and integrated feature head with identical canonical data. Earlier CI at the pre-integration head is not substituted for the final integrated-head checks.
 
 ## Reproduce with an isolated test Profile
 
