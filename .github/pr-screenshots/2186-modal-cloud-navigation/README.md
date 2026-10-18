@@ -21,6 +21,10 @@ driver failures, resolved before the product assertions; they are not feature pa
 No login, pairing redemption, Host writes, deployments or production changes occurred.
 Only empty pairing forms were tested. In-progress pairing/input preservation, existing paired
 Computer return, Android, physical iOS and VoiceOver remain unverified. Human QA is pending.
+Intermediate (`accessibility-large`) and maximum (`accessibility-extra-extra-extra-large`) iOS
+text sizes in both themes, plus live default → maximum → default resizing, were not run in
+Batch 27. These remain explicit follow-up cases in #2186; default `large` screenshots do not
+qualify them.
 The shared checkout, original Documents/preferences, appearance, text size and locale were
 restored; the runner driver and Metro were stopped.
 
