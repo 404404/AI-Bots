@@ -1,6 +1,8 @@
+import * as Clipboard from 'expo-clipboard';
+import { invitationLink } from '../../cloud/invitation-link';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, View, type ScrollViewProps } from 'react-native';
+import { FlatList, Share, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError } from '../../cloud/client';
 import type { Invitation } from '../../cloud/invitation-contract';
@@ -218,6 +220,33 @@ function InvitationWorkspace({
           <Text>
             {t.cloudInvitations.expires} {item.expiresAt}
           </Text>
+          {!!organizationId && item.state === 'pending' && !!row && (
+            <>
+              <Button
+                label={t.cloudJoin.copy}
+                disabled={busy}
+                onPress={() =>
+                  void run(async () => {
+                    await Clipboard.setStringAsync(
+                      invitationLink(row.config.server, item.invitationId),
+                    );
+                    setNotice(t.cloudJoin.copied);
+                  })
+                }
+              />
+              <Button
+                label={t.cloudJoin.share}
+                disabled={busy}
+                onPress={() =>
+                  void run(async () => {
+                    await Share.share({
+                      message: invitationLink(row.config.server, item.invitationId),
+                    });
+                  })
+                }
+              />
+            </>
+          )}
           {organizationId
             ? (item.state === 'pending' || (guest && item.state === 'accepted')) && (
                 <Button

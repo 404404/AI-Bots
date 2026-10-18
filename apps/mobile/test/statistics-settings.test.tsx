@@ -12,11 +12,11 @@ vi.mock('../src/telemetry/native', () => ({
   },
 }));
 vi.mock('react-native', () => import('./react-native-shim'));
-vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
+vi.mock('react-native-keyboard-controller', () => import('./keyboard-controller-shim'));
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
-vi.mock('react-native-keyboard-controller', () => import('./keyboard-controller-shim'));
+vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 let control: ComponentProps<typeof Toggle>;
 vi.mock('../src/ui/primitives/toggle', () => ({
   Toggle: (props: ComponentProps<typeof Toggle>) => {
