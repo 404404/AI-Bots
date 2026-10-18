@@ -53,12 +53,6 @@ export function botPreset(standard) {
     /          - id: (?:time-context|tool-schedule)\n            name: '[^']+'\n/g,
     '',
   );
-  const persona = "            name: '@deepseek-ai/dsh-persona'\n            config:\n";
-  if (body.includes(persona) && !body.includes('suffix: Your working directory'))
-    body = body.replace(
-      persona,
-      `${persona}              suffix: Your working directory is {{cwd}}.\n`,
-    );
   return body;
 }
 

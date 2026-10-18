@@ -100,7 +100,7 @@ describe('PersonaBot agent preset', () => {
     const generated = botPreset(standardPresetSource(root));
     expect(generated).not.toContain('@deepseek-ai/dsh-time-context');
     expect(generated).not.toContain('@deepseek-ai/dsh-tool-schedule');
-    expect(generated).toContain('Your working directory is {{cwd}}.');
+    expect(generated).not.toContain('{{cwd}}');
     expect(generated).toContain('@deepseek-ai/dsh-tool-fs');
     expect(botPreset(standardPresetSource(root))).toBe(generated);
   });
