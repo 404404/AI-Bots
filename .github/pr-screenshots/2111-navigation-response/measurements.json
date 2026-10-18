@@ -5,6 +5,7 @@
   "build": "Android SDK58 Debug, dev JavaScript, Hermes sampling + React hook",
   "limits": [
     "ADB command overhead included in selection latency",
+    "Selection comparison uses warm Home returns only (9 samples per version); candidate Activity selection timestamps were not recorded",
     "JS RAF gaps, not native UI FPS",
     "First visit follows15 seconds idle; candidate may prefetch",
     "120FPS and Release remain unqualified"
@@ -17,7 +18,8 @@
       "medianFirstVisitMaxFrameMs": 678.1332309246063,
       "medianWarmMaxFrameMs": 451.90807700157166,
       "medianWarmMaxCommitMs": 309.24598383903503,
-      "medianWarmSelectionMs": 493.5122311115265,
+      "medianWarmHomeSelectionMs": 476.37723088264465,
+      "warmHomeSelectionSamples": 9,
       "warmFeedRenders": 15,
       "warmHomeAndRowRenders": 45
     },
@@ -28,7 +30,8 @@
       "medianFirstVisitMaxFrameMs": 275.0536150932312,
       "medianWarmMaxFrameMs": 197.74676990509033,
       "medianWarmMaxCommitMs": 127.19309186935425,
-      "medianWarmSelectionMs": 262.51415395736694,
+      "medianWarmHomeSelectionMs": 262.51415395736694,
+      "warmHomeSelectionSamples": 9,
       "warmFeedRenders": 0,
       "warmHomeAndRowRenders": 0
     }

@@ -1,3 +1,23 @@
+import { type CloudWork } from '../cloud/work.js';
+import { runCloudWorkDirect } from '../cloud/work-tool.js';
+import {
+  manageCloud,
+  parseCloudManagement,
+  type CloudManagementResult,
+} from '../cloud/management.js';
+import type { CloudConnections } from '../cloud/connections.js';
+import { ClientError as CloudError } from '../cloud/instance-contract.js';
+import {
+  ChannelManagementError,
+  type ChannelManagementService,
+  type ChannelManagementResult,
+} from '../channels/management.js';
+import { botProfileFingerprint } from '../bots/profile-snapshot.js';
+import {
+  BotCreationError,
+  type BotCreationService,
+  type BotCreationReceipt,
+} from '../bots/creation.js';
 import { TobError, type TobService, type TobHome } from '../tob/service.js';
 import { directToolTrace, summarizeToolTrace, type TurnTrace } from '../bots/tool-trace.js';
 import type { BotOnboarding, OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
@@ -454,6 +474,7 @@ export interface BridgeMethods {
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
+  botNewSession(payload: unknown): Promise<BridgeResult<{ started: true }>>;
   channelBotStop(
     payload: unknown,
   ): Promise<BridgeResult<{ stopped: { botSlug: string; sessionId: string; messageId: string } }>>;
@@ -493,6 +514,8 @@ export interface BridgeMethods {
   messagingSource(payload: unknown): Promise<BridgeResult<{ source: ExternalSource }>>;
   messagingDefaults(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   messagingDefaultsSet(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
+  cloudConnections(payload: unknown): Promise<BridgeResult<CloudManagementResult>>;
+  cloudWork(payload: unknown): Promise<BridgeResult<Awaited<ReturnType<CloudWork['run']>>>>;
   messagingApps(): Promise<BridgeResult<MessagingAppsView>>;
   messagingSnapshot(payload: unknown): Promise<BridgeResult<MessagingSnapshot>>;
   messagingReachable(
@@ -517,13 +540,18 @@ export interface BridgeMethods {
   modelPresetUpdate(payload: unknown): Promise<BridgeResult<{ preset: ModelPreset }>>;
   modelPresetApply(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlan(payload: unknown): Promise<BridgeResult<ModelPlanState>>;
-  modelPlanCustomize(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
+  modelPlanCustomize(
+    payload: unknown,
+    beforeCommit?: () => void,
+  ): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlanAssignmentsSet(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlanSet(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   list(payload: unknown): BridgeResult<{ bots: PersonaBotSummary[] }>;
   activitySnapshot(payload: unknown): BridgeResult<PersonaBotActivitySnapshot>;
-  get(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
-  create(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  get(payload: unknown): BridgeResult<{ bot: PersonaBotDetail; profileFingerprint: string }>;
+  create(
+    payload: unknown,
+  ): BridgeResult<{ bot: PersonaBotDetail; channelId?: string; receipt?: BotCreationReceipt }>;
   createFromGit(
     payload: unknown,
   ): Promise<BridgeResult<{ bot: PersonaBotDetail; httpsFallback?: HttpsFallback }>>;
@@ -545,13 +573,19 @@ export interface BridgeMethods {
   channelHumanNameSet(payload: unknown): BridgeResult<{ channel: ChannelListItem }>;
   channels(payload: unknown): BridgeResult<{ channels: ChannelListItem[] }>;
   channelDm(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
-  channelCreate(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
+  channelGet(payload: unknown): BridgeResult<ChannelManagementResult>;
+  channelCreate(
+    payload: unknown,
+  ): BridgeResult<{ channel: ChannelRecord } | ChannelManagementResult>;
   channelRename(payload: unknown): BridgeResult<{ channel: ChannelRecord; bot?: PersonaBotDetail }>;
   channelGroupAvatarSet(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
-  channelGroupInvite(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
+  channelGroupInvite(
+    payload: unknown,
+  ): BridgeResult<{ channel: ChannelRecord } | ChannelManagementResult>;
   channelGroupInviteCancel(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
   channelGroupJoinDecide(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
   channelGroupMemberRemove(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
+  channelGroupSendReview(payload: unknown): BridgeResult<{ enabled: boolean }>;
   channelGroupWakePolicies(payload: unknown): BridgeResult<{ members: GroupMemberWakePolicy[] }>;
   channelGroupWakeSet(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
   channelGroupDelete(payload: unknown): BridgeResult<{ deleted: boolean }>;
@@ -722,7 +756,7 @@ export interface BridgeMethods {
   marketplaceChallenge(): Promise<BridgeResult<AltchaChallenge>>;
   marketplaceReport(payload: unknown): Promise<BridgeResult<{ received: true }>>;
   releaseInfo(payload: unknown): BridgeResult<ReleaseInfo>;
-  releaseUpdate(): Promise<BridgeResult<ReleaseUpdate>>;
+  releaseUpdate(payload?: unknown): Promise<BridgeResult<ReleaseUpdate>>;
   releaseInstall(payload: unknown): Promise<BridgeResult<ReleaseInstall>>;
   releaseRestart(payload: unknown): Promise<BridgeResult<ReleaseRestart>>;
   telemetryStatus(): BridgeResult<TelemetryStatus>;
@@ -746,10 +780,14 @@ export interface ApprovalReviewerModelView {
 }
 
 export interface BridgeMethodsDeps {
+  cloudConnections?: CloudConnections;
+  cloudWork?: CloudWork;
   approvalReviewer?: ApprovalReviewerSettings;
   composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
+  creations?: BotCreationService;
+  channelManagement?: ChannelManagementService;
   approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
@@ -1615,6 +1653,36 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return Promise.resolve(invalidInput('Valid qualified platform defaults required'));
       return messagingCall((service) => service.setDefaults(parsed.data));
     },
+    async cloudWork(payload) {
+      const parsed = z
+        .object({ slug: z.string().min(1), input: z.unknown() })
+        .strict()
+        .safeParse(payload);
+      if (!parsed.success || !deps.registry.get(parsed.data.slug))
+        return invalidInput('Known bot and cloud work input required');
+      try {
+        if (!deps.cloudWork) throw new CloudError('CLOUD_UNAVAILABLE');
+        return {
+          ok: true,
+          value: await runCloudWorkDirect(deps.cloudWork, parsed.data.slug, parsed.data.input),
+        };
+      } catch (error) {
+        const code = error instanceof CloudError ? error.code : 'CLOUD_WORK_UNAVAILABLE';
+        return { ok: false, error: { code, message: code } };
+      }
+    },
+    async cloudConnections(payload) {
+      try {
+        if (!deps.cloudConnections) throw new CloudError('CLOUD_UNAVAILABLE');
+        return {
+          ok: true,
+          value: await manageCloud(deps.cloudConnections, parseCloudManagement(payload)),
+        };
+      } catch (error) {
+        const code = error instanceof CloudError ? error.code : 'CLOUD_UNAVAILABLE';
+        return { ok: false, error: { code, message: code } };
+      }
+    },
     messagingApps() {
       return messagingCall(async (service) => ({
         apps: await service.apps(),
@@ -2004,6 +2072,26 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(error instanceof Error ? error.message : 'Retry unavailable');
       }
     },
+    async botNewSession(payload) {
+      const slug = asSlug(payload);
+      if (slug === undefined) return invalidInput('slug is required');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.runtime?.startFreshOrchestrator === undefined) return unavailable();
+      try {
+        const outcome = await deps.runtime.startFreshOrchestrator(slug);
+        if (outcome === 'busy')
+          return {
+            ok: false,
+            error: { code: 'bot-busy', message: 'Stop the Bot before starting a fresh Session' },
+          };
+        return { ok: true, value: { started: true } };
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'session-reset-failed', message: 'Could not start a fresh Session' },
+        };
+      }
+    },
     async channelBotStop(payload) {
       const source = asObject(payload);
       const channelId = asNonBlank(source, 'channelId');
@@ -2237,7 +2325,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         },
       };
     },
-    async modelPlanCustomize(payload) {
+    async modelPlanCustomize(payload, beforeCommit) {
       if (deps.modelCatalog === undefined) return unavailable();
       const source = asObject(payload);
       const slug = source['slug'];
@@ -2259,6 +2347,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('A valid expected revision is required');
       try {
         await deps.modelCatalog.validate(orchestrator);
+        beforeCommit?.();
         const result = deps.registry.customizeModelPlan(slug, orchestrator, expectedRevision);
         if (!result.ok)
           return result.reason === 'not-found'
@@ -2514,7 +2603,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const memoryDir = deps.registry.memoryDirFor(slug);
       return {
         ok: true,
-        value: { bot: { ...bot, ...(memoryDir === undefined ? {} : { memoryDir }) } },
+        value: {
+          bot: { ...bot, ...(memoryDir === undefined ? {} : { memoryDir }) },
+          profileFingerprint: botProfileFingerprint(record),
+        },
       };
     },
     create(payload) {
@@ -2545,9 +2637,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       ) {
         return invalidInput('invalid create payload');
       }
-      const slug = createBotId();
-      const result = deps.registry.create({
-        slug,
+      const operationKey = source['operationKey'];
+      if (operationKey !== undefined && typeof operationKey !== 'string')
+        return invalidInput('operationKey must be a string');
+      const input = {
         displayName,
         ...(persona.value === undefined ? {} : { persona: persona.value }),
         ...(coreMemory.value === undefined ? {} : { coreMemory: coreMemory.value }),
@@ -2558,7 +2651,34 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         ...(workspaces.value === undefined ? {} : { workspaces: workspaces.value }),
         ...(avatar.value === undefined ? {} : { avatar: avatar.value }),
         ...(memoryLocation.value === undefined ? {} : { memoryLocation: memoryLocation.value }),
-      });
+      };
+      if (deps.creations !== undefined) {
+        try {
+          const created = deps.creations.create(input, operationKey);
+          return {
+            ok: true,
+            value: {
+              ...detailOf(created.record),
+              channelId: created.channelId,
+              ...(created.receipt === undefined ? {} : { receipt: created.receipt }),
+            },
+          };
+        } catch (error) {
+          if (error instanceof BotCreationError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (operationKey !== undefined)
+        return {
+          ok: false,
+          error: {
+            code: 'creation-unavailable',
+            message: 'Idempotent creation is unavailable on this Host.',
+          },
+        };
+      const slug = createBotId();
+      const result = deps.registry.create({ ...input, slug });
       if (!result.ok) return createFailure(slug, result);
       return { ok: true, value: detailOf(result.record) };
     },
@@ -2622,9 +2742,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (since !== undefined && typeof since !== 'string') return invalidInput('invalid since');
       return { ok: true, value: deps.release.info(since) };
     },
-    async releaseUpdate() {
+    async releaseUpdate(payload) {
       if (deps.release === undefined) return releaseUnavailable();
-      return { ok: true, value: await deps.release.update() };
+      const force = asObject(payload)['force'];
+      if (force !== undefined && typeof force !== 'boolean') return invalidInput('invalid force');
+      return { ok: true, value: await deps.release.update(force) };
     },
     async releaseInstall(payload) {
       if (deps.release === undefined) return releaseUnavailable();
@@ -2744,6 +2866,21 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         ...(workspaces.value === undefined ? {} : { workspaces: workspaces.value }),
         ...(avatar.value === undefined ? {} : { avatar: avatar.value }),
       };
+      const expectedProfile = asObject(payload)['expectedProfile'];
+      if (expectedProfile !== undefined) {
+        if (typeof expectedProfile !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedProfile))
+          return invalidInput('expectedProfile must be an observed profile fingerprint');
+        const current = deps.registry.get(slug);
+        if (!current) return unknownBot(slug);
+        if (botProfileFingerprint(current) !== expectedProfile)
+          return {
+            ok: false,
+            error: {
+              code: 'stale-profile',
+              message: 'The Bot profile changed. Read it again before applying this update.',
+            },
+          };
+      }
       const result = deps.registry.update(slug, patch);
       if (!result.ok) {
         return result.reason === 'not-found'
@@ -3254,6 +3391,23 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         },
       };
     },
+    channelGet(payload) {
+      const channelId = asNonBlank(asObject(payload), 'channelId');
+      if (channelId === undefined) return invalidInput('channelId is required');
+      if (!deps.channelManagement)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Channel management is unavailable' },
+        };
+      try {
+        const result = deps.channelManagement.snapshot(channelId);
+        return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+      } catch (error) {
+        if (error instanceof ChannelManagementError)
+          return { ok: false, error: { code: error.code, message: error.message } };
+        throw error;
+      }
+    },
     channelCreate(payload) {
       const source = asObject(payload);
       const name = asNonBlank(source, 'name');
@@ -3265,6 +3419,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       ) {
         return invalidInput('members must be an array of PersonaBot IDs');
       }
+      const operationKey = source['operationKey'];
+      if (operationKey !== undefined && (typeof operationKey !== 'string' || !operationKey.trim()))
+        return invalidInput('operationKey must be a nonempty string');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.create(
+            { name, members: [...members] },
+            operationKey,
+          );
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (operationKey !== undefined)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Channel management is unavailable' },
+        };
+      if (members.some((slug) => deps.tob?.isTob(slug)))
+        return {
+          ok: false,
+          error: { code: 'protected-bot', message: 'Tob cannot join group Channels' },
+        };
       const channel = deps.channels.createGroup({ name, members: [...members] });
       return { ok: true, value: { channel: channelView(channel) } };
     },
@@ -3276,6 +3456,35 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (name === undefined) return invalidInput('name is required');
       const existing = deps.channels.get(channelId);
       if (existing === undefined) return unknownChannel(channelId);
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (expectedChannel !== undefined && existing.type !== 'group')
+        return {
+          ok: false,
+          error: {
+            code: 'not-group-channel',
+            message: 'Group Channel required for reviewed rename',
+          },
+        };
+      if (existing.type === 'group' && deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.rename({
+            channelId,
+            name,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       if (existing.type === 'dm' && existing.botSlug === undefined)
         return invalidInput('Bot-to-Bot DMs are read-only for Human');
 
@@ -3299,6 +3508,27 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const avatar = source['avatar'];
       if (channelId === undefined || (avatar !== null && !isGroupAvatar(avatar)))
         return invalidInput('valid channelId and Group avatar are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.setAvatar({
+            channelId,
+            avatar,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       try {
         return {
           ok: true,
@@ -3314,6 +3544,38 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const botSlug = asNonBlank(source, 'botSlug');
       if (channelId === undefined || botSlug === undefined || !isValidSlug(botSlug))
         return invalidInput('valid channelId and botSlug are required');
+      const operationKey = source['operationKey'];
+      const expectedChannel = source['expectedChannel'];
+      if (operationKey !== undefined && (typeof operationKey !== 'string' || !operationKey.trim()))
+        return invalidInput('operationKey must be a nonempty string');
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !expectedChannel.trim())
+      )
+        return invalidInput('expectedChannel must be a nonempty string');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.invite(
+            { channelId, botSlug, ...(expectedChannel === undefined ? {} : { expectedChannel }) },
+            operationKey,
+          );
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (operationKey !== undefined || expectedChannel !== undefined)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Channel management is unavailable' },
+        };
+      if (deps.tob?.isTob(botSlug))
+        return {
+          ok: false,
+          error: { code: 'protected-bot', message: 'Tob cannot join group Channels' },
+        };
       const bot = deps.registry.get(botSlug);
       const channel = deps.channels.get(channelId);
       if (bot === undefined || bot.paused === true) return unknownBot(botSlug);
@@ -3340,6 +3602,27 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const invitationId = asNonBlank(source, 'invitationId');
       if (channelId === undefined || invitationId === undefined)
         return invalidInput('channelId and invitationId are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.cancelInvite({
+            channelId,
+            invitationId,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       try {
         return {
           ok: true,
@@ -3356,10 +3639,37 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const accept = source['accept'];
       if (channelId === undefined || requestId === undefined || typeof accept !== 'boolean')
         return invalidInput('channelId, requestId and accept are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.decideJoin({
+            channelId,
+            requestId,
+            accept,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       const channel = deps.channels.get(channelId);
       const request = channel?.joinRequests?.find((item) => item.id === requestId);
       if (channel?.type !== 'group' || request === undefined)
         return invalidInput('Pending Group join request not found');
+      if (accept && deps.tob?.isTob(request.requesterBotSlug))
+        return {
+          ok: false,
+          error: { code: 'protected-bot', message: 'Tob cannot join group Channels' },
+        };
       if (request.status !== 'pending')
         return request.status === (accept ? 'accepted' : 'declined')
           ? { ok: true, value: { channel: channelView(channel) } }
@@ -3394,6 +3704,27 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const botSlug = asNonBlank(source, 'botSlug');
       if (channelId === undefined || botSlug === undefined || !isValidSlug(botSlug))
         return invalidInput('valid channelId and botSlug are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.removeMember({
+            channelId,
+            botSlug,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       try {
         return {
           ok: true,
@@ -3402,6 +3733,31 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       } catch (error) {
         return invalidInput(String(error));
       }
+    },
+    channelGroupSendReview(payload) {
+      const parsed = z
+        .object({ channelId: z.string().min(1), enabled: z.boolean().optional() })
+        .strict()
+        .safeParse(payload);
+      if (!parsed.success) return invalidInput('Invalid send review configuration');
+      const { channelId, enabled } = parsed.data;
+      const channel = deps.channels.get(channelId);
+      if (
+        channel?.type !== 'group' ||
+        channel.deletedAt ||
+        !deps.channels
+          .listHumanMembers(channelId)
+          .some((member) => member.humanId === 'local-human')
+      )
+        return invalidInput('A local Group with the current Human is required');
+      const review = deps.runtime?.groupSendReview;
+      if (!review)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Group send review is unavailable on this Host' },
+        };
+      if (enabled !== undefined) review.configure(channelId, enabled);
+      return { ok: true, value: { enabled: review.enabled(channelId) } };
     },
     channelGroupWakePolicies(payload) {
       const parsed = z.object({ channelId: z.string().min(1) }).safeParse(asObject(payload));
@@ -3467,10 +3823,34 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           count: z.number().int().min(1).max(100),
           intervalSeconds: z.number().int().min(1).max(3600),
           inherit: z.boolean().optional(),
+          expectedChannel: z
+            .string()
+            .regex(/^[a-f0-9]{64}$/u)
+            .optional(),
         })
         .safeParse(asObject(payload));
       if (!parsed.success) return invalidInput('invalid Group wake policy');
-      const { channelId, botSlug, mode, count, intervalSeconds, inherit } = parsed.data;
+      const { channelId, botSlug, mode, count, intervalSeconds, inherit, expectedChannel } =
+        parsed.data;
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.setWake({
+            channelId,
+            botSlug,
+            mode,
+            count,
+            intervalSeconds,
+            ...(inherit === undefined ? {} : { inherit }),
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       const bot = deps.registry.get(botSlug);
       if (bot === undefined || bot.paused === true) return unknownBot(botSlug);
       try {

@@ -27,6 +27,7 @@ vi.mock('expo-router', () => {
   return {
     Redirect: () => null,
     Stack,
+    router: { push },
     useIsFocused: () => true,
     useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]),
     useRouter: () => ({ push, prefetch: () => undefined }),
@@ -67,6 +68,7 @@ vi.mock('../src/ui/connection-banner', () => ({ ConnectionBanner: () => null }))
 
 import HomeScreen from '../app/(tabs)/(home)/index';
 import { t } from '../src/ui/strings';
+import { appDialogs } from '../src/ui/primitives/dialog-state';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -87,6 +89,7 @@ afterEach(() => {
   push.mockReset();
   showActionSheetWithOptions.mockReset();
   alert.mockReset();
+  appDialogs.dismiss();
 });
 
 async function home(os: 'ios' | 'android'): Promise<HTMLElement> {
@@ -99,7 +102,7 @@ async function home(os: 'ios' | 'android'): Promise<HTMLElement> {
 }
 
 const createButton = (view: HTMLElement) =>
-  view.querySelector<HTMLButtonElement>(`button[aria-label="${t.create}"]`);
+  view.querySelector<HTMLButtonElement>(`button[aria-label="${t.cloudJoin.newOrJoin}"]`);
 
 describe('Create from Chats', () => {
   it('iOS: the search + button opens a menu whose choices open their create flow', async () => {
@@ -111,8 +114,8 @@ describe('Create from Chats', () => {
       await act(async () => createButton(view)!.click());
       const [options, choose] = showActionSheetWithOptions.mock.lastCall!;
       expect(options).toEqual({
-        options: [t.newPersonaBot, t.newChannel, t.cancel],
-        cancelButtonIndex: 2,
+        options: [t.newPersonaBot, t.newChannel, t.cloudJoin.title, t.cancel],
+        cancelButtonIndex: 3,
       });
       await act(async () => choose(index));
     };
@@ -128,7 +131,9 @@ describe('Create from Chats', () => {
       params: { target: 'new-channel' },
     });
     await pick(2);
-    expect(push).toHaveBeenCalledTimes(2);
+    expect(push).toHaveBeenLastCalledWith('/cloud-join');
+    await pick(3);
+    expect(push).toHaveBeenCalledTimes(3);
   });
 
   it('Android: the same search + button opens the same choices', async () => {
@@ -137,24 +142,34 @@ describe('Create from Chats', () => {
     expect(view.querySelector('header')!.contains(button)).toBe(false);
     expect(button.parentElement!.querySelector('textarea')).not.toBeNull();
 
-    await act(async () => button.click());
-    const [title, message, buttons] = alert.mock.lastCall!;
-    expect(title).toBe(t.create);
-    expect(message).toBeUndefined();
-    expect(buttons.map((choice: { text: string }) => choice.text)).toEqual([
-      t.cancel,
-      t.newPersonaBot,
-      t.newChannel,
-    ]);
-    await act(async () => buttons[1].onPress());
+    const pick = async (index: number) => {
+      await act(async () => button.click());
+      const dialog = appDialogs.getSnapshot()!;
+      expect(alert).not.toHaveBeenCalled();
+      expect(dialog.title).toBe(t.cloudJoin.newOrJoin);
+      expect(dialog.message).toBeUndefined();
+      expect(dialog.actions.map((choice) => choice.text)).toEqual([
+        t.cancel,
+        t.cloudJoin.title,
+        t.newPersonaBot,
+        t.newChannel,
+      ]);
+      await act(async () => appDialogs.choose(index, dialog.id));
+    };
+    await pick(1);
+    expect(push).toHaveBeenLastCalledWith('/cloud-join');
+    await pick(2);
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/full-client',
       params: { target: 'new-bot' },
     });
-    await act(async () => buttons[2].onPress());
+    await pick(3);
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/full-client',
       params: { target: 'new-channel' },
     });
+    await pick(0);
+    expect(push).toHaveBeenCalledTimes(3);
+    expect(appDialogs.getSnapshot()).toBeUndefined();
   });
 });

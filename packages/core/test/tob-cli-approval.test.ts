@@ -303,7 +303,7 @@ describe('disruptive scoped CLI operations require Human review', () => {
     };
   }
 
-  it.each(['release-install', 'release-restart'])(
+  it.each(['release-install', 'release-restart', 'bot-delete-confirm', 'bot-delete-retry'])(
     'does not bypass %s via full access, saved rules or automatic reviewer',
     async (command) => {
       const match = vi.fn(() => ({ id: 'allow-all' }));

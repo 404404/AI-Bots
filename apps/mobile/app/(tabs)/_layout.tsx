@@ -6,7 +6,6 @@ import { Platform, View } from 'react-native';
 import { useActivityCount } from '../../src/host/native-activity-count';
 import { badgeCount } from '../../src/ui/primitives/badge-count';
 import { useDesignTheme, type DesignTheme } from '../../src/ui/design/theme';
-import { HostDrawer } from '../../src/ui/shell/host-drawer';
 import { ScrollChromeProvider, useChromeHidden } from '../../src/ui/shell/scroll-chrome';
 import { t } from '../../src/ui/strings';
 
@@ -51,7 +50,6 @@ function NativeTabLayout() {
           ) : null}
         </NativeTabs.Trigger>
       </NativeTabs>
-      <HostDrawer />
     </View>
   );
 }

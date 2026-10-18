@@ -32,6 +32,19 @@ import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 const roots: string[] = [];
 const modelOwners: OperationalDatabaseOwner[] = [];
 
+it('reports unavailable Group review without blaming roster storage', () => {
+  const { registry, channels, methods } = setup();
+  registry.create({ slug: 'ada', displayName: 'Ada' });
+  const channel = channels.createGroup({ name: 'Review', members: ['ada'] });
+  vi.spyOn(channels, 'listHumanMembers').mockReturnValue([
+    { humanId: 'local-human', displayName: 'Human' },
+  ]);
+  expect(methods.channelGroupSendReview({ channelId: channel.id })).toEqual({
+    ok: false,
+    error: { code: 'unavailable', message: 'Group send review is unavailable on this Host' },
+  });
+});
+
 describe('composer recovery reference validation', () => {
   it('uses current Human-visible reply and attachment facts without accepting draft text', async () => {
     const { channels, attachments, methods } = setup();
@@ -1237,6 +1250,35 @@ describe('bridge methods', () => {
     await readiness.prepare('ada', 'orchestrator');
     expect(validate).toHaveBeenCalledWith(route);
   });
+  it('checks an IM caller fence after model validation and before changing the saved plan', async () => {
+    let authorized = true;
+    const catalog: ModelCatalog = {
+      list: async () => [],
+      validate: async () => {
+        authorized = false;
+      },
+    };
+    const { registry, methods } = setup(
+      [],
+      ['ada'],
+      undefined,
+      createTestOwnership(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      catalog,
+    );
+    registry.create({ slug: 'ada', displayName: 'Ada' });
+    const result = await methods.modelPlanCustomize(
+      { slug: 'ada', orchestrator: { provider: 'deepseek', model: 'flash' }, expectedRevision: 0 },
+      () => {
+        if (!authorized) throw new Error('Pairing revoked');
+      },
+    );
+    expect(result).toMatchObject({ ok: false });
+    expect(registry.get('ada')?.modelPlan).toBeUndefined();
+  });
   it('rejects stale customization when a preset is applied during model validation', async () => {
     const high = { provider: 'deepseek', model: 'flash', reasoningEffort: 'high' };
     const low = { provider: 'deepseek', model: 'flash', reasoningEffort: 'low' };
@@ -1798,6 +1840,41 @@ describe('bridge methods', () => {
 
     expect(first.ok && first.value.bot.slug).toBe('bot-one');
     expect(second.ok && second.value.bot.slug).toBe('bot-two');
+  });
+
+  it('guards explicit CLI profile updates with the observed fingerprint while keeping the existing UI update path', () => {
+    const { registry, methods } = setup();
+    registry.create({ slug: 'ada', displayName: 'Ada', description: 'Before', roles: ['old'] });
+    const before = methods.get({ slug: 'ada' });
+    if (!before.ok) throw new Error('missing Bot');
+    expect(before.value.profileFingerprint).toMatch(/^[a-f0-9]{64}$/u);
+    expect(
+      methods.update({
+        slug: 'ada',
+        expectedProfile: before.value.profileFingerprint,
+        patch: { description: '', roles: [] },
+      }).ok,
+    ).toBe(true);
+    const changed = registry.get('ada');
+    expect(changed?.description).toBeUndefined();
+    expect(changed?.roles).toBeUndefined();
+    expect(
+      methods.update({
+        slug: 'ada',
+        expectedProfile: before.value.profileFingerprint,
+        patch: { displayName: 'Stale overwrite' },
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'stale-profile' } });
+    expect(registry.get('ada')).toEqual(changed);
+    expect(
+      methods.update({
+        slug: 'ada',
+        expectedProfile: 42,
+        patch: { displayName: 'Bad fingerprint' },
+      }).ok,
+    ).toBe(false);
+    expect(methods.update({ slug: 'ada', patch: { displayName: 'UI update' } }).ok).toBe(true);
+    expect(registry.get('ada')?.displayName).toBe('UI update');
   });
 
   it('updates editable fields and leaves persona untouched', () => {

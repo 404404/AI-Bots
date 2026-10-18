@@ -54,14 +54,13 @@ export interface MarkdownBlock {
   source: string;
 }
 
-export function markdownBlocks(source: string): MarkdownBlock[] {
-  const normalized = source.replace(/\r\n?/g, '\n');
+function parseBlocks(source: string, normalized: string) {
   const tokens = Lexer.lex(normalized, { gfm: true });
   if (
     Object.keys(tokens.links).length > 0 ||
     tokens.map((token) => token.raw).join('') !== normalized
   )
-    return [{ key: 0, source }];
+    return { blocks: [{ key: 0, source }], local: false };
   const blocks: MarkdownBlock[] = [];
   let offset = 0;
   let leading = '';
@@ -76,5 +75,34 @@ export function markdownBlocks(source: string): MarkdownBlock[] {
     }
     offset += token.raw.length;
   }
-  return blocks;
+  return { blocks, local: true };
+}
+
+export function markdownBlocks(source: string): MarkdownBlock[] {
+  return parseBlocks(source, source.replace(/\r\n?/g, '\n')).blocks;
+}
+
+export function createMarkdownBlocks() {
+  let previous = '';
+  let normalized = '';
+  let blocks: MarkdownBlock[] = [];
+  let local = true;
+  return (source: string): MarkdownBlock[] => {
+    if (source === previous) return blocks;
+    const next = source.replace(/\r\n?/g, '\n');
+    const retained = local && next.startsWith(normalized) ? Math.max(0, blocks.length - 2) : 0;
+    const offset = blocks[retained]?.key ?? 0;
+    let parsed = parseBlocks(source.slice(offset), next.slice(offset));
+    if (offset > 0 && !parsed.local) parsed = parseBlocks(source, next);
+    else if (offset > 0)
+      parsed.blocks = [
+        ...blocks.slice(0, retained),
+        ...parsed.blocks.map((block) => ({ key: block.key + offset, source: block.source })),
+      ];
+    previous = source;
+    normalized = next;
+    blocks = parsed.blocks;
+    local = parsed.local;
+    return blocks;
+  };
 }

@@ -5,6 +5,7 @@ import { SheetStack } from '../../../src/ui/primitives/sheet-stack';
 export default function BotProfileLayout() {
   return (
     <SheetStack>
+      <Stack.Screen name="chat-background" options={{ title: t.chatBackground.title }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="memory" />
       <Stack.Screen name="activity" />

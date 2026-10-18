@@ -1,3 +1,21 @@
+import { CloudConnections } from './cloud/connections.js';
+import { createCloudProvider } from './cloud/provider.js';
+import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
+import { CloudWork } from './cloud/work.js';
+import { createCloudWorkTool } from './cloud/work-tool.js';
+import {
+  createTobChannelOperations,
+  TOB_CHANNEL_CAPABILITIES,
+} from './tob/cli-channel-operations.js';
+import { createBotCreation, type BotCreationService } from './bots/creation.js';
+import {
+  createTobBotCreationOperations,
+  TOB_BOT_CREATE_CAPABILITIES,
+} from './tob/cli-bot-create.js';
+import {
+  createTobBotProfileOperations,
+  TOB_BOT_PROFILE_CAPABILITIES,
+} from './tob/cli-bot-profile-operations.js';
 import { followCompanion } from './companions/live.js';
 import {
   createTobService,
@@ -233,7 +251,15 @@ const runningRelease = {
   ledgers: installedPackage.ledgers(),
 };
 
-export const inject = ['tools', 'systemPrompt', 'sessions', 'agents', 'agentDefaultModel', 'llm'];
+export const inject = [
+  'tools',
+  'systemPrompt',
+  'sessions',
+  'agents',
+  'agentDefaultModel',
+  'llm',
+  'credentials',
+];
 
 export const PERSONA_SECTION_ORDER = 10400;
 
@@ -314,6 +340,8 @@ export interface BotHarnessCore {
   rootDir: string;
   onboarding: BotOnboarding;
   tob: TobService;
+  creations: BotCreationService;
+  channelManagement: ChannelManagementService;
   partLibrary: PartLibrary;
   operationalDatabase: OperationalDatabaseOwner;
   registry: PersonaBotRegistry;
@@ -353,6 +381,8 @@ export interface BotHarnessCore {
   humanAttentionDecisions: HumanAttentionDecisions;
   grants: WorkspaceGrantStore;
   externalMessaging: OutboundMessaging;
+  cloudConnections?: CloudConnections;
+  cloudWork?: CloudWork;
   toolRules: ToolApprovalRuleStore;
   assignmentAccess: AssignmentAccessStore;
 }
@@ -406,6 +436,7 @@ export function createCore(
     sessionArchive?: () => NativeSessionArchive | undefined;
     autoAcceptGroupInvitations?: () => boolean;
     triageContinuation?: boolean;
+    imCommands?: () => import('./messaging/im-commands.js').ImCommandServices | undefined;
     onOutputCommitted?: (event: PersonaBotOutputCommitted) => void;
     activeQuestionMessageIds?: () => readonly string[];
     activeToolApprovalMessageIds?: () => readonly string[];
@@ -556,6 +587,7 @@ export function createCore(
       for (const slug of slugs) runtime?.resumePendingDigests?.(slug);
     },
     onIngested: (channelId, messageId) => runtime?.admitGroupMessage(channelId, messageId),
+    ...(options.imCommands === undefined ? {} : { imCommands: options.imCommands }),
     recover: operationalDatabase.mode === 'ready',
     isBotActive: (slug) => {
       const bot = registry.get(slug);
@@ -769,6 +801,21 @@ export function createCore(
     ...(options.ensureTobWorkspace ? { ensureWorkspace: options.ensureTobWorkspace } : {}),
     ...(options.tobSettings ? { settings: options.tobSettings } : {}),
   });
+  const creations = createBotCreation({
+    database: attachOperationalModule(operationalDatabase, 'bot-creation'),
+    registry,
+    channels,
+  });
+  const channelManagement = createChannelManagement({
+    database: attachOperationalModule(operationalDatabase, 'channel-management'),
+    channels,
+    registry,
+    isProtectedBot: (slug) => tob.isTob(slug),
+    autoAcceptGroupInvitations: () =>
+      (groupInvitationPolicies.at(-1)?.policy ?? initialGroupInvitationPolicy)(),
+    onInvitation: (dmId, invitationId) => runtime?.admitGroupInvitation(dmId, invitationId),
+    onJoinDecision: (dmId, requestId) => runtime?.admitGroupJoinDecision?.(dmId, requestId),
+  });
   const profileRecovery = createProfileRecovery(operationalDatabase, registry, ownership);
   const orchestratorCwd = (bot: { slug: string }): string | undefined =>
     registry.memoryDirFor(bot.slug);
@@ -904,6 +951,8 @@ export function createCore(
     contentPurge,
     onboarding,
     tob,
+    creations,
+    channelManagement,
     partLibrary,
     rootDir,
     operationalDatabase,
@@ -1118,8 +1167,17 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                 authorize,
                 prepareOperation: async (command, args) =>
                   (await tobModelOperations(command, args)) ??
-                  (await tobMaintenanceOperations(command, args)),
-                capabilities: [...TOB_MODEL_CAPABILITIES, ...TOB_MAINTENANCE_CAPABILITIES],
+                  (await tobMaintenanceOperations(command, args)) ??
+                  (await tobBotCreationOperations(command, args)) ??
+                  (await tobBotProfileOperations(command, args)) ??
+                  (await tobChannelOperations(command, args)),
+                capabilities: [
+                  ...TOB_MODEL_CAPABILITIES,
+                  ...TOB_MAINTENANCE_CAPABILITIES,
+                  ...TOB_BOT_CREATE_CAPABILITIES,
+                  ...TOB_BOT_PROFILE_CAPABILITIES,
+                  ...TOB_CHANNEL_CAPABILITIES,
+                ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
                 writeSetting: (value, revision, guard) =>
@@ -1167,6 +1225,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   let userQuestions: ChannelUserQuestions | undefined;
   let toolApproval: ChannelToolApproval | undefined;
   let privateInputs: PrivateInputs | undefined;
+  let imCommandServices: import('./messaging/im-commands.js').ImCommandServices | undefined;
   const core = createCore({
     dshHome,
     triageContinuation: true,
@@ -1223,6 +1282,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     workspaces: () => ctx.get('workspaceRegistry') as unknown as DshWorkspaceLookup | undefined,
     sessionArchive: () =>
       ctx.get('workspaceRegistry') as unknown as NativeSessionArchive | undefined,
+    imCommands: () => imCommandServices,
   });
   publishDraft = (event) => core.live.publishDraft(event);
   ctx.effect(() => () => core.operationalDatabase.close(), 'botharness: operational database');
@@ -1295,6 +1355,58 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     secretMcpStore,
   );
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
+  const cloudConnections = new CloudConnections(
+    attachOperationalModule(core.operationalDatabase, 'messaging'),
+    () => ctx.get('credentials'),
+    undefined,
+    (phase, id) => ctx.logger.info('cloud-connection %j', { phase, id }),
+  );
+  core.cloudConnections = cloudConnections;
+  const cloudWork = new CloudWork(
+    attachOperationalModule(core.operationalDatabase, 'messaging'),
+    cloudConnections,
+    core.externalMessaging.inbound,
+    (slug) => {
+      const bot = core.registry.get(slug);
+      return bot !== undefined && bot.paused !== true;
+    },
+    (phase, requestId) => ctx.logger.info('cloud-work %j', { phase, requestId }),
+  );
+  core.cloudWork = cloudWork;
+  ctx.effect(() => () => cloudWork.close(), 'botharness: cloud work');
+  core.hostTools.add('cloud_work');
+  ctx.effect(
+    () => () => {
+      core.hostTools.delete('cloud_work');
+    },
+    'botharness: cloud work tool name',
+  );
+  ctx.effect(
+    () =>
+      core.contributeBotAgentSetup((agentCtx, agent, info) => {
+        if (info.rootRole === 'orchestrator')
+          agentCtx.tools.register(
+            createCloudWorkTool(
+              cloudWork,
+              info.botSlug,
+              (call) =>
+                call.agent === agent &&
+                ctx.agents.get(agent.id) === agent &&
+                core.ownership.resolve(agent.session.id)?.botSlug === info.botSlug,
+            ),
+          );
+      }),
+    'botharness: cloud work tool',
+  );
+  ctx.effect(() => () => cloudConnections.close(), 'botharness: cloud connections');
+  if (core.operationalDatabase.mode === 'ready')
+    ctx.effect(() =>
+      core.externalMessaging.register(
+        createCloudProvider(cloudConnections, (phase, id, code) =>
+          ctx.logger.info('cloud-messaging %j', { phase, id, code }),
+        ),
+      ),
+    );
   ctx.inject(['dshIm'], (child) => {
     for (const platform of ['feishu', 'slack', 'discord', 'weixin', 'qq'] as const) {
       const provider = createDshImProvider(child.get('dshIm'), platform);
@@ -1897,11 +2009,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   });
   const releaseService = createLoadingReleaseService({
     version: () => runningRelease.version,
+    ...(profile === undefined
+      ? {}
+      : { profileId: createHash('sha256').update(profile.dir).digest('hex').slice(0, 24) }),
     identity: () =>
       installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
     ledgers: () => runningRelease.ledgers,
     installer: () => releaseInstaller.current,
     restarter: () => releaseRestarter.current,
+    warn: (message) => ctx.logger.warn(message),
   });
   const tobModelOperations = createTobModelOperations({
     registry: core.registry,
@@ -1920,6 +2036,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     release: releaseService,
   });
   const bridgeMethods = createBridgeMethods({
+    cloudConnections,
+    cloudWork,
     approvalReviewer,
     composerIdentity: () =>
       composerRecoveryIdentity(
@@ -1938,6 +2056,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     modelReadiness,
     onboarding: core.onboarding,
     tob: core.tob,
+    creations: core.creations,
+    channelManagement: core.channelManagement,
     partLibrary: core.partLibrary,
     onboardingNews: (slug) =>
       onboardingNewsAvailable(
@@ -2030,6 +2150,61 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         provider?.resetBot?.(slug);
       },
     },
+  });
+  imCommandServices = {
+    botDisplayName: (slug) =>
+      core.registry.get(slug)?.displayName ?? core.registry.getHistorical(slug)?.displayName,
+    plan: async (slug) => {
+      const state = await bridgeMethods.modelPlan({ slug });
+      if (!state.ok) throw new Error(state.error.message);
+      return state.value.plan;
+    },
+    catalog: () => modelCatalog.list(),
+    defaultRoute: () => modelCatalog.defaultRoute?.(),
+    applyModel: async (slug, route, assertCurrent) => {
+      const state = await bridgeMethods.modelPlan({ slug });
+      if (!state.ok) throw new Error(state.error.message);
+      assertCurrent?.();
+      const result = await bridgeMethods.modelPlanCustomize(
+        {
+          slug,
+          expectedRevision: state.value.revision ?? 0,
+          orchestrator: route,
+        },
+        assertCurrent,
+      );
+      if (!result.ok) throw new Error(result.error.message);
+    },
+    stopTurn: async (slug) => {
+      const channel = core.channels.getOrCreateDm(slug);
+      if (channel === undefined) throw new Error('Bot DM is unavailable');
+      const stopped = await bridgeMethods.channelBotStop({
+        channelId: channel.id,
+        botSlug: slug,
+      });
+      if (stopped.ok) return { sessionId: stopped.value.stopped.sessionId };
+      if (stopped.error.code === 'not-working') return undefined;
+      throw new Error(stopped.error.message);
+    },
+    startFreshOrchestrator: (slug, assertCurrent) =>
+      core.runtime.startFreshOrchestrator!(slug, assertCurrent),
+    turnRunning: (slug) => core.runtime.turnRunning!(slug),
+  };
+  const tobBotCreationOperations = createTobBotCreationOperations({
+    registry: core.registry,
+    creations: core.creations,
+    bridge: bridgeMethods,
+  });
+  const tobBotProfileOperations = createTobBotProfileOperations({
+    registry: core.registry,
+    bridge: () => bridgeMethods,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
+  });
+  const tobChannelOperations = createTobChannelOperations({
+    management: core.channelManagement,
+    channels: core.channels,
+    registry: core.registry,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
   });
   registerBridge(ctx, bridgeMethods, privateInputs, {
     followRoster: (signal) => core.live.followRoster(signal),

@@ -84,6 +84,23 @@ export function createInbox(
   const readOnce = async (): Promise<void> => {
     revision += 1;
     loading.clear();
+    const retained =
+      snapshot.status === 'ready' && options.activity ? snapshot.sections : undefined;
+    const readWindow = async (category: InboxSection): Promise<HumanAttentionPage> => {
+      let page = await readPage(category);
+      const count = retained?.[category].length ?? 0;
+      if (count <= page.items.length || !page.nextCursor || stopped) return page;
+      const items = new Map(page.items.map((item) => [item.id, item]));
+      const cursors = new Set<string>();
+      while (!stopped && items.size < count && page.nextCursor && !cursors.has(page.nextCursor)) {
+        cursors.add(page.nextCursor);
+        const before = items.size;
+        page = await readPage(category, page.nextCursor);
+        for (const item of page.items) items.set(item.id, item);
+        if (items.size === before) break;
+      }
+      return { ...page, items: [...items.values()] };
+    };
     const [pages, counts] = await Promise.all([
       Promise.all(
         INBOX_SECTIONS.map((category) =>
@@ -92,7 +109,7 @@ export function createInbox(
             ? category !== options.section
             : category === 'handled')
             ? Promise.resolve({ items: [] } as HumanAttentionPage)
-            : readPage(category),
+            : readWindow(category),
         ),
       ),
       client.call<UnreadCounts>('channelUnreadCounts').catch(() => ({ channels: [] })),

@@ -6,6 +6,9 @@ import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
 import { hostSession } from '../src/host/host-session';
+import { hostLooks } from '../src/host/native-host-look';
+import { HOST_NAME_MAX, hostLookName, withHostName } from '../src/ui/design/host-look';
+import { ConnectionNameField } from '../src/ui/primitives/connection-name-field';
 import { nativeCarrier } from '../src/host/native-carrier';
 import { pairHost, type PairingFailure } from '../src/host/pairing';
 import { mobileTelemetry } from '../src/telemetry/native';
@@ -25,7 +28,9 @@ export default function PairScreen() {
   const params = useLocalSearchParams<{ p?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [link, setLink] = useState('');
+  const [connectionName, setConnectionName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [error, setError] = useState<PairingFailure | undefined>();
   const lastMethod = useRef<PairingMethod>('paste');
   const pending = useRef<AbortController | undefined>(undefined);
@@ -45,7 +50,11 @@ export default function PairScreen() {
       method,
       deviceName: deviceName(),
       carrier: nativeCarrier(),
-      save: hostSession.pair,
+      save: async (host) => {
+        await hostSession.pair(host);
+        const name = hostLookName(connectionName);
+        if (name) hostLooks.set(host.hostId, withHostName(hostLooks.look(host.hostId), name));
+      },
       telemetry: mobileTelemetry,
       signal: operation.signal,
     });
@@ -58,9 +67,13 @@ export default function PairScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setFocused(true);
       if (typeof params.p === 'string' && handled.current === undefined)
         void pair(`deepseekbot://pair?p=${params.p}`, 'deep_link');
-      return () => pending.current?.abort();
+      return () => {
+        setFocused(false);
+        pending.current?.abort();
+      };
     }, [params.p]),
   );
 
@@ -78,7 +91,14 @@ export default function PairScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
+      <Button label={t.cloud.title} onPress={() => router.push('/cloud-services')} />
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
+      <ConnectionNameField
+        value={connectionName}
+        onChange={setConnectionName}
+        maxLength={HOST_NAME_MAX}
+        disabled={busy}
+      />
       <View
         style={{
           aspectRatio: 1,
@@ -90,12 +110,14 @@ export default function PairScreen() {
         }}
       >
         {permission?.granted ? (
-          <CameraView
-            style={{ width: '100%', height: '100%' }}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-            onBarcodeScanned={busy ? undefined : ({ data }) => void pair(data, 'qr')}
-          />
+          focused && (
+            <CameraView
+              style={{ width: '100%', height: '100%' }}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={busy ? undefined : ({ data }) => void pair(data, 'qr')}
+            />
+          )
         ) : (
           <Pressable
             onPress={() => void requestPermission()}

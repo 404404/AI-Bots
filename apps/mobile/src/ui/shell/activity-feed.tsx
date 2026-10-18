@@ -248,7 +248,6 @@ const Row = memo(function Row({
 
 function Post({
   client,
-  inbox,
   item,
   requestRef: ref,
   bot,
@@ -257,7 +256,6 @@ function Post({
   onSettled,
 }: {
   client: HostClient;
-  inbox: Inbox | undefined;
   item: HumanAttentionItem;
   requestRef: RequestRef;
   bot: RosterBot | undefined;
@@ -289,7 +287,6 @@ function Post({
   }, [client, channelId, messageId, botSlug]);
   const settled = (result: DecisionResult) => {
     onSettled(item, result);
-    void inbox?.refresh();
   };
   return (
     <View
@@ -575,17 +572,18 @@ const ActivityPage = memo(function ActivityPage({
   }, [settlementScope, active]);
   const scopedSnapshot = useFocusedSnapshot(scoped ?? EMPTY_SOURCE, scrollActive);
   const visible = scoped === undefined ? snapshot : scopedSnapshot;
-  const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
+  const currentInbox = () => (scoped === undefined ? inbox : scoped.getInbox());
   const rows = feedRows(visible, gone, held, filter, search);
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
     if (activeSettlementScope.current !== settlementScope) return;
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
     else setHeld((current) => [...current.filter((kept) => kept.id !== item.id), item]);
+    void currentInbox()?.refresh();
   };
   const refresh = () => {
     setRefreshing(true);
     setHeld([]);
-    void (activeInbox?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
+    void (currentInbox()?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
   };
   return (
     <View
@@ -659,7 +657,7 @@ const ActivityPage = memo(function ActivityPage({
                     visible.status === 'ready' &&
                     visible.loadingMore?.includes(row.section) === true
                   }
-                  onPress={() => void activeInbox?.loadMore?.(row.section)}
+                  onPress={() => void currentInbox()?.loadMore?.(row.section)}
                 />
               </View>
             );
@@ -686,7 +684,6 @@ const ActivityPage = memo(function ActivityPage({
               {client === undefined ? null : (
                 <Post
                   client={client}
-                  inbox={activeInbox}
                   item={row.item}
                   requestRef={row.ref}
                   bot={bot(row.item.botSlug)}

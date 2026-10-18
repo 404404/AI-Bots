@@ -32,7 +32,7 @@ vi.mock('../src/ui/bot-avatar', () => ({
 }));
 
 import { createHostClient, type HostClient } from '../src/host/client';
-import type { InboxSnapshot } from '../src/host/inbox';
+import { observeInbox, type InboxSnapshot } from '../src/host/inbox';
 import type { HumanAttentionItem } from '../src/host/wire';
 import { ActivityFeed, feedRows } from '../src/ui/shell/activity-feed';
 import { t } from '../src/ui/strings';
@@ -217,6 +217,59 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('retries through the current Inbox while a cached return is still refreshing', async () => {
+    const fake = host();
+    const view = await feed(fake, ready([]), 'cached-host', 5000);
+    const observed = observeInbox(client!, { activity: true, section: 'action' });
+    fake.answers.set('humanAttention', () => ({
+      ok: false,
+      error: { code: 'unavailable', message: 'temporary failure', details: {} },
+    }));
+    await act(async () => observed.getInbox()!.refresh());
+    expect(view.textContent).toContain('temporary failure');
+    act(() => root!.unmount());
+
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reads = 0;
+    const request = fake.carrier.request;
+    fake.carrier.request = async (url, init) => {
+      if (url.includes('humanAttention')) {
+        reads++;
+        await pending;
+      }
+      return request(url, init);
+    };
+    fake.answers.set('humanAttention', () => ({ ok: true, value: { items: [], queryVersion: 1 } }));
+    root = createRoot(view);
+    try {
+      await act(async () =>
+        root!.render(
+          createElement(ActivityFeed, {
+            hostId: 'cached-host',
+            client,
+            inbox: undefined,
+            snapshot: ready([]),
+            botSlugs: [],
+            bot: () => undefined,
+            onOpen: () => undefined,
+          }),
+        ),
+      );
+      await settle();
+      expect(reads).toBe(1);
+      await press(button(view, t.tryAgain));
+      await act(async () => release());
+      await settle();
+      expect(reads).toBe(2);
+      expect(view.textContent).not.toContain('temporary failure');
+    } finally {
+      release();
+    }
+  });
+
   it('shows navigable tabs and a skeleton while the initial Host read remains pending', async () => {
     const fake = host();
     let release!: () => void;

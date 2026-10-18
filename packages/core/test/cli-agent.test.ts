@@ -112,8 +112,8 @@ describe('scoped Tob CLI', () => {
     const live = await broker();
     for (const argv of [
       ['list', '--home', '/tmp/profile'],
-      ['create'],
-      ['pause', 'tob'],
+      ['channel-create'],
+      ['pause', 'tob', '--home', '/tmp/profile'],
       ['settings', 'other'],
       ['settings', 'botharness-client', '--host', 'http://127.0.0.1:1'],
       ['settings', 'botharness-client', '--token-file', '/tmp/private'],
@@ -123,6 +123,55 @@ describe('scoped Tob CLI', () => {
       expect((await invoke(argv, live.endpoint)).json.error.code).toBe('agent-scope-denied');
     }
     expect(live.calls).toEqual([]);
+  });
+  it('routes standard Bot arguments through the scoped broker and requires reviewed identity', async () => {
+    const live = await broker({ ok: true, value: { accepted: true } });
+    expect((await invoke(['create'], live.endpoint)).json.error.code).toBe('usage');
+    expect((await invoke(['pause', 'helper'], live.endpoint)).json.error.code).toBe('usage');
+    expect(
+      (
+        await invoke(
+          ['create', '--name', 'Helper', '--operation-key', 'create-helper-1', '--persona-stdin'],
+          live.endpoint,
+          'Be helpful.',
+        )
+      ).code,
+    ).toBe(0);
+    expect(
+      (
+        await invoke(
+          ['update', 'helper', '--name', 'Updated', '--expected-profile', 'opaque-fingerprint'],
+          live.endpoint,
+        )
+      ).code,
+    ).toBe(0);
+    expect(
+      (
+        await invoke(
+          ['bot-delete-confirm', 'helper', '--confirmation-stdin', '--confirm', '--erase-memory'],
+          live.endpoint,
+          '{"token":"preview-token"}',
+        )
+      ).code,
+    ).toBe(0);
+    expect(live.calls).toEqual([
+      {
+        command: 'create',
+        args: { displayName: 'Helper', operationKey: 'create-helper-1', persona: 'Be helpful.' },
+      },
+      {
+        command: 'update',
+        args: {
+          slug: 'helper',
+          expectedProfile: 'opaque-fingerprint',
+          patch: { displayName: 'Updated' },
+        },
+      },
+      {
+        command: 'bot-delete-confirm',
+        args: { slug: 'helper', token: 'preview-token', confirm: true, eraseMemory: true },
+      },
+    ]);
   });
   it('rejects missing or remote broker context before any fallback', async () => {
     for (const endpoint of [

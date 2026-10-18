@@ -111,6 +111,7 @@ export interface BotCreateResult {
   steps: BotCreateStep[];
   next: string[];
   httpsFallback?: { from: string; to: string; reason: string };
+  operation?: import('./creation.js').BotCreationReceipt;
 }
 
 export interface BotCreateFailure {
@@ -126,7 +127,7 @@ Usage:
                     [--core-memory <text> | --core-memory-stdin]
                     [--description <text>] [--role <tag> ...] [--avatar-file <image>]
                     [--preset <model-preset-id>] [--memory-location <absolute-dir>]
-                    [--home <dsh-home>]
+                    [--home <dsh-home>] [--operation-key <stable-key> (online blank creation)]
   deepseekbot create --name <name> --from-git <url | owner/repo> [...]
   deepseekbot create [--name <name>] --from-zip <file> [...]
   deepseekbot create [--name <name>] --from-dir <directory> [...]
@@ -208,7 +209,16 @@ Usage:
   deepseekbot settings <namespace>
   deepseekbot settings-set <namespace> --patch-stdin [--expected-revision <n> --previous-value <json>]
   deepseekbot workspace-create <absolute-path>
-  deepseekbot group-create <name> --member <bot-id> [--member <bot-id> ...]
+  deepseekbot channel <channel-id>
+  deepseekbot group-create <name> [--member <bot-id> ...] [--operation-key <key>]
+  deepseekbot group-invite <channel-id> --bot <bot-id> [--operation-key <key>] [--expected-channel <fingerprint>]
+  deepseekbot group-invite-cancel <channel-id> --invitation <invitation-id> [--expected-channel <fingerprint>]
+  deepseekbot group-join-decide <channel-id> --request <join-request-id> (--accept | --decline) [--expected-channel <fingerprint>]
+  deepseekbot channel-rename <channel-id> --name <name> [--expected-channel <fingerprint>]
+  deepseekbot group-avatar-set <channel-id> (--avatar-file <path> | --clear) [--expected-channel <fingerprint>]
+  deepseekbot group-wake-policies <channel-id>
+  deepseekbot group-wake-set <channel-id> --bot <bot-id> (--mode all|mentions|digest|silent | --inherit) [--count <n>] [--interval <seconds>] [--expected-channel <fingerprint>]
+  deepseekbot group-member-remove <channel-id> --bot <bot-id> [--expected-channel <fingerprint>]
   deepseekbot im-app-add <discord|slack|qq|dingtalk|wecom|matrix> --credentials-stdin
   deepseekbot im-app-status <platform>
   deepseekbot im-app-remove <platform> --app <app-id>
@@ -285,8 +295,9 @@ Usage:
   deepseekbot private-mcp-set <id> --server <name> (--enabled | --disabled)
   deepseekbot private-mcp-remove <id> --server <name> --confirm
   deepseekbot bot-delete-preview <id>
-  deepseekbot bot-delete-confirm <id> --confirmation-stdin
-  deepseekbot bot-delete-retry <id>
+  deepseekbot bot-delete-memory-folder <id>
+  deepseekbot bot-delete-confirm <id> --confirmation-stdin --confirm [--erase-memory]
+  deepseekbot bot-delete-retry <id> --confirm
   deepseekbot bot-avatar-set|bot-banner-set <id> (--file <image> | --clear)
   deepseekbot bot-banner-set|bot-appearance-set <id> --recipe-stdin
   deepseekbot bot-primary-color-set <id> (--color <#rrggbb> | --automatic)
@@ -476,6 +487,9 @@ const CREATE_OPTIONS = {
   role: { type: 'string', multiple: true },
   preset: { type: 'string' },
   'preset-revision': { type: 'string' },
+  'operation-key': { type: 'string' },
+  'expected-profile': { type: 'string' },
+  'erase-memory': { type: 'boolean' },
   'from-zip': { type: 'string' },
   'from-dir': { type: 'string' },
   'from-git': { type: 'string' },
@@ -780,7 +794,7 @@ export interface ValidatedCreate {
     | { kind: 'dir'; path: string };
 }
 
-async function validatedCreate(
+export async function validatedCreate(
   values: CreateValues,
   readStdin: () => Promise<string>,
 ): Promise<ValidatedCreate> {
@@ -2571,6 +2585,26 @@ export async function runBotCreateCli(
       return 0;
     }
     const online = values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined;
+    if (
+      values['operation-key'] !== undefined &&
+      (!online || !['create', 'group-create', 'group-invite'].includes(command))
+    )
+      throw usageError(
+        '--operation-key is supported only for online Bot creation, group creation or group invitation.',
+      );
+    if (
+      values['expected-channel'] !== undefined &&
+      ![
+        'group-invite',
+        'group-invite-cancel',
+        'group-join-decide',
+        'channel-rename',
+        'group-avatar-set',
+        'group-wake-set',
+        'group-member-remove',
+      ].includes(command)
+    )
+      throw usageError('--expected-channel is supported only for reviewed group changes.');
     if (
       DIAGNOSTIC_COMMANDS.some((entry) => entry.command === command) ||
       LIFECYCLE_COMMANDS.some((entry) => entry.command === command) ||

@@ -4,6 +4,14 @@
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
+      "id": "messaging.im-dm-commands",
+      "label": "Handle whole-text IM DM commands with current authority and canonical Outbox replies",
+      "source": "packages/core/src/messaging/im-commands.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/im-dm-commands.md",
+      "task": 2005,
+      "gap": "Controlled-Provider and isolated-Host paths do not establish a fresh native WeChat command exchange."
+    },
+    {
       "id": "desktop.sessions.bot-folders",
       "label": "Group native Sessions under DeepSeekBot and Bot-avatar subgroups without changing execution directories",
       "source": "packages/client/src/client/bot-session-folders.tsx",
@@ -504,6 +512,29 @@
       "source": "packages/client/src/client/home-panel.tsx",
       "guide": ".agents/skills/verify-deepseekbot/features/tob-home.md",
       "task": 2082,
+      "gap": null
+    },
+    {
+      "id": "desktop.group.send-review",
+      "label": "Hold stale Group replies and revise or drop with full paired history review",
+      "source": "packages/core/src/channels/send-review.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/group-send-review.md",
+      "task": 2053,
+      "gap": null
+    },
+    {
+      "id": "phone.chat-backgrounds",
+      "label": "Device-local chat backgrounds and transactional native editor",
+      "source": "apps/mobile/src/host/chat-background.ts",
+      "task": 2118,
+      "guide": ".agents/skills/verify-deepseekbot/features/phone-chat-backgrounds.md"
+    },
+    {
+      "id": "cloud.host.connections",
+      "label": "Import a cloud Agent into an explicit Host, bind a PersonaBot and preserve source identity on replay",
+      "source": "packages/core/src/cloud/provider.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/cloud-host-connections.md",
+      "task": 2155,
       "gap": null
     }
   ],
@@ -1088,9 +1119,9 @@
       "path": "scripts/e2e-fresh-profile-install.mjs",
       "category": "historical-regression",
       "behaviors": ["product.fresh-install"],
-      "reason": "Exact prepared artifact manifest and fresh output directory; installs/restarts real Host, creates Bot/DM; no Client check.",
+      "reason": "Exact prepared artifacts and fresh Profile; installs/restarts real Host, rejects native preflight plugin disablement, creates Bot/DM; no Client check.",
       "task": 1980,
-      "sha256": "8cee7c889b55c115cba0c17d0057a9a79a60e1aa643051e35c80509cbf1eec5b"
+      "sha256": "15d101840fae11397b69a8b516ac992bfcd3221dde767ffdf1040e234a6cc16b"
     },
     {
       "path": "scripts/e2e-grant-attention.mjs",
@@ -1299,14 +1330,6 @@
       "reason": "Injectable dshIm probe, not standalone journey; pins rc.1/provider revision in reports and sends checked replies. Requalify current provider metadata and authorized receiver; provider receipt cannot prove PersonaBot/visible IM delivery.",
       "task": 1978,
       "sha256": "97a5bdbec53537520a529cc2db50f0f75d4682f1fd61740a1f8c8380d49c474c"
-    },
-    {
-      "path": "scripts/e2e-llm-scenarios.mjs",
-      "category": "mapped",
-      "behaviors": ["desktop.dm.reply", "desktop.group.mention"],
-      "reason": "verify-app instance/optional owned launch and real model scenarios; DM reply and mention wake, model-specific results only.",
-      "task": 1967,
-      "sha256": "c6627745e3c9595da42c280bcc968686dd545fb8ed9bc901d70012bc41ceebbc"
     },
     {
       "path": "scripts/e2e-local-computer-idle.mjs",
@@ -1701,6 +1724,78 @@
       "reason": "Scoped CLI model/runtime discovery and actual Tob approval, denial, stale refusal and settings UI persistence in Web and native Desktop.",
       "task": 2088,
       "sha256": "cbd8d9837eb8657672c2ec765f2fd5f8cd7a302dc1950e362d2135cfae01a578"
+    },
+    {
+      "path": "scripts/e2e-tob-bot-management.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Natural Tob creation, profile and optional model changes through rendered approval, completed native Shell turns, canonical identity/Memory/DM replay, deny/protected refusals and separate restart readback on Web and Desktop.",
+      "task": 2089,
+      "sha256": "a0ba72ab479894cab9050ed440c72d32b20330b9694c3d9edcab2dd49183e5f8"
+    },
+    {
+      "path": "scripts/e2e-llm-scenarios.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.dm.reply", "desktop.group.mention"],
+      "reason": "Real model DM/mention scenarios; exact committed DM oracle rejects failure cards; retain full histories and unknown usage for paired send-review evaluation.",
+      "task": 2053,
+      "sha256": "4940ba3a8c8e3892b11e01c959efc874a3e12b16527e076db62345f87b4508d6"
+    },
+    {
+      "path": "scripts/e2e-tob-channel-management.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Natural Tob Group creation and invitation through rendered approval, default automatic acceptance and visible Members; optional invitee-decision opt-out, denial, protected identity and receipt replay/conflict, plus separate same-Profile restart on Web/macOS.",
+      "task": 2090,
+      "sha256": "bef6529005d394eba0f34a2c6e4e5be9d61891501c44b14140ba49fa2c1ec907"
+    },
+    {
+      "path": "scripts/e2e-group-send-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate. Native export also includes inbox_snooze arguments/results for bounded review and deferred-resume assessment (#2055).",
+      "task": 2053,
+      "sha256": "5215105fca692ef6e1255c47754f3b81dd01ec7a7a8f172c29f43d9595ada3cf"
+    },
+    {
+      "path": "scripts/e2e-group-peer-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Real two-Bot peer-answer triplets with accepted Bi and original B0, full histories and all-Bot usage; missed race windows and Human acceptance remain explicit.",
+      "task": 2054,
+      "sha256": "f39b2cdc6af7be38ee79867702c22a3947bb961a38346afdaf9ed3167f4719d7"
+    },
+    {
+      "path": "scripts/e2e-tob-group-settings.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Natural Tob Group rename, member attention and removal through rendered approval, denial and stale refusal; independent avatar clearing, canonical readback and actual settings/Members UI, plus same-Profile restart on Web/macOS.",
+      "task": 2090,
+      "sha256": "61d1770c1471e8a598df11d385585182082e1c8189b591d0814a15e658a543c0"
+    },
+    {
+      "path": "scripts/e2e-tob-group-decisions.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Natural Tob pending-invitation cancellation and join acceptance/decline through rendered approval, denial and concurrent stale refusal; actual ordinary-Bot selected-Group join preconditions, canonical decision history and Members UI, terminal refusal and Web/macOS restart.",
+      "task": 2090,
+      "sha256": "6998a510585f53ccbe6210f73458fd8c666716df6dbb257c8388f1e345cf916e"
+    },
+    {
+      "path": "scripts/e2e-group-busy-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Real DSH busy-Group triplets with full records and all-Bot costs. v3 bounds outcome time and waits for original, observed and snoozed canonical Inbox responsibility before early settlement; preserves frozen older cohorts, unknown future cost and separate semantic judgment.",
+      "task": 2055,
+      "sha256": "27a142b32d0219d5d7a04f7a6123bfb004881c20a63e8db4a633a96bb05b970b"
+    },
+    {
+      "path": "scripts/e2e-group-responsibility.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Read-only isolated Profile helper for Group episode completion. Counts all unresolved observed/snoozed Admissions plus the acting original across Channels, excludes unopened silent peer copies, bounds evidence not totals, refuses missing canonical facts.",
+      "task": 2055,
+      "sha256": "03b1f454483c43716fd11e784dee3ffaf08d3b1fc4cea2a15d1ca6ca325de5eb"
     }
   ],
   "native": [

@@ -93,6 +93,53 @@ describe('Activity query observation', () => {
     stop();
   });
 
+  it('refreshes the loaded page window on return without discarding its tail', async () => {
+    const fake = new FakeHost();
+    const calls: Record<string, unknown>[] = [];
+    let updated = false;
+    fake.answers.set('humanAttention', (args) => {
+      calls.push(args);
+      const second = args.cursor === 'page-two';
+      return {
+        ok: true,
+        value: {
+          items: [{ id: second ? 'second' : 'first', summary: updated ? 'updated' : 'original' }],
+          ...(second ? {} : { nextCursor: 'page-two' }),
+          queryVersion: 1,
+        },
+      };
+    });
+    const client = createHostClient({
+      routes: ['https://studio.example'],
+      credential: fake.credential,
+      carrier: fake.carrier,
+    });
+    clients.push(client);
+    client.start();
+    const observed = observeInbox(client, { activity: true, section: 'replies' });
+    const off = observed.subscribe(() => {});
+    await settle();
+    await observed.getInbox()!.loadMore!('replies');
+    const loaded = observed.getSnapshot();
+    expect(loaded).toMatchObject({ sections: { replies: [{ id: 'first' }, { id: 'second' }] } });
+    off();
+    updated = true;
+    calls.length = 0;
+    const stop = observed.subscribe(() => {});
+    expect(observed.getSnapshot()).toBe(loaded);
+    await settle();
+    expect(observed.getSnapshot()).toMatchObject({
+      sections: {
+        replies: [
+          { id: 'first', summary: 'updated' },
+          { id: 'second', summary: 'updated' },
+        ],
+      },
+    });
+    expect(calls.map((args) => args.cursor)).toEqual([undefined, 'page-two']);
+    stop();
+  });
+
   it('shares a query until its last observer leaves and bounds inactive search caches', async () => {
     const target = host();
     const query = { activity: true, section: 'action' } as const;

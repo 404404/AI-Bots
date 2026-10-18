@@ -1,6 +1,7 @@
 import { TextInput } from '../primitives/system-text';
 import { useState, type ReactNode } from 'react';
-import { Alert, FlatList, Pressable, SectionList, View } from 'react-native';
+import { FlatList, Pressable, SectionList, View } from 'react-native';
+import { showAppDialog } from '../primitives/app-dialog';
 import { KeyboardFormScroll } from '../primitives/keyboard-form';
 
 import { errorText } from '../../host/bot-settings';
@@ -24,7 +25,6 @@ import {
   SettingsSection,
 } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
-import { SheetScreen } from '../primitives/sheet-screen';
 import { ChevronRightIcon, MoreIcon, PlusIcon } from '../shell/icons';
 import { t } from '../strings';
 import { GroupMark } from './group-mark';
@@ -249,12 +249,14 @@ export function GroupInfoSheet({
   pickAvatar,
   onOpenBot,
   onDisbanded,
+  background,
 }: {
   info: GroupInfo;
   actions: GroupActions;
   pickAvatar(): Promise<string | undefined>;
   onOpenBot(slug: string): void;
   onDisbanded(): void;
+  background?: ReactNode;
 }) {
   const theme = useDesignTheme();
   const [busy, setBusy] = useState<string | undefined>();
@@ -291,19 +293,18 @@ export function GroupInfoSheet({
 
   const memberMenu = (member: GroupMember) => {
     const name = memberName(member);
-    Alert.alert(name, undefined, [
+    showAppDialog(name, undefined, [
       { text: t.groupOpenProfile, onPress: () => onOpenBot(member.slug) },
       {
         text: t.groupRemove,
         style: 'destructive',
         onPress: () =>
-          Alert.alert(t.groupRemoveConfirm(name), undefined, [
+          showAppDialog(t.groupRemoveConfirm(name), undefined, [
             { text: t.cancel, style: 'cancel' },
             {
               text: t.groupRemove,
               style: 'destructive',
-              onPress: () =>
-                void run(`member:${member.slug}`, () => actions.removeMember(member.slug)),
+              onPress: () => run(`member:${member.slug}`, () => actions.removeMember(member.slug)),
             },
           ]),
       },
@@ -312,14 +313,15 @@ export function GroupInfoSheet({
   };
 
   const confirmDisband = () =>
-    Alert.alert(t.groupDisbandConfirm(channel.name), t.groupDisbandDetail, [
+    showAppDialog(t.groupDisbandConfirm(channel.name), t.groupDisbandDetail, [
       { text: t.cancel, style: 'cancel' },
       {
         text: t.groupDisband,
         style: 'destructive',
         onPress: () =>
-          void run('disband', actions.disband).then((ok) => {
+          run('disband', actions.disband).then((ok) => {
             if (ok) onDisbanded();
+            return ok;
           }),
       },
     ]);
@@ -342,6 +344,7 @@ export function GroupInfoSheet({
           <SheetCallout tone="danger">{error}</SheetCallout>
         </View>
       )}
+      {background}
       <SettingsSection title={t.groupSettingsSection}>
         <SettingsRow
           title={t.groupName}
@@ -391,7 +394,7 @@ export function GroupInfoSheet({
 
   return (
     <>
-      <SheetScreen>
+      <View style={{ flex: 1 }}>
         <SectionList
           sections={groupRows(info)}
           keyExtractor={(row) => row.key}
@@ -428,7 +431,7 @@ export function GroupInfoSheet({
             </SettingsGroupItem>
           )}
         />
-      </SheetScreen>
+      </View>
       <InviteSheet
         visible={sheet === 'invite'}
         candidates={info.candidates}

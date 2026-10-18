@@ -154,6 +154,11 @@ finish system prompts before retrying. Evidence and commit/serial manifests live
 
 Drive by accessible labels from the XML using a device automation tool or the existing
 Android-compatible Maestro flows; scrcpy supplies the visible control surface and video.
+An ADB input command exiting successfully is not proof of a gesture. On the QA phone,
+MIUI logged `input event inject fail` while the command still exited zero. Require visible
+movement or native scroll events inside the sampled interval before reporting scrolling FPS;
+an empty or stationary interval is unqualified. Keep the failure evidence and ask the Human
+to try the same gesture on the phone to distinguish injection failure from an app problem.
 The iOS `simctl push` journey in `e2e-mobile-sim.mjs` is not an Android test runner. Keep phone
 captures inside the QA app, enable the Human's preferred notification privacy, and inspect
 frames before sharing. Redact serials, account names, hostnames, paths, personal notifications,

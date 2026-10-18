@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { parseAgentManagement } from '../src/bots/cli-agent-management.js';
 import { CliLiveError } from '../src/bots/cli-live-error.js';
@@ -29,7 +32,7 @@ describe('scoped management CLI arguments', () => {
   it('only recognizes the scoped management surface', async () => {
     const { parse } = parser();
     expect(await parse('settings')).toBeUndefined();
-    expect(await parse('create')).toBeUndefined();
+    expect(await parse('channel-create')).toBeUndefined();
     expect(await parse('model-preset-delete')).toBeUndefined();
   });
 
@@ -282,4 +285,134 @@ describe('scoped management CLI arguments', () => {
       });
     },
   );
+});
+
+describe('scoped Group settings CLI', () => {
+  const expectedChannel = 'a'.repeat(64);
+  const writes = [
+    { command: 'channel-rename', flags: { name: ' Launch team ' }, args: { name: 'Launch team' } },
+    { command: 'group-avatar-set', flags: { clear: true }, args: { avatar: null } },
+    { command: 'group-member-remove', flags: { bot: 'ada' }, args: { botSlug: 'ada' } },
+    {
+      command: 'group-wake-set',
+      flags: { bot: 'ada', mode: 'mentions' },
+      args: { botSlug: 'ada', mode: 'mentions', count: 5, intervalSeconds: 30 },
+    },
+    {
+      command: 'group-wake-set',
+      flags: { bot: 'ada', inherit: true },
+      args: { botSlug: 'ada', mode: 'digest', count: 5, intervalSeconds: 30, inherit: true },
+    },
+    {
+      command: 'group-wake-set',
+      flags: { bot: 'ada', mode: 'all', count: '2', interval: '60' },
+      args: { botSlug: 'ada', mode: 'all', count: 2, intervalSeconds: 60 },
+    },
+  ];
+
+  it('reads wake policies without granting a write', async () => {
+    expect(await parser().parse('group-wake-policies', ['team'])).toEqual({
+      command: 'group-wake-policies',
+      args: { channelId: 'team' },
+      write: false,
+    });
+  });
+
+  it.each(writes)(
+    'parses $command with its observed fingerprint and existing defaults',
+    async ({ command, flags, args }) => {
+      expect(
+        await parser().parse(command, ['team'], { ...flags, 'expected-channel': expectedChannel }),
+      ).toEqual({
+        command,
+        args: { channelId: 'team', expectedChannel, ...args },
+        write: true,
+      });
+    },
+  );
+
+  it.each(writes)(
+    'refuses missing or malformed fingerprints for $command',
+    async ({ command, flags }) => {
+      for (const fingerprint of [undefined, '', 'old', 'a'.repeat(63), 'A'.repeat(64), 42]) {
+        await expect(
+          parser().parse(command, ['team'], { ...flags, 'expected-channel': fingerprint }),
+        ).rejects.toMatchObject({ code: 'usage' });
+      }
+    },
+  );
+
+  it.each(writes)(
+    'refuses unrelated authority and operation flags for $command',
+    async ({ command, flags }) => {
+      for (const flag of ['host', 'token', 'operation-key', 'confirm', 'unknown']) {
+        await expect(
+          parser().parse(command, ['team'], {
+            ...flags,
+            'expected-channel': expectedChannel,
+            [flag]: 'private-value',
+          }),
+        ).rejects.toMatchObject({ code: 'agent-scope-denied' });
+      }
+    },
+  );
+
+  it.each([
+    { bot: 'ada' },
+    { bot: 'ada', mode: 'loud' },
+    { bot: 'ada', mode: 'digest', count: '0' },
+    { bot: 'ada', mode: 'digest', count: '101' },
+    { bot: 'ada', mode: 'digest', interval: '1.5' },
+    { bot: 'ada', mode: 'digest', interval: '3601' },
+    { mode: 'all' },
+  ])('rejects invalid wake settings before dispatch', async (flags) => {
+    await expect(
+      parser().parse('group-wake-set', ['team'], { ...flags, 'expected-channel': expectedChannel }),
+    ).rejects.toMatchObject({ code: 'usage' });
+  });
+
+  it('reuses Human avatar image validation and embeds bytes rather than a local path', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'scoped-group-avatar-'));
+    const path = join(dir, 'avatar');
+    const parse = (flags: Record<string, unknown>) =>
+      parser().parse('group-avatar-set', ['team'], {
+        'expected-channel': expectedChannel,
+        ...flags,
+      });
+    try {
+      for (const [type, bytes] of [
+        ['png', Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1])],
+        ['jpeg', Buffer.from([255, 216, 255, 1])],
+        ['webp', Buffer.from('RIFF1234WEBP1234')],
+      ] as const) {
+        writeFileSync(path, bytes);
+        expect(await parse({ 'avatar-file': path })).toEqual({
+          command: 'group-avatar-set',
+          args: {
+            channelId: 'team',
+            expectedChannel,
+            avatar: `data:image/${type};base64,${bytes.toString('base64')}`,
+          },
+          write: true,
+        });
+      }
+      await expect(parse({ 'avatar-file': path, clear: true })).rejects.toMatchObject({
+        code: 'usage',
+      });
+      await expect(parse({})).rejects.toMatchObject({ code: 'usage' });
+      await expect(parse({ 'avatar-file': join(dir, 'missing') })).rejects.toMatchObject({
+        code: 'usage',
+      });
+      for (const bytes of [
+        Buffer.from('private non-image input'),
+        Buffer.alloc(0),
+        Buffer.alloc(98305),
+      ]) {
+        writeFileSync(path, bytes);
+        await expect(parse({ 'avatar-file': path })).rejects.toMatchObject({ code: 'usage' });
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
