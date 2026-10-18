@@ -131,7 +131,7 @@ export function AppDialogHost() {
                       disabled={shown.busy !== undefined}
                       busy={shown.busy === index}
                       onPress={() => {
-                        void appDialogs.choose(index);
+                        void appDialogs.choose(index, shown.id);
                       }}
                     />
                   );
@@ -169,7 +169,7 @@ export function AppDialogHost() {
                           disabled={shown.busy !== undefined}
                           busy={shown.busy === index}
                           onPress={() => {
-                            void appDialogs.choose(index);
+                            void appDialogs.choose(index, shown.id);
                           }}
                         />
                       </View>

@@ -136,13 +136,13 @@ describe('Create from Chats', () => {
       t.newPersonaBot,
       t.newChannel,
     ]);
-    await act(async () => appDialogs.choose(1));
+    await act(async () => appDialogs.choose(1, dialog.id));
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/full-client',
       params: { target: 'new-bot' },
     });
     await act(async () => button.click());
-    await act(async () => appDialogs.choose(2));
+    await act(async () => appDialogs.choose(2, appDialogs.getSnapshot()!.id));
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/full-client',
       params: { target: 'new-channel' },

@@ -36,10 +36,10 @@ export function createDialogState() {
     dismiss() {
       if (current?.busy === undefined) publish(undefined);
     },
-    async choose(index: number) {
+    async choose(index: number, requestId: number) {
       const shown = current;
       const action = shown?.actions[index];
-      if (!shown || !action || shown.busy !== undefined) return;
+      if (!shown || shown.id !== requestId || !action || shown.busy !== undefined) return;
       if (action.style === 'cancel') {
         publish(undefined);
         return;

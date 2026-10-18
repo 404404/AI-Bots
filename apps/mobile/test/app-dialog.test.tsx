@@ -50,7 +50,7 @@ describe('app dialogs', () => {
       { text: 'Unpair', style: 'destructive' as const, onPress: remove },
     ];
     state.open('Unpair?', undefined, actions);
-    await state.choose(0);
+    await state.choose(0, state.getSnapshot()!.id);
     expect(state.getSnapshot()).toBeUndefined();
     state.open('Unpair?', undefined, actions);
     state.dismiss();
@@ -67,12 +67,38 @@ describe('app dialogs', () => {
         onPress: () => state.open('Unpair?', undefined, [{ text: 'Confirm', onPress: remove }]),
       },
     ]);
-    await state.choose(0);
+    await state.choose(0, state.getSnapshot()!.id);
     expect(state.getSnapshot()?.title).toBe('Unpair?');
     expect(remove).not.toHaveBeenCalled();
-    await state.choose(0);
+    await state.choose(0, state.getSnapshot()!.id);
     expect(remove).toHaveBeenCalledOnce();
     expect(state.getSnapshot()).toBeUndefined();
+  });
+
+  it('rejects a repeated menu callback after a destructive confirmation replaces it', async () => {
+    const state = createDialogState();
+    const remove = vi.fn();
+    state.open('Member', undefined, [
+      { text: 'Open profile' },
+      {
+        text: 'Remove',
+        onPress: () =>
+          state.open('Remove member?', undefined, [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Remove', style: 'destructive', onPress: remove },
+          ]),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+    const menuId = state.getSnapshot()!.id;
+    const pressRemove = () => state.choose(1, menuId);
+    const first = pressRemove();
+    const repeated = pressRemove();
+    await Promise.all([first, repeated]);
+    expect(state.getSnapshot()?.title).toBe('Remove member?');
+    expect(remove).not.toHaveBeenCalled();
+    await state.choose(1, state.getSnapshot()!.id);
+    expect(remove).toHaveBeenCalledOnce();
   });
 
   it('executes once, blocks dismiss while saving, then closes after success', async () => {
@@ -85,8 +111,8 @@ describe('app dialogs', () => {
         }),
     );
     state.open('Unpair?', undefined, [{ text: 'Unpair', onPress: save }]);
-    const first = state.choose(0);
-    await state.choose(0);
+    const first = state.choose(0, state.getSnapshot()!.id);
+    await state.choose(0, state.getSnapshot()!.id);
     state.dismiss();
     expect(state.getSnapshot()?.busy).toBe(0);
     expect(save).toHaveBeenCalledOnce();
@@ -102,13 +128,13 @@ describe('app dialogs', () => {
       .mockRejectedValueOnce(new Error('Offline'))
       .mockResolvedValueOnce(undefined);
     state.open('Unpair?', undefined, [{ text: 'Unpair', onPress: save }]);
-    await state.choose(0);
+    await state.choose(0, state.getSnapshot()!.id);
     expect(state.getSnapshot()).toMatchObject({
       title: 'Unpair?',
       busy: undefined,
       error: 'Offline',
     });
-    await state.choose(0);
+    await state.choose(0, state.getSnapshot()!.id);
     expect(save).toHaveBeenCalledTimes(2);
     expect(state.getSnapshot()).toBeUndefined();
   });
@@ -116,7 +142,7 @@ describe('app dialogs', () => {
   it('keeps an existing group action refusal visible', async () => {
     const state = createDialogState();
     state.open('Disband?', undefined, [{ text: 'Disband', onPress: async () => false }]);
-    await state.choose(0);
+    await state.choose(0, state.getSnapshot()!.id);
     expect(state.getSnapshot()?.error).toBe('');
     state.dismiss();
     expect(state.getSnapshot()).toBeUndefined();
@@ -134,7 +160,7 @@ describe('app dialogs', () => {
           }),
       },
     ]);
-    const old = state.choose(0);
+    const old = state.choose(0, state.getSnapshot()!.id);
     state.open('New', undefined, [{ text: 'Cancel', style: 'cancel' }]);
     fail(new Error('Old failure'));
     await old;
