@@ -20,10 +20,10 @@ Use `(instanceId, organizationId)` keys so identical names across self-hosted se
 
 Organization creation leads to its channels and a Share organization action. Channel creation opens the conversation with Share channel. Existing destinations expose the same actions in their details/menu. Sharing uses one sheet with a visible target and scope:
 
-| Scope | Recipient gets |
-| --- | --- |
+| Scope        | Recipient gets                                                                   |
+| ------------ | -------------------------------------------------------------------------------- |
 | Organization | Organization membership and its ordinary channels, subject to role/history rules |
-| Channel | Only the selected channel; organization identity for navigation |
+| Channel      | Only the selected channel; organization identity for navigation                  |
 
 The sheet offers Copy invitation link, Show QR code and Save QR image. These are representations of the same invitation. A resource URL is not an invitation and cannot grant access. Invitation expiry, revocation and any recipient restrictions are server-owned. Existing email-bound invitations remain email-bound unless a separate scoped share-link capability is deliberately introduced; displaying an invitation ID as a URL must not bypass that rule.
 
