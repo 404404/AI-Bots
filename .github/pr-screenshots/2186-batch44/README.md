@@ -16,11 +16,11 @@
 5. Actual **Reload channels** removed old rows, named open buttons and pagination. A second reload remained denied. `denied-list-light.png` / `denied-list-dark.png` show this state.
 6. Both previously visited channel URLs were opened through the native URL handler. Stable views displayed `ORGANIZATION_ACCESS_DENIED`, without channel names, history, composer or pagination. The generic **Open channel** retry remains on a deep-link screen; tapping it was also denied. Back returned to Cloud services without restoring protected content. `denied-old-route-light.png` / `denied-second-route-dark.png` show route denial.
 
-`authorized-*` images show the authorized state on this same candidate, not a build-before comparison. Prior Batch42 failure is separately pinned in the PR at source `132b33e3c9965fcb5a01066a134f2744269b2d75`: stale rows remained under the denial there. That historical image was not recaptured at this PR's exact base.
+`authorized-*` images show the authorized state on this same candidate, not a build-before comparison. Prior Batch42 failure is separately pinned in the PR at source `132b33e3c9965fcb5a01066a134f2744269b2d75`: stale rows remained under the denial there. That historical image was not recaptured at this PR's exact base: the assigned Batch44 device/fixture lease covered the candidate and one invitation/membership lifecycle, not a second baseline run. Exact-base matched native recapture remains unqualified; the historical reproduction and failing-before/passing-after component tests are separate evidence.
 
 ## Scope and limitations
 
-This verifies cleanup after an observed authorization denial, not instantaneous server-pushed revocation or a zero-frame offline-cache guarantee. Both native channels were empty; populated history and late hydration rejection are covered by component regressions. Test session setup does not qualify Hosted AuthKit/PKCE. No physical device, Android native, VoiceOver/TalkBack, external delivery, new organization/channel, model call, Host change, deployment, Prod or merge.
+This verifies cleanup after an observed authorization denial, not instantaneous server-pushed revocation or a zero-frame offline-cache guarantee. Both native channels were empty; populated history and late hydration rejection are covered by component regressions. Test session setup does not qualify Hosted AuthKit/PKCE. Intermediate/maximum text sizes were not rerun in this default-size authorization-lifecycle window; no typography/layout code changed. Android and physical-iOS verification require separate device assignments. These matrix items and screen-reader testing remain explicitly unqualified in #2186. No physical device, Android native, VoiceOver/TalkBack, external delivery, new organization/channel, model call, Host change, deployment, Prod or merge.
 
 ## Driver observations
 
@@ -34,4 +34,4 @@ Only the new member was removed; the new accepted invitation audit record remain
 
 Original cloud vault, pending invitation, Hosts, stopped app Documents/Preferences and cloud-message-cache bytes/absence were restored. Only newly created cache files positively identified by the frozen channel IDs were eligible for cleanup. Display settings restored; clipboard unchanged. Own driver and Metro stopped; port 8091 free; shared checkout restored to `qa/batch-24` / `648c1202c44f5a5e82ce22596682934745705cef` with its original three untracked documents. Coordinator and TOB notified; Batch44 explicitly released before publication.
 
-Issue #2186 remains open for its other acceptance items; PR #2250 remains unmerged.
+Issue #2186 remains open for its other acceptance items. This manifest records the pre-merge Batch44 result; subsequent review, CI and merge status live on PR #2250.
