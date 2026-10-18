@@ -40,6 +40,9 @@ describe('Agent-scoped native file Policy', () => {
           getSectionOrder: () => 1,
         });
         c.provide('sandboxPolicy', base);
+        c.provide('workingDirectory', {
+          ensure: async (agent: Agent) => agent.session.header.cwd,
+        });
         c.provide('shellEnv', {});
         c.provide('shell', { sandboxMode: 'workspace-write' });
         c.provide('fs', {
@@ -158,6 +161,9 @@ describe('Agent-scoped native file Policy', () => {
           getSectionOrder: () => 1,
         });
         c.provide('sandboxPolicy', base);
+        c.provide('workingDirectory', {
+          ensure: async (agent: Agent) => agent.session.header.cwd,
+        });
         c.provide('shellEnv', {});
         c.provide('shell', { sandboxMode: 'workspace-write' });
         c.provide('fs', {
@@ -268,6 +274,9 @@ describe('Agent-scoped native file Policy', () => {
             getSectionOrder: () => 1,
           });
           c.provide('sandboxPolicy', base);
+          c.provide('workingDirectory', {
+            ensure: async (agent: Agent) => agent.session.header.cwd,
+          });
           c.provide('shellEnv', { collect: () => ({}) });
           c.provide('shell', { sandboxMode: 'workspace-write' });
           c.provide('fs', { sandboxMode: 'workspace-write' });
