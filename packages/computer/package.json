@@ -17,7 +17,6 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-computer-use": "0.2.1-rc.2",
     "@deepseek-ai/dsh-mcp-client": "0.2.1-rc.2",
     "@modelcontextprotocol/client": "2.0.0",
     "sharp": "0.35.4"
