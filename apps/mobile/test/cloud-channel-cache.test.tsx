@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClientError } from '../src/cloud/instance-contract';
 const state = vi.hoisted(() => ({
+  initialChannelId: 'channel_a' as string | undefined,
+  messages: vi.fn(),
   read: vi.fn(),
   remove: vi.fn(),
   open: vi.fn(),
@@ -24,7 +26,7 @@ vi.mock('expo-router', async () => {
     useLocalSearchParams: () => ({
       instanceId: 'uat',
       organizationId: 'org_a',
-      channelId: 'channel_a',
+      channelId: state.initialChannelId,
     }),
   };
 });
@@ -39,7 +41,15 @@ vi.mock('../src/cloud/native-message-cache', () => ({
   cacheCloudMessages: vi.fn(),
 }));
 vi.mock('../src/cloud/native', () => ({
-  cloudClient: { openChannel: state.open },
+  cloudClient: {
+    openChannel: state.open,
+    whoami: async () => {},
+    listChannels: async () => ({
+      channels: [{ channelId: 'channel_b', name: 'B' }],
+      nextCursor: null,
+    }),
+    readMessages: state.messages,
+  },
   useCloudSnapshot: () => ({
     ready: true,
     busy: false,
@@ -60,6 +70,9 @@ const cached = {
   messages: [{ sequence: 1, text: 'Cached private text', authorId: 'a', authorType: 'human' }],
   hasMore: false,
 };
+afterEach(() => {
+  state.initialChannelId = 'channel_a';
+});
 describe('cloud channel cached access', () => {
   it.each(['CHANNEL_ACCESS_DENIED', 'NETWORK_UNAVAILABLE'])(
     'handles %s after cache has loaded',
@@ -88,6 +101,23 @@ describe('cloud channel cached access', () => {
       act(() => root.unmount());
     },
   );
+  it('invalidates the attempted list channel rather than the previous render selection', async () => {
+    state.initialChannelId = undefined;
+    state.remove.mockReset();
+    state.messages.mockRejectedValue(new ClientError('CHANNEL_ACCESS_DENIED'));
+    const node = document.createElement('div');
+    const root = createRoot(node);
+    await act(async () => root.render(<CloudChannelsScreen />));
+    const button = [...node.querySelectorAll('button')].find((entry) =>
+      entry.textContent?.endsWith(': B'),
+    );
+    expect(button).toBeDefined();
+    await act(async () => button!.click());
+    expect(state.remove).toHaveBeenCalledWith(
+      JSON.stringify(['cloud', 'account_a', 'org_a', 'channel_b']),
+    );
+    act(() => root.unmount());
+  });
   it('does not resurrect a delayed cache after permission denial', async () => {
     let release: (value: unknown) => void = () => {};
     state.read.mockImplementation(

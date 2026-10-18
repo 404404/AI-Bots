@@ -110,6 +110,7 @@ function ChannelWorkspace({
   const busy = working || snapshot.busy;
   const cacheScope = cloudDraftKey(cloudViewScope(row), organizationId, initialChannelId ?? '');
   const loadedHistory = useRef(false);
+  const attemptedChannelId = useRef(initialChannelId);
   const messageWindow = useRef<CloudMessage[]>([]);
   useFocusEffect(
     useCallback(() => {
@@ -191,11 +192,7 @@ function ChannelWorkspace({
         setMessages(undefined);
         setMore(false);
         void removeCloudMessages(
-          cloudDraftKey(
-            cloudViewScope(row),
-            organizationId,
-            selected?.channelId ?? initialChannelId ?? '',
-          ),
+          cloudDraftKey(cloudViewScope(row), organizationId, attemptedChannelId.current ?? ''),
         );
       }
       setError(cloudError(e));
@@ -216,6 +213,7 @@ function ChannelWorkspace({
     setChannelCursor(page.nextCursor);
   };
   const history = async (channel: CloudChannel, after = 0) => {
+    attemptedChannelId.current = channel.channelId;
     const page = await cloudClient.readMessages(
       instanceId,
       organizationId,
