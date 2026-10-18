@@ -13,8 +13,8 @@ export const nativeMemoryPreview: MemoryPreviewIO = {
       redirect: 'error',
     });
   },
-  store(bytes) {
-    const file = new File(Paths.cache, `memory-preview-${randomUUID()}.png`);
+  store(bytes, extension = 'png') {
+    const file = new File(Paths.cache, `memory-preview-${randomUUID()}.${extension}`);
     try {
       file.writeSync(bytes);
     } catch (error) {

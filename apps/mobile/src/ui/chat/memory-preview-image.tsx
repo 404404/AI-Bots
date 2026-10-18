@@ -111,7 +111,7 @@ export function MemoryPreviewImage({
             path.split('/').at(-1) ||
             'image.png',
           kind: 'image',
-          mime: 'image/png',
+          mime: image.mime,
           size: image.size,
           local: true,
           source: { uri: image.uri, headers: {} },

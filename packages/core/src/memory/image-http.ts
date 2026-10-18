@@ -1,3 +1,4 @@
+import { inspectImage } from '../media/image-format.js';
 import { MemoryAcceptError } from './accepted.js';
 import { MemoryImageError } from './image.js';
 import { MemoryPathError } from './jail.js';
@@ -34,12 +35,12 @@ export function createMemoryImageHttp(
           : memory.markdownImageFile(slug, path, source, revision, reference);
       return new Response(new Uint8Array(bytes), {
         headers: {
-          'content-type': 'image/png',
+          'content-type': inspectImage(bytes).mime,
           'cross-origin-resource-policy': 'same-origin',
           'content-length': String(bytes.length),
           'cache-control': 'no-store',
           'x-content-type-options': 'nosniff',
-          'content-security-policy': "default-src 'none'; sandbox",
+          'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
         },
       });
     } catch (error) {

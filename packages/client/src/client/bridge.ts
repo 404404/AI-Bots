@@ -3927,7 +3927,7 @@ export interface MemoryGitGraph {
 }
 
 export interface MemoryImage {
-  mime?: 'image/png';
+  mime?: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | 'image/svg+xml';
   source: string;
   status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
   revision?: string;
