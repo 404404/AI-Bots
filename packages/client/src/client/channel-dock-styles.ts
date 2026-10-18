@@ -68,6 +68,11 @@ export const CHANNEL_DOCK_CSS =
 .bh-dock .dv-full-width-single-tab .dv-tab { flex: 1 1 0; min-width: 0; }
 .bh-dock .dv-tab:has([data-dock-header="bh:channel-body"]) { flex: 1 1 0; min-width: 0; max-width: 100%; }
 .bh-dock [data-panel-hide]:active { cursor: grabbing; }
+html[data-platform="darwin"] .bh-dock .dv-tabs-and-actions-container,
+html[data-platform="darwin"] .bh-dock .dv-tabs-and-actions-container .dv-tab,
+html[data-platform="darwin"] .bh-dock .bh-dock-header { -webkit-app-region:drag; }
+html[data-platform="darwin"] .bh-dock .bh-dock-header [data-window-drag-recall],
+html[data-platform="darwin"] .bh-dock .bh-dock-header :is(button, a, input, select, textarea, [role="tab"]) { -webkit-app-region:no-drag; }
 .bh-dock .dv-tab:focus-visible,
 .bh-dock .dv-tab:focus-within { outline: none; }
 .bh-dock .dv-tab .dv-default-tab-action { display: none; }

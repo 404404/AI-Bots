@@ -486,12 +486,6 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
       className="bh-dock-header"
       data-dock-header={entryId}
       data-window-drag
-      onDragStartCapture={(event) => {
-        if (!(event.target as Element).closest('[data-panel-hide]')) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      }}
       onMouseDown={(event) => {
         if (!(event.target as Element).closest('[data-panel-hide]')) event.stopPropagation();
       }}
@@ -1455,6 +1449,16 @@ export function ChannelDock({
               } as React.CSSProperties)
             : undefined
         }
+        onDragStartCapture={(event) => {
+          const target = event.target as Element;
+          if (
+            target.closest('.dv-tabs-and-actions-container, .bh-channel-session-header') &&
+            !target.closest('[data-panel-hide]')
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
         onDragOverCapture={(event) => {
           if (!workspace || !api || !event.dataTransfer.types.includes('application/x-bh-rail'))
             return;

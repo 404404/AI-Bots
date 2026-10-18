@@ -120,6 +120,7 @@ async function click(selector: string): Promise<void> {
 
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  vi.stubGlobal('PointerEvent', class extends MouseEvent {});
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -802,11 +803,21 @@ it('updates the Messages Channel title and trailing actions without replacing it
   expect(channelContext.textContent).toBe('Ada');
   act(() => channelContext.click());
   expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
-  for (const target of [header, channelContext]) {
+  for (const target of [
+    header,
+    channelContext,
+    header.closest('.dv-tab')!,
+    header.closest('.dv-tabs-and-actions-container')!,
+  ]) {
     const drag = new Event('dragstart', { bubbles: true, cancelable: true });
     act(() => target.dispatchEvent(drag));
     expect(drag.defaultPrevented).toBe(true);
   }
+
+  const titleDrag = new Event('dragstart', { bubbles: true, cancelable: true });
+  act(() => titleHandle.dispatchEvent(titleDrag));
+  expect(titleDrag.defaultPrevented).toBe(false);
+  act(() => titleHandle.dispatchEvent(new Event('dragend', { bubbles: true })));
 
   await act(async () =>
     header.querySelector<HTMLButtonElement>('[aria-label="Channel settings"]')!.click(),
