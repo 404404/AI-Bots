@@ -12,6 +12,7 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  dialogFailed: 'That did not go through. Try again.',
   openMention: (name: string) => `Open chat with ${name}`,
   connectionName: 'Name on this phone',
   connectionNameOptional: 'Optional — use the original name',
@@ -964,6 +965,7 @@ const en = {
 };
 
 const zh: typeof en = {
+  dialogFailed: '操作没有成功，请重试。',
   openMention: (name: string) => `打开与${name}的私聊`,
   connectionName: '在这台手机上的名称',
   connectionNameOptional: '选填，默认使用原名称',

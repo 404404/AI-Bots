@@ -8,6 +8,7 @@ import { usePushRouting } from '../src/host/push-routing';
 import { HostDrawer, WorkspaceButton } from '../src/ui/shell/host-drawer';
 import { StatisticsNotice } from '../src/ui/shell/statistics-notice';
 import { KeyboardRoot } from '../src/ui/primitives/keyboard-frame';
+import { AppDialogHost } from '../src/ui/primitives/app-dialog-host';
 import { sheetScreenOptions } from '../src/ui/primitives/sheet-screen';
 import { useDesignTheme } from '../src/ui/design/theme';
 import { t } from '../src/ui/strings';
@@ -129,6 +130,7 @@ export default function RootLayout() {
             </Stack>
             <StatisticsNotice />
             <HostDrawer />
+            <AppDialogHost />
           </View>
         </SafeAreaProvider>
       </KeyboardRoot>
