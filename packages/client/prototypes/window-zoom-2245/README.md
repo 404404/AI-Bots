@@ -12,9 +12,23 @@ Requires macOS, the official installed `DeepSeek Harness.app` version `0.2.1-rc.
 BH_SOURCE_ROOT=/path/to/BotHarness node packages/client/prototypes/window-zoom-2245/launch-native.mjs
 ```
 
-This creates a fresh temporary DSH_HOME and browser directory, lets the desktop initialize its Profile, stops only its own child, inserts the local prototype Plugin, and restarts it. It uses the repository's shared dev credential resolver without printing credentials; no model request is necessary. Ctrl+C stops this owned instance and retains its temporary files. The bootstrap wrapper was syntax-checked; the equivalent steps were executed manually for the recorded experiment, rather than claiming the wrapper itself was replayed.
+This creates a fresh temporary DSH_HOME and browser directory, lets the desktop initialize its Profile, stops only its own child, inserts the local prototype Plugin, and restarts it. It uses the repository's shared dev credential resolver without printing credentials; no model request is necessary. Ctrl+C stops this owned instance and retains its temporary files. The final wrapper was replayed from a fresh Profile in round 2, including its initial boot, exact-process stop, compatibility copy and ready check. It generates a hash-locked temporary theme copy, removes its fixed font-size shortcut installer, and resolves the copied Host schema import to the canonical installed module. Set `ZOOM_PROTOTYPE_THEME_COMPAT=0` only to reproduce the baseline conflict.
 
-In another terminal, with the same source checkout:
+## Round 2: native system input
+
+Read [ROUND2.md](ROUND2.md) for the current verdict and exact input limits. In another terminal run `node packages/client/prototypes/window-zoom-2245/serve-fixture.mjs`, then run the following with `BH_SOURCE_ROOT` set:
+
+```sh
+node packages/client/prototypes/window-zoom-2245/observe-native.mjs setup
+node packages/client/prototypes/window-zoom-2245/observe-native.mjs reset
+node packages/client/prototypes/window-zoom-2245/observe-native.mjs focus guest
+```
+
+Send OS keys to the verified THROWAWAY window (not the daily app), then use `observe-native.mjs snapshot <new-label>` to record. `focus` also accepts `main`, `local`, `cross`; `record on/off` controls the real recording API. Snapshots append JSON and write the named PNG, so use unique labels. The driver is test instrumentation, not a product CLI. Ctrl+C stops the fixture. Preserve round 2 evidence before any rerun.
+
+## Round 1 historical drivers
+
+These use CDP input and did not qualify native forwarding. Run with theme compatibility disabled to reproduce the baseline. In another terminal, with the same source checkout:
 
 ```sh
 BH_SOURCE_ROOT=/path/to/BotHarness node packages/client/prototypes/window-zoom-2245/run-native.mjs
@@ -27,6 +41,6 @@ The first driver hosts an inert loopback fixture on port 39446 and writes screen
 
 ## Evidence and limits
 
-Read `REPORT.md` first. `evidence/native-results.json` is the final desktop run; `native-first-attempt.json` preserves the first, incomplete fixture attempt. The Web runs with and without the tutorial are kept separately. `guest-first-input-attempt.json` preserves the failed focus setup; `guest-native-input.json` fixes focus but still lacks a positive native-input response.
+Read `ROUND2.md` first; `REPORT.md` retains round 1 history. `evidence/native-results.json` is the final desktop run; `native-first-attempt.json` preserves the first, incomplete fixture attempt. The Web runs with and without the tutorial are kept separately. `guest-first-input-attempt.json` preserves the failed focus setup; `guest-native-input.json` fixes focus but still lacks a positive native-input response.
 
-No production persistence, default selection, restore command, compatibility package, new desktop shell, CI qualification or release was implemented. No upstream file was edited. The native DSH run and BotHarness Web layout run are separate compositions and must not be presented as an integrated DeepSeekBot desktop acceptance run.
+No production persistence, default selection, restore command, distributed compatibility package, new desktop shell, CI qualification or release was implemented. The compatibility copy is a disposable experiment only. No upstream file was edited. The native DSH run and BotHarness Web layout run are separate compositions and must not be presented as an integrated DeepSeekBot desktop acceptance run.

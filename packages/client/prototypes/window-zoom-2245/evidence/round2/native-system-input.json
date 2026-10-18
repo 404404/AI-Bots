@@ -1,0 +1,2592 @@
+[
+  {
+    "label": "native-positive-control",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "",
+            "code": "KeyY",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": []
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 240,
+    "sidebarWidth": 302.40625,
+    "focus": "DIV",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": null,
+    "themeRows": 1,
+    "frames": []
+  },
+  {
+    "label": "main-100",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [],
+        "native": [],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-edit",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "main-equal-first-attempt",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 240,
+    "sidebarWidth": 302.40625,
+    "focus": "zoom-edit",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "main-minus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-edit",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "local-100",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [],
+        "native": [],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-local",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "edit",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "local-plus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:iframe",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "iframe",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "zoom-prototype-local",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 240,
+    "sidebarWidth": 302.40625,
+    "focus": "zoom-local",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "edit",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "local-minus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:iframe",
+            "level": 1
+          },
+          {
+            "source": "registry:iframe",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "iframe",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "zoom-prototype-local",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          },
+          {
+            "kind": "iframe",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "zoom-prototype-local",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-local",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "edit",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "cross-100",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [],
+        "native": [],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-cross",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "edit",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "cross-plus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:iframe",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "iframe",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "zoom-prototype-cross",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 240,
+    "sidebarWidth": 302.40625,
+    "focus": "zoom-cross",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "edit",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "cross-minus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:iframe",
+            "level": 1
+          },
+          {
+            "source": "registry:iframe",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "iframe",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "zoom-prototype-cross",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          },
+          {
+            "kind": "iframe",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "zoom-prototype-cross",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-cross",
+    "documentFocused": true,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "edit",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "guest-100",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [],
+        "native": [],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-guest",
+    "documentFocused": false,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "edit",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "guest-plus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:webview",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "webview",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "f6f480e6-dd08-45c6-a599-59236b603c91",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 240,
+    "sidebarWidth": 302.40625,
+    "focus": "zoom-guest",
+    "documentFocused": false,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "edit",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "guest-minus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:webview",
+            "level": 1
+          },
+          {
+            "source": "registry:webview",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "webview",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "f6f480e6-dd08-45c6-a599-59236b603c91",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          },
+          {
+            "kind": "webview",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "f6f480e6-dd08-45c6-a599-59236b603c91",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-guest",
+    "documentFocused": false,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "edit",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "guest-recording-protected",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": true,
+        "composing": false,
+        "actions": [],
+        "native": [],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-guest",
+    "documentFocused": false,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "edit",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "guest-plus-key-alias",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:webview",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "webview",
+            "revision": "65f48162-31da-4795-a735-904d6bc56053",
+            "frameName": "f6f480e6-dd08-45c6-a599-59236b603c91",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 240,
+    "sidebarWidth": 302.40625,
+    "focus": "zoom-guest",
+    "documentFocused": false,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "edit",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "fresh-guest-plus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:webview",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "webview",
+            "revision": "9eabe4a9-5d7c-45f1-95c1-13113649621a",
+            "frameName": "0e5ddd66-cf58-49c0-a9df-7c5106525669",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 240,
+    "sidebarWidth": 302.40625,
+    "focus": "zoom-guest",
+    "documentFocused": false,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "edit",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  },
+  {
+    "label": "fresh-guest-minus",
+    "input": "OS key through cua_repl, setup/readback through isolated CDP",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "registry:webview",
+            "level": 1
+          },
+          {
+            "source": "registry:webview",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "webview",
+            "revision": "9eabe4a9-5d7c-45f1-95c1-13113649621a",
+            "frameName": "0e5ddd66-cf58-49c0-a9df-7c5106525669",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": true,
+            "meta": true
+          },
+          {
+            "kind": "webview",
+            "revision": "9eabe4a9-5d7c-45f1-95c1-13113649621a",
+            "frameName": "0e5ddd66-cf58-49c0-a9df-7c5106525669",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "fontTokens": [
+      [
+        "--dsh-content-font-size",
+        "14px"
+      ],
+      [
+        "--dsh-code-font-size",
+        "11px"
+      ],
+      [
+        "--dsh-terminal-font-size",
+        "13px"
+      ]
+    ],
+    "ruler": 200,
+    "sidebarWidth": 252,
+    "focus": "zoom-guest",
+    "documentFocused": false,
+    "value": "保留这段输入",
+    "guest": {
+      "nativeZoom": 1,
+      "focus": "edit",
+      "value": "cross-origin fixture"
+    },
+    "themeRows": 1,
+    "frames": [
+      {
+        "name": "local",
+        "focus": "",
+        "value": "same-origin iframe",
+        "ruler": 100
+      },
+      {
+        "name": "cross",
+        "focus": "",
+        "value": "cross-origin fixture",
+        "ruler": 100
+      }
+    ]
+  }
+]

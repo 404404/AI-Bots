@@ -3,7 +3,7 @@
 window.__ModuleLoader__.load({ id: '@botharness/zoom-prototype', factory: () => ({
   inject: ['shortcuts'],
   apply(ctx) {
-    const state = { level: 0, mode: 'off', recording: false, composing: false, actions: [], errors: [] };
+    const state = { level: 0, mode: 'off', recording: false, composing: false, actions: [], native: [], errors: [] };
     const oldZoom = document.documentElement.style.zoom;
     const root = document.createElement('section'); root.id = 'zoom-prototype';
     root.style.cssText = 'position:fixed;right:12px;top:75px;width:300px;max-height:70vh;overflow:auto;z-index:99999;padding:12px;background:var(--dsw-alias-bg-base,#222);color:var(--dsw-alias-fg-base,#eee);border:1px solid currentColor;font:12px sans-serif';
@@ -15,8 +15,9 @@ window.__ModuleLoader__.load({ id: '@botharness/zoom-prototype', factory: () => 
     root.querySelector('#zoom-plus').onclick=()=>set(state.level+1);
     root.querySelector('#zoom-reset').onclick=()=>set(0);
     const disposers=[];
-    for(const [id,code,delta] of [['increase','Equal',1],['decrease','Minus',-1],['bridgeControl','KeyY',1]]) {
-      try { disposers.push(ctx.shortcuts.register({id:`zoomPrototype.${id}`,label:()=>`ZOOM PROTOTYPE ${id}`,aliases:[],defaults:{[`${ctx.shortcuts.runtime}:${ctx.shortcuts.platform}`]:{code,modifiers:['primary']}},regions:['page','editable','terminal'],modals:['other'],resolve(context){return {status:'handled',run(){set(state.level+delta,`registry:${context.source??'keyboard'}`);}}}})); }
+    if(window.dshDesktop?.keyboard)disposers.push(window.dshDesktop.keyboard.subscribe(input=>{state.native.push(input);if(state.native.length>100)state.native.shift();}));
+    for(const [id,code,delta,shift=false] of [['increase','Equal',1],['increaseShift','Equal',1,true],['decrease','Minus',-1],['bridgeControl','KeyY',1]]) {
+      try { disposers.push(ctx.shortcuts.register({id:`zoomPrototype.${id}`,label:()=>`ZOOM PROTOTYPE ${id}`,aliases:[],defaults:{[`${ctx.shortcuts.runtime}:${ctx.shortcuts.platform}`]:{code,modifiers:shift?['primary','shift']:['primary']}},regions:['page','editable','terminal'],modals:['other'],resolve(context){return {status:'handled',run(){set(state.level+delta,`registry:${context.source??'keyboard'}`);}}}})); }
       catch(error){state.errors.push(String(error));}
     }
     const start=()=>state.composing=true, end=()=>state.composing=false;
@@ -30,7 +31,7 @@ window.__ModuleLoader__.load({ id: '@botharness/zoom-prototype', factory: () => 
       event.preventDefault();event.stopImmediatePropagation();set(state.level+delta,'capture');
     };
     window.addEventListener('keydown',capture,true);
-    window.__zoomProbe={state,set,mode(value){state.mode=value;render();},snapshot(){return {state:structuredClone(state),catalog:ctx.shortcuts.catalog.getSnapshot().filter(x=>x.id.startsWith('zoomPrototype.')),fixed:ctx.shortcuts.fixedCatalog.getSnapshot().filter(x=>x.id.startsWith('fontSize.')),config:ctx.shortcuts.config.getSnapshot().status};},async recording(value){await ctx.shortcuts.recording(value);state.recording=value;},async embeds(url){
+    window.__zoomProbe={state,set,clear(){state.actions=[];state.native=[];render();},mode(value){state.mode=value;render();},snapshot(){return {state:structuredClone(state),catalog:ctx.shortcuts.catalog.getSnapshot().filter(x=>x.id.startsWith('zoomPrototype.')),fixed:ctx.shortcuts.fixedCatalog.getSnapshot().filter(x=>x.id.startsWith('fontSize.')),config:ctx.shortcuts.config.getSnapshot().status};},async recording(value){await ctx.shortcuts.recording(value);state.recording=value;},async embeds(url){
       const box=root.querySelector('#zoom-embeds');
       const local=document.createElement('iframe');local.name='zoom-prototype-local';local.dataset.htmlPreview='';local.id='zoom-local';local.style.cssText='width:260px;height:100px';local.srcdoc='<body style="margin:8px"><div style="width:100px;height:15px;background:teal" id="ruler"></div><input id="edit" value="same-origin iframe"></body>';box.append(local);
       const cross=document.createElement('iframe');cross.name='zoom-prototype-cross';cross.dataset.htmlPreview='';cross.id='zoom-cross';cross.style.cssText='width:260px;height:100px';cross.src=url;box.append(cross);

@@ -1,0 +1,2 @@
+// THROWAWAY inert local embedded-content fixture.
+import {createServer} from 'node:http';const s=createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html'});res.end('<body style="margin:8px;background:white;color:black"><div id="ruler" style="width:100px;height:15px;background:teal"></div><input aria-label="Embedded test input" id="edit" value="cross-origin fixture"><p>Embedded content</p></body>')});s.listen(39446,'127.0.0.1',()=>console.log('Owned inert fixture ready'));process.on('SIGTERM',()=>s.close());

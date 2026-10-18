@@ -1,0 +1,12 @@
+{
+  "version": "0.2.1-rc.2",
+  "clientBefore": "52e08eb1b687d8c9d2f550b4e1f2094b2b6108b8c6ea05601cab5c2e22aa4bb3",
+  "clientAfter": "395994acbb02890413c43066b133204190535b05caa39068b59eaf7c0ee4eeea",
+  "hostBefore": "1adf59906ab10e91765d96f3e42268b0b7669f921c4baf4021a3057894cf3000",
+  "hostAfter": "3dc119cf3daa9a55e728978fecd116a5c24d3ced73330b7d8f8c2e189c0e8137",
+  "edits": [
+    "One Client installer call removed in temporary copy",
+    "Host schema import resolved to canonical installed module"
+  ],
+  "installedFilesModified": false
+}
