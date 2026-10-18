@@ -188,8 +188,11 @@ function ChannelWorkspace({
       if (!canRetainCloudCache(e)) {
         loadedHistory.current = true;
         messageWindow.current = [];
+        setChannels(undefined);
+        setChannelCursor(null);
         setSelected(undefined);
         setMessages(undefined);
+        setCursor(0);
         setMore(false);
         void removeCloudMessages(
           cloudDraftKey(cloudViewScope(row), organizationId, attemptedChannelId.current ?? ''),

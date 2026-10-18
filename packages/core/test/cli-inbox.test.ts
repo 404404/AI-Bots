@@ -166,7 +166,7 @@ describe('Human Inbox, assignment, Session and approval-rule commands', () => {
         },
       },
       { method: 'humanAttention', args: {} },
-      { method: 'humanAttentionStatus', args: {} },
+      { method: 'humanAttentionStatus', args: { messageCounts: true } },
       { method: 'humanAttentionDismiss', args: { itemId: 'item-1', sourceKey: 'src-1' } },
       { method: 'humanAttentionDismiss', args: { itemId: 'item-2', sourceKey: '' } },
       { method: 'humanAttentionIgnore', args: { sourceEventId: 'src-9' } },

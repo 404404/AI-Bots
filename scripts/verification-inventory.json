@@ -562,6 +562,14 @@
       "gap": "Web Markdown and local PNG only; editor/file-card previews, other local formats and native mobile remain in #2214."
     },
     {
+      "id": "desktop.memory.image-formats",
+      "label": "Read and compare original JPEG/GIF/WebP/static SVG bytes with genuine decode, animation and CLI export",
+      "source": "packages/core/src/media/image-format.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
+      "task": 2214,
+      "gap": "Native decoding/sharing remains queued; SVG is the bounded static subset, editor/file-card/mobile diff paths remain #2214."
+    },
+    {
       "id": "desktop.vrm-companion",
       "label": "Native VRM Panel follows live Activity and committed DM output with independent fixed-Bot instances",
       "source": "packages/vrm-companion/src/client/index.tsx",
@@ -1340,6 +1348,14 @@
       "sha256": "401f5733fa76d7151a247abda68a0fd8914e7b3fca18675539366dfd395dab95"
     },
     {
+      "path": "scripts/e2e-activity-live.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Task-local real browser: idle and slow-read stability, live cross-Channel message and request arrivals, read/source identity, actual WebSocket reconnect, snooze expiry, group-join decision and bounded CLI watch.",
+      "task": 2230,
+      "sha256": "c8afb92a41d9af11b7d629eb245cdb7e03c378e2099e0ee59954bc75ae929b5e"
+    },
+    {
       "path": "scripts/e2e-inbox-tool-approval.mjs",
       "category": "mapped",
       "behaviors": ["desktop.activity-center.inline-tool-approval"],
@@ -1838,6 +1854,22 @@
       "sha256": "d0777a9dfd7bb30de5a23f03be842de9fde975a391e64a32c61123a44103294e"
     },
     {
+      "path": "scripts/e2e-activity-approve-sync.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Real native bash Allow once from Activity and conversation with independent browser observers, canonical decision identity and native file effect.",
+      "task": 2230,
+      "sha256": "6ca3f039719c512d5740c44df6182c3a7b60d4da82e40a928b92ae850d2abde7"
+    },
+    {
+      "path": "scripts/e2e-activity-load.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Sequential main/candidate real Host load: 24 silent Groups, public direct channel_send, three 240-message rounds, query/coalescing/latency/long-task/heap and idle-recovery evidence.",
+      "task": 2230,
+      "sha256": "461ebc88f911f1424e9179475eae14e88741a6059735b85dde75a2634cbce9e0"
+    },
+    {
       "path": "scripts/e2e-memory-images.mjs",
       "category": "mapped",
       "behaviors": ["desktop.memory.png-preview"],
@@ -1852,6 +1884,14 @@
       "reason": "Task-owned isolated Git/Host fixture; real Markdown rendering and image decode, source/line toggles, historical/index/local bytes, explicit intercepted external load, missing/stale/anonymous refusal and narrow layout.",
       "task": 2214,
       "sha256": "504d4ddc27e5fd5b4f844a044f02c5ea04a05e487c691841dceac97d4e087abf"
+    },
+    {
+      "path": "scripts/e2e-memory-formats.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.image-formats"],
+      "reason": "Matched main/candidate current/Markdown/working/history/narrow images, genuine pixels and animation advancement, version/MIME original-byte exports and rejected SVG external-resource loads.",
+      "task": 2214,
+      "sha256": "f781c109dba94abe6bae2b3a41b2db0d68a86e3dd3f6a0904ebe5dbf536c0391"
     },
     {
       "path": "scripts/e2e-vrm-companion.mjs",

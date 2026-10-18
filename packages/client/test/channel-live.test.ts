@@ -254,7 +254,8 @@ describe('Roster live Client', () => {
 });
 
 describe('Roster live Client latest messages', () => {
-  it('retains completed Bot activity across newer Human previews and out-of-order commits', () => {
+  it('retains completed Bot activity across newer Human previews and out-of-order commits', async () => {
+    vi.useFakeTimers();
     const store = createStore();
     store.setMode('bot');
     store.setRoster(
@@ -295,15 +296,18 @@ describe('Roster live Client latest messages', () => {
       commit('bea-done-delayed', 20000, 'bea');
       commit('ada-older', 5000, 'ada');
       commit('private', 90000, 'ada', 'unknown');
+      await vi.advanceTimersByTimeAsync(25);
       expect(store.getSnapshot().bots.find((x) => x.slug === 'ada')?.lastActivityAt).toBe(10000);
       expect(store.getSnapshot().bots.find((x) => x.slug === 'bea')?.lastActivityAt).toBe(20000);
       expect(store.getSnapshot().channels[0]?.latestMessage?.id).toBe('human');
       expect(refreshRoster).not.toHaveBeenCalled();
     } finally {
       dispose();
+      vi.useRealTimers();
     }
   });
-  it('moves a listed Channel preview forward without a roster refresh', () => {
+  it('moves a listed Channel preview forward without a roster refresh', async () => {
+    vi.useFakeTimers();
     const store = createStore();
     store.setMode('bot');
     const other = { ...CHANNEL, id: 'group-other', name: 'Other' };
@@ -328,13 +332,16 @@ describe('Roster live Client latest messages', () => {
       store.getSnapshot().channels.find((item) => item.id === CHANNEL.id)?.latestMessage?.id;
     try {
       latest(CHANNEL.id, 'message-278', '2026-10-13T00:00:02.000Z');
+      await vi.advanceTimersByTimeAsync(25);
       expect(preview()).toBe('message-278');
       expect(store.getSnapshot().channels.find((item) => item.id === CHANNEL.id)?.updatedAt).toBe(
         '2026-10-13T00:00:02.000Z',
       );
       latest(CHANNEL.id, 'older', '2026-10-13T00:00:01.000Z');
+      await vi.advanceTimersByTimeAsync(25);
       expect(preview()).toBe('message-278');
       latest('unknown', 'stray', '2026-10-13T00:00:03.000Z');
+      await vi.advanceTimersByTimeAsync(25);
       expect(store.getSnapshot().channels.map((item) => item.id)).not.toContain('unknown');
       expect(
         store.getSnapshot().channels.find((item) => item.id === other.id)?.latestMessage,
@@ -342,6 +349,7 @@ describe('Roster live Client latest messages', () => {
       expect(refreshRoster).not.toHaveBeenCalled();
     } finally {
       dispose();
+      vi.useRealTimers();
     }
   });
 });

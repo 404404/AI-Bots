@@ -1,3 +1,5 @@
+import { activityIndicator } from './activity-indicator.js';
+import { useActivityIndicatorMenu } from './activity-indicator-menu.js';
 import { onboardingFor } from './onboarding.js';
 import { HomePanel } from './home-panel.js';
 import { WORKSPACE_HOME } from './workspace-context.js';
@@ -219,6 +221,15 @@ function WorkspaceRail({
     () => options.prefs.source.getSnapshot().botIcon,
   );
   const state = useClientState();
+  const indicatorMenu = useActivityIndicatorMenu(t);
+  const indicator = activityIndicator(indicatorMenu.scope, state.humanInbox);
+  const attentionLabel = [
+    ...(state.humanInbox.unreadCount > 0
+      ? [t('humanInbox.unreadCount', { count: String(state.humanInbox.unreadCount) })]
+      : []),
+    ...(state.humanInbox.hasAction ? [t('humanInbox.action')] : []),
+    ...(indicator === 'unknown' ? [t('activityIndicator.unavailable')] : []),
+  ].join(' · ');
   const shortcuts = useSyncExternalStore(
     options.shortcuts.catalog.subscribe,
     options.shortcuts.catalog.getSnapshot,
@@ -305,15 +316,24 @@ function WorkspaceRail({
               shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
               collapsed
               t={t}
+              menuTrigger={(id) =>
+                id === 'activity-center' ? indicatorMenu.triggerProps : undefined
+              }
               badge={(id) =>
                 id === 'activity-center'
-                  ? { count: state.humanInbox.unreadCount, dot: state.humanInbox.hasAction }
+                  ? {
+                      count: state.humanInbox.unreadCount,
+                      dot: state.humanInbox.hasAction,
+                      indicator,
+                      label: attentionLabel || undefined,
+                    }
                   : undefined
               }
             />
           )}
         </div>
       </div>
+      {indicatorMenu.menu}
       <span className="bh-workspace-grip">
         <Menu
           open={menu}

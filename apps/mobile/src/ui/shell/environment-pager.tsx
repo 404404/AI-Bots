@@ -4,7 +4,7 @@ import { TabBar, TabView } from 'react-native-tab-view';
 import { useReducedMotion } from 'react-native-reanimated';
 import type { ConversationEnvironment } from '../../host/conversation-environments';
 import { useDesignTheme } from '../design/theme';
-import { edge, space } from '../design/tokens';
+import { edge, environmentTab, space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { CloudIcon, ComputerIcon } from './icons';
 
@@ -22,6 +22,7 @@ export function EnvironmentPager({
   const theme = useDesignTheme();
   const { width } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
+  const maxTabWidth = Math.min(environmentTab.maxWidth, width - space.x6 * 2);
   const index = Math.max(
     0,
     routes.findIndex((route) => route.key === selected),
@@ -46,32 +47,30 @@ export function EnvironmentPager({
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: space.x2,
-                    maxWidth: width - space.x6 * 2,
+                    maxWidth: maxTabWidth - space.x5 * 2,
                   }}
                 >
-                  <View style={{ flexShrink: 1 }}>
-                    <Text
-                      strong
-                      tone={focused ? 'fg' : 'muted'}
-                      numberOfLines={2}
-                      style={{ flexShrink: 1 }}
-                    >
-                      {route.title}
-                    </Text>
-                    {route.detail ? (
-                      <Text variant="meta" tone="muted" numberOfLines={2}>
-                        {route.detail}
-                      </Text>
-                    ) : null}
-                  </View>
-                  {Icon ? <Icon color={theme.color.muted} size={theme.type.meta.line} /> : null}
+                  <Text
+                    strong
+                    tone={focused ? 'fg' : 'muted'}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={{ flexShrink: 1 }}
+                  >
+                    {route.title}
+                  </Text>
+                  {Icon ? (
+                    <View style={{ flexShrink: 0 }}>
+                      <Icon color={theme.color.muted} size={theme.type.meta.line} />
+                    </View>
+                  ) : null}
                 </View>
               );
             },
           },
         ]),
       ),
-    [routes, theme, width],
+    [routes, theme, maxTabWidth],
   );
   return (
     <TabView
@@ -90,6 +89,7 @@ export function EnvironmentPager({
           options={options}
           tabStyle={{
             width: 'auto',
+            maxWidth: maxTabWidth,
             minHeight: theme.touch,
             paddingHorizontal: space.x5,
             paddingVertical: space.x4,

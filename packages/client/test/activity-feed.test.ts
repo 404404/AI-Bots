@@ -1,5 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
+import {
+  installTypedLive,
+  subscribeMessagingDefaults,
+  type TypedLive,
+} from '../src/client/messaging-defaults-live.js';
 import { createActivityFeed } from '../src/client/activity-feed.js';
 import {
   createStore,
@@ -129,6 +134,133 @@ it('disposes polling and ignores an in-flight response after the last surface cl
   await vi.advanceTimersByTimeAsync(30_000);
   expect(activityPage).toHaveBeenCalledTimes(3);
   expect(feed.getSnapshot().pages.action.items).toEqual([]);
+});
+
+function liveFixture() {
+  let handlers!: Parameters<TypedLive['roster']>[0];
+  const stopped = vi.fn();
+  const roster = vi.fn((next: typeof handlers) => {
+    handlers = next;
+    return stopped;
+  });
+  const uninstall = installTypedLive({ roster, activity: () => () => {} });
+  return {
+    get handlers() {
+      return handlers;
+    },
+    stopped,
+    roster,
+    uninstall,
+  };
+}
+
+it('shares the roster carrier, coalesces arrivals, and does not poll while connected', async () => {
+  vi.useFakeTimers();
+  const live = liveFixture();
+  const stopRoster = subscribeMessagingDefaults(() => {});
+  let ids: string[] = [];
+  const activityPage = vi.fn(async () => ({ items: ids.map(item) }));
+  const feed = createActivityFeed({ activityPage });
+  const first = feed.acquire();
+  const second = feed.acquire();
+  try {
+    live.handlers.baseline([]);
+    await vi.advanceTimersByTimeAsync(30);
+    const count = activityPage.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(activityPage).toHaveBeenCalledTimes(count);
+    expect(live.roster).toHaveBeenCalledTimes(1);
+    ids = ['from-another-channel'];
+    for (let i = 0; i < 10; i++) live.handlers.attention?.();
+    await vi.advanceTimersByTimeAsync(30);
+    expect(activityPage).toHaveBeenCalledTimes(count + 3);
+    expect(feed.getSnapshot().pages.unread.items[0]?.id).toBe('from-another-channel');
+    first();
+    first();
+    expect(live.stopped).not.toHaveBeenCalled();
+    second();
+    expect(live.stopped).not.toHaveBeenCalled();
+    stopRoster();
+    expect(live.stopped).toHaveBeenCalledTimes(1);
+  } finally {
+    first();
+    second();
+    stopRoster();
+    live.uninstall();
+  }
+});
+
+it('recovers while disconnected and resynchronizes on the next baseline without erasing loaded data', async () => {
+  vi.useFakeTimers();
+  const live = liveFixture();
+  let fail = false;
+  let ids = ['one'];
+  const activityPage = vi.fn(async () => {
+    if (fail) throw new Error('Offline');
+    return { items: ids.map(item) };
+  });
+  const feed = createActivityFeed({ activityPage });
+  const release = feed.acquire();
+  try {
+    live.handlers.baseline([]);
+    await vi.advanceTimersByTimeAsync(30);
+    live.handlers.interrupted();
+    fail = true;
+    await vi.advanceTimersByTimeAsync(5000);
+    live.handlers.interrupted();
+    await vi.advanceTimersByTimeAsync(5030);
+    expect(feed.getSnapshot().pages.action).toMatchObject({
+      status: 'ready',
+      items: [item('one')],
+      error: 'Offline',
+    });
+    ids = ['one', 'two'];
+    fail = false;
+    live.handlers.baseline([]);
+    await vi.advanceTimersByTimeAsync(30);
+    expect(feed.getSnapshot().pages.action.items.map((x) => x.id)).toEqual(ids);
+    expect(feed.getSnapshot().pages.action.error).toBeUndefined();
+    const count = activityPage.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(activityPage).toHaveBeenCalledTimes(count);
+    live.handlers.attention?.();
+    release();
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(activityPage).toHaveBeenCalledTimes(count);
+  } finally {
+    release();
+    live.uninstall();
+  }
+});
+
+it('rereads changes received during the initial query and keeps unchanged snapshots referentially stable', async () => {
+  vi.useFakeTimers();
+  const live = liveFixture();
+  const resolve: ((page: HumanAttentionPage) => void)[] = [];
+  let first = true;
+  const activityPage = vi.fn(async () =>
+    first
+      ? new Promise<HumanAttentionPage>((done) => resolve.push(done))
+      : { items: [item('arrived-during-baseline')] },
+  );
+  const feed = createActivityFeed({ activityPage });
+  const release = feed.acquire();
+  try {
+    live.handlers.baseline([]);
+    live.handlers.attention?.();
+    await vi.advanceTimersByTimeAsync(30);
+    first = false;
+    resolve.forEach((done) => done({ items: [] }));
+    await vi.advanceTimersByTimeAsync(1);
+    expect(activityPage).toHaveBeenCalledTimes(6);
+    expect(feed.getSnapshot().pages.action.items[0]?.id).toBe('arrived-during-baseline');
+    const snapshot = feed.getSnapshot();
+    await feed.refresh();
+    expect(feed.getSnapshot()).toBe(snapshot);
+  } finally {
+    release();
+    live.uninstall();
+  }
 });
 
 it('requeries on committed mute changes and rejects late pages without changing the view', async () => {

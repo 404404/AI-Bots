@@ -10,10 +10,12 @@ export function usePanelMenu({
   items,
   onSelect,
   keepOpen = false,
+  selectedId,
 }: {
   items: readonly MenuEntry[];
   onSelect(id: string): void;
   keepOpen?: boolean;
+  selectedId?: string;
 }) {
   const [point, setPoint] = useState<{ x: number; y: number }>();
   const trigger = useRef<HTMLElement | null>(null);
@@ -43,6 +45,8 @@ export function usePanelMenu({
   return {
     triggerProps: {
       tabIndex: 0,
+      'aria-haspopup': 'menu' as const,
+      'aria-expanded': point !== undefined,
       onContextMenu: open,
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
         if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) open(event);
@@ -55,6 +59,7 @@ export function usePanelMenu({
         autoFocus
         anchor={<span aria-hidden="true" />}
         items={items}
+        selectedId={selectedId}
         onSelect={(id) => {
           if (!keepOpen) close();
           onSelect(id);

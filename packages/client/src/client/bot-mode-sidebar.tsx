@@ -20,13 +20,12 @@ import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 import { ExitIcon } from './exit-icon.js';
 import { InboxIcon } from './inbox-icon.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { observeHumanAttention } from './messaging-defaults-live.js';
 import { useMountedResource } from './mounted-resource.js';
 import { OnboardingLauncher } from './onboarding-checklist-view.js';
 import { PinnedPanelCards } from './pinned-panel-cards.js';
 import type { ShortcutBindings } from './shortcut-bindings.js';
 import type { WindowCompanions } from './window-companions.js';
-
-const INBOX_REFRESH_MS = 10_000;
 
 export interface BotModeSidebarProps {
   collapsed: boolean;
@@ -65,11 +64,7 @@ export function BotModeSidebar(props: BotModeSidebarProps): ReactElement {
   const morph = logoHover || logoFocus;
   const rootMount = useMountedResource<HTMLDivElement>(() => {
     void actions.refreshHumanInboxStatus();
-    const timer = window.setInterval(
-      () => void actions.refreshHumanInboxStatus(),
-      INBOX_REFRESH_MS,
-    );
-    return () => window.clearInterval(timer);
+    return observeHumanAttention(() => void actions.refreshHumanInboxStatus());
   }, [actions]);
 
   const row = (

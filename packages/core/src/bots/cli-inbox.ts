@@ -1,7 +1,9 @@
+import { watchInbox } from './cli-inbox-watch.js';
 import { CliLiveError } from './cli-live-error.js';
 
 export const INBOX_OPTIONS = {
   category: { type: 'string' },
+  'watch-seconds': { type: 'string' },
   channel: { type: 'string' },
   sort: { type: 'string' },
   search: { type: 'string' },
@@ -21,6 +23,10 @@ export const INBOX_OPTIONS = {
 } as const;
 
 export const INBOX_COMMANDS = [
+  {
+    command: 'inbox-watch',
+    description: 'observe live inbox changes for a bounded time and return one JSON snapshot',
+  },
   { command: 'inbox', description: 'list Human Inbox items by category, Bot or Channel' },
   { command: 'inbox-status', description: 'read the Human Inbox unread count and action flag' },
   { command: 'inbox-dismiss', description: 'dismiss one Human Inbox item' },
@@ -64,6 +70,7 @@ export const INBOX_HOST_COMMANDS = ['grant-revoke', 'grant-write-set'] as const;
 
 export interface InboxValues {
   category?: string;
+  'watch-seconds'?: string;
   kind?: string;
   channel?: string;
   bot?: string;
@@ -138,9 +145,33 @@ export async function runInboxCommand(
   command: string,
   rest: string[],
   values: InboxValues,
-  connect: () => Promise<{ rpc: Rpc }>,
+  connect: () => Promise<{ rpc: Rpc; stream?: (path: string) => Promise<Response> }>,
 ): Promise<unknown> {
-  const call = prepare(command, rest, values);
+  const call = prepare(command === 'inbox-watch' ? 'inbox' : command, rest, values);
+  if (command === 'inbox-watch') {
+    const seconds = Number(values['watch-seconds'] ?? 10);
+    if (!Number.isInteger(seconds) || seconds < 1 || seconds > 60)
+      usage('--watch-seconds must be 1–60.');
+    const host = await connect();
+    if (!host.stream)
+      throw new CliLiveError(
+        'host-query-unsupported',
+        'This connection cannot watch live inbox changes.',
+      );
+    return watchInbox(
+      host.stream,
+      async () => {
+        const result = await host.rpc<Record<string, unknown>>(call.method, call.args);
+        if (call.args['queryVersion'] === 1 && result['queryVersion'] !== 1)
+          throw new CliLiveError(
+            'host-query-unsupported',
+            'Update the Host to use Activity query filters.',
+          );
+        return result;
+      },
+      seconds,
+    );
+  }
   const { rpc } = await connect();
   const result = await rpc<Record<string, unknown>>(call.method, call.args);
   if (call.args['queryVersion'] === 1 && result['queryVersion'] !== 1)
@@ -216,7 +247,7 @@ function prepare(
     }
     case 'inbox-status':
       positionals(command, rest, 0, '');
-      return { method: 'humanAttentionStatus', args: {} };
+      return { method: 'humanAttentionStatus', args: { messageCounts: true } };
     case 'inbox-dismiss': {
       const [itemId] = positionals(command, rest, 1, 'exactly one inbox item id');
       return {

@@ -12,6 +12,11 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  createHere: 'Create or join',
+  chooseCreationTarget: 'Choose where to create',
+  noCreationTargets: 'No available actions for this environment.',
+  creationSourceChanged: 'The selected connection changed. Close this menu and choose again.',
+  invitePeople: 'Invite people',
   allEnvironments: 'All',
   activityPartialScope: 'Showing this Computer’s activity. Cloud activity is not available yet.',
   activitySourceUnavailable:
@@ -168,7 +173,7 @@ const en = {
     create: 'Create channel',
     retryCreate: 'Retry channel creation',
     reload: 'Reload channels',
-    empty: 'No channels yet. An owner can create one above.',
+    empty: 'No channels yet. An owner can create a channel.',
     open: 'Open channel',
     back: 'All channels',
     message: 'Message',
@@ -734,6 +739,23 @@ const en = {
   memoryEmptyFile: 'This file is empty.',
   memoryMissing: 'This file is no longer in Memory.',
   memoryBinary: 'This file cannot be shown as text.',
+  memoryPreview: 'Preview',
+  memorySource: 'Source',
+  memoryViewMode: 'Document view',
+  memoryLoadExternal: 'Load external image',
+  memoryImageLoading: 'Loading image',
+  memoryEnlarge: (name: string) => `Enlarge ${name || 'image'}`,
+  memoryImageError: (code: string) =>
+    ({
+      'memory-image-missing': 'Image not found. Refresh the document and try again.',
+      'memory-image-stale': 'The document or image changed. Refresh the document.',
+      'memory-image-unsupported':
+        'This image cannot be previewed. Supported formats: PNG, JPEG, GIF, WebP and safe SVG.',
+      'memory-image-too-large': 'Image exceeds the preview size or dimension limit.',
+      'memory-image-invalid': 'This image reference is not allowed.',
+      'memory-image-share-failed': 'Could not share this image. Try again.',
+    })[code] ?? 'Could not load this image. Try again.',
+
   showMore: 'Show more',
   showLess: 'Show less',
   routineOff: 'Off',
@@ -977,6 +999,11 @@ const en = {
 };
 
 const zh: typeof en = {
+  createHere: '创建或加入',
+  chooseCreationTarget: '选择创建位置',
+  noCreationTargets: '当前环境没有可用操作。',
+  creationSourceChanged: '所选连接已变更，请关闭菜单后重新选择。',
+  invitePeople: '邀请成员',
   allEnvironments: '全部',
   activityPartialScope: '当前显示此电脑的动态；云端动态暂不可用。',
   activitySourceUnavailable: '此环境暂不支持动态。请在聊天页选择电脑以查看它的动态。',
@@ -1119,7 +1146,7 @@ const zh: typeof en = {
     create: '创建频道',
     retryCreate: '重试创建频道',
     reload: '重新加载频道',
-    empty: '暂无频道，所有者可以在上方创建。',
+    empty: '暂无频道，所有者可以创建频道。',
     open: '打开频道',
     back: '全部频道',
     message: '消息',
@@ -1670,6 +1697,22 @@ const zh: typeof en = {
   memoryEmptyFile: '这个文件是空的。',
   memoryMissing: '这个文件已不在记忆里。',
   memoryBinary: '这个文件无法以文本显示。',
+  memoryPreview: '预览',
+  memorySource: '源码',
+  memoryViewMode: '文档查看方式',
+  memoryLoadExternal: '加载外部图片',
+  memoryImageLoading: '正在加载图片',
+  memoryEnlarge: (name: string) => `放大${name || '图片'}`,
+  memoryImageError: (code: string) =>
+    ({
+      'memory-image-missing': '找不到图片，请刷新文档后重试。',
+      'memory-image-stale': '文档或图片已变化，请刷新文档。',
+      'memory-image-unsupported': '无法预览此图片，支持 PNG、JPEG、GIF、WebP 和安全的 SVG。',
+      'memory-image-too-large': '图片超过预览的大小或尺寸限制。',
+      'memory-image-invalid': '不允许访问此图片引用。',
+      'memory-image-share-failed': '无法分享此图片，请重试。',
+    })[code] ?? '图片加载失败，请重试。',
+
   showMore: '展开',
   showLess: '收起',
   routineOff: '已关闭',

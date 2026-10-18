@@ -367,6 +367,7 @@ deepseekbot grants <bot-id>
 ```bash
 deepseekbot inbox --category action --limit 20
 deepseekbot inbox --category replies --search budget --unread --sort mentions-first
+deepseekbot inbox-watch --category unread --watch-seconds 10
 deepseekbot inbox-status
 deepseekbot inbox-dismiss <item-id> --source-key <source-event-id>
 deepseekbot inbox-snooze <item-id> --source-key <source-event-id> --until 2026-10-15T09:00:00Z
@@ -386,6 +387,10 @@ deepseekbot grant-write-set <bot-id> --grant <grant-id> --disabled
 deepseekbot private-mcp-set <bot-id> --server <name> --enabled
 deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
+
+`inbox-status` requests the complete message-category summary and returns `unreadCount`, `hasAction` and, on a supporting Host, `messageCounts: { replies, other }`. The categories partition distinct unread Source Events after visibility and Channel mute rules; read retained personal messages and handled requests do not trigger a message indicator. These are complete counts, independent of Activity pagination or browser filters. A legacy Host may omit `messageCounts`; missing data is not zero. The control-rail indicator preference is browser/Host-origin-local presentation and does not change this CLI state.
+
+`inbox-watch` subscribes to the existing authenticated roster stream before its baseline read. It observes for 1–60 seconds (default 10), then emits one JSON document with `initial`, `current` and the number of `invalidations`. Both snapshots use the same Human Inbox query and filters as `inbox`; intermediate events are invalidations, not a second notification store. An interrupted stream is a coded refusal. Set `--timeout` longer than the observation window.
 
 `inbox --search <text>` searches safe Activity summaries, Channel names and Bot slugs before pagination (maximum 200 characters). `--unread` restricts personal messages to unread entries and leaves pending actions intact. `--sort newest|oldest` orders each category; `--category replies --sort mentions-first` puts mentions before replies. Keep filters unchanged when using `--cursor`. Search, unread filtering and mention ordering require query version 1; an older Host fails with `host-query-unsupported` instead of returning partial results.
 
@@ -924,9 +929,9 @@ the same message ID, including after another restart. Inspection cannot include
 
 `deepseekbot onboarding` reads the Profile journey and actual Bot/group result references. Use `--action start|pause|skip|continue|restart|finish` to change tutorial lifecycle. `finish` refuses before actual Bot/group creation. Restart preserves resources, approvals, layouts and history. Layout tip completion stays on the current Client; this command does not operate the UI or mark provider execution successful.
 
-### Version-bound Memory PNG images
+### Version-bound Memory images
 
-`memory-file`, `memory-working-diff`, and `memory-commit-diff` include optional image metadata for PNG files. `source` identifies the working tree, index, or exact commit; `revision` binds the returned bytes. No image body is printed in JSON.
+`memory-file`, `memory-working-diff`, and `memory-commit-diff` include optional image metadata for PNG, JPEG/JPG, GIF, WebP and safe static SVG files. `source` identifies the working tree, index, or exact commit; `revision` binds the returned bytes. No image body is printed in JSON.
 
 ```bash
 deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
@@ -934,7 +939,7 @@ deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --i
 
 Markdown `.md` / `.markdown` results from `memory-file`, `memory-working-diff` and `memory-commit-diff` additionally expose a `markdown` document (or `before` / `after` documents): `source`, `revision` (SHA-256 of the document bytes), `status`, and the exact UTF-8 `body`. Diff previews have independent text budgets: 4 MiB per document and 4 MiB total document bodies per commit query; line-diff limits stay unchanged. No rendered HTML or image bodies enter these JSON results.
 
-For an inline local PNG, pass the document's source/revision and the authored reference:
+For an inline local image, pass the document's source/revision and the authored reference:
 
 ```bash
 deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document-source> --image-revision <document-revision> --image-reference ../chart.png --out /absolute/new-chart.png
@@ -942,4 +947,4 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 
 With `--image-reference`, `--path` names the Markdown document and `--image-revision` identifies that document, not the image. The receipt includes `reference`. Relative images resolve from the document directory, `/chart.png` from the Memory Repository root. Percent-encoded spaces/Unicode and in-root parent traversal work; root escape, `.git`, backslashes, URL schemes and symlink escape are refused. The route revalidates mutable document content before and after reading the image; index/commit images never fall back to the worktree. It returns the selected source's image at load time; refresh the view to observe later mutable image changes. External HTTPS images are a Client-only explicit-load action; the Host/CLI do not fetch external URLs.
 
-Use the exact metadata from the selected file/diff side. The authenticated Host returns that PNG or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. This first image slice supports PNG up to 25 MiB, 16,384 pixels per axis and 40 million pixels; other formats retain their existing behavior. Original-file download and Open current file remain separate actions.
+Use the exact metadata from the selected file/diff side. The authenticated Host returns those original image bytes and their detected MIME, or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. Preview limits are 25 MiB per image, 16,384 pixels per axis and 40 million decoded pixels. GIF/WebP keep their original animation within 256 frames and 40 million canvas pixels across all frames. SVG additionally allows at most 1 MiB UTF-8, 10,000 XML nodes, depth 64, 64 KiB CSS and 20,000 expanded nodes. The static SVG subset accepts ordinary shapes, text, CSS, gradients, markers, clipping and bounded internal references; scripts, event handlers, foreign HTML, images, filters, animation, external references, DTDs, processing instructions and reference cycles are refused. SVG stays an image resource, never inserted markup, and all successful exports preserve the original SVG bytes. Original-file download and Open current file remain separate actions.

@@ -1,4 +1,10 @@
-import { useState, useSyncExternalStore, type DragEvent, type ReactElement } from 'react';
+import {
+  useState,
+  useSyncExternalStore,
+  type DragEvent,
+  type ReactElement,
+  type HTMLAttributes,
+} from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -9,12 +15,23 @@ import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 import type { BotHarnessTranslate } from './locale.js';
 
 export interface PinnedPanelBadge {
+  readonly indicator?: 'on' | 'off' | 'unknown' | undefined;
   readonly count: number;
   readonly dot: boolean;
   readonly label?: string | undefined;
 }
 
 export interface PinnedPanelCardsProps {
+  menuTrigger?:
+    | ((
+        id: string,
+      ) =>
+        | Pick<
+            HTMLAttributes<HTMLButtonElement>,
+            'onContextMenu' | 'onKeyDown' | 'aria-haspopup' | 'aria-expanded'
+          >
+        | undefined)
+    | undefined;
   registry: DockPanelRegistry;
   collapsed: boolean;
   order?: readonly string[] | undefined;
@@ -39,6 +56,7 @@ export function PinnedPanelCards({
   badge,
   fallback,
   tourOf,
+  menuTrigger,
   t,
 }: PinnedPanelCardsProps): ReactElement | null {
   const [dragging, setDragging] = useState<string | null>(null);
@@ -124,6 +142,7 @@ export function PinnedPanelCards({
         const open = openIds.includes(panel.id) || current === panel.id;
         const run = available ? () => registry.toggle(panel.id) : fallback?.(panel.id);
         const mark = badge?.(panel.id);
+        const menu = menuTrigger?.(panel.id);
         const keys = shortcut?.(panel.id);
         const tooltipLabel = [
           panel.title,
@@ -159,6 +178,9 @@ export function PinnedPanelCards({
               aria-pressed={open}
               aria-disabled={run === undefined ? true : undefined}
               onClick={run}
+              onContextMenu={menu?.onContextMenu}
+              aria-haspopup={menu?.['aria-haspopup']}
+              aria-expanded={menu?.['aria-expanded']}
               draggable={onOrderChange !== undefined}
               aria-description={onOrderChange ? t('workspace.reorderHint') : undefined}
               onDragStart={(event) => {
@@ -168,6 +190,8 @@ export function PinnedPanelCards({
                 setDragging(panel.id);
               }}
               onKeyDown={(event) => {
+                menu?.onKeyDown?.(event);
+                if (event.defaultPrevented) return;
                 if (
                   !onOrderChange ||
                   !event.altKey ||
@@ -202,7 +226,19 @@ export function PinnedPanelCards({
                 />
               )}
               <ChannelSidebarIcon name={panel.icon} size={collapsed ? 18 : 16} />
-              {mark === undefined ? null : mark.count > 0 && !collapsed ? (
+              {mark === undefined ? null : collapsed && mark.indicator !== undefined ? (
+                mark.indicator === 'on' ? (
+                  <span {...stylex.props(styles.dot)} data-pinned-panel-dot="" aria-hidden="true" />
+                ) : mark.indicator === 'unknown' ? (
+                  <span
+                    {...stylex.props(styles.count, styles.unknown)}
+                    data-pinned-panel-unknown=""
+                    aria-hidden="true"
+                  >
+                    …
+                  </span>
+                ) : null
+              ) : mark.count > 0 && !collapsed ? (
                 <span {...stylex.props(styles.count)} data-pinned-panel-count="">
                   {mark.count > 99 ? '99+' : mark.count}
                 </span>
@@ -317,6 +353,7 @@ const styles = stylex.create({
     textAlign: 'center',
     fontVariantNumeric: 'tabular-nums',
   },
+  unknown: { backgroundColor: color.well, color: color.muted },
   dot: {
     position: 'absolute',
     top: space.x2,

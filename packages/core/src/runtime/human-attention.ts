@@ -57,6 +57,12 @@ export interface HumanAttentionPage {
   nextCursor?: string;
 }
 
+export interface HumanAttentionStatus {
+  unreadCount: number;
+  hasAction: boolean;
+  messageCounts?: { replies: number; other: number };
+}
+
 export interface HumanAttentionQuery {
   item(id: string, sourceKey?: string): HumanAttentionItem | undefined;
   assignmentContext(
@@ -78,7 +84,7 @@ export interface HumanAttentionQuery {
     cursor?: string;
     limit?: number;
   }): HumanAttentionPage;
-  status(): { unreadCount: number; hasAction: boolean };
+  status(messageCounts?: boolean): HumanAttentionStatus;
   unreadByChannel(): Array<{ channelId: string; unreadCount: number }>;
   durableAttention(): Array<{
     botSlug: string;
@@ -996,22 +1002,29 @@ SELECT 'handled:' || request.source_event_id AS id,
         botSlugs: rows.map((row) => row.bot_slug),
       };
     },
-    status() {
-      const unreadCount = database.read(
+    status(messageCounts = false) {
+      const counts = database.read(
         (db) =>
-          (
-            db
-              .prepare(`${INBOX_CHANNEL_ATTENTION_CTE}
-        SELECT count(DISTINCT source_event_id) AS unread_count FROM visible_unread
-      `)
-              .get(LOCAL_HUMAN_ID, LOCAL_HUMAN_ID, JSON.stringify(mutedChannelIds())) as {
-              unread_count: number;
-            }
-          ).unread_count,
+          db
+            .prepare(`${INBOX_CHANNEL_ATTENTION_CTE}, unread_events AS (
+          SELECT source_event_id, max(is_reply OR is_mention) AS personal
+            FROM visible_unread GROUP BY source_event_id
+        )
+          SELECT count(*) AS total, coalesce(sum(personal), 0) AS replies,
+                 count(*) - coalesce(sum(personal), 0) AS other FROM unread_events
+        `)
+            .get(LOCAL_HUMAN_ID, LOCAL_HUMAN_ID, JSON.stringify(mutedChannelIds())) as {
+            total: number;
+            replies: number;
+            other: number;
+          },
       );
       return {
-        unreadCount,
+        unreadCount: counts.total,
         hasAction: this.list({ category: 'action', limit: 1 }).items.length > 0,
+        ...(messageCounts
+          ? { messageCounts: { replies: counts.replies, other: counts.other } }
+          : {}),
       };
     },
     unreadByChannel() {

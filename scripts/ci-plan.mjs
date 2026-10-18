@@ -46,6 +46,10 @@ export const RULES = [
     true,
   ),
   related('packages/*/src/**', 'Package source'),
+  full(
+    'packages/core/test/fixtures/memory-images/**',
+    'Binary image fixtures are loaded dynamically by Host, CLI and mobile tests',
+  ),
   related('packages/*/test/**', 'Package tests and helpers'),
   related('packages/*/lib/**', 'Committed client bundles read by stylesheet tests'),
   related('packages/*/extension/**', 'Browser extension sources'),

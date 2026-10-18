@@ -165,6 +165,25 @@ export interface MemoryFile {
   body: string;
   head: string;
   binary?: boolean;
+  image?: MemoryImage;
+  markdown?: MemoryMarkdown;
+}
+
+export interface MemoryImage {
+  source: string;
+  status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
+  revision?: string;
+  mime?: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | 'image/svg+xml';
+  size?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface MemoryMarkdown {
+  source: string;
+  status: MemoryImage['status'];
+  revision?: string;
+  body: string;
 }
 
 export type ScheduleTrigger =
@@ -275,6 +294,7 @@ export interface WireGroupJoinRequest {
 }
 
 export type RosterLiveFrame =
+  | { type: 'attention' }
   | { type: 'baseline'; placements: unknown[] }
   | { type: 'changed' }
   | { type: 'latest'; channelId: string; message: WireMessage }

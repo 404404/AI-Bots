@@ -271,6 +271,7 @@ import {
 import {
   HUMAN_INBOX_SNOOZE_MAX_MS,
   type HumanAttentionQuery,
+  type HumanAttentionStatus,
   type HumanAttentionDecisions,
   type HumanAttentionPage,
   type HumanAttentionCategory,
@@ -622,7 +623,7 @@ export interface BridgeMethods {
   activityOverview(payload: unknown): BridgeResult<ActivityOverview>;
   humanAttention(payload: unknown): BridgeResult<HumanAttentionPage>;
   humanAssignmentContext(payload: unknown): BridgeResult<{ context: HumanAssignmentContext }>;
-  humanAttentionStatus(payload: unknown): BridgeResult<{ unreadCount: number; hasAction: boolean }>;
+  humanAttentionStatus(payload: unknown): BridgeResult<HumanAttentionStatus>;
   channelUnreadCounts(
     payload: unknown,
   ): BridgeResult<{ channels: Array<{ channelId: string; unreadCount: number }> }>;
@@ -4902,11 +4903,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(String(error));
       }
     },
-    humanAttentionStatus() {
+    humanAttentionStatus(payload) {
+      const requested = asObject(payload)['messageCounts'];
+      if (requested !== undefined && typeof requested !== 'boolean')
+        return invalidInput('messageCounts must be boolean');
       try {
         return {
           ok: true,
-          value: deps.humanAttention?.status() ?? { unreadCount: 0, hasAction: false },
+          value: deps.humanAttention?.status(requested === true) ?? {
+            unreadCount: 0,
+            hasAction: false,
+            ...(requested === true ? { messageCounts: { replies: 0, other: 0 } } : {}),
+          },
         };
       } catch (error) {
         return invalidInput(String(error));
