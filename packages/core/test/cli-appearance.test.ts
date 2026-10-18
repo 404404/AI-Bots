@@ -39,6 +39,26 @@ describe('appearance CLI contract', () => {
     });
     expect(result).toEqual({ snapshot: { config: { revision: 'new' } } });
   });
+  it('reads functional targets from one Client through the same owner reply', async () => {
+    const reply = {
+      targets: [{ id: 'dock:bh:home', label: 'Home' }],
+      snapshot: { config: { revision: 'current' } },
+    };
+    const http = vi.fn(async () => ({ bytes: new TextEncoder().encode(JSON.stringify(reply)) }));
+    expect(
+      await runAppearanceCommand(
+        'appearance-targets',
+        [],
+        { 'client-id': 'one' },
+        io,
+        async () => ({ http }),
+      ),
+    ).toEqual(reply);
+    expect(http).toHaveBeenCalledExactlyOnceWith('/api/botharness/appearance-control', {
+      action: 'request',
+      clientId: 'one',
+    });
+  });
   it('rejects malformed JSON and write flags on read commands', async () => {
     const connect = vi.fn();
     await expect(

@@ -690,9 +690,10 @@
         "route:packages/core/src/plugin.ts:APPEARANCE_CONTROL_PATH",
         "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialBlur')}",
         "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialColor')}",
-        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialOpacity')}"
+        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialOpacity')}",
+        "setting:packages/client/src/client/appearance-panel-settings.tsx:{t( field === 'color' ? 'appearance.materialColor' : field === 'opacity' ? 'appearance.materialOpacity' : 'appearance.materialBlur', )}"
       ],
-      "commands": ["appearance-clients", "appearance-get", "appearance-set"]
+      "commands": ["appearance-clients", "appearance-get", "appearance-set", "appearance-targets"]
     }
   ]
 }

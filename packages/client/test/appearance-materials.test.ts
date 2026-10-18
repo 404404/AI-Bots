@@ -43,7 +43,7 @@ describe('global Header/Body appearance', () => {
     const { owner, storage } = fixture();
     const original = parseAppearance(null);
     original.wallpaper = { asset: 'kept' };
-    original.modes.light.panels = { memory: { color: 'kept' } };
+    original.modes.light.panels = { 'dock:memory': { header: { future: 'kept' } } };
     original.modes.light.materials = {
       header: { color: '#112233', opacity: 5, blur: 40, future: 3 },
     };

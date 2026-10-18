@@ -970,3 +970,9 @@ Global materials (T2): the four presets are `classic-blue`, `mist-purple`, `fore
 ```bash
 printf '%s' '{"mode":"light","materials":{"header":{"color":"#e9ddf6","opacity":75,"blur":16},"body":{"opacity":80,"blur":12}}}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
 ```
+
+Functional Panels (T3): `deepseekbot appearance-targets --client-id CLIENT_ID` reads the target catalog and snapshot from that Client (use the same Host/auth flags as above). IDs such as `dock:bh:channel-body` identify the Messages function, regardless of its selected Channel. `appearance-get` also returns `targets`.
+
+Use `appearance-set` with `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":"#e0c1ed","opacity":42},"body":{"blur":8}}}}`. Send a field as `null` to follow global, for example `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":null}}}}`. Reset only that target/mode with `{"mode":"light","panel":{"id":"dock:bh:channel-body","reset":true}}`. Panel operations cannot mix global fields in the same patch. All writes require `--patch-stdin` and the last `--expected-revision`.
+
+Target refusals are `appearance-target-unavailable`, `appearance-target-duplicate` and `appearance-target-invalid`; they never redirect to another Panel. Closing a Panel does not delete its override. Global preset changes retain it. Nested targets are introduced separately.

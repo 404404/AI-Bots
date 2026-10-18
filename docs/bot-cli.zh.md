@@ -954,3 +954,9 @@ printf '%s' '{"preference":"dark","mode":"dark","preset":"mist-purple","primary"
 ```bash
 printf '%s' '{"mode":"light","materials":{"header":{"color":"#e9ddf6","opacity":75,"blur":16},"body":{"opacity":80,"blur":12}}}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
 ```
+
+功能 Panel（T3）：`deepseekbot appearance-targets --client-id CLIENT_ID` 从指定 Client 读取功能目标和本地快照，Host/认证参数同上。`dock:bh:channel-body` 表示 Messages 功能，不随当前频道改变。`appearance-get` 也返回 `targets`。
+
+使用 `appearance-set` 补丁 `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":"#e0c1ed","opacity":42},"body":{"blur":8}}}}`。字段传 `null` 恢复跟随全局，例如 `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":null}}}}`。仅恢复该目标和模式：`{"mode":"light","panel":{"id":"dock:bh:channel-body","reset":true}}`。Panel 操作不能与全局属性混在一个补丁中。写入仍要求 `--patch-stdin` 和刚读取的 `--expected-revision`。
+
+目标拒绝码：`appearance-target-unavailable`、`appearance-target-duplicate`、`appearance-target-invalid`，不会替换成另一个 Panel。关闭 Panel 保留覆盖，切换全局主题也保留。嵌套目标在后续切片接入。

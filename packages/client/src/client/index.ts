@@ -1,3 +1,4 @@
+import { panelTargetId } from './appearance-panels.js';
 import { refreshBotPrimaryColors } from './bot-primary-color.js';
 import { Appearance } from './appearance.js';
 import { mountAppearance } from './appearance-scope.js';
@@ -439,6 +440,11 @@ export function apply(ctx: ClientContext): void {
   }, 'botharness: Bot Session visibility');
   const dockPanels = createDockPanelRegistry();
   ctx.provide('dockPanels', dockPanels);
+  ctx.effect(() =>
+    appearance.setTargetSource(() =>
+      dockPanels.panels().map((panel) => ({ id: panelTargetId(panel.id), label: panel.title })),
+    ),
+  );
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
   const workspace = {
     actions,
@@ -1029,6 +1035,7 @@ export function apply(ctx: ClientContext): void {
           channelSidebar,
           dockPanels,
           profileCards,
+          appearance,
           nativeChatT,
           nativeSessions,
           prefs,
@@ -1174,6 +1181,7 @@ export function apply(ctx: ClientContext): void {
             channelSidebar,
             dockPanels,
             profileCards,
+            appearance,
             nativeChatT,
             nativeSessions,
             prefs,

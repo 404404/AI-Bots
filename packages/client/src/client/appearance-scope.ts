@@ -1,3 +1,4 @@
+import { panelMaterials, validTargetId } from './appearance-panels.js';
 import { appearanceMaterials } from './appearance-materials.js';
 import {
   APPEARANCE_KEY,
@@ -34,7 +35,7 @@ export function appearanceCss(snapshot: AppearanceSnapshot): string {
     .map(([k, v]) => `${k}:${v}`)
     .join(
       ';',
-    )}}:root [data-bh-appearance-owned][data-menu-material],:root .${APPEARANCE_CLASS}[data-menu-material],:root .${APPEARANCE_CLASS} [data-menu-material]{--dsw-elevation-stroke-color:var(--dsw-alias-border-${mode === 'dark' ? 'l3' : 'l4'})}${materialCss()}`;
+    )}}:root [data-bh-appearance-owned][data-menu-material],:root .${APPEARANCE_CLASS}[data-menu-material],:root .${APPEARANCE_CLASS} [data-menu-material]{--dsw-elevation-stroke-color:var(--dsw-alias-border-${mode === 'dark' ? 'l3' : 'l4'})}${materialCss()}${panelCss(snapshot)}`;
 }
 
 export function mountAppearance(owner: Appearance): () => void {
@@ -70,4 +71,20 @@ ${scope} .bh-root, ${scope} .bh-workspace-rail { background:transparent; }
 ${scope} .dv-tabs-and-actions-container, ${scope} .bh-channel-session-header { background:var(--bh-global-header-fill); backdrop-filter:blur(var(--bh-global-header-blur)); }
 ${scope} .dv-content-container { background:var(--bh-global-body-fill); backdrop-filter:blur(var(--bh-global-body-blur)); }
 `;
+}
+
+function panelCss({ config, mode }: AppearanceSnapshot): string {
+  return Object.keys(config.modes[mode].panels ?? {})
+    .filter(validTargetId)
+    .map((id) => {
+      const material = panelMaterials(config.modes[mode], mode, id);
+      const scope = `:root .bh-workspace-mount[data-workspace-enabled] .dv-groupview:has(> .dv-tabs-and-actions-container .dv-active-tab [data-dock-header="${id.slice(5)}"])`;
+      return (['header', 'body'] as const)
+        .map(
+          (part) =>
+            `${scope} > ${part === 'header' ? '.dv-tabs-and-actions-container' : '.dv-content-container'} { background:color-mix(in srgb, ${material[part].color} ${material[part].opacity}%, transparent); backdrop-filter:blur(${material[part].blur}px); }`,
+        )
+        .join('');
+    })
+    .join('');
 }

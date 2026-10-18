@@ -1,3 +1,5 @@
+import { AppearanceContext } from './appearance-context.js';
+import type { Appearance } from './appearance.js';
 import { onboardingFor } from './onboarding.js';
 import { PointerMenu } from './ds/pointer-menu.js';
 import { useScopedRef, useScopedState } from './scoped-state.js';
@@ -3408,10 +3410,12 @@ function BotMainContent({
 const subscribeWithoutPrefs = (): (() => void) => () => {};
 
 export function BotMain({
+  appearance,
   prefs,
   workspace,
   ...props
 }: Parameters<typeof BotMainContent>[0] & {
+  appearance?: Appearance | undefined;
   workspace?: WorkspaceOptions | undefined;
   prefs?: Pick<BotModePrefs, 'source'> | undefined;
 }): ReactElement {
@@ -3428,15 +3432,18 @@ export function BotMain({
   return (
     <MessageDeveloperMode.Provider value={developerMode}>
       <ComposerSendKeyContext.Provider value={sendKey}>
-        <Workspace options={workspace} t={props.t ?? zhTranslate}>
-          <BotMainContent {...props} />
-        </Workspace>
+        <AppearanceContext.Provider value={appearance}>
+          <Workspace options={workspace} t={props.t ?? zhTranslate}>
+            <BotMainContent {...props} />
+          </Workspace>
+        </AppearanceContext.Provider>
       </ComposerSendKeyContext.Provider>
     </MessageDeveloperMode.Provider>
   );
 }
 
 export function BotPanel({
+  appearance,
   onMobileBack,
   workspace,
   prefs,
@@ -3462,6 +3469,7 @@ export function BotPanel({
   nativeChatT?: NativeChatFailureText | undefined;
   releaseNotes?: ReleaseNotesController | undefined;
   telemetryNotice?: TelemetryNoticeController | undefined;
+  appearance?: Appearance | undefined;
   workspace?: WorkspaceOptions | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
@@ -3491,6 +3499,7 @@ export function BotPanel({
         <TelemetryNotice controller={telemetryNotice} releaseNotes={releaseNotes} t={t} />
       )}
       <BotMain
+        appearance={appearance}
         workspace={workspace}
         onMobileBack={onMobileBack}
         prefs={prefs}

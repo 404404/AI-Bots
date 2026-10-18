@@ -3,6 +3,14 @@ import {
   validMaterials,
   type AppearanceMaterialOverrides,
 } from './appearance-materials.js';
+import {
+  applyPanelPatch,
+  validPanelOverrides,
+  validPanelPatch,
+  validTargetId,
+  type AppearanceTarget,
+  type AppearancePanelPatch,
+} from './appearance-panels.js';
 export const APPEARANCE_KEY = 'botharness:appearance:v1';
 export type AppearanceMode = 'light' | 'dark';
 export type AppearancePreference = AppearanceMode | 'system';
@@ -17,6 +25,7 @@ export interface AppearanceModeConfig extends Record<string, unknown> {
   preset: AppearancePreset;
   primary?: string;
   materials?: AppearanceMaterialOverrides;
+  panels?: Record<string, AppearanceMaterialOverrides>;
 }
 export interface AppearanceConfig extends Record<string, unknown> {
   version: 1;
@@ -73,6 +82,7 @@ export function parseAppearance(raw: string | null): AppearanceConfig {
   for (const mode of ['light', 'dark'] as const) {
     const entry = object(modes[mode]);
     if (
+      (entry.panels !== undefined && !validPanelOverrides(entry.panels)) ||
       (entry.materials !== undefined && !validMaterials(entry.materials)) ||
       !preset(entry.preset) ||
       (entry.primary !== undefined &&
@@ -88,17 +98,25 @@ export interface AppearancePatch {
   preset?: AppearancePreset;
   primary?: string;
   materials?: AppearanceMaterialOverrides;
+  panel?: AppearancePanelPatch;
 }
 export function parseAppearancePatch(value: unknown): AppearancePatch {
   const v = object(value);
   if (
     !Object.keys(v).length ||
     Object.keys(v).some(
-      (k) => !['preference', 'mode', 'preset', 'primary', 'materials'].includes(k),
+      (k) => !['preference', 'mode', 'preset', 'primary', 'materials', 'panel'].includes(k),
     ) ||
     (v.preference !== undefined && !preference(v.preference)) ||
     (v.mode !== undefined && v.mode !== 'light' && v.mode !== 'dark') ||
     (v.preset !== undefined && !preset(v.preset)) ||
+    (v.panel !== undefined &&
+      (!validPanelPatch(v.panel) ||
+        v.mode === undefined ||
+        v.preference !== undefined ||
+        v.preset !== undefined ||
+        v.primary !== undefined ||
+        v.materials !== undefined)) ||
     (v.materials !== undefined && !validMaterials(v.materials, true)) ||
     (v.primary !== undefined &&
       (typeof v.primary !== 'string' || !/^#[0-9a-f]{6}$/i.test(v.primary))) ||
@@ -107,7 +125,8 @@ export function parseAppearancePatch(value: unknown): AppearancePatch {
     (v.mode !== undefined &&
       v.preset === undefined &&
       v.primary === undefined &&
-      v.materials === undefined)
+      v.materials === undefined &&
+      v.panel === undefined)
   )
     throw new AppearanceError('appearance-invalid-input');
   return v as AppearancePatch;
@@ -115,6 +134,21 @@ export function parseAppearancePatch(value: unknown): AppearancePatch {
 export class Appearance {
   #snapshot: AppearanceSnapshot;
   #listeners = new Set<() => void>();
+  #targets: () => readonly AppearanceTarget[] = () => [];
+  setTargetSource(source: () => readonly AppearanceTarget[]): () => void {
+    this.#targets = source;
+    return () => {
+      if (this.#targets === source) this.#targets = () => [];
+    };
+  }
+  targets(): readonly AppearanceTarget[] {
+    const targets = this.#targets();
+    if (targets.some((target) => !validTargetId(target.id)))
+      throw new AppearanceError('appearance-target-invalid');
+    if (new Set(targets.map((target) => target.id)).size !== targets.length)
+      throw new AppearanceError('appearance-target-duplicate');
+    return targets;
+  }
   constructor(
     private storage: AppearanceStorage | undefined,
     private system: () => AppearanceMode,
@@ -158,6 +192,8 @@ export class Appearance {
   update = (value: unknown, expectedRevision?: string): AppearanceSnapshot => {
     try {
       const patch = parseAppearancePatch(value);
+      if (patch.panel && !this.targets().some((target) => target.id === patch.panel!.id))
+        throw new AppearanceError('appearance-target-unavailable');
       const current = this.#read();
       if (expectedRevision !== undefined && expectedRevision !== current.revision)
         throw new AppearanceError('appearance-revision-conflict');
@@ -166,6 +202,7 @@ export class Appearance {
       if (patch.preference !== undefined) next.preference = patch.preference;
       if (patch.mode !== undefined) {
         const mode = next.modes[patch.mode];
+        if (patch.panel) applyPanelPatch(mode, patch.panel);
         if (patch.preset !== undefined) {
           mode.preset = patch.preset;
           delete mode.primary;
