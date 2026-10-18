@@ -12,6 +12,11 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  createHere: 'Create or join',
+  chooseCreationTarget: 'Choose where to create',
+  noCreationTargets: 'No available actions for this environment.',
+  creationSourceChanged: 'The selected connection changed. Close this menu and choose again.',
+  invitePeople: 'Invite people',
   allEnvironments: 'All',
   activityPartialScope: 'Showing this Computer’s activity. Cloud activity is not available yet.',
   activitySourceUnavailable:
@@ -977,6 +982,11 @@ const en = {
 };
 
 const zh: typeof en = {
+  createHere: '创建或加入',
+  chooseCreationTarget: '选择创建位置',
+  noCreationTargets: '当前环境没有可用操作。',
+  creationSourceChanged: '所选连接已变更，请关闭菜单后重新选择。',
+  invitePeople: '邀请成员',
   allEnvironments: '全部',
   activityPartialScope: '当前显示此电脑的动态；云端动态暂不可用。',
   activitySourceUnavailable: '此环境暂不支持动态。请在聊天页选择电脑以查看它的动态。',

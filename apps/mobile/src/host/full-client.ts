@@ -29,6 +29,7 @@ export function staysInFullClient(route: string, url: string): boolean {
 }
 
 export type FullClientParams = {
+  hostId?: string;
   target?: string;
   slug?: string;
   channelId?: string;

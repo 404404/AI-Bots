@@ -3,7 +3,6 @@ import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-r
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
 import { prefetchInbox } from '../../../src/host/inbox';
 import { useHostLook } from '../../../src/host/native-host-look';
@@ -27,7 +26,6 @@ import {
 } from '../../../src/host/conversation-environments';
 import { shownHostName } from '../../../src/ui/design/host-look';
 import { Text } from '../../../src/ui/primitives/text';
-import { CreateButton, type CreateTarget } from '../../../src/ui/shell/create-button';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { SettingsButton } from '../../../src/ui/shell/settings-button';
@@ -202,8 +200,6 @@ const HomeContent = memo(function HomeContent({
       </View>
     );
   if (saved === null && cloud.rows.length === 0) return <Redirect href="/cloud-join" />;
-  const create = (target: CreateTarget) =>
-    router.push({ pathname: '/full-client', params: fullClientParams(target) });
   const refresh = async () => {
     setRefreshing(true);
     await Promise.all([client?.refresh(), inbox?.refresh(), cloudConversations.refresh()]).catch(
@@ -294,7 +290,6 @@ const HomeContent = memo(function HomeContent({
                       value={query}
                       placeholder={t.searchPlaceholder}
                       onChangeText={setQuery}
-                      trailing={saved ? <CreateButton onPick={create} /> : undefined}
                     />
                     {(directory.errors.length > 0 || cloud.error || error) && (
                       <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>

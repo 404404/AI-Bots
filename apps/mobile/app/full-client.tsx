@@ -21,6 +21,7 @@ export default function FullClientScreen() {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<'loading' | 'loaded' | 'refused' | 'unreachable'>('loading');
 
+  const sourceChanged = !!params.hostId && saved?.hostId !== params.hostId;
   const route =
     snapshot.connection.route !== '' ? snapshot.connection.route : (saved?.routes[0] ?? '');
   const revoked = saved === null || state === 'refused' || snapshot.connection.status === 'refused';
@@ -33,7 +34,11 @@ export default function FullClientScreen() {
 
   return (
     <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: theme.background }}>
-      {revoked || state === 'unreachable' ? (
+      {sourceChanged ? (
+        <View style={{ flex: 1, padding: 24 }}>
+          <Text accessibilityRole="alert">{t.creationSourceChanged}</Text>
+        </View>
+      ) : revoked || state === 'unreachable' ? (
         <View style={{ flex: 1, padding: 24, gap: 16, justifyContent: 'center' }}>
           <Text
             accessibilityRole="alert"
