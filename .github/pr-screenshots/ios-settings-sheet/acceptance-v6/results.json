@@ -1,0 +1,106 @@
+{
+  "default-light": [
+    {
+      "name": "Fixed header and last row reachable",
+      "passed": true
+    },
+    {
+      "name": "Statistics disclosure expands and collapses",
+      "passed": true
+    },
+    {
+      "name": "Root handle drag closes sheet",
+      "passed": true
+    },
+    {
+      "name": "Immediate setting survives dismiss and reopen",
+      "passed": true
+    },
+    {
+      "name": "Accessible Close handle tap dismisses scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Canonical preference survives cold restart",
+      "passed": true
+    },
+    {
+      "name": "Original Streaming restored",
+      "passed": true
+    },
+    {
+      "name": "Child handle drag closes sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to Settings root",
+      "passed": true
+    }
+  ],
+  "background-retry": [
+    {
+      "name": "Background child Back stays within Settings",
+      "passed": true
+    },
+    {
+      "name": "Background Back discards unsaved draft",
+      "passed": true
+    },
+    {
+      "name": "Background handle tap closes entire Settings",
+      "passed": true
+    },
+    {
+      "name": "Background handle dismissal discards unsaved draft",
+      "passed": true
+    },
+    {
+      "name": "Background child handle drag closes Settings",
+      "passed": true
+    },
+    {
+      "name": "Reopen after background dismissal resets to Settings root",
+      "passed": true
+    }
+  ],
+  "chinese-retry": [
+    {
+      "name": "Chinese statistics disclosure expands and collapses",
+      "passed": true
+    },
+    {
+      "name": "Fixed header and final row reachable",
+      "passed": true
+    },
+    {
+      "name": "Handle activation closes scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Handle drag dismisses sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to root",
+      "passed": true
+    }
+  ],
+  "reduce-motion": [
+    {
+      "name": "Fixed header and final row reachable",
+      "passed": true
+    },
+    {
+      "name": "Handle activation closes scrolled sheet",
+      "passed": true
+    },
+    {
+      "name": "Handle drag dismisses sheet",
+      "passed": true
+    },
+    {
+      "name": "Reopen returns to root",
+      "passed": true
+    }
+  ]
+}
