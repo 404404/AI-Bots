@@ -614,3 +614,27 @@ it('cloud list and revisioned policy/removal use the same owner, requiring expli
     input: { operation: 'remove', id, revision: 2, confirm: true },
   });
 });
+
+it('runs cloud_work through authenticated CLI parity and refuses caller-supplied authority before contacting Host', async () => {
+  const input = { operation: 'execute', source_event_id: 'im-' + 'a'.repeat(64) };
+  const live = await host((method, args) => {
+    expect(method).toBe('cloudWork');
+    expect(args).toEqual({ slug: 'cloud-a', input });
+    return { ok: true, value: { state: 'finished', executed: 1 } };
+  });
+  const result = await invoke(
+    ['cloud-work', 'cloud-a', '--input-stdin'],
+    live.url,
+    JSON.stringify(input),
+  );
+  expect(result.code, result.text).toBe(0);
+  expect(result.json).toEqual({ state: 'finished', executed: 1 });
+  const bad = await invoke(
+    ['cloud-work', 'cloud-a', '--input-stdin'],
+    live.url,
+    JSON.stringify({ ...input, requesterUserId: 'canary-authority' }),
+  );
+  expect(bad.code).toBe(1);
+  expect(bad.text).not.toContain('canary-authority');
+  expect(live.calls).toHaveLength(1);
+});

@@ -11,6 +11,31 @@ export function cloudMessageAllowed(
   event: Omit<MessagingInboundEvent, 'text'>,
   context: boolean,
 ): boolean {
+  if (!context) {
+    try {
+      return (
+        cloudWorkIdentityAllowed(db, botSlug, event) &&
+        Date.parse(parseWorkRequest(event.cloudWork).expiresAt) > Date.now()
+      );
+    } catch {
+      return false;
+    }
+  }
+  return cloudIdentityAllowed(db, botSlug, event, true);
+}
+export function cloudWorkIdentityAllowed(
+  db: DatabaseSync,
+  botSlug: string,
+  event: Omit<MessagingInboundEvent, 'text'>,
+): boolean {
+  return cloudIdentityAllowed(db, botSlug, event, false);
+}
+function cloudIdentityAllowed(
+  db: DatabaseSync,
+  botSlug: string,
+  event: Omit<MessagingInboundEvent, 'text'>,
+  context: boolean,
+): boolean {
   const row = db
     .prepare('SELECT connection_json,policy_json FROM cloud_connections WHERE id=? AND active=1')
     .get(event.botId) as { connection_json: string; policy_json: string } | undefined;
@@ -35,7 +60,6 @@ export function cloudMessageAllowed(
     return (
       work.channelId === connection.channelId &&
       work.targetActorId === connection.actorId &&
-      Date.parse(work.expiresAt) > Date.now() &&
       (work.delegation
         ? event.actor.kind === 'agent' && event.actor.id === work.delegation.actorId
         : event.actor.kind === 'user' && event.actor.id === work.requesterUserId) &&

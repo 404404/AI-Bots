@@ -1,6 +1,25 @@
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 import { parseCloudManagement } from '../cloud/management.js';
+import { parseCloudWork } from '../cloud/work.js';
+export async function prepareCloudWork(
+  rest: string[],
+  values: { 'input-stdin'?: boolean },
+  io: BotCreateCliIo,
+) {
+  if (rest.length !== 1 || !rest[0]?.trim() || !values['input-stdin'] || !io.readStdin)
+    throw new CliLiveError('usage', 'Use cloud-work <bot> --input-stdin.');
+  try {
+    const text = await io.readStdin();
+    if (Buffer.byteLength(text) > 2000) throw Error();
+    return { slug: rest[0].trim(), input: parseCloudWork(JSON.parse(text)) };
+  } catch {
+    throw new CliLiveError(
+      'invalid-cloud-work',
+      'Cloud work requires an operation and canonical source_event_id.',
+    );
+  }
+}
 export async function prepareCloud(
   rest: string[],
   values: { 'input-stdin'?: boolean; confirm?: boolean },

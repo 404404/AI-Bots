@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-Explicit cloud credential import, existing Bot binding, typed source delivery, replay and connection removal.
+Explicit cloud credential import, existing Bot binding, typed source delivery, replay, connection removal and bounded health work.
 
 ## How to get to it (user POV)
 
@@ -16,7 +16,8 @@ Reserve the shared QA lane before starting Hosts. Use two distinct isolated DSH 
 2. Send one typed request to the bound remote Agent. Correlate Cloud channel sequence, local Source Event, Inbox admission and Orchestrator run. Ordinary unrelated text and result messages must not independently wake the Bot. Repeat with explicit ordinary-message immediate wake and a local Channel bridge whose members wake on all messages; unauthorized requests stay context-only. Revoke the local allow-list after admission and check current source consumption refuses execution.
 3. Interrupt delivery acknowledgement, resume, and verify one canonical source and one admission. Plain HTTP source tests are not a real network-interruption result.
 4. Remove the connection with its current revision. Confirm traffic stops before credential cleanup and that responses already in flight cannot advance the checkpoint. Retry failed cleanup; reimport must require explicit local policy again.
-5. For the full collaboration gate, separately prove the bounded work owner, original-Human policy, A-to-B forwarding, one execution, result delivery and both Host restarts through real Cloudflare UAT. Independent Node processes, fake model adapters and source tests do not pass this gate.
+5. Use `cloud-work <bot> --input-stdin` with an admitted Source Event ID to inspect/execute/forward through the same Tool implementation. Verify pause/revocation, malformed canonical responses, expired requests and recovery from uncertain result/forward delivery. No arbitrary shell or supplied Human identity is accepted.
+6. For the full collaboration gate, separately prove the bounded work owner, original-Human policy, A-to-B forwarding, one execution, result delivery and both Host restarts through real Cloudflare UAT. Independent Node processes, fake model adapters and source tests do not pass this gate.
 
 ## Gotchas
 

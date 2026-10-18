@@ -2362,6 +2362,27 @@ const CLOUD_CONNECTION_MIGRATION: SchemaMigration = {
   },
 };
 
+const CLOUD_WORK_MIGRATION: SchemaMigration = {
+  generation: 101,
+  module: 'messaging',
+  description: 'Fence bounded cloud work execution and forwarding across retries',
+  migrate(database) {
+    database.exec(`CREATE TABLE cloud_work (
+      connection_id TEXT NOT NULL,
+      request_id TEXT NOT NULL,
+      bot_slug TEXT NOT NULL,
+      source_event_id TEXT NOT NULL,
+      request_hash TEXT NOT NULL,
+      state TEXT NOT NULL CHECK (state IN ('authorizing','started','outbox','finished','forwarding','forwarded')),
+      target_actor_id TEXT,
+      environment TEXT NOT NULL,
+      execution_count INTEGER NOT NULL CHECK (execution_count IN (0,1)),
+      outcome_json TEXT,
+      PRIMARY KEY (connection_id,request_id)
+    );`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2462,4 +2483,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   CHANNEL_MANAGEMENT_OPERATION_MIGRATION,
   GROUP_SEND_REVIEW_MIGRATION,
   CLOUD_CONNECTION_MIGRATION,
+  CLOUD_WORK_MIGRATION,
 ]);

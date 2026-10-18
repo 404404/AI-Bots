@@ -1,3 +1,5 @@
+import { type CloudWork } from '../cloud/work.js';
+import { runCloudWorkDirect } from '../cloud/work-tool.js';
 import {
   manageCloud,
   parseCloudManagement,
@@ -512,6 +514,7 @@ export interface BridgeMethods {
   messagingDefaults(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   messagingDefaultsSet(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   cloudConnections(payload: unknown): Promise<BridgeResult<CloudManagementResult>>;
+  cloudWork(payload: unknown): Promise<BridgeResult<Awaited<ReturnType<CloudWork['run']>>>>;
   messagingApps(): Promise<BridgeResult<MessagingAppsView>>;
   messagingSnapshot(payload: unknown): Promise<BridgeResult<MessagingSnapshot>>;
   messagingReachable(
@@ -774,6 +777,7 @@ export interface ApprovalReviewerModelView {
 
 export interface BridgeMethodsDeps {
   cloudConnections?: CloudConnections;
+  cloudWork?: CloudWork;
   approvalReviewer?: ApprovalReviewerSettings;
   composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
@@ -1644,6 +1648,24 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (!parsed.success)
         return Promise.resolve(invalidInput('Valid qualified platform defaults required'));
       return messagingCall((service) => service.setDefaults(parsed.data));
+    },
+    async cloudWork(payload) {
+      const parsed = z
+        .object({ slug: z.string().min(1), input: z.unknown() })
+        .strict()
+        .safeParse(payload);
+      if (!parsed.success || !deps.registry.get(parsed.data.slug))
+        return invalidInput('Known bot and cloud work input required');
+      try {
+        if (!deps.cloudWork) throw new CloudError('CLOUD_UNAVAILABLE');
+        return {
+          ok: true,
+          value: await runCloudWorkDirect(deps.cloudWork, parsed.data.slug, parsed.data.input),
+        };
+      } catch (error) {
+        const code = error instanceof CloudError ? error.code : 'CLOUD_WORK_UNAVAILABLE';
+        return { ok: false, error: { code, message: code } };
+      }
     },
     async cloudConnections(payload) {
       try {

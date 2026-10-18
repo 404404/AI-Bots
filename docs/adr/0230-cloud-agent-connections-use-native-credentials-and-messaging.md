@@ -1,6 +1,6 @@
 # ADR-0230: Cloud Agent connections use native Credentials and Messaging
 
-- Status: Accepted for the UAT Host slice; two-Host runtime qualification pending
+- Status: Accepted for the UAT Host slice; transport qualified on two Hosts; bounded-work runtime qualification pending
 - Date: 2026-10-18
 - Issue: [#2155](https://github.com/BotHarness/DeepSeekBot/issues/2155)
 
@@ -20,8 +20,12 @@ The initial transport uses bounded public HTTP history. Human and remote Agent a
 
 Text sending receives the existing Outbox's durable operation ID. A deterministic cloud idempotency key is derived from that ID, never from message text. Binding/grant fences run immediately before network send and after response. Uncertain responses remain `unknown`; this adapter does not turn them into confirmed sends or invent automatic retries.
 
-Host management uses authenticated `cloudConnections` RPC and `deepseekbot cloud`. Credentials enter CLI via stdin; removal requires a revision and explicit confirmation. Agent-side health execution/forwarding must use a separate bounded operation owner tied to the accepted source and current local policy. Import or message receipt alone does not grant those capabilities. That owner, model-mediated forwarding, and two isolated Hosts communicating through UAT remain outstanding qualification work.
+Host management uses authenticated `cloudConnections` RPC and `deepseekbot cloud`. Credentials enter CLI via stdin; removal requires a revision and explicit confirmation. Application-defined `CloudWork` owns bounded health execution/forwarding, exposed by the Agent-scoped native `cloud_work` Tool and the authenticated `cloudWork` RPC/`deepseekbot cloud-work` direct path. Both invoke the same Tool implementation. The caller supplies only an operation, canonical Source Event ID and optional forward target; the owner derives original Human, channel, capability and deadline from that accepted source. The live Orchestrator Agent identity, active Bot, current binding and local Human policy are checked. Remote authorization must match the exact canonical request, and local authority is rechecked after I/O before execution. Import or message receipt alone does not grant these capabilities.
+
+Generation 101 adds a bounded work ledger in the same Operational Database. It records request hashes, execution count and outcome, not another conversation store. A durable `authorizing` intent precedes remote authorization; `started` is claimed before the fixed synchronous runtime check. Recovery from `started` reports `needs-review`, never silently repeats the effect. An `outbox` result retries delivery, including after the deadline, without running work again. A durable `forwarding` intent fixes the single-hop target before transmission; uncertain delivery can retry only that target and cannot fall back to execution. Completed/forwarded records return their existing outcome. Current authority still applies to retries. The health capability reads platform, architecture and runtime version; it accepts no arbitrary command or file path.
+
+Two isolated Hosts have qualified transport, removal, context-only authorization and crash-before-checkpoint replay through UAT. The new bounded-work owner has source tests; native model-mediated forwarding and its two-Host UAT result remain unqualified until separately recorded.
 
 ## Consequences
 
-The connector can reuse the existing Bot binding, channel placement and diagnostics surfaces. Native secrets and local canonical messages retain their established ownership. The protocol v1 parser is pinned locally for the independent TOB service; changing that contract requires compatibility tests with both repositories. An old Host cannot open generation 100 without the standard schema recovery gate. No production rollout, automatic downgrade, federation or group-to-group bridge is implied.
+The connector can reuse the existing Bot binding, channel placement and diagnostics surfaces. Native secrets and local canonical messages retain their established ownership. The protocol v1 parser is pinned locally for the independent TOB service; changing that contract requires compatibility tests with both repositories. An old Host cannot open generation 100 or 101 without the standard schema recovery gate. No production rollout, automatic downgrade, federation or group-to-group bridge is implied.

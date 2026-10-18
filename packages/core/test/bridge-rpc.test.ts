@@ -513,6 +513,7 @@ describe('bridge typert service', () => {
       'pairingReview',
       'senderAccess',
       'cloudConnections',
+      'cloudWork',
       'messagingApps',
       'messagingSnapshot',
       'messagingTargets',

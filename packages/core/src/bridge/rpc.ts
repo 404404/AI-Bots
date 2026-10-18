@@ -12,6 +12,7 @@ import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import { LiveRefused } from '../channels/live-frames.js';
 import type { ChannelJournalPage, ChannelJournalRequest } from '../channels/timeline.js';
 import type { CompanionLiveFrame } from '../companions/live.js';
+import type { CloudWork, CloudWorkInput } from '../cloud/work.js';
 import {
   ChannelLiveRefused,
   LiveUnavailable,
@@ -504,6 +505,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
   cloudConnections(input: CloudManagementInput): Promise<CloudManagementResult> {
     return unwrapAsync(this.methods.cloudConnections(input));
+  }
+  cloudWork(slug: string, input: CloudWorkInput): Promise<Awaited<ReturnType<CloudWork['run']>>> {
+    return unwrapAsync(this.methods.cloudWork({ slug, input }));
   }
   messagingApps(): Promise<MessagingAppsView> {
     return unwrapAsync(this.methods.messagingApps());
@@ -1795,6 +1799,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'pairingReview',
   'senderAccess',
   'cloudConnections',
+  'cloudWork',
   'messagingApps',
   'messagingSnapshot',
   'messagingTargets',

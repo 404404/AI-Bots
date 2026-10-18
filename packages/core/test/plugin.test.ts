@@ -433,6 +433,7 @@ describe('plugin entry', () => {
       'pairingReview',
       'senderAccess',
       'cloudConnections',
+      'cloudWork',
       'messagingApps',
       'messagingSnapshot',
       'messagingTargets',
