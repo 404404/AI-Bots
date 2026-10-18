@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientError } from '../src/cloud/instance-contract';
 const state = vi.hoisted(() => ({
   initialChannelId: 'channel_a' as string | undefined,
@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   read: vi.fn(),
   remove: vi.fn(),
   open: vi.fn(),
+  list: vi.fn(),
 }));
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -44,10 +45,7 @@ vi.mock('../src/cloud/native', () => ({
   cloudClient: {
     openChannel: state.open,
     whoami: async () => {},
-    listChannels: async () => ({
-      channels: [{ channelId: 'channel_b', name: 'B' }],
-      nextCursor: null,
-    }),
+    listChannels: state.list,
     readMessages: state.messages,
   },
   useCloudSnapshot: () => ({
@@ -70,11 +68,75 @@ const cached = {
   messages: [{ sequence: 1, text: 'Cached private text', authorId: 'a', authorType: 'human' }],
   hasMore: false,
 };
+beforeEach(() => {
+  state.list.mockReset().mockResolvedValue({
+    channels: [{ channelId: 'channel_b', name: 'B' }],
+    nextCursor: null,
+  });
+});
 afterEach(() => {
   state.initialChannelId = 'channel_a';
 });
 describe('cloud channel cached access', () => {
-  it.each(['CHANNEL_ACCESS_DENIED', 'NETWORK_UNAVAILABLE'])(
+  it.each(['ORGANIZATION_ACCESS_DENIED', 'NETWORK_UNAVAILABLE'])(
+    'handles %s when refreshing a previously loaded channel list',
+    async (code) => {
+      state.initialChannelId = undefined;
+      state.list.mockResolvedValueOnce({
+        channels: [{ channelId: 'channel_b', name: 'B' }],
+        nextCursor: 'next-page',
+      });
+      const node = document.createElement('div');
+      const root = createRoot(node);
+      await act(async () => root.render(<CloudChannelsScreen />));
+      const buttons = () => [...node.querySelectorAll('button')];
+      expect(buttons().some((b) => b.textContent === 'Open channel: B')).toBe(true);
+      state.list.mockRejectedValueOnce(new ClientError(code));
+      await act(async () =>
+        buttons()
+          .find((b) => b.textContent === 'Reload channels')!
+          .click(),
+      );
+      expect(node.textContent).toContain(code);
+      expect(buttons().some((b) => b.textContent === 'Open channel: B')).toBe(
+        code === 'NETWORK_UNAVAILABLE',
+      );
+      expect(buttons().some((b) => b.textContent === 'Load more')).toBe(
+        code === 'NETWORK_UNAVAILABLE',
+      );
+      state.list.mockResolvedValueOnce({ channels: [], nextCursor: null });
+      await act(async () =>
+        buttons()
+          .find((b) => b.textContent === 'Reload channels')!
+          .click(),
+      );
+      expect(buttons().some((b) => b.textContent === 'Open channel: B')).toBe(false);
+      act(() => root.unmount());
+    },
+  );
+  it('clears the old list as well as the open channel on organization access loss', async () => {
+    state.initialChannelId = undefined;
+    state.messages.mockResolvedValueOnce({
+      messages: cached.messages,
+      nextCursor: 1,
+      hasMore: false,
+    });
+    const node = document.createElement('div');
+    const root = createRoot(node);
+    await act(async () => root.render(<CloudChannelsScreen />));
+    const button = (label: string) =>
+      [...node.querySelectorAll('button')].find((b) => b.textContent === label);
+    await act(async () => button('Open channel: B')!.click());
+    expect(node.textContent).toContain('Cached private text');
+    state.messages.mockRejectedValueOnce(new ClientError('ORGANIZATION_ACCESS_DENIED'));
+    await act(async () => button('Reload messages')!.click());
+    expect(node.textContent).toContain('ORGANIZATION_ACCESS_DENIED');
+    expect(node.textContent).not.toContain('Cached private text');
+    expect(button('Reload messages')).toBeUndefined();
+    expect(button('Open channel: B')).toBeUndefined();
+    act(() => root.unmount());
+  });
+  it.each(['CHANNEL_ACCESS_DENIED', 'ORGANIZATION_ACCESS_DENIED', 'NETWORK_UNAVAILABLE'])(
     'handles %s after cache has loaded',
     async (code) => {
       state.remove.mockReset();
@@ -118,20 +180,23 @@ describe('cloud channel cached access', () => {
     );
     act(() => root.unmount());
   });
-  it('does not resurrect a delayed cache after permission denial', async () => {
-    let release: (value: unknown) => void = () => {};
-    state.read.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    state.open.mockRejectedValue(new ClientError('CHANNEL_ACCESS_DENIED'));
-    const node = document.createElement('div');
-    const root = createRoot(node);
-    await act(async () => root.render(<CloudChannelsScreen />));
-    await act(async () => release(cached));
-    expect(node.textContent).not.toContain('Cached private text');
-    act(() => root.unmount());
-  });
+  it.each(['CHANNEL_ACCESS_DENIED', 'ORGANIZATION_ACCESS_DENIED'])(
+    'does not resurrect a delayed cache after %s',
+    async (code) => {
+      let release: (value: unknown) => void = () => {};
+      state.read.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            release = resolve;
+          }),
+      );
+      state.open.mockRejectedValue(new ClientError(code));
+      const node = document.createElement('div');
+      const root = createRoot(node);
+      await act(async () => root.render(<CloudChannelsScreen />));
+      await act(async () => release(cached));
+      expect(node.textContent).not.toContain('Cached private text');
+      act(() => root.unmount());
+    },
+  );
 });
