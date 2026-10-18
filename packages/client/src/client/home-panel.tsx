@@ -1,3 +1,4 @@
+import { TobOnboarding } from './tob-onboarding.js';
 import { HomeWelcome } from './home-welcome.js';
 import { HomeOverview } from './home-overview.js';
 import { ChannelComposer, type ChannelComposerUpload } from './channel-composer.js';
@@ -334,6 +335,20 @@ export function HomePanel({
             onSubmit={submit}
           />
         )}
+        <TobOnboarding
+          actions={actions}
+          t={t}
+          ready={ready === true}
+          hasDraft={!!draft.trim() || uploads.length > 0}
+          openChannel={(id) => {
+            registry.open(CHANNEL_BODY_PANEL);
+            void actions.openChannel(id);
+          }}
+          suggest={(body) => {
+            saveDraft(body);
+            setFocusSignal((value) => value + 1);
+          }}
+        />
         <div {...stylex.props(styles.prompts)} aria-label={t('home.starters')}>
           {(['create', 'status', 'action', 'memory'] as const).map((key) => (
             <Button

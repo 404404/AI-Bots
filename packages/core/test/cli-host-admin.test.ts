@@ -471,3 +471,11 @@ it('release-check --force forwards the manual refresh to the Host cache owner', 
   expect(server.calls).toEqual([{ method: 'releaseUpdate', args: { force: true } }]);
   expect(result.code).toBe(0);
 });
+
+it('queries and changes onboarding through the owning Host with coded invalid-action refusal', async () => {
+  const live = await host((method, args) => ok({ method, ...args }));
+  expect((await invoke(['onboarding'], live.url)).json.method).toBe('onboarding');
+  expect((await invoke(['onboarding', '--action', 'pause'], live.url)).json.action).toBe('pause');
+  expect((await invoke(['onboarding', '--action', 'invalid'], live.url)).code).not.toBe(0);
+  expect(live.calls).toHaveLength(2);
+});

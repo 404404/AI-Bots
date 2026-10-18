@@ -181,7 +181,11 @@ import {
   approvalTemplateInUse,
   sessionHasFullAccess,
 } from './workspaces/grant-execution.js';
-import { ChannelToolApproval, type ToolAutoApproval } from './workspaces/tool-approval.js';
+import {
+  ChannelToolApproval,
+  registerChannelToolApproval,
+  type ToolAutoApproval,
+} from './workspaces/tool-approval.js';
 import {
   changesApprovalPolicy,
   createApprovalTemplateLibrary,
@@ -1165,12 +1169,28 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               return {
                 signal: execution.signal,
                 authorize,
-                prepareOperation: async (command, args) =>
-                  (await tobModelOperations(command, args)) ??
-                  (await tobMaintenanceOperations(command, args)) ??
-                  (await tobBotCreationOperations(command, args)) ??
-                  (await tobBotProfileOperations(command, args)) ??
-                  (await tobChannelOperations(command, args)),
+                prepareOperation: async (command, args) => {
+                  const prepared =
+                    (await tobModelOperations(command, args)) ??
+                    (await tobMaintenanceOperations(command, args)) ??
+                    (await tobBotCreationOperations(command, args)) ??
+                    (await tobBotProfileOperations(command, args)) ??
+                    (await tobChannelOperations(command, args));
+                  if (!prepared || !['create', 'group-create'].includes(command)) return prepared;
+                  return {
+                    ...prepared,
+                    run: async (guard, beforeEffect) => {
+                      guard();
+                      core.onboarding.trackCreation(
+                        command,
+                        String(args.operationKey),
+                        actor.session.id,
+                        started,
+                      );
+                      return prepared.run(guard, beforeEffect);
+                    },
+                  };
+                },
                 capabilities: [
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
@@ -1621,9 +1641,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const approvedCalls = new Map<symbol, (name: string, args: unknown) => boolean>();
   ctx.effect(() => () => approvedCalls.clear(), 'botharness: one-call approval execution fences');
   ctx.effect(() => () => toolApproval.close(), 'botharness: Channel tool approvals');
-  ctx.on('approval/request', async (request, next) => (await toolApproval.ask(request)) ?? next(), {
-    global: true,
-  });
+  registerChannelToolApproval(ctx, toolApproval);
   ctx.on(
     'tools/pre-execute',
     async (execution, next) => {

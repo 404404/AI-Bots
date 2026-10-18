@@ -313,6 +313,8 @@ function ChannelMessageContent(): ReactElement {
           >
             <PanelHeader
               label={detailLabel}
+              onHide={closeDetail}
+              hideLabel={dock.t('dock.close', { label: detailLabel })}
               badge={
                 !filesOpen && DetailBadge && detailProps ? (
                   <DetailBadge {...detailProps} />
@@ -484,6 +486,11 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
     <div className="bh-dock-header" data-dock-header={entryId} {...contextMenu.triggerProps}>
       {contextMenu.menu}
       <PanelHeader
+        onHide={() => {
+          dock.close(panelId);
+          panel.onTitleHide?.();
+        }}
+        hideLabel={closeLabel}
         icon={<ChannelSidebarIcon name={panel.icon} />}
         label={
           entryId === CHANNEL_BODY_PANEL && dock.header ? (
