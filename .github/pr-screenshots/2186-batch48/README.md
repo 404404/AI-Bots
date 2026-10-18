@@ -25,19 +25,19 @@ Original signed-out vault, pending join, paired Hosts, clipboard, stopped Docume
 
 All eleven PNGs were visually inspected. Public UAT service addresses and synthetic fixture names are shown; no credentials, tokens or authenticated user IDs. These are interaction states from one product source, not a before/fix build comparison. No video was recorded.
 
-| Image | State                                                              |
-| ----- | ------------------------------------------------------------------ |
-| 01    | Owner/member compact directory, light; roles confirmed by AX/API   |
-| 02    | Owner's two channels and Create form, light                        |
-| 03    | Injected channel-read failure retaining authorized rows, light     |
-| 04    | Actual live Reload recovered after original transport restoration  |
-| 05    | Member list top, without Create form, light                        |
-| 06    | Member list bottom, dark; all six names matched across captures/AX |
-| 07    | Injected drawer-read failure and Retry, dark                       |
-| 08    | Live Retry restored owner/member rows, dark                        |
-| 09    | B's own organizations plus separate guest workspace, dark          |
-| 10    | Guest sees only the invited channel, dark                          |
-| 11    | Same guest-only channel, light                                     |
+| Image                                      | State                                                              |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| [01](01-owner-member-directory-light.png)  | Owner/member compact directory, light; roles confirmed by AX/API   |
+| [02](02-owner-channels-light.png)          | Owner's two channels and Create form, light                        |
+| [03](03-owner-channel-injected-error.png)  | Injected channel-read failure retaining authorized rows, light     |
+| [04](04-owner-channel-recovered.png)       | Actual live Reload recovered after original transport restoration  |
+| [05](05-member-list-light.png)             | Member list top, without Create form, light                        |
+| [06](06-member-bottom-dark.png)            | Member list bottom, dark; all six names matched across captures/AX |
+| [07](07-directory-injected-error-dark.png) | Injected drawer-read failure and Retry, dark                       |
+| [08](08-owner-member-recovered-dark.png)   | Live Retry restored owner/member rows, dark                        |
+| [09](09-guest-directory-dark.png)          | B's own organizations plus separate guest workspace, dark          |
+| [10](10-guest-only-channel-dark.png)       | Guest sees only the invited channel, dark                          |
+| [11](11-guest-only-channel-light.png)      | Same guest-only channel, light                                     |
 
 ## First failures and limits
 
