@@ -8,10 +8,13 @@ on:
   schedule:
     - cron: '0 18 * * *'
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: verify-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
-  cancel-in-progress: true
+  # Main/release commits keep their own verification; only superseded PR runs cancel.
+  # github.workflow separates a release caller from the normal verify run on the same SHA.
+  group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
