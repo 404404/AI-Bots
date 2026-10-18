@@ -42,6 +42,7 @@ import { shownHostName, type HostLook } from '../design/host-look';
 import { glassShadow, useDesignTheme } from '../design/theme';
 import { useMounted } from '../mounted';
 import { drawerSpring, edge, motion, radius, scrim, space } from '../design/tokens';
+import { DrawerHeader } from '../primitives/drawer-header';
 import { CountBadge } from '../primitives/count-badge';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
@@ -577,17 +578,19 @@ export function HostDrawer() {
           ]}
         >
           <View
-            ref={heading}
-            accessible
-            accessibilityRole="header"
-            accessibilityLabel={t.workspaces}
             style={{
               paddingTop: insets.top + space.x5,
               paddingHorizontal: space.x5,
               paddingBottom: space.x4,
             }}
           >
-            <Text variant="display">{t.workspaces}</Text>
+            <DrawerHeader
+              title={t.workspaces}
+              headingRef={heading}
+              icon={<ComputerIcon color={theme.color.fg} size={theme.type.title.line} />}
+              closeLabel={t.closeWorkspaces}
+              onClose={() => settle(false)}
+            />
           </View>
           <FlatList<WorkspaceDrawerItem>
             style={{ flex: 1 }}
