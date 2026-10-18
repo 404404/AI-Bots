@@ -1149,3 +1149,14 @@ External HTTPS images require a per-image click and load directly in the browser
 [Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。尚未开始实现；T1 运行验证及 Human 反馈是扩展门槛。交付状态与依赖以工单为准：T2–T6 依赖 T1，T7 依赖 T6，迁移父票与 T8–T15 各自依赖 T1。迁移与 T2–T7 同属 T1 后的扩展分支，子票不等待协调父票完成，也不隐式等待 T7；并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
 
 T4 保留 ADR-0220 的 Sessions 范围：DM 中为 Bot 所有的 Sessions，Group 默认按原始 Source Event 查看 Assignments，并保留已有显式成员 Bot 筛选。群聊不显示 Bot-bound 面板不等于移除该筛选，也不改变 Session ownership。T5 的 Members 在 DM 消息内隐藏，但全局固定 Group 实例不受当前聊天切换影响。Panel Consumer 释放与卸载领域 Provider／整个 Bundle 分开；后者遵循原生生命周期，能力缺失须明确显示不可用。
+
+### Desktop whole-window zoom (controlled S1)
+
+[ADR-0237](../adr/0237-desktop-window-zoom-is-client-owned.md) defines an application-owned Client
+zoom Service on the stable desktop origin. Settings, native Shortcut Registry commands and an
+explicitly addressed CLI share its versioned local default/current-primary-window document;
+the authenticated Host route is an ephemeral delivery relay with no preference copy. A pinned,
+MIT-preserving downstream theme composition leases only the original font-shortcut Fiber,
+then returns it on disposal. It does not edit the installed desktop shell. Ordinary Web zoom
+is unchanged. The controlled macOS slice is gated on native guest foreground restoration and
+Human QA; numberpad, broader reliability and other desktop platforms remain #2269/#2270.

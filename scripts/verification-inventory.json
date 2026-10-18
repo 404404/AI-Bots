@@ -568,6 +568,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
       "task": 2214,
       "gap": "Native decoding/sharing remains queued; SVG is the bounded static subset, editor/file-card/mobile diff paths remain #2214."
+    },
+    {
+      "id": "desktop.window-zoom",
+      "label": "Set and restore device-local primary-window zoom through Settings and exact-target CLI",
+      "source": "packages/client/src/client/window-zoom.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/desktop-window-zoom.md",
+      "task": 2268,
+      "gap": "Controlled S1 composition only. Ordinary native guest foreground restoration, final native input/visual proof and Human QA remain qualification gates; Windows/Linux are S3."
     }
   ],
   "scripts": [
@@ -1884,6 +1892,14 @@
       "reason": "Matched main/candidate current/Markdown/working/history/narrow images, genuine pixels and animation advancement, version/MIME original-byte exports and rejected SVG external-resource loads.",
       "task": 2214,
       "sha256": "f781c109dba94abe6bae2b3a41b2db0d68a86e3dd3f6a0904ebe5dbf536c0391"
+    },
+    {
+      "path": "scripts/e2e-desktop-zoom-launch.mjs",
+      "sha256": "63e8b451a90f9e2b551a55137f460ec8faac8c65d458c58aac74a261a4f1a81a",
+      "category": "mapped",
+      "reason": "Audited isolated native launcher and readiness probe; feature guide explicitly distinguishes launch from acceptance.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
     }
   ],
   "native": [

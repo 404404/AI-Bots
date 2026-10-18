@@ -1,3 +1,4 @@
+import { createWindowZoomControl, WINDOW_ZOOM_CONTROL_PATH } from './window-zoom/control.js';
 import { CloudConnections } from './cloud/connections.js';
 import { createCloudProvider } from './cloud/provider.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
@@ -2299,6 +2300,19 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         };
       }
     ).connection;
+    connectionCtx.effect(() => {
+      const control = createWindowZoomControl();
+      const off = connection.fetch.register({
+        path: WINDOW_ZOOM_CONTROL_PATH,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: control.fetch,
+      });
+      return async () => {
+        control.dispose();
+        await off();
+      };
+    }, 'botharness: targeted window zoom delivery');
     connectionCtx.effect(() => {
       return connection.fetch.register({
         path: CHANNEL_STREAM_PATH,

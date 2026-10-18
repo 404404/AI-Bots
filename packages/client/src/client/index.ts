@@ -1,3 +1,5 @@
+import { mountWindowZoomControl } from './window-zoom-control.js';
+import { mountWindowZoom, type ZoomCompatibility } from './window-zoom-mount.js';
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client';
 import { AppearanceSection } from './appearance-settings.js';
 import { KeyboardSettings, setWorkShortcutNotice } from './keyboard-settings.js';
@@ -191,6 +193,18 @@ export function apply(ctx: ClientContext): void {
       ? undefined
       : takeHmrView(window as unknown as Record<string, unknown>);
   const t = ctx.locale.bind(LOCALE_NS);
+  const zoom = mountWindowZoom({
+    document,
+    window,
+    shortcuts: ctx.shortcuts,
+    storage,
+    onReady: mountWindowZoomControl,
+    compatibility: (
+      window as unknown as { __botharnessWindowZoomCompatibility?: ZoomCompatibility }
+    ).__botharnessWindowZoomCompatibility,
+    t,
+  });
+  ctx.effect(() => () => zoom.dispose(), 'botharness: device-local window zoom');
   const nativeChatT = ctx.locale.bind('chat');
   const call = createBridgeCall(ctx);
   const profileContext = async (): Promise<{ profileId: string }> => {
@@ -761,7 +775,11 @@ export function apply(ctx: ClientContext): void {
           order: 0,
           label: () => t('botSettings.section.general'),
           locale: LOCALE_NS,
-          inject: () => ({ actions, closeBotSettings: botSettings.close }),
+          inject: () => ({
+            actions,
+            closeBotSettings: botSettings.close,
+            zoomSurface: zoom.surface,
+          }),
         },
         GeneralSection,
       ),

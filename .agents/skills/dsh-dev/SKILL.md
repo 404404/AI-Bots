@@ -278,3 +278,17 @@ The Windows 1.4.0 fallback also writes layout version 8 while keeping Sessions a
 ## Additional verified pitfall — #2214
 
 A bundled Markdown dependency can resolve its package-internal condition imports to Node implementations even in a Client build. With `react-markdown` / `vfile` in the pinned tsdown/Rolldown toolchain, the Client required `node:process`, `node:path` and `node:url`; the real DSH loader refused the plugin before Bot mode could mount. Explicit browser export conditions alone did not change vfile's `#minpath` / `#minproc` / `#minurl` resolution. Resolve those three imports only inside vfile to its shipped `.browser.js` implementations in the Client build, retain the native external baseline, and verify both the actual built Bundle and a cold browser boot. Do not add Node modules to the shell baseline or install a global process shim. The browser condition also selects DOM entity decoding; the Bundle execution test needs a real DOM for that browser-only code.
+
+
+## Additional verified pitfalls — #2268 desktop zoom composition
+
+The npm `dsh-client-ui-theme` 0.2.1-rc.2 Host artifact imports Schemastery as ESM.
+A generated local copy that rewrites this to `createRequire.resolve()`'s CommonJS entry
+can fail full Profile startup with an ESM/CJS loading race. Keep the canonical ESM singleton
+(`lib/index.mjs`) and verify by importing the generated Host, then cold-booting a complete
+isolated Profile. Do not infer native startup from a syntax-only transformation test.
+
+The same release's shortcut `normalizeBinding` rejects `NumpadAdd`, `NumpadSubtract` and
+`Numpad0`. Validate contributed defaults against the real pinned protocol before registering;
+a thrown registration must revoke earlier commands, restore owned compatibility resources,
+and expose a refusal. Do not silently turn a failed zoom mount into apparent success.
