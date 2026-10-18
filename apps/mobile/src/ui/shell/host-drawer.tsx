@@ -608,27 +608,6 @@ export function HostDrawer() {
             accessibilityLabel={t.closeWorkspaces}
             onPress={() => settle(false)}
           />
-          <View
-            style={{
-              paddingTop: space.x2,
-              paddingBottom: insets.bottom + space.x2,
-              borderTopWidth: edge.hairline,
-              borderTopColor: theme.layer.sheet.edge,
-            }}
-          >
-            {tab === 'cloud' && (
-              <FooterRow
-                label={t.workspaceAdd.manage}
-                icon={<CloudIcon color={theme.color.fg} size={icon} />}
-                onPress={() => closeThen(() => router.push('/cloud-services'))}
-              />
-            )}
-            <FooterRow
-              label={t.notifications}
-              icon={<ActivityIcon color={theme.color.fg} size={icon} />}
-              onPress={() => closeThen(() => hostDrawer.openNotifications())}
-            />
-          </View>
         </Animated.View>
         <Animated.View
           accessibilityViewIsModal
