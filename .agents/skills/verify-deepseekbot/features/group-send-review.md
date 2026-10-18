@@ -161,8 +161,16 @@ Verify that a later genuinely observed message still returns the item early with
 duplicate deadline wake.
 For freshness-only contention, verify the exhausted/drop result's `suggestedSnoozeUntil`
 is a short future Host time and that the Bot actually resumes within the episode. It is
-not permission to shorten a Human deadline or ignore a condition. The v2 runner records
+not permission to shorten a Human deadline or ignore a condition. The runner records
 the outcome cutoff, pauses only its own episode Bots and stops remaining turns before
 final usage settlement; late output stays visible but cannot change a censored outcome.
+The v3 runner uses `scripts/e2e-group-responsibility.mjs` to read canonical Inbox Admissions before ending early: the acting
+Bot's original request and all episode Bots' observed or snoozed work must be resolved or
+ignored, with 12 seconds of idle, stable usage afterward. An unopened silent peer copy does
+not require completion. A correct reply with an outstanding original snooze is unfinished
+accounting; keep observing until responsibility settles or the 240-second deadline. A failed
+canonical read is unknown, never an empty Inbox. Semantic success remains a separate full
+history judgment. Keep v1/v2 cohorts frozen and label their remaining responsibility and
+unobserved future cost separately; do not pool them with v3 or reactivate their stopped Bots.
 Snoozed work alone is not a successful task. Human history remains committed messages, with decision
 diagnostics separate. Capture the real Group history in the Web Client and inspect console.

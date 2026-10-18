@@ -22,6 +22,13 @@ it('does not count prelude or silence as completion', () => {
   run.transcript.dm = [msg('leak', 'Unrequested DM')];
   expect(busyGoal(run).goal).toBe(false);
 });
+it('does not count preparation replies when setup fails before the task starts', () => {
+  const run = fixture('chatter');
+  delete run.sourceStartedAt;
+  delete run.preludeMessageIds;
+  expect(busyGoal(run).goal).toBe(false);
+  expect(busyGoal(run).firstReplyMs).toBeNull();
+});
 it('requires the changed facts and a real resumed answer after the condition', () => {
   const corrected = fixture('correction');
   corrected.transcript.g.push(msg('wrong', '10:00 A-101 R3'));

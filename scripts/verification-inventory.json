@@ -1762,9 +1762,17 @@
       "path": "scripts/e2e-group-busy-review.mjs",
       "category": "mapped",
       "behaviors": ["desktop.group.send-review"],
-      "reason": "Real DSH busy-Group triplets with two established turns, bounded chatter, latest corrections, explicit snooze/resume and revocation/quiet controls; all attempts and usage retained, current assistant reads full records. v2 pauses only episode Bots after the outcome cutoff and retains late output without changing censored outcomes.",
+      "reason": "Real DSH busy-Group triplets with full records and all-Bot costs. v3 bounds outcome time and waits for original, observed and snoozed canonical Inbox responsibility before early settlement; preserves frozen older cohorts, unknown future cost and separate semantic judgment.",
       "task": 2055,
-      "sha256": "bbcad127d56a9001ea7629e05bf9ac37d770d6780575c63b98208ed0533f3059"
+      "sha256": "27a142b32d0219d5d7a04f7a6123bfb004881c20a63e8db4a633a96bb05b970b"
+    },
+    {
+      "path": "scripts/e2e-group-responsibility.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Read-only isolated Profile helper for Group episode completion. Counts all unresolved observed/snoozed Admissions plus the acting original across Channels, excludes unopened silent peer copies, bounds evidence not totals, refuses missing canonical facts.",
+      "task": 2055,
+      "sha256": "03b1f454483c43716fd11e784dee3ffaf08d3b1fc4cea2a15d1ca6ca325de5eb"
     }
   ],
   "native": [

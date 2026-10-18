@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { rpc } from './verify-app.mjs';
+import { readEpisodeResponsibility } from './e2e-group-responsibility.mjs';
 import { createContext, presetFor, parseModelRoute } from './e2e-llm-scenarios.mjs';
 import {
   PROTOCOL,
@@ -17,8 +18,8 @@ import {
 
 export const BUSY_PROTOCOL = {
   ...PROTOCOL,
-  version: '2055-busy-v2',
-  revisionOf: '2055-busy-v1',
+  version: '2055-busy-v3',
+  revisionOf: '2055-busy-v2',
   issue: 2055,
   baseline: '390630e0dc81b0e776758bc420c1622b2ad51981',
   originalBaseline: PROTOCOL.baseline,
@@ -44,7 +45,7 @@ export const BUSY_PROTOCOL = {
     overrides: 1,
   },
   bootstrap: { seed: 2055, resamples: 10000 },
-  end: 'All planned intervention messages completed, necessary task outcome and both Bots idle, usage unchanged for 12 seconds; otherwise censored at 240-second whole-episode deadline. No replacements.',
+  end: 'All planned interventions completed, task output (or exposed revocation), both Bots idle, all observed/snoozed Inbox responsibilities and the acting Bot original request resolved or ignored, usage unchanged for 12 seconds; otherwise censored at the 240-second whole-episode deadline. Unopened silent peer copies do not owe work. No replacements. Semantic success is judged separately from settlement.',
   teardown:
     "After the outcome cutoff, pause only this episode's Bots and stop any active turn before final usage settlement. Retain cleanup errors and late output separately; a late reply cannot turn a censored episode into success.",
 };
@@ -53,6 +54,14 @@ const timestamp = (value) => (typeof value === 'number' ? value : Date.parse(val
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 
 export function busyGoal(run) {
+  if (!run.sourceStartedAt)
+    return {
+      goal: false,
+      earlyReply: false,
+      postRevocationReply: false,
+      firstReplyMs: null,
+      responseCount: 0,
+    };
   const outputs = taskOutputs(run).filter(
       (x) => !run.outcomeCutoffAt || timestamp(x.message.at) <= timestamp(run.outcomeCutoffAt),
     ),
@@ -206,11 +215,20 @@ async function episode(instance, preset, family, index, variant, register, save)
     });
     await delay(400);
     log.sourceStartedAt = new Date().toISOString();
-    await ctx.humanSend(
-      log.group,
-      'Aura，请按已确认事实发一条简明会议通知，包含时间、地点、材料和三个议题。只在本群回答，不找其他同事。',
-      ['aura'],
-    );
+    const sourceBody =
+      'Aura，请按已确认事实发一条简明会议通知，包含时间、地点、材料和三个议题。只在本群回答，不找其他同事。';
+    await ctx.humanSend(log.group, sourceBody, ['aura']);
+    await ctx.refresh();
+    const sources = ctx
+      .messages(log.group)
+      .filter(
+        (message) =>
+          message.author?.kind === 'human' &&
+          message.body?.endsWith(sourceBody) &&
+          !log.preludeMessageIds.includes(message.id),
+      );
+    if (sources.length !== 1) throw Error('Original request must have one canonical message');
+    log.sourceMessageId = sources[0].id;
     let signature,
       stableAt = Date.now();
     for (;;) {
@@ -240,19 +258,26 @@ async function episode(instance, preset, family, index, variant, register, save)
       const done = revoke
         ? !!log.revokedAt
         : taskOutputs({ ...log, transcript: { [log.group]: ctx.messages(log.group) } }).length > 0;
+      log.responsibility = readEpisodeResponsibility(instance, {
+        botSlugs: [ctx.slug('aura'), ctx.slug('atlas')],
+        channelId: log.group,
+        messageId: log.sourceMessageId,
+      });
+      if (!log.responsibility.complete) stableAt = Date.now();
+      if (Date.now() >= deadline) {
+        log.censored = true;
+        log.settled = false;
+        break;
+      }
       if (
         interventionDone &&
         done &&
+        log.responsibility.complete &&
         isIdle &&
         Date.now() - stableAt >= 12000 &&
         (family !== 'defer' || Date.now() >= timestamp(log.resumeAt))
       ) {
         log.settled = true;
-        break;
-      }
-      if (Date.now() >= deadline) {
-        log.censored = true;
-        log.settled = false;
         break;
       }
       save();
@@ -261,7 +286,8 @@ async function episode(instance, preset, family, index, variant, register, save)
   } catch (error) {
     log.error = error.message;
   } finally {
-    log.outcomeCutoffAt = new Date().toISOString();
+    log.outcomeCutoffAt = new Date(Math.min(Date.now(), deadline ?? Date.now())).toISOString();
+    log.outcomeStoppedAt = new Date().toISOString();
     abort.abort();
     await streaming;
     await pump;
@@ -338,7 +364,7 @@ async function episode(instance, preset, family, index, variant, register, save)
       !log.streamError &&
       !log.interventionError &&
       !log.teardownError &&
-      log.teardown.every((item) => item.paused && !item.error) &&
+      (log.teardown?.every((item) => item.paused && !item.error) ?? false) &&
       !log.routeMismatch &&
       log.settled === true &&
       log.usage?.settled === true &&
