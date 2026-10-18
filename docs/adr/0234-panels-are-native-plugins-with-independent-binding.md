@@ -1,0 +1,37 @@
+# Panels are native Plugins with independent binding
+
+- Status: Accepted design direction; implementation pending
+- Date: 2026-10-19
+- Documentation: [#2215](https://github.com/BotHarness/DeepSeekBot/issues/2215)
+
+First-party Panels must become replaceable Plugins, and independent authors need the same public capabilities. We use native DSH Plugin/Fiber and Bundle/Profile composition, application-defined Services and live Cordis Events owned by their domains, and an application-defined Panel contribution/instance contract. This avoids a second package manager, event authority or Bot-specific code sandbox while allowing a Panel to outlive the selected conversation.
+
+## Binding and placement
+
+Panel implementation, instance, binding and workspace placement are separate. Installing once makes an implementation available; ordinary content can have multiple instances, and reinstall must not duplicate them. Messages and Workspace Control Rail retain their required-role cardinality.
+
+A Bot-bound Panel inside Messages follows the current PersonaBot DM. Group Channels provide neither that Panel nor its open action; there is no implicit member Bot or member selector. A separately instantiated Global-workspace Panel may explicitly select a Bot or Channel, identifies its binding visibly, and retains it across conversation changes. An unbound Global Panel can aggregate several Bots. Group-channel-bound means Channel binding with Group-only applicability. These choices do not authorize cross-workspace dragging of existing Channel subpanels or grant access to their data; ADR-0221's two-level workspace and current layout restrictions remain in force.
+
+## Capabilities, notification and lifecycle
+
+The owning Host module retains domain authority. Public commands/queries are Service Definitions, and public business changes are typed application-defined Cordis Events with explicit production semantics. Providers and notifications remain useful without a mounted Panel. Browser Consumers use the existing authenticated Typert/API Gateway or supported stream adapters; Host Events do not automatically cross into the browser.
+
+The first foundation promises current-state access plus live notification, not a generic durable event queue, offline replay or exactly-once effects. Reliable automation must use an appropriate domain-owned durable contract. Ordinary Cordis emit does not isolate listener exceptions; each public producer must define failure handling and bounded diagnostics without confusing notification failure with rollback of a committed fact. Panel/Fiber cleanup owns subscriptions, callbacks and rendering resources without stopping Bot execution.
+
+Memory observation must eventually cover working-tree changes from external editors, Shell and Git even without an active conversation. It reuses the existing Memory Observation and admission owner, distinguishes observed changes from Git commits, and neither promises one event per disk write nor invents authorship. It follows the first Activity slice rather than becoming a prerequisite for it.
+
+## Native composition and replacement
+
+Use native Plugin/Bundle packaging and installation authorization. Binding is presentation context, not code confinement; no additional Bot-local installation or execution permission layer is introduced.
+
+For required shell roles, retain one effective implementation, a registered first-party fallback and a recovery entry independent of the replacement. Prefer native Slots' priority, conflict, disposal and render-error abdication semantics instead of last-install-wins. Native render fallback has a bounded error scope and requires a surviving contribution; it does not restore an old Client module after HMR teardown. The existing Dock Panel Registry's duplicate-id rejection is not already native Slot precedence, so the implementation must explicitly connect the seams and keep declaration ownership stable.
+
+## Delivery and alternatives
+
+The first runnable slice is an independent companion Panel plus Activity, with public types, real native install/dispose, explicit bindings, multiple ordinary instances, Group absence, current-state recovery and a direct agent verification path. Reuse existing character presentation for this proof; a new 3D renderer is not a dependency. Validate it and obtain Human feedback before broadening Memory and other first-party or required-role Panels. New Host methods/routes/tools require matching CLI parity in their own slice.
+
+We rejected binding-by-placement, a Group member picker for Bot-bound Panels, a custom Plugin package/runtime, and a generic replay layer in the first foundation. Native trusted Plugins preserve ecosystem compatibility but do not confine authored code to its displayed Bot. Separating implementation from instance requires a real public contract and compatibility work; documentation alone does not deliver that contract.
+
+## Evidence and current-state boundary
+
+The [source audit](../research/2026-10-19-panel-events-audit.md), [native packaging investigation](../research/2026-10-19-panel-authoring-dsh-mechanisms.md), [Cordis/Slots investigation](../research/2026-10-19-cordis-events-and-slot-conflicts.md) and [design discussion](../research/2026-10-19-panel-plugin-design-discussion.md) retain the reasoning and pinned evidence. They are static investigation, not runtime qualification. This ADR revises the authoring target of ADR-0203 while preserving ADR-0221's placement rules; it makes no claim that the public SDK, independent Panel lifecycle or Memory notifications have shipped. Existing #1791/#1792 authoring work and #2096 layout CLI must be coordinated rather than duplicated.

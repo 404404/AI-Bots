@@ -1109,3 +1109,11 @@ The application-defined mobile conversation directory combines the selected Host
 ### Mobile Chats environment paging (#2194)
 
 Chats shares its persisted device-local conversation filter with Activity. The native source pager derives tabs from verified Organization listings, including empty memberships and authorized guest labels, in enrolled-source order. Source/account-qualified keys preserve identity while swiping; tab selection does not switch Host management authority. Unsupported Cloud Activity has an explicit notice and no borrowed Computer badge; All discloses partial Computer-only coverage. This first slice retains one active Computer. See the Chats environment extension in [ADR-0229](../adr/0229-mobile-cloud-sessions-are-independent-of-host-pairing.md).
+
+## 原生 Panel Plugin 开发目标（ADR-0234）
+
+[ADR-0234](../adr/0234-panels-are-native-plugins-with-independent-binding.md) 记录已确认目标，运行实现尚待交付。第一方与独立作者的面板复用原生 Plugin/Fiber 和 Bundle/Profile 组合。领域 owner 的 Host Service 与具名实时 Cordis Event 独立于面板显隐；浏览器 Consumer 沿用认证后的 Typert/API Gateway 与支持的 stream。状态型展示需恢复当前状态，首版不建设通用离线事件补发。后续 Memory 观测要覆盖无对话时的外部工作树变化，保留既有 Observation/Admission owner，并与 Git commit 区分。
+
+实现、实例、绑定与工作区位置分开。普通实现允许多个实例，重复安装不重复创建。消息面板内的 Bot-bound Panel 跟随 PersonaBot 私聊；群聊不显示内容和打开入口，也不增加成员选择器。显式绑定的全局工作区实例保留并清楚标明所选 Bot/Channel；Group-channel-bound 复用 Channel 绑定并限制为群聊。现有频道子面板不因此获得跨工作区拖放，绑定不授予数据访问或代码隔离。
+
+必需系统角色保留唯一性、已注册的第一方兜底和独立恢复入口。替换优先复用原生 Slots 的优先级、冲突规则和有界渲染失败退让；这不等于 HMR 回滚，也不是当前应用定义 Registry 的重复 id 拒绝已经提供的能力。首个纵向切片为独立角色面板＋Activity，验收原生安装、两个 Bot 的独立绑定、当前状态与实时变化、群聊缺席、重连和资源清理。交付进度由后续工单承载；与既有 #1791/#1792 开发入口及 #2096 布局 CLI 工作协调，避免重复。
