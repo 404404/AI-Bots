@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import { edge, radius } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
 
-/** Opaque fallback; the iOS module adds native glass without owning text or hit targets. */
 export function DrawerMaterial() {
   const theme = useDesignTheme();
   return (

@@ -1,36 +1,38 @@
 import { Capsule, Host } from '@expo/ui/swift-ui';
 import { accessibilityHidden, foregroundStyle, glassEffect } from '@expo/ui/swift-ui/modifiers';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Platform, StyleSheet, View } from 'react-native';
 
 import { edge, radius } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
 
+let reduced = true;
+const readTransparency = () => reduced;
+function subscribeTransparency(notify: () => void) {
+  let active = true;
+  let changed = false;
+  const subscription = AccessibilityInfo.addEventListener('reduceTransparencyChanged', (value) => {
+    changed = true;
+    reduced = value;
+    notify();
+  });
+  void AccessibilityInfo.isReduceTransparencyEnabled().then(
+    (value) => {
+      if (!active || changed) return;
+      reduced = value;
+      notify();
+    },
+    () => {},
+  );
+  return () => {
+    active = false;
+    subscription.remove();
+  };
+}
+
 export function DrawerMaterial() {
   const theme = useDesignTheme();
-  // Start opaque until the system preference is known. Text stays in the RN tree.
-  const [reduceTransparency, setReduceTransparency] = useState(true);
-  useEffect(() => {
-    let active = true;
-    let changed = false;
-    const subscription = AccessibilityInfo.addEventListener(
-      'reduceTransparencyChanged',
-      (value) => {
-        changed = true;
-        setReduceTransparency(value);
-      },
-    );
-    void AccessibilityInfo.isReduceTransparencyEnabled().then(
-      (value) => {
-        if (active && !changed) setReduceTransparency(value);
-      },
-      () => {},
-    );
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
+  const reduceTransparency = useSyncExternalStore(subscribeTransparency, readTransparency);
   const glass = Number.parseInt(String(Platform.Version), 10) >= 26 && !reduceTransparency;
   return (
     <View

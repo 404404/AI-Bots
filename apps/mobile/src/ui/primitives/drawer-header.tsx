@@ -8,7 +8,6 @@ import { t } from '../strings';
 import { DrawerMaterial } from './drawer-material';
 import { Text } from './text';
 
-/** Appearance is shared; callers retain their own navigation and dismissal policy. */
 export function DrawerHeader({
   title,
   subtitle,
