@@ -590,6 +590,15 @@ export function HostDrawer() {
           >
             <WorkspaceTabs value={tab} onChange={setTab} selectedRef={tabFocus} />
           </View>
+          <WorkspaceAddButton
+            label={tab === 'computers' ? t.pairAnother : t.workspaceAdd.join}
+            onPress={() =>
+              closeThen(() => {
+                if (tab === 'computers') hostDrawer.pairNew();
+                else router.push('/cloud-join');
+              })
+            }
+          />
           <FlatList<WorkspaceDrawerItem>
             key={tab}
             style={{ flex: 1 }}
@@ -669,15 +678,6 @@ export function HostDrawer() {
                     {t.workspaceAdd.noComputers}
                   </Text>
                 )}
-                <WorkspaceAddButton
-                  label={tab === 'computers' ? t.pairAnother : t.workspaceAdd.join}
-                  onPress={() =>
-                    closeThen(() => {
-                      if (tab === 'computers') hostDrawer.pairNew();
-                      else router.push('/cloud-join');
-                    })
-                  }
-                />
                 {tab === 'cloud' && (
                   <FooterRow
                     label={t.workspaceAdd.manage}
