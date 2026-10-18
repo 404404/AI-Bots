@@ -12,6 +12,7 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  openMention: (name: string) => `Open chat with ${name}`,
   chatBackground: {
     global: 'Default chat background',
     type: 'Background type',
@@ -778,6 +779,7 @@ const en = {
 };
 
 const zh: typeof en = {
+  openMention: (name: string) => `打开与${name}的私聊`,
   chatBackground: {
     global: '默认聊天背景',
     type: '背景类型',
