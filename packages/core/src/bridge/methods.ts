@@ -752,7 +752,7 @@ export interface BridgeMethods {
   marketplaceChallenge(): Promise<BridgeResult<AltchaChallenge>>;
   marketplaceReport(payload: unknown): Promise<BridgeResult<{ received: true }>>;
   releaseInfo(payload: unknown): BridgeResult<ReleaseInfo>;
-  releaseUpdate(): Promise<BridgeResult<ReleaseUpdate>>;
+  releaseUpdate(payload?: unknown): Promise<BridgeResult<ReleaseUpdate>>;
   releaseInstall(payload: unknown): Promise<BridgeResult<ReleaseInstall>>;
   releaseRestart(payload: unknown): Promise<BridgeResult<ReleaseRestart>>;
   telemetryStatus(): BridgeResult<TelemetryStatus>;
@@ -2717,9 +2717,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (since !== undefined && typeof since !== 'string') return invalidInput('invalid since');
       return { ok: true, value: deps.release.info(since) };
     },
-    async releaseUpdate() {
+    async releaseUpdate(payload) {
       if (deps.release === undefined) return releaseUnavailable();
-      return { ok: true, value: await deps.release.update() };
+      const force = asObject(payload)['force'];
+      if (force !== undefined && typeof force !== 'boolean') return invalidInput('invalid force');
+      return { ok: true, value: await deps.release.update(force) };
     },
     async releaseInstall(payload) {
       if (deps.release === undefined) return releaseUnavailable();

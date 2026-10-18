@@ -83,6 +83,7 @@ import { edgeFade, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
 import { leaveScreen } from '../shell/leave-screen';
 import { Text } from '../primitives/text';
+import { MarkdownViewportContext } from '../markdown-viewport';
 import { KeyboardChatFrame } from '../primitives/keyboard-frame';
 import { t } from '../strings';
 
@@ -343,6 +344,10 @@ function ChatConversation({
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
   const latest = useFollowLatest(list, visible, playback?.setFollowing);
+  const markdownViewport = useMemo(
+    () => ({ scroll, viewport, layout: viewportLayout, active: focused }),
+    [scroll, viewport, viewportLayout, focused],
+  );
   const readMount = useMarkRead(client, inbox, conversation, activeChannel, !latest.away);
   const mountRef = dictation.mountRef;
   const screenRef = useCallback(
@@ -742,75 +747,77 @@ function ChatConversation({
             viewportLayout.value += 1;
           }}
         >
-          <SpeakerStageContext.Provider value={dm ? undefined : stage}>
-            <Animated.FlatList
-              ref={list}
-              inverted
-              removeClippedSubviews={false}
-              style={{ flex: 1 }}
-              contentContainerStyle={{
-                paddingTop: composerHeight + edgeFade.bottom,
-                paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
-              }}
-              data={rows}
-              keyExtractor={(row) => row.key}
-              renderItem={renderItem}
-              onContentSizeChange={jump}
-              onScrollToIndexFailed={(info) => {
-                list.current?.scrollToOffset({
-                  offset: info.averageItemLength * info.index,
-                  animated: false,
-                });
-                setTimeout(
-                  () =>
-                    list.current?.scrollToIndex({
-                      index: info.index,
-                      viewPosition: 0.5,
-                      animated: true,
-                    }),
-                  100,
-                );
-              }}
-              onEndReached={() => void conversation?.loadOlder()}
-              onEndReachedThreshold={0.5}
-              {...latest.listProps}
-              scrollEventThrottle={32}
-              keyboardDismissMode="interactive"
-              keyboardShouldPersistTaps="handled"
-              ListHeaderComponent={<WorkingStatus bots={working} />}
-              ListFooterComponent={
-                snapshot.loadingOlder ? (
-                  <View
-                    style={{
-                      padding: space.x4,
-                      alignItems: 'center',
-                      gap: space.x2,
-                    }}
-                  >
-                    <ActivityIndicator />
-                    <Text variant="meta" tone="muted">
-                      {t.olderLoading}
+          <MarkdownViewportContext.Provider value={markdownViewport}>
+            <SpeakerStageContext.Provider value={dm ? undefined : stage}>
+              <Animated.FlatList
+                ref={list}
+                inverted
+                removeClippedSubviews={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{
+                  paddingTop: composerHeight + edgeFade.bottom,
+                  paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
+                }}
+                data={rows}
+                keyExtractor={(row) => row.key}
+                renderItem={renderItem}
+                onContentSizeChange={jump}
+                onScrollToIndexFailed={(info) => {
+                  list.current?.scrollToOffset({
+                    offset: info.averageItemLength * info.index,
+                    animated: false,
+                  });
+                  setTimeout(
+                    () =>
+                      list.current?.scrollToIndex({
+                        index: info.index,
+                        viewPosition: 0.5,
+                        animated: true,
+                      }),
+                    100,
+                  );
+                }}
+                onEndReached={() => void conversation?.loadOlder()}
+                onEndReachedThreshold={0.5}
+                {...latest.listProps}
+                scrollEventThrottle={32}
+                keyboardDismissMode="interactive"
+                keyboardShouldPersistTaps="handled"
+                ListHeaderComponent={<WorkingStatus bots={working} />}
+                ListFooterComponent={
+                  snapshot.loadingOlder ? (
+                    <View
+                      style={{
+                        padding: space.x4,
+                        alignItems: 'center',
+                        gap: space.x2,
+                      }}
+                    >
+                      <ActivityIndicator />
+                      <Text variant="meta" tone="muted">
+                        {t.olderLoading}
+                      </Text>
+                    </View>
+                  ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
+                    <Text
+                      variant="meta"
+                      tone="muted"
+                      style={{ textAlign: 'center', padding: space.x5 }}
+                    >
+                      {dm ? t.beginning : t.beginningChannel}
                     </Text>
-                  </View>
-                ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
-                  <Text
-                    variant="meta"
-                    tone="muted"
-                    style={{ textAlign: 'center', padding: space.x5 }}
-                  >
-                    {dm ? t.beginning : t.beginningChannel}
-                  </Text>
-                ) : undefined
-              }
-              ListEmptyComponent={
-                snapshot.status === 'opening' ? (
-                  <View style={{ padding: space.x6, alignItems: 'center' }}>
-                    <ActivityIndicator />
-                  </View>
-                ) : undefined
-              }
-            />
-          </SpeakerStageContext.Provider>
+                  ) : undefined
+                }
+                ListEmptyComponent={
+                  snapshot.status === 'opening' ? (
+                    <View style={{ padding: space.x6, alignItems: 'center' }}>
+                      <ActivityIndicator />
+                    </View>
+                  ) : undefined
+                }
+              />
+            </SpeakerStageContext.Provider>
+          </MarkdownViewportContext.Provider>
           <EdgeFade edge="bottom" height={edgeFade.bottom} />
           {latest.away ? (
             <View

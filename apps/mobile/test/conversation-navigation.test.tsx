@@ -40,6 +40,7 @@ vi.mock('react-native', async () => {
   return { ...shim, KeyboardAvoidingView: shim.View };
 });
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({ client: undefined, inbox: undefined }),
   useHostSnapshot: () => state.host,
