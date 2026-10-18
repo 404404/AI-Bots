@@ -50,7 +50,7 @@ export function EnvironmentPager({
                   }}
                 >
                   <Text
-                    strong={focused}
+                    strong
                     tone={focused ? 'fg' : 'muted'}
                     numberOfLines={2}
                     style={{ flexShrink: 1 }}
