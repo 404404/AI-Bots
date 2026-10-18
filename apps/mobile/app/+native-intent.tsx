@@ -8,9 +8,7 @@ export async function redirectSystemPath({ path }: { path: string; initial: bool
       const link = new URL(destination, 'https://native.invalid').searchParams.get('link')!;
       parseInvitationLink(link);
       await SecureStore.setItemAsync('tob.cloud.pending-join.v1', link);
-    } catch {
-      /* The route still carries the target if local persistence is unavailable. */
-    }
+    } catch {}
     return destination;
   }
   if (destination !== '/cloud-services') return destination;
@@ -20,8 +18,6 @@ export async function redirectSystemPath({ path }: { path: string; initial: bool
       parseInvitationLink(pending);
       return '/cloud-join';
     }
-  } catch {
-    /* Existing login can still return to its neutral service screen. */
-  }
+  } catch {}
   return destination;
 }

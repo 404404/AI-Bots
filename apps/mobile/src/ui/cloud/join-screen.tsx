@@ -1,6 +1,6 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { cloudError } from '../../cloud/client';
 import type { InstanceConfig } from '../../cloud/instance-contract';
@@ -28,6 +28,7 @@ export function CloudJoinScreen() {
   const running = useRef(false);
   const [scanning, setScanning] = useState(false),
     [focused, setFocused] = useState(false);
+  const restored = useRef<string | undefined>(undefined);
   const [permission, requestPermission] = useCameraPermissions();
   useFocusEffect(
     useCallback(() => {
@@ -35,29 +36,30 @@ export function CloudJoinScreen() {
       return () => setFocused(false);
     }, []),
   );
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      const raw = params.link ?? (await pendingCloudJoin.read());
-      if (raw && active) {
-        parseInvitationLink(raw);
-        setLink(raw);
-        setInvitation(undefined);
-        setCandidate(undefined);
-      }
-    })().catch((e) => {
-      if (active) setError(cloudError(e));
-    });
-    return () => {
-      active = false;
-    };
-  }, [params.link]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void (async () => {
+        const raw = params.link ?? (await pendingCloudJoin.read());
+        if (raw && active && raw !== restored.current) {
+          restored.current = raw;
+          parseInvitationLink(raw);
+          setLink(raw);
+          setInvitation(undefined);
+          setCandidate(undefined);
+        }
+      })().catch((e) => {
+        if (active) setError(cloudError(e));
+      });
+      return () => {
+        active = false;
+      };
+    }, [params.link]),
+  );
   let target: ReturnType<typeof parseInvitationLink> | undefined;
   try {
     target = parseInvitationLink(link);
-  } catch {
-    /* Show the form until input is valid. */
-  }
+  } catch {}
   const row = snapshot.rows.find((r) => r.config.server === target?.server);
   const config = row?.config ?? candidate;
   const busy = working || snapshot.busy || !snapshot.ready;

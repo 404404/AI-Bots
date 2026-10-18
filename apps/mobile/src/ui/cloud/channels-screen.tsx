@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError } from '../../cloud/client';
@@ -82,20 +82,22 @@ function ChannelWorkspace({
     [notice, setNotice] = useState<string>();
   const busy = working || snapshot.busy;
   const opened = useRef(false);
-  useEffect(() => {
-    if (!initialChannelId || !snapshot.ready || snapshot.busy || opened.current) return;
-    opened.current = true;
-    void run(async () => {
-      const channel = await cloudClient.openChannel(
-        instanceId,
-        organizationId,
-        initialChannelId,
-        guest,
-      );
-      await history(channel);
-      setSelected(channel);
-    });
-  }, [initialChannelId, instanceId, organizationId, guest, snapshot.ready, snapshot.busy]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!initialChannelId || !snapshot.ready || snapshot.busy || opened.current) return;
+      opened.current = true;
+      void run(async () => {
+        const channel = await cloudClient.openChannel(
+          instanceId,
+          organizationId,
+          initialChannelId,
+          guest,
+        );
+        await history(channel);
+        setSelected(channel);
+      });
+    }, [initialChannelId, instanceId, organizationId, guest, snapshot.ready, snapshot.busy]),
+  );
   const pending = row?.pendingChannelAction;
   const pendingHere = (
     guest

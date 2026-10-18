@@ -1,6 +1,5 @@
 import { ClientError, serverOrigin } from './instance-contract';
 
-// A locator for a recipient-bound invitation. Possession never grants membership.
 export function invitationLink(server: string, invitationId: string): string {
   serverOrigin(server);
   if (!/^(?:invitation_[A-Za-z0-9]{1,120}|ci_[a-f0-9]{64})$/.test(invitationId))

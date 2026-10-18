@@ -14,8 +14,6 @@ export function cloudNativeIntent(path: string): string {
       parseInvitationLink(link);
       return '/cloud-join?link=' + encodeURIComponent(link);
     }
-  } catch {
-    /* Invalid external input opens a neutral entry point. */
-  }
+  } catch {}
   return '/cloud-services';
 }
