@@ -520,6 +520,14 @@
       "source": "apps/mobile/src/host/chat-background.ts",
       "task": 2118,
       "guide": ".agents/skills/verify-deepseekbot/features/phone-chat-backgrounds.md"
+    },
+    {
+      "id": "cloud.host.connections",
+      "label": "Import a cloud Agent into an explicit Host, bind a PersonaBot and preserve source identity on replay",
+      "source": "packages/core/src/cloud/provider.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/cloud-host-connections.md",
+      "task": 2155,
+      "gap": null
     }
   ],
   "scripts": [
