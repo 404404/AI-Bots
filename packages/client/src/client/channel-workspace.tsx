@@ -201,7 +201,10 @@ export function ChannelWorkspace({
                 className="bh-channel-session-header"
                 draggable={!!channelId}
                 onDragStart={(event) => {
-                  if (!channelId || (event.target as Element).closest('button, [role="tab"]')) {
+                  if (
+                    !channelId ||
+                    (event.target as Element).closest('button:not([data-panel-hide]), [role="tab"]')
+                  ) {
                     event.preventDefault();
                     return;
                   }

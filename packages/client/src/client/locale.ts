@@ -225,13 +225,46 @@ export const zh = {
   'onboarding.reminderUnknownBody':
     '我想在 10 分钟后收到一次“测试定时任务”的提醒，发送到当前私聊。但浏览器无法识别我的时区，请先问我使用哪个时区，再创建真实的一次性任务。',
   'onboarding.freeform': '也可以直接在下方输入你的问题。',
+  'onboarding.short.title': '从这里开始',
+  'onboarding.short.progress': '第 {step} 步，共 5 步',
+  'onboarding.short.model': '配置模型',
+  'onboarding.short.modelHint': '选择模型，然后告诉总管你想做什么。',
+  'onboarding.short.bot': '请总管创建一个 Bot',
+  'onboarding.short.botHint': '描述你需要的助手；创建成功后会自动进入下一步。',
+  'onboarding.short.botPrompt': '帮我创建一个叫「学习助手」的 Bot，帮助我制定学习计划。',
+  'onboarding.short.group': '创建一个群聊',
+  'onboarding.short.groupHint': '请总管把刚创建的 Bot 加入新群聊。',
+  'onboarding.short.groupPrompt': '帮我创建一个叫「学习小组」的群聊，把刚刚创建的 {name} 加进去。',
+  'onboarding.short.chat': '进入对话',
+  'onboarding.short.chatHint':
+    '现在试一下：点击首页面板左上角的图标与标题，关闭首页，进入总管对话。草稿会保留。',
+  'onboarding.short.layout': '调整页面布局',
+  'onboarding.short.layoutHint': '了解移动、缩放、关闭与重新打开面板。',
+  'onboarding.short.suggest': '填入示例问题',
+  'onboarding.short.draft': '输入框里有草稿，可以继续编辑后发送。',
+  'onboarding.short.tour': '看看怎么操作',
+  'onboarding.short.pause': '稍后继续',
+  'onboarding.short.skip': '跳过引导',
+  'onboarding.short.move': '移动面板',
+  'onboarding.short.moveHint':
+    '拖住面板标题栏，移动到高亮区域后放开。全局面板和频道子面板分别在各自区域内移动。',
+  'onboarding.short.resize': '调整大小',
+  'onboarding.short.resizeHint':
+    '拖拽面板之间的分隔线调整宽度或高度。位置和比例会保留，不会随窗口宽度自动重排。',
+  'onboarding.short.hide': '关闭面板',
+  'onboarding.short.hideHint':
+    '单击标题左侧的图标与名称即可隐藏面板。拖拽标题不会触发关闭；隐藏面板不会停止 Bot 工作。',
+  'onboarding.short.restore': '重新打开',
+  'onboarding.short.restoreHint':
+    '从左侧控制栏重新打开全局面板；频道子面板从消息面板标题栏打开。原有布局和大小会保留。',
+  'onboarding.short.openBot': '打开新 Bot',
+  'onboarding.short.openGroup': '打开群聊',
   'onboarding.start': '开始教程',
   'onboarding.skip': '跳过',
   'onboarding.continue': '继续教程',
   'onboarding.restart': '重新开始教程',
   'onboarding.settings.title': '新手教程',
-  'onboarding.settings.description':
-    '打开上手清单，或重新开始教程；不会影响 Bot 身份、记忆和已有对话。',
+  'onboarding.settings.description': '继续或重看简短引导；不会影响 Bot 身份、记忆、对话和布局。',
   'onboarding.binding.notNow': '暂时不绑定',
   'onboarding.binding.description':
     '绑定后可以从外部应用联系这个 Bot。暂时不绑定也不影响已完成的对话。',
@@ -3913,6 +3946,42 @@ export const en = {
   'onboarding.reminderUnknownBody':
     'I want a one-time reminder in 10 minutes to “test scheduled tasks” in this DM. My browser could not identify my time zone. Ask which time zone to use before creating a real one-time schedule.',
   'onboarding.freeform': 'You can also type your own question below.',
+  'onboarding.short.title': 'Get started',
+  'onboarding.short.progress': 'Step {step} of 5',
+  'onboarding.short.model': 'Configure a model',
+  'onboarding.short.modelHint': 'Choose a model, then tell your steward what you want to do.',
+  'onboarding.short.bot': 'Ask your steward to create a Bot',
+  'onboarding.short.botHint':
+    'Describe the assistant you need. This step advances after it is actually created.',
+  'onboarding.short.botPrompt': 'Create a Bot called “Study helper” to help me plan my learning.',
+  'onboarding.short.group': 'Create a group',
+  'onboarding.short.groupHint': 'Ask your steward to include the new Bot in a group.',
+  'onboarding.short.groupPrompt':
+    'Create a group called “Study group” with the {name} Bot you just created.',
+  'onboarding.short.chat': 'Start chatting',
+  'onboarding.short.chatHint':
+    'Try it now: click the Home panel icon and title at the top left to hide Home and enter your steward conversation. Your draft stays saved.',
+  'onboarding.short.layout': 'Arrange your workspace',
+  'onboarding.short.layoutHint': 'Learn to move, resize, hide and reopen panels.',
+  'onboarding.short.suggest': 'Use example request',
+  'onboarding.short.draft': 'Your input has a draft. Edit it and send when ready.',
+  'onboarding.short.tour': 'Show me how',
+  'onboarding.short.pause': 'Continue later',
+  'onboarding.short.skip': 'Skip tutorial',
+  'onboarding.short.move': 'Move a panel',
+  'onboarding.short.moveHint':
+    'Drag a panel header into a highlighted area. Global panels and Channel subpanels stay within their own workspace.',
+  'onboarding.short.resize': 'Resize panels',
+  'onboarding.short.resizeHint':
+    'Drag the divider between panels to change their width or height. Positions and proportions are retained without automatic re-docking.',
+  'onboarding.short.hide': 'Hide a panel',
+  'onboarding.short.hideHint':
+    'Click the icon and name at the left of the header to hide the panel. Dragging does not hide it, and hiding does not stop Bot work.',
+  'onboarding.short.restore': 'Reopen panels',
+  'onboarding.short.restoreHint':
+    'Reopen global panels from the control rail and Channel subpanels from the Messages header. Their saved layout and sizes are retained.',
+  'onboarding.short.openBot': 'Open the new Bot',
+  'onboarding.short.openGroup': 'Open the group',
   'onboarding.start': 'Start tutorial',
   'onboarding.skip': 'Skip',
   'onboarding.continue': 'Continue tutorial',

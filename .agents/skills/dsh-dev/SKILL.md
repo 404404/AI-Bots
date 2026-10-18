@@ -263,3 +263,8 @@ In rc.2, `tools.restrict({ deny: [...] })` validates names against the global To
 ## Additional verified pitfall — #2056 verification transport
 
 Against an idle RC2 Host on Windows, Node's pooled `fetch` reproduced `ECONNRESET` after the probe's event loop was blocked for six seconds: it reused a connection whose close event had not been consumed. An asynchronous six-second wait and a request with `Connection: close` both succeeded. The `verify-app` RPC helper uses one connection per request; it preserves a lost mutation response as an error instead of retrying a possibly committed write. Distinguish this test transport failure from a model-provider failure, and correlate Host health with any deliberate restart before diagnosing a crash. Preserve failed cohort attempts; register changed transport settings before a new comparison rather than replacing old results.
+
+
+## Additional verified pitfall — #2192 Desktop approvals
+
+In DSH `0.2.1-rc.2`, the native API remotes approval answerer can run before an application's Channel answerer and hold a Session-backed approval without calling `next()`. Native Session events then show `approval/asked`, but no application Channel card appears and the command times out. Register the application-owned answerer with Cordis `prepend: true`, retaining exact Agent/call tracking and owner checks, and delegate unowned requests to `next()`. Native `never` policy still refuses before the waterfall. An isolated macOS Desktop reproduced the missing card; after this change, approving once visibly created a Bot and group through Tob's CLI. Regression coverage must exercise an earlier swallowing answerer, delegation, cancellation and native policy denial; do not bypass approval to make the journey pass.

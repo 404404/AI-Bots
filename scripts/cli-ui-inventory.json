@@ -337,7 +337,7 @@
     },
     {
       "id": "ui-tour",
-      "description": "Tutorial navigation/seen markers only; not a setting controlling Bot or Host behavior. Retains the existing onboarding exemption.",
+      "description": "Tutorial lifecycle is covered by onboarding; device-local presentation markers remain nonconfigurable.",
       "scope": "Client transport / transient state",
       "surfaces": [
         "setting:packages/client/src/client/onboarding-view.tsx:{t('onboarding.settings.title')}",
@@ -348,9 +348,12 @@
         "storage:packages/client/src/client/onboarding-sessions-tour.ts:setItem(RETURN_KEY)",
         "storage:packages/client/src/client/onboarding-sessions-tour.ts:setItem(SEEN_KEY)",
         "storage:packages/client/src/client/onboarding.ts:removeItem(key)",
-        "storage:packages/client/src/client/onboarding.ts:setItem(key)"
+        "storage:packages/client/src/client/onboarding.ts:removeItem(`botharness/onboarding/layout-v2/${receipt.profileId}`)",
+        "storage:packages/client/src/client/onboarding.ts:setItem(key)",
+        "storage:packages/client/src/client/onboarding.ts:removeItem('botharness/onboarding/sessions-return')",
+        "storage:packages/client/src/client/onboarding.ts:setItem(`botharness/onboarding/layout-v2/${this.state.receipt.profileId}`)"
       ],
-      "exemption": "Tutorial navigation/seen markers only; not a setting controlling Bot or Host behavior. Retains the existing onboarding exemption.",
+      "exemption": "Device-local tour anchors and seen markers are presentation state, not Host settings. Profile tutorial lifecycle is available through onboarding.",
       "configurable": false
     },
     {

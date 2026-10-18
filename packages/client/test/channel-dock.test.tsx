@@ -560,6 +560,28 @@ it('persists hidden rail controls, closes only the hidden Panel and supports hea
   expect(host.querySelector('[data-roster-search]')).toBeNull();
   act(() => registry.open(WORKSPACE_CHANNELS));
   await settle();
+  const title = () =>
+    host.querySelector<HTMLButtonElement>(
+      `[data-dock-header="${WORKSPACE_CHANNELS}"] [data-panel-hide]`,
+    )!;
+  act(() => {
+    title().dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 30, clientY: 40 }),
+    );
+    title().dispatchEvent(
+      new MouseEvent('pointermove', { bubbles: true, clientX: 100, clientY: 40 }),
+    );
+    title().dispatchEvent(
+      new MouseEvent('click', { bubbles: true, detail: 1, clientX: 30, clientY: 40 }),
+    );
+  });
+  expect(registry.isOpen(WORKSPACE_CHANNELS)).toBe(true);
+  act(() => title().click());
+  await settle();
+  expect(registry.isOpen(WORKSPACE_CHANNELS)).toBe(false);
+  expect(readChannelDock(storage)?.hiddenControls).toEqual([]);
+  act(() => registry.open(WORKSPACE_CHANNELS));
+  await settle();
   const header = host.querySelector<HTMLElement>(`[data-dock-header="${WORKSPACE_CHANNELS}"]`)!;
   act(() =>
     header.dispatchEvent(

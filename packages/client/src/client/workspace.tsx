@@ -1,3 +1,4 @@
+import { onboardingFor } from './onboarding.js';
 import { HomePanel } from './home-panel.js';
 import { WORKSPACE_HOME } from './workspace-context.js';
 import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
@@ -115,6 +116,10 @@ export function Workspace({
         scope: 'global',
         order: 1000,
         defaultPosition: { zone: 'center' },
+        onTitleHide: () =>
+          void onboardingFor(options.actions).finishFromHomeTitle(() =>
+            registry.open(CHANNEL_BODY_PANEL),
+          ),
         component: function HomeEntry() {
           const sendKey = useSyncExternalStore(
             options.prefs.source.subscribe,
@@ -131,8 +136,12 @@ export function Workspace({
           );
         },
       });
+      const detachGuide = onboardingFor(options.actions).attachHome(() =>
+        registry.open(WORKSPACE_HOME),
+      );
       setEnabled(true);
       return () => {
+        detachGuide();
         unregisterHome();
         unregisterMessages();
         unregister();

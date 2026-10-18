@@ -33,7 +33,7 @@ async function withCore(
   }
 }
 describe('Bot onboarding through the public Host bridge', () => {
-  it('starts only on deliberate entry and prepares one durable Bot, Appearance, Memory and welcome across concurrent calls', async () => {
+  it('starts only on deliberate entry and prepares one durable Bot, Appearance, Memory without welcome messages across concurrent calls', async () => {
     await withCore(async (core) => {
       expect(core.registry.list()).toHaveLength(0);
       const bridge = createBridgeMethods({ ...core });
@@ -46,14 +46,12 @@ describe('Bot onboarding through the public Host bridge', () => {
       expect(bot.displayName).toBe('Tob');
       expect(bot.appearance?.recipe).toEqual(DEEPSEEKBOT_RECIPE);
       expect(core.registry.memoryDirFor(bot.slug)).toBeTruthy();
-      expect(core.channels.readMessages(first.value.channelId!)).toMatchObject([
-        { author: { kind: 'system' }, id: 'tob-welcome-v1' },
-      ]);
+      expect(core.channels.readMessages(first.value.channelId!)).toEqual([]);
       expect(first.value.completed).toBe(false);
       core.registry.update(bot.slug, { displayName: 'Renamed' });
       await bridge.onboarding({ action: 'restart' });
       expect(core.registry.get(bot.slug)?.appearance?.recipe).toEqual(DEEPSEEKBOT_RECIPE);
-      expect(core.channels.readMessages(first.value.channelId!)).toHaveLength(1);
+      expect(core.channels.readMessages(first.value.channelId!)).toHaveLength(0);
     });
   });
   it('continues first-run onboarding after Home already provisioned Tob', async () => {
@@ -66,7 +64,7 @@ describe('Bot onboarding through the public Host bridge', () => {
         completed: false,
       });
       expect(core.registry.list()).toHaveLength(1);
-      expect(core.channels.readMessages(home.channelId)).toHaveLength(1);
+      expect(core.channels.readMessages(home.channelId)).toHaveLength(0);
     });
   });
   it('reuses existing Bots, lets the Human select among several, and never resurrects the default Bot', async () => {
@@ -77,14 +75,14 @@ describe('Bot onboarding through the public Host bridge', () => {
       const initial = await bridge.onboarding({});
       expect(initial).toMatchObject({ ok: true, value: { completed: false } });
       if (!initial.ok) throw new Error(initial.error.message);
-      expect(initial.value.channelId).toBeUndefined();
-      expect(core.registry.list()).toHaveLength(2);
+      expect(initial.value.channelId).toBeTruthy();
+      expect(core.registry.list()).toHaveLength(3);
       expect(await bridge.onboarding({ slug: 'bea' })).toMatchObject({
         ok: true,
-        value: { channelId: 'dm-bea' },
+        value: { channelId: initial.value.channelId },
       });
       core.registry.setPaused('bea', true);
-      expect(await bridge.onboarding({ slug: 'bea' })).toMatchObject({ ok: false });
+      expect(await bridge.onboarding({ slug: 'bea' })).toMatchObject({ ok: true });
     });
     await withCore(async (core) => {
       const first = await core.onboarding.enter();
@@ -140,7 +138,7 @@ describe('Bot onboarding through the public Host bridge', () => {
         restored.channels
           .readMessages(channelId!)
           .filter((message) => message.id === 'tob-welcome-v1'),
-      ).toHaveLength(1);
+      ).toHaveLength(0);
     } finally {
       await restored.runtime.close();
       restored.operationalDatabase.close();
@@ -459,5 +457,154 @@ it('rechecks both model preset and Bot revisions after asynchronous catalog vali
         expectedPresetRevision: 2,
       }),
     ).toMatchObject({ ok: false, error: { code: 'stale-setting' } });
+  });
+});
+
+it('records only successful new scoped creation results and retains them through pause, replay and restart', async () => {
+  await withCore(async (core) => {
+    const old = core.creations.create({ displayName: 'Old' }, 'old-operation');
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    await core.onboarding.enter(undefined, 'start');
+    const started = Date.now();
+    core.onboarding.recordCreation(
+      'create',
+      'old-operation',
+      { bot: { slug: old.record.slug } },
+      'tob-session',
+      started,
+    );
+    expect((await core.onboarding.enter()).journey?.botSlug).toBeUndefined();
+    await expect(core.onboarding.enter(undefined, 'finish')).rejects.toThrow(
+      'onboarding-creation-incomplete',
+    );
+    const created = core.creations.create({ displayName: 'Study' }, 'study-operation');
+    core.onboarding.recordCreation(
+      'create',
+      'study-operation',
+      { bot: { slug: created.record.slug } },
+      'tob-session',
+      started,
+    );
+    await core.onboarding.enter(undefined, 'pause');
+    const group = core.channelManagement.create(
+      { name: 'Study group', members: [created.record.slug] },
+      'group-operation',
+    );
+    core.onboarding.recordCreation(
+      'group-create',
+      'group-operation',
+      { channel: { id: group.channel.id } },
+      'tob-session',
+      started,
+    );
+    const receipt = await core.onboarding.enter(undefined, 'continue');
+    expect(receipt.journey).toEqual({
+      version: 2,
+      done: false,
+      botSlug: created.record.slug,
+      groupChannelId: group.channel.id,
+    });
+    await core.onboarding.enter(undefined, 'finish');
+    expect((await core.onboarding.enter()).journey?.done).toBe(true);
+    expect((await core.onboarding.enter(undefined, 'restart')).journey).toEqual(receipt.journey);
+    expect(core.registry.list().filter((bot) => bot.displayName === 'Study')).toHaveLength(1);
+    expect(core.channels.readMessages(created.channelId)).toEqual([]);
+  });
+});
+
+it.each(['active', 'paused', 'not-started', 'skipped', 'completed'] as const)(
+  'migrates legacy %s quietly without touching historical welcome messages',
+  async (tutorial) => {
+    const dshHome = createTempRoot('bh-onboarding-v2-upgrade-');
+    const prior = mountOperationalDatabase({
+      dshHome,
+      schemaPlan: defineSchemaPlan(
+        BOT_HARNESS_SCHEMA_PLAN.migrations.filter((m) => m.generation <= 101),
+      ),
+    });
+    attachOperationalModule(prior, 'bot-onboarding').transaction((db) =>
+      db
+        .prepare(
+          `INSERT INTO bot_onboarding (singleton,profile_id,entered_at,preparation,tutorial) VALUES (1,'legacy','2026-01-01T00:00:00Z','ready',?)`,
+        )
+        .run(tutorial === 'completed' ? 'paused' : tutorial),
+    );
+    if (tutorial === 'completed')
+      attachOperationalModule(prior, 'bot-onboarding').transaction((db) =>
+        db
+          .prepare(
+            "UPDATE bot_onboarding SET completed_message_id = 'legacy-real-reply' WHERE singleton = 1",
+          )
+          .run(),
+      );
+    prior.close();
+    const core = createCore({ dshHome, agents: adapter() });
+    try {
+      const home = await core.tob.ensure();
+      await core.channels.appendMessage(home.channelId, {
+        id: 'tob-welcome-v1',
+        at: new Date().toISOString(),
+        author: { kind: 'system' },
+        body: 'Historical greeting',
+        onboardingWelcome: { version: 1, kind: 'tob' },
+        format: 'text',
+      });
+      const state = await core.onboarding.enter();
+      expect(state.tutorial).toBe(tutorial === 'skipped' ? 'skipped' : 'paused');
+      expect(state.journey).toEqual({
+        version: 2,
+        done: tutorial === 'skipped' || tutorial === 'completed',
+      });
+      expect(core.channels.readMessages(home.channelId).map((message) => message.body)).toEqual([
+        'Historical greeting',
+      ]);
+    } finally {
+      await core.runtime.close();
+      core.operationalDatabase.close();
+    }
+  },
+);
+
+it('recovers committed operations after a missed callback and waits for real group membership', async () => {
+  await withCore(async (core) => {
+    await core.onboarding.enter(undefined, 'start');
+    core.onboarding.trackCreation('create', 'recover-bot', 'tob-session', Date.now());
+    expect((await core.onboarding.enter()).journey?.botSlug).toBeUndefined();
+    const created = core.creations.create({ displayName: 'Recover' }, 'recover-bot');
+    expect((await core.onboarding.enter()).journey?.botSlug).toBe(created.record.slug);
+    core.onboarding.trackCreation('group-create', 'recover-group', 'tob-session', Date.now());
+    const group = core.channelManagement.create(
+      { name: 'Recovered group', members: [] },
+      'recover-group',
+    );
+    expect((await core.onboarding.enter()).journey?.groupChannelId).toBeUndefined();
+    const invitation = core.channels.inviteGroupBot({
+      channelId: group.channel.id,
+      inviterHuman: true,
+      targetBotSlug: created.record.slug,
+      targetBotCreatedAt: created.record.createdAt,
+      targetDmChannelId: created.channelId,
+    });
+    core.channels.respondToGroupInvite({
+      invitationId: invitation.id,
+      targetBotSlug: created.record.slug,
+      targetBotCreatedAt: created.record.createdAt,
+      accept: true,
+    });
+    expect((await core.onboarding.enter()).journey?.groupChannelId).toBe(group.channel.id);
+  });
+});
+
+it('recovers a replacement created before refresh after the original Bot is paused', async () => {
+  await withCore(async (core) => {
+    await core.onboarding.enter(undefined, 'start');
+    core.onboarding.trackCreation('create', 'original', 'tob-session', Date.now());
+    const original = core.creations.create({ displayName: 'Original' }, 'original');
+    expect((await core.onboarding.enter()).journey?.botSlug).toBe(original.record.slug);
+    core.registry.setPaused(original.record.slug, true);
+    core.onboarding.trackCreation('create', 'replacement', 'tob-session', Date.now());
+    const replacement = core.creations.create({ displayName: 'Replacement' }, 'replacement');
+    expect((await core.onboarding.enter()).journey?.botSlug).toBe(replacement.record.slug);
+    expect((await core.onboarding.enter()).journey?.botSlug).toBe(replacement.record.slug);
   });
 });

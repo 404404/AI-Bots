@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useRef, type ReactElement, type ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -109,6 +109,8 @@ export function PanelHeader({
   tabs,
   action,
   disclosure,
+  onHide,
+  hideLabel,
   dimmed = false,
   locked = false,
   struck = false,
@@ -119,10 +121,13 @@ export function PanelHeader({
   readonly tabs?: ReactNode;
   readonly action?: ReactNode;
   readonly disclosure?: PanelHeaderDisclosure | undefined;
+  readonly onHide?: () => void;
+  readonly hideLabel?: string;
   readonly dimmed?: boolean;
   readonly locked?: boolean;
   readonly struck?: boolean;
 }): ReactElement {
+  const pointer = useRef<{ x: number; y: number; moved: boolean } | undefined>(undefined);
   const fixed = tabs !== undefined;
   const content = (
     <>
@@ -143,7 +148,42 @@ export function PanelHeader({
   );
   return (
     <div {...stylex.props(styles.header)}>
-      {disclosure === undefined ? (
+      {onHide ? (
+        <button
+          type="button"
+          data-panel-head=""
+          data-panel-hide=""
+          draggable
+          aria-label={hideLabel}
+          onPointerDown={(event) => {
+            if (event.button === 0)
+              pointer.current = { x: event.clientX, y: event.clientY, moved: false };
+          }}
+          onPointerMove={(event) => {
+            const origin = pointer.current;
+            if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 5)
+              origin.moved = true;
+          }}
+          onPointerCancel={() => {
+            if (pointer.current) pointer.current.moved = true;
+          }}
+          onDragStart={() => {
+            if (pointer.current) pointer.current.moved = true;
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            const origin = pointer.current;
+            const moved =
+              origin &&
+              (origin.moved || Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 5);
+            if (event.detail === 0 || !moved) onHide();
+            pointer.current = undefined;
+          }}
+          {...stylex.props(styles.head, fixed && styles.fixed)}
+        >
+          {content}
+        </button>
+      ) : disclosure === undefined ? (
         <div
           data-panel-head=""
           {...stylex.props(
