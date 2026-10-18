@@ -17,8 +17,8 @@ import {
 
 export const BUSY_PROTOCOL = {
   ...PROTOCOL,
-  version: '2055-busy-v1',
-  revisionOf: null,
+  version: '2055-busy-v2',
+  revisionOf: '2055-busy-v1',
   issue: 2055,
   baseline: '390630e0dc81b0e776758bc420c1622b2ad51981',
   originalBaseline: PROTOCOL.baseline,
@@ -45,13 +45,17 @@ export const BUSY_PROTOCOL = {
   },
   bootstrap: { seed: 2055, resamples: 10000 },
   end: 'All planned intervention messages completed, necessary task outcome and both Bots idle, usage unchanged for 12 seconds; otherwise censored at 240-second whole-episode deadline. No replacements.',
+  teardown:
+    "After the outcome cutoff, pause only this episode's Bots and stop any active turn before final usage settlement. Retain cleanup errors and late output separately; a late reply cannot turn a censored episode into success.",
 };
 const call = (instance, method, args = {}) => rpc(instance, `botharness/${method}`, args);
 const timestamp = (value) => (typeof value === 'number' ? value : Date.parse(value));
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 
 export function busyGoal(run) {
-  const outputs = taskOutputs(run),
+  const outputs = taskOutputs(run).filter(
+      (x) => !run.outcomeCutoffAt || timestamp(x.message.at) <= timestamp(run.outcomeCutoffAt),
+    ),
     group = outputs.filter((x) => x.channelId === run.group);
   const quiet = run.family === 'revoke-or-quiet' && run.index % 2 === 0;
   const revoked = run.family === 'revoke-or-quiet' && !quiet;
@@ -257,10 +261,32 @@ async function episode(instance, preset, family, index, variant, register, save)
   } catch (error) {
     log.error = error.message;
   } finally {
+    log.outcomeCutoffAt = new Date().toISOString();
     abort.abort();
     await streaming;
     await pump;
     if (log.bots) {
+      log.teardown = [];
+      let activity;
+      try {
+        activity = await call(instance, 'activitySnapshot');
+      } catch (error) {
+        log.teardownError = error.message;
+      }
+      for (const slug of Object.values(log.bots)) {
+        const item = { slug, at: new Date().toISOString() };
+        log.teardown.push(item);
+        try {
+          await call(instance, 'pause', { slug });
+          item.paused = true;
+          if (activity?.bots?.some((bot) => bot.slug === slug && bot.state !== 'idle')) {
+            await call(instance, 'channelBotStop', { botSlug: slug, channelId: `dm-${slug}` });
+            item.stopped = true;
+          }
+        } catch (error) {
+          item.error = error.message;
+        }
+      }
       try {
         log.usage = await ctx.settledUsage(startDay, 12);
       } catch (error) {
@@ -311,6 +337,8 @@ async function episode(instance, preset, family, index, variant, register, save)
       !log.error &&
       !log.streamError &&
       !log.interventionError &&
+      !log.teardownError &&
+      log.teardown.every((item) => item.paused && !item.error) &&
       !log.routeMismatch &&
       log.settled === true &&
       log.usage?.settled === true &&

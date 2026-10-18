@@ -50,6 +50,13 @@ after the exhausted snapshot but before the override, and the candidate sent obs
 Earlier green tests allowed unseen trailing chatter and missed this race. The regression now
 inserts a correction at that exact boundary and requires refusal without any public append.
 
+A subsequent diagnostic safely dropped the obsolete draft but chose an arbitrary five-minute
+snooze, missing the 240-second completion window. Exhausted outcomes now supply a Host-time
+`suggestedSnoozeUntil` 30 seconds ahead for freshness-only contention. This is guidance to the
+existing Inbox Tool, not automatic scheduling or permission to shorten a Human deadline or
+ignore an unmet condition. Observed completed FYI work can be resolved in the drop call while
+the original request remains open; successful resolution does not need repeated verification.
+
 The owner records actor, reason, observation, version, count and committed message identity
 in its existing draft JSON in the same transaction as the formal Channel append. A successful
 override retains that terminal audit record. No additional database generation, content store,

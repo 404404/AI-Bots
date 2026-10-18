@@ -154,6 +154,7 @@ async function fixture(
       draftId?: string;
       draftVersion?: number;
       budget?: { used: number; limit: number; exhausted: boolean };
+      suggestedSnoozeUntil?: string;
       messageId: string;
       observationIds: Record<string, string>;
       changedMessageIds?: string[];
@@ -873,6 +874,8 @@ describe('busy Group progress through the direct tool', () => {
       });
       expect(ordinary.reason).toBe('retry-budget-exhausted');
       expect(ordinary.draftVersion).toBe(exhausted.draftVersion);
+      expect(Date.parse(ordinary.suggestedSnoozeUntil!)).toBeGreaterThan(Date.now());
+      expect(Date.parse(ordinary.suggestedSnoozeUntil!)).toBeLessThanOrEqual(Date.now() + 30_000);
       const override = {
         body: 'Meet at 11:00',
         draft_id: exhausted.draftId,

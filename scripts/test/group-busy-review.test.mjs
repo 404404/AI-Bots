@@ -49,3 +49,13 @@ it('keeps revocation and quiet control denominators separate', () => {
   expect(BUSY_PROTOCOL.pairsPerFamily).toBe(10);
   expect(BUSY_PROTOCOL.families).toHaveLength(4);
 });
+
+it('retains late output without counting it as an in-window success', () => {
+  const run = fixture('correction');
+  run.outcomeCutoffAt = '2026-10-18T01:04:00Z';
+  run.transcript.g.push(msg('late', '11:00 B-204 R3', '2026-10-18T01:05:00Z'));
+  expect(busyGoal(run).goal).toBe(false);
+  expect(run.transcript.g).toHaveLength(2);
+  run.transcript.g.push(msg('timely', '11:00 B-204 R3', '2026-10-18T01:03:59Z'));
+  expect(busyGoal(run).goal).toBe(true);
+});

@@ -188,6 +188,9 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 `draftVersion` 和可选动作；新来源消息不能重置已有草稿预算。需要延后时，不带
 `resolve_inbox_ids` 放弃草稿，再通过既有 `inbox_snooze` 为已观察且未完成的事项设置时间和说明。
 等待中的事项不能标为完成。
+仅因消息持续变化而延后时，`suggestedSnoozeUntil` 提供 Host 当前时间之后 30 秒的
+`inbox_snooze.until_time` 建议值，本身不创建调度；Human 指定的更晚时间或未满足的
+条件优先，取消指令仍终止事项。
 在同一原生 Orchestrator turn 内，放弃耗尽预算的草稿后不能重新发送，返回
 `dropped-exhausted-draft-defer-turn`；后续一轮可以读取最新上下文继续处理。
 独立的直接 CLI 调用不共享原生 turn。

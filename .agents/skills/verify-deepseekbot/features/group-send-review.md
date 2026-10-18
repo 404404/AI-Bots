@@ -152,5 +152,10 @@ work must still wake at its deadline when the awaited fact arrives without a men
 has not otherwise been observed; ordinary context alone cannot cancel the return timer.
 Verify that a later genuinely observed message still returns the item early without a
 duplicate deadline wake.
+For freshness-only contention, verify the exhausted/drop result's `suggestedSnoozeUntil`
+is a short future Host time and that the Bot actually resumes within the episode. It is
+not permission to shorten a Human deadline or ignore a condition. The v2 runner records
+the outcome cutoff, pauses only its own episode Bots and stops remaining turns before
+final usage settlement; late output stays visible but cannot change a censored outcome.
 Snoozed work alone is not a successful task. Human history remains committed messages, with decision
 diagnostics separate. Capture the real Group history in the Web Client and inspect console.

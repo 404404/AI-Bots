@@ -18,6 +18,7 @@ export type SendReviewOutcome = {
   draftVersion?: number;
   budget?: { used: number; limit: number; exhausted: boolean };
   choices?: ('drop' | 'snooze-inbox' | 'freshness-override')[];
+  suggestedSnoozeUntil?: string;
   changedMessageIds?: string[];
   changedMessageCount?: number;
   yieldedToMessageIds?: string[];
@@ -440,7 +441,7 @@ export class GroupSendReview {
   #progress(
     draft: ReviewDraft,
   ): Required<Pick<SendReviewOutcome, 'draftVersion' | 'budget'>> &
-    Pick<SendReviewOutcome, 'choices'> {
+    Pick<SendReviewOutcome, 'choices' | 'suggestedSnoozeUntil'> {
     const choices: NonNullable<SendReviewOutcome['choices']> = [
       'drop',
       'snooze-inbox',
@@ -453,7 +454,9 @@ export class GroupSendReview {
         limit: MAX_RECHECKS,
         exhausted: draft.attempts >= MAX_RECHECKS,
       },
-      ...(draft.attempts >= MAX_RECHECKS ? { choices } : {}),
+      ...(draft.attempts >= MAX_RECHECKS
+        ? { choices, suggestedSnoozeUntil: new Date(this.now().getTime() + 30_000).toISOString() }
+        : {}),
     };
   }
 

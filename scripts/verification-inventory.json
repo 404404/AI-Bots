@@ -1762,9 +1762,9 @@
       "path": "scripts/e2e-group-busy-review.mjs",
       "category": "mapped",
       "behaviors": ["desktop.group.send-review"],
-      "reason": "Real DSH busy-Group triplets with two established turns, bounded chatter, latest corrections, explicit snooze/resume and revocation/quiet controls; all attempts and usage retained, current assistant reads full records.",
+      "reason": "Real DSH busy-Group triplets with two established turns, bounded chatter, latest corrections, explicit snooze/resume and revocation/quiet controls; all attempts and usage retained, current assistant reads full records. v2 pauses only episode Bots after the outcome cutoff and retains late output without changing censored outcomes.",
       "task": 2055,
-      "sha256": "4905ea57975a8d7fa57324ec261a7bc2d7c4cda1a95bc8686560edae7161de27"
+      "sha256": "bbcad127d56a9001ea7629e05bf9ac37d770d6780575c63b98208ed0533f3059"
     }
   ],
   "native": [

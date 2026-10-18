@@ -7,7 +7,8 @@
 held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0227](../adr/0227-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
 
 忙群最多进行两次复核，耗尽后明确 drop、既有 Inbox snooze 或一次显式继续申请（freshness_override）。显式继续仍原子核对当前消息；出现未读变化则拒绝本次申请，保留责任并延后，不能跳过新纠正。
-Override 绑定 owner、原 Group、当前草稿版本与实际观察；只跳过新鲜度检查，保留停止、权限、过期与 purge fence。
+Override 绑定 owner、原 Group、当前草稿版本与实际观察；只越过自动复核次数上限，不越过当前消息检查，保留停止、权限、过期与 purge fence。
+耗尽预算时的 `suggestedSnoozeUntil` 是 Host 时间之后 30 秒的延后建议，复用现有 Inbox 调度，不自动安排唤醒；Human 的更晚时间、等待条件与取消约束仍优先。
 选择理由、观察与提交 ID 留在原草稿记录；不新增 wake scheduler 或公开系统消息。见 [ADR-0229](../adr/0229-busy-group-review-has-an-explicit-progress-boundary.md)。
 
 Group composer 的 `/workspace` 和工作区 chip 复用 DM 的目录选择器与授权确认组件。默认选中当前未暂停、未删除的全部 Bot；Human 可以取消勾选，只授权指定几个。Group 只是逐 Bot 授权的入口，不持有权限；预览固定确认目标，后来加入的 Bot 不自动继承 Grant。共享目录预览相对于权限是只读的：native Workspace controller 可以登记、解析一个 DSH Workspace，但确认前不会建立任何 Workspace Grant。确认展示每个 Bot、canonical 目录、既有 Assignment mode 和 Orchestrator 写入状态；这些权限设置保持不变。逐 Bot 调用既有 `grantCreate`，可选的 application-defined Group scope 仅约束当前 Channel 成员与确认目录，并在异步 Workspace status 检查后、没有后续 await 的实际写入边界再次校验。SQLite `workspace_grants` 仍是唯一授权权威；无 Channel Workspace Binding、Group Grant 或统一 cwd。成功、有效 Grant 复用、拒绝和未知结果分别展示；失败/未知成员重试前通过同一个 `grants` readback 验证成员、撤销状态与当前目录，读回失败不发起写入。原侧栏与 chip 使用既有逐 Bot 变更通知刷新，正常委派仍通过原 Channel、Orchestrator 与 Assignment seam（#1433）。

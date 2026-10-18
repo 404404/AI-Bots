@@ -197,6 +197,9 @@ Busy Groups allow an initial hold and at most two rechecks. `budget.exhausted` r
 `requires-review`, `draftVersion` and choices; new source messages do not reset the existing
 draft. To defer, drop without `resolve_inbox_ids`, then use `inbox_snooze` for the observed
 unfinished work with a time and note. Do not mark waiting work done.
+For freshness-only contention, `suggestedSnoozeUntil` supplies a Host-time hint 30 seconds
+ahead for `inbox_snooze.until_time`; it schedules nothing itself. A later Human deadline
+or unmet condition takes precedence, and cancellation still ends the work.
 Inside a native Orchestrator turn, dropping an exhausted draft fences replacement sends
 until the turn ends (`dropped-exhausted-draft-defer-turn`). A later turn can read fresh
 context and proceed. Separate direct CLI invocations do not share a native turn.
