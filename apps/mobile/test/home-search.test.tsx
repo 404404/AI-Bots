@@ -3,9 +3,22 @@ import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { CloudRow } from '../src/cloud/client';
+import type { CloudConversation } from '../src/cloud/conversations';
+import { publicInstance, MOBILE_REDIRECT_URI } from '../src/cloud/instance-contract';
+import { cloudViewScope } from '../src/cloud/workspace-directory';
 import type { RosterView } from '../src/host/client';
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+const { push, cloudState, directoryState } = vi.hoisted(() => ({
+  push: vi.fn(),
+  cloudState: {
+    error: undefined as string | undefined,
+    ready: true,
+    busy: false,
+    rows: [] as CloudRow[],
+  },
+  directoryState: { busy: false, rows: [] as CloudConversation[], errors: [] as string[] },
+}));
 const roster: RosterView = {
   bots: [
     {
@@ -32,6 +45,18 @@ const roster: RosterView = {
   channels: [{ id: 'launch-team', name: 'Launch team', memberCount: 3, members: [] }],
 };
 
+vi.mock('../src/host/native-conversation-filter', async () => {
+  const { useState } = await import('react');
+  return { useConversationFilter: () => useState('all') };
+});
+vi.mock('../src/cloud/native', () => ({
+  useCloudSnapshot: () => cloudState,
+  cloudClient: { getSnapshot: () => cloudState },
+}));
+vi.mock('../src/cloud/native-conversations', () => ({
+  useCloudConversations: () => directoryState,
+  cloudConversations: { refresh: async () => {} },
+}));
 vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
 vi.mock('react-native', () => import('./react-native-shim'));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
@@ -45,6 +70,7 @@ vi.mock('expo-router', () => {
     Stack,
     router: { push },
     useIsFocused: () => true,
+    useFocusEffect: () => {},
     useRouter: () => ({ push }),
   };
 });
@@ -87,6 +113,10 @@ afterEach(() => {
   host?.remove();
   root = undefined;
   push.mockReset();
+  cloudState.rows = [];
+  cloudState.ready = true;
+  cloudState.error = undefined;
+  directoryState.rows = [];
 });
 
 async function home(): Promise<HTMLElement> {
@@ -110,20 +140,104 @@ async function type(view: HTMLElement, text: string): Promise<void> {
 
 const rows = (view: HTMLElement) =>
   [...view.querySelectorAll('button')]
-    .filter((node) => node.getAttribute('aria-label') !== t.cloudJoin.newOrJoin)
+    .filter(
+      (node) =>
+        ![t.cloudJoin.newOrJoin, t.allConversations, 'studio'].includes(
+          node.getAttribute('aria-label') ?? '',
+        ),
+    )
     .map((node) => node.getAttribute('aria-label'));
 
 describe('Search at the top of Chats', () => {
+  it('keeps the Computer usable when Cloud local state cannot load', async () => {
+    cloudState.ready = false;
+    cloudState.error = 'STORAGE_UNAVAILABLE';
+    const view = await home();
+    expect(view.textContent).toContain('Ada');
+    expect(view.textContent).toContain(t.cloudListUnavailable);
+  });
+  it('opens a cloud row with its account and organization while leaving the paired Computer selected', async () => {
+    const config = publicInstance({
+      instanceId: 'uat',
+      environment: 'uat',
+      server: 'https://uat.example.test',
+      clientId: 'client_test',
+      issuer: 'https://api.workos.com/user_management/client_test',
+      authkitDomain: 'test-staging.authkit.app',
+      mobileRedirectUri: MOBILE_REDIRECT_URI,
+    });
+    const cloudRow: CloudRow = {
+      config,
+      hasSession: true,
+      sessionUserId: 'user_a',
+      identity: { instanceId: 'uat', userId: 'user_a', instanceRole: 'user' },
+      organization: {
+        organizationId: 'org_a',
+        name: 'Cloud team',
+        description: '',
+        version: 1,
+        role: 'member',
+      },
+    };
+    const scope = cloudViewScope(cloudRow);
+    cloudState.rows = [cloudRow];
+    directoryState.rows = [
+      {
+        key: 'cloud-one',
+        scope,
+        instanceId: 'uat',
+        organizationId: 'org_a',
+        organizationName: 'Cloud team',
+        guest: false,
+        channel: {
+          channelId: 'ch_' + 'a'.repeat(64),
+          name: 'Cloud general',
+          creatorId: 'user_a',
+          creatorType: 'human',
+          createdAt: '2026-10-18T00:00:00Z',
+        },
+      },
+    ];
+    const view = await home();
+    expect(view.textContent).toContain('Cloud general');
+    expect(view.textContent).toContain('Ada');
+    await act(async () =>
+      view
+        .querySelector<HTMLButtonElement>(
+          `button[aria-label="Cloud general, ${t.cloudChannels.cloudChannel}"]`,
+        )!
+        .click(),
+    );
+    expect(push).toHaveBeenLastCalledWith({
+      pathname: '/cloud-channels',
+      params: {
+        instanceId: 'uat',
+        organizationId: 'org_a',
+        channelId: 'ch_' + 'a'.repeat(64),
+        guest: 'false',
+        accountScope: scope,
+      },
+    });
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>('button[aria-label="studio"]')!.click(),
+    );
+    expect(view.textContent).not.toContain('Cloud general');
+    expect(view.textContent).toContain('Ada');
+  });
+
   it('filters the list in place and opens the chat the Human taps', async () => {
     const view = await home();
     expect(rows(view)).toHaveLength(3);
 
-    await type(view, 'AD');
+    await type(view, 'ＡＤ');
     expect(rows(view)).toEqual(['Ada, Done']);
     await act(async () =>
       view.querySelector<HTMLButtonElement>('button[aria-label="Ada, Done"]')!.click(),
     );
-    expect(push).toHaveBeenLastCalledWith({ pathname: '/dm/[slug]', params: { slug: 'ada' } });
+    expect(push).toHaveBeenLastCalledWith({
+      pathname: '/dm/[slug]',
+      params: { slug: 'ada', hostId: 'h1' },
+    });
 
     await type(view, '小明');
     expect(rows(view)).toEqual(['小明']);
@@ -131,12 +245,12 @@ describe('Search at the top of Chats', () => {
     await type(view, 'launch');
     await act(async () =>
       [...view.querySelectorAll('button')]
-        .find((node) => node.getAttribute('aria-label') !== t.cloudJoin.newOrJoin)!
+        .find((node) => node.getAttribute('aria-label')?.startsWith('Launch team'))!
         .click(),
     );
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/channel/[id]',
-      params: { id: 'launch-team' },
+      params: { id: 'launch-team', hostId: 'h1' },
     });
   });
 

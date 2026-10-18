@@ -1,3 +1,4 @@
+import { sourceDrafts } from './native-source-drafts';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { AppState, Platform } from 'react-native';
@@ -26,6 +27,7 @@ export interface HostSessionState {
   inbox: Inbox | undefined;
 }
 
+const clientHosts = new WeakMap<HostClient, string>();
 const listeners = new Set<() => void>();
 let state: HostSessionState = { saved: undefined, hosts: [], client: undefined, inbox: undefined };
 let stored: SavedHosts = { hosts: [] };
@@ -78,6 +80,7 @@ function adopt(next: SavedHosts, trigger: ConnectionTrigger = 'open'): void {
           carrier: nativeCarrier(),
           telemetry: createConnectionTelemetry(mobileTelemetry, trigger),
         });
+  if (client && saved) clientHosts.set(client, saved.hostId);
   const inbox = client === undefined ? undefined : createInbox(client);
   offInbox =
     saved === null || inbox === undefined
@@ -139,6 +142,15 @@ export const hostSession = {
     if (host === null || host === undefined) return;
     const current = host.hostId === state.saved?.hostId;
     void pushSession.forget(host);
+    await sourceDrafts.ready;
+    sourceDrafts.removeWhere((key) => {
+      try {
+        const parts = JSON.parse(key);
+        return parts[0] === 'computer' && parts[1] === host.hostId;
+      } catch {
+        return false;
+      }
+    });
     await commit(withoutHost(stored, host.hostId));
     if (!current) return;
     try {
@@ -193,6 +205,7 @@ function conversationFor(
     host: client,
     ...options,
     cache: nativeConversationCache,
+    cacheKey: JSON.stringify(['computer', clientHosts.get(client), key]),
     telemetry: { send: () => mobileTelemetry.send(options.botSlug === undefined ? 'group' : 'dm') },
   });
   let watchers = 0;
