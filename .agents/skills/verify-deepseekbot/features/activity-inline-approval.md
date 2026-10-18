@@ -98,3 +98,24 @@ The first RC2 run of this journey observed a native `ask_user_question` tool pen
 canonical Channel question card, including after a timed retry. Preserve the trace and do not
 claim native question creation as verified by this journey. The group-join case qualifies updates
 to existing canonical action sources; it does not repair or substitute for that request-creation path.
+
+## Bidirectional Approve and sustained multi-Channel load
+
+Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-activity-approve-sync.mjs`
+for two real native bash approvals. It creates disposable QA Bots, validates the exact harmless
+marker commands, clicks **Allow once** in Activity and then in the conversation, and checks
+both rendered projections, exactly one canonical decision, and the actual native file effect.
+Each observer uses a separate browser so a hidden tab's rendering lifecycle is not mistaken
+for a live synchronization failure. Saved layout state must be handled when opening a second
+page. A resolved request renders an approved notice rather than retaining its pending card.
+
+Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-activity-load.mjs`
+on a fresh isolated Host. It creates 24 silent Groups and drives the public `botToolRun`
+`channel_send` path (no model tokens or fabricated Client events) after a trusted Human Source
+Event in each Group. Three rounds each send 240 messages in waves of 24, with a 100ms minimum
+wave period. The actual achieved rate is reported, not assumed. Compare sequential runs on
+main and the candidate on the same machine; use `BH_LOAD_BASELINE=1` for the main run.
+Capture write/query latency, query counts, browser task time, animation frame intervals,
+long tasks, heap samples, idle recovery, one existing remote.mux connection, and exact latest
+message identities across all 24 Channels. This bounded load is not an unlimited-capacity
+or long-duration memory-leak qualification. Preserve failed runs and their DOM evidence.

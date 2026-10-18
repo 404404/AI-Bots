@@ -1820,6 +1820,22 @@
       "reason": "Isolated synthetic Memory repository; real Client checks both diff entry points, wrap/scroll switching, five-digit gutters, narrow panes, light/dark themes and browser errors.",
       "task": 2213,
       "sha256": "d0777a9dfd7bb30de5a23f03be842de9fde975a391e64a32c61123a44103294e"
+    },
+    {
+      "path": "scripts/e2e-activity-approve-sync.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Real native bash Allow once from Activity and conversation with independent browser observers, canonical decision identity and native file effect.",
+      "task": 2230,
+      "sha256": "ff9901ec9c8ce42ff88633a03e804f45657c5f39caf8fe31c5f88db30d73a723"
+    },
+    {
+      "path": "scripts/e2e-activity-load.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Sequential main/candidate real Host load: 24 silent Groups, public direct channel_send, three 240-message rounds, query/coalescing/latency/long-task/heap and idle-recovery evidence.",
+      "task": 2230,
+      "sha256": "39ffb3b95da42797286198fcf76cf4535456577285315d37ae57a0379fd7c06a"
     }
   ],
   "native": [

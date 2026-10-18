@@ -34,7 +34,7 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Composer footer customization and optional reply speed | yes for a speed sample | none (Web interaction path) | [composer-footer.md](composer-footer.md) |
 | Disposable Memory history, restore and stale-head refusal | no | `scripts/e2e-memory-restore.mjs` | [memory-restore.md](memory-restore.md) |
 
-| Activity Center inline Tool approvals: page and Dock | yes (real pending requests) | `scripts/e2e-inbox-tool-approval.mjs`, `scripts/e2e-activity-live.mjs` | [activity-inline-approval.md](activity-inline-approval.md) |
+| Activity Center inline Tool approvals: page and Dock | yes (real pending requests) | `scripts/e2e-inbox-tool-approval.mjs`, `scripts/e2e-activity-live.mjs`, `scripts/e2e-activity-approve-sync.mjs`, `scripts/e2e-activity-load.mjs` | [activity-inline-approval.md](activity-inline-approval.md) |
 
 ## Coverage and maintenance
 
