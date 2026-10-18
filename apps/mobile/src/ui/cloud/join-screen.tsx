@@ -177,7 +177,9 @@ export function CloudJoinScreen() {
       {!!row?.hasSession && (
         <View style={box}>
           <Text>{t.cloudJoin.account}</Text>
-          <Text selectable>{row.identity?.userId ?? t.cloud.required}</Text>
+          <Text selectable>
+            {invitation?.email ?? row.identity?.userId ?? t.cloud.savedSession}
+          </Text>
           <Button
             label={t.cloudJoin.switchAccount}
             disabled={busy}
