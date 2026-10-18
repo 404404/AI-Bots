@@ -474,6 +474,7 @@ export interface BridgeMethods {
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
+  botNewSession(payload: unknown): Promise<BridgeResult<{ started: true }>>;
   channelBotStop(
     payload: unknown,
   ): Promise<BridgeResult<{ stopped: { botSlug: string; sessionId: string; messageId: string } }>>;
@@ -539,7 +540,10 @@ export interface BridgeMethods {
   modelPresetUpdate(payload: unknown): Promise<BridgeResult<{ preset: ModelPreset }>>;
   modelPresetApply(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlan(payload: unknown): Promise<BridgeResult<ModelPlanState>>;
-  modelPlanCustomize(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
+  modelPlanCustomize(
+    payload: unknown,
+    beforeCommit?: () => void,
+  ): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlanAssignmentsSet(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlanSet(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   list(payload: unknown): BridgeResult<{ bots: PersonaBotSummary[] }>;
@@ -2068,6 +2072,26 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(error instanceof Error ? error.message : 'Retry unavailable');
       }
     },
+    async botNewSession(payload) {
+      const slug = asSlug(payload);
+      if (slug === undefined) return invalidInput('slug is required');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.runtime?.startFreshOrchestrator === undefined) return unavailable();
+      try {
+        const outcome = await deps.runtime.startFreshOrchestrator(slug);
+        if (outcome === 'busy')
+          return {
+            ok: false,
+            error: { code: 'bot-busy', message: 'Stop the Bot before starting a fresh Session' },
+          };
+        return { ok: true, value: { started: true } };
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'session-reset-failed', message: 'Could not start a fresh Session' },
+        };
+      }
+    },
     async channelBotStop(payload) {
       const source = asObject(payload);
       const channelId = asNonBlank(source, 'channelId');
@@ -2301,7 +2325,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         },
       };
     },
-    async modelPlanCustomize(payload) {
+    async modelPlanCustomize(payload, beforeCommit) {
       if (deps.modelCatalog === undefined) return unavailable();
       const source = asObject(payload);
       const slug = source['slug'];
@@ -2323,6 +2347,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('A valid expected revision is required');
       try {
         await deps.modelCatalog.validate(orchestrator);
+        beforeCommit?.();
         const result = deps.registry.customizeModelPlan(slug, orchestrator, expectedRevision);
         if (!result.ok)
           return result.reason === 'not-found'

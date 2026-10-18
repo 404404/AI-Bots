@@ -436,6 +436,7 @@ export function createCore(
     sessionArchive?: () => NativeSessionArchive | undefined;
     autoAcceptGroupInvitations?: () => boolean;
     triageContinuation?: boolean;
+    imCommands?: () => import('./messaging/im-commands.js').ImCommandServices | undefined;
     onOutputCommitted?: (event: PersonaBotOutputCommitted) => void;
     activeQuestionMessageIds?: () => readonly string[];
     activeToolApprovalMessageIds?: () => readonly string[];
@@ -586,6 +587,7 @@ export function createCore(
       for (const slug of slugs) runtime?.resumePendingDigests?.(slug);
     },
     onIngested: (channelId, messageId) => runtime?.admitGroupMessage(channelId, messageId),
+    ...(options.imCommands === undefined ? {} : { imCommands: options.imCommands }),
     recover: operationalDatabase.mode === 'ready',
     isBotActive: (slug) => {
       const bot = registry.get(slug);
@@ -1223,6 +1225,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   let userQuestions: ChannelUserQuestions | undefined;
   let toolApproval: ChannelToolApproval | undefined;
   let privateInputs: PrivateInputs | undefined;
+  let imCommandServices: import('./messaging/im-commands.js').ImCommandServices | undefined;
   const core = createCore({
     dshHome,
     triageContinuation: true,
@@ -1279,6 +1282,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     workspaces: () => ctx.get('workspaceRegistry') as unknown as DshWorkspaceLookup | undefined,
     sessionArchive: () =>
       ctx.get('workspaceRegistry') as unknown as NativeSessionArchive | undefined,
+    imCommands: () => imCommandServices,
   });
   publishDraft = (event) => core.live.publishDraft(event);
   ctx.effect(() => () => core.operationalDatabase.close(), 'botharness: operational database');
@@ -2147,6 +2151,45 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
+  imCommandServices = {
+    botDisplayName: (slug) =>
+      core.registry.get(slug)?.displayName ?? core.registry.getHistorical(slug)?.displayName,
+    plan: async (slug) => {
+      const state = await bridgeMethods.modelPlan({ slug });
+      if (!state.ok) throw new Error(state.error.message);
+      return state.value.plan;
+    },
+    catalog: () => modelCatalog.list(),
+    defaultRoute: () => modelCatalog.defaultRoute?.(),
+    applyModel: async (slug, route, assertCurrent) => {
+      const state = await bridgeMethods.modelPlan({ slug });
+      if (!state.ok) throw new Error(state.error.message);
+      assertCurrent?.();
+      const result = await bridgeMethods.modelPlanCustomize(
+        {
+          slug,
+          expectedRevision: state.value.revision ?? 0,
+          orchestrator: route,
+        },
+        assertCurrent,
+      );
+      if (!result.ok) throw new Error(result.error.message);
+    },
+    stopTurn: async (slug) => {
+      const channel = core.channels.getOrCreateDm(slug);
+      if (channel === undefined) throw new Error('Bot DM is unavailable');
+      const stopped = await bridgeMethods.channelBotStop({
+        channelId: channel.id,
+        botSlug: slug,
+      });
+      if (stopped.ok) return { sessionId: stopped.value.stopped.sessionId };
+      if (stopped.error.code === 'not-working') return undefined;
+      throw new Error(stopped.error.message);
+    },
+    startFreshOrchestrator: (slug, assertCurrent) =>
+      core.runtime.startFreshOrchestrator!(slug, assertCurrent),
+    turnRunning: (slug) => core.runtime.turnRunning!(slug),
+  };
   const tobBotCreationOperations = createTobBotCreationOperations({
     registry: core.registry,
     creations: core.creations,

@@ -481,6 +481,7 @@ describe('plugin entry', () => {
       'onboardingModel',
       'modelPlanInherit',
       'channelRetry',
+      'botNewSession',
       'channelBotStop',
       'modelCatalog',
       'modelPresets',

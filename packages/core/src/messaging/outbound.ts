@@ -408,6 +408,7 @@ export function createOutboundMessaging(options: {
   onPlaced?(commit: ChannelMessageCommit): void;
   onShared?(botSlugs: string[]): void;
   onIngested?(channelId: string, messageId: string): void;
+  imCommands?(): import('./im-commands.js').ImCommandServices | undefined;
   timeoutMs?: number;
   recover?: boolean;
   now?: () => Date;
@@ -1112,6 +1113,21 @@ export function createOutboundMessaging(options: {
     },
     sourcePolicy: options.sourcePolicy ?? createBotSourcePolicyStore(database),
     isBotActive: options.isBotActive,
+    async replyCommand(botSlug, sourceEventId, text) {
+      let part = 0;
+      for (let offset = 0; offset < text.length;) {
+        let end = Math.min(offset + 4000, text.length);
+        if (end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1]!)) end--;
+        const result = await routedReply(
+          botSlug,
+          sourceEventId,
+          text.slice(offset, end),
+          `im-command-${sourceEventId}-${part++}`,
+        );
+        if (result.state !== 'provider-accepted') throw new MessagingError(result.state);
+        offset = end;
+      }
+    },
     onAdmissionCommitted(botSlug, sourceEventId) {
       feedback.notify(botSlug, sourceEventId, 'received');
     },
@@ -1123,6 +1139,7 @@ export function createOutboundMessaging(options: {
     },
     ...(options.onShared ? { onShared: options.onShared } : {}),
     ...(options.onIngested ? { onIngested: options.onIngested } : {}),
+    ...(options.imCommands === undefined ? {} : { imCommands: options.imCommands }),
     ...(options.warn === undefined ? {} : { warn: options.warn }),
   });
   const sourceForReply = (botSlug: string, sourceEventId: string, value: MessagingGrant) => {
