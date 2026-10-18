@@ -5,6 +5,7 @@ import type { BotHarnessTranslate } from './locale.js';
 import { MemoryCurrentFileOpenButton } from './memory-file-actions.js';
 import {
   MemoryDiffFile,
+  MemoryDiffWrapButton,
   MemoryViewIconButton,
   splitMemoryDiffFiles,
 } from './memory-reader-parts.js';
@@ -25,6 +26,7 @@ export function MemoryCommitView({
   onClose: () => void;
   t: BotHarnessTranslate;
 }): ReactElement {
+  const [wrap, setWrap] = useState(true);
   const [detail, setDetail] = useState<MemoryGitCommitDiff>();
   const [error, setError] = useState<string>();
   const mount = useMountedResource<HTMLDivElement>(() => {
@@ -59,6 +61,7 @@ export function MemoryCommitView({
             <span>{detail.subject}</span>
           )}
         </div>
+        <MemoryDiffWrapButton wrap={wrap} onToggle={() => setWrap((value) => !value)} t={t} />
       </div>
       {error !== undefined ? (
         <div className="bh-error" role="alert">
@@ -78,6 +81,7 @@ export function MemoryCommitView({
               path={file.path}
               status={file.status}
               diff={diffSections[index] ?? ''}
+              wrap={wrap}
               label={t('memory.diff')}
               binaryLabel={t('memory.binaryPreview')}
               emptyLabel={t('memory.noTextDiff')}
