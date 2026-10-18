@@ -190,6 +190,7 @@ export async function rpc(instance, endpoint, args = {}) {
     signal: AbortSignal.timeout(60_000),
     headers: {
       'content-type': 'application/json',
+      connection: 'close',
       cookie: cookieFor(instance.home),
     },
     body: JSON.stringify({

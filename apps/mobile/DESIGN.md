@@ -312,6 +312,8 @@ For shared primitives, cover representative screens from each row and record gap
 
 ## Keyboard and text entry
 
+Structured mention links follow the Human-confirmed inline presentation in #2160: the avatar and `@name` share the body text's line box, with the Bot primary color adapted against the actual bubble surface using the same name-color function as Web. They wrap as inline text; do not impose a 44/48-point block height. This is an explicit exception to the general control-size rule for these inline links, not a new default for buttons. Keep accessible link labels and ID-bound actions.
+
 Every editable field on iOS and Android belongs to a layout that responds to the keyboard. Keep the focused caret and the current editing line visible throughout keyboard opening, closing, interactive dismissal, focus changes and multiline growth. The user must be able to reach validation, submit, cancel and retry while editing, including at maximum system text size and in a partially expanded sheet.
 
 - Forms use `KeyboardFormScroll` from `src/ui/primitives/keyboard-form.tsx`. It follows native keyboard frames and automatically reveals the focused field, reserving room for a following action. Put actions in the same scroll owner or a keyboard-tracking footer. Keep the draft and editable-field identity when layout changes.

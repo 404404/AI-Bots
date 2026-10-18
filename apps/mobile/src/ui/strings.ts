@@ -12,6 +12,7 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  openMention: (name: string) => `Open chat with ${name}`,
   cloud: {
     title: 'Cloud services',
     hint: 'Import the UAT configuration supplied by your deployer. Cloud sign-in is separate from pairing a computer.',
@@ -948,6 +949,7 @@ const en = {
 };
 
 const zh: typeof en = {
+  openMention: (name: string) => `打开与${name}的私聊`,
   cloud: {
     title: '云服务',
     hint: '导入部署者提供的 UAT 配置。云服务登录与电脑配对相互独立。',

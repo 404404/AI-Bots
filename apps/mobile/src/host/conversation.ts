@@ -119,6 +119,7 @@ export interface ConversationMessage {
   author: 'human' | 'bot' | 'system';
   bot?: string;
   body: string;
+  mentions?: WireMention[];
   attachments: MessageAttachment[];
   card?: MessageCard;
   resolves?: { requestId: string; resolution: CardResolution };
@@ -384,6 +385,7 @@ function present(
     author: kind === 'human' ? 'human' : kind === 'bot' ? 'bot' : 'system',
     ...(message.author.kind === 'bot' ? { bot: message.author.slug } : {}),
     body: message.body,
+    ...(message.mentions === undefined ? {} : { mentions: message.mentions }),
     attachments: attachmentsOf(entry, resolve, picked),
     ...(card === undefined ? {} : { card }),
     ...(resolves === undefined ? {} : { resolves }),
@@ -460,6 +462,7 @@ export function createConversation(options: ConversationOptions): Conversation {
         at: item.at,
         author: 'human',
         body: item.body,
+        ...(item.tags.mentions === undefined ? {} : { mentions: item.tags.mentions }),
         attachments: item.files.map((file, index) => ({
           key: `${item.id}:${index}`,
           kind: file.kind ?? 'file',
