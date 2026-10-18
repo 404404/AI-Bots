@@ -563,6 +563,7 @@ export function HostDrawer() {
         </Animated.View>
         <Animated.View
           accessibilityViewIsModal
+          accessible={false}
           onAccessibilityEscape={() => settle(false)}
           style={[
             {
