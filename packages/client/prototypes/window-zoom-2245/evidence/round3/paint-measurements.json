@@ -920,5 +920,48 @@
       200
     ],
     "passed": true
+  },
+  {
+    "image": "guest-plain-visible.png",
+    "bands": [
+      {
+        "firstY": 568,
+        "lastY": 603,
+        "runs": [
+          [
+            2183,
+            2423
+          ]
+        ]
+      },
+      {
+        "firstY": 826,
+        "lastY": 861,
+        "runs": [
+          [
+            2183,
+            2423
+          ]
+        ]
+      },
+      {
+        "firstY": 1080,
+        "lastY": 1111,
+        "runs": [
+          [
+            2179,
+            2419
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      240,
+      240,
+      240
+    ],
+    "passed": true
   }
 ]

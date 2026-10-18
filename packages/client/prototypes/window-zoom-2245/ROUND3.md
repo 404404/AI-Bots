@@ -57,6 +57,10 @@ node packages/client/prototypes/window-zoom-2245/probe-paint.mjs verify sample-q
 
 没有正式实现、实现PR、合并、上游修改或已安装ASAR修改。
 
-## 保留的人工步骤
+## 最终 webview 普通 Cmd+= 对照：通过
 
-主页面plain Equal已通过。为独立验证webview plain Equal，最后已停止重建、将guest输入标成`WEBVIEW: Cmd+=`，确认guest id=12、parent activeElement=zoom-guest、guest activeElement=edit，并清零该样本计数。发布本轮报告时尚未收到此样本按键，因此它仍是**待验证**，不借用第二轮Shift+Equal或主页面结果。隔离窗口保留供Human完成这一步；无需重新执行已完成的空白归因。
+最后停止所有重建和界面操作，固定guest输入为`WEBVIEW: Cmd+=`并清零此样本计数。Human确认只按一次后，实测native `kind=webview, code=Equal, meta=true, shift=false, repeat=false`，仅一个`registry:webview`动作，L=0→1。guest id=12、guest focus=edit、输入值保留，字号14/11/13px、自有zoom=1不变。
+
+Human返回聊天后父页面hidden，故该次回读只用于输入/状态证据；随后通过全屏恢复真实visible并用整窗验证工具复核，三个标尺均为240物理px，`qualified=true`，动作与callback仍各一个。该视觉复核包含窗口可见性恢复，不冒充按键当刻的截图。证据为`guest-plain-before.json`→`guest-plain-after.json`→`guest-plain-visible.json`。
+
+本轮plain Equal已独立覆盖主页面和原生webview；同源/跨源iframe的plain Equal未单独重跑，仍只有第二轮Shift+Equal/Minus资格。正式功能验收、其他平台和完整Human QA仍未完成。人工步骤结束后关闭本任务隔离实例与夹具服务。

@@ -1,0 +1,164 @@
+{
+  "probe": {
+    "state": {
+      "level": 1,
+      "mode": "off",
+      "recording": false,
+      "composing": false,
+      "actions": [
+        {
+          "source": "registry:webview",
+          "level": 1
+        }
+      ],
+      "native": [
+        {
+          "kind": "webview",
+          "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+          "frameName": "aa9b6612-08d1-402d-bb7e-8789798205e7",
+          "code": "Equal",
+          "repeat": false,
+          "control": false,
+          "alt": false,
+          "shift": false,
+          "meta": true
+        }
+      ],
+      "errors": [],
+      "guestReady": true
+    },
+    "catalog": [
+      {
+        "id": "zoomPrototype.increase",
+        "binding": {
+          "code": "Equal",
+          "modifiers": [
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE increase",
+        "aliases": [],
+        "keys": [
+          "⌘",
+          "="
+        ],
+        "aria": "Meta+="
+      },
+      {
+        "id": "zoomPrototype.increaseShift",
+        "binding": {
+          "code": "Equal",
+          "modifiers": [
+            "shift",
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE increaseShift",
+        "aliases": [],
+        "keys": [
+          "⇧",
+          "⌘",
+          "="
+        ],
+        "aria": "Shift+Meta+="
+      },
+      {
+        "id": "zoomPrototype.decrease",
+        "binding": {
+          "code": "Minus",
+          "modifiers": [
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE decrease",
+        "aliases": [],
+        "keys": [
+          "⌘",
+          "-"
+        ],
+        "aria": "Meta+-"
+      },
+      {
+        "id": "zoomPrototype.bridgeControl",
+        "binding": {
+          "code": "KeyY",
+          "modifiers": [
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE bridgeControl",
+        "aliases": [],
+        "keys": [
+          "⌘",
+          "Y"
+        ],
+        "aria": "Meta+Y"
+      }
+    ],
+    "fixed": [],
+    "config": "ready"
+  },
+  "parent": {
+    "visibility": "hidden",
+    "focus": "zoom-guest",
+    "rect": {
+      "x": 871.203125,
+      "y": 530.578125,
+      "width": 312,
+      "height": 120,
+      "top": 530.578125,
+      "right": 1183.203125,
+      "bottom": 650.578125,
+      "left": 871.203125
+    },
+    "dpr": 2,
+    "viewport": [
+      1261,
+      820
+    ],
+    "fonts": [
+      "14px",
+      "11px",
+      "13px"
+    ]
+  },
+  "trace": [
+    {
+      "event": "dom-ready",
+      "blank": true,
+      "visibility": "visible"
+    },
+    {
+      "event": "dom-ready",
+      "blank": false,
+      "visibility": "visible"
+    }
+  ],
+  "guest": {
+    "id": 12,
+    "zoom": 1,
+    "loading": false,
+    "data": {
+      "visibility": "visible",
+      "focus": "edit",
+      "viewport": [
+        260,
+        100
+      ],
+      "ready": "complete",
+      "value": "WEBVIEW: Cmd+="
+    }
+  }
+}
