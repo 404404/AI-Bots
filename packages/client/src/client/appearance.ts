@@ -1,14 +1,22 @@
+import {
+  clearMaterialAdjustments,
+  validMaterials,
+  type AppearanceMaterialOverrides,
+} from './appearance-materials.js';
 export const APPEARANCE_KEY = 'botharness:appearance:v1';
 export type AppearanceMode = 'light' | 'dark';
 export type AppearancePreference = AppearanceMode | 'system';
-export type AppearancePreset = 'classic-blue' | 'mist-purple';
+export type AppearancePreset = 'classic-blue' | 'mist-purple' | 'forest-green' | 'warm-amber';
 export const APPEARANCE_PRIMARY = {
   'classic-blue': { light: '#4176e6', dark: '#7aaaff' },
   'mist-purple': { light: '#7957c9', dark: '#b19af0' },
+  'forest-green': { light: '#287454', dark: '#7cc7a0' },
+  'warm-amber': { light: '#94600d', dark: '#e6b75c' },
 } as const;
 export interface AppearanceModeConfig extends Record<string, unknown> {
   preset: AppearancePreset;
   primary?: string;
+  materials?: AppearanceMaterialOverrides;
 }
 export interface AppearanceConfig extends Record<string, unknown> {
   version: 1;
@@ -36,7 +44,10 @@ export function object(value: unknown): Record<string, unknown> {
     : {};
 }
 const preset = (value: unknown): value is AppearancePreset =>
-  value === 'classic-blue' || value === 'mist-purple';
+  value === 'classic-blue' ||
+  value === 'mist-purple' ||
+  value === 'forest-green' ||
+  value === 'warm-amber';
 const preference = (value: unknown): value is AppearancePreference =>
   value === 'system' || value === 'light' || value === 'dark';
 export function parseAppearance(raw: string | null): AppearanceConfig {
@@ -62,6 +73,7 @@ export function parseAppearance(raw: string | null): AppearanceConfig {
   for (const mode of ['light', 'dark'] as const) {
     const entry = object(modes[mode]);
     if (
+      (entry.materials !== undefined && !validMaterials(entry.materials)) ||
       !preset(entry.preset) ||
       (entry.primary !== undefined &&
         (typeof entry.primary !== 'string' || !/^#[0-9a-f]{6}$/i.test(entry.primary)))
@@ -75,19 +87,27 @@ export interface AppearancePatch {
   mode?: AppearanceMode;
   preset?: AppearancePreset;
   primary?: string;
+  materials?: AppearanceMaterialOverrides;
 }
 export function parseAppearancePatch(value: unknown): AppearancePatch {
   const v = object(value);
   if (
     !Object.keys(v).length ||
-    Object.keys(v).some((k) => !['preference', 'mode', 'preset', 'primary'].includes(k)) ||
+    Object.keys(v).some(
+      (k) => !['preference', 'mode', 'preset', 'primary', 'materials'].includes(k),
+    ) ||
     (v.preference !== undefined && !preference(v.preference)) ||
     (v.mode !== undefined && v.mode !== 'light' && v.mode !== 'dark') ||
     (v.preset !== undefined && !preset(v.preset)) ||
+    (v.materials !== undefined && !validMaterials(v.materials, true)) ||
     (v.primary !== undefined &&
       (typeof v.primary !== 'string' || !/^#[0-9a-f]{6}$/i.test(v.primary))) ||
-    ((v.preset !== undefined || v.primary !== undefined) && v.mode === undefined) ||
-    (v.mode !== undefined && v.preset === undefined && v.primary === undefined)
+    ((v.preset !== undefined || v.primary !== undefined || v.materials !== undefined) &&
+      v.mode === undefined) ||
+    (v.mode !== undefined &&
+      v.preset === undefined &&
+      v.primary === undefined &&
+      v.materials === undefined)
   )
     throw new AppearanceError('appearance-invalid-input');
   return v as AppearancePatch;
@@ -149,8 +169,16 @@ export class Appearance {
         if (patch.preset !== undefined) {
           mode.preset = patch.preset;
           delete mode.primary;
+          clearMaterialAdjustments(mode);
         }
         if (patch.primary !== undefined) mode.primary = patch.primary.toLowerCase();
+        if (patch.materials !== undefined) {
+          mode.materials ??= {};
+          for (const part of ['header', 'body'] as const) {
+            if (patch.materials[part] !== undefined)
+              mode.materials[part] = { ...mode.materials[part], ...patch.materials[part] };
+          }
+        }
       }
       try {
         this.storage!.setItem(APPEARANCE_KEY, JSON.stringify(next));

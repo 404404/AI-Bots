@@ -687,7 +687,10 @@
         "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPreset' : 'appearance.darkPreset')}",
         "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPrimary' : 'appearance.darkPrimary')}",
         "storage:packages/client/src/client/appearance.ts:setItem(APPEARANCE_KEY)",
-        "route:packages/core/src/plugin.ts:APPEARANCE_CONTROL_PATH"
+        "route:packages/core/src/plugin.ts:APPEARANCE_CONTROL_PATH",
+        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialBlur')}",
+        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialColor')}",
+        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialOpacity')}"
       ],
       "commands": ["appearance-clients", "appearance-get", "appearance-set"]
     }

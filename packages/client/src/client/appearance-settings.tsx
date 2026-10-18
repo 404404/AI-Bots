@@ -1,3 +1,4 @@
+import { AppearanceMaterialSettings } from './appearance-material-settings.js';
 import { useSyncExternalStore, type ReactNode, type ReactElement } from 'react';
 import type { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client';
 import { APPEARANCE_PRIMARY, type Appearance, type AppearancePatch } from './appearance.js';
@@ -57,6 +58,8 @@ export function AppearanceSection(
                 options={[
                   { value: 'classic-blue', label: t('appearance.classicBlue') },
                   { value: 'mist-purple', label: t('appearance.mistPurple') },
+                  { value: 'forest-green', label: t('appearance.forestGreen') },
+                  { value: 'warm-amber', label: t('appearance.warmAmber') },
                 ]}
                 onChange={(preset) => change({ mode, preset })}
               />
@@ -80,6 +83,7 @@ export function AppearanceSection(
           />
         </div>
       ))}
+      <AppearanceMaterialSettings appearance={appearance} snapshot={theme} t={t} />
       <MotionSetting {...props} />
       <BotIconSetting {...props} />
       <SettingsRow
