@@ -13,7 +13,6 @@ import {
 } from '../models/presets.js';
 import { resolveSubagentRoute } from '../models/subagent-route.js';
 
-// DSH activations no longer register Jobs; this adapter owns the background Job kind.
 declare module '@deepseek-ai/dsh-jobs' {
   interface JobKindMap {
     subagent: 'subagent';
@@ -34,7 +33,6 @@ function agentOptions(parent: AgentOptions, route: ModelRoute): AgentOptions {
   };
 }
 
-// Activation signals own startup only; foreground and Job callers also own cancellation afterward.
 async function startCallerActivation(
   subagents: Context['subagents'],
   spec: Omit<SubagentActivationSpec, 'delivery'>,
@@ -46,7 +44,6 @@ async function startCallerActivation(
     return (disposal ??= activation.dispose());
   };
   const onAbort = () => {
-    // The memoized rejection is observed by collect/settleJob through dispose().
     void dispose().catch(() => undefined);
   };
   spec.signal.addEventListener('abort', onAbort, { once: true });
