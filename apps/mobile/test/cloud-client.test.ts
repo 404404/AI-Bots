@@ -1081,6 +1081,30 @@ describe('recipient-bound invitation journey', () => {
     ).rejects.toMatchObject({ code: 'INVITATION_TARGET_MISMATCH' });
     expect(f.calls).toHaveLength(before);
   });
+  it('restores verified identity when opening a guest channel after a cold restart', async () => {
+    const f = await loggedIn();
+    const original = f.rt.request;
+    const channelId = 'ch_' + 'c'.repeat(64);
+    f.rt.request = async (url, init) =>
+      url.endsWith('/api/guest-channels/' + channelId)
+        ? Response.json({
+            channelId,
+            organizationId: 'org_invited',
+            access: 'guest',
+            name: 'Invited channel',
+            creatorId: 'user_owner',
+            creatorType: 'human',
+            createdAt: '2026-01-01T00:00:00Z',
+          })
+        : original(url, init);
+    const restarted = new CloudClient(f.rt);
+    await restarted.load();
+    expect(restarted.getSnapshot().rows[0]?.identity).toBeUndefined();
+    await restarted.openChannel(config.instanceId, 'org_invited', channelId, true);
+    expect(restarted.getSnapshot().rows[0]?.identity?.userId).toBe('user_test');
+    expect(restarted.getSnapshot().rows[0]?.organization).toBeUndefined();
+    expect(f.calls.some((call) => call.url.includes('/api/organizations/org_invited'))).toBe(false);
+  });
   it('rejects discovery whose advertised origin differs from the invitation', async () => {
     const f = fixture();
     f.rt.request = async () => Response.json({ ...config, server: 'https://other.example' });

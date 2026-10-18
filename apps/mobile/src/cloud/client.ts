@@ -376,6 +376,7 @@ export class CloudClient {
       const entry = guest
         ? await this.current(this.entry(id))
         : await this.channelEntry(id, organizationId);
+      if (!this.identities.has(id)) await this.me(entry);
       const raw = await this.orgRequest(
         entry,
         (guest ? '' : '/' + organizationId + '/channels') + '/' + channelId,
