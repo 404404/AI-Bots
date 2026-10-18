@@ -1,0 +1,65 @@
+{
+  "sourceSha": "132b33e3c9965fcb5a01066a134f2744269b2d75",
+  "batch": 42,
+  "ciVerifyRuns": [
+    39157206364,
+    39160553634
+  ],
+  "focusedCloudClientTests": 38,
+  "environment": "UAT",
+  "screenshots": 10,
+  "nativeActions": {
+    "oneOrganizationInvite": true,
+    "actualClipboardEqual": true,
+    "nativeShareLightAndDarkOpenedCancelled": true,
+    "recipientReviewedWorkspaceScopeAndJoined": true,
+    "twoExistingChannelsVisibleAndOpened": true
+  },
+  "accepted": {
+    "acceptedExactRecipient": true,
+    "newMembershipRole": "member",
+    "allExistingChannelsVisible": true,
+    "channelCount": 2,
+    "eachChannelReadAllowed": true
+  },
+  "membershipCleanup": {
+    "onlyNewMembershipRemoved": true,
+    "allPriorMembershipIdsRolesStatusesPreserved": true,
+    "recipientMe200": true,
+    "organizationAndChannels403": true,
+    "priorOrganizationAndGuestListsRestored": true,
+    "acceptedInvitationAuditRetained": true
+  },
+  "sessionCleanup": {
+    "a1": {
+      "priorActivePreserved": true,
+      "ownSessionRevoked": true,
+      "latestRefreshRejected": true
+    },
+    "b1": {
+      "priorActivePreserved": true,
+      "ownSessionRevoked": true,
+      "latestRefreshRejected": true
+    }
+  },
+  "runtimeRestore": {
+    "originalCloudVaultRestored": true,
+    "originalHostsRestored": true,
+    "originalPendingJoinRestored": true
+  },
+  "clipboardRestore": {
+    "originalTextItemPresenceRestored": true,
+    "originalTextRestored": true
+  },
+  "limits": [
+    "Existing trusted config and genuine independently issued session fixture; not Hosted AuthKit or PKCE",
+    "System share sheet opened and cancelled; no external delivery",
+    "No physical QR, phone, Android or VoiceOver verification",
+    "Cached channel names remain after ORGANIZATION_ACCESS_DENIED; tracked in issue 2186",
+    "Some system share-sheet labels show missing glyphs; localization not qualified",
+    "One accepted invitation audit row intentionally retained",
+    "Historical Batch39 clipboard metadata limitation remains unchanged"
+  ],
+  "productionTouched": false,
+  "productCodeChanged": false
+}
