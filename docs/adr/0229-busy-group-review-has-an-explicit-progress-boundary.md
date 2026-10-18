@@ -57,6 +57,16 @@ existing Inbox Tool, not automatic scheduling or permission to shorten a Human d
 ignore an unmet condition. Observed completed FYI work can be resolved in the drop call while
 the original request remains open; successful resolution does not need repeated verification.
 
+The second frozen cohort exposed completion IDs being carried from an unsuccessful send into
+an exhausted drop: the model dropped its draft and accidentally resolved the original request
+with unrelated FYI items. An exhausted drop without observed peer-yield evidence now returns
+`keepOpenInboxIds` for its original Source Event and that Group's Message ID. The reply Consumer
+excludes those IDs from the composed completion selection, reports them as `keptOpen`, and
+still resolves selected completed background work. This guards the send-to-drop transition;
+it does not classify natural language or forbid a later explicit `inbox_resolve` for work the
+model judges cancelled or complete. Observed peer yield preserves the normal explicit
+completion path. No new Inbox state or scheduler is introduced.
+
 The owner records actor, reason, observation, version, count and committed message identity
 in its existing draft JSON in the same transaction as the formal Channel append. A successful
 override retains that terminal audit record. No additional database generation, content store,

@@ -188,6 +188,11 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 `draftVersion` 和可选动作；新来源消息不能重置已有草稿预算。需要延后时，不带
 `resolve_inbox_ids` 放弃草稿，再通过既有 `inbox_snooze` 为已观察且未完成的事项设置时间和说明。
 等待中的事项不能标为完成。
+预算耗尽后放弃草稿且没有已观察的同伴让话证据时，`keepOpenInboxIds` 返回原请求的
+Source Event 和群内 Message ID。这些 ID 不会被同次 `resolve_inbox_ids` 顺带结清，
+而会显示在 `inboxResolution.keptOpen`；其它已完成的旁话仍可结清。若选中的 ID 都需保留，
+结果为 `kept-open`。未完成的请求使用 `inbox_snooze` 延后；确已取消或完成的事项可另行
+显式调用 `inbox_resolve`。有依据的同伴让话仍保留正常结清路径，直接 CLI 使用相同检查。
 仅因消息持续变化而延后时，`suggestedSnoozeUntil` 提供 Host 当前时间之后 30 秒的
 `inbox_snooze.until_time` 建议值，本身不创建调度；Human 指定的更晚时间或未满足的
 条件优先，取消指令仍终止事项。

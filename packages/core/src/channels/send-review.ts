@@ -19,6 +19,7 @@ export type SendReviewOutcome = {
   budget?: { used: number; limit: number; exhausted: boolean };
   choices?: ('drop' | 'snooze-inbox' | 'freshness-override')[];
   suggestedSnoozeUntil?: string;
+  keepOpenInboxIds?: string[];
   changedMessageIds?: string[];
   changedMessageCount?: number;
   yieldedToMessageIds?: string[];
@@ -214,6 +215,18 @@ export class GroupSendReview {
       draft.state = 'dropped';
       this.#save(db, draft);
       const { budget, suggestedSnoozeUntil } = this.#progress(draft);
+      const keepOpenInboxIds =
+        budget.exhausted && !draft.yieldedToMessageIds
+          ? [
+              draft.sourceEventId,
+              ...db
+                .prepare(
+                  'SELECT message_id FROM channel_placements WHERE channel_id = ? AND source_event_id = ?',
+                )
+                .all(channelId, draft.sourceEventId)
+                .map((row) => String(row.message_id)),
+            ]
+          : undefined;
       return {
         status: 'dropped',
         channelId,
@@ -222,6 +235,7 @@ export class GroupSendReview {
           ? 'explicit-peer-yield'
           : 'explicit-drop-does-not-resolve-inbox',
         budget,
+        ...(keepOpenInboxIds ? { keepOpenInboxIds: [...new Set(keepOpenInboxIds)] } : {}),
         ...(suggestedSnoozeUntil ? { suggestedSnoozeUntil } : {}),
         ...(draft.yieldedToMessageIds ? { yieldedToMessageIds: draft.yieldedToMessageIds } : {}),
       };

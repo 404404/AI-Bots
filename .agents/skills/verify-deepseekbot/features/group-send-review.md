@@ -142,6 +142,11 @@ In a native Orchestrator turn, drop the exhausted draft and attempt a fresh send
 `dropped-exhausted-draft-defer-turn`. A later independent request must remain answerable.
 Separate direct Tool invocations are separate operations, so verify this turn boundary in
 the native Session path as well as the focused runtime regression.
+Drop an exhausted draft with completion IDs containing its original Source Event, original
+Group Message and completed FYI. Require both original aliases in `keepOpenInboxIds` and
+`inboxResolution.keptOpen`, the original Admission still unresolved, and only the FYI
+resolved. A later explicit completion decision remains possible; observed peer-yield drops
+must still compose normal completion. Check the actual Inbox owner, not only the Tool text.
 Wrong owner, wrong version, incomplete observation, revoked membership, stopped/archived Bot,
 expiry and purge must refuse without a new message.
 

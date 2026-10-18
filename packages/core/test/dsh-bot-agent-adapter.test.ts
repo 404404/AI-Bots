@@ -231,6 +231,47 @@ describe('explicit Inbox completion with channel_send', () => {
       expect(resolve).toHaveBeenCalledTimes(1);
     });
   });
+  it('keeps the exhausted draft source open while resolving selected completed background work', async () => {
+    await fixture(async (run, call) => {
+      const resolve = vi.spyOn(run.triage!, 'resolve');
+      run.channels.dropDraft = (input) => ({
+        status: 'dropped',
+        channelId: input.channelId,
+        draftId: input.draftId,
+        reason: 'explicit-drop-does-not-resolve-inbox',
+        budget: { used: 2, limit: 2, exhausted: true },
+        keepOpenInboxIds: ['request-source', 'request-message'],
+      });
+      const args = { body: '', channel_id: 'group', draft_id: 'draft', drop: true };
+      expect(
+        await call({ ...args, resolve_inbox_ids: ['request-source', 'request-message', 'fyi'] }),
+      ).toMatchObject({
+        status: 'dropped',
+        inboxResolution: {
+          resolved: ['fyi'],
+          keptOpen: ['request-source', 'request-message'],
+          reason: 'exhausted-drop-keeps-original-work-open',
+        },
+      });
+      expect(resolve).toHaveBeenCalledWith({ ids: ['fyi'], outcome: 'done' });
+      resolve.mockClear();
+      expect(await call({ ...args, resolve_inbox_ids: ['request-message'] })).toMatchObject({
+        inboxResolution: { outcome: 'kept-open', keptOpen: ['request-message'] },
+      });
+      expect(resolve).not.toHaveBeenCalled();
+      run.channels.dropDraft = (input) => ({
+        status: 'dropped',
+        channelId: input.channelId,
+        draftId: input.draftId,
+        reason: 'explicit-peer-yield',
+        budget: { used: 2, limit: 2, exhausted: true },
+        yieldedToMessageIds: ['peer-answer'],
+      });
+      expect(await call({ ...args, resolve_inbox_ids: ['request-message'] })).toMatchObject({
+        inboxResolution: { resolved: ['request-message'] },
+      });
+    });
+  });
   it('reports omitted completion without resolving work or hiding committed delivery', async () => {
     await fixture(async (run, call) => {
       const resolve = vi.spyOn(run.triage!, 'resolve');

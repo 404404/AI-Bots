@@ -200,6 +200,13 @@ unfinished work with a time and note. Do not mark waiting work done.
 For freshness-only contention, `suggestedSnoozeUntil` supplies a Host-time hint 30 seconds
 ahead for `inbox_snooze.until_time`; it schedules nothing itself. A later Human deadline
 or unmet condition takes precedence, and cancellation still ends the work.
+An exhausted drop without observed peer-yield evidence returns `keepOpenInboxIds` for the
+original request's Source Event and Group Message IDs. These are excluded from any composed
+`resolve_inbox_ids` selection and reported in `inboxResolution.keptOpen`; other selected
+completed FYI items can still resolve. If all selected IDs must stay open, the outcome is
+`kept-open`. Continue unfinished work through `inbox_snooze`; if it is genuinely cancelled
+or otherwise complete, resolve it explicitly with `inbox_resolve`. Peer-yield completion
+remains available. Direct CLI uses the same checks.
 Inside a native Orchestrator turn, dropping an exhausted draft fences replacement sends
 until the turn ends (`dropped-exhausted-draft-defer-turn`). A later turn can read fresh
 context and proceed. Separate direct CLI invocations do not share a native turn.

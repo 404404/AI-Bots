@@ -760,6 +760,7 @@ describe('busy Group progress through the direct tool', () => {
   it('cannot drop an exhausted draft and restart its budget inside the same Orchestrator turn', async () => {
     let groupId = '';
     let turns = 0;
+    let keptOpen: string[] | undefined;
     const outcomes: string[] = [];
     const core = createCore({
       dshHome: createTempRoot('review-turn-budget-'),
@@ -804,6 +805,7 @@ describe('busy Group progress through the direct tool', () => {
             Date.now() + 30_000,
           );
           expect(dropped.choices).toBeUndefined();
+          keptOpen = dropped.keepOpenInboxIds;
           const fresh = JSON.parse(run.channels.readModel({ channelId: groupId }));
           await expect(
             run.channels.send({
@@ -847,6 +849,16 @@ describe('busy Group progress through the direct tool', () => {
         await core.runtime.whenIdle();
       }
       expect(outcomes).toEqual(['held', 'held', 'requires-review', 'replacement-refused']);
+      expect(keptOpen).toContain('initial-request');
+      const source = attachOperationalModule(core.operationalDatabase, 'drop-source-test').read(
+        (db) =>
+          db
+            .prepare(
+              'SELECT source_event_id FROM channel_placements WHERE channel_id = ? AND message_id = ?',
+            )
+            .get(groupId, 'initial-request')!.source_event_id,
+      );
+      expect(keptOpen).toContain(source);
       expect(
         core.channels
           .readMessages(groupId)
