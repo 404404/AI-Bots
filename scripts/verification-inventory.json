@@ -1851,7 +1851,7 @@
       "behaviors": ["desktop.activity-center.inline-tool-approval"],
       "reason": "Sequential main/candidate real Host load: 24 silent Groups, public direct channel_send, three 240-message rounds, query/coalescing/latency/long-task/heap and idle-recovery evidence.",
       "task": 2230,
-      "sha256": "39ffb3b95da42797286198fcf76cf4535456577285315d37ae57a0379fd7c06a"
+      "sha256": "461ebc88f911f1424e9179475eae14e88741a6059735b85dde75a2634cbce9e0"
     },
     {
       "path": "scripts/e2e-memory-images.mjs",

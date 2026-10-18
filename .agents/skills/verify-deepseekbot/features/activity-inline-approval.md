@@ -116,7 +116,8 @@ Event in each Group. Three rounds each send 240 messages in waves of 24, with a 
 wave period. The actual achieved rate is reported, not assumed. Compare sequential runs on
 main and the candidate on the same machine; use `BH_LOAD_BASELINE=1` for the main run.
 Capture write/query latency, query counts, browser task time, animation frame intervals,
-long tasks, heap samples, idle recovery, one existing remote.mux connection, and exact latest
+long tasks, heap samples, bounded draining of in-flight refreshes before the 12-second idle window,
+one existing remote.mux connection, and exact latest
 message identities across all 24 Channels. This bounded load is not an unlimited-capacity
 or long-duration memory-leak qualification. Preserve failed runs and their DOM evidence.
 

@@ -327,6 +327,15 @@ try {
   await shot('after-720-messages');
   await page.bringToFront();
   proof.heapAfterRun = (await metrics()).JSHeapUsedSize;
+  const drainStarted = performance.now();
+  const drainQueries = requests.length;
+  await wait(
+    () => started.size === 0 && Date.now() - (requests.at(-1) ?? 0) >= 500,
+    'outstanding refreshes drain',
+    15000,
+  );
+  proof.drainMs = performance.now() - drainStarted;
+  proof.drainQueries = requests.length - drainQueries;
   const settled = requests.length;
   await sleep(12000);
   proof.settledIdleQueries = requests.length - settled;
