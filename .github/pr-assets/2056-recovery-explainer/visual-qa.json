@@ -1,0 +1,18 @@
+{
+  "head": "9c61b4575041bcf1361e155eaf5d27fd5882b451",
+  "desktop": {
+    "width": 1100,
+    "pageHeight": 3326,
+    "scrollWidth": 1100,
+    "visual": "all six panels inspected across top and bottom viewports"
+  },
+  "narrow": {
+    "width": 390,
+    "pageHeight": 4683,
+    "scrollWidth": 390,
+    "visual": "all six panels inspected across overlapping top/bottom2800px viewports; code has internal scroll, page no overflow"
+  },
+  "console": [],
+  "toolLimits": "Initial missing-tabId errors corrected with explicit owned tab; render --replace outside skill global pages refused, normal explicit output render succeeded; no product defect",
+  "scope": "Review explainer, not runtime or acceptance evidence"
+}
