@@ -13,6 +13,13 @@ import {
 } from '../models/presets.js';
 import { resolveSubagentRoute } from '../models/subagent-route.js';
 
+// DSH activations no longer register Jobs; this adapter owns the background Job kind.
+declare module '@deepseek-ai/dsh-jobs' {
+  interface JobKindMap {
+    subagent: 'subagent';
+  }
+}
+
 type DelegationProvider = 'spawn' | 'fork';
 
 function agentOptions(parent: AgentOptions, route: ModelRoute): AgentOptions {
