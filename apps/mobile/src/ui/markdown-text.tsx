@@ -141,10 +141,13 @@ export function MarkdownText({
           )}
         </View>
       );
+    // Android whole-paragraph line optimization gets expensive as a streamed tail grows.
+    // Keep the same native strategy after completion so finishing does not reflow the text.
     const paragraph = (
       <Text
         key={index}
         selectable={selectable}
+        textBreakStrategy="simple"
         variant={token.type === 'heading' ? 'title' : 'body'}
         style={{ color }}
       >
