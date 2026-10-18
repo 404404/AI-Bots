@@ -43,6 +43,7 @@ export function MemoryDiffFile({
   diff,
   label,
   binary = false,
+  preview,
   binaryLabel,
   emptyLabel,
   oldLineLabel,
@@ -55,6 +56,7 @@ export function MemoryDiffFile({
   diff: string;
   label: string;
   binary?: boolean;
+  preview?: ReactNode;
   binaryLabel: string;
   emptyLabel: string;
   oldLineLabel: string;
@@ -82,7 +84,9 @@ export function MemoryDiffFile({
         ) : null}
         {action === undefined ? null : <span className="bh-memory-diff-file-action">{action}</span>}
       </summary>
-      {binary || model.binary ? (
+      {preview !== undefined ? (
+        preview
+      ) : binary || model.binary ? (
         <div className="bh-memory-diff-empty">{binaryLabel}</div>
       ) : model.lines.length === 0 ? (
         <div className="bh-memory-diff-empty">{emptyLabel}</div>

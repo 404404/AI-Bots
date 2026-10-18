@@ -536,6 +536,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/cloud-host-connections.md",
       "task": 2155,
       "gap": null
+    },
+    {
+      "id": "desktop.memory.png-preview",
+      "label": "Read and compare version-bound Memory PNG images with real Web decoding and CLI export",
+      "source": "packages/client/src/client/memory-image-view.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
+      "task": 2214,
+      "gap": "First Web PNG slice only; other formats, Markdown and mobile remain in #2214."
     }
   ],
   "scripts": [
@@ -1796,6 +1804,14 @@
       "reason": "Read-only isolated Profile helper for Group episode completion. Counts all unresolved observed/snoozed Admissions plus the acting original across Channels, excludes unopened silent peer copies, bounds evidence not totals, refuses missing canonical facts.",
       "task": 2055,
       "sha256": "03b1f454483c43716fd11e784dee3ffaf08d3b1fc4cea2a15d1ca6ca325de5eb"
+    },
+    {
+      "path": "scripts/e2e-memory-images.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.png-preview"],
+      "reason": "Task-owned isolated Host, synthetic Git fixture, current/working/history Web decode and image exports with unauthenticated-route refusal.",
+      "task": 2214,
+      "sha256": "a0b71a025ba1958b304c5d1c6c17fd623bae79c5859d2d421f302a2f2b52521e"
     }
   ],
   "native": [

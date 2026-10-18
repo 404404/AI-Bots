@@ -609,7 +609,16 @@ export interface BridgeActions {
   memoryFile(
     channelId: string,
     path: string,
-  ): Promise<{ path: string; body: string; head: string; binary?: boolean } | undefined>;
+  ): Promise<
+    | {
+        path: string;
+        body: string;
+        head: string;
+        binary?: boolean;
+        image?: import('./bridge.js').MemoryImage;
+      }
+    | undefined
+  >;
   memoryHistory(channelId: string): Promise<MemoryAcceptedCommit[]>;
   memoryDiff(channelId: string, sha: string): Promise<string>;
   memoryGitGraph(channelId: string, offset: number): Promise<MemoryGitGraph>;
