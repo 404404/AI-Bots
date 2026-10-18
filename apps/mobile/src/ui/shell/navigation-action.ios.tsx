@@ -16,7 +16,7 @@ export function NavigationAction({ size, label, close = false, onPress }: Naviga
   const theme = useDesignTheme();
   const glass = Number.parseInt(String(Platform.Version), 10) >= 26;
   return (
-    <Host style={{ width: size, height: size }} colorScheme={theme.scheme}>
+    <Host key={theme.scheme} style={{ width: size, height: size }} colorScheme={theme.scheme}>
       <Button
         onPress={onPress}
         modifiers={[

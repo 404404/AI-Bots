@@ -22,7 +22,7 @@ export function NavigationDestinations({ items }: { items: NavigationDestination
   const theme = useDesignTheme();
   const glass = Number.parseInt(String(Platform.Version), 10) >= 26;
   return (
-    <Host style={{ flex: 1 }} colorScheme={theme.scheme}>
+    <Host key={theme.scheme} style={{ flex: 1 }} colorScheme={theme.scheme}>
       <HStack
         spacing={space.x2}
         modifiers={[
