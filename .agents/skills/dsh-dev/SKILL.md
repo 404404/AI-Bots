@@ -44,6 +44,8 @@ The helper injects a shared machine-local DeepSeek key when available; `node scr
 
 ## Pitfall log
 
+Restored application runtime work can run before an undeclared native Service Provider loads. In #2056 a real held-draft Host restart resumed an Orchestrator before `ctx.credentials` existed and published a model-readiness failure, although the same configured key worked after startup. BotHarness now declares `credentials` in its required `inject` dependencies. A real Cordis/LocalCredentialProvider regression starts the Consumer before the Provider and verifies readiness is not attempted until that Provider is available. Do not hide this race with a credential fallback, polling delay or suppressed failure; use the Service dependency lifecycle.
+
 When a DSH-side bug or trap is diagnosed, **record it here (or in the playbook) in the same change**. Entries:
 
 | # | Trap | Symptom | Cause / fix |

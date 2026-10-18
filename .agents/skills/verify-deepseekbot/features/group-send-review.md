@@ -27,6 +27,9 @@ observed basis. The Human sees only committed replies in canonical history.
 For #2056, preserve the isolated Profile and session evidence, hold a draft, stop only that Host,
 restart it, then supply a correction and explicitly resume. Inspect the complete Group history
 and native Tool trace before and after restart. It must show one corrected formal message.
+Also inspect lifecycle failures emitted before the Host becomes ready: a restored runtime must
+wait for its native credentials Provider instead of publishing a spurious model-readiness error.
+Zero failed provider requests does not prove there were no preflight Session failures.
 Use direct `bot-tool` calls to inspect/recover/replay the same contract without the model;
 include changed-body, wrong-owner, expired, purged and revoked cases. Discard a successful send
 response at the transport seam and verify canonical message identity and unchanged Admission
