@@ -71,7 +71,7 @@ describe('Tob canonical identity and settings', () => {
       expect(f.core.registry.list()).toHaveLength(3);
       expect(f.core.tob.isTob('spoof')).toBe(false);
       expect(f.core.registry.get('existing')?.displayName).toBe('DeepSeek Bot');
-      expect(f.core.channels.readMessages(result.value.channelId)).toHaveLength(1);
+      expect(f.core.channels.readMessages(result.value.channelId)).toHaveLength(0);
       expect(() => f.core.deletions.preview(result.value.botSlug)).toThrow('protected-bot');
       expect(() => f.core.registry.setPaused(result.value.botSlug, true)).toThrow('protected-bot');
       expect(bridge.pause({ slug: result.value.botSlug })).toMatchObject({
@@ -266,7 +266,7 @@ describe('Tob canonical identity and settings', () => {
       await f.core.tob.ensure();
       expect(f.core.grants.list(home.botSlug)).toHaveLength(1);
       expect(f.core.grants.list(home.botSlug)[0]?.revokedAt).toBeTruthy();
-      expect(f.core.channels.readMessages(home.channelId)).toHaveLength(1);
+      expect(f.core.channels.readMessages(home.channelId)).toHaveLength(0);
     } finally {
       await f.close();
     }

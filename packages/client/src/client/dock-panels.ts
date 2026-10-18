@@ -38,6 +38,7 @@ export interface DockPanel {
   readonly order?: number | undefined;
   readonly component: ComponentType<DockPanelProps>;
   readonly headerAction?: ComponentType<DockPanelProps> | undefined;
+  readonly onTitleHide?: (() => void) | undefined;
 }
 
 export interface DockPanelRegistration extends DockPanel {

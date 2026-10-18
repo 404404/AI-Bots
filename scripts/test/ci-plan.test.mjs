@@ -44,6 +44,9 @@ const repo = {
   'changes/1640-chip.md': '',
   'docs/adr/0001-thing.md': '',
   'CHANGELOG.md': '',
+  'CHANGELOG.zh.md': '',
+  'apps/docs/test/changelog-release-site.test.ts':
+    'readFileSync(resolve(ROOT, "CHANGELOG.md")); readFileSync(resolve(ROOT, "CHANGELOG.zh.md"));',
 };
 const index = createIndex(Object.keys(repo), (file) => repo[file]);
 const pr = (...paths) => ({
@@ -148,6 +151,17 @@ describe('CI test plan', () => {
       'apps/docs/test/release-draft.test.ts',
     );
   });
+
+  it.each(['CHANGELOG.md', 'CHANGELOG.zh.md'])(
+    'selects release projection tests for %s',
+    (path) => {
+      expect(plan(pr(path))).toMatchObject({
+        tests: 'affected',
+        docsSite: true,
+        related: expect.arrayContaining(['apps/docs/test/changelog-release-site.test.ts']),
+      });
+    },
+  );
 
   it('builds the docs site for docs inputs and docs site imports, never as a related test', () => {
     for (const path of [

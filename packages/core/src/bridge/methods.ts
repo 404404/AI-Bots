@@ -1937,7 +1937,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const action = source['action'];
       if (
         action !== undefined &&
-        !['start', 'pause', 'skip', 'continue', 'restart'].includes(String(action))
+        !['start', 'pause', 'skip', 'continue', 'restart', 'finish'].includes(String(action))
       )
         return invalidInput('Invalid tutorial action');
       try {

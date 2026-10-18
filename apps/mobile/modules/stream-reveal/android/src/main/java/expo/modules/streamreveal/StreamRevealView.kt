@@ -15,6 +15,12 @@ class StreamRevealView(context: Context, appContext: AppContext) : ExpoView(cont
   var maxGlyphs = 48
   private val observers = mutableMapOf<TextView, TextReveal>()
 
+  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.getSize(heightMeasureSpec))
+  }
+
+  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) = Unit
+
   fun sync() {
     if (!active || !isAttachedToWindow) {
       clear()

@@ -102,7 +102,6 @@ const styles = stylex.create({
   panel: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
   breadcrumb: { display: 'flex', alignItems: 'center', gap: space.x2, minWidth: 0 },
   channelName: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
-  messageLabel: { flexShrink: 0 },
   breadcrumbIcon: { display: 'inline-flex', alignItems: 'center', flexShrink: 0 },
   actions: { display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: space.x1 },
 });
@@ -313,6 +312,8 @@ function ChannelMessageContent(): ReactElement {
           >
             <PanelHeader
               label={detailLabel}
+              onHide={closeDetail}
+              hideLabel={dock.t('dock.close', { label: detailLabel })}
               badge={
                 !filesOpen && DetailBadge && detailProps ? (
                   <DetailBadge {...detailProps} />
@@ -481,14 +482,27 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
     panel.scope === 'global' || dock.channel !== undefined ? panel.headerAction : undefined;
   const closeLabel = dock.t('dock.close', { label: panel.title });
   return (
-    <div className="bh-dock-header" data-dock-header={entryId} {...contextMenu.triggerProps}>
+    <div
+      className="bh-dock-header"
+      data-dock-header={entryId}
+      data-window-drag
+      onMouseDown={(event) => {
+        if (!(event.target as Element).closest('[data-panel-hide]')) event.stopPropagation();
+      }}
+      {...contextMenu.triggerProps}
+    >
       {contextMenu.menu}
       <PanelHeader
+        onHide={() => {
+          dock.close(panelId);
+          panel.onTitleHide?.();
+        }}
+        hideLabel={closeLabel}
         icon={<ChannelSidebarIcon name={panel.icon} />}
-        label={
+        label={HeaderTabs === undefined ? panel.title : (entry?.headerLabel ?? panel.title)}
+        context={
           entryId === CHANNEL_BODY_PANEL && dock.header ? (
             <span {...stylex.props(styles.breadcrumb)}>
-              <span {...stylex.props(styles.messageLabel)}>{panel.title}</span>
               <span aria-hidden="true" {...stylex.props(styles.breadcrumbIcon)}>
                 <ChannelSidebarIcon name="chevron-right" />
               </span>
@@ -505,11 +519,7 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
                 {dock.header.title}
               </span>
             </span>
-          ) : HeaderTabs === undefined ? (
-            panel.title
-          ) : (
-            (entry?.headerLabel ?? panel.title)
-          )
+          ) : undefined
         }
         badge={Badge === undefined || props === undefined ? undefined : <Badge {...props} />}
         tabs={
@@ -1439,6 +1449,16 @@ export function ChannelDock({
               } as React.CSSProperties)
             : undefined
         }
+        onDragStartCapture={(event) => {
+          const target = event.target as Element;
+          if (
+            target.closest('.dv-tabs-and-actions-container, .bh-channel-session-header') &&
+            !target.closest('[data-panel-hide]')
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
         onDragOverCapture={(event) => {
           if (!workspace || !api || !event.dataTransfer.types.includes('application/x-bh-rail'))
             return;

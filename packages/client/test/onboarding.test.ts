@@ -32,6 +32,8 @@ function harness(configured = false) {
 }
 beforeEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
+  store.select(undefined);
   store.setConversation({ sending: false });
 });
 it('preserves missing-key intent locally across refresh and only sends on explicit final confirmation', async () => {
@@ -98,6 +100,8 @@ it('does not carry another client draft and guards concurrent welcome clicks', a
   await first.controller.enter();
   await first.controller.prepareSend('dm-ada', 'ada', 'Private draft');
   sessionStorage.clear();
+  localStorage.clear();
+  store.select(undefined);
   const another = harness(true);
   await another.controller.enter();
   expect(another.controller.getSnapshot().pending).toBeUndefined();
@@ -297,3 +301,86 @@ it('ends the active highlight when the first real reply completes onboarding', a
     receipt: { completed: true },
   });
 });
+
+it('v2 entry and progress refresh preserve the selected DM and open Home only on explicit start', async () => {
+  const { actions, controller } = harness(true);
+  actions.onboarding.mockResolvedValue({ ...receipt, journey: { version: 2, done: false } });
+  const reveal = vi.fn();
+  controller.attachHome(reveal);
+  await controller.enter();
+  expect(actions.openChannel).not.toHaveBeenCalled();
+  expect(reveal).not.toHaveBeenCalled();
+  await controller.refresh(undefined, 'start');
+  expect(reveal).toHaveBeenCalledTimes(1);
+  await controller.refresh();
+  expect(actions.openChannel).not.toHaveBeenCalled();
+  expect(reveal).toHaveBeenCalledTimes(1);
+});
+it('v2 requires the real Home title action after layout tips before finishing', async () => {
+  const { actions, controller } = harness(true);
+  actions.onboarding.mockResolvedValue({
+    ...receipt,
+    tutorial: 'active',
+    journey: { version: 2, done: false, botSlug: 'ada', groupChannelId: 'group' },
+  });
+  await controller.enter();
+  const reveal = vi.fn();
+  await controller.finishFromHomeTitle(reveal);
+  expect(reveal).not.toHaveBeenCalled();
+  controller.finishTour();
+  await Promise.resolve();
+  expect(actions.onboarding).not.toHaveBeenLastCalledWith(undefined, 'finish');
+  actions.openChannel.mockImplementationOnce(async () => {
+    store.select({ kind: 'channel', channelId: 'dm-ada' });
+    store.setConversation({ status: 'ready', error: undefined });
+  });
+  await controller.finishFromHomeTitle(reveal);
+  expect(reveal).toHaveBeenCalledOnce();
+  expect(actions.openChannel).toHaveBeenLastCalledWith('dm-ada');
+  expect(actions.onboarding).toHaveBeenLastCalledWith(undefined, 'finish');
+  expect(controller.getSnapshot().checklistOpen).toBe(false);
+});
+
+it('v2 explicit replay resets only local tips while continue retains them', async () => {
+  const { actions, controller } = harness(true);
+  actions.onboarding.mockResolvedValue({
+    ...receipt,
+    tutorial: 'active',
+    journey: { version: 2, done: false, botSlug: 'ada', groupChannelId: 'group' },
+  });
+  localStorage.setItem('botharness/onboarding/layout-v2/qa', '1');
+  await controller.enter();
+  await controller.refresh(undefined, 'continue');
+  expect(controller.getSnapshot().layoutComplete).toBe(true);
+  await controller.refresh(undefined, 'restart');
+  expect(controller.getSnapshot()).toMatchObject({
+    layoutComplete: false,
+    receipt: { journey: { botSlug: 'ada', groupChannelId: 'group' } },
+  });
+  expect(localStorage.getItem('botharness/onboarding/layout-v2/qa')).toBeNull();
+});
+it.each(['no-op', 'failure', 'timeline-error'])(
+  'v2 does not finish after %s navigation',
+  async (kind) => {
+    const { actions, controller } = harness(true);
+    actions.onboarding.mockResolvedValue({
+      ...receipt,
+      tutorial: 'active',
+      journey: { version: 2, done: false, botSlug: 'ada', groupChannelId: 'group' },
+    });
+    const home = vi.fn();
+    controller.attachHome(home);
+    await controller.enter();
+    controller.finishTour();
+    if (kind === 'failure') actions.openChannel.mockRejectedValueOnce(new Error('offline'));
+    if (kind === 'timeline-error')
+      actions.openChannel.mockImplementationOnce(async () => {
+        store.select({ kind: 'channel', channelId: 'dm-ada' });
+        store.setConversation({ error: 'offline' });
+      });
+    await controller.finishFromHomeTitle(vi.fn());
+    expect(actions.onboarding).not.toHaveBeenLastCalledWith(undefined, 'finish');
+    expect(home).toHaveBeenCalledOnce();
+    expect(controller.getSnapshot().error).toBeTruthy();
+  },
+);

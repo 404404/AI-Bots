@@ -1,3 +1,4 @@
+import { onboardingFor } from './onboarding.js';
 import { HomePanel } from './home-panel.js';
 import { WORKSPACE_HOME } from './workspace-context.js';
 import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
@@ -115,6 +116,10 @@ export function Workspace({
         scope: 'global',
         order: 1000,
         defaultPosition: { zone: 'center' },
+        onTitleHide: () =>
+          void onboardingFor(options.actions).finishFromHomeTitle(() =>
+            registry.open(CHANNEL_BODY_PANEL),
+          ),
         component: function HomeEntry() {
           const sendKey = useSyncExternalStore(
             options.prefs.source.subscribe,
@@ -131,8 +136,12 @@ export function Workspace({
           );
         },
       });
+      const detachGuide = onboardingFor(options.actions).attachHome(() =>
+        registry.open(WORKSPACE_HOME),
+      );
       setEnabled(true);
       return () => {
+        detachGuide();
         unregisterHome();
         unregisterMessages();
         unregister();
@@ -272,29 +281,31 @@ function WorkspaceRail({
           </span>
         </button>
       </Tooltip>
-      <div className="bh-workspace-controls">
-        {options.dockPanels && (
-          <PinnedPanelCards
-            registry={options.dockPanels}
-            order={order}
-            onOrderChange={setOrder}
-            hiddenIds={[
-              'members',
-              'bot-inbox',
-              ...CHANNEL_WORKSPACE_PANELS,
-              ...botOnlyHidden,
-              ...hiddenControls,
-            ]}
-            shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
-            collapsed
-            t={t}
-            badge={(id) =>
-              id === 'activity-center'
-                ? { count: state.humanInbox.unreadCount, dot: state.humanInbox.hasAction }
-                : undefined
-            }
-          />
-        )}
+      <div className="bh-workspace-controls" data-window-drag>
+        <div data-window-drag-recall>
+          {options.dockPanels && (
+            <PinnedPanelCards
+              registry={options.dockPanels}
+              order={order}
+              onOrderChange={setOrder}
+              hiddenIds={[
+                'members',
+                'bot-inbox',
+                ...CHANNEL_WORKSPACE_PANELS,
+                ...botOnlyHidden,
+                ...hiddenControls,
+              ]}
+              shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
+              collapsed
+              t={t}
+              badge={(id) =>
+                id === 'activity-center'
+                  ? { count: state.humanInbox.unreadCount, dot: state.humanInbox.hasAction }
+                  : undefined
+              }
+            />
+          )}
+        </div>
       </div>
       <span className="bh-workspace-grip">
         <Menu

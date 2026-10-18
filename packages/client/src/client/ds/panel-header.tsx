@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useRef, type ReactElement, type ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -43,6 +43,9 @@ const styles = stylex.create({
   },
   dimmed: { cursor: 'default', opacity: 0.6 },
   fixed: { flexGrow: 0, flexBasis: 'auto', maxWidth: '40%' },
+  compact: { flexGrow: 0, flexBasis: 'auto', cursor: 'grab' },
+  context: { display: 'flex', alignItems: 'center', minWidth: 0, flexShrink: 1 },
+  spacer: { flexGrow: 1 },
   chevron: {
     display: 'inline-flex',
     flexShrink: 0,
@@ -84,6 +87,7 @@ const styles = stylex.create({
     overflowX: 'auto',
     whiteSpace: 'nowrap',
   },
+  tabsCompact: { flexGrow: 0, flexBasis: 'auto' },
   action: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -108,7 +112,10 @@ export function PanelHeader({
   badge,
   tabs,
   action,
+  context,
   disclosure,
+  onHide,
+  hideLabel,
   dimmed = false,
   locked = false,
   struck = false,
@@ -118,11 +125,15 @@ export function PanelHeader({
   readonly badge?: ReactNode;
   readonly tabs?: ReactNode;
   readonly action?: ReactNode;
+  readonly context?: ReactNode;
   readonly disclosure?: PanelHeaderDisclosure | undefined;
+  readonly onHide?: () => void;
+  readonly hideLabel?: string;
   readonly dimmed?: boolean;
   readonly locked?: boolean;
   readonly struck?: boolean;
 }): ReactElement {
+  const pointer = useRef<{ x: number; y: number; moved: boolean } | undefined>(undefined);
   const fixed = tabs !== undefined;
   const content = (
     <>
@@ -134,16 +145,56 @@ export function PanelHeader({
       <span
         data-panel-label=""
         title={typeof label === 'string' ? label : undefined}
-        {...stylex.props(styles.label, fixed && styles.labelFixed, struck && styles.struck)}
+        {...stylex.props(
+          styles.label,
+          (fixed || !!onHide) && styles.labelFixed,
+          struck && styles.struck,
+        )}
       >
         {label}
       </span>
-      {badge === undefined ? null : <span {...stylex.props(styles.badge)}>{badge}</span>}
+      {badge === undefined || onHide ? null : <span {...stylex.props(styles.badge)}>{badge}</span>}
     </>
   );
   return (
     <div {...stylex.props(styles.header)}>
-      {disclosure === undefined ? (
+      {onHide ? (
+        <button
+          type="button"
+          data-panel-head=""
+          data-panel-hide=""
+          data-window-drag-recall
+          draggable
+          aria-label={hideLabel}
+          onPointerDown={(event) => {
+            if (event.button === 0)
+              pointer.current = { x: event.clientX, y: event.clientY, moved: false };
+          }}
+          onPointerMove={(event) => {
+            const origin = pointer.current;
+            if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 5)
+              origin.moved = true;
+          }}
+          onPointerCancel={() => {
+            if (pointer.current) pointer.current.moved = true;
+          }}
+          onDragStart={() => {
+            if (pointer.current) pointer.current.moved = true;
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            const origin = pointer.current;
+            const moved =
+              origin &&
+              (origin.moved || Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 5);
+            if (event.detail === 0 || !moved) onHide();
+            pointer.current = undefined;
+          }}
+          {...stylex.props(styles.head, fixed && styles.fixed, styles.compact)}
+        >
+          {content}
+        </button>
+      ) : disclosure === undefined ? (
         <div
           data-panel-head=""
           {...stylex.props(
@@ -183,12 +234,31 @@ export function PanelHeader({
           {content}
         </button>
       )}
+      {onHide && badge !== undefined ? (
+        <span data-panel-badge="" data-window-drag-recall {...stylex.props(styles.badge)}>
+          {badge}
+        </span>
+      ) : null}
+      {context === undefined ? null : (
+        <span data-panel-context="" data-window-drag-recall {...stylex.props(styles.context)}>
+          {context}
+        </span>
+      )}
       {tabs === undefined ? null : (
-        <span data-panel-tabs="" {...stylex.props(styles.tabs)}>
+        <span
+          data-panel-tabs=""
+          data-window-drag-recall
+          {...stylex.props(styles.tabs, !!onHide && styles.tabsCompact)}
+        >
           {tabs}
         </span>
       )}
-      {action === undefined ? null : <span {...stylex.props(styles.action)}>{action}</span>}
+      {onHide ? <span aria-hidden="true" {...stylex.props(styles.spacer)} /> : null}
+      {action === undefined ? null : (
+        <span data-window-drag-recall {...stylex.props(styles.action)}>
+          {action}
+        </span>
+      )}
     </div>
   );
 }

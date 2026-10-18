@@ -345,6 +345,33 @@ export function OnboardingWelcome({
   );
 }
 
+export function desktopLayoutTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
+  return [
+    {
+      selector: '[data-dock-header]',
+      title: t('onboarding.short.move'),
+      description: t('onboarding.short.moveHint'),
+    },
+    {
+      selector: '[data-workspace-enabled] .dv-sash',
+      fallback: '[data-workspace-enabled]',
+      title: t('onboarding.short.resize'),
+      description: t('onboarding.short.resizeHint'),
+    },
+    {
+      selector: '[data-dock-header] button[data-panel-head]',
+      fallback: '[data-dock-header]',
+      title: t('onboarding.short.hide'),
+      description: t('onboarding.short.hideHint'),
+    },
+    {
+      selector: '.bh-workspace-rail',
+      title: t('onboarding.short.restore'),
+      description: t('onboarding.short.restoreHint'),
+    },
+  ];
+}
+
 function onboardingTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
   const ownSidebar = botModeSidebarViewport();
   if (document.querySelector('[data-workspace-enabled]'))
@@ -443,7 +470,12 @@ export function OnboardingOverlay({
     controller.enter(companion).then(() => {
       void controller.refreshEvidence();
       const receipt = controller.getSnapshot().receipt;
-      if (receipt !== undefined && !receipt.completed && receipt.tutorial === 'not-started')
+      if (
+        receipt !== undefined &&
+        !(receipt.journey?.done ?? receipt.completed) &&
+        receipt.tutorial === 'not-started' &&
+        (!receipt.journey || document.querySelector('[data-workspace-enabled]') !== null)
+      )
         void controller.refresh(undefined, 'start', undefined, true);
     });
   const mount = useMountedResource<HTMLSpanElement>(() => {
@@ -452,7 +484,8 @@ export function OnboardingOverlay({
     markBotModeEntered();
     const returned = takeSessionsTourReturn();
     void enter().then(() => {
-      if (active && returned) controller.openChecklist();
+      if (active && returned && !controller.getSnapshot().receipt?.journey)
+        controller.openChecklist();
     });
     const unsubscribe = store.subscribe(() => {
       const snapshot = store.getSnapshot();
@@ -498,22 +531,25 @@ export function OnboardingOverlay({
       state.sendOpen
     )
       return;
-    return startInternalTour(onboardingTourSteps(t), {
-      closeLabel: t('common.close'),
-      skipLabel: t('onboarding.skip'),
-      previousLabel: t('onboarding.tour.previous'),
-      nextLabel: t('onboarding.tour.next'),
-      doneLabel: t('onboarding.tour.done'),
-      onClosed: () => {
-        controller.pauseGuide();
+    return startInternalTour(
+      state.receipt?.journey ? desktopLayoutTourSteps(t) : onboardingTourSteps(t),
+      {
+        closeLabel: t('common.close'),
+        skipLabel: t('onboarding.skip'),
+        previousLabel: t('onboarding.tour.previous'),
+        nextLabel: t('onboarding.tour.next'),
+        doneLabel: t(state.receipt?.journey ? 'onboarding.tour.next' : 'onboarding.tour.done'),
+        onClosed: () => {
+          controller.pauseGuide();
+        },
+        onFinished: () => {
+          controller.finishTour();
+        },
+        onSkip: () => {
+          void controller.refresh(undefined, 'skip');
+        },
       },
-      onFinished: () => {
-        controller.finishTour();
-      },
-      onSkip: () => {
-        void controller.refresh(undefined, 'skip');
-      },
-    });
+    );
   }, [
     state.guideOpen,
     state.receipt?.tutorial,
@@ -613,7 +649,8 @@ export function OnboardingSetting({
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const receipt = state.receipt;
   const action: TutorialAction =
-    receipt !== undefined && (receipt.completed || receipt.tutorial === 'skipped')
+    receipt !== undefined &&
+    ((receipt.journey?.done ?? receipt.completed) || receipt.tutorial === 'skipped')
       ? 'restart'
       : receipt === undefined || receipt.tutorial === 'not-started'
         ? 'start'

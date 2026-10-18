@@ -5,6 +5,12 @@ Markdown parsing, text, typography, layout, selection and accessibility stay wit
 the existing renderer. It owns only temporary appearance spans and their
 `Choreographer` clock; it does not own received text or the playback cursor.
 
+The container takes its own measured size from Yoga and leaves child measurement
+and layout to React Native. `ExpoView` inherits Android `LinearLayout`; running
+its inherited measurement can change text wrapping, and its inherited layout can
+replace Fabric's paragraph bounds with an unmeasured `0 × 0` child. Native
+regressions preserve both child measurement and bounds across parent passes.
+
 New graphemes fade with the shared duration and stagger tokens. Android ICU keeps
 joined emoji, flags and combining marks atomic. At most 48 graphemes animate simultaneously; older
 overflow is shown immediately. Text replacement preserves pending reveal clocks,
@@ -26,6 +32,6 @@ bash apps/mobile/android/gradlew -p apps/mobile/android :stream-reveal:testDebug
 
 AGP 9 registers the Debug unit-test variant by default. The tests cover reveal
 timing, Unicode boundaries, replacements, corrections, bounded work, reduced
-motion and cleanup. They do not qualify hardware drawing, React Native child
-layout, scrolling, TalkBack or native text selection: use the shared Android
+motion, cleanup and preservation of externally assigned child measurement and bounds. They do not
+qualify Fabric mounting on hardware, scrolling, TalkBack or native text selection: use the shared Android
 device lane and the `stream-text-reveal` / `stream-window` journeys for those.

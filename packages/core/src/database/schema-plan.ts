@@ -2383,6 +2383,26 @@ const CLOUD_WORK_MIGRATION: SchemaMigration = {
   },
 };
 
+const TOB_ONBOARDING_MIGRATION: SchemaMigration = {
+  generation: 102,
+  module: 'bot-onboarding',
+  description: 'Version the short Tob journey without restarting legacy tutorials',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE bot_onboarding ADD COLUMN journey_version INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_started_at TEXT;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_bot TEXT;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_group TEXT;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_done INTEGER NOT NULL DEFAULT 0;
+      CREATE TABLE onboarding_creation_results (
+        operation_key TEXT NOT NULL, kind TEXT NOT NULL, target_id TEXT,
+        session_id TEXT NOT NULL, recorded_at TEXT NOT NULL,
+        PRIMARY KEY (operation_key, kind)
+      );
+    `);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2484,4 +2504,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   GROUP_SEND_REVIEW_MIGRATION,
   CLOUD_CONNECTION_MIGRATION,
   CLOUD_WORK_MIGRATION,
+  TOB_ONBOARDING_MIGRATION,
 ]);
