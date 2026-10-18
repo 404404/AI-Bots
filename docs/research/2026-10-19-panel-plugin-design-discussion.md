@@ -89,6 +89,10 @@ Q4–Q13 are settled at the direction level. T1–T7 and the T8–T15 migration 
 
 Questions about exact event payload fields, SDK signatures and implementation slices follow these decisions. No speculative public event names are introduced in this record. The four accepted product category names are recorded in the bilingual glossary; their registration representation remains open.
 
+## Ticket consistency follow-through
+
+The published set is T1–T7 under #2219 and T8–T15 under migration hub #2234. The earlier instruction to wait before publishing migration tickets is superseded; runtime validation and Human feedback still gate expansion. T2–T6 depend directly on T1, T7 on T6, and the migration hub and each migration child on T1. Migration does not wait for T7 or its coordinating parent to finish. ADR-0234 also makes explicit that Sessions retains ADR-0220's existing member-Bot scope filter, Global Group-bound Members remains independent of active DM selection, and unloading a Panel Consumer differs from uninstalling its domain Provider. This is documentation maintenance, not authorization to implement.
+
 ## Documentation follow-through
 
 The four resolved Panel category names have been added to `CONTEXT.md` and its Chinese counterpart, explicitly labelled as authoring target terminology. Existing runtime layout rules remain in force: ADR-0221 and the Channel workspace definition currently prohibit Channel subpanels from docking into the Global workspace. Q7 permits separately instantiated, explicitly bound content in the Global workspace; it does not silently change existing dragging behavior. Q10 accepts required-role recovery while preferring native conflict mechanisms. ADR-0234 now records the durable direction and both living architecture versions link its target result. This discussion does not supersede that ADR or claim delivery.

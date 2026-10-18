@@ -1122,4 +1122,6 @@ Chats shares its persisted device-local conversation filter with Activity. The n
 
 [T2 #2223](https://github.com/BotHarness/DeepSeekBot/issues/2223) 将办公室切片改为无 Bot／Channel 绑定的 **全局 Task Kanban**，管理当前 Profile 内共享的 Task。Human 卡片操作与 Bot 查询／创建／更新工具使用同一授权 Service、持久记录和提交后通知；关闭面板不影响工具工作。演进 #1792 已有 to-do owner 并兼容旧记录，不增加第二份存储。Task 状态与进度独立于 Session 内计划和 Assignment 执行，创建、移动、完成或重开卡片不自动启动执行。验收重启／重开一致性、显式并发冲突及直接 CLI／工具 parity。
 
-[Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。尚未开始实现；T1 运行验证及 Human 反馈是扩展门槛。交付状态与依赖以工单为准，并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
+[Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。尚未开始实现；T1 运行验证及 Human 反馈是扩展门槛。交付状态与依赖以工单为准：T2–T6 依赖 T1，T7 依赖 T6，迁移父票与 T8–T15 各自依赖 T1。迁移与 T2–T7 同属 T1 后的扩展分支，子票不等待协调父票完成，也不隐式等待 T7；并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
+
+T4 保留 ADR-0220 的 Sessions 范围：DM 中为 Bot 所有的 Sessions，Group 默认按原始 Source Event 查看 Assignments，并保留已有显式成员 Bot 筛选。群聊不显示 Bot-bound 面板不等于移除该筛选，也不改变 Session ownership。T5 的 Members 在 DM 消息内隐藏，但全局固定 Group 实例不受当前聊天切换影响。Panel Consumer 释放与卸载领域 Provider／整个 Bundle 分开；后者遵循原生生命周期，能力缺失须明确显示不可用。
