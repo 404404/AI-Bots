@@ -1,0 +1,10 @@
+{
+  "oneHost": true,
+  "localName": true,
+  "hostIdUnchanged": true,
+  "serverHostNameUnchanged": true,
+  "routeUnchanged": true,
+  "connected": true,
+  "liveRoster": true,
+  "cloudUnchanged": true
+}
