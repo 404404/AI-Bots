@@ -3,7 +3,7 @@ import { act, createElement, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { CloudSnapshot } from '../src/cloud/client';
-import { publicInstance, MOBILE_REDIRECT_URI } from '../src/cloud/instance-contract';
+import { publicInstance, MOBILE_REDIRECT_URI, ClientError } from '../src/cloud/instance-contract';
 import { cloudViewScope } from '../src/cloud/workspace-directory';
 const mocks = vi.hoisted(() => ({
   snapshot: undefined as CloudSnapshot | undefined,
@@ -139,4 +139,49 @@ it('opens the created channel without starting a competing directory request', a
       channelId: 'channel_created',
     },
   });
+});
+
+it.each(['INSTANCE_ACCESS_DENIED', 'LOGIN_REQUIRED', 'ORGANIZATION_ACCESS_DENIED'])(
+  'removes owner actions after %s instead of reviving captured authority',
+  async (code) => {
+    await render();
+    mocks.prepare.mockImplementationOnce(async () => {
+      delete mocks.snapshot!.rows[0]!.organization;
+      throw new ClientError(code);
+    });
+    await act(async () => host.querySelector('button')!.click());
+    expect(host.querySelector('button')).toBeNull();
+    expect(host.textContent).toContain(code);
+    expect(mocks.create).not.toHaveBeenCalled();
+    await act(async () => root.render(<CloudCreateChannelScreen />));
+    expect(host.querySelector('button')).toBeNull();
+  },
+);
+
+it('keeps the draft and retry available after a transient preflight failure', async () => {
+  await render();
+  mocks.prepare.mockImplementationOnce(async () => {
+    delete mocks.snapshot!.rows[0]!.organization;
+    throw new ClientError('NETWORK_UNAVAILABLE');
+  });
+  const input = host.querySelector('textarea');
+  await act(async () => host.querySelector('button')!.click());
+  expect(host.querySelector('textarea')).toBe(input);
+  expect(input?.value).toBe('Keep my draft');
+  expect(host.querySelector('button')?.disabled).toBe(false);
+  expect(mocks.create).not.toHaveBeenCalled();
+});
+
+it('removes owner actions when access is revoked between preflight and the write', async () => {
+  await render();
+  mocks.prepare.mockResolvedValueOnce(undefined);
+  mocks.create.mockImplementationOnce(async () => {
+    delete mocks.snapshot!.rows[0]!.organization;
+    throw new ClientError('ORGANIZATION_ACCESS_DENIED');
+  });
+  await act(async () => host.querySelector('button')!.click());
+  expect(mocks.create).toHaveBeenCalledOnce();
+  expect(host.querySelector('button')).toBeNull();
+  expect(host.textContent).toContain('ORGANIZATION_ACCESS_DENIED');
+  expect(mocks.replace).not.toHaveBeenCalled();
 });

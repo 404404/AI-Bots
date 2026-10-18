@@ -4,7 +4,7 @@ import { View, type ViewInstance } from 'react-native';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { cloudViewScope } from '../../cloud/workspace-directory';
 import { prepareCloudCreation } from '../../cloud/prepare-creation';
-import { cloudError } from '../../cloud/client';
+import { canRetainCloudCache, cloudError } from '../../cloud/client';
 import { useDesignTheme } from '../design/theme';
 import { space } from '../design/tokens';
 import { KeyboardFormScroll } from '../primitives/keyboard-form';
@@ -44,7 +44,9 @@ function CreateChannelForm({
     row?.organization?.organizationId === organizationId ? row.organization : undefined,
   );
   const org = row?.organization?.organizationId === organizationId ? row.organization : initialOrg;
-  const allowed = org?.organizationId === organizationId && org.role === 'owner';
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const allowed =
+    !permissionDenied && org?.organizationId === organizationId && org.role === 'owner';
   const pending = row?.pendingChannelAction;
   const pendingHere =
     pending?.kind === 'channel.create' && pending.organizationId === organizationId
@@ -89,6 +91,14 @@ function CreateChannelForm({
         params: { instanceId, organizationId, accountScope, channelId: channel.channelId },
       });
     } catch (e) {
+      const authority = cloudClient
+        .getSnapshot()
+        .rows.find((r) => r.config.instanceId === instanceId)?.organization;
+      if (
+        !canRetainCloudCache(e) &&
+        (authority?.organizationId !== organizationId || authority.role !== 'owner')
+      )
+        setPermissionDenied(true);
       setError(cloudError(e));
     } finally {
       setWorking(false);
@@ -105,6 +115,7 @@ function CreateChannelForm({
         <Text variant="title" strong>
           {org?.name}
         </Text>
+        {!!error && <Text accessibilityRole="alert">{error}</Text>}
         {!allowed ? (
           <Text>{t.cloudInvitations.required}</Text>
         ) : (
@@ -124,7 +135,6 @@ function CreateChannelForm({
                 padding: space.x4,
               }}
             />
-            {!!error && <Text accessibilityRole="alert">{error}</Text>}
             {!!pendingHere && <Text>{t.cloudChannels.pending}</Text>}
             <View>
               <Button
