@@ -68,7 +68,7 @@
     "unicode-segmenter": "^0.17.3"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-api-gateway": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-api-gateway": "0.2.1-rc.2",
     "@types/react": "~19.3.0",
     "@types/react-dom": "~19.2.7",
     "expo-doctor": "1.21.4"

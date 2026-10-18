@@ -118,7 +118,7 @@ const ROLE_PROMPT_ORDER = 10_350;
 const REPLY_DELIVERY_PROMPT = `## Before ending this Orchestrator turn
 MUST deliver any intended Human-facing answer with channel_send({body: your actual answer}). Final assistant text is NOT sent to the Channel. This includes "only reply", "no tools", greetings and image answers: channel_send is the required reply transport, not optional extra work. Do not follow earlier assistant-only examples. Omit channel_id for the inbound Channel. Each turn names its source and Channel in a leading bracketed header such as [Human DM] or [Bot Inbox: ...]; that Channel is this turn's inbound Channel, and requests from earlier turns belong to the Channel named in their own header. When a message from another Channel joins a running turn, address every channel_send in that turn: pass channel_id, or reply_to with the message ID you are answering. What a Human says in your DM, and your answer to it, stays in that DM: post it in a Group only when the Human asked for it to be shared there. A [Host: ...] line reports Host state such as an interrupted turn; it is not a request.
 中文：要回答用户，就必须调用 channel_send，body 填实际答复；纯文本 final 不会发送给用户。“只回复”“不要调用工具”指不要额外工作，仍须用 channel_send 送达答复。读完图片后也必须发送回答。
-If no reply is wanted, remain silent. A cancellation ends the task: drop a held draft silently, without an acknowledgement unless requested. A refused Group send or revoked membership does not authorize a DM fallback, a copied draft or an unsolicited explanation elsewhere. Stop that task. For completed work, pass resolve_inbox_ids on channel_send to explicitly resolve those Inbox items only after a successful send or drop, avoiding a separate cleanup call. If omitted, Inbox work remains open: explicitly inbox_resolve completed items before ending this turn. Do not include unfinished work. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. All authorization checks still apply.`;
+If no reply is wanted, remain silent. A cancellation ends the task: drop a held draft silently, without an acknowledgement unless requested. A refused Group send or revoked membership does not authorize a DM fallback, a copied draft or an unsolicited explanation elsewhere. Stop that task. For completed work, pass resolve_inbox_ids on channel_send to explicitly resolve those Inbox items only after a successful send or drop, avoiding a separate cleanup call. If omitted, Inbox work remains open: explicitly inbox_resolve completed items before ending this turn. Do not include unfinished work. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. After an interrupted opted-in Group send, use channel_send with review_action inspect and empty body to find your draft or commit receipt. Read a committed message instead of sending it again. To recover an unexpired held draft after Host restart, read current Channel facts and explicitly use review_action recover with draft_id, a fresh observation_id and the revised body; keep unfinished Inbox responsibility open. All authorization checks still apply.`;
 const PEER_REVIEW_PROMPT = `## Group peer replies
 Before any Group reply, compare the fully observed committed peer answers with the Human's actual request and your remaining responsibility. A preview is not an answer; never claim a peer answered before reading their committed answer. If the request is fully answered and you have nothing useful to add:
 - No held draft: do not call channel_send, create a draft or react just to acknowledge. Use inbox_resolve for observed work that is complete, then finish silently.
@@ -2284,7 +2284,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'inbox_snooze',
         description:
-          'Hide open Bot Inbox items until a time, with an optional note for when they come back. At that time they return and wake you; a new event in the same Channel conversation or Assignment brings them back early. Snoozing again never moves the return earlier. Pass ids, or filter fields with the same count-then-confirm flow as inbox_resolve.',
+          'Defer only unfinished Bot Inbox responsibilities until a time, with a note for resumption. Resolve already-read FYI items as done instead of snoozing them; they need no future work. At that time they return and wake you; a new event in the same Channel conversation or Assignment brings them back early. Snoozing again never moves the return earlier. Pass ids, or filter fields with the same count-then-confirm flow as inbox_resolve.',
         parameters: {
           ids: {
             type: 'array',
@@ -3460,13 +3460,19 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'channel_send',
         description:
-          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: when a reply is needed, use this Tool for the actual answer, including a requested acknowledgment, greeting, clarification or image answer. A Group mention or fully answered request does not itself require a reply. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent. Read review.content when present: it contains newly observed messages. If review.complete is true, use review.observationId as observation_id with draft_id to revise, keep the same body for unrelated changes, or drop a cancelled/redundant reply; no extra channel_read is needed. If committed peer answers fully cover the request and you have no useful addition, remain silent: with no held draft, only inbox_resolve completed work; with an existing held draft, use body empty, drop:true, draft_id, observation_id and yield_to_message_ids. Never create a draft merely to drop it. Preserve independent evidence and new direct questions. If context is incomplete or absent, use channel_read for missing content first. A second change returns requires-review: stop this automatic attempt and keep unfinished Inbox responsibility open. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
+          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: when a reply is needed, use this Tool for the actual answer, including a requested acknowledgment, greeting, clarification or image answer. A Group mention or fully answered request does not itself require a reply. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent. Read review.content when present: it contains newly observed messages. If review.complete is true, use review.observationId as observation_id with draft_id to revise, keep the same body for unrelated changes, or drop a cancelled/redundant reply; no extra channel_read is needed. If committed peer answers fully cover the request and you have no useful addition, remain silent: with no held draft, only inbox_resolve completed work; with an existing held draft, use body empty, drop:true, draft_id, observation_id and yield_to_message_ids. Never create a draft merely to drop it. Preserve independent evidence and new direct questions. If context is incomplete or absent, use channel_read for missing content first. After at most two rechecks, requires-review with budget.exhausted stops automatic retries. Do not create another draft to reset the budget. If waiting for information, drop the draft without resolving work and use inbox_snooze with a bounded time and note; read fresh context when that responsibility returns. If no reply is needed, drop silently. Only when the answer remains necessary after reading all required context, use freshness_override with the returned draftVersion, a short reason and observation_id; this is one explicit attempt beyond the automatic review budget, never permission to skip unread messages. If override-context-changed-defer is returned, nothing was sent and that attempt is spent: read the returned context, drop without resolving unfinished work, then use the returned suggestedSnoozeUntil as inbox_snooze until_time for freshness-only contention, with a note to read fresh context and finish the original request. This is a short continuation, not a reason to invent a minutes-long delay. A Human not-before time or unmet condition takes precedence. If unrelated messages wake you early, resolve those FYIs and leave the original responsibility at its existing return time; do not poll or move that time. Read the latest facts when resuming. Batch observed completed FYI IDs with the drop; keep the original unfinished request out of resolve_inbox_ids. An exhausted drop without observed peer-yield evidence protects the original request in keepOpenInboxIds and reports keptOpen completion IDs. Snooze that unfinished work; only if cancelled or otherwise complete, explicitly inbox_resolve it separately. A successful resolution already confirms its IDs; do not repeat list/read/resolve calls solely to confirm that same cleanup. Do not retry the override or replace the dropped draft in this turn. Never override a Human request to wait or cancel. Keep internal decisions out of the reply. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
         parameters: {
+          review_action: {
+            type: 'string',
+            enum: ['inspect', 'recover'],
+            description:
+              'Group draft recovery only. inspect with empty body lists your pending drafts and recent commit receipts; optionally select draft_id. It never sends or resolves work. After Host restart, read current Channel facts and use recover with draft_id, fresh observation_id and the revised body. Recovery preserves expiry and retry limits. After an uncertain commit, inspect and read its canonical message; resubmitting the same draft_id and unchanged content returns the original message ID. Never create a new send merely because its response was lost.',
+          },
           resolve_inbox_ids: {
             type: 'array',
             items: { type: 'string' },
             description:
-              'Explicitly mark these 1–200 observed Source Event or Message IDs done ONLY after this send commits or this draft is dropped. Include the original request and handled FYI/correction IDs when complete. Saves a separate inbox_resolve call. Held/refused sends never resolve them. Check inboxResolution; a resolution failure does not undo delivery or justify resending.',
+              'Explicitly mark these 1–200 observed Source Event or Message IDs done ONLY after this send commits or this draft is dropped. Include the original request and handled FYI/correction IDs when complete. Saves a separate inbox_resolve call. Held/refused sends never resolve them. An exhausted drop without peer-yield evidence keeps its original request open even if selected; inspect keptOpen and snooze unfinished work, or separately inbox_resolve if genuinely cancelled or complete. Check inboxResolution; a resolution failure does not undo delivery or justify resending.',
           },
           observation_id: {
             type: 'string',
@@ -3476,7 +3482,17 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           draft_id: {
             type: 'string',
             description:
-              'The held draftId to revise or drop. One explicit recheck is allowed; unchanged body is valid.',
+              'The held draftId to revise or drop. At most two rechecks; unchanged body is valid. Reuse this ID rather than creating a new budget.',
+          },
+          freshness_override: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              draftVersion: { type: 'integer', required: true },
+              reason: { type: 'string', required: true },
+            },
+            description:
+              'Only after budget.exhausted: one explicit continuation attempt for this draft_id and its returned draftVersion. Read all required context and pass observation_id; explain why the answer is still necessary. The Host still atomically checks current content: a newly arrived or edited message refuses the attempt and requires drop/defer, not another override. It never bypasses ownership, permissions, stop, expiry or purge. Do not combine with drop or reactions; do not use when Human requested waiting or cancellation.',
           },
           drop: {
             type: 'boolean',
@@ -3556,6 +3572,54 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           if (active?.role !== 'orchestrator') {
             throw new Error('channel_send: Orchestrator run is unavailable');
           }
+          if (args.review_action === 'inspect') {
+            if (
+              args.body !== '' ||
+              args.drop ||
+              args.attachments !== undefined ||
+              args.react_to !== undefined ||
+              args.reaction !== undefined ||
+              args.resolve_inbox_ids !== undefined ||
+              args.yield_to_message_ids !== undefined ||
+              args.mention_bot_ids !== undefined ||
+              args.mention_human_ids !== undefined ||
+              args.reply_to !== undefined ||
+              args.freshness_override !== undefined
+            )
+              throw new Error(
+                'channel_send: draft inspection cannot send, react, drop or resolve work',
+              );
+            const channelId = args.channel_id ?? active.run.inboundChannelId;
+            if (!channelId || !active.run.channels.inspectDrafts)
+              throw new Error('channel_send: draft inspection requires a Group Channel');
+            return JSON.stringify(
+              active.run.channels.inspectDrafts({
+                channelId,
+                ...(args.draft_id === undefined ? {} : { draftId: args.draft_id }),
+              }),
+            );
+          }
+          if (
+            args.review_action === 'recover' &&
+            (!args.draft_id || !args.observation_id || args.drop || args.react_to !== undefined)
+          )
+            throw new Error(
+              'channel_send: recovery requires draft_id, fresh observation_id and a send',
+            );
+          if (
+            args.freshness_override !== undefined &&
+            (!args.draft_id ||
+              !args.observation_id ||
+              args.drop === true ||
+              args.react_to !== undefined ||
+              !Number.isSafeInteger(args.freshness_override.draftVersion) ||
+              args.freshness_override.draftVersion < 1 ||
+              !args.freshness_override.reason.trim() ||
+              args.freshness_override.reason.length > 500)
+          )
+            throw new Error(
+              'channel_send: freshness_override requires draft_id, observation_id, a draftVersion and a reason; no drop or reaction',
+            );
           if (
             args.yield_to_message_ids !== undefined &&
             (args.drop !== true ||
@@ -3580,7 +3644,14 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             throw new Error(
               'channel_send: resolve_inbox_ids requires 1–200 IDs, an Inbox, and a send or drop (not a reaction)',
             );
-          const resolveCompleted = () => {
+          const resolveCompleted = (keepOpenIds: string[] = []) => {
+            const continuation = keepOpenIds.length
+              ? {
+                  reason: 'exhausted-drop-keeps-original-work-open',
+                  instruction:
+                    'The original request is unfinished. Use inbox_snooze for its keepOpenInboxIds at suggestedSnoozeUntil unless a Human wait condition requires later. Batch-resolve already-read FYIs as done now; do not snooze them or re-read solely to confirm cleanup. End this turn after that cleanup and snooze. When woken, read fresh context, finish the original request and resolve it with the successful send. Resolve without sending only for cancellation or independently completed work.',
+                }
+              : {};
             if (args.resolve_inbox_ids === undefined)
               return active.run.triage === undefined
                 ? {}
@@ -3589,18 +3660,28 @@ class DshBotAgentAdapter implements BotAgentAdapter {
                       outcome: 'not-requested',
                       instruction:
                         'This send/drop did not resolve Inbox work. Explicitly inbox_resolve completed items before ending this turn; leave unfinished items open.',
+                      ...continuation,
                     },
                   };
+            const ids = args.resolve_inbox_ids.filter((id) => !keepOpenIds.includes(id));
+            const keptOpen = args.resolve_inbox_ids.filter((id) => keepOpenIds.includes(id));
+            const preservation = {
+              ...continuation,
+              ...(keptOpen.length ? { keptOpen } : {}),
+            };
+            if (ids.length === 0)
+              return { inboxResolution: { outcome: 'kept-open', ...preservation } };
             try {
               return {
-                inboxResolution: active.run.triage!.resolve({
-                  ids: args.resolve_inbox_ids,
-                  outcome: 'done',
-                }),
+                inboxResolution: {
+                  ...active.run.triage!.resolve({ ids, outcome: 'done' }),
+                  ...preservation,
+                },
               };
             } catch {
               return {
                 inboxResolution: {
+                  ...preservation,
                   outcome: 'failed',
                   reason: 'inbox-resolution-failed',
                   retry: 'inbox_resolve',
@@ -3634,7 +3715,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             this.#drafts.discard(run.sessionId, dropChannelId);
             return JSON.stringify({
               ...outcome,
-              ...(outcome.status === 'dropped' ? resolveCompleted() : {}),
+              ...(outcome.status === 'dropped' ? resolveCompleted(outcome.keepOpenInboxIds) : {}),
             });
           }
           const reacted =
@@ -3655,6 +3736,10 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             message = await active.run.channels.send({
               ...(args.observation_id === undefined ? {} : { observationId: args.observation_id }),
               ...(args.draft_id === undefined ? {} : { draftId: args.draft_id }),
+              ...(args.freshness_override === undefined
+                ? {}
+                : { freshnessOverride: args.freshness_override }),
+              ...(args.review_action === 'recover' ? { recover: true } : {}),
               body: args.body,
               ...(exec.callId === undefined ? {} : { deliveryKey: String(exec.callId) }),
               ...(args.attachments === undefined ? {} : { attachments: args.attachments }),

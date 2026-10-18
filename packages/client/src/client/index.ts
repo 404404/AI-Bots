@@ -713,7 +713,12 @@ export function apply(ctx: ClientContext): void {
 
   ctx.inject(['configForms'], (settingsCtx) => {
     const scope = settingsCtx.configForms.get<BotModeSettings>(BOT_MODE_NAMESPACE);
-    prefs.attach(scope);
+    prefs.attach({
+      getSnapshot: () => ({ ...scope.getSnapshot(), mode: 'host' }),
+      subscribe: (listener) => scope.subscribe(listener),
+      set: (field, value) => scope.set(field, value),
+      mutate: (ops, expectedRevision) => scope.mutate(ops, expectedRevision),
+    });
     const releaseNavIcon = installBotNavIcon({
       labels: () => [t('settings.nav')],
       markup: () => botIconMarkup(prefs.source.getSnapshot().botIcon, readBotColorScheme()),

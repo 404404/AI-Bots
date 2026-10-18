@@ -13,10 +13,12 @@ export function appendTextReveal(
   if (previous !== undefined && !text.startsWith(previous.text))
     return { text, prefix: text, glyphs: [] };
   const offset = previous?.text.length ?? 0;
+  const from = previous?.glyphs.at(-1)?.offset ?? 0;
   const segments: Array<{ segment: string; index: number }> = [];
-  for (const part of graphemeSegments(text)) {
-    if (part.index + part.segment.length <= offset) continue;
-    segments.push(part);
+  for (const part of graphemeSegments(text.slice(from))) {
+    const index = from + part.index;
+    if (index + part.segment.length <= offset) continue;
+    segments.push({ segment: part.segment, index });
     if (segments.length > streamReveal.maxGlyphs) segments.shift();
   }
   const size = Math.max(1, Math.ceil(segments.length / streamReveal.maxFreshSpans));

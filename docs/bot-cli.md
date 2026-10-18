@@ -172,9 +172,20 @@ Pass the target's handle as `observation_id` to `channel_send`. A `held` result 
 message: read `review.content` when present. If `review.complete` is true, pass its
 `review.observationId` as `observation_id` without another `channel_read`; otherwise read the
 missing content first. Then pass `draft_id` with the new observation and revised
-(or unchanged) `body`. Only one recheck is allowed. Send `drop: true`, `draft_id` and an empty
+(or unchanged) `body`. At most two rechecks are allowed. Send `drop: true`, `draft_id` and an empty
 `body` to abandon the draft without resolving its Inbox item. `expired`, `refused` and
 `requires-review` are terminal for automatic sending. Handles cannot cross Bot owners or Groups.
+
+After an interrupted Group send, use the same direct Tool command with
+`{"channel_id":"...","body":"","review_action":"inspect"}`. This returns at most 20 own
+draft/receipt metadata entries (pending first) and `hasMore`; supply `draft_id` for an exact
+older record. It sends nothing and does not resolve Inbox work. After a Host restart, read the
+current Channel, then send `review_action:"recover"`, `draft_id`, the fresh `observation_id`
+and corrected `body`. Old observations, expiry and exhausted retry budgets cannot be reset.
+For a committed receipt, read its canonical `messageId`; resubmitting that `draft_id` with the
+same content returns the same message ID without a new message or Admission. Changed content
+returns `draft-commit-content-changed`. Current membership, owner, source and attachment checks
+still apply; a revoked Group may be refused by the direct runner before Tool execution.
 
 For deliberate yielding, the same direct `bot-tool <bot> channel_send --args-stdin` accepts
 `{"channel_id":"...","body":"","drop":true,"draft_id":"...","observation_id":"...","yield_to_message_ids":["..."]}`.
@@ -192,6 +203,39 @@ Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a
 `group-delete` and `channel-purge-confirm` cannot be undone and need `--confirm`. `channel-history` lists deleted groups whose content can still be purged. Purging works in two steps like the history page: `channel-purge-preview` lists the messages, Bot admissions, files and effects the chosen Source Events would remove and returns a short-lived `token`; `channel-purge-confirm` reads `{"token": …}` from stdin for the same Source Events and fails coded when the scope changed. Pick Source Events from `channel-history-sources`, which pages with the `before` cursor it returns.
 
 `channel-media-target` acquires checked source media through current Human Channel authorization and returns its canonical Host file target. `channel-media-download` uses the same authenticated attachment route as the card, writes the original bytes to a new local `--out` file and returns size, MIME and SHA-256 in its JSON result. It refuses an existing output instead of overwriting it. Both commands use `channel + source-event + attachment` without a Bot selector or model call; source revocation remains a coded refusal. The default bound is 25 MiB.
+
+Busy Groups allow an initial hold and at most two rechecks. `budget.exhausted` returns
+`requires-review`, `draftVersion` and choices; new source messages do not reset the existing
+draft. To defer, drop without `resolve_inbox_ids`, then use `inbox_snooze` for the observed
+unfinished work with a time and note. Do not mark waiting work done.
+For freshness-only contention, `suggestedSnoozeUntil` supplies a Host-time hint 30 seconds
+ahead for `inbox_snooze.until_time`; it schedules nothing itself. A later Human deadline
+or unmet condition takes precedence, and cancellation still ends the work.
+An exhausted drop without observed peer-yield evidence returns `keepOpenInboxIds` for the
+original request's Source Event and Group Message IDs. These are excluded from any composed
+`resolve_inbox_ids` selection and reported in `inboxResolution.keptOpen`; other selected
+completed FYI items can still resolve. If all selected IDs must stay open, the outcome is
+`kept-open`. Continue unfinished work through `inbox_snooze`; if it is genuinely cancelled
+or otherwise complete, resolve it explicitly with `inbox_resolve`. Peer-yield completion
+remains available. Direct CLI uses the same checks.
+The unfinished-request continuation instruction is returned even when completion IDs are
+omitted or contain only FYI: resolving background work does not prove the answer was sent.
+Inside a native Orchestrator turn, dropping an exhausted draft fences replacement sends
+until the turn ends (`dropped-exhausted-draft-defer-turn`). A later turn can read fresh
+context and proceed. Separate direct CLI invocations do not share a native turn.
+
+After reading all required content, an answer that remains necessary may use the same direct
+command with `freshness_override: {"draftVersion":3,"reason":"Necessary after review"}`,
+`draft_id`, `observation_id`, original `channel_id` and the actual `body`. Use the returned
+version, never a guessed constant. This explicit attempt is permitted once per exhausted
+draft and still atomically checks current content. `override-context-changed-defer` means a
+new message or edit arrived: nothing was sent, and the attempt is spent. Read that context,
+drop without resolving unfinished work, then snooze briefly and read fresh context on return;
+respect a later Human time or condition. `override-already-attempted-defer` refuses repetition.
+The attempt does not bypass membership, stopped/archived state, expiry, purge or ownership.
+`draft-version-changed`, `override-context-not-observed` and `override-requires-exhausted-draft`
+are coded refusals, not delivery. A committed message ID proves the result; tool traces retain
+the selected reason. Human requests to wait or cancel must never be overridden.
 
 ### Bot profile, roster and Part Library
 
@@ -556,7 +600,7 @@ deepseekbot marketplace-topics
 deepseekbot marketplace-detail <owner/repo>
 deepseekbot marketplace-submit https://github.com/<owner>/<repo>
 deepseekbot marketplace-report <owner/repo> [--reason <text>]
-deepseekbot release-check
+deepseekbot release-check [--force]
 deepseekbot release-install <version> --confirm
 deepseekbot release-restart --confirm
 deepseekbot telemetry-status
@@ -570,9 +614,11 @@ deepseekbot pairing-review <bot-id> <pairing-id> --decision reject
 deepseekbot pairing-review <bot-id> <pairing-id> --decision revoke --confirm
 ```
 
+`release-check --force` bypasses the Host check cache. `available` includes native DSH compatibility and may expose `blockedLatest` when a newer release is incompatible; `blocked` carries incompatible requirements or an unknown-runtime/metadata reason. Compatibility covers the exact Bundle, first-party components and its pinned IM Provider using the running DSH evaluator. Installation rechecks metadata and still uses the native Plugin Manager for final admission. A cached/offline failure is never “up to date”.
+
 `release-info` includes an optional Host-owned `identity`: `development` with source revision/dirty state, `release` with version, or `unknown` with a metadata/composition reason. Old Hosts omit this field; absence is not verified release identity. The internal source version placeholder remains `0.0.0`; About displays source identity instead. `release-check` can return `unknown`; install/restart then refuse with `release-identity-invalid`. Installed/staged and running versions remain separate until the new Host answers with the exact target version.
 
-`marketplace-submit` and `marketplace-report` first solve the Host's proof-of-work challenge, as the Web page does, so they can take a few seconds; the Marketplace's own refusals (`repository-missing-topic`, `rate-limited`, …) come back as the error code. A report reason is at most 500 characters. `release-check` returns the update status (`current`, `available`, `restart-required`, `development`, `unknown` or `unavailable`). `release-install` and `release-restart` need `--confirm`; a failed install or restart exits non-zero with `release-<reason>`, such as `release-network` or `release-not-pending`. Restarting stops every running Bot turn, so do it only on a Host you own. `pairing-list` shows a Bot's pairing requests and its roles; `pairing-review` reads the current revisions itself, so a request that changed in between is refused instead of overwritten. Approve with one `--role` for a conversation request or with `--capability` for a management request.
+`marketplace-submit` and `marketplace-report` first solve the Host's proof-of-work challenge, as the Web page does, so they can take a few seconds; the Marketplace's own refusals (`repository-missing-topic`, `rate-limited`, …) come back as the error code. A report reason is at most 500 characters. `release-check` returns the update status (`current`, `available`, `restart-required`, `blocked`, `development`, `unknown` or `unavailable`). `release-install` and `release-restart` need `--confirm`; a failed install or restart exits non-zero with `release-<reason>`, such as `release-network` or `release-not-pending`. Restarting stops every running Bot turn, so do it only on a Host you own. `pairing-list` shows a Bot's pairing requests and its roles; `pairing-review` reads the current revisions itself, so a request that changed in between is refused instead of overwritten. Approve with one `--role` for a conversation request or with `--capability` for a management request.
 
 ## IM application authorization
 
@@ -849,6 +895,17 @@ deepseekbot release-restart --confirm
 These reuse the same telemetry, Git and release owners as Settings. Environment-locked telemetry cannot be overridden; inspect the returned effective/locked state rather than assuming the stored preference controls collection. Git covers availability and installation only, with no new global Git identity editor.
 
 Scoped `release-install` and `release-restart` require explicit `--confirm` and a fresh Human decision for every invocation. Full access, remembered allow rules and automatic approval cannot replace that decision; the flag itself is not approval. `git-install` does not use `--confirm` and retains its existing review policy. Restart can interrupt running turns and disconnect the requesting CLI; do not automatically repeat an install or restart after an uncertain result. Reconnect and inspect release status before deciding another action. Test these operations only in an owned isolated Profile, preserving the Human's active Desktop.
+
+### Recover an exhausted Group draft
+
+After restarting the Host, inspect the draft, read the current Group, and pass both
+`review_action: "recover"` and `freshness_override` with the current `draftVersion`,
+fresh `observation_id`, original `draft_id`, and revised body to the same direct
+`bot-tool ... channel_send --args-stdin` command. Recovery does not renew the two-recheck
+budget or a spent explicit override. A changed context still refuses the final attempt.
+A successful override retains a commit receipt; retrying its unchanged intent returns
+the same message ID, including after another restart. Inspection cannot include
+`freshness_override` or other mutation arguments.
 
 ### Cloud Agent connections (UAT)
 
