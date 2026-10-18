@@ -79,8 +79,8 @@ on a fresh task-local Host after `doctor`. This journey observes 12 idle seconds
 polling, delays background reads by 350ms without replacing the loaded empty DOM, creates a
 real reply in another Channel, marks it read through Activity, closes the browser's actual
 WebSocket while offline, and checks canonical unread recovery after reconnect. Source navigation
-must reveal the same message ID in the conversation. A second disposable Bot asks a real native
-question: its Activity card appears, snoozes, returns at expiry and disappears after an answer.
+must reveal the same message ID in the conversation. A second disposable Bot requests membership in a Human-selected Group: its Activity card
+appears, snoozes, returns at expiry and disappears after a decision from the public API.
 The journey also runs `inbox-watch` against that same Host and saves its bounded JSON result.
 
 QA Bots use the already configured `deepseek-official/deepseek-flash` route; override only these
@@ -93,3 +93,8 @@ Also compare the three empty sections on full page (600×1000) and Dock (1440×1
 with the base revision: background reads must preserve text and section heights. Screenshots,
 ARIA, canonical item/message/Source Event IDs and console failures stay in the instance evidence.
 Human QA and native mobile behavior remain separate from these Web checks.
+
+The first RC2 run of this journey observed a native `ask_user_question` tool pending without a
+canonical Channel question card, including after a timed retry. Preserve the trace and do not
+claim native question creation as verified by this journey. The group-join case qualifies updates
+to existing canonical action sources; it does not repair or substitute for that request-creation path.

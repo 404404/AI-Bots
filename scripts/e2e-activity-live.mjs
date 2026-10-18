@@ -15,6 +15,10 @@ mkdirSync(out, { recursive: true });
 const browser = await installed('puppeteer').launch({ headless: true, args: ['--no-sandbox'] });
 const page = await browser.newPage();
 const errors = [];
+const consoleMessages = [];
+page.on('console', (message) =>
+  consoleMessages.push({ type: message.type(), text: message.text() }),
+);
 const requests = [];
 const sockets = [];
 page.on('pageerror', (e) => errors.push(e.message));
@@ -36,14 +40,19 @@ await page.evaluateOnNewDocument(() => {
 });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const click = async (name) => {
-  const matches = await page.$$('button[aria-label=' + JSON.stringify(name) + ']');
-  for (const el of matches) {
-    if (await el.isVisible()) {
-      await el.click();
+  for (const button of await page.$$('button')) {
+    if (!(await button.isVisible())) continue;
+    const matches = await button.evaluate(
+      (element, label) =>
+        element.getAttribute('aria-label') === label || element.textContent.trim() === label,
+      name,
+    );
+    if (matches) {
+      await button.click();
       return;
     }
   }
-  await page.locator(`::-p-aria([name=${JSON.stringify(name)}][role="button"])`).click();
+  throw Error('Visible button unavailable: ' + name);
 };
 const dismiss = async () => {
   for (let i = 0; i < 5; i++) {
@@ -223,9 +232,9 @@ try {
   await page.waitForSelector(`.bh-bubble-wrap[data-message-id="${offline.messageId}"]`);
   await shot('same-message-source');
   const questionBot = await rpc('create', {
-    displayName: 'Activity Question QA',
+    displayName: 'Activity Request QA',
     persona:
-      'Follow verification instructions exactly. Use ask_user_question when asked; do not modify files or settings.',
+      'Follow verification instructions exactly. Use group_join_request for the selected Group when asked; do not modify files or settings.',
   });
   const qslug = questionBot.bot.slug;
   await rpc('modelPlanCustomize', {
@@ -237,23 +246,29 @@ try {
     },
   });
   const qchannel = (await rpc('channelDm', { slug: qslug })).channel;
+  const group = (await rpc('channelCreate', { name: 'Activity QA Group', members: [slug] }))
+    .channel;
+  const reference = '#' + group.name;
   await rpc('channelSend', {
     channelId: qchannel.id,
-    body: 'Call ask_user_question now. One question id activity-qa, question ACTIVITY_2230_QUESTION, choices Continue and Cancel. Wait for my answer. After answer, send exactly ACTIVITY_2230_ANSWERED via channel_send.',
+    body:
+      reference +
+      '\nCall group_join_request for this selected Group now, then send REQUESTED in this DM. Do not ask any questions or run other tools.',
+    channelRefs: [{ channelId: group.id, label: group.name, start: 0, end: reference.length }],
   });
   const question = await wait(
     async () =>
-      (await rpc('humanAttention', { category: 'action', channelId: qchannel.id })).items.find(
-        (x) => x.kind === 'user-question',
+      (await rpc('humanAttention', { category: 'action', channelId: group.id })).items.find(
+        (x) => x.kind === 'group-join-request',
       ),
-    'real pending native question',
+    'real pending group join request',
   );
   await page.waitForFunction(
     (id) => document.querySelector(`[data-attention-id="${id}"]`),
     { timeout: 3000 },
     question.id,
   );
-  await shot('cross-channel-question');
+  await shot('cross-channel-request');
   const cli = promisify(execFile)(
     process.execPath,
     [
@@ -275,7 +290,7 @@ try {
   await sleep(500);
   await rpc('humanAttentionSnooze', {
     itemId: question.id,
-    sourceKey: question.sourceEventId,
+    sourceKey: question.sourceEventId ?? '',
     until: new Date(Date.now() + 2000).toISOString(),
   });
   await page.waitForSelector(`[data-attention-id="${question.id}"]`, {
@@ -283,30 +298,22 @@ try {
     timeout: 1500,
   });
   await page.waitForSelector(`[data-attention-id="${question.id}"]`, { timeout: 3000 });
-  const qmessage = (await rpc('channelMessages', { channelId: qchannel.id })).messages.find(
-    (m) => m.id === question.messageId,
-  );
-  const answers = qmessage.userQuestionRequest.questions.map((q) => ({
-    id: q.id,
-    selected: [q.options[0].label],
-  }));
-  await rpc('userQuestionAnswer', {
-    channelId: qchannel.id,
-    messageId: question.messageId,
-    answer: { answers },
+  const decided = await rpc('channelGroupJoinDecide', {
+    channelId: group.id,
+    requestId: question.requestId,
+    accept: false,
   });
   await page.waitForSelector(`[data-attention-id="${question.id}"]`, {
     hidden: true,
     timeout: 3000,
   });
   assert.equal(
-    (await rpc('userQuestionStatus', { channelId: qchannel.id, messageId: question.messageId }))
-      .status,
-    'answered',
+    decided.channel.joinRequests.find((request) => request.id === question.requestId).status,
+    'declined',
   );
   const cliResult = JSON.parse((await cli).stdout);
   assert.ok(cliResult.invalidations > 0);
-  await shot('question-resolved');
+  await shot('request-resolved');
   const result = {
     canonical,
     offline,
@@ -329,5 +336,6 @@ try {
   console.error(e);
   process.exitCode = 1;
 } finally {
+  writeFileSync(out + '/console.json', JSON.stringify(consoleMessages, null, 2));
   await browser.close();
 }
