@@ -29,6 +29,7 @@ export function WorkspaceTabs({
         return (
           <Pressable
             key={tab}
+            collapsable={false}
             ref={selected ? selectedRef : undefined}
             accessibilityRole="tab"
             accessibilityLabel={label}
