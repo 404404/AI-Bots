@@ -228,7 +228,7 @@ function UpgradeNotice({
   if (update.status === 'restart-required')
     return (
       <Modal
-        open={snapshot.updateNotice && !deferred}
+        open={snapshot.updateNotice && snapshot.announcement === undefined && !deferred}
         title={t('release.restart.title', { installed: update.installed })}
         closeLabel={t('releaseNotes.close')}
         onClose={() => controller.dismissUpdate()}

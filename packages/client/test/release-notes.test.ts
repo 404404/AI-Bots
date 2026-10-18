@@ -642,3 +642,29 @@ it('shows a pending restart independently after a fresh Client starts', async ()
   await controller.enter();
   expect(controller.source.getSnapshot().updateNotice).toBe(true);
 });
+
+it('serializes installed notes before the pending restart modal', async () => {
+  const controller = new ReleaseNotesController(
+    async (method) => ({
+      ok: true,
+      value:
+        method === 'releaseInfo'
+          ? { version: '1.3.1', releases: [note('1.3.1')], profileId: 'profile-a' }
+          : { status: 'restart-required', current: '1.3.1', installed: '1.4.0', restartable: true },
+    }),
+    memoryStorage(),
+  );
+  await controller.enter();
+  const view = await render(
+    createElement(ReleaseNotesAnnouncement, { controller, t }),
+  );
+  try {
+    expect(view.host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    expect(view.host.textContent).toContain('1.3.1');
+    await act(async () => controller.dismiss());
+    expect(view.host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    expect(view.host.textContent).toContain('1.4.0');
+  } finally {
+    view.unmount();
+  }
+});
