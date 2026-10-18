@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,31 +27,42 @@ function renderInvitationScroll(props: ScrollViewProps) {
   return <InvitationScroll {...props} />;
 }
 export function CloudInvitationsScreen() {
-  const { instanceId, organizationId, channelId, kind } = useLocalSearchParams<{
+  const { instanceId, organizationId, channelId, channelName, kind } = useLocalSearchParams<{
     instanceId: string;
     organizationId?: string;
     channelId?: string;
+    channelName?: string;
     kind?: string;
   }>();
   return (
-    <InvitationWorkspace
-      key={instanceId + ':' + (organizationId ?? 'inbox') + ':' + (channelId ?? kind ?? '')}
-      instanceId={instanceId}
-      organizationId={organizationId}
-      channelId={channelId}
-      guest={kind === 'channel' || !!channelId}
-    />
+    <>
+      <Stack.Screen
+        options={{
+          title: kind === 'channel' || channelId ? t.cloudGuests.inbox : t.cloudInvitations.title,
+        }}
+      />
+      <InvitationWorkspace
+        key={instanceId + ':' + (organizationId ?? 'inbox') + ':' + (channelId ?? kind ?? '')}
+        instanceId={instanceId}
+        organizationId={organizationId}
+        channelId={channelId}
+        channelName={channelName?.slice(0, 80)}
+        guest={kind === 'channel' || !!channelId}
+      />
+    </>
   );
 }
 function InvitationWorkspace({
   instanceId,
   organizationId,
   channelId,
+  channelName,
   guest,
 }: {
   instanceId: string;
   organizationId?: string | undefined;
   channelId?: string | undefined;
+  channelName?: string | undefined;
   guest: boolean;
 }) {
   const snapshot = useCloudSnapshot(),
@@ -132,6 +143,7 @@ function InvitationWorkspace({
                 ? t.cloudGuests.inbox
                 : t.cloudInvitations.inbox}
           </Text>
+          {!!channelName && <Text variant="title">{channelName}</Text>}
           {!!error && (
             <Text accessibilityLiveRegion="polite">
               {t.cloud.error} {error}
