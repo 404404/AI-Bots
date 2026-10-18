@@ -32,7 +32,7 @@ export function EnvironmentPager({
         routes.map((route) => [
           route.key,
           {
-            accessibilityLabel: route.title,
+            accessibilityLabel: route.accessibilityLabel ?? route.title,
             label: ({ focused }: { focused: boolean }) => {
               const Icon =
                 route.kind === 'cloud'
@@ -49,14 +49,21 @@ export function EnvironmentPager({
                     maxWidth: width - space.x6 * 2,
                   }}
                 >
-                  <Text
-                    strong
-                    tone={focused ? 'fg' : 'muted'}
-                    numberOfLines={2}
-                    style={{ flexShrink: 1 }}
-                  >
-                    {route.title}
-                  </Text>
+                  <View style={{ flexShrink: 1 }}>
+                    <Text
+                      strong
+                      tone={focused ? 'fg' : 'muted'}
+                      numberOfLines={2}
+                      style={{ flexShrink: 1 }}
+                    >
+                      {route.title}
+                    </Text>
+                    {route.detail ? (
+                      <Text variant="meta" tone="muted" numberOfLines={2}>
+                        {route.detail}
+                      </Text>
+                    ) : null}
+                  </View>
                   {Icon ? <Icon color={theme.color.muted} size={theme.type.meta.line} /> : null}
                 </View>
               );

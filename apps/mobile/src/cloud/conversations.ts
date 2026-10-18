@@ -16,7 +16,7 @@ type Port = Pick<CloudClient, 'listOrganizations' | 'listConversationChannels'>;
 export type ConversationWorkspace = Pick<
   CloudConversation,
   'scope' | 'instanceId' | 'organizationId' | 'organizationName' | 'guest'
->;
+> & { server: string };
 type Snapshot = {
   busy: boolean;
   ready: boolean;
@@ -48,6 +48,7 @@ export function createCloudConversations(port: Port) {
         workspaces.set(organizationId, {
           scope,
           instanceId: source.config.instanceId,
+          server: source.config.server,
           organizationId,
           organizationName,
           guest,

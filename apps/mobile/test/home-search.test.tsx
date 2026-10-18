@@ -221,10 +221,28 @@ describe('Search at the top of Chats', () => {
       },
     ];
     directoryState.workspaces = [
-      ...directoryState.rows,
-      { ...directoryState.rows[0]!, organizationId: 'empty', organizationName: 'Empty workspace' },
+      ...directoryState.rows.map((r) => ({ ...r, server: config.server })),
+      {
+        ...directoryState.rows[0]!,
+        server: config.server,
+        organizationId: 'empty',
+        organizationName: 'Empty workspace',
+      },
     ];
+    directoryState.workspaces.push({
+      ...directoryState.workspaces[0]!,
+      organizationId: 'same-name-empty',
+    });
     const view = await home();
+    const duplicate = view.querySelector<HTMLButtonElement>(
+      '[role="tab"][aria-label="Cloud team, https://uat.example.test, same-name-empty"]',
+    )!;
+    expect(duplicate).not.toBeNull();
+    await act(async () => duplicate.click());
+    expect(rows(view).join(' ')).not.toContain('Cloud general');
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>('[role="tab"][aria-label="All"]')!.click(),
+    );
     expect(view.textContent).toContain('Cloud general');
     expect(view.textContent).toContain('Ada');
     await act(async () =>
@@ -253,7 +271,9 @@ describe('Search at the top of Chats', () => {
       view.querySelector<HTMLButtonElement>('[data-testid="pager-next"]')!.click(),
     );
     expect(
-      view.querySelector('[role="tab"][aria-label="Cloud team"]')?.getAttribute('aria-selected'),
+      view
+        .querySelector('[role="tab"][aria-label="Cloud team, https://uat.example.test, org_a"]')
+        ?.getAttribute('aria-selected'),
     ).toBe('true');
     expect(rows(view).join(' ')).not.toContain('Ada, Done');
     expect(rows(view).join(' ')).toContain('Cloud general');

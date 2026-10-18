@@ -3,6 +3,8 @@ import type { ConversationWorkspace } from '../cloud/conversations';
 export type ConversationEnvironment = {
   key: string;
   title: string;
+  detail?: string;
+  accessibilityLabel?: string;
   kind: 'all' | 'computer' | 'cloud';
 };
 export const computerEnvironmentKey = (hostId: string) => JSON.stringify(['computer', hostId]);
@@ -31,6 +33,36 @@ export function conversationEnvironments(
       seen.add(key);
       result.push({ key, title: workspace.organizationName, kind: 'cloud' });
     }
+  }
+  for (const route of result) {
+    if (route.kind !== 'cloud' || result.filter((r) => r.title === route.title).length < 2)
+      continue;
+    const workspace = workspaces.find(
+      (w) => cloudEnvironmentKey(w.scope, w.organizationId) === route.key,
+    );
+    if (!workspace) continue;
+    const host = new URL(workspace.server).host;
+    const peers = workspaces.filter(
+      (w) =>
+        w.organizationName === workspace.organizationName &&
+        w.server === workspace.server &&
+        w.organizationId !== workspace.organizationId,
+    );
+    let length = 8;
+    while (
+      length < workspace.organizationId.length &&
+      peers.some((w) => w.organizationId.endsWith(workspace.organizationId.slice(-length)))
+    )
+      length++;
+    const duplicateSource = workspaces.some(
+      (w) =>
+        w.scope !== workspace.scope &&
+        w.server === workspace.server &&
+        w.organizationId === workspace.organizationId,
+    );
+    const source = duplicateSource ? `${host} · ${workspace.instanceId}` : host;
+    route.detail = `${workspace.organizationId.slice(-length)} · ${source}`;
+    route.accessibilityLabel = `${route.title}, ${workspace.server}, ${workspace.organizationId}${duplicateSource ? `, ${workspace.instanceId}` : ''}`;
   }
   return result;
 }
