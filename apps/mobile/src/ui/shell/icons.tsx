@@ -31,6 +31,10 @@ function Glyph({ d, color, size, focused = false }: IconProps & { d: string }) {
   );
 }
 
+export function CloudIcon(props: IconProps) {
+  return <Glyph {...props} d="M6 18h12a4 4 0 0 0 .2-8A6.5 6.5 0 0 0 5.7 9.1 4.5 4.5 0 0 0 6 18Z" />;
+}
+
 export function ChatsIcon(props: IconProps) {
   return (
     <Glyph

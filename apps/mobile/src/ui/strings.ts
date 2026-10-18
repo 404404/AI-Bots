@@ -116,6 +116,7 @@ const en = {
   },
   cloudChannels: {
     title: 'Cloud channels',
+    cloudChannel: 'Cloud channel',
     name: 'Channel name',
     create: 'Create channel',
     retryCreate: 'Retry channel creation',
@@ -1012,6 +1013,7 @@ const zh: typeof en = {
   },
   cloudChannels: {
     title: '云频道',
+    cloudChannel: '云频道',
     name: '频道名称',
     create: '创建频道',
     retryCreate: '重试创建频道',
