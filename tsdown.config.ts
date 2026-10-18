@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'tsdown';
 
@@ -29,12 +30,24 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
     outDir,
     format: ['cjs'],
     platform: 'browser',
+    inputOptions: { resolve: { conditionNames: ['browser', 'import', 'default'] } },
     define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     dts: false,
     clean: true,
     sourcemap: true,
     external: PLATFORM_MODULES,
-    plugins: [stylexPlugin({ rootDir: ROOT_DIR }), dockviewCssPlugin({ rootDir: ROOT_DIR })],
+    plugins: [
+      {
+        name: 'botharness:vfile-browser-imports',
+        resolveId(id, importer) {
+          if (/^#min(?:path|proc|url)$/u.test(id) && importer?.includes('/node_modules/vfile/lib/'))
+            return join(dirname(importer), `${id.slice(1)}.browser.js`);
+          return null;
+        },
+      },
+      stylexPlugin({ rootDir: ROOT_DIR }),
+      dockviewCssPlugin({ rootDir: ROOT_DIR }),
+    ],
     outputOptions: {
       entryFileNames: 'client.js',
       banner: `window.__ModuleLoader__.load({

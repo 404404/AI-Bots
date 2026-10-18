@@ -1,4 +1,4 @@
-# Version-bound Memory PNG previews
+# Version-bound Memory image and Markdown previews
 
 ## Sub-features
 
@@ -19,8 +19,18 @@ For before/after review, run `node scripts/e2e-memory-images.mjs --name <name> -
 
 ## Gotchas
 
-This is the first Web PNG slice of #2214. JPEG/GIF/WebP/SVG, Markdown previews, editor/file-card previews and mobile remain follow-up work. A supported header is not decoding proof: the browser journey checks `naturalWidth`. Source/CLI transport tests do not replace Web rendering or Human QA. No model reply is needed.
+This is the first Web PNG slice of #2214. JPEG/GIF/WebP/SVG, editor/file-card previews and mobile remain follow-up work; the second Web Markdown slice is documented below. A supported header is not decoding proof: the browser journey checks `naturalWidth`. Source/CLI transport tests do not replace Web rendering or Human QA. No model reply is needed.
 
 The current dock opens Channels and Messages independently; selecting a Channel while only Home is visible does not itself expose Memory controls. Use the Messages rail entry and its header switches. Image selection and diff source identities are separate from the existing Open current file action. All fixtures belong to the isolated test Host; never point this journey at an everyday or shared QA Profile.
 
 At 700px, wait for the narrow shell to mount, select the Bot from its visible list, open Conversation settings, expand Memory, select the working change, then press Escape to close the overlay. Resizing remounts the conversation; a screenshot of the roster or an occluded old desktop view is not image evidence. The journey measures the two visible figure positions to prove stacking.
+
+## Markdown documents (second Web slice)
+
+Use the same Memory files, working change and commit entry points for `.md` / `.markdown`. Files default to rendered GFM documents; View source returns the original text. Diffs default to lines; Rendered preview displays the full Before and After documents, stacked on narrow Web viewports. Local inline PNGs follow the selected worktree/index/commit; relative paths start at the document directory, slash-prefixed paths at the repository root. Images are loaded when visible, expand through the existing gallery, and release temporary resources on source mode or navigation. Refresh reobserves mutable image dependencies.
+
+Run `node scripts/e2e-memory-markdown.mjs --name <task-owned-instance>` after launch and doctor. It creates one synthetic Markdown Preview QA PersonaBot with two committed illustrated notes and a working change. The journey checks actual heading/table/image rendering, source and default line-diff behavior, working and first-parent historical image decoding, 700px stacked layout, enlargement/return, a missing-image result, nine CLI exports including staged/unstaged content, anonymous denial and stale-document refusal. It intercepts only the synthetic `https://preview.invalid/` image in the browser and serves fixture bytes with CORS: zero requests before the click and one after proves the consent boundary, not third-party server availability. Browser network restrictions on arbitrary external sites remain platform behavior.
+
+For matched Before captures, build the base Client in a disposable baseline worktree, load it against a task-owned base Host with the same fixture, and run this journey with `--before`. Preserve both builds and first failures; restore the feature build and restart only the task Host without deleting its Profile. Inspect screenshots, ARIA, image byte comparisons and all unexpected console/page errors. Expected missing-image HTTP 404s are listed separately. No model call or native mobile check is needed for this Web journey.
+
+Local inline PNGs keep the first slice's 25 MiB/dimension limits; Markdown bodies have independent 4 MiB limits. Other local formats, unsaved-editor and ordinary message-file previews, and native mobile remain later #2214 scope. Rendering does not execute raw HTML. HTTP/data/file/protocol-relative images stay inert; external HTTPS images require a per-image click, no referrer and anonymous cross-origin access. Historical missing images never fall back to current files.

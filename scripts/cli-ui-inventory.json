@@ -292,7 +292,7 @@
     },
     {
       "id": "memory-image-preview",
-      "description": "Version-bound Memory PNG transfer; metadata is available through existing Memory commands.",
+      "description": "Version-bound standalone and document-relative Memory PNG transfer; --image-reference binds inline images to Markdown metadata from existing Memory commands.",
       "scope": "Host",
       "surfaces": ["route:packages/core/src/plugin.ts:MEMORY_IMAGE_PATH"],
       "commands": ["memory-image"]

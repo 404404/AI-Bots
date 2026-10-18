@@ -616,6 +616,7 @@ export interface BridgeActions {
         head: string;
         binary?: boolean;
         image?: import('./bridge.js').MemoryImage;
+        markdown?: import('./bridge.js').MemoryMarkdown;
       }
     | undefined
   >;

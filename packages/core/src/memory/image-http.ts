@@ -27,7 +27,11 @@ export function createMemoryImageHttp(
       );
     try {
       request.signal.throwIfAborted();
-      const bytes = memory.imageFile(slug, path, source, revision);
+      const reference = url.searchParams.get('reference');
+      const bytes =
+        reference === null
+          ? memory.imageFile(slug, path, source, revision)
+          : memory.markdownImageFile(slug, path, source, revision, reference);
       return new Response(new Uint8Array(bytes), {
         headers: {
           'content-type': 'image/png',

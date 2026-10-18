@@ -3921,10 +3921,25 @@ export interface MemoryImageComparison {
   after?: MemoryImage;
 }
 
+export interface MemoryMarkdown {
+  source: string;
+  status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
+  revision?: string;
+  body: string;
+}
+export interface MemoryMarkdownComparison {
+  before?: MemoryMarkdown;
+  after?: MemoryMarkdown;
+}
 export interface MemoryGitCommitDiff {
   sha: string;
   subject?: string;
-  files: { path: string; status: string; images?: MemoryImageComparison }[];
+  files: {
+    path: string;
+    status: string;
+    images?: MemoryImageComparison;
+    markdown?: MemoryMarkdownComparison;
+  }[];
   diff: string;
 }
 
@@ -3936,6 +3951,7 @@ export interface MemoryWorkingChange {
 }
 export interface MemoryWorkingDiff extends MemoryWorkingChange {
   images?: MemoryImageComparison;
+  markdown?: MemoryMarkdownComparison;
   diff: string;
   binary: boolean;
 }
@@ -4135,7 +4151,15 @@ export async function loadMemoryFile(
   channelId: string,
   path: string,
 ): Promise<
-  { path: string; body: string; head: string; binary?: boolean; image?: MemoryImage } | undefined
+  | {
+      path: string;
+      body: string;
+      head: string;
+      binary?: boolean;
+      image?: MemoryImage;
+      markdown?: MemoryMarkdown;
+    }
+  | undefined
 > {
   const response = asRecord(await unwrap(call, 'memoryFile', { channelId, path }));
   if (response?.['file'] === undefined) return undefined;
@@ -4154,6 +4178,7 @@ export async function loadMemoryFile(
     head: string;
     binary?: boolean;
     image?: MemoryImage;
+    markdown?: MemoryMarkdown;
   };
 }
 

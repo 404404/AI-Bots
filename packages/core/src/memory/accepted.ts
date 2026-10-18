@@ -1,4 +1,12 @@
 import {
+  isMemoryMarkdown,
+  readMemoryMarkdown,
+  memoryMarkdownImagePath,
+  MAX_MEMORY_MARKDOWN_BYTES,
+  type MemoryMarkdown,
+  type MemoryMarkdownComparison,
+} from './markdown.js';
+import {
   readMemoryImage,
   MemoryImageError,
   type MemoryImage,
@@ -141,7 +149,12 @@ export interface MemoryGitGraph {
 export interface MemoryGitCommitDiff {
   sha: string;
   subject: string;
-  files: { path: string; status: string; images?: MemoryImageComparison }[];
+  files: {
+    path: string;
+    status: string;
+    images?: MemoryImageComparison;
+    markdown?: MemoryMarkdownComparison;
+  }[];
   diff: string;
 }
 
@@ -155,6 +168,7 @@ export interface MemoryWorkingChange {
 
 export interface MemoryWorkingDiff extends MemoryWorkingChange {
   images?: MemoryImageComparison;
+  markdown?: MemoryMarkdownComparison;
   diff: string;
   binary: boolean;
 }
@@ -198,8 +212,22 @@ export interface MemoryAcceptance {
     botSlug: string,
     path: string,
   ):
-    | { path: string; body: string; head: string; binary?: boolean; image?: MemoryImage }
+    | {
+        path: string;
+        body: string;
+        head: string;
+        binary?: boolean;
+        image?: MemoryImage;
+        markdown?: MemoryMarkdown;
+      }
     | undefined;
+  markdownImageFile(
+    botSlug: string,
+    path: string,
+    source: string,
+    revision: string,
+    reference: string,
+  ): Buffer;
   imageFile(botSlug: string, path: string, source: string, revision: string): Buffer;
   history(botSlug: string, limit?: number): MemoryAcceptedCommit[];
   diff(botSlug: string, sha: string): { sha: string; diff: string };
@@ -1494,6 +1522,24 @@ export function createMemoryAcceptance(options: {
         ),
       };
     },
+    markdownImageFile(botSlug, path, source, revision, reference) {
+      const root = graphRepository(botSlug);
+      const document = readMemoryMarkdown(root, path, source, run);
+      if (document.status !== 'ready')
+        throw new MemoryImageError(`memory-image-${document.status}`, 'Markdown is unavailable');
+      if (document.revision !== revision)
+        throw new MemoryImageError('memory-image-stale', 'Markdown changed; refresh the view');
+      const imagePath = memoryMarkdownImagePath(path, reference);
+      const { image, bytes } = readMemoryImage(root, imagePath, source, run);
+      if (image.status !== 'ready' || bytes === undefined)
+        throw new MemoryImageError(
+          `memory-image-${image.status}`,
+          'Image is unavailable or cannot be previewed',
+        );
+      if (readMemoryMarkdown(root, path, source, run).revision !== revision)
+        throw new MemoryImageError('memory-image-stale', 'Markdown changed; refresh the view');
+      return bytes;
+    },
     imageFile(botSlug, path, source, revision) {
       if (!/^[0-9a-f]{64}$/u.test(revision))
         throw new MemoryImageError('memory-image-invalid', 'Invalid image content revision');
@@ -1512,6 +1558,16 @@ export function createMemoryAcceptance(options: {
       const relative = toMemoryRelativePath(path);
       const target = resolveMemoryPath(root, relative);
       if (!existsSync(target) || !statSync(target).isFile()) return undefined;
+      if (isMemoryMarkdown(relative)) {
+        const markdown = readMemoryMarkdown(root, relative, 'worktree', run);
+        return {
+          path: relative,
+          body: markdown.body,
+          head: head(root),
+          markdown,
+          ...(markdown.status === 'ready' ? {} : { binary: true }),
+        };
+      }
       if (/\.png$/iu.test(relative)) {
         return {
           path: relative,
@@ -1659,12 +1715,28 @@ export function createMemoryAcceptance(options: {
         .split('\0')
         .filter(Boolean);
       const files: MemoryGitCommitDiff['files'] = [];
+      let markdownBudget = MAX_MEMORY_MARKDOWN_BYTES;
+      const document = (path: string, source: string) => {
+        const result = readMemoryMarkdown(root, path, source, run, markdownBudget);
+        markdownBudget -= Buffer.byteLength(result.body, 'utf8');
+        return result;
+      };
       for (let index = 0; index < nameStatus.length; index += 2) {
         const status = nameStatus[index] ?? '';
         const path = nameStatus[index + 1] ?? '';
         files.push({
           status,
           path,
+          ...(isMemoryMarkdown(path)
+            ? {
+                markdown: {
+                  ...(status === 'A' || firstParent === undefined
+                    ? {}
+                    : { before: document(path, firstParent) }),
+                  ...(status === 'D' ? {} : { after: document(path, sha) }),
+                },
+              }
+            : {}),
           ...(/\.png$/iu.test(path)
             ? {
                 images: {
@@ -1720,6 +1792,31 @@ export function createMemoryAcceptance(options: {
       if (change === undefined) {
         throw new MemoryAcceptError('memory-invalid', 'Memory working change no longer exists');
       }
+      const comparisonHead = head(root);
+      const markdown = isMemoryMarkdown(relative)
+        ? {
+            ...(change.status === 'A' || kind === 'untracked'
+              ? {}
+              : {
+                  before: readMemoryMarkdown(
+                    root,
+                    relative,
+                    kind === 'unstaged' ? 'index' : comparisonHead,
+                    run,
+                  ),
+                }),
+            ...(change.status === 'D'
+              ? {}
+              : {
+                  after: readMemoryMarkdown(
+                    root,
+                    relative,
+                    kind === 'staged' ? 'index' : 'worktree',
+                    run,
+                  ),
+                }),
+          }
+        : undefined;
       if (/\.png$/iu.test(relative)) {
         const oldSource = kind === 'unstaged' ? 'index' : head(root);
         const newSource = kind === 'staged' ? 'index' : 'worktree';
@@ -1743,11 +1840,30 @@ export function createMemoryAcceptance(options: {
           '--no-ext-diff',
           '--no-textconv',
           '--no-renames',
-          ...(kind === 'staged' ? ['--cached', 'HEAD'] : kind === 'current' ? ['HEAD'] : []),
+          ...(kind === 'staged'
+            ? ['--cached', comparisonHead]
+            : kind === 'current'
+              ? [comparisonHead]
+              : []),
           '--',
           relative,
         ]);
-        return { ...change, diff, binary: /^Binary files .+ differ$/mu.test(diff) };
+        if (markdown !== undefined) {
+          if (
+            head(root) !== comparisonHead ||
+            Object.values(markdown).some((document) => {
+              const next = readMemoryMarkdown(root, relative, document.source, run);
+              return next.revision !== document.revision || next.status !== document.status;
+            })
+          )
+            throw new MemoryImageError('memory-image-stale', 'Markdown changed; refresh the view');
+        }
+        return {
+          ...change,
+          diff,
+          binary: /^Binary files .+ differ$/mu.test(diff),
+          ...(markdown === undefined ? {} : { markdown }),
+        };
       }
       const target = resolveMemoryPath(root, relative);
       const stat = lstatSync(target);
@@ -1773,7 +1889,7 @@ export function createMemoryAcceptance(options: {
         ...lines.map((line) => `+${line}`),
         ...(body !== '' && !body.endsWith('\n') ? ['\\ No newline at end of file'] : []),
       ].join('\n');
-      return { ...change, diff, binary: false };
+      return { ...change, diff, binary: false, ...(markdown === undefined ? {} : { markdown }) };
     },
     recoveryHistory(botSlug) {
       if (pendingRepair(botSlug) !== undefined)
