@@ -9,6 +9,7 @@ import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
+import { ConnectionNameField } from '../primitives/connection-name-field';
 import { Text } from '../primitives/text';
 import { TextInput } from '../primitives/system-text';
 import { t } from '../strings';
@@ -43,6 +44,8 @@ export function CloudServicesScreen() {
   const [candidate, setCandidate] = useState<{ raw: string; config: InstanceConfig }>();
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const [connectionName, setConnectionName] = useState('');
+  const [editingName, setEditingName] = useState<{ id: string; value: string }>();
   const old =
     candidate && snapshot.rows.find((row) => row.config.instanceId === candidate.config.instanceId);
   const replacement =
@@ -64,7 +67,12 @@ export function CloudServicesScreen() {
     setNotice(undefined);
     setError(undefined);
     try {
-      setCandidate({ raw, config: parseCloudQr(raw) });
+      const config = parseCloudQr(raw);
+      setCandidate({ raw, config });
+      setConnectionName(
+        snapshot.rows.find((row) => row.config.instanceId === config.instanceId)?.config.name ??
+          config.name,
+      );
       setPasting(false);
       setConfigurationText('');
       Keyboard.dismiss();
@@ -197,7 +205,12 @@ export function CloudServicesScreen() {
           )}
           {candidate && (
             <View style={box}>
-              <Text variant="title">{candidate.config.name}</Text>
+              <ConnectionNameField
+                value={connectionName}
+                onChange={setConnectionName}
+                maxLength={100}
+                disabled={snapshot.busy}
+              />
               <Text selectable>{candidate.config.server}</Text>
               <Text variant="meta" selectable>
                 {candidate.config.instanceId} · {candidate.config.environment.toUpperCase()}
@@ -221,7 +234,13 @@ export function CloudServicesScreen() {
                 disabled={snapshot.busy}
                 onPress={() =>
                   void run(async () => {
-                    await cloudClient.importConfig(candidate.raw, replacement);
+                    await cloudClient.importConfig(
+                      JSON.stringify({
+                        ...candidate.config,
+                        name: connectionName.trim() || candidate.config.name,
+                      }),
+                      replacement,
+                    );
                     setCandidate(undefined);
                     setNotice(t.cloud.imported);
                   })
@@ -241,6 +260,43 @@ export function CloudServicesScreen() {
         <View style={box}>
           <Text variant="title">{item.config.name}</Text>
           <Text selectable>{item.config.server}</Text>
+          {editingName?.id === item.config.instanceId ? (
+            <View style={{ gap: space.x3 }}>
+              <ConnectionNameField
+                value={editingName.value}
+                onChange={(value) => setEditingName({ id: item.config.instanceId, value })}
+                maxLength={100}
+                disabled={snapshot.busy}
+              />
+              <Button
+                label={t.saveConnectionName}
+                disabled={snapshot.busy || !editingName.value.trim()}
+                onPress={() =>
+                  void run(async () => {
+                    await cloudClient.rename(item.config.instanceId, editingName.value);
+                    setEditingName(undefined);
+                    Keyboard.dismiss();
+                  })
+                }
+              />
+              <Button
+                label={t.cancel}
+                onPress={() => {
+                  setEditingName(undefined);
+                  Keyboard.dismiss();
+                }}
+              />
+            </View>
+          ) : (
+            <Button
+              label={t.renameConnection}
+              disabled={snapshot.busy}
+              onPress={() =>
+                setEditingName({ id: item.config.instanceId, value: item.config.name })
+              }
+            />
+          )}
+
           <Text variant="meta">{item.config.environment.toUpperCase()}</Text>
           <Text>
             {item.identity

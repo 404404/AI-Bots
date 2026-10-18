@@ -9,7 +9,7 @@ import { useDesignTheme } from '../design/theme';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { SheetGrabber } from '../primitives/sheet-grabber';
-import { CloseIcon } from '../shell/icons';
+import { DrawerHeader } from '../primitives/drawer-header';
 import { t } from '../strings';
 
 export const SHEET_GROUP: LayerName = 'raised';
@@ -19,28 +19,6 @@ function Grabber() {
     <View style={{ alignSelf: 'center', marginBottom: space.x3 }}>
       <SheetGrabber />
     </View>
-  );
-}
-
-function CloseButton({ onPress }: { onPress(): void }) {
-  const theme = useDesignTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.close}
-      onPress={onPress}
-      hitSlop={space.x3}
-      style={({ pressed }) => ({
-        width: theme.type.title.line + space.x4,
-        height: theme.type.title.line + space.x4,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: radius.round,
-        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
-      })}
-    >
-      <CloseIcon color={theme.color.muted} size={theme.type.meta.line} />
-    </Pressable>
   );
 }
 
@@ -123,24 +101,15 @@ export function Sheet({
             {title === undefined ? null : (
               <View
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: space.x4,
                   paddingHorizontal: space.x5,
                   paddingBottom: space.x4,
                 }}
               >
-                <View style={{ flex: 1, gap: space.x1 }}>
-                  <Text variant="title" strong accessibilityRole="header">
-                    {title}
-                  </Text>
-                  {subtitle === undefined ? null : (
-                    <Text variant="meta" tone="muted">
-                      {subtitle}
-                    </Text>
-                  )}
-                </View>
-                <CloseButton onPress={onClose} />
+                <DrawerHeader
+                  title={title}
+                  {...(subtitle === undefined ? {} : { subtitle })}
+                  onClose={onClose}
+                />
               </View>
             )}
             {children}
