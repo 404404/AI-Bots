@@ -1,0 +1,6148 @@
+[
+  {
+    "label": "watch-0",
+    "time": 1792361311816,
+    "visibility": "hidden",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": ""
+  },
+  {
+    "label": "watch-1",
+    "time": 1792361451317,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-2",
+    "time": 1792361451716,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-3",
+    "time": 1792361452042,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-4",
+    "time": 1792361452374,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-5",
+    "time": 1792361452715,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-6",
+    "time": 1792361476538,
+    "visibility": "hidden",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-7",
+    "time": 1792361477136,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-8",
+    "time": 1792361492932,
+    "visibility": "hidden",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-9",
+    "time": 1792361502844,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-guest"
+  },
+  {
+    "label": "watch-10",
+    "time": 1792361509796,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-edit"
+  },
+  {
+    "label": "watch-11",
+    "time": 1792361511402,
+    "visibility": "hidden",
+    "probe": {
+      "state": {
+        "level": 1,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-edit"
+  },
+  {
+    "label": "watch-12",
+    "time": 1792361591083,
+    "visibility": "visible",
+    "probe": {
+      "state": {
+        "level": 0,
+        "mode": "off",
+        "recording": false,
+        "composing": false,
+        "actions": [
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "paint-cycle",
+            "level": 0
+          },
+          {
+            "source": "paint-cycle",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 5
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 4
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 3
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 2
+          },
+          {
+            "source": "paint-experiment",
+            "level": 0
+          },
+          {
+            "source": "registry:keyboard",
+            "level": 1
+          },
+          {
+            "source": "unzoom-control",
+            "level": 0
+          }
+        ],
+        "native": [
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Minus",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          },
+          {
+            "kind": "keyboard",
+            "revision": "659781c1-0f5c-4902-9617-03539b44b238",
+            "frameName": "",
+            "code": "Equal",
+            "repeat": false,
+            "control": false,
+            "alt": false,
+            "shift": false,
+            "meta": true
+          }
+        ],
+        "errors": [],
+        "guestReady": true
+      },
+      "catalog": [
+        {
+          "id": "zoomPrototype.increase",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increase",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "="
+          ],
+          "aria": "Meta+="
+        },
+        {
+          "id": "zoomPrototype.increaseShift",
+          "binding": {
+            "code": "Equal",
+            "modifiers": [
+              "shift",
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE increaseShift",
+          "aliases": [],
+          "keys": [
+            "⇧",
+            "⌘",
+            "="
+          ],
+          "aria": "Shift+Meta+="
+        },
+        {
+          "id": "zoomPrototype.decrease",
+          "binding": {
+            "code": "Minus",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE decrease",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "-"
+          ],
+          "aria": "Meta+-"
+        },
+        {
+          "id": "zoomPrototype.bridgeControl",
+          "binding": {
+            "code": "KeyY",
+            "modifiers": [
+              "meta"
+            ]
+          },
+          "modified": false,
+          "issue": null,
+          "conflicts": [],
+          "label": "ZOOM PROTOTYPE bridgeControl",
+          "aliases": [],
+          "keys": [
+            "⌘",
+            "Y"
+          ],
+          "aria": "Meta+Y"
+        }
+      ],
+      "fixed": [],
+      "config": "ready"
+    },
+    "focus": "zoom-edit"
+  }
+]

@@ -1,0 +1,924 @@
+[
+  {
+    "image": "full-after-clip.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 927,
+        "runs": [
+          [
+            1888,
+            2088
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "hidden-create-0.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "hidden-create-1.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "visible-control-2.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 929,
+        "runs": [
+          [
+            2306,
+            2506
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "visible-create-0.png",
+    "bands": [
+      {
+        "firstY": 568,
+        "lastY": 603,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      },
+      {
+        "firstY": 826,
+        "lastY": 861,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      },
+      {
+        "firstY": 1080,
+        "lastY": 1115,
+        "runs": [
+          [
+            1761,
+            2001
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      240,
+      240,
+      240
+    ],
+    "passed": true
+  },
+  {
+    "image": "fullscreen.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 927,
+        "runs": [
+          [
+            2306,
+            2506
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "physical-guest-complete.png",
+    "bands": [
+      {
+        "firstY": 568,
+        "lastY": 603,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      },
+      {
+        "firstY": 826,
+        "lastY": 861,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      240,
+      240
+    ],
+    "passed": false
+  },
+  {
+    "image": "same-guest-visible.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 929,
+        "runs": [
+          [
+            2306,
+            2506
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "visible-create-1.png",
+    "bands": [
+      {
+        "firstY": 568,
+        "lastY": 603,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      },
+      {
+        "firstY": 826,
+        "lastY": 861,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      },
+      {
+        "firstY": 1080,
+        "lastY": 1115,
+        "runs": [
+          [
+            1761,
+            2001
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      240,
+      240,
+      240
+    ],
+    "passed": true
+  },
+  {
+    "image": "clipped-no-beyond.png",
+    "bands": [
+      {
+        "firstY": 322,
+        "lastY": 351,
+        "runs": [
+          [
+            46,
+            246
+          ]
+        ]
+      },
+      {
+        "firstY": 538,
+        "lastY": 567,
+        "runs": [
+          [
+            46,
+            246
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "r3-initial.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 929,
+        "runs": [
+          [
+            1888,
+            2088
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "visible-create-2.png",
+    "bands": [
+      {
+        "firstY": 568,
+        "lastY": 603,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      },
+      {
+        "firstY": 826,
+        "lastY": 861,
+        "runs": [
+          [
+            1765,
+            2005
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      240,
+      240
+    ],
+    "passed": false
+  },
+  {
+    "image": "physical-keys-ongoing.png",
+    "bands": [
+      {
+        "firstY": 682,
+        "lastY": 724,
+        "runs": [
+          [
+            1615,
+            1903
+          ]
+        ]
+      },
+      {
+        "firstY": 992,
+        "lastY": 1034,
+        "runs": [
+          [
+            1615,
+            1903
+          ]
+        ]
+      },
+      {
+        "firstY": 1297,
+        "lastY": 1339,
+        "runs": [
+          [
+            1610,
+            1898
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      288,
+      288,
+      288
+    ],
+    "passed": true
+  },
+  {
+    "image": "after-fullscreen-exit.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 927,
+        "runs": [
+          [
+            1888,
+            2088
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "guest-plain-before.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 927,
+        "runs": [
+          [
+            1888,
+            2088
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "visible-control-1.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 929,
+        "runs": [
+          [
+            2306,
+            2506
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "clipped.png",
+    "bands": [
+      {
+        "firstY": 322,
+        "lastY": 351,
+        "runs": [
+          [
+            46,
+            246
+          ]
+        ]
+      },
+      {
+        "firstY": 538,
+        "lastY": 567,
+        "runs": [
+          [
+            46,
+            246
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "hidden-create-2.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "hidden-resize-261.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "hidden-resize-260.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "hidden-restored-100.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 907,
+        "lastY": 949,
+        "runs": [
+          [
+            1895,
+            2183
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": false,
+    "widths": [
+      200,
+      200,
+      288
+    ],
+    "passed": false
+  },
+  {
+    "image": "hidden-create.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": false,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200
+    ],
+    "passed": false
+  },
+  {
+    "image": "visible-control-0.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            2310,
+            2510
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 929,
+        "runs": [
+          [
+            2306,
+            2506
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  {
+    "image": "full-before-clip.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 927,
+        "runs": [
+          [
+            1888,
+            2088
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  }
+]

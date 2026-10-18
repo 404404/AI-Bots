@@ -1,0 +1,17 @@
+// THROWAWAY #2245 round 3: test instrumentation only.
+import {dirname,join} from 'node:path';import {fileURLToPath} from 'node:url';
+const here=dirname(fileURLToPath(import.meta.url));
+import {createRequire} from 'node:module';import {mkdirSync,writeFileSync} from 'node:fs';import {spawnSync} from 'node:child_process';
+const p=createRequire(join(process.env.BH_SOURCE_ROOT??process.cwd(),'node_modules/.pnpm/puppeteer@25.11.0/node_modules/'))('puppeteer');
+const b=await p.connect({browserURL:`http://127.0.0.1:${process.env.ZOOM_PROTOTYPE_DEBUG_PORT??39445}`,defaultViewport:null,protocolTimeout:5000});const page=(await b.pages()).find(p=>p.url().startsWith('dsh-app://app/'));
+const [cmd='snapshot',label=cmd]=process.argv.slice(2);const out=process.env.ZOOM_PROTOTYPE_EVIDENCE_DIR??join(here,'evidence/round3-rerun');mkdirSync(out,{recursive:true});
+try{
+ if(cmd==='setup'){await page.evaluate(()=>window.__zoomProbe.embeds('http://127.0.0.1:39446/'));await page.waitForFunction(()=>window.__zoomProbe.state.guestReady,{polling:100,timeout:10000});}
+ if(cmd==='level')await page.evaluate(x=>window.__zoomProbe.set(Number(x),'paint-experiment'),label);
+ if(cmd==='guest-invalidate')await page.evaluate(()=>document.querySelector('#zoom-guest').executeJavaScript('document.body.style.backgroundColor="#fffffe";true'));
+ if(cmd==='unzoom')await page.evaluate(()=>{window.__zoomProbe.set(0,'unzoom-control');document.documentElement.style.removeProperty('zoom')});
+ if(cmd==='resize-guest')await page.evaluate(()=>{const w=document.querySelector('#zoom-guest');w.style.width=w.style.width==='261px'?'260px':'261px'});
+ if(cmd==='reset')await page.evaluate(()=>{window.__zoomProbe.set(0,'test-reset');window.__zoomProbe.clear()});
+ const data=await page.evaluate(async()=>{const w=document.querySelector('#zoom-guest'),r=w?.getBoundingClientRect();return {probe:window.__zoomProbe.snapshot(),parent:{visibility:document.visibilityState,focus:document.activeElement?.id,rect:r?.toJSON(),dpr:devicePixelRatio,viewport:[innerWidth,innerHeight],fonts:['--dsh-content-font-size','--dsh-code-font-size','--dsh-terminal-font-size'].map(x=>getComputedStyle(document.body).getPropertyValue(x))},trace:window.__guestTrace??[],guest:w?{id:w.getWebContentsId(),zoom:w.getZoomFactor(),loading:w.isLoading(),data:await w.executeJavaScript('({visibility:document.visibilityState,focus:document.activeElement?.id,viewport:[innerWidth,innerHeight],ready:document.readyState,value:document.querySelector("#edit")?.value})')}:null}});
+ const rect=await page.$eval('#zoom-prototype',el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}});data.captureMode=process.env.ZOOM_PROTOTYPE_CLIP==='1'?'clipped-diagnostic-only':'whole-window';await page.screenshot({path:out+'/'+label+'.png',...(process.env.ZOOM_PROTOTYPE_CLIP==='1'?{clip:rect}:{})});if(cmd==='verify'){const measured=spawnSync(process.env.ZOOM_PROTOTYPE_PYTHON??'python3',[join(here,'measure-paint.py'),out+'/'+label+'.png'],{encoding:'utf8'});if(!measured.stdout)throw Error('Pixel measurement needs Python with Pillow');data.paint=JSON.parse(measured.stdout);data.qualified=data.captureMode==='whole-window'&&data.parent.visibility==='visible'&&data.paint.passed;process.exitCode=data.qualified?0:2;}writeFileSync(out+'/'+label+'.json',JSON.stringify(data,null,2));console.log(JSON.stringify({label,...data}));
+}finally{b.disconnect()}

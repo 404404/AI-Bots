@@ -14,6 +14,10 @@ BH_SOURCE_ROOT=/path/to/BotHarness node packages/client/prototypes/window-zoom-2
 
 This creates a fresh temporary DSH_HOME and browser directory, lets the desktop initialize its Profile, stops only its own child, inserts the local prototype Plugin, and restarts it. It uses the repository's shared dev credential resolver without printing credentials; no model request is necessary. Ctrl+C stops this owned instance and retains its temporary files. The final wrapper was replayed from a fresh Profile in round 2, including its initial boot, exact-process stop, compatibility copy and ready check. It generates a hash-locked temporary theme copy, removes its fixed font-size shortcut installer, and resolves the copied Host schema import to the canonical installed module. Set `ZOOM_PROTOTYPE_THEME_COMPAT=0` only to reproduce the baseline conflict.
 
+## Round 3: plain Equal and webview paint
+
+[ROUND3.md](ROUND3.md) documents physical-key evidence, visibility-dependent paint, the red/green pixel detector and reproduction steps. Use whole-window capture; clipped CDP screenshots can omit the native guest surface. `probe-paint.mjs verify <label>` requires both parent visibility and matching painted ruler widths. These are test-only tools, not production changes.
+
 ## Round 2: native system input
 
 Read [ROUND2.md](ROUND2.md) for the current verdict and exact input limits. In another terminal run `node packages/client/prototypes/window-zoom-2245/serve-fixture.mjs`, then run the following with `BH_SOURCE_ROOT` set:
@@ -41,6 +45,6 @@ The first driver hosts an inert loopback fixture on port 39446 and writes screen
 
 ## Evidence and limits
 
-Read `ROUND2.md` first; `REPORT.md` retains round 1 history. `evidence/native-results.json` is the final desktop run; `native-first-attempt.json` preserves the first, incomplete fixture attempt. The Web runs with and without the tutorial are kept separately. `guest-first-input-attempt.json` preserves the failed focus setup; `guest-native-input.json` fixes focus but still lacks a positive native-input response.
+Read `ROUND3.md` first, then `ROUND2.md`; `REPORT.md` retains round 1 history. `evidence/native-results.json` is the final desktop run; `native-first-attempt.json` preserves the first, incomplete fixture attempt. The Web runs with and without the tutorial are kept separately. `guest-first-input-attempt.json` preserves the failed focus setup; `guest-native-input.json` fixes focus but still lacks a positive native-input response.
 
 No production persistence, default selection, restore command, distributed compatibility package, new desktop shell, CI qualification or release was implemented. The compatibility copy is a disposable experiment only. No upstream file was edited. The native DSH run and BotHarness Web layout run are separate compositions and must not be presented as an integrated DeepSeekBot desktop acceptance run.

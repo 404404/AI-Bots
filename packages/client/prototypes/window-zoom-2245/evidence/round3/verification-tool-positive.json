@@ -1,0 +1,192 @@
+{
+  "probe": {
+    "state": {
+      "level": 0,
+      "mode": "off",
+      "recording": false,
+      "composing": false,
+      "actions": [],
+      "native": [],
+      "errors": [],
+      "guestReady": true
+    },
+    "catalog": [
+      {
+        "id": "zoomPrototype.increase",
+        "binding": {
+          "code": "Equal",
+          "modifiers": [
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE increase",
+        "aliases": [],
+        "keys": [
+          "⌘",
+          "="
+        ],
+        "aria": "Meta+="
+      },
+      {
+        "id": "zoomPrototype.increaseShift",
+        "binding": {
+          "code": "Equal",
+          "modifiers": [
+            "shift",
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE increaseShift",
+        "aliases": [],
+        "keys": [
+          "⇧",
+          "⌘",
+          "="
+        ],
+        "aria": "Shift+Meta+="
+      },
+      {
+        "id": "zoomPrototype.decrease",
+        "binding": {
+          "code": "Minus",
+          "modifiers": [
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE decrease",
+        "aliases": [],
+        "keys": [
+          "⌘",
+          "-"
+        ],
+        "aria": "Meta+-"
+      },
+      {
+        "id": "zoomPrototype.bridgeControl",
+        "binding": {
+          "code": "KeyY",
+          "modifiers": [
+            "meta"
+          ]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "ZOOM PROTOTYPE bridgeControl",
+        "aliases": [],
+        "keys": [
+          "⌘",
+          "Y"
+        ],
+        "aria": "Meta+Y"
+      }
+    ],
+    "fixed": [],
+    "config": "ready"
+  },
+  "parent": {
+    "visibility": "visible",
+    "focus": "zoom-guest",
+    "rect": {
+      "x": 936,
+      "y": 442,
+      "width": 260,
+      "height": 100,
+      "top": 442,
+      "right": 1196,
+      "bottom": 542,
+      "left": 936
+    },
+    "dpr": 2,
+    "viewport": [
+      1261,
+      820
+    ],
+    "fonts": [
+      "14px",
+      "11px",
+      "13px"
+    ]
+  },
+  "trace": [
+    {
+      "event": "dom-ready",
+      "blank": true,
+      "visibility": "visible"
+    },
+    {
+      "event": "dom-ready",
+      "blank": false,
+      "visibility": "visible"
+    }
+  ],
+  "guest": {
+    "id": 12,
+    "zoom": 1,
+    "loading": false,
+    "data": {
+      "visibility": "visible",
+      "focus": "edit",
+      "viewport": [
+        260,
+        100
+      ],
+      "ready": "complete",
+      "value": "WEBVIEW: Cmd+="
+    }
+  },
+  "captureMode": "whole-window",
+  "paint": {
+    "image": "whole-window.png",
+    "bands": [
+      {
+        "firstY": 472,
+        "lastY": 501,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 688,
+        "lastY": 717,
+        "runs": [
+          [
+            1892,
+            2092
+          ]
+        ]
+      },
+      {
+        "firstY": 900,
+        "lastY": 927,
+        "runs": [
+          [
+            1888,
+            2088
+          ]
+        ]
+      }
+    ],
+    "paintedThreeEmbeds": true,
+    "matchingWidths": true,
+    "widths": [
+      200,
+      200,
+      200
+    ],
+    "passed": true
+  },
+  "qualified": true
+}
