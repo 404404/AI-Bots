@@ -1,3 +1,4 @@
+import { MemoryImageView, MemoryImageDiff } from './memory-image-view.js';
 import { useState, type ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
 import type { MemoryWorkingChange, MemoryWorkingDiff } from './bridge.js';
@@ -122,6 +123,8 @@ export function MemoryFileView({
         error === undefined ? (
           <div className="bh-note">{t('memory.loading')}</div>
         ) : null
+      ) : file.image !== undefined && botSlug !== undefined ? (
+        <MemoryImageView slug={botSlug} path={path} image={file.image} t={t} />
       ) : file.binary ? (
         <div className="bh-note">{t('memory.binaryPreview')}</div>
       ) : (
@@ -237,6 +240,11 @@ export function MemoryWorkingView({
                 : badge === 'updated'
                   ? t('memory.badge.updated')
                   : (badge ?? detail.status)
+          }
+          preview={
+            detail.images === undefined || botSlug === undefined ? undefined : (
+              <MemoryImageDiff slug={botSlug} path={change.path} images={detail.images} t={t} />
+            )
           }
           diff={detail.diff}
           wrap={wrap}

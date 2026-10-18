@@ -8,7 +8,7 @@ import type { Invitation } from '../../cloud/invitation-contract';
 import { parseInvitationLink } from '../../cloud/invitation-link';
 import { cloudClient, pendingCloudJoin, useCloudSnapshot } from '../../cloud/native';
 import { useDesignTheme } from '../design/theme';
-import { radius, space } from '../design/tokens';
+import { edge, radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
 import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { TextInput } from '../primitives/system-text';
@@ -114,7 +114,16 @@ export function CloudJoinScreen() {
         autoCorrect={false}
         maxLength={2048}
         editable={!busy}
-        style={{ color: theme.color.fg }}
+        style={{
+          minHeight: theme.touch,
+          padding: space.x3,
+          borderWidth: edge.hairline,
+          borderColor: theme.layer.raised.edge,
+          borderRadius: radius.md,
+          color: theme.color.fg,
+          backgroundColor: theme.layer.raised.fill,
+          fontSize: theme.type.body.size,
+        }}
       />
       <Button label={t.cloudJoin.scan} disabled={busy} onPress={() => setScanning(true)} />
       {scanning &&

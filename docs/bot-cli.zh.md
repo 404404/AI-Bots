@@ -907,3 +907,13 @@ Host 重启后先检查草稿、重新读取群聊，再通过同一个
 ## Desktop 新手引导
 
 `deepseekbot onboarding` 读取 Profile 引导及实际 Bot／群聊结果引用。`--action start|pause|skip|continue|restart|finish` 控制生命周期；未实际创建 Bot 与群聊时 finish 拒绝。重新开始保留资源、审批、布局和历史。布局教学完成记录属于当前 Client；CLI 不操作界面，也不把模型配置视为执行成功。
+
+### 绑定版本的 Memory PNG 图片
+
+`memory-file`、`memory-working-diff` 和 `memory-commit-diff` 为 PNG 文件返回可选图片元数据。`source` 标识当前工作树、暂存区或确切提交，`revision` 绑定实际字节；JSON 不包含图片正文。
+
+```bash
+deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
+```
+
+使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应 PNG 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。首片支持不超过 25 MiB、单边不超过 16,384 像素、总像素不超过 4000 万的 PNG；其余格式沿用原行为。原文件下载与“打开当前文件”仍为独立操作。

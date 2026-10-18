@@ -923,3 +923,13 @@ the same message ID, including after another restart. Inspection cannot include
 ## Desktop onboarding
 
 `deepseekbot onboarding` reads the Profile journey and actual Bot/group result references. Use `--action start|pause|skip|continue|restart|finish` to change tutorial lifecycle. `finish` refuses before actual Bot/group creation. Restart preserves resources, approvals, layouts and history. Layout tip completion stays on the current Client; this command does not operate the UI or mark provider execution successful.
+
+### Version-bound Memory PNG images
+
+`memory-file`, `memory-working-diff`, and `memory-commit-diff` include optional image metadata for PNG files. `source` identifies the working tree, index, or exact commit; `revision` binds the returned bytes. No image body is printed in JSON.
+
+```bash
+deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
+```
+
+Use the exact metadata from the selected file/diff side. The authenticated Host returns that PNG or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. This first image slice supports PNG up to 25 MiB, 16,384 pixels per axis and 40 million pixels; other formats retain their existing behavior. Original-file download and Open current file remain separate actions.

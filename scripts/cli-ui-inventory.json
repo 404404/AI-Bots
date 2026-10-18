@@ -291,6 +291,13 @@
       "issue": "#2089"
     },
     {
+      "id": "memory-image-preview",
+      "description": "Version-bound Memory PNG transfer; metadata is available through existing Memory commands.",
+      "scope": "Host",
+      "surfaces": ["route:packages/core/src/plugin.ts:MEMORY_IMAGE_PATH"],
+      "commands": ["memory-image"]
+    },
+    {
       "id": "memory-download",
       "description": "Current Memory file download.",
       "scope": "Host",

@@ -140,6 +140,8 @@ export function createMemoryService(options: MemoryServiceOptions): MemoryServic
       requireAcceptance().abortTurn(botSlug, sessionId, preserveObservation),
     snapshot: (botSlug) => requireAcceptance().snapshot(botSlug),
     readAccepted: (botSlug, path) => requireAcceptance().readAccepted(botSlug, path),
+    imageFile: (botSlug, path, source, revision) =>
+      requireAcceptance().imageFile(botSlug, path, source, revision),
     history: (botSlug, limit) => requireAcceptance().history(botSlug, limit),
     diff: (botSlug, sha) => requireAcceptance().diff(botSlug, sha),
     gitGraph: (botSlug, offset) => requireAcceptance().gitGraph(botSlug, offset),
