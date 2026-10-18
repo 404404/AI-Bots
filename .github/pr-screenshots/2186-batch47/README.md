@@ -23,17 +23,17 @@ Record app PID plus a non-auth JS continuity marker before A logout. Sign out A,
 
 These are interaction states from one source, **not a before/fix build comparison**. No product change was necessary. Credentials and authenticated user IDs are not in these images. The Cloud services images contain the existing public UAT service address, not a token or login URL.
 
-| Image | Observed state |
-| --- | --- |
-|01|A's two authorized channels, light|
-|03|After A logout, Back refuses old content, light|
-|04|B login then Back refuses the old A route, light|
-|05|B retry on the old A channel remains refused, light|
-|06|B's permitted channel list, light|
-|08|B's list after scrolling, dark; all7names matched across captures/AX|
-|09|B's real session after native Refresh, dark|
-|10|First old A channel retry after B selects its own organization, dark|
-|11|B signed out, local removal and remote revocation reported, dark|
+| Image | Observed state                                                       |
+| ----- | -------------------------------------------------------------------- |
+| 01    | A's two authorized channels, light                                   |
+| 03    | After A logout, Back refuses old content, light                      |
+| 04    | B login then Back refuses the old A route, light                     |
+| 05    | B retry on the old A channel remains refused, light                  |
+| 06    | B's permitted channel list, light                                    |
+| 08    | B's list after scrolling, dark; all7names matched across captures/AX |
+| 09    | B's real session after native Refresh, dark                          |
+| 10    | First old A channel retry after B selects its own organization, dark |
+| 11    | B signed out, local removal and remote revocation reported, dark     |
 
 Image02 caught the native theme-transition dimming and was excluded; image07 was an intermediate scroll capture. Neither is used as final visual proof. The empty AuthKit form was inspected privately to confirm the expected staging domain; credential entry was never recorded. No video was taken.
 
