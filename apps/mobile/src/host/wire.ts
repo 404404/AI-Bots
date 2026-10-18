@@ -173,7 +173,7 @@ export interface MemoryImage {
   source: string;
   status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
   revision?: string;
-  mime?: 'image/png';
+  mime?: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | 'image/svg+xml';
   size?: number;
   width?: number;
   height?: number;

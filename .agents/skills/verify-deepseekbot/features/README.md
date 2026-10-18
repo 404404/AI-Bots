@@ -33,7 +33,7 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Default Bot Browser open, observe, stop and Access refusal | no | `scripts/e2e-browser-lifecycle.mjs` | [browser-lifecycle.md](browser-lifecycle.md) |
 | Composer footer customization and optional reply speed | yes for a speed sample | none (Web interaction path) | [composer-footer.md](composer-footer.md) |
 | Disposable Memory history, restore and stale-head refusal | no | `scripts/e2e-memory-restore.mjs` | [memory-restore.md](memory-restore.md) |
-| Version-bound Memory PNG and Markdown previews and CLI export | no | `scripts/e2e-memory-images.mjs`, `scripts/e2e-memory-markdown.mjs` | [memory-images.md](memory-images.md) |
+| Version-bound Memory images, Markdown previews and CLI export | no | `scripts/e2e-memory-images.mjs`, `scripts/e2e-memory-markdown.mjs`, `scripts/e2e-memory-formats.mjs` | [memory-images.md](memory-images.md) |
 
 | Activity Center: approvals, Channel mute and independent control-rail indicator; page and Dock | yes (real pending requests) | `scripts/e2e-inbox-tool-approval.mjs`, `scripts/e2e-activity-live.mjs`, `scripts/e2e-activity-approve-sync.mjs`, `scripts/e2e-activity-load.mjs` | [activity-inline-approval.md](activity-inline-approval.md) |
 

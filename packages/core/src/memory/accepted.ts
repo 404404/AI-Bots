@@ -8,6 +8,7 @@ import {
 } from './markdown.js';
 import {
   readMemoryImage,
+  isMemoryImagePath,
   MemoryImageError,
   type MemoryImage,
   type MemoryImageComparison,
@@ -1568,7 +1569,7 @@ export function createMemoryAcceptance(options: {
           ...(markdown.status === 'ready' ? {} : { binary: true }),
         };
       }
-      if (/\.png$/iu.test(relative)) {
+      if (isMemoryImagePath(relative)) {
         return {
           path: relative,
           body: '',
@@ -1737,7 +1738,7 @@ export function createMemoryAcceptance(options: {
                 },
               }
             : {}),
-          ...(/\.png$/iu.test(path)
+          ...(isMemoryImagePath(path)
             ? {
                 images: {
                   ...(status === 'A' || firstParent === undefined
@@ -1817,7 +1818,7 @@ export function createMemoryAcceptance(options: {
                 }),
           }
         : undefined;
-      if (/\.png$/iu.test(relative)) {
+      if (isMemoryImagePath(relative)) {
         const oldSource = kind === 'unstaged' ? 'index' : head(root);
         const newSource = kind === 'staged' ? 'index' : 'worktree';
         return {

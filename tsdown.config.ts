@@ -114,7 +114,7 @@ export const coreCliBundleOptions: UserConfig = {
   platform: 'node',
   dts: false,
   clean: true,
-  external: ['@resvg/resvg-js', 'silk-wasm'],
+  external: ['@resvg/resvg-js', 'silk-wasm', 'css-tree'],
   deps: { alwaysBundle: [/^@deepseek-ai\//] },
 };
 
@@ -149,6 +149,7 @@ export default defineConfig([
     external: [
       '@resvg/resvg-js',
       'silk-wasm',
+      'css-tree',
       '@deepseek-ai/dsh-agent',
       '@deepseek-ai/dsh-llm',
       '@deepseek-ai/dsh-session',

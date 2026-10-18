@@ -121,6 +121,7 @@ const documentVersion = {
 const imageBytes = new Uint8Array(33);
 imageBytes.set([137, 80, 78, 71, 13, 10, 26, 10], 0);
 imageBytes.set([73, 72, 68, 82], 12);
+new DataView(imageBytes.buffer).setUint32(8, 13);
 new DataView(imageBytes.buffer).setUint32(16, 16);
 new DataView(imageBytes.buffer).setUint32(20, 12);
 function previewPort() {
