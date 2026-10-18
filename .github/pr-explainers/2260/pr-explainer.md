@@ -15,15 +15,12 @@ source: "base a376b9f4dc46609ff86cc5d2b48d0c59b32bc6f0 · head 07b9cea069c08a00d
 ## B 功能身份与数据路径
 
 ```flow
-[Header 右键 modal] -> [Client 外观 owner]
-[定向 CLI] -> [Client 外观 owner]
-[Client 外观 owner] -> [本地配置]
-[功能 Panel 注册目录] -> [目标发现与校验]
-[目标发现与校验] -> [Client 外观 owner]
-[本地配置] -> [当前活动 Dock 组表面]
+[Header 右键或定向 CLI] -> [校验功能目标]
+[校验功能目标] -> [Client 外观 owner]
+[Client 外观 owner] -> [本地保存与表面刷新]
 ```
 
-目标使用稳定功能 ID。Bot、Channel 和文件不是外观键。关闭面板保留设置；目标卸载后拒绝写入。
+注册目录提供可用目标和名称。目标使用稳定功能 ID。Bot、Channel 和文件不是外观键。关闭面板保留设置；目标卸载后拒绝写入。
 
 ## C 每个字段如何求值
 
