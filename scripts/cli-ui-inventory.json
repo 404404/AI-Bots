@@ -358,7 +358,8 @@
       "surfaces": [
         "setting:packages/client/src/client/bot-settings-sections.tsx:{t('build.row.title')}",
         "setting:packages/client/src/client/release-notes-view.tsx:{t('release.row.title')}",
-        "storage:packages/client/src/client/release-notes.ts:setItem(RELEASE_NOTES_SEEN_KEY)"
+        "storage:packages/client/src/client/release-notes.ts:setItem(RELEASE_NOTES_SEEN_KEY)",
+        "storage:packages/client/src/client/release-notes.ts:setItem(key)"
       ],
       "exemption": "Release/build information and seen receipt only, not configurable release controls.",
       "configurable": false

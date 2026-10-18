@@ -125,3 +125,38 @@ it('does not report missing metadata or unknown runtime as compatible', async ()
     compatibility: { status: 'unknown', reason: 'runtime-unavailable' },
   });
 });
+
+it('searches past twenty incompatible releases', async () => {
+  const documents = fixture();
+  const versions: Record<string, unknown> = {};
+  for (let patch = 2; patch <= 25; patch++) {
+    const version = `1.3.${patch}`;
+    versions[version] = manifest('deepseekbot', version);
+    for (const name of ['deepseekbot', ...names])
+      documents[`/${name}/${version}`] = manifest(
+        name,
+        version,
+        patch === 2 ? undefined : '>=0.2.2',
+      );
+  }
+  documents['/deepseekbot'] = { versions };
+  expect(await service(documents).update()).toMatchObject({ status: 'available', latest: '1.3.2' });
+});
+it.each(['packument', 'candidate'])(
+  'retries incomplete %s discovery after the failure TTL',
+  async (failure) => {
+    const documents = fixture();
+    const path = failure === 'packument' ? '/deepseekbot' : '/deepseekbot/1.3.2';
+    const saved = documents[path];
+    delete documents[path];
+    let now = 0;
+    const release = service(documents, { now: () => now });
+    expect(await release.update()).toMatchObject({
+      status: 'blocked',
+      compatibility: { status: 'unknown' },
+    });
+    documents[path] = saved;
+    now = 5 * 60_000 + 1;
+    expect(await release.update()).toMatchObject({ status: 'available', latest: '1.3.2' });
+  },
+);

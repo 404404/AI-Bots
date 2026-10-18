@@ -434,10 +434,21 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
         installable: false,
         releases: await newerNotes(current, latest),
       };
+    const incomplete = (): CheckResult => ({
+      status: 'blocked',
+      current,
+      latest,
+      compatibility: {
+        status: 'unknown',
+        reason: 'metadata-unavailable',
+        dshVersion: host.version,
+      },
+    });
     if (compatibility.status === 'incompatible') {
       const packument = releaseMetadata(await json(`${registry}/${RELEASE_PACKAGE}`));
       const versions = releaseMetadata(packument?.['versions']);
-      const candidates = Object.keys(versions ?? {})
+      if (versions === undefined) return incomplete();
+      const candidates = Object.keys(versions)
         .filter(
           (version) =>
             isReleaseVersion(version) &&
@@ -445,10 +456,9 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
             compareVersions(version, current) > 0 &&
             compareVersions(version, latest) < 0,
         )
-        .sort((a, b) => compareVersions(b, a))
-        .slice(0, 20);
+        .sort((a, b) => compareVersions(b, a));
       for (const version of candidates) {
-        if (Date.now() >= deadline) break;
+        if (Date.now() >= deadline) return incomplete();
         const candidate = await manifestCompatibility(registry, version, host);
         if (candidate.status === 'compatible')
           return {
@@ -460,7 +470,7 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
             installable: false,
             releases: await newerNotes(current, version),
           };
-        if (candidate.status === 'unknown') break;
+        if (candidate.status === 'unknown') return incomplete();
       }
     }
     options.warn?.(`release/check blocked target=${latest} compatibility=${compatibility.status}`);

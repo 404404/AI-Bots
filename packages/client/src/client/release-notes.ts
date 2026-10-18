@@ -299,8 +299,8 @@ export class ReleaseNotesController {
     await this.start();
     await this.checkUpdate();
     const update = this.source.getSnapshot().update;
-    if (update.status === 'restart-required') return;
     const eligible =
+      update.status === 'restart-required' ||
       (update.status === 'available' && update.compatibility?.status === 'compatible') ||
       (update.status === 'blocked' && update.compatibility.status === 'incompatible');
     const key = this.noticeKey();
@@ -317,10 +317,12 @@ export class ReleaseNotesController {
     const update = this.source.getSnapshot().update;
     if (
       this.profileId === undefined ||
-      (update.status !== 'available' && update.status !== 'blocked')
+      (update.status !== 'available' &&
+        update.status !== 'blocked' &&
+        update.status !== 'restart-required')
     )
       return undefined;
-    return `botharness.releaseUpdate.dismissed/${encodeURIComponent(this.profileId)}/${update.current.includes('-') ? 'preview' : 'stable'}/${update.latest}`;
+    return `botharness.releaseUpdate.dismissed/${encodeURIComponent(this.profileId)}/${update.current.includes('-') ? 'preview' : 'stable'}/${update.status === 'restart-required' ? `restart-${update.installed}` : update.latest}`;
   }
 
   dismissUpdate(): void {
@@ -409,6 +411,7 @@ export class ReleaseNotesController {
     this.source.update((draft) => {
       if (outcome?.status === 'installed') {
         draft.install = { status: 'idle' };
+        draft.updateNotice = true;
         draft.update = {
           status: 'restart-required',
           current: outcome.current,

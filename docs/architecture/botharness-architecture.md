@@ -782,6 +782,8 @@ Registry 在 Generation 66 持久化不可恢复的身份关闭状态和确认�
 
 #1980 的运行身份沿用 Release Service：四个第一方 Plugin 在模块加载时将不可变包名、版本与真实目录快照附在各自 callback 上。Core 捕获产品依赖组合，随后从原生 Registry 的 ACTIVE Fiber 读取实际 callback 快照并比对；等待组件启动时返回 `composition-unverified`，关于页面允许重新读取身份，不能只凭已安装清单宣布发布身份。运行版本和待生效状态在当前 Service 内保留；后续请求继续校验实际 callback，组件被替换后身份可失效，但不提前宣布新版本。配置重新应用复用同一 Core 模块捕获的组合；磁盘安装不能提前改变运行版本。该快照是应用定义的进程诊断，不是新持久化版本库，也不是对任意可执行 Plugin 的安全认证。源码构建使用编译时 Git／dirty 身份；具体安装、重启与 Human QA 证据仍由 issue／PR 记录。
 
+#2173 的应用定义升级发现仍由同一个 Release Service 负责。Bot 模式进入时通过认证 bridge 查询运行身份、真实 DSH 版本及 registry 版本清单；兼容性复用当前 Host 的原生检查器，覆盖产品与精确依赖组件。绝对最新版本不兼容时继续寻找最新兼容版本；元数据缺失、搜索超时或网络失败保持未知并短期重试，不宣称没有更新。客户端按本地 Profile、发布通道和精确目标保存提醒关闭记录，与已安装版本更新说明分开。确认安装前再次核验兼容性，再进入既有原生安装和权限边界；已暂存版本仍独立提示重启，不提前改变运行身份。CLI `release-check --force` 与 UI 共用该 Service 并绕过查询缓存。
+
 ## 8 · 实现顺序与可并发范围
 
 1. #77 验证 pinned DSH 的 Agent/SessionPersistence/Subagent seams；#79 建立 operational database owner。这两项可并行。
