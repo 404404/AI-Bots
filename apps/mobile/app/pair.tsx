@@ -91,7 +91,6 @@ export default function PairScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
-      {/* Leave the native pairing modal so the root workspace drawer stays reachable. */}
       <Button label={t.cloud.title} onPress={() => router.dismissTo('/cloud-services')} />
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <ConnectionNameField
