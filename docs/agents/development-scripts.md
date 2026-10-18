@@ -54,6 +54,7 @@ Run `node scripts/ci-plan.mjs --base origin/main` to print the plan and the exac
 | `scripts/stylex-plugin.mjs`                                                                               | Full suite          | Yes       | StyleX transform used by every test                          |
 | `.github/workflows/verify.yml`                                                                            | Full suite          | Yes       | The verify workflow itself                                   |
 | `.github/workflows/npm-release.yml`                                                                       | Full suite          | Yes       | Release verification and package gates                       |
+| `scripts/published-product-provider.json`                                                                 | Full suite          | Yes       | Published Provider reuse qualification                       |
 | `scripts/ci-plan.mjs`                                                                                     | Full suite          | Yes       | This test plan                                               |
 | `packages/core/src/**`                                                                                    | Related tests       | Yes       | Core source; the docs site also reads it for reference pages |
 | `packages/*/src/**`                                                                                       | Related tests       |           | Package source                                               |
@@ -171,3 +172,14 @@ a skipped fallback permits packing only when exact-SHA reuse succeeded.
 The package build, frozen release plan, supported-DSH fresh installation checks and Human
 `npm-release` environment approval remain required. Reusing source verification never substitutes
 for qualification of the exact tarballs that will be published.
+
+### Published Provider reuse
+
+Product preparation uses `scripts/published-product-provider.json` to verify an already
+published Provider before reusing its exact registry archive. It records the independently
+verified package integrity, upstream source, runtime file digest/count and qualification run.
+After publishing a new Provider with the product, refresh this record from the frozen inventory
+and registry readback before preparing later product releases. A different runtime or registry
+archive still fails closed; an unpublished Provider continues through first-publication preparation.
+The historical `scripts/provider-release-plan.json` belongs to the separate standalone Provider
+publication workflow and is not the product's reuse authority.
