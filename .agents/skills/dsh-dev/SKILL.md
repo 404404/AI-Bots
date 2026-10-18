@@ -23,7 +23,7 @@ The web client calls `/api/<endpoint>` over plain HTTP (`fetch` + auth cookie). 
 
 ## Dev loop (WSL, fnm node)
 
-Use the worktree's local `@deepseek-ai/dsh@0.2.0-rc.2`, not a global `dsh` binary. The launcher checks the installed version, creates an isolated Web Profile, links all Bundle members as dependencies, enables only the `deepseekbot` umbrella, and probes the authenticated API.
+Use the worktree's local `@deepseek-ai/dsh@0.2.1-rc.2`, not a global `dsh` binary. The launcher checks the installed version, creates an isolated Web Profile, links all Bundle members as dependencies, enables only the `deepseekbot` umbrella, and probes the authenticated API.
 
 ```bash
 corepack pnpm build
@@ -34,6 +34,15 @@ corepack pnpm dev:client
 The launch summary includes the Host PID and local login URL. For Client edits, open the local Web tab with `?botharness-dev-reload=1`: tsdown rebuilds the linked Client bundle, and the opted-in development listener refreshes the page when the RC publishes a rebuilt frame. The Desktop Client HMR stream replaces the linked `@botharness/ui` Fiber; BotHarness hands off the active Bot/Channel selection during replacement. The Web development listener retains a full-page refresh fallback. For Host edits, build, stop that exact PID, then start the helper again with the same home and port; Host hot replacement is disabled in the pinned RC. Follow `docs/client-bridge.md` §7 for the complete steps and measured timings.
 
 The helper injects a shared machine-local DeepSeek key when available; `node scripts/dev-secret.mjs check` reports its source without a value. Existing Profile credentials are another DSH source. Confirm model access with a real DM reply. `node scripts/dev-secret.mjs adopt-profile --home <existing-DSH_HOME>` copies only the DeepSeek reference into a private local file for later isolated Profiles.
+
+## DSH 0.2.1 migration contracts
+
+Source inspection of `dsh-subagent/lib/types/types.d.ts` and `lib/index.js` in `0.2.1-rc.2`:
+`startActivation` replaces `start` and `startContinuable`; `delivery: 'parent'` sends the result
+to the parent, while `'caller'` returns it only to the caller. Its signal owns startup only;
+callers that retain cancellation ownership must connect later aborts to the receipt's `dispose()`.
+The old `settleRun` export is gone. `dsh-client-connection` also replaces the shared `operator`
+with per-Peer identity; Owner-only Remote methods check `invocation.peer.principal.kind`.
 
 ## Profile model
 
@@ -153,7 +162,7 @@ DSH 0.2.0 provider token reports use disjoint uncached input, output, cache-read
 
 Pre-execution refusal can leave an application-owned Session ID without a DSH Session. Before retrying that reserved identity, use Session Persistence `stat(id)` to distinguish an absent stored Session from an existing one: create only when `stat` returns `undefined`, and propagate storage failures. Do not infer persistent existence from the live Session Store or blindly resume a reserved ID. Verified against DSH 0.2.0-rc.1 in #500 with a rejected model route followed by a successful Human repair.
 
-- **DSH source checkout**: `reference/deepseek-harness` (gitignored, in this worktree) pinned to the installed tag — currently `dsh-v0.2.0-rc.2`. Read the TypeScript source (`packages/typert`, `packages/*connection*`, `packages/*gateway*`, `apps/cli/reference/README.md`) when the how/why matters; the installed `lib/*.js` is bundled output. Re-pin when DSH is bumped: `git fetch --depth 1 origin tag <tag> && git checkout <tag>`.
+- **DSH source checkout**: `reference/deepseek-harness` (gitignored, in this worktree) must match the installed tag, now `dsh-v0.2.1-rc.2`. Read the TypeScript source (`packages/typert`, `packages/*connection*`, `packages/*gateway*`, `apps/cli/reference/README.md`) when the how/why matters; the installed `lib/*.js` is bundled output. Re-pin when DSH is bumped: `git fetch --depth 1 origin tag <tag> && git checkout <tag>`.
 - `references/debugging-playbook.md` — boot verification, status-code semantics, WS mux probe, bisect recipes, headless puppeteer probe.
 - `references/probe-web.mjs` — headless browser probe (console errors, failed requests, WS, internal fetch); run from the repo.
 - `dsh-ui` skill — in-harness UI rules; `docs/client-bridge.md` §7 — dev loop; ADR-0023 / #50 — bridge transport contract.

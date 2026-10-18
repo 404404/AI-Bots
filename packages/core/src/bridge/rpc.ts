@@ -399,8 +399,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
 
   private requirePrivateOwner(): void {
-    const operator = (this.ctx.get('connection') as { operator?: unknown } | undefined)?.operator;
-    if (operator === undefined || this.ctx.invocation?.peer !== operator)
+    if (this.ctx.invocation?.peer.principal.kind !== 'owner')
       throw new RemoteError(
         'forbidden' as RemoteError['code'],
         'Private input requires the authenticated Owner',
