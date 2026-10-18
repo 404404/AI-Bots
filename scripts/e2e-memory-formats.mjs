@@ -145,7 +145,8 @@ const maybe = async (label) => {
 const capture = async (label) => {
   const viewport = page.viewport();
   const clip = viewport.width === 1440 ? { x: 326, y: 0, width: 1114, height: 1000 } : undefined;
-  await page.screenshot({ path: resolve(out, `${label}.png`), clip });
+  await page.waitForSelector('.bh-memory-commit-view', { visible: true });
+  await page.screenshot({ path: resolve(out, `${label}.png`), clip, captureBeyondViewport: false });
   writeFileSync(
     resolve(out, `${label}.aria.json`),
     JSON.stringify(await page.accessibility.snapshot({ interestingOnly: false }), null, 2),
