@@ -25,7 +25,7 @@ class StreamRevealView(context: Context, appContext: AppContext) : ExpoView(cont
   private var drawViewport = false
   private val updateViewport = ViewTreeObserver.OnPreDrawListener {
     val child = if (childCount == 1) getChildAt(0) as? TextView else null
-    var next = active && child != null && child.height > resources.displayMetrics.heightPixels * 2 &&
+    var next = active && scrollX == 0 && scrollY == 0 && child != null && child.height > resources.displayMetrics.heightPixels * 2 &&
       child.matrix.isIdentity && child.alpha == 1f && child.scrollX == 0 && child.scrollY == 0 &&
       child.animation == null && child.layerType == View.LAYER_TYPE_NONE &&
       child.clipBounds == null && !child.clipToOutline && child.elevation == 0f
