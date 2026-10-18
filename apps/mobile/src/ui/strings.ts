@@ -13,6 +13,10 @@ function toolGroup(tool: string): ToolGroup {
 
 const en = {
   openMention: (name: string) => `Open chat with ${name}`,
+  connectionName: 'Name on this phone',
+  connectionNameOptional: 'Optional — use the original name',
+  renameConnection: 'Rename connection',
+  saveConnectionName: 'Save name',
   cloud: {
     title: 'Cloud services',
     hint: 'Import the UAT configuration supplied by your deployer. Cloud sign-in is separate from pairing a computer.',
@@ -961,6 +965,10 @@ const en = {
 
 const zh: typeof en = {
   openMention: (name: string) => `打开与${name}的私聊`,
+  connectionName: '在这台手机上的名称',
+  connectionNameOptional: '选填，默认使用原名称',
+  renameConnection: '重命名连接',
+  saveConnectionName: '保存名称',
   cloud: {
     title: '云服务',
     hint: '导入部署者提供的 UAT 配置。云服务登录与电脑配对相互独立。',
