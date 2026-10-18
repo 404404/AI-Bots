@@ -1827,7 +1827,7 @@
       "behaviors": ["desktop.activity-center.inline-tool-approval"],
       "reason": "Real native bash Allow once from Activity and conversation with independent browser observers, canonical decision identity and native file effect.",
       "task": 2230,
-      "sha256": "ff9901ec9c8ce42ff88633a03e804f45657c5f39caf8fe31c5f88db30d73a723"
+      "sha256": "6ca3f039719c512d5740c44df6182c3a7b60d4da82e40a928b92ae850d2abde7"
     },
     {
       "path": "scripts/e2e-activity-load.mjs",

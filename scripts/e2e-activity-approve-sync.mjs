@@ -79,7 +79,7 @@ const consoleMessages = [];
 const decisions = [];
 const sockets = [];
 const pages = [];
-const click = async (page, name, root = '') => {
+const click = async (page, name, root = '', optional = false) => {
   await page.bringToFront();
   for (const button of await page.$$((root + ' button').trim())) {
     if (!(await button.isVisible())) continue;
@@ -92,7 +92,7 @@ const click = async (page, name, root = '') => {
       return;
     }
   }
-  throw Error('Visible control missing: ' + name);
+  if (!optional) throw Error('Visible control missing: ' + name);
 };
 const open = async (role) => {
   const browser = await installed('puppeteer').launch({ headless: true, args: ['--no-sandbox'] });
@@ -132,14 +132,21 @@ const open = async (role) => {
           ?.textContent.trim(),
       );
       if (!name) return;
-      await click(page, name);
+      await click(page, name, '', true);
       await sleep(250);
     }
   };
   await sleep(500);
   await dismiss();
-  if (!(await page.$('[aria-label="Bot 模式布局"]'))) await click(page, 'Bot 模式');
-  await sleep(1000);
+  if (
+    !(await page.evaluate(() =>
+      document.querySelector('[aria-label="Bot 模式布局"]')?.checkVisibility(),
+    ))
+  )
+    await click(page, 'Bot 模式');
+  await page.waitForFunction(() =>
+    document.querySelector('[aria-label="Bot 模式布局"]')?.checkVisibility(),
+  );
   await dismiss();
   const messages = await page.evaluate(() =>
     [...document.querySelectorAll('button[aria-label^="消息"]')]
@@ -204,8 +211,21 @@ try {
     await channelButton.click();
     const messageCard = `[data-message-id="${scene.item.messageId}"] .bh-tool-approval-card`;
     const activityCard = `[data-attention-id="${scene.item.id}"]`;
-    await conversation.waitForSelector(messageCard + ' button');
-    await activity.waitForSelector(activityCard + ' .bh-tool-approval-card button');
+    for (const [page, selector] of [
+      [conversation, messageCard],
+      [activity, activityCard],
+    ])
+      await page.waitForFunction(
+        (root) =>
+          [...document.querySelectorAll(root + ' button')].some(
+            (button) =>
+              button.checkVisibility() &&
+              !button.disabled &&
+              button.textContent.trim() === '仅批准这一次',
+          ),
+        {},
+        selector,
+      );
     await shot(activity, scene.surface + '-before-activity');
     await shot(conversation, scene.surface + '-before-conversation');
     const source = scene.surface === 'activity' ? activity : conversation;
