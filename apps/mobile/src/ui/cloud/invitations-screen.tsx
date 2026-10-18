@@ -221,7 +221,11 @@ function InvitationWorkspace({
           {organizationId
             ? (item.state === 'pending' || (guest && item.state === 'accepted')) && (
                 <Button
-                  label={t.cloudInvitations.revoke}
+                  label={
+                    guest && item.state === 'accepted'
+                      ? t.cloudGuests.revoke
+                      : t.cloudInvitations.revoke
+                  }
                   disabled={busy}
                   onPress={() =>
                     void run(async () => {
@@ -240,7 +244,9 @@ function InvitationWorkspace({
                 <Button
                   label={
                     item.state === 'accepted'
-                      ? t.cloudOrganizations.select
+                      ? guest
+                        ? t.cloudGuests.title
+                        : t.cloudOrganizations.select
                       : t.cloudInvitations.accept
                   }
                   disabled={busy}
