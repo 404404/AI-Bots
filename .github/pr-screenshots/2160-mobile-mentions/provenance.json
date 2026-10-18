@@ -1,72 +1,74 @@
 {
   "issue": 2160,
   "base": "810ae5398deda703b9c2840dbdf0d29eb627c9ed",
-  "behavior": "06b469860c2faa12adcbd016899c424457f12019",
-  "selectedStyle": "Human selected B: no background; body-sized inline avatar + @ + Web primary-colored current name; visually centered avatar using scaled body leading",
-  "nativeClientSource": "47a2fbf4553e7760480fe10f3c47c1bd5cb3ef19",
-  "nativeInputs": "unchanged; SDK58/RN0.88 dev client reused",
+  "integrationBase": "9a2b651844d8686a0381cbd2d991da6d5199e924",
+  "behavior": "46528d4df60edc35d6b29f07870c66205be5d1ca",
+  "selectedStyle": "Human selected B: no background; body-sized inline avatar + @ + Web primary-colored current name; avatar visually centered with scaled body leading",
+  "nativeClientSource": "46528d4df60edc35d6b29f07870c66205be5d1ca",
+  "nativeApkSha256": "755BDEC3B05FCEEEDF63F2D53BCBDAF9B4CC8DA9F3A62E05E2B6D69765A424CD",
+  "nativeInputs": "Fresh SDK58/RN0.88 x86_64 client built after integrating main additions expo-crypto/expo-web-browser and app scheme",
   "device": "dedicated Android16 API36 emulator;1080x2400;420dpi",
-  "captures": "Actual unmodified native screencaps, same canonical group and messages, Chinese locale. Public-safe QA identities; no series conversations. Before captures retained from baseline; older block-layout After captures replaced.",
+  "captures": "Actual unmodified native screencaps, same canonical group and messages, Chinese locale. Public-safe QA identities; no series conversations. Before captures retained from original baseline; superseded block/unaligned After captures replaced.",
   "afterMatrix": [
     {
       "phase": "after",
       "scheme": "light",
       "scale": 1,
-      "source": "06b469860c2faa12adcbd016899c424457f12019",
+      "source": "46528d4df60edc35d6b29f07870c66205be5d1ca",
       "viewport": "1080x2400",
       "badges": ["[425,1932][911,1985]", "[206,1395][692,1448]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T05:27:45.382Z"
+      "captured": "2026-10-18T05:47:44.298Z"
     },
     {
       "phase": "after",
       "scheme": "light",
       "scale": 1.3,
-      "source": "06b469860c2faa12adcbd016899c424457f12019",
+      "source": "46528d4df60edc35d6b29f07870c66205be5d1ca",
       "viewport": "1080x2400",
       "badges": ["[478,1843][1017,1905]", "[217,1258][834,1320]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T05:28:15.306Z"
+      "captured": "2026-10-18T05:48:17.163Z"
     },
     {
       "phase": "after",
       "scheme": "light",
       "scale": 2,
-      "source": "06b469860c2faa12adcbd016899c424457f12019",
+      "source": "46528d4df60edc35d6b29f07870c66205be5d1ca",
       "viewport": "1080x2400",
       "badges": ["[566,1429][1017,1519]", "[243,622][834,712]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T05:28:43.820Z"
+      "captured": "2026-10-18T05:48:50.542Z"
+    },
+    {
+      "phase": "after",
+      "scheme": "dark",
+      "scale": 1.3,
+      "source": "46528d4df60edc35d6b29f07870c66205be5d1ca",
+      "viewport": "1080x2400",
+      "badges": ["[478,1843][1017,1905]", "[217,1258][834,1320]"],
+      "tap": "correct-DM",
+      "captured": "2026-10-18T05:50:09.673Z"
+    },
+    {
+      "phase": "after",
+      "scheme": "dark",
+      "scale": 2,
+      "source": "46528d4df60edc35d6b29f07870c66205be5d1ca",
+      "viewport": "1080x2400",
+      "badges": ["[566,1429][1017,1519]", "[243,622][834,712]"],
+      "tap": "correct-DM",
+      "captured": "2026-10-18T05:50:42.626Z"
     },
     {
       "phase": "after",
       "scheme": "dark",
       "scale": 1,
-      "source": "06b469860c2faa12adcbd016899c424457f12019",
+      "source": "46528d4df60edc35d6b29f07870c66205be5d1ca",
       "viewport": "1080x2400",
       "badges": ["[425,1932][911,1985]", "[206,1395][692,1448]"],
       "tap": "correct-DM",
-      "captured": "2026-10-18T05:29:10.659Z"
-    },
-    {
-      "phase": "after",
-      "scheme": "dark",
-      "scale": 1.3,
-      "source": "06b469860c2faa12adcbd016899c424457f12019",
-      "viewport": "1080x2400",
-      "badges": ["[478,1843][1017,1905]", "[217,1258][834,1320]"],
-      "tap": "correct-DM",
-      "captured": "2026-10-18T05:29:40.531Z"
-    },
-    {
-      "phase": "after",
-      "scheme": "dark",
-      "scale": 2,
-      "source": "06b469860c2faa12adcbd016899c424457f12019",
-      "viewport": "1080x2400",
-      "badges": ["[566,1429][1017,1519]", "[243,622][834,712]"],
-      "tap": "correct-DM",
-      "captured": "2026-10-18T05:30:09.410Z"
+      "captured": "2026-10-18T05:54:27.267Z"
     }
   ],
   "beforeMatrix": [
@@ -132,19 +134,20 @@
     }
   ],
   "verification": {
-    "fullFocusedSuite": "613 passed,8 skipped at533b134cb; preview-removal delta:53 focused tests passed; final alignment delta:9 focused/style-guard tests passed",
-    "typecheck": "passed at final alignment head",
-    "lint": "passed at final alignment head",
+    "mobileAndSharedColorSuite": "651 passed,8 skipped at integration head",
+    "typecheck": "root and mobile passed",
+    "build": "passed",
+    "lint": "passed",
     "format": "passed",
     "changelog": "passed",
     "featureMap": "passed",
-    "standardsReview": "0 remaining findings at selected B head",
-    "specReview": "0 confirmed findings at selected B head",
+    "standardsReview": "0 remaining findings",
+    "specReview": "0 confirmed findings",
     "ios": "blocked:no accessible Mac/iOS queue",
     "talkBack": "unrun",
     "liveStreaming": "not measured; existing renderer and playback tests retained"
   },
-  "diagnostics": "Baseline tooling emitted transient Expo duplicate-linking errors during activity/font reload. Selected B captures use cold opens; initial UIAutomator null-root transition was retried. Final Metro log checked separately. Native XML retries retained privately.",
+  "diagnostics": "Cold-open captures avoid existing Expo duplicate-linking dev reload issue. Initial UIAutomator null-root transitions are retried. DM activity rows can show an earlier quota-failed fixture; navigation validation makes no new model call. Final Metro JS error check is recorded privately.",
   "files": [
     {
       "name": "before-light-font1.png",
@@ -172,51 +175,51 @@
     },
     {
       "name": "after-light-font1.png",
-      "sha256": "df2e2b597d7d79ec4e21011fb4ec08d42261ddb5a44e37f36fc045f2c8c5d4f4"
+      "sha256": "ce0ebd622ab995db8a670ba347b98b4dc1f7b6f8e0b45fe16a692f69511a0797"
     },
     {
       "name": "after-light-font1-3.png",
-      "sha256": "e478fb76ca72aafd8570e8be4766bea4191113178b1ad4b69d8a8c356d11263d"
+      "sha256": "3d28d8ae4292a29364fd7b20d46fa5ef9748e143b8da8b6af8c4127ef4f524c4"
     },
     {
       "name": "after-light-font2.png",
-      "sha256": "a2e214a1e1e501b0fd4440e8f0caa932ab0a1be0db7aa17642d10eee147975ed"
+      "sha256": "db6209e02eefc92162c1ce42d70efdd1ad93421eaa4620ec1e0b5f64ca3d2db5"
     },
     {
       "name": "after-dark-font1.png",
-      "sha256": "14476733d88586fb499c914e5e6ef04507d03961e45ca6a41bb15e19319a3f7f"
+      "sha256": "e19ee667d51ec43f8fe4c83b09ab99eaf4ade94a670034b083ce7d9e895e4f65"
     },
     {
       "name": "after-dark-font1-3.png",
-      "sha256": "c409e8378723a60f11da8fa8fc73cb45a5b915be0f2bb8f1389272ae4fd3956c"
+      "sha256": "c71a0c0a5539dc9db9d978ee3dba38efe8639e76f9661054565a01529a5480b9"
     },
     {
       "name": "after-dark-font2.png",
-      "sha256": "5cf1fdc22c0c030f4b015ff5dd43192796a4f3b56828e212cf77e5a5439e73a8"
+      "sha256": "b688ac17ab6c641a89bce654a8fa6525aebd84abfb60fb9f190128b217295767"
     },
     {
       "name": "after-light-font1-dm.png",
-      "sha256": "6c959ffd2b5d120f7f57cc031abf3276c2195e89a9bd4ac5e8ded104c24d8b75"
+      "sha256": "3a9b6d90bb99743757a5b5eddecbf0d54e183bbe9372e4a70011840885535e8c"
     },
     {
       "name": "after-light-font1-3-dm.png",
-      "sha256": "98c8c26ed680e6ee8e42f3e555d8d85f60f28bc8e91cb18cd7dbe2a0dad66f09"
+      "sha256": "d33c87cbabf1d48046c6f92796d3349a07c4541b091e64e393adddbb7a5df163"
     },
     {
       "name": "after-light-font2-dm.png",
-      "sha256": "d6b0516806bf1efc87e526a0911d065721faf1c26b56043f73b14c3a2cde735e"
+      "sha256": "86c9d228d8100ae1e71a461fae66abb2884a9c53721cabad8ed364b1b2bd5857"
     },
     {
       "name": "after-dark-font1-dm.png",
-      "sha256": "717e70a58affd15e8b154296c433fb5eba64c0008d2894afbae7605800fb1b7a"
+      "sha256": "184a9d1854b189545502fd5f155a21dcdafb733f2adc9a5c774039512d1efd67"
     },
     {
       "name": "after-dark-font1-3-dm.png",
-      "sha256": "8756da719526802e8d9b854ed6280b263a55cb138b17d65ce28708aadf2c61fa"
+      "sha256": "1b33f440865845ed24a2ffc9645b38ad54575f73f65b895be5a709acab5a99e6"
     },
     {
       "name": "after-dark-font2-dm.png",
-      "sha256": "9638a0d9d6b2c9d3c75f18f439c4422f2208f4982ad198558f7d64367a98f4f5"
+      "sha256": "1481fe0658dd6158c010ab0e0061a3ff4e04600212e2b7ba730f21430ecbebae"
     }
   ]
 }
