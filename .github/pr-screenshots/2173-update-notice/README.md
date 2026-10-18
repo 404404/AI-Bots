@@ -25,7 +25,9 @@ PR #2177 implements #2173. All rendered evidence comes from official macOS Deskt
 | Registry unavailable, force check from About       | Says npm cannot be reached, never “up to date”                         | `offline-settings-021.png`, `offline-cli.json`           |
 | Registry restored, CLI force check                 | Available compatible target returned immediately                       | `recovered-cli.json`                                     |
 
-Dark and light captures use native 2522 × 1640 screenshots. Baseline is an absence-state comparison across historical and current UI; its shell/layout is intentionally different, not a pixel-aligned styling comparison.
+The constrained-window capture is 1344 × 1200 pixels (`candidate-constrained-021.png`): title, identities, summary and all actions remain visible. Escape closes the notice. A subsequent forced settings check preserves the unsent Home draft and panel geometry (`draft-before-check.png`, `draft-after-check.png`); closing settings returns focus to its launcher. No test draft was sent.
+
+Full-size dark and light captures use native 2522 × 1640 screenshots. Baseline is an absence-state comparison across historical and current UI; its shell/layout is intentionally different, not a pixel-aligned styling comparison.
 
 ## Installation test limitations and first failures
 
