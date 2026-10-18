@@ -3220,6 +3220,7 @@ function ConversationView({
                                 channel.type === 'group' ? 'groupProfile.label' : 'profile.view',
                               )}
                               side="bottom"
+                              portal
                               delayMs={500}
                             >
                               <IconButton
@@ -3234,7 +3235,12 @@ function ConversationView({
                             </Tooltip>
                           )}
                           {hasChannelSettings && (
-                            <Tooltip label={t('channelSettings.open')} side="bottom" delayMs={500}>
+                            <Tooltip
+                              label={t('channelSettings.open')}
+                              side="bottom"
+                              portal
+                              delayMs={500}
+                            >
                               <IconButton
                                 aria-label={t('channelSettings.open')}
                                 onClick={() => channelSettings.open(settingsAttention[0]?.id)}

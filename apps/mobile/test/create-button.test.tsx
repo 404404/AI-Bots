@@ -80,6 +80,7 @@ vi.mock('../src/ui/connection-banner', () => ({ ConnectionBanner: () => null }))
 
 import HomeScreen from '../app/(tabs)/(home)/index';
 import { t } from '../src/ui/strings';
+import { appDialogs } from '../src/ui/primitives/dialog-state';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -92,6 +93,7 @@ afterEach(() => {
   push.mockReset();
   showActionSheetWithOptions.mockReset();
   alert.mockReset();
+  appDialogs.dismiss();
 });
 
 async function home(os: 'ios' | 'android'): Promise<HTMLElement> {
@@ -144,27 +146,34 @@ describe('Create from Chats', () => {
     expect(view.querySelector('header')!.contains(button)).toBe(false);
     expect(button.parentElement!.querySelector('textarea')).not.toBeNull();
 
-    await act(async () => button.click());
-    const [title, message, buttons] = alert.mock.lastCall!;
-    expect(title).toBe(t.cloudJoin.newOrJoin);
-    expect(message).toBeUndefined();
-    expect(buttons.map((choice: { text: string }) => choice.text)).toEqual([
-      t.cancel,
-      t.cloudJoin.title,
-      t.newPersonaBot,
-      t.newChannel,
-    ]);
-    await act(async () => buttons[1].onPress());
+    const pick = async (index: number) => {
+      await act(async () => button.click());
+      const dialog = appDialogs.getSnapshot()!;
+      expect(alert).not.toHaveBeenCalled();
+      expect(dialog.title).toBe(t.cloudJoin.newOrJoin);
+      expect(dialog.message).toBeUndefined();
+      expect(dialog.actions.map((choice) => choice.text)).toEqual([
+        t.cancel,
+        t.cloudJoin.title,
+        t.newPersonaBot,
+        t.newChannel,
+      ]);
+      await act(async () => appDialogs.choose(index, dialog.id));
+    };
+    await pick(1);
     expect(push).toHaveBeenLastCalledWith('/cloud-join');
-    await act(async () => buttons[2].onPress());
+    await pick(2);
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/full-client',
       params: { target: 'new-bot' },
     });
-    await act(async () => buttons[3].onPress());
+    await pick(3);
     expect(push).toHaveBeenLastCalledWith({
       pathname: '/full-client',
       params: { target: 'new-channel' },
     });
+    await pick(0);
+    expect(push).toHaveBeenCalledTimes(3);
+    expect(appDialogs.getSnapshot()).toBeUndefined();
   });
 });

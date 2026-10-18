@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { ActionSheetIOS, Alert, Platform, Pressable, View } from 'react-native';
+import { ActionSheetIOS, Platform, Pressable, View } from 'react-native';
 
 import type { FullClientTarget } from '../../host/full-client';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { t } from '../strings';
+import { showAppDialog } from '../primitives/app-dialog';
 import { PlusIcon } from './icons';
 
 export type CreateTarget = Extract<FullClientTarget, { kind: 'new-bot' | 'new-channel' }>;
@@ -32,11 +33,12 @@ export function openCreateMenu(onPick: (target: CreateTarget) => void): void {
     );
     return;
   }
-  Alert.alert(t.cloudJoin.newOrJoin, undefined, [
+  showAppDialog(t.cloudJoin.newOrJoin, undefined, [
     { text: t.cancel, style: 'cancel' },
     { text: t.cloudJoin.title, onPress: () => router.push('/cloud-join') },
     ...CREATE_CHOICES.map((choice) => ({
       text: choice.label,
+      icon: choice.target.kind === 'new-bot' ? ('person' as const) : ('chat' as const),
       onPress: () => onPick(choice.target),
     })),
   ]);

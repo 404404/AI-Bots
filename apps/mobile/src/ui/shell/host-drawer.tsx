@@ -4,7 +4,6 @@ import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   ActionSheetIOS,
-  Alert,
   BackHandler,
   FlatList,
   Platform,
@@ -44,6 +43,7 @@ import { useMounted } from '../mounted';
 import { drawerSpring, edge, motion, radius, scrim, space } from '../design/tokens';
 import { CountBadge } from '../primitives/count-badge';
 import { Text } from '../primitives/text';
+import { showAppDialog } from '../primitives/app-dialog';
 import { t } from '../strings';
 import { HostTile } from './host-tile';
 import { WorkspaceTabs, type WorkspaceTab } from './workspace-tabs';
@@ -160,12 +160,12 @@ function closeThen(action: () => void): void {
 }
 
 function confirmUnpair(row: HostDrawerRow, name: string): void {
-  Alert.alert(t.unpairHost(name), t.unpairHostDetail, [
+  showAppDialog(t.unpairHost(name), t.unpairHostDetail, [
     { text: t.cancel, style: 'cancel' },
     {
       text: t.unpair,
       style: 'destructive',
-      onPress: () => void hostSession.unpair(row.hostId).catch(() => undefined),
+      onPress: () => hostSession.unpair(row.hostId),
     },
   ]);
 }
@@ -174,13 +174,25 @@ function openHostMenu(row: HostDrawerRow, name: string): void {
   const actions = [
     {
       label: t.hostCustomize,
+      icon: 'settings' as const,
       run: () =>
         closeThen(() => router.push({ pathname: '/host-look', params: { hostId: row.hostId } })),
     },
     ...(row.current
       ? []
-      : [{ label: t.showHost, run: () => closeThen(() => void hostDrawer.select(row.hostId)) }]),
-    { label: t.unpair, run: () => confirmUnpair(row, name), destructive: true },
+      : [
+          {
+            label: t.showHost,
+            icon: 'computer' as const,
+            run: () => closeThen(() => void hostDrawer.select(row.hostId)),
+          },
+        ]),
+    {
+      label: t.unpair,
+      icon: 'close' as const,
+      run: () => confirmUnpair(row, name),
+      destructive: true,
+    },
   ];
   if (Platform.OS === 'ios') {
     ActionSheetIOS.showActionSheetWithOptions(
@@ -194,10 +206,11 @@ function openHostMenu(row: HostDrawerRow, name: string): void {
     );
     return;
   }
-  Alert.alert(name, undefined, [
+  showAppDialog(name, undefined, [
     { text: t.cancel, style: 'cancel' },
     ...actions.map((action) => ({
       text: action.label,
+      icon: action.icon,
       style: action.destructive === true ? ('destructive' as const) : ('default' as const),
       onPress: action.run,
     })),
