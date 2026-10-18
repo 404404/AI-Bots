@@ -312,7 +312,7 @@ const ACTION_ATTENTION_CTE = `WITH attention AS (
              AND d.source_event_id IS NULL
         )`;
 
-const CHANNEL_ATTENTION_CTE = `
+const channelAttentionCte = (excludeMuted: boolean): string => `
   WITH visible_messages AS (
     SELECT p.channel_id, p.revision, p.message_id, p.source_event_id,
            e.created_at, e.body, e.bot_slug,
@@ -345,11 +345,15 @@ const CHANNEL_ATTENTION_CTE = `
          OR (json_extract(c.record_json, '$.type') = 'group'
              AND m.left_at IS NULL AND m.visible_from_revision IS NOT NULL
              AND p.revision >= m.visible_from_revision))
+       ${excludeMuted ? 'AND p.channel_id NOT IN (SELECT value FROM json_each(?))' : ''}
        AND json_extract(e.payload_json, '$.author.kind') != 'human'
        AND ${notChannelNoticeSql('e.payload_json')}
   ), visible_unread AS (
     SELECT * FROM visible_messages WHERE revision > read_revision
   )`;
+
+const CHANNEL_ATTENTION_CTE = channelAttentionCte(false);
+const INBOX_CHANNEL_ATTENTION_CTE = channelAttentionCte(true);
 
 function decodeCursor(value: string, filters: string): Cursor {
   try {
@@ -473,13 +477,19 @@ export function createHumanAttentionQuery(
         const row = database.read(
           (db) =>
             db
-              .prepare(`${CHANNEL_ATTENTION_CTE}
+              .prepare(`${INBOX_CHANNEL_ATTENTION_CTE}
           SELECT 'unread:' || channel_id AS id, 'unread' AS category, 'channel-unread' AS kind,
                  created_at, channel_id, channel_name, coalesce(bot_slug, '') AS bot_slug,
                  body AS summary, NULL AS request_id, message_id, NULL AS assignment_session_id, source_event_id
             FROM visible_messages WHERE ('unread:' || channel_id) = ? AND source_event_id = ? AND is_reply = 0 AND is_mention = 0 LIMIT 1
         `)
-              .get(LOCAL_HUMAN_ID, LOCAL_HUMAN_ID, id, sourceKey) as AttentionRow | undefined,
+              .get(
+                LOCAL_HUMAN_ID,
+                LOCAL_HUMAN_ID,
+                JSON.stringify(mutedChannelIds()),
+                id,
+                sourceKey,
+              ) as AttentionRow | undefined,
         );
         return row === undefined ? undefined : attentionItem(row);
       }
@@ -530,7 +540,7 @@ export function createHumanAttentionQuery(
         search === ''
           ? ''
           : `AND instr(botharness_activity_lower(coalesce(${body}, '') || ' ' || coalesce(${channel}, '') || ' ' || coalesce(${bot}, '')), (SELECT term FROM activity_search)) > 0`;
-      const channelCte = CHANNEL_ATTENTION_CTE.replace('WITH ', searchCte);
+      const channelCte = INBOX_CHANNEL_ATTENTION_CTE.replace('WITH ', searchCte);
       const actionCte = ACTION_ATTENTION_CTE.replace('WITH ', searchCte);
       const direction = sort === 'oldest' ? 'ASC' : 'DESC';
       const cursorComparison = sort === 'oldest' ? '>' : '<';
@@ -710,6 +720,7 @@ SELECT 'handled:' || request.source_event_id AS id,
               search,
               LOCAL_HUMAN_ID,
               LOCAL_HUMAN_ID,
+              JSON.stringify(mutedChannelIds()),
               input.itemId ?? null,
               input.itemId ?? null,
               input.botSlug ?? null,
@@ -799,6 +810,7 @@ SELECT 'handled:' || request.source_event_id AS id,
                 search,
                 LOCAL_HUMAN_ID,
                 LOCAL_HUMAN_ID,
+                JSON.stringify(mutedChannelIds()),
                 input.botSlug ?? null,
                 input.botSlug ?? null,
                 input.itemId ?? null,
@@ -989,9 +1001,8 @@ SELECT 'handled:' || request.source_event_id AS id,
         (db) =>
           (
             db
-              .prepare(`${CHANNEL_ATTENTION_CTE}
+              .prepare(`${INBOX_CHANNEL_ATTENTION_CTE}
         SELECT count(DISTINCT source_event_id) AS unread_count FROM visible_unread
-         WHERE channel_id NOT IN (SELECT value FROM json_each(?))
       `)
               .get(LOCAL_HUMAN_ID, LOCAL_HUMAN_ID, JSON.stringify(mutedChannelIds())) as {
               unread_count: number;
