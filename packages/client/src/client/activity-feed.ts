@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { BridgeActions } from './actions.js';
-import type { HumanInboxState } from './store.js';
+import { store, type ClientStore, type HumanInboxState } from './store.js';
 
 export const ACTIVITY_SECTIONS = ['action', 'replies', 'unread'] as const;
 export type ActivitySection = (typeof ACTIVITY_SECTIONS)[number] | 'handled';
@@ -47,7 +47,10 @@ function readCollapsed(): Partial<Record<ActivitySection, boolean>> {
   }
 }
 
-export function createActivityFeed(actions: Pick<BridgeActions, 'activityPage'>) {
+export function createActivityFeed(
+  actions: Pick<BridgeActions, 'activityPage'>,
+  clientStore: Pick<ClientStore, 'getSnapshot' | 'subscribe'> = store,
+) {
   let state = {
     query: { ...INITIAL_QUERY },
     collapsed: readCollapsed(),
@@ -65,6 +68,7 @@ export function createActivityFeed(actions: Pick<BridgeActions, 'activityPage'>)
   };
   let generation = 0;
   let users = 0;
+  let unsubscribeMute: (() => void) | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
   const pending = new Map<ActivitySection, Promise<void>>();
   const visible = (): ActivitySection[] =>
@@ -184,6 +188,15 @@ export function createActivityFeed(actions: Pick<BridgeActions, 'activityPage'>)
     },
     acquire() {
       if (users++ === 0) {
+        let muted = JSON.stringify([...clientStore.getSnapshot().roster.muted].sort());
+        unsubscribeMute = clientStore.subscribe(() => {
+          const next = JSON.stringify([...clientStore.getSnapshot().roster.muted].sort());
+          if (next === muted) return;
+          muted = next;
+          generation++;
+          pending.clear();
+          void refresh();
+        });
         void refresh();
         timer = setInterval(() => {
           if (!pending.size) void refresh();
@@ -191,6 +204,8 @@ export function createActivityFeed(actions: Pick<BridgeActions, 'activityPage'>)
       }
       return () => {
         if (--users === 0) {
+          unsubscribeMute?.();
+          unsubscribeMute = undefined;
           clearInterval(timer);
           generation++;
           pending.clear();

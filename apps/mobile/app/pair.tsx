@@ -3,7 +3,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { hostSession } from '../src/host/host-session';
 import { hostLooks } from '../src/host/native-host-look';
@@ -77,13 +77,6 @@ export default function PairScreen() {
     }, [params.p]),
   );
 
-  const button = {
-    backgroundColor: theme.brand,
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-  } as const;
-
   return (
     <KeyboardFormScroll
       keyboardShouldPersistTaps="handled"
@@ -130,9 +123,14 @@ export default function PairScreen() {
           </Pressable>
         )}
       </View>
-      {busy ? <ActivityIndicator /> : null}
       {error !== undefined ? (
-        <Text style={{ color: theme.danger }}>{t.pairRefused[error]}</Text>
+        <Text
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={{ color: theme.danger }}
+        >
+          {t.pairRefused[error]}
+        </Text>
       ) : null}
       {error !== undefined && handled.current !== undefined ? (
         <Button
@@ -165,14 +163,14 @@ export default function PairScreen() {
           backgroundColor: theme.surface,
         }}
       />
-      <Pressable
-        onPress={() => void pair(link, 'paste')}
+      <Button
+        label={t.pair}
+        tone="primary"
+        on="canvas"
+        busy={busy}
         disabled={busy || link.trim() === ''}
-        accessibilityRole="button"
-        style={button}
-      >
-        <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t.pair}</Text>
-      </Pressable>
+        onPress={() => void pair(link, 'paste')}
+      />
     </KeyboardFormScroll>
   );
 }

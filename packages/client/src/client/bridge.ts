@@ -3907,10 +3907,39 @@ export interface MemoryGitGraph {
   hasMore: boolean;
 }
 
+export interface MemoryImage {
+  mime?: 'image/png';
+  source: string;
+  status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
+  revision?: string;
+  size?: number;
+  width?: number;
+  height?: number;
+}
+export interface MemoryImageComparison {
+  before?: MemoryImage;
+  after?: MemoryImage;
+}
+
+export interface MemoryMarkdown {
+  source: string;
+  status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
+  revision?: string;
+  body: string;
+}
+export interface MemoryMarkdownComparison {
+  before?: MemoryMarkdown;
+  after?: MemoryMarkdown;
+}
 export interface MemoryGitCommitDiff {
   sha: string;
   subject?: string;
-  files: { path: string; status: string }[];
+  files: {
+    path: string;
+    status: string;
+    images?: MemoryImageComparison;
+    markdown?: MemoryMarkdownComparison;
+  }[];
   diff: string;
 }
 
@@ -3921,6 +3950,8 @@ export interface MemoryWorkingChange {
   status: string;
 }
 export interface MemoryWorkingDiff extends MemoryWorkingChange {
+  images?: MemoryImageComparison;
+  markdown?: MemoryMarkdownComparison;
   diff: string;
   binary: boolean;
 }
@@ -4119,7 +4150,17 @@ export async function loadMemoryFile(
   call: BridgeCall,
   channelId: string,
   path: string,
-): Promise<{ path: string; body: string; head: string; binary?: boolean } | undefined> {
+): Promise<
+  | {
+      path: string;
+      body: string;
+      head: string;
+      binary?: boolean;
+      image?: MemoryImage;
+      markdown?: MemoryMarkdown;
+    }
+  | undefined
+> {
   const response = asRecord(await unwrap(call, 'memoryFile', { channelId, path }));
   if (response?.['file'] === undefined) return undefined;
   const file = asRecord(response?.['file']);
@@ -4131,7 +4172,14 @@ export async function loadMemoryFile(
     throw new Error('invalid Memory file');
   if (file['binary'] !== undefined && typeof file['binary'] !== 'boolean')
     throw new Error('invalid Memory file');
-  return file as { path: string; body: string; head: string; binary?: boolean };
+  return file as {
+    path: string;
+    body: string;
+    head: string;
+    binary?: boolean;
+    image?: MemoryImage;
+    markdown?: MemoryMarkdown;
+  };
 }
 
 export async function loadMemoryHistory(
