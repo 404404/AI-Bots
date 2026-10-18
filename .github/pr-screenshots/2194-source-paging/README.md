@@ -35,3 +35,15 @@ Native UAT used an independent test-user session prepared through the existing U
 - The existing creation/search controls have source regression coverage; no new native creation workflow was run in this slice. N2/N3 own their redesign.
 - Only one active Computer was tested. Android native, physical iPhone, VoiceOver, Release/120 Hz behavior and Human QA remain unverified. Cloud Activity capability is deferred; this slice prevents unrelated Computer data from masquerading as Cloud Activity.
 - HTML explainer is a review aid, not native evidence. Rendering CLI succeeded; local-file browser inspection was blocked by the browser URL policy and is not claimed.
+
+## Review correction — Batch 32
+
+Tested source `908f3935e072787479a5ed9fa929aba576a3a694` (main `907885c3` integrated), CI [39148076956](https://github.com/BotHarness/DeepSeekBot/actions/runs/39148076956) passed. Compatible installed iOS native baseline `494a20f1e`; no build or dependency changes.
+
+Spec review found that different Organizations named “My workspace” had identical visible and accessible labels. Collision-only labels now show an Organization suffix and service hostname, with full identity in the accessibility label; keys/order/permissions are unchanged. Native taps and swipes reached the empty member Organization and the other channel-only guest Organization. `selection-proof.json` records independently checked canonical API channel sets: zero versus one, under the same verified UAT user. `same-name-organizations.mp4` records the actual paging. No messages sent in this rerun.
+
+`collision-*.png` captures default/intermediate/maximum system text in light/dark at 402×874 pt. At a live maximum-text change, the strip initially retained its old offset (`collision-max-dark.png`); tapping the selected tab scrolled it fully into view (`collision-max-selected-dark.png`). Long hostnames truncate, while the distinguishing suffix remains visible. Full labels were inspected as accessibility metadata, not VoiceOver. The original send/draft/restart checks above were on source `14614a6`; these source paths did not change in the correction and were not replayed here.
+
+Standards review: no actionable findings. Spec review: one P2 (ambiguous same-name Organization labels), fixed and revalidated. Full mobile suite after the source fix: **732 passed / 8 skipped**; integrated focused tests and typecheck passed. All required integrated-head CI passed.
+
+Cleanup: only this run’s guest grant/session revoked; three preexisting member Organizations and prior WorkOS sessions preserved; latest test refresh rejected. Original cloud/Host state and app Documents/preferences restored byte-for-byte. Display settings and shared checkout restored; own driver/Metro stopped and lane released. Android, physical iPhone, VoiceOver and Human QA remain unverified. A local Metro IPv6/IPv4 mismatch and a premature identity probe were test setup failures, corrected without application changes.
