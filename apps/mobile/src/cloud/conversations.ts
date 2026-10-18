@@ -1,4 +1,4 @@
-import { cloudError, type CloudClient, type CloudRow } from './client';
+import { canRetainCloudCache, cloudError, type CloudClient, type CloudRow } from './client';
 import { cloudViewScope } from './workspace-directory';
 import type { CloudChannel } from './channel-contract';
 import { ClientError } from './instance-contract';
@@ -138,12 +138,7 @@ export function createCloudConversations(port: Port) {
           } catch (error) {
             if (version !== epoch) return;
             const code = cloudError(error);
-            const keep = [
-              'NETWORK_UNAVAILABLE',
-              'CLOUD_UNAVAILABLE',
-              'SESSION_BUSY',
-              'AUTH_RETRY_REQUIRED',
-            ].includes(code);
+            const keep = canRetainCloudCache(error);
             publish({
               ...state,
               rows: keep ? state.rows : state.rows.filter((r) => r.scope !== scope),

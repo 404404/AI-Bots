@@ -4,8 +4,12 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { readCloudMessages, cacheCloudMessages } from '../../cloud/native-message-cache';
-import { cloudError } from '../../cloud/client';
+import {
+  readCloudMessages,
+  cacheCloudMessages,
+  removeCloudMessages,
+} from '../../cloud/native-message-cache';
+import { canRetainCloudCache, cloudError } from '../../cloud/client';
 import type { CloudChannel, CloudMessage } from '../../cloud/channel-contract';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { cloudViewScope } from '../../cloud/workspace-directory';
@@ -180,6 +184,20 @@ function ChannelWorkspace({
     try {
       await action();
     } catch (e) {
+      if (!canRetainCloudCache(e)) {
+        loadedHistory.current = true;
+        messageWindow.current = [];
+        setSelected(undefined);
+        setMessages(undefined);
+        setMore(false);
+        void removeCloudMessages(
+          cloudDraftKey(
+            cloudViewScope(row),
+            organizationId,
+            selected?.channelId ?? initialChannelId ?? '',
+          ),
+        );
+      }
       setError(cloudError(e));
     } finally {
       setWorking(false);

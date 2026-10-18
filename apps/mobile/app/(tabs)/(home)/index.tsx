@@ -1,7 +1,7 @@
 import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
 import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
@@ -12,11 +12,11 @@ import { cloudViewScope } from '../../../src/cloud/workspace-directory';
 import { cloudError } from '../../../src/cloud/client';
 import type { CloudConversation } from '../../../src/cloud/conversations';
 import { ConversationRow } from '../../../src/ui/chat/conversation-row';
-import { conversations, type Conversation } from '../../../src/ui/chat/conversations';
-import { SourceName } from '../../../src/ui/chat/source-name';
+import { conversations, searchKey, type Conversation } from '../../../src/ui/chat/conversations';
+import { CloudConversationRow } from '../../../src/ui/chat/cloud-conversation-row';
+import { useConversationFilter } from '../../../src/host/native-conversation-filter';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
-import { useDesignTheme } from '../../../src/ui/design/theme';
 import { SearchField } from '../../../src/ui/primitives/search-field';
 import { Chip } from '../../../src/ui/primitives/chip';
 import { Text } from '../../../src/ui/primitives/text';
@@ -37,7 +37,6 @@ export default function HomeScreen() {
   const focused = useIsFocused();
   const onScroll = useChromeScroll(focused);
   const bottom = useFloatingTabInset();
-  const theme = useDesignTheme();
   const { saved, client, inbox } = useHostSession();
   const look = useHostLook(saved?.hostId);
   const snapshot = useHostSnapshot(client, focused);
@@ -45,7 +44,7 @@ export default function HomeScreen() {
   const cloud = useCloudSnapshot();
   const directory = useCloudConversations();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useConversationFilter();
   const [refreshing, setRefreshing] = useState(false);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string>();
@@ -57,7 +56,7 @@ export default function HomeScreen() {
   );
   const filters = useMemo(() => {
     const choices = new Map<string, string>([['all', t.allConversations]]);
-    if (saved) choices.set('computer', saved.hostName);
+    if (saved) choices.set(JSON.stringify(['computer', saved.hostId]), saved.hostName);
     for (const row of directory.rows)
       choices.set(JSON.stringify([row.scope, row.organizationId]), row.organizationName);
     return [...choices].map(([key, label]) => ({ key, label }));
@@ -66,7 +65,7 @@ export default function HomeScreen() {
   const rows = useMemo(() => {
     const pins = new Set(snapshot.roster?.arrangement?.pins);
     const hostRows: Row[] =
-      effectiveFilter === 'all' || effectiveFilter === 'computer'
+      effectiveFilter === 'all' || effectiveFilter === JSON.stringify(['computer', saved?.hostId])
         ? conversations(
             snapshot.roster,
             list.status === 'ready' ? list.sections.action : [],
@@ -99,22 +98,22 @@ export default function HomeScreen() {
         conversation,
         pinned: false,
       }));
-    const needle = query.trim().toLocaleLowerCase();
+    const needle = searchKey(query);
+    const title = (r: Row) =>
+      searchKey(
+        r.type === 'cloud'
+          ? r.conversation.channel.name
+          : r.conversation.kind === 'bot'
+            ? r.conversation.bot.displayName
+            : r.conversation.channel.name,
+      );
     return [...hostRows, ...cloudRows]
-      .filter(
-        (r) =>
-          !needle ||
-          (r.type === 'cloud'
-            ? r.conversation.channel.name
-            : r.conversation.kind === 'bot'
-              ? r.conversation.bot.displayName
-              : r.conversation.channel.name
-          )
-            .toLocaleLowerCase()
-            .includes(needle),
-      )
+      .filter((r) => !needle || title(r).includes(needle))
       .sort(
         (a, b) =>
+          (needle
+            ? Number(title(b).startsWith(needle)) - Number(title(a).startsWith(needle))
+            : 0) ||
           Number(b.pinned) - Number(a.pinned) ||
           (Date.parse(b.at ?? '') || 0) - (Date.parse(a.at ?? '') || 0) ||
           a.key.localeCompare(b.key),
@@ -240,7 +239,8 @@ export default function HomeScreen() {
               </>
             }
             ListEmptyComponent={
-              directory.busy ? (
+              directory.busy ||
+              (saved && !snapshot.roster && snapshot.connection.status === 'connecting') ? (
                 <ActivityIndicator />
               ) : (
                 <Text tone="muted" style={{ padding: space.x6 }}>
@@ -256,24 +256,11 @@ export default function HomeScreen() {
                   onPress={() => openConversation(router, item.conversation, saved?.hostId)}
                 />
               ) : (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${item.conversation.channel.name}, ${t.cloudChannels.cloudChannel}`}
+                <CloudConversationRow
+                  row={item.conversation}
                   disabled={opening || cloud.busy || directory.busy}
                   onPress={() => void openCloud(item.conversation)}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: space.x5,
-                    paddingVertical: space.x3,
-                    minHeight: theme.touch,
-                    gap: space.x1,
-                    backgroundColor: pressed ? theme.layer.canvas.pressed : theme.layer.canvas.fill,
-                  })}
-                >
-                  <SourceName name={item.conversation.channel.name} source="cloud" />
-                  <Text variant="meta" tone="muted">
-                    {t.recentNotLoaded}
-                  </Text>
-                </Pressable>
+                />
               )
             }
           />

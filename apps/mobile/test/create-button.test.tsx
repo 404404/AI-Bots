@@ -10,6 +10,10 @@ const { push, platform, showActionSheetWithOptions, alert } = vi.hoisted(() => (
   alert: vi.fn(),
 }));
 
+vi.mock('../src/host/native-conversation-filter', async () => {
+  const { useState } = await import('react');
+  return { useConversationFilter: () => useState('all') };
+});
 vi.mock('../src/cloud/native', () => ({
   useCloudSnapshot: () => ({ ready: true, busy: false, rows: [] }),
   cloudClient: {},

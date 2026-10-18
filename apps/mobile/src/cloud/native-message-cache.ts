@@ -47,3 +47,10 @@ export async function cacheCloudMessages(
     );
   } catch {}
 }
+
+export async function removeCloudMessages(key: string) {
+  try {
+    const f = await file(key);
+    if (f.exists) f.delete();
+  } catch {}
+}

@@ -112,9 +112,10 @@ export function ConversationScreen({
   const identities = useMemo(
     () => ({
       bots: roster?.bots ?? [],
-      openBot: (slug: string) => router.push({ pathname: '/dm/[slug]', params: { slug } }),
+      openBot: (slug: string) =>
+        router.push({ pathname: '/dm/[slug]', params: { slug, hostId: saved?.hostId } }),
     }),
-    [roster?.bots, router],
+    [roster?.bots, router, saved?.hostId],
   );
   const bot =
     place.kind === 'dm' ? roster?.bots.find((entry) => entry.slug === place.slug) : undefined;

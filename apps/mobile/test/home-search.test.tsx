@@ -40,6 +40,10 @@ const roster: RosterView = {
   channels: [{ id: 'launch-team', name: 'Launch team', memberCount: 3, members: [] }],
 };
 
+vi.mock('../src/host/native-conversation-filter', async () => {
+  const { useState } = await import('react');
+  return { useConversationFilter: () => useState('all') };
+});
 vi.mock('../src/cloud/native', () => ({
   useCloudSnapshot: () => cloudState,
   cloudClient: { getSnapshot: () => cloudState },
@@ -211,7 +215,7 @@ describe('Search at the top of Chats', () => {
     const view = await home();
     expect(rows(view)).toHaveLength(3);
 
-    await type(view, 'AD');
+    await type(view, 'ＡＤ');
     expect(rows(view)).toEqual(['Ada, Done']);
     await act(async () =>
       view.querySelector<HTMLButtonElement>('button[aria-label="Ada, Done"]')!.click(),

@@ -78,6 +78,14 @@ const fail = (code: string): never => {
   throw new ClientError(code);
 };
 export const cloudError = (e: unknown) => (e instanceof ClientError ? e.code : 'CLOUD_UNAVAILABLE');
+export const canRetainCloudCache = (error: unknown) =>
+  [
+    'NETWORK_UNAVAILABLE',
+    'CLOUD_UNAVAILABLE',
+    'INSTANCE_UNAVAILABLE',
+    'SESSION_BUSY',
+    'AUTH_RETRY_REQUIRED',
+  ].includes(cloudError(error));
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fail('INVALID_RESPONSE');
   return value as Record<string, unknown>;
