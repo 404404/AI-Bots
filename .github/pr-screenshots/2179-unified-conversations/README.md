@@ -9,17 +9,17 @@
 
 ## Observed results
 
-| Check | Result |
-| --- | --- |
-| Mixed Computer and Cloud rows, source icons and filters | Passed; organization filter also survived restart |
-| Computer send | One canonical Host message, Human author; explicit keyboard Send passed after moving the development tool overlay |
-| Computer receive | Bot channel_send CLI message visibly received through the normal Host conversation |
-| Cloud send | Canonical sequences 19 and 20, expected cloud user and organization; no Computer context switch |
-| Computer route disconnected | Cloud sequence 20 committed while Host client reported unreachable; Computer Send unavailable; cached history and draft retained |
-| Cold restart | Cloud identity/directory restored; Computer draft restored after reconnect |
-| No automatic resend | Unsent DRAFT-KEEP marker absent from Host canonical history after restart/reconnect |
-| Display checks | Default/intermediate/maximum text, light/dark captured; scrolling retained. Maximum text truncates names substantially; screenshots document that limitation |
-| Cleanup | Own WorkOS session revoked, latest refresh rejected, prior sessions preserved; new Host device revoked/unpaired; original signed-out configuration, draft/filter files, shared checkout, light/large and locale restored |
+| Check                                                   | Result                                                                                                                                                                                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Mixed Computer and Cloud rows, source icons and filters | Passed; organization filter also survived restart                                                                                                                                                                        |
+| Computer send                                           | One canonical Host message, Human author; explicit keyboard Send passed after moving the development tool overlay                                                                                                        |
+| Computer receive                                        | Bot channel_send CLI message visibly received through the normal Host conversation                                                                                                                                       |
+| Cloud send                                              | Canonical sequences 19 and 20, expected cloud user and organization; no Computer context switch                                                                                                                          |
+| Computer route disconnected                             | Cloud sequence 20 committed while Host client reported unreachable; Computer Send unavailable; cached history and draft retained                                                                                         |
+| Cold restart                                            | Cloud identity/directory restored; Computer draft restored after reconnect                                                                                                                                               |
+| No automatic resend                                     | Unsent DRAFT-KEEP marker absent from Host canonical history after restart/reconnect                                                                                                                                      |
+| Display checks                                          | Default/intermediate/maximum text, light/dark captured; scrolling retained. Maximum text truncates names substantially; screenshots document that limitation                                                             |
+| Cleanup                                                 | Own WorkOS session revoked, latest refresh rejected, prior sessions preserved; new Host device revoked/unpaired; original signed-out configuration, draft/filter files, shared checkout, light/large and locale restored |
 
 ## Recordings
 
