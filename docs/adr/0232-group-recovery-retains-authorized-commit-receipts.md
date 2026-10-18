@@ -1,4 +1,4 @@
-# ADR-0230: Group recovery retains authorized commit receipts
+# ADR-0232: Group recovery retains authorized commit receipts
 
 - Status: Proposed; #2056 implementation and runtime qualification in progress
 - Date: 2026-10-18
