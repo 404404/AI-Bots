@@ -831,7 +831,7 @@ _Avoid_: Dock panel, widget, view, pane, sidebar, DSH main panel
 The following Panel categories name the agreed authoring target from the [Panel plugin design discussion](docs/research/2026-10-19-panel-plugin-design-discussion.md); they do not assert that external authoring or fixed-Bot binding is already implemented.
 
 **Global Panel**:
-A Panel with a purpose independent of the active Channel and without a required binding to one PersonaBot or Channel, such as an office showing multiple Bots.
+A Panel with a purpose independent of the active Channel and without a required binding to one PersonaBot or Channel, such as the Profile-wide Task Kanban.
 _Avoid_: global Channel, all-Bot permission
 
 **Bot-bound Panel**:
@@ -845,6 +845,10 @@ _Avoid_: Bot-bound Panel, DM-only Panel
 **Group-channel-bound Panel**:
 A Channel-bound Panel whose use requires a Group Channel, such as group membership. Group-only applicability restricts the eligible Channel, rather than introducing a different binding mechanism.
 _Avoid_: group-member Bot Panel, Group-only permission
+
+**Task**:
+In the Panel Plugin authoring target (ADR-0234, T2 #2223; implementation pending), a Task is a persistent work item shared within one Profile, with stable identity, title, description, status and latest progress managed by Humans and Bots. It is distinct from a Session-local plan or Assignment Session; changing a Task does not itself start execution.
+_Avoid_: Session plan, Assignment Session, automatic execution job
 
 **Panel header**:
 The title and action area of a content Panel, containing its icon, name and Panel-specific actions. It belongs to that Panel wherever the Panel is placed. The content-sized icon-and-name title handle closes the Panel on click and moves it on drag; Channel identity, tabs and action controls are outside that handle. In macOS Desktop, unused header space moves the native window.

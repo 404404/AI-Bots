@@ -43,11 +43,19 @@ These answers were recovered from the referenced chat after its continuation fai
 12. **Bot-bound Panels do not appear in Group Channels.** The Human rejected a group member picker. Inside Messages, a Bot-bound Panel follows the current PersonaBot DM; a Group Channel has neither that Panel nor its open action. Keep its DM preferences for returning later. This concerns Channel-workspace applicability; the already accepted explicitly bound Global-workspace instance remains independent of active Channel selection.
 13. **First slice: independent companion Panel plus Activity.** The Human selected this ahead of Memory. The slice must exercise the public capability/event seam, Panel binding and instances, and native Plugin/Bundle lifecycle. The existing WindowCompanions implementation is an overlay, not an existing Dock Panel; reuse appropriate rendering and Activity capabilities without assuming the move is mechanical. Memory observation and other first-party Panels remain subsequent slices.
 
-## First-slice planning proposal
+## Later Human-confirmed slice revisions
 
-Observable behavior: an independently installed native companion Panel shows its bound PersonaBot and reflects that Bot's current Activity through the owning capability. Two explicitly bound Global-workspace instances can independently show two Bots.
+After Q13 and ticket publication, the Human selected VRM for T1, including mappings from Activity and actual Bot speech. T2 changed from a multi-Bot office to a Global Task Kanban with Human controls and Bot query/create/update tools. These decisions supersede the earlier existing-renderer-only proposal and office example. [T1 #2222](https://github.com/BotHarness/DeepSeekBot/issues/2222) and [T2 #2223](https://github.com/BotHarness/DeepSeekBot/issues/2223) carry acceptance criteria; ADR-0234 and the living architecture carry the design. Both remain unimplemented.
 
-- Reuse existing character presentation for the smallest verification path; a new 3D engine or asset-production workflow is not needed to prove the Plugin contract.
+T2 reuses/evolves #1792's durable to-do owner rather than creating another store. Profile-wide shared Tasks have identity, title, description, status, latest progress and update time. Human edits and Bot tools share authorization, commands, conflict handling and post-commit notification. Task is separate from Session-local plans and Assignment execution; moving a card does not automatically launch work. Tools remain usable while the Panel is closed and have matching direct CLI paths. This initial board does not promise a full Linear/Notion clone or their external integrations.
+
+## Current first-slice plan
+
+Observable behavior: an independently installed native VRM companion Panel shows its bound PersonaBot, maps current Activity to movement, and presents actual committed Bot output through a separate speaking layer. Two explicitly bound Global-workspace instances can independently show two Bots; working and speaking may overlap.
+
+- Use Three.js/three-vrm with a provenance-checked model and supplied clips/VRMA. Keep Activity facts unchanged; speaking is Client presentation, not another Activity state or Output authority.
+- Drive initial mouth/expression/gesture playback from actual committed text and available expressions; degrade to neutral/text when assets fail. No historical speech replay on mount/reconnect, duplicate sound across instances, or new TTS/phoneme dependency.
+- Include reduced motion, hidden-instance throttling, two-instance measurement and owned GPU disposal. A character editor, wardrobe, marketplace, world simulation and complete overlay migration remain outside this slice.
 - Inside Messages, follow the active PersonaBot DM; hide both content and entry in a Group. Do not select a member Bot automatically and do not add a member picker.
 - In the Global workspace, explicitly choose a Bot and show its identity in the Panel header. Switching the active conversation does not change that binding.
 - Use the existing Activity authority for current-state reads and live changes. Mount/reconnect resynchronizes current state without replaying intermediate events. Define race-safe read/subscription ordering in the adapter.
@@ -60,7 +68,7 @@ This proposal narrows the already chosen slice. Exact public method names, paylo
 
 ## First-slice source constraints
 
-At the existing audit baseline, the current companion is registered in the native shell.overlay Slot (packages/client/src/client/index.ts:311). Its reusable character renderer is PersonaBotAvatar (packages/client/src/client/avatar.tsx:344); a new 3D engine is not a prerequisite for the Plugin capability proof. Reuse requires a supported shared presentation contract, not a runtime import from another feature Plugin's internals.
+At the existing audit baseline, the current companion is registered in the native shell.overlay Slot (packages/client/src/client/index.ts:311). Its existing character renderer is PersonaBotAvatar (packages/client/src/client/avatar.tsx:344). This is a baseline implementation fact, not the selected renderer for T1: the later VRM decision supersedes the initial reuse-only proposal. Any reused presentation capability needs a public contract rather than imports from another feature Plugin's internals.
 
 Current Activity reads and streams already exist (packages/core/src/bridge/methods.ts:2613, packages/core/src/bridge/rpc.ts:257). The followActivity implementation subscribes before yielding its baseline and then coalesces changes into current snapshots (packages/core/src/channels/live.ts:472). The Client currently disables its separate Activity subscription while the companion feed updates the shared store (packages/client/src/client/index.ts:694). The extracted capability must preserve one coherent data owner and work with or without the old overlay; moving a UI import alone does not establish independent lifetime.
 
@@ -77,7 +85,7 @@ The [native event and conflict investigation](2026-10-19-cordis-events-and-slot-
 - The observation recorder at `packages/core/src/runtime/bot-runtime.ts:7961` commits Source Event, Inbox Admission and Memory checkpoint together. Preserve this owner rather than creating a second admission authority for public notifications.
 - Messages has a placeholder registration (`packages/client/src/client/workspace.tsx:104`), while `channel-dock.tsx:650` and `:679` select its dedicated implementation. Control Rail is supplied through Workspace context (`workspace.tsx:158`) and receives special layout constraints (`channel-dock.tsx:657`, `:1192`). Independent replacement is not already established by the ordinary Panel Registry.
 
-Q4–Q13 are settled at the direction level. The first-slice direction is selected; detailed implementation tickets await review through the to-tickets workflow. Native API details and implementation verification remain engineering work, not questions for the Human to research.
+Q4–Q13 are settled at the direction level. T1–T7 and the T8–T15 migration parent/children have been published under #2219 for v2.0 in Panel Plugins Project #21; implementation has not started. T1 runtime validation and Human feedback gate expansion, with migration explicitly blocked by T1. Native API details and implementation verification remain engineering work, not questions for the Human to research.
 
 Questions about exact event payload fields, SDK signatures and implementation slices follow these decisions. No speculative public event names are introduced in this record. The four accepted product category names are recorded in the bilingual glossary; their registration representation remains open.
 

@@ -829,7 +829,7 @@ _避免使用_：Dock panel、widget、view、pane、sidebar、DSH main panel
 以下 Panel 分类命名了[面板插件设计讨论](docs/research/2026-10-19-panel-plugin-design-discussion.md)中已确认的开发目标；不代表外部开发能力或固定 Bot 绑定已经实现。
 
 **Global Panel**：
-全局面板。具有独立于当前 Channel 的用途，不要求绑定某个 PersonaBot 或 Channel，例如展示多个 Bot 的虚拟办公室。
+全局面板。具有独立于当前 Channel 的用途，不要求绑定某个 PersonaBot 或 Channel，例如当前 Profile 内共享的 Task Kanban。
 _避免使用_：全局频道、所有 Bot 的访问权限
 
 **Bot-bound Panel**：
@@ -843,6 +843,10 @@ _避免使用_：绑定 Bot 的面板、仅私聊面板
 **Group-channel-bound Panel**：
 绑定群聊频道的面板。用途要求 Group Channel 的 Channel-bound Panel，例如群聊成员。仅适用于群聊限制的是可选频道，不引入另一套绑定机制。
 _避免使用_：群成员 Bot 面板、群聊专属权限
+
+**Task**：
+在 Panel Plugin 开发目标（ADR-0234、T2 #2223，待实现）中，Task 是当前 Profile 内由 Human 与 Bot 共同管理的持久工作项，具有稳定身份、标题、描述、状态和最新进度。它不等于 Session 内计划或 Assignment Session，修改 Task 本身不启动执行。
+_避免使用_：Session 计划、Assignment Session、自动执行 Job
 
 **Panel header**：
 面板标题栏。内容面板的标题与操作区域，包含图标、名称和该面板的操作；它始终属于对应面板，不随面板位置改变含义。图标与名称组成随内容宽度自适应的标题操作区：点击关闭面板，拖拽移动面板；频道身份信息、标签页与操作按钮不属于该操作区。在 macOS Desktop 中，标题栏剩余空白区域用于拖动原生窗口。

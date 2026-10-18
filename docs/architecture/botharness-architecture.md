@@ -1116,4 +1116,10 @@ Chats shares its persisted device-local conversation filter with Activity. The n
 
 实现、实例、绑定与工作区位置分开。普通实现允许多个实例，重复安装不重复创建。消息面板内的 Bot-bound Panel 跟随 PersonaBot 私聊；群聊不显示内容和打开入口，也不增加成员选择器。显式绑定的全局工作区实例保留并清楚标明所选 Bot/Channel；Group-channel-bound 复用 Channel 绑定并限制为群聊。现有频道子面板不因此获得跨工作区拖放，绑定不授予数据访问或代码隔离。
 
-必需系统角色保留唯一性、已注册的第一方兜底和独立恢复入口。替换优先复用原生 Slots 的优先级、冲突规则和有界渲染失败退让；这不等于 HMR 回滚，也不是当前应用定义 Registry 的重复 id 拒绝已经提供的能力。首个纵向切片为独立角色面板＋Activity，验收原生安装、两个 Bot 的独立绑定、当前状态与实时变化、群聊缺席、重连和资源清理。交付进度由后续工单承载；与既有 #1791/#1792 开发入口及 #2096 布局 CLI 工作协调，避免重复。
+必需系统角色保留其唯一性、已注册的第一方兜底和独立恢复入口。替换优先复用原生 Slots 的优先级与有界渲染错误退让；这不等于 HMR 回滚，也不是现有应用 Registry 的重复 id 拒绝已经具备的能力。
+
+首个纵向切片 [T1 #2222](https://github.com/BotHarness/DeepSeekBot/issues/2222) 为使用 Three.js/three-vrm 的独立 **VRM＋Activity＋说话表现面板**。动作消费已有 Activity 事实；说话表现独立消费真实、已提交的 Bot 输出，允许边工作边说话。首版使用文字节奏驱动表情、嘴型与轻手势，不要求音素级口型或新增 TTS。验收原生安装、两个 Bot 绑定、群聊无入口、当前状态与实时更新、重连不重播旧话或重复发声、减少动态效果、资产／渲染失败降级及 GPU 资源释放。此方向替代仅复用旧角色 renderer 的提议，不要求整体迁移浮窗交互或构建生活模拟世界。
+
+[T2 #2223](https://github.com/BotHarness/DeepSeekBot/issues/2223) 将办公室切片改为无 Bot／Channel 绑定的 **全局 Task Kanban**，管理当前 Profile 内共享的 Task。Human 卡片操作与 Bot 查询／创建／更新工具使用同一授权 Service、持久记录和提交后通知；关闭面板不影响工具工作。演进 #1792 已有 to-do owner 并兼容旧记录，不增加第二份存储。Task 状态与进度独立于 Session 内计划和 Assignment 执行，创建、移动、完成或重开卡片不自动启动执行。验收重启／重开一致性、显式并发冲突及直接 CLI／工具 parity。
+
+[Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。尚未开始实现；T1 运行验证及 Human 反馈是扩展门槛。交付状态与依赖以工单为准，并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
