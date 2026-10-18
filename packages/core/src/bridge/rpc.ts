@@ -1,4 +1,5 @@
 import { isAuthenticatedOwner } from './owner-compat.js';
+import type { CloudManagementInput, CloudManagementResult } from '../cloud/management.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
@@ -12,6 +13,7 @@ import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import { LiveRefused } from '../channels/live-frames.js';
 import type { ChannelJournalPage, ChannelJournalRequest } from '../channels/timeline.js';
 import type { CompanionLiveFrame } from '../companions/live.js';
+import type { CloudWork, CloudWorkInput } from '../cloud/work.js';
 import {
   ChannelLiveRefused,
   LiveUnavailable,
@@ -500,6 +502,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     input: MessagingIdentityInput,
   ): Promise<{ identity: MessagingIdentity }> {
     return unwrapAsync(this.methods.messagingIdentity({ slug, input }));
+  }
+  cloudConnections(input: CloudManagementInput): Promise<CloudManagementResult> {
+    return unwrapAsync(this.methods.cloudConnections(input));
+  }
+  cloudWork(slug: string, input: CloudWorkInput): Promise<Awaited<ReturnType<CloudWork['run']>>> {
+    return unwrapAsync(this.methods.cloudWork({ slug, input }));
   }
   messagingApps(): Promise<MessagingAppsView> {
     return unwrapAsync(this.methods.messagingApps());
@@ -1790,6 +1798,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'failureAlertsRetry',
   'pairingReview',
   'senderAccess',
+  'cloudConnections',
+  'cloudWork',
   'messagingApps',
   'messagingSnapshot',
   'messagingTargets',

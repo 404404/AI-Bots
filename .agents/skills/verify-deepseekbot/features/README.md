@@ -14,7 +14,7 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Orchestrator model switching | yes, for reply evidence | none | [orchestrator-model-switch.md](orchestrator-model-switch.md) |
 | Bot DM reply                                                                                       | yes                        | `scripts/e2e-llm-scenarios.mjs --scenario dm-reply`                                                  | [bot-dm-reply.md](bot-dm-reply.md)                   |
 | Bot-to-Bot Group mentions and wake                                                                 | yes                        | `scripts/e2e-llm-scenarios.mjs` (nightly)                                                            | [bot-group-mention.md](bot-group-mention.md)         |
-| Group send review | yes for A/B; no for direct tools | `scripts/e2e-group-send-review.mjs`, `scripts/e2e-group-peer-review.mjs` | [group-send-review.md](group-send-review.md) |
+| Group send review | yes for A/B; no for direct tools | `scripts/e2e-group-send-review.mjs`, `scripts/e2e-group-peer-review.mjs`, `scripts/e2e-group-busy-review.mjs`, `scripts/e2e-group-responsibility.mjs` | [group-send-review.md](group-send-review.md) |
 | Conversation timeline: new-messages divider, kept place, folding, image preview, reactions, search, member mention | for replies | none | [conversation-timeline.md](conversation-timeline.md) |
 | PersonaBot creation and restart persistence                                                        | for Bot-created Bots       | `scripts/e2e-personabot-create.mjs` (CI)                                                             | [personabot-create.md](personabot-create.md)         |
 | Stop a working Bot (Web Client)                                                                    | yes                        | `scripts/e2e-web-stop.mjs`                                                                           | [bot-stop.md](bot-stop.md)                           |
@@ -52,6 +52,7 @@ The check fails for a missing feature row, required section, local link or scrip
 an index row's scripted journeys disagree with its feature file. It runs in lint. Passing
 checks only reference integrity: update and run the affected paths when the product changes.
 
+| Cloud Agent Host connections | yes for Agent response; no for credential management | isolated Host plus real TOB UAT, two Hosts for collaboration | [cloud-host-connections.md](cloud-host-connections.md) |
 | IM conversation mirroring and forwarding settings | no for settings; yes for a model-generated reply | `verify-app` settings path; real IM destination required for delivery | [im-conversation-mirroring.md](im-conversation-mirroring.md) |
 
 ## Not mapped yet

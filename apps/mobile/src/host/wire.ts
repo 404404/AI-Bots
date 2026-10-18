@@ -40,6 +40,7 @@ export interface WireAllBotMention {
 
 export interface ChannelWireMessage extends WireMessage {
   author: WireAuthor;
+  mentions?: WireMention[];
   reactions?: WireReaction[];
   attachments?: readonly AttachmentRef[];
   bridgeMedia?: { items: readonly BridgeMediaItem[] };

@@ -57,6 +57,8 @@ Use application adapters for both API generations rather than raising the instal
 
 ## Pitfall log
 
+Restored application runtime work can run before an undeclared native Service Provider loads. In #2056 a real held-draft Host restart resumed an Orchestrator before `ctx.credentials` existed and published a model-readiness failure, although the same configured key worked after startup. BotHarness now declares `credentials` in its required `inject` dependencies. A real Cordis/LocalCredentialProvider regression starts the Consumer before the Provider and verifies readiness is not attempted until that Provider is available. Do not hide this race with a credential fallback, polling delay or suppressed failure; use the Service dependency lifecycle.
+
 When a DSH-side bug or trap is diagnosed, **record it here (or in the playbook) in the same change**. Entries:
 
 | # | Trap | Symptom | Cause / fix |
@@ -255,3 +257,7 @@ Summing only `assistant/message` usage omits failed native `assistant/attempt` e
 ## Additional verified pitfall — #2089
 
 In rc.2, `tools.restrict({ deny: [...] })` validates names against the global Tool registry even when called from an Agent scope. Naming an application-defined Tool registered only in that Agent scope, or intentionally omitted there, fails Agent setup with `names unknown global tool` before the model runs. Tob creation reproduced this on macOS Desktop with `bot_create`. Omit the legacy registration and use an Agent-scoped `tools.guard` for execution refusal, retaining the callback's current-run authority check for stale references. A mocked restriction collector cannot qualify this behavior; test the pinned `ToolRuntime` with real Cordis scopes.
+
+## Additional verified pitfall — #2056 verification transport
+
+Against an idle RC2 Host on Windows, Node's pooled `fetch` reproduced `ECONNRESET` after the probe's event loop was blocked for six seconds: it reused a connection whose close event had not been consumed. An asynchronous six-second wait and a request with `Connection: close` both succeeded. The `verify-app` RPC helper uses one connection per request; it preserves a lost mutation response as an error instead of retrying a possibly committed write. Distinguish this test transport failure from a model-provider failure, and correlate Host health with any deliberate restart before diagnosing a crash. Preserve failed cohort attempts; register changed transport settings before a new comparison rather than replacing old results.

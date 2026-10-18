@@ -898,6 +898,45 @@ describe('group Channel conversation', () => {
 });
 
 describe('group Channel mentions on send', () => {
+  it('keeps identity and ranges in cached history, live entries and optimistic messages', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    const mentions = [{ botSlug: 'stable-ada-id', label: 'Ada', start: 0, end: 4 }];
+    channel.append({ id: 'history', body: '@Ada **plan**', mentions }, false);
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const target = open(host, {
+      cache: {
+        read: async () => ({ entries: channel.page(1, undefined, 10)!.entries, hasOlder: false }),
+        write: () => {},
+      },
+      host: {
+        call: (method, args) => client!.call(method, args),
+        upload: (name, data) => client!.upload(name, data),
+        resource: (path) => client!.resource(path),
+        follow: (endpoint, args, handlers) => {
+          let cancel: (() => void) | undefined;
+          void gate.then(() => {
+            cancel = client!.follow(endpoint, args, handlers);
+          });
+          return () => cancel?.();
+        },
+      },
+    });
+    const cached = await until(target, (s) => s.fromCache);
+    expect(cached.messages[0]).toMatchObject({ mentions });
+    release();
+    await until(target, (s) => s.status === 'live' && !s.fromCache);
+    expect(target.getSnapshot().messages[0]).toMatchObject({ mentions });
+    channel.append({ id: 'live', body: '@Ada **plan**', mentions });
+    const live = await until(target, (s) => s.messages.some((message) => message.id === 'live'));
+    expect(live.messages.at(-1)).toMatchObject({ mentions });
+    target.send('@Ada plan it', [], { mentions });
+    expect(target.getSnapshot().messages.at(-1)).toMatchObject({ mentions, delivery: 'pending' });
+  });
+
   it('passes selected mention tokens to channelSend', async () => {
     const host = new FakeHost();
     host.channel('launch-team');
