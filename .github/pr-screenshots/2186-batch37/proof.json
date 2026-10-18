@@ -1,0 +1,98 @@
+{
+  "issue": 2186,
+  "pr": 2212,
+  "candidate": "92c253254fe9d24fb7243fb978f1defb9bc5c14e",
+  "baseline": "9a51bc6028cdcc7c8beb5a8bfcc30a8a1755f98c",
+  "native": "494a20f1eb4f0666a2c90bc3c758af4e7ff5f46b",
+  "mainCi": 39156654455,
+  "platform": "iOS 26 Simulator",
+  "viewport": {
+    "width": 402,
+    "height": 874
+  },
+  "locale": "English app; keyboard system glyph limitations",
+  "matrix": [
+    {
+      "id": "after-default-dark",
+      "size": "large",
+      "theme": "dark",
+      "typed": true,
+      "inviteGeometry": true,
+      "inviteInvoked": false,
+      "reloadKeyboardTap": true,
+      "backKeyboardTap": true
+    },
+    {
+      "id": "after-intermediate-light",
+      "size": "accessibility-large",
+      "theme": "light",
+      "typed": true,
+      "inviteGeometry": true,
+      "inviteInvoked": false,
+      "reloadKeyboardTap": true,
+      "backKeyboardTap": true
+    },
+    {
+      "id": "after-intermediate-dark",
+      "size": "accessibility-large",
+      "theme": "dark",
+      "typed": true,
+      "inviteGeometry": true,
+      "inviteInvoked": false,
+      "reloadKeyboardTap": true,
+      "backKeyboardTap": true
+    },
+    {
+      "id": "after-maximum-light-verified",
+      "size": "accessibility-extra-extra-extra-large",
+      "theme": "light",
+      "typed": true,
+      "inviteGeometry": true,
+      "inviteInvoked": false,
+      "reloadKeyboardTap": true,
+      "backKeyboardTap": true
+    },
+    {
+      "id": "after-maximum-dark-verified",
+      "size": "accessibility-extra-extra-extra-large",
+      "theme": "dark",
+      "typed": true,
+      "inviteGeometry": true,
+      "inviteInvoked": false,
+      "reloadKeyboardTap": true,
+      "backKeyboardTap": true
+    },
+    {
+      "id": "after-default-light-verified",
+      "size": "large",
+      "theme": "light",
+      "typed": true,
+      "inviteGeometry": true,
+      "inviteInvoked": false,
+      "reloadKeyboardTap": true,
+      "backKeyboardTap": true
+    }
+  ],
+  "cleanup": {
+    "ownSessionRevoked": true,
+    "latestRefreshRejected": true,
+    "allPriorActiveSessionsPreserved": true,
+    "priorActiveCount": 1,
+    "canonicalInvitationsUnchanged": true,
+    "invitationCount": 0,
+    "cloudVaultRestored": true,
+    "hostsUnchanged": true,
+    "originalDocumentsPreferencesByteIdentical": true,
+    "displayRestored": true
+  },
+  "notQualified": [
+    "Invitation delivery",
+    "Hosted AuthKit / PKCE",
+    "Android",
+    "Physical iPhone",
+    "VoiceOver / TalkBack",
+    "Translated names",
+    "All shared sheets"
+  ],
+  "initialMaxReloadResult": "Invalidated: clipped AX bounds; corrected full-button screenshots and taps supersede initial helper success."
+}
