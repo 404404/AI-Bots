@@ -6,6 +6,9 @@ import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
 import { hostSession } from '../src/host/host-session';
+import { hostLooks } from '../src/host/native-host-look';
+import { HOST_NAME_MAX, hostLookName, withHostName } from '../src/ui/design/host-look';
+import { ConnectionNameField } from '../src/ui/primitives/connection-name-field';
 import { nativeCarrier } from '../src/host/native-carrier';
 import { pairHost, type PairingFailure } from '../src/host/pairing';
 import { mobileTelemetry } from '../src/telemetry/native';
@@ -25,6 +28,7 @@ export default function PairScreen() {
   const params = useLocalSearchParams<{ p?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [link, setLink] = useState('');
+  const [connectionName, setConnectionName] = useState('');
   const [busy, setBusy] = useState(false);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState<PairingFailure | undefined>();
@@ -46,7 +50,11 @@ export default function PairScreen() {
       method,
       deviceName: deviceName(),
       carrier: nativeCarrier(),
-      save: hostSession.pair,
+      save: async (host) => {
+        await hostSession.pair(host);
+        const name = hostLookName(connectionName);
+        if (name) hostLooks.set(host.hostId, withHostName(hostLooks.look(host.hostId), name));
+      },
       telemetry: mobileTelemetry,
       signal: operation.signal,
     });
@@ -85,6 +93,12 @@ export default function PairScreen() {
     >
       <Button label={t.cloud.title} onPress={() => router.push('/cloud-services')} />
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
+      <ConnectionNameField
+        value={connectionName}
+        onChange={setConnectionName}
+        maxLength={HOST_NAME_MAX}
+        disabled={busy}
+      />
       <View
         style={{
           aspectRatio: 1,

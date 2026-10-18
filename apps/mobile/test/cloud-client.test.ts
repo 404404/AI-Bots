@@ -101,6 +101,49 @@ async function loggedIn() {
   return f;
 }
 describe('mobile cloud session boundary', () => {
+  it('renames a connection locally without changing credentials or trusted connection scope', async () => {
+    const f = await loggedIn();
+    const before = f.client.getSnapshot().rows[0]!;
+    const stored = JSON.parse(f.stored()!);
+    const requestCount = f.calls.length;
+    f.state.offline = true;
+    await f.client.rename(config.instanceId, '  Team UAT  ');
+    const after = f.client.getSnapshot().rows[0]!;
+    expect(after.config.name).toBe('Team UAT');
+    expect(cloudViewScope(after)).toBe(cloudViewScope(before));
+    expect(after.identity).toEqual(before.identity);
+    expect(JSON.parse(f.stored()!).entries[0].session).toEqual(stored.entries[0].session);
+    expect(f.calls).toHaveLength(requestCount);
+    const reopened = new CloudClient(f.rt);
+    await reopened.load();
+    expect(reopened.getSnapshot().rows[0]?.config.name).toBe('Team UAT');
+    expect(reopened.getSnapshot().rows[0]?.hasSession).toBe(true);
+  });
+
+  it('refuses invalid names and preserves the previous name when storage fails', async () => {
+    const f = await loggedIn();
+    const before = f.stored();
+    await expect(f.client.rename(config.instanceId, '  ')).rejects.toMatchObject({
+      code: 'INVALID_INSTANCE_CONFIG',
+    });
+    await expect(f.client.rename(config.instanceId, 'bad\nname')).rejects.toMatchObject({
+      code: 'INVALID_INSTANCE_CONFIG',
+    });
+    f.state.failWrite = true;
+    await expect(f.client.rename(config.instanceId, 'New name')).rejects.toMatchObject({
+      code: 'STORAGE_UNAVAILABLE',
+    });
+    expect(f.stored()).toBe(before);
+    expect(f.client.getSnapshot().rows[0]?.config.name).toBe(config.name);
+  });
+
+  it('accepts a local display name during verified configuration import', async () => {
+    const f = fixture();
+    await f.client.importConfig(JSON.stringify({ ...config, name: 'My cloud' }));
+    expect(f.client.getSnapshot().rows[0]?.config).toEqual({ ...config, name: 'My cloud' });
+    expect(f.calls.some((call) => call.url.endsWith('/.well-known/open-cloud-groups'))).toBe(true);
+  });
+
   it('keeps draft scope stable through refresh but separates a later signed-in account', async () => {
     const f = fixture();
     await f.client.importConfig(JSON.stringify(config));

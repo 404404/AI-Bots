@@ -419,6 +419,12 @@ export class CloudClient {
       await this.save({ ...(!changed ? old : {}), config });
       return config;
     });
+  rename = (id: string, name: string) =>
+    this.lock(async () => {
+      const entry = this.entry(id);
+      const config = parseInstance({ ...entry.config, name: name.trim() });
+      await this.save({ ...entry, config });
+    });
   private async acceptTokens(
     entry: Entry,
     value: unknown,
