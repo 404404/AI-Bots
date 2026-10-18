@@ -8,24 +8,31 @@ import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
-import { KeyboardFormScroll, renderKeyboardFormScroll } from '../primitives/keyboard-form';
+import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { Text } from '../primitives/text';
 import { TextInput } from '../primitives/system-text';
 import { t } from '../strings';
 
-function ChannelFormScroll(props: ScrollViewProps) {
+function ChannelFormScroll({
+  actionLines = 2,
+  ...props
+}: ScrollViewProps & { actionLines?: number }) {
   const theme = useDesignTheme();
   return (
     <KeyboardFormScroll
       {...props}
       bottomOffset={
-        Math.max(theme.touch, theme.type.body.line * theme.fontScale * 2) + space.x6 * 3
+        Math.max(theme.touch, theme.type.body.line * theme.fontScale * actionLines) + space.x6 * 3
       }
     />
   );
 }
 function renderChannelFormScroll(props: ScrollViewProps) {
   return <ChannelFormScroll {...props} />;
+}
+
+function renderGuestChannelFormScroll(props: ScrollViewProps) {
+  return <ChannelFormScroll {...props} actionLines={1} />;
 }
 
 export function CloudChannelsScreen() {
@@ -137,7 +144,7 @@ function ChannelWorkspace({
     <FlatList<CloudChannel | CloudMessage>
       style={{ flex: 1, backgroundColor: theme.color.base }}
       contentInsetAdjustmentBehavior="automatic"
-      renderScrollComponent={guest ? renderKeyboardFormScroll : renderChannelFormScroll}
+      renderScrollComponent={guest ? renderGuestChannelFormScroll : renderChannelFormScroll}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         padding: space.x5,
