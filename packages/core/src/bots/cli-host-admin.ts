@@ -5,6 +5,7 @@ import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 
 export const HOST_ADMIN_OPTIONS = {
+  force: { type: 'boolean' },
   query: { type: 'string' },
   topic: { type: 'string' },
   sort: { type: 'string' },
@@ -15,6 +16,7 @@ export const HOST_ADMIN_OPTIONS = {
 } as const;
 
 export interface HostAdminValues {
+  force?: boolean;
   query?: string;
   topic?: string;
   sort?: string;
@@ -249,7 +251,7 @@ export async function runHostAdminCommand(
       });
     }
     case 'release-check':
-      return rpc('releaseUpdate', {});
+      return rpc('releaseUpdate', values.force === true ? { force: true } : {});
     case 'release-install': {
       const result = record(await rpc('releaseInstall', { version: target }));
       if (result['status'] === 'failed')

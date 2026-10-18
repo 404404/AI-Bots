@@ -1711,8 +1711,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.releaseInfo(since === undefined ? {} : { since }));
   }
 
-  async releaseUpdate(): Promise<ReleaseUpdate> {
-    return unwrapAsync(this.methods.releaseUpdate());
+  async releaseUpdate(force?: boolean): Promise<ReleaseUpdate> {
+    return unwrapAsync(this.methods.releaseUpdate({ force }));
   }
 
   async releaseInstall(version: string): Promise<ReleaseInstall> {

@@ -778,7 +778,7 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.marketplaceChallenge)).toEqual([]);
     expect(parameterNames(service.marketplaceReport)).toEqual(['id', 'altcha', 'reason']);
     expect(parameterNames(service.releaseInfo)).toEqual(['since']);
-    expect(parameterNames(service.releaseUpdate)).toEqual([]);
+    expect(parameterNames(service.releaseUpdate)).toEqual(['force']);
     expect(parameterNames(service.channelReact)).toEqual([
       'channelId',
       'messageId',
