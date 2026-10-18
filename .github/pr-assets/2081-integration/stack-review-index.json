@@ -1,0 +1,154 @@
+{
+  "parentIssue": 2081,
+  "integrationPr": 2149,
+  "frozenMain": "810ae5398deda703b9c2840dbdf0d29eb627c9ed",
+  "builtSource": "205a5bdaf503ffa061620507d745f482f716d81c",
+  "reviewSource": "54c09227a05d08a107bbe28e157d6e21249daf17",
+  "completeTreeIdentical": false,
+  "allPrsUnmerged": true,
+  "autoMergeEnabled": false,
+  "runtimeEvidenceDoesNotReplaceCi": true,
+  "layers": [
+    {
+      "order": 1,
+      "pr": 2119,
+      "branch": "codex/2090-channel-preferences",
+      "baseBranch": "main",
+      "head": "a3db52dcc6d4d474d2aeef944f0268e32107cfe7",
+      "originalReviewHead": "a3e2c4e64d131191e686e33cb207d3db9b3a0937"
+    },
+    {
+      "order": 2,
+      "pr": 2123,
+      "branch": "codex/2093-tob-schedules",
+      "baseBranch": "codex/2090-channel-preferences",
+      "head": "971deaf3a6a1896d734ca778eb24ae4e229ce9e6",
+      "originalReviewHead": "6a6cc80b8f8c06c3327e79df025e1be954e50eb0"
+    },
+    {
+      "order": 3,
+      "pr": 2128,
+      "branch": "codex/2091-tob-memory-read",
+      "baseBranch": "codex/2093-tob-schedules",
+      "head": "7180b04f8970eaac4e604cd050f6401d66d7e0b5",
+      "originalReviewHead": "5d44b7a6507d661415881808ab67e74275d54182"
+    },
+    {
+      "order": 4,
+      "pr": 2132,
+      "branch": "codex/2092-tob-memory-edit",
+      "baseBranch": "codex/2091-tob-memory-read",
+      "head": "9d0b8169f86d5a2dc24e56ee3b33c7be4e78e1a1",
+      "originalReviewHead": "910f38d35163b265bd428e4b470e977021daeba8"
+    },
+    {
+      "order": 5,
+      "pr": 2126,
+      "branch": "codex/2095-tob-client-preferences",
+      "baseBranch": "codex/2092-tob-memory-edit",
+      "head": "3deaf029b735ede953e8ff584c17b1eafe71a70b",
+      "originalReviewHead": "757dad603e814349aac2cd1a2aea115ea200a2da"
+    },
+    {
+      "order": 6,
+      "pr": 2135,
+      "branch": "codex/2096-tob-layout",
+      "baseBranch": "codex/2095-tob-client-preferences",
+      "head": "0a2f07e8b6ebb31b7d149037aec8939f25b31f49",
+      "originalReviewHead": "35dcde43749bfe45c3ebd3805bc66ed9e95c2561"
+    },
+    {
+      "order": 7,
+      "pr": 2136,
+      "branch": "codex/2097-tob-shortcuts",
+      "baseBranch": "codex/2096-tob-layout",
+      "head": "ebd8b6b8ed0046b5e1dbaf16fcfddf7c79172cdf",
+      "originalReviewHead": "c088e6aae31476ea5516e6091dfd519840804258"
+    },
+    {
+      "order": 8,
+      "pr": 2139,
+      "branch": "codex/2094-tob-grants",
+      "baseBranch": "codex/2097-tob-shortcuts",
+      "head": "682da245cc3ba9a2f89d4f682c3072541ab57e2d",
+      "originalReviewHead": "061b36566b5524bd3b2f8366946f9b14baf10b7b"
+    },
+    {
+      "order": 9,
+      "pr": 2140,
+      "branch": "codex/2081-home-dashboard",
+      "baseBranch": "codex/2094-tob-grants",
+      "head": "b91495157f28781233fad372af7f2e3934182345",
+      "originalReviewHead": "6b743a7f01bb0d56b350db86be9c54220e7ae49d"
+    },
+    {
+      "order": 10,
+      "pr": 2129,
+      "branch": "codex/2098-tob-devices",
+      "baseBranch": "codex/2081-home-dashboard",
+      "head": "60cbd2be3a4c82d6b8335ddebd4e95e3cf533b95",
+      "originalReviewHead": "5f3892c42eb0ada6c326344bde60ac17d4f1e1e3"
+    },
+    {
+      "order": 11,
+      "pr": 2141,
+      "branch": "codex/2099-tob-backup",
+      "baseBranch": "codex/2098-tob-devices",
+      "head": "4b7b2e47e7b14f976409ab184bb367ae5ed1461d",
+      "originalReviewHead": "d586c1b1e91d262ef0d8883f40fef7f06b79d717"
+    },
+    {
+      "order": 12,
+      "pr": 2127,
+      "branch": "codex/2090-channel-transfer",
+      "baseBranch": "codex/2099-tob-backup",
+      "head": "e2da8bc3934ee344d01ecca9d0df6e739bfa90c4",
+      "originalReviewHead": "25907692054fa4320ac598326fbedd3f5bdc87c3"
+    },
+    {
+      "order": 13,
+      "pr": 2142,
+      "branch": "codex/2089-bot-transfer",
+      "baseBranch": "codex/2090-channel-transfer",
+      "head": "c68c8388ed237505b274b0416d5379cf2455c904",
+      "originalReviewHead": "c6e813114df7bf6470f50ab9ba38a7b1751b2d72"
+    },
+    {
+      "order": 14,
+      "pr": 2147,
+      "branch": "codex/2100-tob-marketplace",
+      "baseBranch": "codex/2089-bot-transfer",
+      "head": "21195830d17595083fad6f78b23e9af1c41e397a",
+      "originalReviewHead": "9d4750d1dc37f9c148ddee0fad987aab3a5afea6"
+    },
+    {
+      "order": 15,
+      "pr": 2143,
+      "branch": "codex/2134-tob-content-read",
+      "baseBranch": "codex/2100-tob-marketplace",
+      "head": "ccb09d739908bd288cdec93f22041fb93f6c97c4",
+      "originalReviewHead": "f24527f167c1dd350da1e1701011bf987a25e505"
+    },
+    {
+      "order": 16,
+      "pr": 2144,
+      "branch": "codex/2088-model-qualification",
+      "baseBranch": "codex/2134-tob-content-read",
+      "head": "d3421e2a76cd24c6881ca36d5431393af6a331ae",
+      "originalReviewHead": "3f994eb1c1ad5a730f6212d8f3447a934f01f2db"
+    },
+    {
+      "order": 17,
+      "pr": 2149,
+      "branch": "codex/2081-shared-integration",
+      "baseBranch": "codex/2088-model-qualification",
+      "head": "54c09227a05d08a107bbe28e157d6e21249daf17",
+      "originalReviewHead": null
+    }
+  ],
+  "qualifiedBuiltPackagesTree": "c6692101c248592c5ca1cc006b76ab8b03658d55",
+  "reviewPackagesTree": "87d2de82c1836a67570f6b7c84a799595acbaeed",
+  "productSourcesAndArtifactsUnchanged": true,
+  "testOnlyDelta": "packages/core/test/tob-cli-broker.test.ts",
+  "ciStatus": "pending exact new-head checks at evidence publication; old runs do not qualify new heads"
+}

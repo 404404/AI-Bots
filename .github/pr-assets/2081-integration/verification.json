@@ -1,0 +1,151 @@
+{
+  "webBuildSource": "15caaba496b2ed620b249e6b70efc9e315df6d70",
+  "nativeBuiltSource": "205a5bdaf503ffa061620507d745f482f716d81c",
+  "reviewSource": "54c09227a05d08a107bbe28e157d6e21249daf17",
+  "web": {
+    "syntheticBotsOnly": true,
+    "scheduleReviewedCreateDelete": true,
+    "activeMemoryTriage": {
+      "turn": 3,
+      "freshHumanSplicedSameTurn": true,
+      "currentClientPreferencesWrite": true,
+      "selectedReadonlyMemoryAssignment": true,
+      "childBackupRefusal": "memory-read-only",
+      "immutableMemoryReportVerified": true
+    },
+    "naturalBackup": {
+      "ordinaryFreshHuman": true,
+      "acceptedContextIncludesMemory": true,
+      "activeTriageSameTurnBackup": "not claimed",
+      "previewActualReviewExportInspect": true,
+      "canonicalTerminalTurn": 4,
+      "completed": true,
+      "screenshotsCapturedBeforeFinalTurnEnded": true,
+      "portableSessions": "unsupported: no portable Session Persistence adapter"
+    }
+  },
+  "coldRestore": {
+    "buildSource": "15caaba496b2ed620b249e6b70efc9e315df6d70",
+    "retained": {
+      "bot_schedule_creations": {
+        "rows": 1,
+        "equal": true
+      },
+      "assignment_memory_read_scopes": {
+        "rows": 1,
+        "equal": true
+      },
+      "usage_receipts": {
+        "rows": 45,
+        "equal": true
+      },
+      "usage_receipt_state": {
+        "rows": 1,
+        "equal": true
+      }
+    },
+    "state": {
+      "assignments": [
+        {
+          "stop_state": "stopped",
+          "activity": "idle"
+        }
+      ],
+      "activeGrants": 0,
+      "tobIdentities": 0,
+      "enabledSchedules": 0
+    },
+    "actualUsageTokens": 1727083,
+    "freshHumanScope": true,
+    "restoreLaunched": false,
+    "sessions": "unsupported; no portable Session Persistence adapter",
+    "schemaGeneration": 102,
+    "archiveSha": "86ed75059cfe0a547ba3d67d1a334dceb54fc52d0d9c3ba6409739ad1284246a",
+    "archiveEntries": 130,
+    "allManagedMemoryIncluded": true
+  },
+  "native": {
+    "status": "passed actual model reads, reconciled same request after a new process",
+    "buildSource": "205a5bdaf503ffa061620507d745f482f716d81c",
+    "checks": {
+      "actualNativeFreshHumanReads": true,
+      "modelShell": true,
+      "sameHumanReadOnlyReconciliation": true,
+      "sameProfileProcessRestart": true,
+      "noNewHumanRequest": true,
+      "rootSerializedNative": true,
+      "readOnly": true
+    },
+    "humanMessageId": "human-8d1954a4-9e08-4661-821a-39a15c8f9f2e",
+    "admissionState": "handled",
+    "associatedTurns": [
+      {
+        "turn": 5,
+        "endReason": "completed"
+      }
+    ],
+    "actualCliCommands": [
+      "client-preferences current",
+      "memory-snapshot",
+      "memory-file",
+      "bot-progress"
+    ],
+    "selectedMemory": {
+      "Alpha": {
+        "path": "MEMORY.md",
+        "sha": "92f2e327e135c2972b76593de28c6465aa45fb20",
+        "syntheticPreference": "green tea"
+      },
+      "Beta": {
+        "path": "MEMORY.md",
+        "sha": "96ccefcda1978c50d851545051ff5ceaf14587ee",
+        "syntheticPreference": "black coffee"
+      }
+    },
+    "visibleExpandedCapture": "passed after same-profile process restart; no new request",
+    "pageErrors": [],
+    "rootRestoredMain": true
+  },
+  "checks": {
+    "finalBuiltSourceRootTypecheck": "passed",
+    "fourBoundedSharedRegressionCases": "passed",
+    "buildMs": 5813,
+    "all182WorkspaceLinksResolveOwnCheckout": true,
+    "sourceStampDirty": false,
+    "additionalLogicalBodyLimitCase": "passed1/39skipped728ms; malformed400, valid oversized413, no preparation/approval/write"
+  },
+  "firstFailures": {
+    "webTimingFixtures": "preserved privately; no success claimed for failed preconditions",
+    "symlinkProfileBackup": "required-file-missing; fixed by canonical physical home, guard retained",
+    "oldSessionPath": "blocked before provider/tool work due exact cwd mismatch; old Session archived through existing Human owner",
+    "qaPrompt": "model refused choreographed QA instruction; separate natural request later passed",
+    "nativeVerifier": "actual reads/reply succeeded; verifier used wrong channelSendStatus.deliveries shape; reconciliation uses documented state/replies contract"
+  },
+  "notClaimed": [
+    "physical device",
+    "external IM or service acceptance",
+    "genuine published current-Tob release installation",
+    "Human QA",
+    "merge",
+    "deployment"
+  ],
+  "qualifiedBuiltPackagesTree": "c6692101c248592c5ca1cc006b76ab8b03658d55",
+  "reviewPackagesTree": "87d2de82c1836a67570f6b7c84a799595acbaeed",
+  "testOnlyDelta": "packages/core/test/tob-cli-broker.test.ts",
+  "ciStatus": "pending exact new-head checks at publication; root final handoff may link completed runs separately",
+  "qualifiedArtifactSha256": {
+    "packages/core/dist/index.mjs": "655784709db4f7ce8e7ab6e5f96cb6f792013557580628815471551f0dc2625e",
+    "packages/core/cli/index.mjs": "db1caa1618c413b0b47af48666d457c11415bd621927805455d38f682878df5a",
+    "packages/client/dist/index.mjs": "595b90bc8ff67c4c2891f3991706a1224a150fe864492cf159ee53310a41885c",
+    "packages/client/lib/client.js": "c781319821031543c110ebb6c8c46161ea814d64f6d79984079f37810c534eba",
+    "packages/deepseekbot/dist/deepseekbot.mjs": "2b8b068e2c4ce3cbb0f6e31f267064686adee46772e96420294e1a7b10a084f7"
+  },
+  "reviewHtml": {
+    "generatedWith": "answer-me-with-html",
+    "desktopWidth": 1440,
+    "mobileWidth": 390,
+    "pageErrors": [],
+    "documentHorizontalOverflow": false,
+    "runtimeEvidence": false
+  }
+}
