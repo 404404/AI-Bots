@@ -102,3 +102,22 @@ it('removes the old account form instead of carrying its draft into a replacemen
   expect(host.querySelector('textarea')).toBeNull();
   expect(mocks.create).not.toHaveBeenCalled();
 });
+
+it('does not create after the form is dismissed during permission preflight', async () => {
+  let finish: () => void = () => {};
+  mocks.prepare.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await render();
+  const button = host.querySelector('button');
+  expect(button).not.toBeNull();
+  await act(async () => button!.click());
+  expect(mocks.prepare).toHaveBeenCalledOnce();
+  await act(async () => root.unmount());
+  await act(async () => finish());
+  expect(mocks.create).not.toHaveBeenCalled();
+  expect(mocks.replace).not.toHaveBeenCalled();
+});

@@ -3,7 +3,6 @@ import type { ConversationWorkspace } from './conversations';
 import { ClientError } from './instance-contract';
 import { cloudViewScope } from './workspace-directory';
 
-/** Refresh authority before opening a write flow; labels never select an account. */
 export async function prepareCloudCreation(
   client: Pick<CloudClient, 'getSnapshot' | 'whoami' | 'useOrganization'>,
   target: ConversationWorkspace,

@@ -1,6 +1,6 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { useRef, useState } from 'react';
+import { View, type ViewInstance } from 'react-native';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { cloudConversations } from '../../cloud/native-conversations';
 import { cloudViewScope } from '../../cloud/workspace-directory';
@@ -9,6 +9,7 @@ import { cloudError } from '../../cloud/client';
 import { useDesignTheme } from '../design/theme';
 import { space } from '../design/tokens';
 import { KeyboardFormScroll } from '../primitives/keyboard-form';
+import { useMounted } from '../mounted';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { TextInput } from '../primitives/system-text';
@@ -40,8 +41,6 @@ function CreateChannelForm({
   const theme = useDesignTheme();
   const snapshot = useCloudSnapshot();
   const row = snapshot.rows.find((r) => r.config.instanceId === instanceId);
-  // Organization selection publishes an empty slot while refreshing its token.
-  // Keep this source-bound form mounted; the write still requires fresh authority.
   const [initialOrg] = useState(() =>
     row?.organization?.organizationId === organizationId ? row.organization : undefined,
   );
@@ -54,7 +53,7 @@ function CreateChannelForm({
       : undefined;
   const [name, setName] = useState(pendingHere?.value ?? '');
   const active = useRef(true);
-  useEffect(() => {
+  const mount = useMounted<ViewInstance>(() => {
     active.current = true;
     return () => {
       active.current = false;
@@ -98,7 +97,7 @@ function CreateChannelForm({
     }
   };
   return (
-    <>
+    <View ref={mount} style={{ flex: 1 }}>
       <Stack.Screen options={{ title: t.newChannel }} />
       <KeyboardFormScroll
         contentContainerStyle={{ padding: space.x5, gap: space.x5 }}
@@ -140,6 +139,6 @@ function CreateChannelForm({
           </>
         )}
       </KeyboardFormScroll>
-    </>
+    </View>
   );
 }

@@ -27,7 +27,11 @@ function fixture() {
   };
   const port = {
     getSnapshot: () => ({ ready: true, busy: false, rows: [row] }),
-    whoami: vi.fn(async () => ({ userId: row.sessionUserId!, instanceRole: 'user' as const })),
+    whoami: vi.fn(async () => ({
+      instanceId: 'uat',
+      userId: row.sessionUserId!,
+      instanceRole: 'user' as const,
+    })),
     useOrganization: vi.fn(async () => org),
   };
   const target = {
@@ -58,7 +62,7 @@ it('rejects an account change during verification instead of selecting under the
   const f = fixture();
   f.port.whoami.mockImplementation(async () => {
     f.row.sessionUserId = 'user_b';
-    return { userId: 'user_b', instanceRole: 'user' };
+    return { instanceId: 'uat', userId: 'user_b', instanceRole: 'user' };
   });
   await expect(prepareCloudCreation(f.port, f.target)).rejects.toMatchObject({
     code: 'SOURCE_CHANGED',

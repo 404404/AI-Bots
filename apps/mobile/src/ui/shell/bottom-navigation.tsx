@@ -1,7 +1,14 @@
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import { Keyboard, Platform, Pressable, View, useWindowDimensions } from 'react-native';
+import { useRef, useState, type ComponentProps } from 'react';
+import {
+  Keyboard,
+  Platform,
+  Pressable,
+  View,
+  useWindowDimensions,
+  type ViewInstance,
+} from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hostSession, useHostSession } from '../../host/host-session';
@@ -21,6 +28,7 @@ import { prepareCloudCreation } from '../../cloud/prepare-creation';
 import { shownHostName } from '../design/host-look';
 import { useDesignTheme } from '../design/theme';
 import { navigationBar, radius, space } from '../design/tokens';
+import { useMounted } from '../mounted';
 import { NavigationIcon } from './navigation-icon';
 import { NavigationMaterial } from './navigation-material';
 import { Text } from '../primitives/text';
@@ -86,25 +94,20 @@ function NavigationBar({
   );
   const pending = useActivityCount().count ?? 0;
   const insets = useSafeAreaInsets();
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenu] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const generation = useRef(0);
   const close = () => {
     generation.current++;
-    setMenu(false);
+    setMenu(undefined);
     setError(undefined);
   };
-  useEffect(() => {
-    generation.current++;
-    setMenu(false);
-    setError(undefined);
-  }, [scope]);
-  useEffect(
+  const mount = useMounted<ViewInstance>(
     () => () => {
       generation.current++;
     },
-    [],
+    [scope],
   );
   const hidden = useChromeHidden();
   const progress = useChromeProgress();
@@ -155,6 +158,7 @@ function NavigationBar({
   return (
     <>
       <Animated.View
+        ref={mount}
         pointerEvents={hidden ? 'none' : 'box-none'}
         accessibilityElementsHidden={hidden}
         importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
@@ -249,7 +253,7 @@ function NavigationBar({
           onPress={() => {
             Keyboard.dismiss();
             setError(undefined);
-            setMenu(true);
+            setMenu(scope);
           }}
           style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
         >
@@ -257,7 +261,7 @@ function NavigationBar({
           <PlusIcon color={theme.color.fg} size={theme.type.title.line} />
         </Pressable>
       </Animated.View>
-      {menu && (
+      {menu === scope && (
         <CreationPanel
           key={scope}
           scope={scope}
