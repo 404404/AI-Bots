@@ -1,0 +1,188 @@
+{
+  "kind": "isolated-real-BotHarness-Web-layout-only",
+  "steps": [
+    {
+      "label": "bot-100",
+      "zoom": "1",
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "dialogs": [],
+      "text": "DeepSeekBot\n消息\n拖到此处置顶\n拖到此处取消置顶并回到原位\nDeepSeek Bot\n05:33\nWelcome to DeepSeek Bot\nBot 设置\nDeepSeek Bot\n2026年10月19日\nDeepSeek Bot\n05:33\nDeepSeek Bot\n专属 Bot\n你好，我是 DeepSeek Bot\n\n我是你的专属 Bot：有自己的记忆，可以帮你查资料、排计划、盯定时任务。这是我写给你的第一封信——选一个问题回信给我，我们就算认识了。\n\n—— 期待你的回信\n\n介绍一下你能帮我做什么\n看看今天的 AI 新闻\n每天晚上 9 点来和我打个招呼\n每天 21:00 · 当前私聊 · Asia/Tokyo\n10 分钟后提醒我测试定时任务\n只提醒一次 · 当前私聊 · Asia/Tokyo\n\n也可以直接在下方输入你的问题。\n\n选择模型\nDeepSeek V4.1 Flash · opencode-go\n创建 Bot\n\n预设欢迎信 · 由产品提供\n\nDeepSeek V4.1 Flash\n0 个工作区\n0\n会话\n\n当前没有可显示的会话。\n\nBot 收件箱\n\n当前 Channel 没有可显示的内容。\n\nBot 收件箱 opened"
+    },
+    {
+      "label": "bot-settings-100",
+      "zoom": "1",
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "dialogs": [
+        {
+          "text": "Bot 设置通用模型与运行自动审批消息IM 应用ComputerBrowser窗口伙伴设备数据与隐私高级关于通用我的默认名字聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。Bot 图标选择 Bot 在应用侧边栏与设置导航中使用的",
+          "rect": {
+            "x": 340,
+            "y": 130,
+            "width": 760,
+            "height": 640,
+            "top": 130,
+            "right": 1100,
+            "bottom": 770,
+            "left": 340
+          }
+        }
+      ],
+      "text": "DeepSeekBot\n消息\n拖到此处置顶\n拖到此处取消置顶并回到原位\nDeepSeek Bot\n05:33\nWelcome to DeepSeek Bot\nBot 设置\nDeepSeek Bot\n2026年10月19日\nDeepSeek Bot\n05:33\nDeepSeek Bot\n专属 Bot\n你好，我是 DeepSeek Bot\n\n我是你的专属 Bot：有自己的记忆，可以帮你查资料、排计划、盯定时任务。这是我写给你的第一封信——选一个问题回信给我，我们就算认识了。\n\n—— 期待你的回信\n\n介绍一下你能帮我做什么\n看看今天的 AI 新闻\n每天晚上 9 点来和我打个招呼\n每天 21:00 · 当前私聊 · Asia/Tokyo\n10 分钟后提醒我测试定时任务\n只提醒一次 · 当前私聊 · Asia/Tokyo\n\n也可以直接在下方输入你的问题。\n\n选择模型\nDeepSeek V4.1 Flash · opencode-go\n创建 Bot\n\n预设欢迎信 · 由产品提供\n\nDeepSeek V4.1 Flash\n0 个工作区\n0\n会话\n\n当前没有可显示的会话。\n\nBot 收件箱\n\n当前 Channel 没有可显示的内容。\n\nBot 收件箱 opened\nBot 设置\n通用\n模型与运行\n自动审批\n消息\nIM 应用\nComputer\nBrowser\n窗口伙伴\n设备\n数据与隐私\n高级\n关于\n通用\n我的默认名字\n聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。\nBot 图标\n选择 Bot 在应用侧边栏与设置导航中使用的标记\nDeepSeekBot 吉祥物\nDeepSeekBot 简约\n生成形象\n通用机器人\n界面动效\n控制 BotHarness 中持续和空间动效的呈现方式\n动效预览 · 当前使用完整动效\n跟随系统\nBot 列表排序\n设置 Bot 模式列表的默认排序方式\n最近更新\n发送消息\n选择发送消息的按键，另一种组合用于换行\n↵\n发送\n·\n⇧\n↵\n换行\n在会话列表显示 Bot 会话\nBot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。\n在会话列表显示审批复核会话\n自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。\n桌面通知\n页面不在前台时，Bot 需要你审批、@你、回复你或在私聊里回复完成，会弹出系统通知。点击通知跳到对应消息。只对这个浏览器生效。\n键盘快捷键\n按 ? 或 Ctrl+/（Mac 上 ⌘+/）随时查看，导航快捷键可以修改。\n查看\n新手教程\n打开上手清单，或重新开始教程；不会影响 Bot 身份、记忆和已有对话。\n继续教程"
+    },
+    {
+      "label": "bot-settings-120",
+      "zoom": "1.2",
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "dialogs": [
+        {
+          "text": "Bot 设置通用模型与运行自动审批消息IM 应用ComputerBrowser窗口伙伴设备数据与隐私高级关于通用我的默认名字聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。Bot 图标选择 Bot 在应用侧边栏与设置导航中使用的",
+          "rect": {
+            "x": 264,
+            "y": 66,
+            "width": 912,
+            "height": 768,
+            "top": 66,
+            "right": 1176,
+            "bottom": 834,
+            "left": 264
+          }
+        }
+      ],
+      "text": "DeepSeekBot\n消息\n拖到此处置顶\n拖到此处取消置顶并回到原位\nDeepSeek Bot\n05:33\nWelcome to DeepSeek Bot\nBot 设置\nDeepSeek Bot\n2026年10月19日\nDeepSeek Bot\n05:33\nDeepSeek Bot\n专属 Bot\n你好，我是 DeepSeek Bot\n\n我是你的专属 Bot：有自己的记忆，可以帮你查资料、排计划、盯定时任务。这是我写给你的第一封信——选一个问题回信给我，我们就算认识了。\n\n—— 期待你的回信\n\n介绍一下你能帮我做什么\n看看今天的 AI 新闻\n每天晚上 9 点来和我打个招呼\n每天 21:00 · 当前私聊 · Asia/Tokyo\n10 分钟后提醒我测试定时任务\n只提醒一次 · 当前私聊 · Asia/Tokyo\n\n也可以直接在下方输入你的问题。\n\n选择模型\nDeepSeek V4.1 Flash · opencode-go\n创建 Bot\n\n预设欢迎信 · 由产品提供\n\nDeepSeek V4.1 Flash\n0 个工作区\n0\n会话\n\n当前没有可显示的会话。\n\nBot 收件箱\n\n当前 Channel 没有可显示的内容。\n\nBot 收件箱 opened\nBot 设置\n通用\n模型与运行\n自动审批\n消息\nIM 应用\nComputer\nBrowser\n窗口伙伴\n设备\n数据与隐私\n高级\n关于\n通用\n我的默认名字\n聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。\nBot 图标\n选择 Bot 在应用侧边栏与设置导航中使用的标记\nDeepSeekBot 吉祥物\nDeepSeekBot 简约\n生成形象\n通用机器人\n界面动效\n控制 BotHarness 中持续和空间动效的呈现方式\n动效预览 · 当前使用完整动效\n跟随系统\nBot 列表排序\n设置 Bot 模式列表的默认排序方式\n最近更新\n发送消息\n选择发送消息的按键，另一种组合用于换行\n↵\n发送\n·\n⇧\n↵\n换行\n在会话列表显示 Bot 会话\nBot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。\n在会话列表显示审批复核会话\n自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。\n桌面通知\n页面不在前台时，Bot 需要你审批、@你、回复你或在私聊里回复完成，会弹出系统通知。点击通知跳到对应消息。只对这个浏览器生效。\n键盘快捷键\n按 ? 或 Ctrl+/（Mac 上 ⌘+/）随时查看，导航快捷键可以修改。\n查看\n新手教程\n打开上手清单，或重新开始教程；不会影响 Bot 身份、记忆和已有对话。\n继续教程"
+    },
+    {
+      "label": "bot-settings-144",
+      "zoom": "1.44",
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "dialogs": [
+        {
+          "text": "Bot 设置通用模型与运行自动审批消息IM 应用ComputerBrowser窗口伙伴设备数据与隐私高级关于通用我的默认名字聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。Bot 图标选择 Bot 在应用侧边栏与设置导航中使用的",
+          "rect": {
+            "x": 172.796875,
+            "y": 34.546875,
+            "width": 1094.390625,
+            "height": 830.90625,
+            "top": 34.546875,
+            "right": 1267.1875,
+            "bottom": 865.453125,
+            "left": 172.796875
+          }
+        }
+      ],
+      "text": "DeepSeekBot\n消息\n拖到此处置顶\n拖到此处取消置顶并回到原位\nDeepSeek Bot\n05:33\nWelcome to DeepSeek Bot\nBot 设置\nDeepSeek Bot\n2026年10月19日\nDeepSeek Bot\n05:33\nDeepSeek Bot\n专属 Bot\n你好，我是 DeepSeek Bot\n\n我是你的专属 Bot：有自己的记忆，可以帮你查资料、排计划、盯定时任务。这是我写给你的第一封信——选一个问题回信给我，我们就算认识了。\n\n—— 期待你的回信\n\n介绍一下你能帮我做什么\n看看今天的 AI 新闻\n每天晚上 9 点来和我打个招呼\n每天 21:00 · 当前私聊 · Asia/Tokyo\n10 分钟后提醒我测试定时任务\n只提醒一次 · 当前私聊 · Asia/Tokyo\n\n也可以直接在下方输入你的问题。\n\n选择模型\nDeepSeek V4.1 Flash · opencode-go\n创建 Bot\n\n预设欢迎信 · 由产品提供\n\nDeepSeek V4.1 Flash\n0 个工作区\n0\n会话\n\n当前没有可显示的会话。\n\nBot 收件箱\n\n当前 Channel 没有可显示的内容。\n\nBot 收件箱 opened\nBot 设置\n通用\n模型与运行\n自动审批\n消息\nIM 应用\nComputer\nBrowser\n窗口伙伴\n设备\n数据与隐私\n高级\n关于\n通用\n我的默认名字\n聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。\nBot 图标\n选择 Bot 在应用侧边栏与设置导航中使用的标记\nDeepSeekBot 吉祥物\nDeepSeekBot 简约\n生成形象\n通用机器人\n界面动效\n控制 BotHarness 中持续和空间动效的呈现方式\n动效预览 · 当前使用完整动效\n跟随系统\nBot 列表排序\n设置 Bot 模式列表的默认排序方式\n最近更新\n发送消息\n选择发送消息的按键，另一种组合用于换行\n↵\n发送\n·\n⇧\n↵\n换行\n在会话列表显示 Bot 会话\nBot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。\n在会话列表显示审批复核会话\n自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。\n桌面通知\n页面不在前台时，Bot 需要你审批、@你、回复你或在私聊里回复完成，会弹出系统通知。点击通知跳到对应消息。只对这个浏览器生效。\n键盘快捷键\n按 ? 或 Ctrl+/（Mac 上 ⌘+/）随时查看，导航快捷键可以修改。\n查看\n新手教程\n打开上手清单，或重新开始教程；不会影响 Bot 身份、记忆和已有对话。\n继续教程"
+    },
+    {
+      "label": "bot-settings-83",
+      "zoom": "0.833333",
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "dialogs": [
+        {
+          "text": "Bot 设置通用模型与运行自动审批消息IM 应用ComputerBrowser窗口伙伴设备数据与隐私高级关于通用我的默认名字聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。Bot 图标选择 Bot 在应用侧边栏与设置导航中使用的",
+          "rect": {
+            "x": 403.328125,
+            "y": 183.328125,
+            "width": 633.328125,
+            "height": 533.328125,
+            "top": 183.328125,
+            "right": 1036.65625,
+            "bottom": 716.65625,
+            "left": 403.328125
+          }
+        }
+      ],
+      "text": "DeepSeekBot\n消息\n拖到此处置顶\n拖到此处取消置顶并回到原位\nDeepSeek Bot\n05:33\nWelcome to DeepSeek Bot\nBot 设置\nDeepSeek Bot\n2026年10月19日\nDeepSeek Bot\n05:33\nDeepSeek Bot\n专属 Bot\n你好，我是 DeepSeek Bot\n\n我是你的专属 Bot：有自己的记忆，可以帮你查资料、排计划、盯定时任务。这是我写给你的第一封信——选一个问题回信给我，我们就算认识了。\n\n—— 期待你的回信\n\n介绍一下你能帮我做什么\n看看今天的 AI 新闻\n每天晚上 9 点来和我打个招呼\n每天 21:00 · 当前私聊 · Asia/Tokyo\n10 分钟后提醒我测试定时任务\n只提醒一次 · 当前私聊 · Asia/Tokyo\n\n也可以直接在下方输入你的问题。\n\n选择模型\nDeepSeek V4.1 Flash · opencode-go\n创建 Bot\n\n预设欢迎信 · 由产品提供\n\nDeepSeek V4.1 Flash\n0 个工作区\n0\n会话\n\n当前没有可显示的会话。\n\nBot 收件箱\n\n当前 Channel 没有可显示的内容。\n\nBot 收件箱 opened\nBot 设置\n通用\n模型与运行\n自动审批\n消息\nIM 应用\nComputer\nBrowser\n窗口伙伴\n设备\n数据与隐私\n高级\n关于\n通用\n我的默认名字\n聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。\nBot 图标\n选择 Bot 在应用侧边栏与设置导航中使用的标记\nDeepSeekBot 吉祥物\nDeepSeekBot 简约\n生成形象\n通用机器人\n界面动效\n控制 BotHarness 中持续和空间动效的呈现方式\n动效预览 · 当前使用完整动效\n跟随系统\nBot 列表排序\n设置 Bot 模式列表的默认排序方式\n最近更新\n发送消息\n选择发送消息的按键，另一种组合用于换行\n↵\n发送\n·\n⇧\n↵\n换行\n在会话列表显示 Bot 会话\nBot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。\n在会话列表显示审批复核会话\n自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。\n桌面通知\n页面不在前台时，Bot 需要你审批、@你、回复你或在私聊里回复完成，会弹出系统通知。点击通知跳到对应消息。只对这个浏览器生效。\n键盘快捷键\n按 ? 或 Ctrl+/（Mac 上 ⌘+/）随时查看，导航快捷键可以修改。\n查看\n新手教程\n打开上手清单，或重新开始教程；不会影响 Bot 身份、记忆和已有对话。\n继续教程"
+    },
+    {
+      "label": "bot-settings-430",
+      "zoom": "4.29982",
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "dialogs": [
+        {
+          "text": "Bot 设置通用模型与运行自动审批消息IM 应用ComputerBrowser窗口伙伴设备数据与隐私高级关于通用我的默认名字聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。Bot 图标选择 Bot 在应用侧边栏与设置导航中使用的",
+          "rect": {
+            "x": 103.1875,
+            "y": 103.1875,
+            "width": 1233.625,
+            "height": 693.625,
+            "top": 103.1875,
+            "right": 1336.8125,
+            "bottom": 796.8125,
+            "left": 103.1875
+          }
+        }
+      ],
+      "text": "DeepSeekBot\n消息\n拖到此处置顶\n拖到此处取消置顶并回到原位\nDeepSeek Bot\n05:33\nWelcome to DeepSeek Bot\nBot 设置\nDeepSeek Bot\n2026年10月19日\nDeepSeek Bot\n05:33\nDeepSeek Bot\n专属 Bot\n你好，我是 DeepSeek Bot\n\n我是你的专属 Bot：有自己的记忆，可以帮你查资料、排计划、盯定时任务。这是我写给你的第一封信——选一个问题回信给我，我们就算认识了。\n\n—— 期待你的回信\n\n介绍一下你能帮我做什么\n看看今天的 AI 新闻\n每天晚上 9 点来和我打个招呼\n每天 21:00 · 当前私聊 · Asia/Tokyo\n10 分钟后提醒我测试定时任务\n只提醒一次 · 当前私聊 · Asia/Tokyo\n\n也可以直接在下方输入你的问题。\n\n选择模型\nDeepSeek V4.1 Flash · opencode-go\n创建 Bot\n\n预设欢迎信 · 由产品提供\n\nDeepSeek V4.1 Flash\n0 个工作区\n0\n会话\n\n当前没有可显示的会话。\n\nBot 收件箱\n\n当前 Channel 没有可显示的内容。\n\nBot 收件箱 opened\nBot 设置\n通用\n模型与运行\n自动审批\n消息\nIM 应用\nComputer\nBrowser\n窗口伙伴\n设备\n数据与隐私\n高级\n关于\n通用\n我的默认名字\n聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。\nBot 图标\n选择 Bot 在应用侧边栏与设置导航中使用的标记\nDeepSeekBot 吉祥物\nDeepSeekBot 简约\n生成形象\n通用机器人\n界面动效\n控制 BotHarness 中持续和空间动效的呈现方式\n动效预览 · 当前使用完整动效\n跟随系统\nBot 列表排序\n设置 Bot 模式列表的默认排序方式\n最近更新\n发送消息\n选择发送消息的按键，另一种组合用于换行\n↵\n发送\n·\n⇧\n↵\n换行\n在会话列表显示 Bot 会话\nBot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。\n在会话列表显示审批复核会话\n自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。\n桌面通知\n页面不在前台时，Bot 需要你审批、@你、回复你或在私聊里回复完成，会弹出系统通知。点击通知跳到对应消息。只对这个浏览器生效。\n键盘快捷键\n按 ? 或 Ctrl+/（Mac 上 ⌘+/）随时查看，导航快捷键可以修改。\n查看\n新手教程\n打开上手清单，或重新开始教程；不会影响 Bot 身份、记忆和已有对话。\n继续教程"
+    },
+    {
+      "label": "bot-settings-reset",
+      "zoom": "1",
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "dialogs": [
+        {
+          "text": "Bot 设置通用模型与运行自动审批消息IM 应用ComputerBrowser窗口伙伴设备数据与隐私高级关于通用我的默认名字聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。Bot 图标选择 Bot 在应用侧边栏与设置导航中使用的",
+          "rect": {
+            "x": 340,
+            "y": 130,
+            "width": 760,
+            "height": 640,
+            "top": 130,
+            "right": 1100,
+            "bottom": 770,
+            "left": 340
+          }
+        }
+      ],
+      "text": "DeepSeekBot\n消息\n拖到此处置顶\n拖到此处取消置顶并回到原位\nDeepSeek Bot\n05:33\nWelcome to DeepSeek Bot\nBot 设置\nDeepSeek Bot\n2026年10月19日\nDeepSeek Bot\n05:33\nDeepSeek Bot\n专属 Bot\n你好，我是 DeepSeek Bot\n\n我是你的专属 Bot：有自己的记忆，可以帮你查资料、排计划、盯定时任务。这是我写给你的第一封信——选一个问题回信给我，我们就算认识了。\n\n—— 期待你的回信\n\n介绍一下你能帮我做什么\n看看今天的 AI 新闻\n每天晚上 9 点来和我打个招呼\n每天 21:00 · 当前私聊 · Asia/Tokyo\n10 分钟后提醒我测试定时任务\n只提醒一次 · 当前私聊 · Asia/Tokyo\n\n也可以直接在下方输入你的问题。\n\n选择模型\nDeepSeek V4.1 Flash · opencode-go\n创建 Bot\n\n预设欢迎信 · 由产品提供\n\nDeepSeek V4.1 Flash\n0 个工作区\n0\n会话\n\n当前没有可显示的会话。\n\nBot 收件箱\n\n当前 Channel 没有可显示的内容。\n\nBot 收件箱 opened\nBot 设置\n通用\n模型与运行\n自动审批\n消息\nIM 应用\nComputer\nBrowser\n窗口伙伴\n设备\n数据与隐私\n高级\n关于\n通用\n我的默认名字\n聊天、提及和 Bot 上下文使用此名字；留空则使用默认名字。\nBot 图标\n选择 Bot 在应用侧边栏与设置导航中使用的标记\nDeepSeekBot 吉祥物\nDeepSeekBot 简约\n生成形象\n通用机器人\n界面动效\n控制 BotHarness 中持续和空间动效的呈现方式\n动效预览 · 当前使用完整动效\n跟随系统\nBot 列表排序\n设置 Bot 模式列表的默认排序方式\n最近更新\n发送消息\n选择发送消息的按键，另一种组合用于换行\n↵\n发送\n·\n⇧\n↵\n换行\n在会话列表显示 Bot 会话\nBot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。\n在会话列表显示审批复核会话\n自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。\n桌面通知\n页面不在前台时，Bot 需要你审批、@你、回复你或在私聊里回复完成，会弹出系统通知。点击通知跳到对应消息。只对这个浏览器生效。\n键盘快捷键\n按 ? 或 Ctrl+/（Mac 上 ⌘+/）随时查看，导航快捷键可以修改。\n查看\n新手教程\n打开上手清单，或重新开始教程；不会影响 Bot 身份、记忆和已有对话。\n继续教程"
+    }
+  ],
+  "console": []
+}

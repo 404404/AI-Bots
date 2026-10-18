@@ -1,0 +1,2070 @@
+{
+  "kind": "native-desktop-prototype",
+  "browser": "Chrome/152.0.7977.130",
+  "input": "CDP keyboard input, not physical keyboard/Human QA",
+  "steps": [
+    {
+      "label": "native-100-baseline",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "off",
+          "recording": false,
+          "composing": false,
+          "actions": [],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "DIV",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "reserved-equal",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "off",
+          "recording": false,
+          "composing": false,
+          "actions": [],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-edit",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "capture-120-input",
+      "probe": {
+        "state": {
+          "level": 1,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1.2",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 871.203125,
+        "y": 175.1953125,
+        "width": 240,
+        "height": 19.1953125
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 16.796875,
+          "y": 124.796875,
+          "width": 302.40625,
+          "height": 45.59375
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-edit",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "capture-144-control",
+      "probe": {
+        "state": {
+          "level": 2,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1.44",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 793.453125,
+        "y": 209.8203125,
+        "width": 288,
+        "height": 23.0390625
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 20.1484375,
+          "y": 149.7578125,
+          "width": 362.8984375,
+          "height": 54.71875
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "recording-protected",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": true,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "synthetic-composition-protected",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": true,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "embedded-100",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-local-equal",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-local",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-local-bridge-control",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-local",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-cross-equal",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-cross",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-cross-bridge-control",
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-cross",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "embedded-120",
+      "probe": {
+        "state": {
+          "level": 1,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-set-120",
+              "level": 1
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1.2",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 871.203125,
+        "y": 175.1953125,
+        "width": 240,
+        "height": 19.1953125
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 16.796875,
+          "y": 124.796875,
+          "width": 302.40625,
+          "height": 45.59375
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-cross",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 871.203125,
+            "y": 272.578125,
+            "width": 316,
+            "height": 124
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 871.203125,
+            "y": 401.578125,
+            "width": 316,
+            "height": 124
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 871.203125,
+            "y": 530.578125,
+            "width": 312,
+            "height": 120
+          }
+        }
+      ]
+    }
+  ],
+  "console": []
+}

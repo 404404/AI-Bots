@@ -1,0 +1,16 @@
+[
+  {
+    "keyCode": "Y",
+    "level": 0,
+    "events": [],
+    "focus": "zoom-cross",
+    "guestZoom": 1
+  },
+  {
+    "keyCode": "=",
+    "level": 0,
+    "events": [],
+    "focus": "zoom-cross",
+    "guestZoom": 1
+  }
+]

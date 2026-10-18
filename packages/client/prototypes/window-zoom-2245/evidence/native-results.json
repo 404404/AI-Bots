@@ -1,0 +1,4213 @@
+{
+  "kind": "native-desktop-prototype",
+  "browser": "Chrome/152.0.7977.130",
+  "input": "CDP keyboard input, not physical keyboard/Human QA",
+  "steps": [
+    {
+      "label": "native-100-baseline",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "14px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(12px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(15px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "off",
+          "recording": false,
+          "composing": false,
+          "actions": [],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "DIV",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "main-native-positive-control",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "14px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(12px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(15px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "off",
+          "recording": false,
+          "composing": false,
+          "actions": [],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-edit",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "reserved-equal",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "off",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-edit",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "capture-120-input",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "14px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(12px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(15px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 1,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1.2",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 871.203125,
+        "y": 175.1953125,
+        "width": 240,
+        "height": 19.1953125
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 16.796875,
+          "y": 124.796875,
+          "width": 302.40625,
+          "height": 45.59375
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-edit",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "capture-144-control",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "14px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "15px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(12px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(15px - 1px), max(13px, calc(15px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(15px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(15px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 2,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1.44",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 793.453125,
+        "y": 209.8203125,
+        "width": 288,
+        "height": 23.0390625
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 20.1484375,
+          "y": 149.7578125,
+          "width": 362.8984375,
+          "height": 54.71875
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "recording-protected",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": true,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "synthetic-composition-protected",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": true,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": []
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": []
+    },
+    {
+      "label": "embedded-100",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": [],
+          "guestReady": true
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-plus",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-local-equal",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": [],
+          "guestReady": true
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-local",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-local-bridge-control",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": [],
+          "guestReady": true
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-local",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-cross-equal",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": [],
+          "guestReady": true
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-cross",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "zoom-prototype-cross-bridge-control",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 0,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            }
+          ],
+          "errors": [],
+          "guestReady": true
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 936,
+        "y": 145,
+        "width": 200,
+        "height": 16
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 14,
+          "y": 104,
+          "width": 252,
+          "height": 38
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-cross",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 936,
+            "y": 226,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 936,
+            "y": 334,
+            "width": 264,
+            "height": 104
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 936,
+            "y": 442,
+            "width": 260,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "label": "embedded-120",
+      "focused": true,
+      "fontTokens": [
+        [
+          "font-size",
+          "16px"
+        ],
+        [
+          "font-size-adjust",
+          "none"
+        ],
+        [
+          "--dsw-font-markdown-table-head-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-base-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsh-terminal-font-size",
+          "15px"
+        ],
+        [
+          "--dsh-code-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h1-font-size",
+          "calc(21px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h4-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xl-24-font-size",
+          "24px"
+        ],
+        [
+          "--dsw-font-s-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-markdown-base-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-small-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxxs-strong-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-s-strong-14-font-size",
+          "14px"
+        ],
+        [
+          "--dsw-font-xxs-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-code-block-small-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-xxs-strong-12-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-italic-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-base-strong-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xs-strong-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsh-content-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-l-20-font-size",
+          "20px"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-small-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsw-font-markdown-table-font-size",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-markdown-code-font-size",
+          "calc(12px + calc(13px - 11px))"
+        ],
+        [
+          "--dsw-font-markdown-small-strong-italic-font-size",
+          "12px"
+        ],
+        [
+          "--dsh-content-font-size-secondary",
+          "min(calc(16px - 1px), max(13px, calc(16px - 2px)))"
+        ],
+        [
+          "--dsw-font-xs-13-font-size",
+          "13px"
+        ],
+        [
+          "--dsw-font-markdown-h3-font-size",
+          "calc(18px + calc(16px - 14px))"
+        ],
+        [
+          "--dsw-font-base-strong-16-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-xxxs-11-font-size",
+          "11px"
+        ],
+        [
+          "--dsw-font-m-18-font-size",
+          "16px"
+        ],
+        [
+          "--dsw-font-markdown-h2-font-size",
+          "calc(19px + calc(16px - 14px))"
+        ]
+      ],
+      "probe": {
+        "state": {
+          "level": 1,
+          "mode": "capture",
+          "recording": false,
+          "composing": false,
+          "actions": [
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "capture",
+              "level": 1
+            },
+            {
+              "source": "control",
+              "level": 2
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-reset",
+              "level": 0
+            },
+            {
+              "source": "driver-set-120",
+              "level": 1
+            }
+          ],
+          "errors": [],
+          "guestReady": true
+        },
+        "catalog": [
+          {
+            "id": "zoomPrototype.increase",
+            "binding": {
+              "code": "Equal",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.increase"
+            ],
+            "label": "ZOOM PROTOTYPE increase",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "="
+            ]
+          },
+          {
+            "id": "zoomPrototype.decrease",
+            "binding": {
+              "code": "Minus",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [
+              "fontSize.decrease"
+            ],
+            "label": "ZOOM PROTOTYPE decrease",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "-"
+            ]
+          },
+          {
+            "id": "zoomPrototype.bridgeControl",
+            "binding": {
+              "code": "KeyY",
+              "modifiers": [
+                "meta"
+              ]
+            },
+            "modified": false,
+            "issue": null,
+            "conflicts": [],
+            "label": "ZOOM PROTOTYPE bridgeControl",
+            "aliases": [],
+            "keys": [
+              "⌘",
+              "Y"
+            ],
+            "aria": "Meta+Y"
+          }
+        ],
+        "fixed": [
+          {
+            "id": "fontSize.increase",
+            "label": "增大字号",
+            "keys": [
+              "⌘",
+              "="
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "meta"
+                ]
+              },
+              {
+                "code": "Equal",
+                "modifiers": [
+                  "shift",
+                  "meta"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fontSize.decrease",
+            "label": "减小字号",
+            "keys": [
+              "⌘",
+              "-"
+            ],
+            "group": "application",
+            "bindings": [
+              {
+                "code": "Minus",
+                "modifiers": [
+                  "meta"
+                ]
+              }
+            ]
+          }
+        ],
+        "config": "ready"
+      },
+      "zoom": "1.2",
+      "viewport": [
+        1261,
+        820
+      ],
+      "document": [
+        1261,
+        820
+      ],
+      "ruler": {
+        "x": 871.203125,
+        "y": 175.1953125,
+        "width": 240,
+        "height": 19.1953125
+      },
+      "nativeButton": {
+        "rect": {
+          "x": 16.796875,
+          "y": 124.796875,
+          "width": 302.40625,
+          "height": 45.59375
+        },
+        "font": "14px"
+      },
+      "focus": "zoom-cross",
+      "value": "保留这段输入",
+      "embeds": [
+        {
+          "id": "zoom-local",
+          "rect": {
+            "x": 871.203125,
+            "y": 272.578125,
+            "width": 316,
+            "height": 124
+          }
+        },
+        {
+          "id": "zoom-cross",
+          "rect": {
+            "x": 871.203125,
+            "y": 401.578125,
+            "width": 316,
+            "height": 124
+          }
+        },
+        {
+          "id": "zoom-guest",
+          "rect": {
+            "x": 871.203125,
+            "y": 530.578125,
+            "width": 312,
+            "height": 120
+          }
+        }
+      ]
+    }
+  ],
+  "console": [],
+  "targets": [
+    {
+      "type": "browser",
+      "url": ""
+    },
+    {
+      "type": "page",
+      "url": "dsh-app://app/"
+    },
+    {
+      "type": "webview",
+      "url": "http://127.0.0.1:39446/"
+    },
+    {
+      "type": "other",
+      "url": "http://127.0.0.1:39446/"
+    }
+  ],
+  "guest": {
+    "url": "http://127.0.0.1:39446/",
+    "zoom": 1,
+    "methods": [
+      [
+        "sendInputEvent",
+        "function"
+      ],
+      [
+        "executeJavaScript",
+        "function"
+      ],
+      [
+        "getZoomFactor",
+        "function"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "embedded-100": {
+    "rgb": [
+      55,
+      126,
+      127
+    ],
+    "rulersTopToBottom": [
+      {
+        "top": 472,
+        "bottom": 501,
+        "width": 200,
+        "left": 1892
+      },
+      {
+        "top": 688,
+        "bottom": 717,
+        "width": 200,
+        "left": 1892
+      },
+      {
+        "top": 900,
+        "bottom": 929,
+        "width": 200,
+        "left": 1888
+      }
+    ]
+  },
+  "embedded-120": {
+    "rgb": [
+      55,
+      126,
+      127
+    ],
+    "rulersTopToBottom": [
+      {
+        "top": 568,
+        "bottom": 603,
+        "width": 240,
+        "left": 1765
+      },
+      {
+        "top": 826,
+        "bottom": 858,
+        "width": 240,
+        "left": 1765
+      },
+      {
+        "top": 1080,
+        "bottom": 1115,
+        "width": 240,
+        "left": 1761
+      }
+    ]
+  }
+}
