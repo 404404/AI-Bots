@@ -544,6 +544,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/memory-diffs.md",
       "task": 2213,
       "gap": null
+    },
+    {
+      "id": "desktop.memory.png-preview",
+      "label": "Read and compare version-bound Memory PNG images with real Web decoding and CLI export",
+      "source": "packages/client/src/client/memory-image-view.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
+      "task": 2214,
+      "gap": "First Web PNG slice only; other formats, Markdown and mobile remain in #2214."
     }
   ],
   "scripts": [
@@ -1812,6 +1820,14 @@
       "reason": "Isolated synthetic Memory repository; real Client checks both diff entry points, wrap/scroll switching, five-digit gutters, narrow panes, light/dark themes and browser errors.",
       "task": 2213,
       "sha256": "d0777a9dfd7bb30de5a23f03be842de9fde975a391e64a32c61123a44103294e"
+    },
+    {
+      "path": "scripts/e2e-memory-images.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.png-preview"],
+      "reason": "Task-owned isolated Host, synthetic Git fixture, current/working/history Web decode and image exports with unauthenticated-route refusal.",
+      "task": 2214,
+      "sha256": "9684512792bcea2179b176cf7dbfd8a2e3c0db5cf5a694a7cda740cd9634e3f8"
     }
   ],
   "native": [

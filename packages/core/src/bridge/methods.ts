@@ -681,9 +681,15 @@ export interface BridgeMethods {
   channelMediaTarget(payload: unknown): Promise<BridgeResult<{ target: MemoryFileTarget }>>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memorySnapshot(payload: unknown): BridgeResult<{ snapshot: MemoryAcceptedSnapshot }>;
-  memoryFile(
-    payload: unknown,
-  ): BridgeResult<{ file?: { path: string; body: string; head: string } }>;
+  memoryFile(payload: unknown): BridgeResult<{
+    file?: {
+      path: string;
+      body: string;
+      head: string;
+      binary?: boolean;
+      image?: import('../memory/image.js').MemoryImage;
+    };
+  }>;
   memoryHistory(payload: unknown): BridgeResult<{ commits: MemoryAcceptedCommit[] }>;
   memoryDiff(payload: unknown): BridgeResult<{ sha: string; diff: string }>;
   memoryGitGraph(payload: unknown): BridgeResult<MemoryGitGraph>;

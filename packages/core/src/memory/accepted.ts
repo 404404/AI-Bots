@@ -1,3 +1,9 @@
+import {
+  readMemoryImage,
+  MemoryImageError,
+  type MemoryImage,
+  type MemoryImageComparison,
+} from './image.js';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -135,7 +141,7 @@ export interface MemoryGitGraph {
 export interface MemoryGitCommitDiff {
   sha: string;
   subject: string;
-  files: { path: string; status: string }[];
+  files: { path: string; status: string; images?: MemoryImageComparison }[];
   diff: string;
 }
 
@@ -148,6 +154,7 @@ export interface MemoryWorkingChange {
 }
 
 export interface MemoryWorkingDiff extends MemoryWorkingChange {
+  images?: MemoryImageComparison;
   diff: string;
   binary: boolean;
 }
@@ -190,7 +197,10 @@ export interface MemoryAcceptance {
   readAccepted(
     botSlug: string,
     path: string,
-  ): { path: string; body: string; head: string; binary?: boolean } | undefined;
+  ):
+    | { path: string; body: string; head: string; binary?: boolean; image?: MemoryImage }
+    | undefined;
+  imageFile(botSlug: string, path: string, source: string, revision: string): Buffer;
   history(botSlug: string, limit?: number): MemoryAcceptedCommit[];
   diff(botSlug: string, sha: string): { sha: string; diff: string };
   gitGraph(botSlug: string, offset?: number): MemoryGitGraph;
@@ -1484,11 +1494,33 @@ export function createMemoryAcceptance(options: {
         ),
       };
     },
+    imageFile(botSlug, path, source, revision) {
+      if (!/^[0-9a-f]{64}$/u.test(revision))
+        throw new MemoryImageError('memory-image-invalid', 'Invalid image content revision');
+      const { image, bytes } = readMemoryImage(graphRepository(botSlug), path, source, run);
+      if (image.status !== 'ready' || bytes === undefined)
+        throw new MemoryImageError(
+          `memory-image-${image.status}`,
+          'Image is unavailable or cannot be previewed',
+        );
+      if (image.revision !== revision)
+        throw new MemoryImageError('memory-image-stale', 'Image changed; refresh the view');
+      return bytes;
+    },
     readAccepted(botSlug, path) {
       const { root } = readRepository(botSlug);
       const relative = toMemoryRelativePath(path);
       const target = resolveMemoryPath(root, relative);
       if (!existsSync(target) || !statSync(target).isFile()) return undefined;
+      if (/\.png$/iu.test(relative)) {
+        return {
+          path: relative,
+          body: '',
+          head: head(root),
+          binary: true,
+          image: readMemoryImage(root, relative, 'worktree', run).image,
+        };
+      }
       const fileSize = statSync(target).size;
       if (fileSize > MAX_DIFF_BYTES) {
         return { path: relative, body: '', head: head(root), binary: true };
@@ -1628,7 +1660,22 @@ export function createMemoryAcceptance(options: {
         .filter(Boolean);
       const files: MemoryGitCommitDiff['files'] = [];
       for (let index = 0; index < nameStatus.length; index += 2) {
-        files.push({ status: nameStatus[index] ?? '', path: nameStatus[index + 1] ?? '' });
+        const status = nameStatus[index] ?? '';
+        const path = nameStatus[index + 1] ?? '';
+        files.push({
+          status,
+          path,
+          ...(/\.png$/iu.test(path)
+            ? {
+                images: {
+                  ...(status === 'A' || firstParent === undefined
+                    ? {}
+                    : { before: readMemoryImage(root, path, firstParent, run).image }),
+                  ...(status === 'D' ? {} : { after: readMemoryImage(root, path, sha, run).image }),
+                },
+              }
+            : {}),
+        });
       }
       return {
         sha,
@@ -1672,6 +1719,23 @@ export function createMemoryAcceptance(options: {
           : phases.find((entry) => entry.kind === kind);
       if (change === undefined) {
         throw new MemoryAcceptError('memory-invalid', 'Memory working change no longer exists');
+      }
+      if (/\.png$/iu.test(relative)) {
+        const oldSource = kind === 'unstaged' ? 'index' : head(root);
+        const newSource = kind === 'staged' ? 'index' : 'worktree';
+        return {
+          ...change,
+          diff: '',
+          binary: true,
+          images: {
+            ...(change.status === 'A' || kind === 'untracked'
+              ? {}
+              : { before: readMemoryImage(root, relative, oldSource, run).image }),
+            ...(change.status === 'D'
+              ? {}
+              : { after: readMemoryImage(root, relative, newSource, run).image }),
+          },
+        };
       }
       if (kind !== 'untracked' && !(kind === 'current' && phases[0]?.kind === 'untracked')) {
         const diff = output(root, [
