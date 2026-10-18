@@ -34,7 +34,7 @@
 - QQ 受检消费者可转交普通群文字，用于当前接收器的真实资格核验和按会话显式收集。现有 Observation 与条数／时间聚合将收集和同 App 主动参与分开；屏蔽接收期间的旧事件不会证明重新允许会话后的收件资格。产品以独立版本 `4.32.0-botharness.21` 集成已核验的 Provider，真实应用与 Client 验收单独记录（[#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155)）。
 - Web 客户端也能停止 PersonaBot。私聊或群组频道里有 Bot 在思考或工作、且输入框为空时，发送按钮会变成 **停止**，按下后结束该 Bot 当前这一轮，与手机端的停止相同。在群组频道里会停止所有正在工作的 Bot。开始输入后按钮变回发送，你仍可以改为发消息引导 Bot（[#1721](https://github.com/BotHarness/DeepSeekBot/issues/1721)）。
 - 把文件拖到会话任意位置即可添加附件，拖动时会出现放置区域（[#1725](https://github.com/BotHarness/DeepSeekBot/issues/1725)）。
-- 设置 → 消息 → 发送消息 以键帽显示，可选 ↵ 或 ⌘ ↵（Windows 和 Linux 上为 Ctrl ↵）发送，另一种组合用于换行（[#1726](https://github.com/BotHarness/DeepSeekBot/issues/1726)）。
+- 设置 → 消息 → 发送消息提供 Enter、Shift+Enter 及 ⌘/Ctrl+Enter，使用键帽显示，并匹配相应的换行行为（[#1726](https://github.com/BotHarness/DeepSeekBot/issues/1726)）。
 - 输入框新增 / 命令：私聊里的 `/memory`、`/sessions`，以及私聊和群聊都有的 `/profile`、`/settings`、`/sidebar`（[#1727](https://github.com/BotHarness/DeepSeekBot/issues/1727)）。
 - 你发的消息如果用了 Markdown（代码块、行内代码、粗体、列表、标题、引用、链接、表格），现在会按格式显示，并保留你输入的换行（[#1728](https://github.com/BotHarness/DeepSeekBot/issues/1728)）。
 - Bot 模式下按 Ctrl+K（macOS 为 ⌘K）可打开快速切换：输入 PersonaBot、群聊或频道名称的一部分（支持中文名），用方向键选择、回车打开，效果与点击侧边栏对应行相同。搜索为空时列出最近的会话，隐藏的频道排在最后；在输入框里打字时也可使用该快捷键（[#1740](https://github.com/BotHarness/DeepSeekBot/issues/1740)）。
