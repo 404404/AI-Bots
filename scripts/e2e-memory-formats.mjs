@@ -292,25 +292,50 @@ try {
       await openFile(`animated.${ext}`);
       await decoded();
       const values = new Set();
-      for (let i = 0; i < 20; i++) {
-        values.add(
-          await page.$eval('.bh-memory-commit-view img', (image) => {
-            const c = document.createElement('canvas');
-            c.width = image.naturalWidth;
-            c.height = image.naturalHeight;
-            const x = c.getContext('2d');
-            x.drawImage(image, 0, 0);
-            return [...x.getImageData(1, 1, 1, 1).data].join(',');
-          }),
+      const seen = new Set();
+      for (let i = 0; i < 16; i++) {
+        const point = await page.$eval('.bh-memory-commit-view img', (image) => {
+          const rect = image.getBoundingClientRect();
+          return {
+            x: Math.floor(rect.x + rect.width / 4) - 326,
+            y: Math.floor(rect.y + rect.height / 4),
+          };
+        });
+        const shot = await page.screenshot({
+          clip: { x: 326, y: 0, width: 1114, height: 1000 },
+          captureBeyondViewport: false,
+          encoding: 'base64',
+        });
+        const pixel = await page.evaluate(
+          async (encoded, point) => {
+            const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
+            const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 1;
+            const context = canvas.getContext('2d');
+            context.drawImage(bitmap, point.x, point.y, 1, 1, 0, 0, 1, 1);
+            bitmap.close();
+            return [...context.getImageData(0, 0, 1, 1).data];
+          },
+          shot,
+          point,
         );
+        values.add(pixel.join(','));
+        const color =
+          pixel[3] === 255 && pixel[2] > pixel[0] + 70
+            ? 'blue'
+            : pixel[3] === 255 && pixel[0] > pixel[2] + 70
+              ? 'orange'
+              : undefined;
+        if (color && !seen.has(color)) {
+          seen.add(color);
+          writeFileSync(resolve(out, `animated-${ext}-${color}.png`), Buffer.from(shot, 'base64'));
+        }
         await new Promise((r) => setTimeout(r, 65));
       }
-      const opaque = [...values]
-        .map((value) => value.split(',').map(Number))
-        .filter((pixel) => pixel[3] === 255);
-      if (!opaque.some(([r, , b]) => b > r + 70) || !opaque.some(([r, , b]) => r > b + 70))
+      if (seen.size !== 2)
         throw new Error(
-          `Animation did not show both opaque fixture frames: ${ext}: ${[...values]}`,
+          `Animation did not show both rendered fixture frames: ${ext}: ${[...values]}`,
         );
       animations[ext] = [...values];
       await capture(`animated-${ext}`);
