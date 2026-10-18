@@ -18,6 +18,12 @@ Use `(instanceId, organizationId)` keys so identical names across self-hosted se
 
 ## Create, share, join
 
+The primary channel-list action is **Create or join**: Create channel, Join with invitation (paste URL or scan), and a secondary Connect cloud service option for users who only have a deployment address. The service instance is not the collaboration destination and must not become a compulsory server-management step. A direct invitation carries the target through necessary instance trust and sign-in; the user then confirms and lands in that channel. A bare service address can connect an instance but cannot grant organization or channel membership.
+
+The join preview shows organization name/icon, channel name and cloud mark, explicit organization-versus-channel-only access, service domain, current instance account, and Join/Open/Sign in as appropriate. Only disclose metadata the service authorizes; a recipient-bound invitation can show a neutral sign-in preview until verified. Keep the pending target across browser return and cold launch, without redirecting a cloud-only user to computer pairing. Wrong-account, expired/revoked and unavailable-service states preserve a clear recovery path. Registration may provision a default organization internally, but joining an invitation must not detour into creating/configuring that organization.
+
+[Slack/Discord primary-source research](../research/2026-10-18-cloud-join-ux.md) supports combining create/join and destination-first invitation flows. Discord's channel-created invite still joins its server; TOB's channel-only access instead resembles Slack guest scope. Slack Connect is not the current non-federated design. Invitation QR display/save is our proposed representation of the same scoped URL, not a claim that both reference products provide that exact flow.
+
 Organization creation leads to its channels and a Share organization action. Channel creation opens the conversation with Share channel. Existing destinations expose the same actions in their details/menu. Sharing uses one sheet with a visible target and scope:
 
 | Scope        | Recipient gets                                                                   |
