@@ -1,5 +1,6 @@
 import type { Tokens } from 'marked';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, type ReactNode } from 'react';
+import type { Token } from 'marked';
 import { ScrollView, View } from 'react-native';
 
 import { edge, markdownTable, radius, space } from './design/tokens';
@@ -14,6 +15,7 @@ const TableRow = memo(function TableRow({
   color,
   header,
   last,
+  renderCell,
 }: {
   cells: string;
   widths: string;
@@ -21,6 +23,7 @@ const TableRow = memo(function TableRow({
   color: string;
   header: boolean;
   last: boolean;
+  renderCell?: ((tokens: Token[], heading: boolean) => ReactNode) | undefined;
 }) {
   const theme = useDesignTheme();
   const values: Tokens.TableCell[] = useMemo(() => JSON.parse(cells), [cells]);
@@ -48,21 +51,33 @@ const TableRow = memo(function TableRow({
             borderRightColor: theme.layer.raised.divider,
           }}
         >
-          <Text
-            variant="meta"
-            strong={header}
-            style={{ color, textAlign: alignment[index] ?? 'left' }}
-            {...(header ? { accessibilityRole: 'header' as const } : {})}
-          >
-            {renderMarkdownInline(values[index]?.tokens ?? [], theme)}
-          </Text>
+          {renderCell ? (
+            renderCell(values[index]?.tokens ?? [], header)
+          ) : (
+            <Text
+              variant="meta"
+              strong={header}
+              style={{ color, textAlign: alignment[index] ?? 'left' }}
+              {...(header ? { accessibilityRole: 'header' as const } : {})}
+            >
+              {renderMarkdownInline(values[index]?.tokens ?? [], theme)}
+            </Text>
+          )}
         </View>
       ))}
     </View>
   );
 });
 
-export function MarkdownTable({ table, color }: { table: Tokens.Table; color: string }) {
+export function MarkdownTable({
+  table,
+  color,
+  renderCell,
+}: {
+  table: Tokens.Table;
+  color: string;
+  renderCell?: ((tokens: Token[], heading: boolean) => ReactNode) | undefined;
+}) {
   const theme = useDesignTheme();
   const widths = JSON.stringify(
     table.header.map((_, index) => {
@@ -96,6 +111,7 @@ export function MarkdownTable({ table, color }: { table: Tokens.Table; color: st
           widths={widths}
           align={align}
           color={color}
+          renderCell={renderCell}
           header
           last={table.rows.length === 0}
         />
@@ -106,6 +122,7 @@ export function MarkdownTable({ table, color }: { table: Tokens.Table; color: st
             widths={widths}
             align={align}
             color={color}
+            renderCell={renderCell}
             header={false}
             last={index === table.rows.length - 1}
           />

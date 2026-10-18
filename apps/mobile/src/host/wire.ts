@@ -165,6 +165,25 @@ export interface MemoryFile {
   body: string;
   head: string;
   binary?: boolean;
+  image?: MemoryImage;
+  markdown?: MemoryMarkdown;
+}
+
+export interface MemoryImage {
+  source: string;
+  status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
+  revision?: string;
+  mime?: 'image/png';
+  size?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface MemoryMarkdown {
+  source: string;
+  status: MemoryImage['status'];
+  revision?: string;
+  body: string;
 }
 
 export type ScheduleTrigger =

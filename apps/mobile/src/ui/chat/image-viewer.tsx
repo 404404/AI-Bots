@@ -218,7 +218,7 @@ function ZoomableImage({
                 <Image
                   source={attachment.source}
                   recyclingKey={attachment.key}
-                  cachePolicy="memory-disk"
+                  cachePolicy={attachment.local ? 'none' : 'memory-disk'}
                   contentFit="contain"
                   accessibilityLabel={attachment.name}
                   accessibilityHint={t.viewerHint}

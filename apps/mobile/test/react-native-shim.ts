@@ -120,7 +120,7 @@ export const Switch = (props: Props) =>
 
 export const FlatList = (props: {
   data: unknown[];
-  keyExtractor(item: unknown): string;
+  keyExtractor(item: unknown, index: number): string;
   renderItem(info: { item: unknown; index: number }): ReactNode;
   ListHeaderComponent?: ReactNode;
   ListFooterComponent?: ReactNode;
@@ -136,7 +136,7 @@ export const FlatList = (props: {
       : props.data.map((item, index) =>
           createElement(
             Fragment,
-            { key: props.keyExtractor(item) },
+            { key: props.keyExtractor(item, index) },
             props.renderItem({ item, index }),
           ),
         )),
