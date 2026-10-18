@@ -1,48 +1,50 @@
-import { useContext } from 'react';
-import { Pressable, View } from 'react-native';
+import { useContext, useMemo } from 'react';
+import { Lexer } from 'marked';
+import remend from 'remend';
 
+import { botNameColor } from '../../../../../packages/client/src/client/bot-name-color';
 import type { ConversationMessage } from '../../host/conversation';
 import type { WireMention } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
+import { botColor } from '../bot-color';
 import { useDesignTheme } from '../design/theme';
-import { radius, space } from '../design/tokens';
+import { radius } from '../design/tokens';
+import { textMarkdownSupported } from '../markdown-blocks';
+import { renderMarkdownInline } from '../markdown-inline';
 import { MarkdownView } from '../markdown-view';
-import { Text } from '../primitives/text';
+import { InlineText, Text } from '../primitives/text';
 import { t } from '../strings';
 import { MessageIdentities } from './message-identities';
 import { leadingMessageMentions, messageMentionRuns, mentionIdentity } from './message-mentions';
 
-const AVATAR = 20;
-function MentionBadge({ mention }: { mention: WireMention }) {
+const TINTED = process.env.EXPO_PUBLIC_MENTION_STYLE === 'tint';
+
+function Mention({ mention, background }: { mention: WireMention; background: string }) {
   const theme = useDesignTheme();
   const { bots, openBot } = useContext(MessageIdentities);
   const { label, bot } = mentionIdentity(mention, bots);
   const enabled = bot !== undefined && openBot !== undefined;
+  const size = theme.type.body.size * theme.fontScale;
+  const fill = TINTED ? theme.layer.raised.inset : background;
   return (
-    <Pressable
-      disabled={!enabled}
-      accessibilityRole={enabled ? 'link' : 'text'}
-      accessibilityLabel={enabled ? t.openMention(label) : `@${label}`}
-      onPress={() => {
-        if (bot !== undefined) openBot?.(bot.slug);
+    <InlineText
+      {...(enabled
+        ? {
+            accessibilityRole: 'link' as const,
+            accessibilityLabel: t.openMention(label),
+            onPress: () => openBot(bot.slug),
+          }
+        : {})}
+      style={{
+        color: bot === undefined ? theme.color.fg : botNameColor(botColor(bot), fill),
+        fontWeight: theme.weight.strong,
+        ...(TINTED ? { backgroundColor: fill, borderRadius: radius.xs } : {}),
       }}
-      style={({ pressed }) => ({
-        maxWidth: '100%',
-        minHeight: theme.touch,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: space.x2,
-        paddingHorizontal: space.x3,
-        paddingVertical: space.x1,
-        borderRadius: radius.sm,
-        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.inset,
-      })}
     >
-      {bot === undefined ? null : <BotAvatar bot={bot} size={AVATAR} ring={false} />}
-      <Text strong style={{ flexShrink: 1 }}>
-        @{label}
-      </Text>
-    </Pressable>
+      {bot === undefined ? null : <BotAvatar bot={bot} size={size} ring={false} />}
+      {'\u00a0'}@{label}
+      {'\u00a0'}
+    </InlineText>
   );
 }
 
@@ -56,40 +58,55 @@ export function MessageBody({
   const theme = useDesignTheme();
   const human = message.author === 'human';
   const ink = human ? 'onAccent' : 'fg';
+  const background = human ? theme.color.accent : theme.color.surface;
   const leading = leadingMessageMentions(message.body, message.mentions);
   const text = leading?.text ?? message.body;
+  const markdown = useMemo(() => {
+    if (human || leading === undefined) return undefined;
+    const source = streaming ? remend(text) : text;
+    const first = Lexer.lex(source, { gfm: true })[0];
+    return first?.type === 'paragraph' && textMarkdownSupported([first])
+      ? { first, rest: source.slice(first.raw.length) }
+      : undefined;
+  }, [human, leading === undefined, text, streaming]);
+  if (human)
+    return (
+      <Text tone={ink}>
+        {messageMentionRuns(message.body, message.mentions).map((run, index) =>
+          run.mention === undefined ? (
+            run.text
+          ) : (
+            <Mention key={index} mention={run.mention} background={background} />
+          ),
+        )}
+      </Text>
+    );
+  if (leading === undefined)
+    return text.trim() === '' ? (
+      streaming ? (
+        <Text tone="muted">…</Text>
+      ) : null
+    ) : (
+      <MarkdownView
+        source={text}
+        color={theme.color[ink]}
+        selectable={false}
+        streaming={streaming}
+      />
+    );
   return (
     <>
-      {leading === undefined ? null : (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.x2 }}>
-          {leading.mentions.map((mention) => (
-            <MentionBadge key={mention.start} mention={mention} />
-          ))}
-        </View>
-      )}
-      {text.trim() === '' ? (
-        streaming ? (
-          <Text tone="muted">…</Text>
-        ) : null
-      ) : human ? (
-        <View
-          style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.x1 }}
-        >
-          {messageMentionRuns(text, leading === undefined ? message.mentions : []).map(
-            (run, index) => {
-              if (run.mention === undefined)
-                return (
-                  <Text key={index} tone={ink} style={{ flexShrink: 1 }}>
-                    {run.text}
-                  </Text>
-                );
-              return <MentionBadge key={index} mention={run.mention} />;
-            },
-          )}
-        </View>
-      ) : (
+      <Text tone={ink}>
+        {leading.mentions.map((mention) => (
+          <Mention key={mention.start} mention={mention} background={background} />
+        ))}
+        {markdown === undefined
+          ? null
+          : renderMarkdownInline(markdown.first.tokens ?? [], theme, false, theme.color[ink])}
+      </Text>
+      {(markdown?.rest ?? (markdown === undefined ? text : '')).trim() === '' ? null : (
         <MarkdownView
-          source={text}
+          source={markdown?.rest ?? text}
           color={theme.color[ink]}
           selectable={false}
           streaming={streaming}
