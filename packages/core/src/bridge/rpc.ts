@@ -115,7 +115,11 @@ import type {
   BotScheduleTrigger,
 } from '../schedules/bot-schedules.js';
 import type { BotSourcePolicy } from '../runtime/source-policy.js';
-import type { HumanAttentionCategory, HumanAttentionPage } from '../runtime/human-attention.js';
+import type {
+  HumanAttentionCategory,
+  HumanAttentionPage,
+  HumanAttentionStatus,
+} from '../runtime/human-attention.js';
 import type {
   MemoryAcceptedCommit,
   MemoryAcceptedSnapshot,
@@ -1295,8 +1299,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
       }),
     );
   }
-  humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
-    return unwrap(this.methods.humanAttentionStatus({}));
+  humanAttentionStatus(messageCounts?: boolean): HumanAttentionStatus {
+    return unwrap(this.methods.humanAttentionStatus({ messageCounts }));
   }
   channelUnreadCounts(): { channels: Array<{ channelId: string; unreadCount: number }> } {
     return unwrap(this.methods.channelUnreadCounts({}));

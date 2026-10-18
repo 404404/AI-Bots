@@ -388,6 +388,8 @@ deepseekbot private-mcp-set <bot-id> --server <name> --enabled
 deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
 
+`inbox-status` requests the complete message-category summary and returns `unreadCount`, `hasAction` and, on a supporting Host, `messageCounts: { replies, other }`. The categories partition distinct unread Source Events after visibility and Channel mute rules; read retained personal messages and handled requests do not trigger a message indicator. These are complete counts, independent of Activity pagination or browser filters. A legacy Host may omit `messageCounts`; missing data is not zero. The control-rail indicator preference is browser/Host-origin-local presentation and does not change this CLI state.
+
 `inbox-watch` subscribes to the existing authenticated roster stream before its baseline read. It observes for 1–60 seconds (default 10), then emits one JSON document with `initial`, `current` and the number of `invalidations`. Both snapshots use the same Human Inbox query and filters as `inbox`; intermediate events are invalidations, not a second notification store. An interrupted stream is a coded refusal. Set `--timeout` longer than the observation window.
 
 `inbox --search <text>` searches safe Activity summaries, Channel names and Bot slugs before pagination (maximum 200 characters). `--unread` restricts personal messages to unread entries and leaves pending actions intact. `--sort newest|oldest` orders each category; `--category replies --sort mentions-first` puts mentions before replies. Keep filters unchanged when using `--cursor`. Search, unread filtering and mention ordering require query version 1; an older Host fails with `host-query-unsupported` instead of returning partial results.
