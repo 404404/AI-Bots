@@ -1111,9 +1111,9 @@
       "path": "scripts/e2e-fresh-profile-install.mjs",
       "category": "historical-regression",
       "behaviors": ["product.fresh-install"],
-      "reason": "Exact prepared artifact manifest and fresh output directory; installs/restarts real Host, creates Bot/DM; no Client check.",
+      "reason": "Exact prepared artifacts and fresh Profile; installs/restarts real Host, rejects native preflight plugin disablement, creates Bot/DM; no Client check.",
       "task": 1980,
-      "sha256": "8cee7c889b55c115cba0c17d0057a9a79a60e1aa643051e35c80509cbf1eec5b"
+      "sha256": "15d101840fae11397b69a8b516ac992bfcd3221dde767ffdf1040e234a6cc16b"
     },
     {
       "path": "scripts/e2e-grant-attention.mjs",

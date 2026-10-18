@@ -1,3 +1,4 @@
+import { isAuthenticatedOwner } from './owner-compat.js';
 import type { CloudManagementInput, CloudManagementResult } from '../cloud/management.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
@@ -401,8 +402,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
 
   private requirePrivateOwner(): void {
-    const operator = (this.ctx.get('connection') as { operator?: unknown } | undefined)?.operator;
-    if (operator === undefined || this.ctx.invocation?.peer !== operator)
+    if (!isAuthenticatedOwner(this.ctx.invocation?.peer, this.ctx.get('connection')))
       throw new RemoteError(
         'forbidden' as RemoteError['code'],
         'Private input requires the authenticated Owner',
@@ -1711,8 +1711,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.releaseInfo(since === undefined ? {} : { since }));
   }
 
-  async releaseUpdate(): Promise<ReleaseUpdate> {
-    return unwrapAsync(this.methods.releaseUpdate());
+  async releaseUpdate(force?: boolean): Promise<ReleaseUpdate> {
+    return unwrapAsync(this.methods.releaseUpdate({ force }));
   }
 
   async releaseInstall(version: string): Promise<ReleaseInstall> {
