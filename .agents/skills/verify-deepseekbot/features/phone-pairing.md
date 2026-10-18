@@ -15,7 +15,7 @@ A Human pairs the phone app with their Host by a one-time QR code, and the phone
 ## How to get to it (user POV)
 
 - Computer: Bot mode → settings → Devices → Pair a phone. The dialog shows the QR code and a copy link; the Devices list has Revoke.
-- Phone: the app opens on "Pair with your computer"; scan the code or paste the link, then tap Pair.
+- Phone: first use opens "Pair with your computer". From an existing session: Workspaces → Computers or Cloud → Add → Pair a new computer. Scan the code or paste the link, then tap Pair. Add → Join by link or QR is the separate cloud invitation path; its preview identifies organization membership versus one-channel guest access. Cancel Add returns to the same drawer tab.
 
 ## Driving it with verify-app
 
