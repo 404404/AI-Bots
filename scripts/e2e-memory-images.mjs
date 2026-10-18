@@ -114,6 +114,9 @@ const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', 
 const page = await browser.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
+page.on('console', (message) => {
+  if (message.type() === 'error') errors.push(message.text().slice(0, 1000));
+});
 const cdp = await page.createCDPSession();
 await cdp.send('Emulation.setUserAgentOverride', {
   userAgent: await browser.userAgent(),

@@ -1811,7 +1811,7 @@
       "behaviors": ["desktop.memory.png-preview"],
       "reason": "Task-owned isolated Host, synthetic Git fixture, current/working/history Web decode and image exports with unauthenticated-route refusal.",
       "task": 2214,
-      "sha256": "a0b71a025ba1958b304c5d1c6c17fd623bae79c5859d2d421f302a2f2b52521e"
+      "sha256": "9684512792bcea2179b176cf7dbfd8a2e3c0db5cf5a694a7cda740cd9634e3f8"
     }
   ],
   "native": [

@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "issue": 2214,
+  "baseSourceSha": "1cf4705feb0717fbd7bcce6128200e6746003871",
+  "productSourceSha": "e65d05fa4a205b20eed61f330af6168f2d53914a",
+  "evidenceCommitScope": "Following commit adds captures and browser-console diagnostics; product Host/Client/CLI sources match productSourceSha.",
+  "checks": {
+    "lint": "passed",
+    "format": "passed",
+    "typecheck": "passed",
+    "focusedTests": 105,
+    "build": "passed"
+  },
+  "runtime": {
+    "result": "pass",
+    "metadataAndByteExports": [
+      {
+        "label": "current",
+        "source": "worktree",
+        "revision": "5e24a2657bc82c4cf045d04f6d38bf0a5ec1c8d52da18f83a406863857464410"
+      },
+      {
+        "label": "working-before",
+        "source": "aa40989d834a17f69af0b06463f7784dc0a2691c",
+        "revision": "d827eb144f8efb8a6ee68e6649403baf645cab41f382c1007afde48670ef588b"
+      },
+      {
+        "label": "working-after",
+        "source": "worktree",
+        "revision": "5e24a2657bc82c4cf045d04f6d38bf0a5ec1c8d52da18f83a406863857464410"
+      },
+      {
+        "label": "history-before",
+        "source": "09462251c4173c91706ce5d650399db56441f0df",
+        "revision": "31449c997aa7d1b397708e4f7843529e4721c44e94c8bb8f8ba6ba90618fbe2e"
+      },
+      {
+        "label": "history-after",
+        "source": "aa40989d834a17f69af0b06463f7784dc0a2691c",
+        "revision": "d827eb144f8efb8a6ee68e6649403baf645cab41f382c1007afde48670ef588b"
+      },
+      {
+        "label": "staged-before",
+        "source": "aa40989d834a17f69af0b06463f7784dc0a2691c",
+        "revision": "d827eb144f8efb8a6ee68e6649403baf645cab41f382c1007afde48670ef588b"
+      },
+      {
+        "label": "staged-after",
+        "source": "index",
+        "revision": "31449c997aa7d1b397708e4f7843529e4721c44e94c8bb8f8ba6ba90618fbe2e"
+      },
+      {
+        "label": "unstaged-before",
+        "source": "index",
+        "revision": "31449c997aa7d1b397708e4f7843529e4721c44e94c8bb8f8ba6ba90618fbe2e"
+      },
+      {
+        "label": "unstaged-after",
+        "source": "worktree",
+        "revision": "5e24a2657bc82c4cf045d04f6d38bf0a5ec1c8d52da18f83a406863857464410"
+      }
+    ],
+    "staleContentRefusal": "memory-image-stale",
+    "unauthenticatedStatus": 401,
+    "browser": "Chrome/153.0.8010.36",
+    "pageErrors": []
+  },
+  "narrowLayout": [
+    {
+      "x": 29,
+      "y": 122,
+      "width": 642,
+      "height": 419.125
+    },
+    {
+      "x": 29,
+      "y": 557.125,
+      "width": 642,
+      "height": 419.125
+    }
+  ],
+  "limits": {
+    "humanQA": "pending",
+    "native": "not in Web slice",
+    "merge": "not authorized",
+    "remainingScope": "Other image formats, Markdown, editor/file cards and mobile remain in #2214."
+  },
+  "screenshots": {
+    "after-current-dark.png": "741d8f019d21e4b2b8ad697e292cc62ce7d2e0041cceb54b767ad82959a6d479",
+    "after-current-light.png": "6714a4742f443edd8181b1283bcc45f5528ac90bfdc84cba243862da584e382f",
+    "after-enlarged.png": "bd4ffd310190249798cf71600b85e8eec559147ca7eabafece4be3789a11fe42",
+    "after-history-dark.png": "655ecc2d250be726724bd1e19de27e11c85a2e8ce07951b052e1b7a8e2baf56c",
+    "after-working-dark.png": "6f1fff5f341fcbf75bd94bebc24ddfe02f158fca276781fa3c74d9db39adca17",
+    "after-working-narrow.png": "fa3780060dadfdfbf4f26e44a5d4a9a9477ded14c246740742f4b61537b3ebee",
+    "before-current-dark.png": "6bd1f5348aa2d49afb00f747b62b46685352b5b382069c44579658aaf52cab79",
+    "before-current-light.png": "ccf77007b8bff119ac655085127eb2354b70bcd722da4a281e53b4b2adc373e8",
+    "before-history-dark.png": "0929604991990cd9199fffbd14b481c9b519c40dcf1ed24e0eece46ef5ef1658",
+    "before-working-dark.png": "b15861e082f94306749e65c671aae812bce75ea4ef9b136d56c47b3bbf1ea97c",
+    "before-working-narrow.png": "e7810831d0165c2285b315fd1738e7ecedbae219c24c0a9499f57c00e4779609"
+  }
+}
