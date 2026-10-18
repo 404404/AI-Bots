@@ -31,3 +31,9 @@ After verified cloud identity, the client calls the instance onboarding endpoint
 ## Channel guest extension
 
 Direct channel invitations reuse CloudClient and independent WorkOS sessions, but acceptance never selects or joins the host organization. The app offers a separate guest-channel entry; TOB Channel DO grants are the authority. Owner issuance persists an operation bound to user, organization, channel and email. Guest sends use a distinct `guest.send` pending scope, so a retry cannot accidentally become an organization-member request. The server enforces the grant's message-sequence history floor and current revocation on every read/send. Public invitation identifiers are not credentials. This initial inbox path targets existing verified users and does not claim email delivery or new-account registration.
+
+### Channel Agent credential handoff
+
+The mobile cloud client can provision an Agent through TOB's owner-authorized channel API. It persists a random secret, stable actor operation and target identity in the existing SecureStore vault before issuance; only the secret hash is transmitted at creation. Public snapshots omit the secret. A single outstanding handoff is retained across restart until explicitly cleared, revoked or the Human signs out; this does not add another credential authority.
+
+Explicit Copy credential replays owner-authorized issuance to verify current rights, then exports the trusted instance configuration and this channel credential to the clipboard. It never exports a Human session or WorkOS key. Clearing the local copy is distinct from revoking the remote credential. Agent read/send scope confers neither organization membership nor local work authority. Channel lists and responses still use TOB's current server checks; no DSH transport is introduced here.

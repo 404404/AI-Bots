@@ -21,6 +21,10 @@ export const cloudClient = new CloudClient({
         encoding: Crypto.CryptoEncoding.BASE64,
       }),
     ),
+  digest: (value) =>
+    Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value, {
+      encoding: Crypto.CryptoEncoding.HEX,
+    }),
   now: () => Date.now(),
   request: async (url, init) => {
     return fetch(url, { ...init, signal: AbortSignal.timeout(15000) });

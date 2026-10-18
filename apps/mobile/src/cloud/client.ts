@@ -1,3 +1,4 @@
+import { parseAgent, parseAgentHandoff, validAgentId, type AgentHandoff } from './agent-contract';
 import {
   parseInvitation,
   parsePendingInvitation,
@@ -34,6 +35,7 @@ export type Organization = {
   role: 'owner' | 'member';
 };
 type Entry = {
+  agentHandoff?: AgentHandoff | undefined;
   config: InstanceConfig;
   session?: Session;
   pendingCreate?: { name: string; operation: string } | undefined;
@@ -42,6 +44,7 @@ type Entry = {
 };
 type Vault = { version: 1; entries: Entry[] };
 export type CloudRow = {
+  agentHandoff?: Omit<AgentHandoff, 'secret'> | undefined;
   config: InstanceConfig;
   hasSession: boolean;
   identity?: Identity | undefined;
@@ -62,6 +65,7 @@ export interface CloudRuntime {
   request(url: string, init?: RequestInit): Promise<Response>;
   random(): string;
   challenge(verifier: string): Promise<string>;
+  digest(value: string): Promise<string>;
   authorize(url: string, callback: string): Promise<string | null>;
   now(): number;
 }
@@ -169,6 +173,17 @@ export class CloudClient {
         pendingCreate: e.pendingCreate,
         pendingChannelAction: e.pendingChannelAction,
         pendingInvitation: e.pendingInvitation,
+        agentHandoff: e.agentHandoff
+          ? {
+              actorId: e.agentHandoff.actorId,
+              organizationId: e.agentHandoff.organizationId,
+              channelId: e.agentHandoff.channelId,
+              ownerUserId: e.agentHandoff.ownerUserId,
+              name: e.agentHandoff.name,
+              operationId: e.agentHandoff.operationId,
+              ready: e.agentHandoff.ready,
+            }
+          : undefined,
         identity: this.identities.get(e.config.instanceId),
         organization: this.organizations.get(e.config.instanceId),
       })),
@@ -223,6 +238,7 @@ export class CloudClient {
               pendingCreate,
               pendingChannelAction: parsePendingChannelAction(e.pendingChannelAction),
               pendingInvitation: parsePendingInvitation(e.pendingInvitation),
+              agentHandoff: parseAgentHandoff(e.agentHandoff),
               session: {
                 ...session,
                 userId: saved.userId as string | undefined,
@@ -725,6 +741,131 @@ export class CloudClient {
         ),
       ),
     );
+  listAgents = (id: string, organizationId: string, channelId: string, after?: string) =>
+    this.lock(async () => {
+      const entry = await this.channelEntry(id, organizationId);
+      if (!validChannelId(channelId) || (after && !validAgentId(after)))
+        return fail('INVALID_AGENT_INPUT');
+      const value = await this.orgRequest(
+        entry,
+        '/' +
+          organizationId +
+          '/channels/' +
+          channelId +
+          '/agents' +
+          (after ? '?after=' + after : ''),
+      );
+      if (
+        !Array.isArray(value.agents) ||
+        value.agents.length > 50 ||
+        (value.nextCursor !== null && !validAgentId(value.nextCursor))
+      )
+        return fail('INVALID_AGENT_RESPONSE');
+      const agents = value.agents.map(parseAgent);
+      if (new Set(agents.map((a) => a.actorId)).size !== agents.length)
+        return fail('INVALID_AGENT_RESPONSE');
+      return { agents, nextCursor: value.nextCursor as string | null };
+    });
+  createAgent = (id: string, organizationId: string, channelId: string, name: string) =>
+    this.lock(async () => {
+      let entry = await this.channelEntry(id, organizationId);
+      name = name.trim();
+      if (
+        !validChannelId(channelId) ||
+        !name ||
+        name.length > 80 ||
+        Array.from(name).some((c) => c.charCodeAt(0) < 32)
+      )
+        return fail('INVALID_AGENT_INPUT');
+      let action = entry.agentHandoff;
+      if (
+        action &&
+        (action.ownerUserId !== entry.session!.userId ||
+          action.organizationId !== organizationId ||
+          action.channelId !== channelId ||
+          action.name !== name)
+      )
+        return fail('AGENT_HANDOFF_PENDING');
+      if (!action) {
+        const operationId = this.rt.random();
+        action = {
+          actorId:
+            'ag_' +
+            (await this.rt.digest(JSON.stringify([channelId, entry.session!.userId, operationId]))),
+          organizationId,
+          channelId,
+          ownerUserId: entry.session!.userId!,
+          name,
+          operationId,
+          secret: await this.rt.digest(this.rt.random()),
+          ready: false,
+        };
+        parseAgentHandoff(action);
+        await this.save({ ...entry, agentHandoff: action });
+        entry = this.entry(id);
+      }
+      const agent = parseAgent(
+        await this.orgRequest(entry, '/' + organizationId + '/channels/' + channelId + '/agents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': action.operationId },
+          body: JSON.stringify({ name, secretHash: await this.rt.digest(action.secret) }),
+        }),
+      );
+      if (
+        agent.actorId !== action.actorId ||
+        agent.name !== name ||
+        agent.ownerUserId !== action.ownerUserId
+      )
+        return fail('INVALID_AGENT_RESPONSE');
+      if (agent.state !== 'active') return fail('AGENT_ACCESS_DENIED');
+      await this.save({ ...this.entry(id), agentHandoff: { ...action, ready: true } });
+      return agent;
+    });
+  exportAgentCredential = async (
+    id: string,
+    organizationId: string,
+    channelId: string,
+    name: string,
+  ) => {
+    // Replays owner-authorized issuance before handing out the locally saved key.
+    await this.createAgent(id, organizationId, channelId, name);
+    return this.lock(async () => {
+      const entry = await this.channelEntry(id, organizationId),
+        action = entry.agentHandoff;
+      if (
+        !action?.ready ||
+        action.channelId !== channelId ||
+        action.organizationId !== organizationId ||
+        action.ownerUserId !== entry.session!.userId ||
+        action.name !== name.trim()
+      )
+        return fail('AGENT_HANDOFF_PENDING');
+      const { ready: _ready, ...credential } = action;
+      return JSON.stringify({ version: 1, config: entry.config, ...credential });
+    });
+  };
+  clearAgentHandoff = (id: string) =>
+    this.lock(async () => {
+      const entry = this.entry(id);
+      await this.save({ ...entry, agentHandoff: undefined });
+    });
+  revokeAgent = (id: string, organizationId: string, channelId: string, actorId: string) =>
+    this.lock(async () => {
+      const entry = await this.channelEntry(id, organizationId);
+      if (!validChannelId(channelId) || !validAgentId(actorId)) return fail('INVALID_AGENT_INPUT');
+      const agent = parseAgent(
+        await this.orgRequest(
+          entry,
+          '/' + organizationId + '/channels/' + channelId + '/agents/' + actorId + '/revoke',
+          { method: 'POST' },
+        ),
+      );
+      if (agent.actorId !== actorId || agent.state !== 'revoked')
+        return fail('INVALID_AGENT_RESPONSE');
+      if (entry.agentHandoff?.actorId === actorId)
+        await this.save({ ...this.entry(id), agentHandoff: undefined });
+      return agent;
+    });
   listInvitations = (
     id: string,
     organizationId?: string,

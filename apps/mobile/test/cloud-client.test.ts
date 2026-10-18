@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   CloudClient,
@@ -44,6 +45,7 @@ function fixture() {
     now: () => 1000000,
     random: () => 'random-verifier-or-state-43-characters-00000000',
     challenge: async () => 's256-challenge',
+    digest: async (value) => createHash('sha256').update(value).digest('hex'),
     authorize: async (url) => {
       state.browserUrl = url;
       return state.cancelled
@@ -249,71 +251,68 @@ describe('mobile cloud session boundary', () => {
   });
 });
 
+function organizationsFixture() {
+  const f = fixture();
+  const original = f.rt.request;
+  const state = {
+    selected: '',
+    role: 'owner',
+    version: 1,
+    description: '',
+    loseCreate: false,
+    denied: false,
+    mismatch: false,
+  };
+  const operations: string[] = [];
+  f.rt.request = async (url, init) => {
+    if (url === config.auth.tokenEndpoint) {
+      const id = new URLSearchParams(String(init?.body)).get('organization_id');
+      if (id) state.selected = id;
+    }
+    if (!url.includes('/api/organizations')) return original(url, init);
+    if (state.denied)
+      return Response.json({ error: { code: 'ORGANIZATION_ACCESS_DENIED' } }, { status: 403 });
+    const org = {
+      organizationId: state.mismatch ? 'org_wrong' : 'org_a',
+      name: 'Mobile project',
+      description: state.description,
+      version: state.version,
+      role: state.role,
+    };
+    if (url.endsWith('/access'))
+      return Response.json({ organizationId: 'org_a', role: state.role });
+    if (init?.method === 'POST') {
+      operations.push(new Headers(init.headers).get('Idempotency-Key')!);
+      if (state.loseCreate) {
+        state.loseCreate = false;
+        throw new Error('response lost');
+      }
+      return Response.json({ created: true, organizationId: 'org_a' });
+    }
+    if (url.endsWith('/org_a')) {
+      if (state.selected !== 'org_a')
+        return Response.json({ error: { code: 'ORGANIZATION_TOKEN_REQUIRED' } }, { status: 403 });
+      if (init?.method === 'PATCH') {
+        if (state.role !== 'owner')
+          return Response.json({ error: { code: 'ORGANIZATION_OWNER_REQUIRED' } }, { status: 403 });
+        const body = JSON.parse(String(init.body));
+        if (body.version !== state.version)
+          return Response.json(
+            { error: { code: 'ORGANIZATION_VERSION_CONFLICT' } },
+            { status: 409 },
+          );
+        state.description = body.description;
+        state.version++;
+        org.description = state.description;
+        org.version = state.version;
+      }
+      return Response.json(org);
+    }
+    return Response.json({ organizations: [org], nextCursor: null });
+  };
+  return { ...f, state, operations };
+}
 describe('cloud organizations', () => {
-  function organizationsFixture() {
-    const f = fixture();
-    const original = f.rt.request;
-    const state = {
-      selected: '',
-      role: 'owner',
-      version: 1,
-      description: '',
-      loseCreate: false,
-      denied: false,
-      mismatch: false,
-    };
-    const operations: string[] = [];
-    f.rt.request = async (url, init) => {
-      if (url === config.auth.tokenEndpoint) {
-        const id = new URLSearchParams(String(init?.body)).get('organization_id');
-        if (id) state.selected = id;
-      }
-      if (!url.includes('/api/organizations')) return original(url, init);
-      if (state.denied)
-        return Response.json({ error: { code: 'ORGANIZATION_ACCESS_DENIED' } }, { status: 403 });
-      const org = {
-        organizationId: state.mismatch ? 'org_wrong' : 'org_a',
-        name: 'Mobile project',
-        description: state.description,
-        version: state.version,
-        role: state.role,
-      };
-      if (url.endsWith('/access'))
-        return Response.json({ organizationId: 'org_a', role: state.role });
-      if (init?.method === 'POST') {
-        operations.push(new Headers(init.headers).get('Idempotency-Key')!);
-        if (state.loseCreate) {
-          state.loseCreate = false;
-          throw new Error('response lost');
-        }
-        return Response.json({ created: true, organizationId: 'org_a' });
-      }
-      if (url.endsWith('/org_a')) {
-        if (state.selected !== 'org_a')
-          return Response.json({ error: { code: 'ORGANIZATION_TOKEN_REQUIRED' } }, { status: 403 });
-        if (init?.method === 'PATCH') {
-          if (state.role !== 'owner')
-            return Response.json(
-              { error: { code: 'ORGANIZATION_OWNER_REQUIRED' } },
-              { status: 403 },
-            );
-          const body = JSON.parse(String(init.body));
-          if (body.version !== state.version)
-            return Response.json(
-              { error: { code: 'ORGANIZATION_VERSION_CONFLICT' } },
-              { status: 409 },
-            );
-          state.description = body.description;
-          state.version++;
-          org.description = state.description;
-          org.version = state.version;
-        }
-        return Response.json(org);
-      }
-      return Response.json({ organizations: [org], nextCursor: null });
-    };
-    return { ...f, state, operations };
-  }
   it('creates, selects through WorkOS refresh, updates, and revalidates the same organization after restart', async () => {
     const f = organizationsFixture();
     const client = new CloudClient(f.rt);
@@ -784,4 +783,112 @@ it('ordinary user onboarding retains a retryable session and does not display ad
       .filter((c) => c.url.endsWith('/api/onboarding'))
       .every((c) => c.init?.method === 'POST'),
   ).toBe(true);
+});
+
+describe('channel Agent private handoff', () => {
+  it('persists before issuance, retries after restart, hides secrets and requires current owner before copy', async () => {
+    const f = organizationsFixture(),
+      original = f.rt.request;
+    const channelId = 'ch_' + 'a'.repeat(64);
+    let lose = true,
+      denied = false,
+      revoked = false;
+    const payloads: string[] = [];
+    f.rt.request = async (url, init) => {
+      if (!url.includes('/agents')) return original(url, init);
+      if (denied)
+        return Response.json({ error: { code: 'ORGANIZATION_OWNER_REQUIRED' } }, { status: 403 });
+      const saved = JSON.parse(f.stored()!).entries[0].agentHandoff;
+      const row = {
+        actorId: saved.actorId,
+        kind: 'agent',
+        name: saved.name,
+        ownerUserId: saved.ownerUserId,
+        scopes: ['messages:read', 'messages:send'],
+        state: revoked ? 'revoked' : 'active',
+        historyAfter: 3,
+        expiresAt: '2030-01-01T00:00:00Z',
+      };
+      if (url.endsWith('/revoke')) {
+        revoked = true;
+        return Response.json({ ...row, state: 'revoked' });
+      }
+      if (init?.method === 'POST') {
+        const payload = String(init.body);
+        payloads.push(payload);
+        expect(payload).not.toContain(saved.secret);
+        expect(JSON.parse(payload).secretHash).toBe(await f.rt.digest(saved.secret));
+        if (lose) {
+          lose = false;
+          throw Error('response lost');
+        }
+        return Response.json(row);
+      }
+      return Response.json({ agents: [row], nextCursor: null });
+    };
+    let client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    await client.useOrganization(config.instanceId, 'org_a');
+    await expect(
+      client.createAgent(config.instanceId, 'org_a', channelId, 'Echo agent'),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    const saved = JSON.parse(f.stored()!).entries[0].agentHandoff;
+    expect(JSON.stringify(client.getSnapshot())).not.toContain(saved.secret);
+    client = new CloudClient(f.rt);
+    await client.load();
+    await client.whoami(config.instanceId);
+    await expect(
+      client.createAgent(config.instanceId, 'org_a', 'ch_' + 'b'.repeat(64), 'Echo agent'),
+    ).rejects.toMatchObject({ code: 'AGENT_HANDOFF_PENDING' });
+    await client.createAgent(config.instanceId, 'org_a', channelId, 'Echo agent');
+    expect(payloads[0]).toBe(payloads[1]);
+    expect(
+      (await client.listAgents(config.instanceId, 'org_a', channelId)).agents[0]?.actorId,
+    ).toBe(saved.actorId);
+    const exported = JSON.parse(
+      await client.exportAgentCredential(config.instanceId, 'org_a', channelId, 'Echo agent'),
+    );
+    expect(exported.secret).toBe(saved.secret);
+    expect(exported.config).toEqual(config);
+    expect(exported.ready).toBeUndefined();
+    denied = true;
+    await expect(
+      client.exportAgentCredential(config.instanceId, 'org_a', channelId, 'Echo agent'),
+    ).rejects.toMatchObject({ code: 'ORGANIZATION_OWNER_REQUIRED' });
+    denied = false;
+    await client.revokeAgent(config.instanceId, 'org_a', channelId, saved.actorId);
+    expect(client.getSnapshot().rows[0]?.agentHandoff).toBeUndefined();
+    expect(f.stored()).not.toContain(saved.secret);
+  });
+  it('never issues when secure persistence fails and clears saved handoff on logout', async () => {
+    const f = organizationsFixture(),
+      original = f.rt.request;
+    let writes = 0;
+    f.rt.request = async (url, init) => {
+      if (url.includes('/agents')) {
+        writes++;
+        throw Error('response lost');
+      }
+      return original(url, init);
+    };
+    await f.client.importConfig(JSON.stringify(config));
+    await f.client.login(config.instanceId);
+    await f.client.useOrganization(config.instanceId, 'org_a');
+    const save = f.rt.write;
+    f.rt.write = async () => {
+      throw Error('secure storage unavailable');
+    };
+    await expect(
+      f.client.createAgent(config.instanceId, 'org_a', 'ch_' + 'a'.repeat(64), 'Echo'),
+    ).rejects.toBeDefined();
+    expect(writes).toBe(0);
+    f.rt.write = save;
+    await expect(
+      f.client.createAgent(config.instanceId, 'org_a', 'ch_' + 'a'.repeat(64), 'Echo'),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    const secret = JSON.parse(f.stored()!).entries[0].agentHandoff.secret;
+    await f.client.logout(config.instanceId);
+    expect(f.stored()).not.toContain(secret);
+  });
 });

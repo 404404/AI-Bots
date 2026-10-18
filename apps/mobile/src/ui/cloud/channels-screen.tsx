@@ -168,6 +168,23 @@ function ChannelWorkspace({
             <>
               <Text variant="title">{selected.name}</Text>
               {guest && <Text>{t.cloudGuests.hint}</Text>}
+              {!guest && (
+                <Button
+                  label={t.cloudAgents.title}
+                  disabled={busy}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/cloud-agents',
+                      params: {
+                        instanceId,
+                        organizationId,
+                        channelId: selected.channelId,
+                        channelName: selected.name,
+                      },
+                    })
+                  }
+                />
+              )}
               {!guest && row.organization?.role === 'owner' && (
                 <Button
                   label={t.cloudGuests.manage}
