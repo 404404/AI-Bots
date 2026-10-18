@@ -2345,6 +2345,23 @@ const GROUP_SEND_REVIEW_MIGRATION: SchemaMigration = {
   },
 };
 
+const CLOUD_CONNECTION_MIGRATION: SchemaMigration = {
+  generation: 100,
+  module: 'messaging',
+  description: 'Track explicit cloud Agent connections without storing secret values',
+  migrate(database) {
+    database.exec(`CREATE TABLE cloud_connections (
+      id TEXT PRIMARY KEY,
+      connection_json TEXT NOT NULL,
+      credential_revision TEXT NOT NULL,
+      active INTEGER NOT NULL CHECK (active IN (0,1)),
+      cursor INTEGER NOT NULL CHECK (cursor >= 0),
+      policy_json TEXT NOT NULL,
+      revision INTEGER NOT NULL CHECK (revision >= 1)
+    );`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2444,4 +2461,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   BOT_CREATION_OPERATION_MIGRATION,
   CHANNEL_MANAGEMENT_OPERATION_MIGRATION,
   GROUP_SEND_REVIEW_MIGRATION,
+  CLOUD_CONNECTION_MIGRATION,
 ]);

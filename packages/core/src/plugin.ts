@@ -1,3 +1,5 @@
+import { CloudConnections } from './cloud/connections.js';
+import { createCloudProvider } from './cloud/provider.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
 import {
   createTobChannelOperations,
@@ -369,6 +371,7 @@ export interface BotHarnessCore {
   humanAttentionDecisions: HumanAttentionDecisions;
   grants: WorkspaceGrantStore;
   externalMessaging: OutboundMessaging;
+  cloudConnections?: CloudConnections;
   toolRules: ToolApprovalRuleStore;
   assignmentAccess: AssignmentAccessStore;
 }
@@ -1337,6 +1340,21 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     secretMcpStore,
   );
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
+  const cloudConnections = new CloudConnections(
+    attachOperationalModule(core.operationalDatabase, 'messaging'),
+    () => ctx.get('credentials'),
+    undefined,
+    (phase, id) => ctx.logger.info('cloud-connection %j', { phase, id }),
+  );
+  core.cloudConnections = cloudConnections;
+  ctx.effect(() => () => cloudConnections.close(), 'botharness: cloud connections');
+  ctx.effect(() =>
+    core.externalMessaging.register(
+      createCloudProvider(cloudConnections, (phase, id, code) =>
+        ctx.logger.info('cloud-messaging %j', { phase, id, code }),
+      ),
+    ),
+  );
   ctx.inject(['dshIm'], (child) => {
     for (const platform of ['feishu', 'slack', 'discord', 'weixin', 'qq'] as const) {
       const provider = createDshImProvider(child.get('dshIm'), platform);
@@ -1962,6 +1980,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     release: releaseService,
   });
   const bridgeMethods = createBridgeMethods({
+    cloudConnections,
     approvalReviewer,
     composerIdentity: () =>
       composerRecoveryIdentity(

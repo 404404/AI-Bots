@@ -1,3 +1,4 @@
+import type { CloudManagementInput, CloudManagementResult } from '../cloud/management.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
@@ -500,6 +501,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
     input: MessagingIdentityInput,
   ): Promise<{ identity: MessagingIdentity }> {
     return unwrapAsync(this.methods.messagingIdentity({ slug, input }));
+  }
+  cloudConnections(input: CloudManagementInput): Promise<CloudManagementResult> {
+    return unwrapAsync(this.methods.cloudConnections(input));
   }
   messagingApps(): Promise<MessagingAppsView> {
     return unwrapAsync(this.methods.messagingApps());
@@ -1790,6 +1794,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'failureAlertsRetry',
   'pairingReview',
   'senderAccess',
+  'cloudConnections',
   'messagingApps',
   'messagingSnapshot',
   'messagingTargets',

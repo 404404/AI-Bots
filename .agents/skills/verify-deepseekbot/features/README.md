@@ -52,6 +52,7 @@ The check fails for a missing feature row, required section, local link or scrip
 an index row's scripted journeys disagree with its feature file. It runs in lint. Passing
 checks only reference integrity: update and run the affected paths when the product changes.
 
+| Cloud Agent Host connections | yes for Agent response; no for credential management | isolated Host plus real TOB UAT, two Hosts for collaboration | [cloud-host-connections.md](cloud-host-connections.md) |
 | IM conversation mirroring and forwarding settings | no for settings; yes for a model-generated reply | `verify-app` settings path; real IM destination required for delivery | [im-conversation-mirroring.md](im-conversation-mirroring.md) |
 
 ## Not mapped yet
