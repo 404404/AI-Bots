@@ -276,14 +276,14 @@ try {
     node.closest('.bh-memory-diff-file').scrollIntoView({ block: 'start' }),
   );
   if (!before)
-    await page.waitForFunction(() =>
-      [
-        ...document
-          .querySelector('.bh-memory-diff-file-name[title="preview.webp"]')
-          .closest('.bh-memory-diff-file')
-          .querySelectorAll('img'),
-      ].every((image) => image.naturalWidth === 160),
-    );
+    await page.waitForFunction(() => {
+      const section = document
+        .querySelector('.bh-memory-diff-file-name[title="preview.webp"]')
+        .closest('.bh-memory-diff-file');
+      section.scrollIntoView({ block: 'start' });
+      const images = [...section.querySelectorAll('img')];
+      return images.length === 2 && images.every((image) => image.naturalWidth === 160);
+    });
   await capture('history-dark');
   const animations = {};
   if (!before)
