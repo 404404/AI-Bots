@@ -101,6 +101,7 @@ describe('design-system surfaces', () => {
         hideLabel: 'Close Messages',
         onHide,
         context: createElement('span', null, 'Ada'),
+        badge: createElement('span', null, '3'),
         action: createElement('button', { onClick: onAction }, 'Settings'),
       }),
     );
@@ -108,10 +109,33 @@ describe('design-system surfaces', () => {
     expect(title.textContent).toBe('Messages');
     expect(title.draggable).toBe(true);
     act(() => host.querySelector<HTMLElement>('[data-panel-context]')!.click());
+    act(() => host.querySelector<HTMLElement>('[data-panel-badge]')!.click());
     act(() => button('Settings').click());
     expect(onAction).toHaveBeenCalledOnce();
     expect(onHide).not.toHaveBeenCalled();
     act(() => title.click());
+    expect(onHide).toHaveBeenCalledOnce();
+  });
+
+  it('keeps tab and settings clicks separate from a closable Panel title', () => {
+    const onHide = vi.fn();
+    const onTab = vi.fn();
+    const onSettings = vi.fn();
+    render(
+      createElement(PanelHeader, {
+        label: 'Memory',
+        hideLabel: 'Close Memory',
+        onHide,
+        tabs: createElement('button', { role: 'tab', onClick: onTab }, 'Versions'),
+        action: createElement('button', { onClick: onSettings }, 'Settings'),
+      }),
+    );
+    act(() => button('Versions').click());
+    act(() => button('Settings').click());
+    expect(onTab).toHaveBeenCalledOnce();
+    expect(onSettings).toHaveBeenCalledOnce();
+    expect(onHide).not.toHaveBeenCalled();
+    act(() => button('Close Memory').click());
     expect(onHide).toHaveBeenCalledOnce();
   });
 

@@ -37,6 +37,7 @@ body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-action
 .bh-workspace-grip { opacity:0; transition:opacity 120ms; }
 .bh-workspace-rail:hover .bh-workspace-grip, .bh-workspace-rail:focus-within .bh-workspace-grip { opacity:1; }
 .bh-workspace-controls { min-height:0; flex:1; overflow:auto; width:100%; }
+.bh-workspace-controls > [data-window-drag-recall] { width:fit-content; margin:0 auto; }
 .bh-workspace-controls .bh-pinned-panels { margin:0; padding:0; }
 .bh-workspace-exit-icon { display:none; color:${color.danger}; }
 .bh-workspace-exit:hover .bh-workspace-brand, .bh-workspace-exit:focus-visible .bh-workspace-brand { display:none; }

@@ -87,6 +87,7 @@ const styles = stylex.create({
     overflowX: 'auto',
     whiteSpace: 'nowrap',
   },
+  tabsCompact: { flexGrow: 0, flexBasis: 'auto' },
   action: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -152,7 +153,7 @@ export function PanelHeader({
       >
         {label}
       </span>
-      {badge === undefined ? null : <span {...stylex.props(styles.badge)}>{badge}</span>}
+      {badge === undefined || onHide ? null : <span {...stylex.props(styles.badge)}>{badge}</span>}
     </>
   );
   return (
@@ -233,19 +234,26 @@ export function PanelHeader({
           {content}
         </button>
       )}
+      {onHide && badge !== undefined ? (
+        <span data-panel-badge="" data-window-drag-recall {...stylex.props(styles.badge)}>
+          {badge}
+        </span>
+      ) : null}
       {context === undefined ? null : (
         <span data-panel-context="" data-window-drag-recall {...stylex.props(styles.context)}>
           {context}
         </span>
       )}
-      {onHide && tabs === undefined ? (
-        <span aria-hidden="true" {...stylex.props(styles.spacer)} />
-      ) : null}
       {tabs === undefined ? null : (
-        <span data-panel-tabs="" data-window-drag-recall {...stylex.props(styles.tabs)}>
+        <span
+          data-panel-tabs=""
+          data-window-drag-recall
+          {...stylex.props(styles.tabs, !!onHide && styles.tabsCompact)}
+        >
           {tabs}
         </span>
       )}
+      {onHide ? <span aria-hidden="true" {...stylex.props(styles.spacer)} /> : null}
       {action === undefined ? null : (
         <span data-window-drag-recall {...stylex.props(styles.action)}>
           {action}
