@@ -1,17 +1,9 @@
+import { Text, TextInput } from '../src/ui/primitives/system-text';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
 import { hostSession } from '../src/host/host-session';
 import { nativeCarrier } from '../src/host/native-carrier';
@@ -19,7 +11,7 @@ import { pairHost, type PairingFailure } from '../src/host/pairing';
 import { mobileTelemetry } from '../src/telemetry/native';
 import type { PairingMethod } from '../src/telemetry/schema';
 import { Button } from '../src/ui/primitives/button';
-import { useMounted } from '../src/ui/mounted';
+import { KeyboardFormScroll } from '../src/ui/primitives/keyboard-form';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
 
@@ -34,20 +26,11 @@ export default function PairScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [error, setError] = useState<PairingFailure | undefined>();
   const lastMethod = useRef<PairingMethod>('paste');
   const pending = useRef<AbortController | undefined>(undefined);
   const handled = useRef<string | undefined>(undefined);
-  const scroll = useRef<ScrollView | null>(null);
-  const showPair = () => scroll.current?.scrollToEnd({ animated: true });
-  const mounted = useMounted<ScrollView>((node) => {
-    scroll.current = node;
-    const shown = Keyboard.addListener('keyboardDidShow', showPair);
-    return () => {
-      shown.remove();
-      scroll.current = null;
-    };
-  }, []);
 
   const pair = async (text: string, method: PairingMethod, retry = false): Promise<void> => {
     if (pending.current !== undefined || (!retry && method === 'qr' && handled.current === text))
@@ -76,9 +59,13 @@ export default function PairScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setFocused(true);
       if (typeof params.p === 'string' && handled.current === undefined)
         void pair(`deepseekbot://pair?p=${params.p}`, 'deep_link');
-      return () => pending.current?.abort();
+      return () => {
+        setFocused(false);
+        pending.current?.abort();
+      };
     }, [params.p]),
   );
 
@@ -90,17 +77,13 @@ export default function PairScreen() {
   } as const;
 
   return (
-    <ScrollView
-      ref={mounted}
-      onContentSizeChange={() => {
-        if (Keyboard.isVisible()) showPair();
-      }}
-      automaticallyAdjustKeyboardInsets
+    <KeyboardFormScroll
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
+      <Button label={t.cloud.title} onPress={() => router.push('/cloud-services')} />
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <View
         style={{
@@ -113,12 +96,14 @@ export default function PairScreen() {
         }}
       >
         {permission?.granted ? (
-          <CameraView
-            style={{ width: '100%', height: '100%' }}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-            onBarcodeScanned={busy ? undefined : ({ data }) => void pair(data, 'qr')}
-          />
+          focused && (
+            <CameraView
+              style={{ width: '100%', height: '100%' }}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={busy ? undefined : ({ data }) => void pair(data, 'qr')}
+            />
+          )
         ) : (
           <Pressable
             onPress={() => void requestPermission()}
@@ -143,6 +128,7 @@ export default function PairScreen() {
       ) : null}
       <Text style={{ color: theme.ink, fontWeight: '600' }}>{t.pasteLink}</Text>
       <TextInput
+        accessibilityLabel={t.pasteLink}
         value={link}
         onChangeText={(value) => {
           setLink(value);
@@ -152,6 +138,7 @@ export default function PairScreen() {
         placeholderTextColor={theme.inkSoft}
         autoCapitalize="none"
         autoCorrect={false}
+        keyboardType="url"
         returnKeyType="go"
         onSubmitEditing={() => void pair(link, 'paste')}
         style={{
@@ -172,6 +159,6 @@ export default function PairScreen() {
       >
         <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t.pair}</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardFormScroll>
   );
 }

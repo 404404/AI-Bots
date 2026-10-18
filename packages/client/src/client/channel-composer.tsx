@@ -331,8 +331,8 @@ export function shouldSubmitComposerKey(
 ): boolean {
   return (
     event.key === 'Enter' &&
-    !event.shiftKey &&
-    (sendKey === 'enter' || event.ctrlKey === true || event.metaKey === true) &&
+    (sendKey === 'shift-enter' ? event.shiftKey : !event.shiftKey) &&
+    (sendKey !== 'mod-enter' || event.ctrlKey === true || event.metaKey === true) &&
     !event.nativeEvent.isComposing &&
     event.nativeEvent.keyCode !== 229
   );

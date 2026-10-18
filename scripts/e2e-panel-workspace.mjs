@@ -19,7 +19,11 @@ const out = resolve(
 mkdirSync(out, { recursive: true });
 const browser = desktop
   ? await puppeteer.connect({ browserURL: desktop, defaultViewport: null })
-  : await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--lang=en-US'] });
+  : await puppeteer.launch({
+      headless: true,
+      ignoreDefaultArgs: ['--hide-scrollbars'],
+      args: ['--no-sandbox', '--lang=en-US'],
+    });
 const page = desktop ? (await browser.pages())[0] : await browser.newPage();
 const errors = [],
   results = [];
@@ -31,7 +35,8 @@ const labels = {
   'Move control rail': '移动控制列',
   'Move to right edge': '移至最右',
   'Move before column 3': '移至第 3 列前',
-  'Workspace layout': '工作区布局',
+  Appearance: '界面设置',
+  'Search settings': '搜索设置',
   'Bot settings': 'Bot 设置',
   'Panel spacing': '面板间距',
 };
@@ -174,6 +179,257 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForSelector('[data-message-id]', { timeout: 20000 });
   await proof('01-default');
+  step = 'scrollbar-activity';
+  await sleep(1100);
+  const scrollGeometry = await page.$eval('.bh-chat-body', (node) => {
+    const box = node.getBoundingClientRect();
+    return {
+      x: box.x + box.width / 2,
+      y: box.y + box.height / 2,
+      right: box.right,
+      width: node.clientWidth,
+      delta: node.scrollTop > 0 ? -25 : 25,
+    };
+  });
+  const thumbOpacity = () =>
+    page.$eval('.bh-chat-body', (node) =>
+      Number(getComputedStyle(node).getPropertyValue('--bh-panel-scrollbar-opacity')),
+    );
+  assert.equal(await thumbOpacity(), 0);
+  await page.evaluate(() => {
+    window.__scrollbarMessageNode = document.querySelector('.bh-chat-body');
+  });
+  await page.mouse.move(scrollGeometry.x, scrollGeometry.y);
+  await page.mouse.wheel({ deltaY: scrollGeometry.delta });
+  await page.waitForFunction(
+    () =>
+      Number(
+        getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+          '--bh-panel-scrollbar-opacity',
+        ),
+      ) === 1,
+  );
+  assert.equal(
+    await page.$eval('.bh-workspace-controls', (node) =>
+      Number(getComputedStyle(node).getPropertyValue('--bh-panel-scrollbar-opacity')),
+    ),
+    0,
+  );
+  const reducedMotion = await page.evaluate(
+    () => document.documentElement.dataset.botharnessMotion === 'reduce',
+  );
+  if (!reducedMotion) {
+    await page.waitForFunction(() => {
+      const opacity = Number(
+        getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+          '--bh-panel-scrollbar-opacity',
+        ),
+      );
+      return opacity > 0 && opacity < 1;
+    });
+    await page.mouse.wheel({ deltaY: -scrollGeometry.delta });
+    await page.waitForFunction(
+      () =>
+        Number(
+          getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+            '--bh-panel-scrollbar-opacity',
+          ),
+        ) === 1,
+    );
+  }
+  await page.waitForFunction(
+    () =>
+      Number(
+        getComputedStyle(document.querySelector('.bh-chat-body')).getPropertyValue(
+          '--bh-panel-scrollbar-opacity',
+        ),
+      ) === 0,
+  );
+  await page.mouse.move(scrollGeometry.right - 2, scrollGeometry.y);
+  await sleep(100);
+  assert.equal(await thumbOpacity(), 0);
+  assert.equal(await page.$eval('.bh-chat-body', (node) => node.clientWidth), scrollGeometry.width);
+  assert.ok(
+    await page.evaluate(
+      () => window.__scrollbarMessageNode === document.querySelector('.bh-chat-body'),
+    ),
+  );
+  await proof('01a-scrollbars-idle');
+  step = 'pointer-menu-position';
+  const pointerPositions = [];
+  for (const zoom of [1, 1.25]) {
+    await page.evaluate((value) => {
+      document.body.style.zoom = String(value);
+    }, zoom);
+    await sleep(200);
+    for (const selector of [
+      '[data-dock-header="bh:channels"]',
+      `${channels} .bh-contact[data-channel-id]`,
+    ]) {
+      const point = await page.$eval(selector, (node) => {
+        const box = node.getBoundingClientRect();
+        return { x: box.left + 60, y: box.top + 15 };
+      });
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+      await sleep(100);
+      const box = await page.$eval('[data-pointer-menu] [role="menu"]', (node) => {
+        const r = node.getBoundingClientRect();
+        return { x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+      });
+      assert.ok(
+        Math.abs(box.x - point.x) <= 1,
+        `pointer menu x: ${JSON.stringify({ zoom, point, box })}`,
+      );
+      assert.ok(
+        Math.abs(box.y - point.y) <= 1,
+        `pointer menu y: ${JSON.stringify({ zoom, point, box })}`,
+      );
+      pointerPositions.push({ zoom, selector, point, box });
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+    }
+    await page.$eval('[data-dock-header="bh:channels"]', (node) =>
+      node.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          clientX: innerWidth - 2,
+          clientY: innerHeight - 2,
+        }),
+      ),
+    );
+    await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+    const edges = await page.$eval('[data-pointer-menu] [role="menu"]', (node) => {
+      const r = node.getBoundingClientRect();
+      return { right: r.right <= innerWidth, bottom: r.bottom <= innerHeight };
+    });
+    assert.deepEqual(edges, { right: true, bottom: true });
+    await page.keyboard.press('Escape');
+  }
+  await page.evaluate(() => {
+    document.body.style.zoom = '';
+  });
+  writeFileSync(
+    resolve(out, 'pointer-menu-positions.json'),
+    JSON.stringify(pointerPositions, null, 2),
+  );
+  await proof('01b-pointer-menus');
+  step = 'all-panel-header-menus';
+  const headerMenuResults = [];
+  const panelSwitches = await page.$$eval(`${rail} [data-pinned-panel]`, (nodes) =>
+    nodes.map((node) => ({
+      id: node.dataset.pinnedPanel,
+      open: node.getAttribute('aria-pressed') === 'true',
+    })),
+  );
+  for (const { id, open } of panelSwitches) {
+    const toggle = `${rail} [data-pinned-panel="${id}"]`;
+    const header = `[data-dock-header="${id}"]`;
+    if (!open) await page.click(toggle);
+    await page.waitForSelector(header, { visible: true });
+    const otherPanels = await page.evaluate((current) => {
+      window.__headerMenuPeers = [...document.querySelectorAll('[data-dock-header]')].filter(
+        (node) => node.dataset.dockHeader !== current,
+      );
+      return window.__headerMenuPeers.map((node) => node.dataset.dockHeader).sort();
+    }, id);
+    await page.$eval(header, (node) => {
+      node.addEventListener(
+        'contextmenu',
+        (event) => {
+          window.__headerContextPoint = { x: event.clientX, y: event.clientY };
+        },
+        { once: true },
+      );
+    });
+    await page.locator(header).click({ button: 'right' });
+    const point = await page.evaluate(() => window.__headerContextPoint);
+    await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+    const box = await page.$eval('[data-pointer-menu] [role="menu"]', (node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        x: rect.x,
+        y: rect.y,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: innerWidth,
+        height: innerHeight,
+        label: node.textContent,
+      };
+    });
+    assert.ok(
+      Math.abs(box.x - point.x) <= 1 && Math.abs(box.y - point.y) <= 1,
+      `Panel header pointer: ${JSON.stringify({ id, point, box })}`,
+    );
+    assert.ok(box.right <= box.width && box.bottom <= box.height);
+    assert.equal(
+      await page.$$eval('[data-pointer-menu] [role="menuitem"]', (nodes) => nodes.length),
+      1,
+    );
+    headerMenuResults.push({ id, point, box });
+    await page.screenshot({ path: resolve(out, `header-menu-${id.replaceAll(':', '-')}.png`) });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+    assert.equal(
+      await page.$eval(header, (node) => node === document.activeElement),
+      true,
+      'Escape restores header focus',
+    );
+    if (id === 'bh:channel-body') {
+      await page.locator(header).click({ button: 'right' });
+      await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+      await page.click('.bh-dock-body [role="textbox"]');
+      await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+      assert.ok(
+        await page.$eval(
+          '.bh-dock-body [role="textbox"]',
+          (node) => node === document.activeElement,
+        ),
+        'Outside click keeps composer focus',
+      );
+    }
+    await page.focus(header);
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('F10');
+    await page.keyboard.up('Shift');
+    await page.waitForSelector('[data-pointer-menu] [role="menu"]');
+    const keyboardPosition = await page.$eval(header, (node) => {
+      const anchor = node.getBoundingClientRect();
+      const menu = document
+        .querySelector('[data-pointer-menu] [role="menu"]')
+        .getBoundingClientRect();
+      return { dx: menu.left - anchor.left, dy: menu.top - anchor.bottom };
+    });
+    assert.ok(
+      Math.abs(keyboardPosition.dx) <= 1 && Math.abs(keyboardPosition.dy) <= 1,
+      `Panel header keyboard: ${JSON.stringify({ id, keyboardPosition })}`,
+    );
+    await page.click('[data-pointer-menu] [role="menuitem"]');
+    await page.waitForSelector(header, { hidden: true });
+    await page.waitForSelector('[data-pointer-menu]', { hidden: true });
+    assert.equal(await page.$eval(toggle, (node) => node.getAttribute('aria-pressed')), 'false');
+    assert.deepEqual(
+      await page.$$eval('[data-dock-header]', (nodes) =>
+        nodes.map((node) => node.dataset.dockHeader).sort(),
+      ),
+      otherPanels,
+      'Close only removes the selected Panel',
+    );
+    assert.ok(
+      await page.evaluate(() => window.__headerMenuPeers.every((node) => node.isConnected)),
+      'Other Panel headers stay mounted',
+    );
+    assert.ok((await storage()).parked[id], `Closed Panel ${id} keeps its layout position`);
+    if (open) {
+      await page.click(toggle);
+      await page.waitForSelector(header, { visible: true });
+    }
+  }
+  writeFileSync(
+    resolve(out, 'all-panel-header-menus.json'),
+    JSON.stringify(headerMenuResults, null, 2),
+  );
+  await proof('01c-all-panel-header-menus');
   step = 'channel-search-alignment';
   await page.click('[data-dock-header="bh:channels"] .bh-search-btn');
   await sleep(250);
@@ -210,8 +466,12 @@ try {
   await page.keyboard.press('Escape');
 
   step = 'header-profile-details';
-  await page.click('.bh-topbar .bh-channel-island');
-  await page.locator(`::-p-aria(${chinese ? '查看资料' : 'View profile'})`).click();
+  assert.equal(await page.$('.bh-topbar .bh-channel-island'), null, 'no floating profile chip');
+  await page
+    .locator(
+      `[data-dock-header="bh:channel-body"] button[aria-label="${chinese ? '查看资料' : 'View profile'}"]`,
+    )
+    .click();
   await page.waitForSelector('.bh-profile-view');
   assert.equal(await page.$('.bh-profile-popover'), null, 'profile opens without a popover');
   assert.equal(
@@ -222,6 +482,50 @@ try {
   assert.equal(await page.$('.bh-topbar .bh-companion-pin'), null, 'header has no pin shortcut');
   await proof('01c-profile-details');
   await page.click('.bh-profile-back');
+  await page.waitForSelector('[data-message-id]');
+
+  step = 'channel-switch-stability';
+  await page.click('.bh-workspace-rail [data-pinned-panel="activity-center"]');
+  const stablePanels = await page.$$(
+    '.bh-workspace-rail, [data-dock-panel="bh:channels"], [data-dock-panel="activity-center"]',
+  );
+  const shortcutRows = await page.$$eval(`${channels} [data-channel-id]`, (nodes) =>
+    nodes.map((node) => ({
+      id: node.dataset.channelId,
+      shortcut: node.getAttribute('aria-keyshortcuts'),
+    })),
+  );
+  const originalChannel = await page.$eval(
+    `${channels} .bh-selected[data-channel-id]`,
+    (node) => node.dataset.channelId,
+  );
+  const targets = shortcutRows.filter((row) => row.shortcut?.match(/Alt\+[12]$/));
+  assert.equal(targets.length, 2, 'QA profile needs two Channels with Alt+1/2 shortcuts');
+  for (const target of [...targets, ...targets]) {
+    await page.keyboard.down('Alt');
+    await page.keyboard.press(`Digit${target.shortcut.at(-1)}`);
+    await page.keyboard.up('Alt');
+    await page.waitForFunction(
+      (id) =>
+        document.querySelector('[data-dock-panel="bh:channels"] .bh-selected[data-channel-id]')
+          ?.dataset.channelId === id,
+      {},
+      target.id,
+    );
+    for (const panel of stablePanels)
+      assert.ok(
+        await panel.evaluate((node) => node.isConnected),
+        'unrelated Panel remains mounted during Channel shortcuts',
+      );
+  }
+  await page.click(`${channels} [data-channel-id="${originalChannel}"]`);
+  for (const panel of stablePanels)
+    assert.ok(
+      await panel.evaluate((node) => node.isConnected),
+      'mouse Channel navigation also preserves unrelated Panels',
+    );
+  await proof('01d-channel-switch-stability');
+  await page.click('.bh-workspace-rail [data-pinned-panel="activity-center"]');
   await page.waitForSelector('[data-message-id]');
 
   const liveMessage = await page.$('[data-message-id]');
@@ -239,19 +543,31 @@ try {
     );
   const orderBefore = await switchOrder();
   await page.setDragInterception(true);
-  const buttonRect = async (id) =>
-    page.$eval(`.bh-workspace-rail [data-pinned-panel="${id}"]`, (node) => {
-      const r = node.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-    });
+  const buttonRect = async (id, fraction = 0.25) =>
+    page.$eval(
+      `.bh-workspace-rail [data-pinned-panel="${id}"]`,
+      (node, fraction) => {
+        const r = node.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height * fraction };
+      },
+      fraction,
+    );
   const reorderFrom = await buttonRect(orderBefore[2]);
   const reorderTo = await buttonRect(orderBefore[0]);
   const reorderDrag = await page.mouse.drag(reorderFrom, reorderTo);
   await page.mouse.dragEnter(reorderTo, reorderDrag);
   await page.mouse.dragOver(reorderTo, reorderDrag);
+  await page.waitForSelector('[data-panel-order-indicator="before"]');
+  assert.equal(
+    await page.$eval(
+      `.bh-workspace-rail [data-pinned-panel="${orderBefore[2]}"]`,
+      (node) => node.dataset.dragging,
+    ),
+    'true',
+  );
+  await proof('01a-switch-insertion');
   await page.mouse.drop(reorderTo, reorderDrag);
   await page.mouse.up();
-  await page.setDragInterception(false);
   await page.waitForFunction(
     (id) =>
       document.querySelector('.bh-workspace-rail [data-pinned-panel]')?.dataset.pinnedPanel === id,
@@ -259,9 +575,46 @@ try {
     orderBefore[2],
   );
   await assertLive();
+  assert.equal(await page.$$eval('[data-panel-order-indicator]', (nodes) => nodes.length), 0);
+  const lastSwitch = orderBefore.at(-1);
+  const bottom = await buttonRect(lastSwitch, 0.9);
+  const endDrag = await page.mouse.drag(await buttonRect(orderBefore[2]), bottom);
+  await page.mouse.dragEnter(bottom, endDrag);
+  await page.mouse.dragOver(bottom, endDrag);
+  await page.waitForSelector('[data-panel-order-indicator="after"]');
+  await page.mouse.drop(bottom, endDrag);
+  await page.mouse.up();
+  assert.equal((await switchOrder()).at(-1), orderBefore[2], 'drop below last switch appends');
+  assert.equal(await page.$$eval('[data-panel-order-indicator]', (nodes) => nodes.length), 0);
+  const afterDrop = await switchOrder();
+  const cancelTarget = await buttonRect(afterDrop[0]);
+  const cancelled = await page.mouse.drag(await buttonRect(afterDrop[2]), cancelTarget);
+  await page.mouse.dragEnter(cancelTarget, cancelled);
+  await page.mouse.dragOver(cancelTarget, cancelled);
+  await page.waitForSelector('[data-panel-order-indicator]');
+  const outside = { x: cancelTarget.x + 200, y: cancelTarget.y };
+  await page.mouse.dragOver(outside, cancelled);
+  assert.equal(await page.$$eval('[data-panel-order-indicator]', (nodes) => nodes.length), 0);
+  const dragSession = await page.createCDPSession();
+  await dragSession.send('Input.dispatchDragEvent', {
+    type: 'dragCancel',
+    ...outside,
+    data: cancelled,
+  });
+  await dragSession.detach();
+  await page.mouse.up();
+  await page.waitForSelector('[data-dragging="true"]', { hidden: true });
+  assert.deepEqual(await switchOrder(), afterDrop, 'cancel leaves order unchanged');
+  await page.setDragInterception(false);
+  await page.focus(`.bh-workspace-rail [data-pinned-panel="${afterDrop[1]}"]`);
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  assert.equal((await switchOrder())[0], afterDrop[1], 'keyboard reorder remains available');
+  await assertLive();
   const reordered = await switchOrder();
   await proof('01b-switch-order');
-  assert.equal((await storage()).version, 2);
+  assert.equal((await storage()).version, 6);
   assert.equal((await storage()).gap, 4);
   assert.equal(
     await page.$eval(
@@ -322,7 +675,16 @@ try {
   await page.click(
     '.bh-workspace-rail button[aria-label="' + (chinese ? 'Bot 设置' : 'Bot settings') + '"]',
   );
-  await click('Workspace layout');
+  await page.type(
+    `input[aria-label="${labelFor('Search settings')}"]`,
+    chinese ? '间距' : 'spacing',
+  );
+  await page.click('.bh-settings-search-results button');
+  await page.waitForSelector('[data-settings-highlight]');
+  assert.equal(
+    await page.$eval('[data-settings-content]', (node) => node.dataset.settingsContent),
+    'appearance',
+  );
   await page.locator(`input[aria-label="${labelFor('Panel spacing')}"]`).click();
   for (const gap of [0, 16, 12]) {
     await page.keyboard.press('Home');
@@ -357,7 +719,7 @@ try {
   await page.waitForSelector(rail);
   assert.equal(await page.$('.bh-dock-body'), null, 'closed Messages stays closed after refresh');
   step = 'profile-reopens-messages';
-  const profileRow = await page.$(`${channels} [data-channel-id]`);
+  const profileRow = await page.$(`${channels} .bh-contact[data-channel-id]`);
   const expectedProfileName = await profileRow.$eval('.bh-name', (node) => node.textContent);
   await profileRow.click({ button: 'right' });
   await page.locator(`::-p-aria(${chinese ? '查看资料' : 'View profile'})`).click();

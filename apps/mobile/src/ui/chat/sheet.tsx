@@ -1,30 +1,24 @@
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { ActivityIndicator, Modal, Pressable, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import type { LayerName } from '../design/layers';
 import { radius, space } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
+import { SheetGrabber } from '../primitives/sheet-grabber';
 import { CloseIcon } from '../shell/icons';
 import { t } from '../strings';
 
 export const SHEET_GROUP: LayerName = 'raised';
 
 function Grabber() {
-  const theme = useDesignTheme();
   return (
-    <View
-      style={{
-        alignSelf: 'center',
-        width: space.x6 + space.x3,
-        height: space.x2,
-        borderRadius: radius.round,
-        backgroundColor: theme.layer.canvas.selected,
-        marginBottom: space.x3,
-      }}
-    />
+    <View style={{ alignSelf: 'center', marginBottom: space.x3 }}>
+      <SheetGrabber />
+    </View>
   );
 }
 
@@ -50,28 +44,49 @@ function CloseButton({ onPress }: { onPress(): void }) {
   );
 }
 
+export interface SheetPageProps {
+  title?: string;
+  subtitle?: string;
+  children: ReactNode;
+}
+
 export function Sheet({
+  page: Page,
   visible,
   label,
   title,
   subtitle,
   onClose,
   children,
+  avoidKeyboard = false,
 }: {
+  page?: ComponentType<SheetPageProps> | undefined;
   visible: boolean;
   label: string;
   title?: string;
   subtitle?: string;
   onClose(): void;
   children: ReactNode;
+  avoidKeyboard?: boolean;
 }) {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  if (Page !== undefined)
+    return visible ? (
+      <Page
+        {...(title === undefined ? {} : { title })}
+        {...(subtitle === undefined ? {} : { subtitle })}
+      >
+        {children}
+      </Page>
+    ) : null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {visible ? (
-        <View
+        <KeyboardAvoidingView
+          behavior="padding"
+          enabled={avoidKeyboard}
           style={{
             flex: 1,
             justifyContent: 'flex-end',
@@ -96,7 +111,7 @@ export function Sheet({
             onAccessibilityEscape={onClose}
             style={{
               maxHeight: height - insets.top - theme.touch,
-              backgroundColor: theme.layer.canvas.fill,
+              backgroundColor: theme.overlay.fill,
               borderTopLeftRadius: radius.lg,
               borderTopRightRadius: radius.lg,
               paddingTop: space.x3,
@@ -116,11 +131,11 @@ export function Sheet({
                 }}
               >
                 <View style={{ flex: 1, gap: space.x1 }}>
-                  <Text variant="title" strong accessibilityRole="header" numberOfLines={1}>
+                  <Text variant="title" strong accessibilityRole="header">
                     {title}
                   </Text>
                   {subtitle === undefined ? null : (
-                    <Text variant="meta" tone="muted" numberOfLines={2}>
+                    <Text variant="meta" tone="muted">
                       {subtitle}
                     </Text>
                   )}
@@ -130,7 +145,7 @@ export function Sheet({
             )}
             {children}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       ) : null}
     </Modal>
   );

@@ -67,6 +67,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
   };
 });
 
+import { createDockPanelRegistry } from '../src/client/dock-panels.js';
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotModePrefs } from '../src/client/bot-mode-prefs.js';
 import {
@@ -173,6 +174,92 @@ describe('Bot main Sessions pane', () => {
     expect(chip.textContent).not.toContain('GEO');
     expect(chip.textContent).not.toContain('SEO');
   });
+  it('retains global Panel DOM and local input state across Channel loading and updates', async () => {
+    const previous = store.getSnapshot();
+    const originalMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('min-width'),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      dispatchEvent: () => true,
+    })) as typeof window.matchMedia;
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const first = {
+      id: 'stable-first',
+      type: 'group' as const,
+      name: 'First',
+      members: [],
+      createdAt: '2026-10-17T00:00:00.000Z',
+      updatedAt: '2026-10-17T00:00:00.000Z',
+    };
+    const second = { ...first, id: 'stable-second', name: 'Second' };
+    store.setRoster([], [first, second]);
+    store.select({ kind: 'channel', channelId: first.id });
+    store.setConversation({ status: 'ready', channel: first });
+    const registry = createDockPanelRegistry();
+    registry.register({
+      id: 'sessions',
+      title: 'Global probe',
+      icon: 'hash',
+      scope: 'global',
+      component: () =>
+        createElement('input', { 'data-global-probe': '', defaultValue: 'untouched' }),
+    });
+    const node = document.createElement('div');
+    document.body.append(node);
+    const root = createRoot(node);
+    try {
+      await act(() =>
+        root.render(
+          createElement(BotMain, {
+            actions: {
+              ...inertSubmissionActions,
+              allBotPreview: async () => undefined,
+            } as unknown as BridgeActions,
+            channelSidebar: createChannelSidebarRegistry(),
+            dockPanels: registry,
+          }),
+        ),
+      );
+      const dock = node.querySelector('.bh-dock');
+      const input = node.querySelector<HTMLInputElement>('[data-global-probe]')!;
+      expect(input).not.toBeNull();
+      input.value = 'local state retained';
+      for (const channel of [second, first]) {
+        await act(() => store.select({ kind: 'channel', channelId: channel.id }));
+        expect(node.querySelector('.bh-dock')).toBe(dock);
+        expect(node.querySelector('[data-global-probe]')).toBe(input);
+        await act(() => store.setConversation({ status: 'ready', channel }));
+        expect(input.isConnected).toBe(true);
+        expect(input.value).toBe('local state retained');
+        await act(() =>
+          store.setConversation({ revision: store.getSnapshot().conversation.revision + 1 }),
+        );
+        expect(node.querySelector('[data-global-probe]')).toBe(input);
+      }
+    } finally {
+      await act(() => root.unmount());
+      node.remove();
+      window.matchMedia = originalMedia;
+      vi.unstubAllGlobals();
+      store.setRoster(previous.bots, previous.channels);
+      store.select(previous.selection);
+      store.setConversation(previous.conversation);
+    }
+  });
+
   it('keeps the docked Channel sidebar present on every state update while switching Channels', () => {
     const previous = store.getSnapshot();
     const first = {

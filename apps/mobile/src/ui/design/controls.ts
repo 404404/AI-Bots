@@ -75,3 +75,11 @@ export function switchColors(theme: DesignTheme, on: LayerName): SwitchColors {
     thumb: THUMB,
   };
 }
+
+export function settingsColors(theme: DesignTheme, on: LayerName) {
+  return {
+    heading: readable(theme.color.accent, theme.overlay.fill, theme.color.fg),
+    selected: theme.layer[on].chosen,
+    selectedText: readable(theme.color.accent, theme.layer[on].chosen, theme.color.fg),
+  };
+}

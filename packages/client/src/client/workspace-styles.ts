@@ -15,7 +15,7 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-workspace-enabled] > .
 .bh-dock[data-workspace-dock] .dv-groupview { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; }
 .bh-dock[data-workspace-dock] .bh-root { background:${panelBackground}; }
 html[data-platform="darwin"]:not([data-fullscreen]) .bh-dock:has([data-bh-rail-corner]) .bh-workspace-rail { padding-top:calc(${size.nav} + ${space.x2}); }
-html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-dock-header,
+html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] > .dv-tabs-and-actions-container .bh-dock-header,
 html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-topbar { padding-left:var(--bh-mac-leading); box-sizing:border-box; }
 .bh-dock[data-workspace-dock] .dv-dockview { background:${color.base}; }
 .bh-dock[data-workspace-dock] { box-sizing:border-box; background:${color.base}; }
@@ -23,6 +23,14 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 [data-workspace-dock] .bh-dock-menu, [data-workspace-dock] [data-panel-empty-action] { display:none; }
 [data-workspace-dock] .bh-dock-theme { --dv-activegroup-visiblepanel-tab-background-color:${panelBackground}; --dv-inactivegroup-visiblepanel-tab-background-color:${panelBackground}; --dv-separator-border:transparent; --dv-paneview-header-border-color:transparent; --dv-group-view-background-color:${panelBackground}; --dv-tabs-and-actions-container-background-color:${panelBackground}; }
 .bh-workspace-rail { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; position:relative; height:100%; display:flex; flex-direction:column; align-items:center; gap:${space.x2}; padding:${space.x2}; box-sizing:border-box; background:${panelBackground}; }
+/* Light DSH base and the blended Panel are both nearly white. Recess only
+   the workspace canvas; keep Panels bright and the existing dark palette. */
+body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock],
+body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-dockview,
+body:not([data-ds-dark-theme]) .bh-message-member-divider,
+body:not([data-ds-dark-theme]) .bh-channel-session-divider,
+html[data-platform="darwin"]:not([data-fullscreen]) body:not([data-ds-dark-theme]) [data-workspace-enabled] > .bh-workspace-chrome { background:${color.surface}; }
+body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-actions-container { border-bottom-color:${color.surface}; }
 .bh-workspace-rail > button, .bh-workspace-rail > span > button, .bh-workspace-move { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:${size.row}; height:${size.row}; padding:0; border:0; border-radius:${radius.md}; corner-shape:round; color:${color.fg}; background:transparent; cursor:pointer; }
 .bh-workspace-rail button:hover { background:${color.hover}; }
 .bh-workspace-rail button:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }
@@ -47,10 +55,32 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 .bh-workspace-channels > .bh-region { flex:1; min-height:0; padding:0; }
 .bh-workspace-channels .bh-region:has(> [data-panel-empty]) .bh-roster-list:empty { display:none; }
 .bh-workspace-drop { position:absolute; top:0; bottom:0; width:${space.x1}; background:${color.accent}; z-index:1000; pointer-events:none; }
-.bh-message-split { display:flex; height:100%; min-height:0; }
+.bh-dock-body.bh-message-split { display:flex; flex-direction:row; height:100%; min-height:0; }
 .bh-message-content { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; }
 .bh-message-members { display:flex; flex-direction:column; min-width:0; min-height:0; }
 .bh-message-members > section { flex:1; min-height:0; overflow:auto; }
 .bh-message-member-divider { flex:0 0 var(--bh-workspace-gap); min-width:${space.x2}; background:${color.base}; cursor:col-resize; touch-action:none; }
 .bh-message-member-divider:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }
+.bh-channel-workspace-root, .bh-channel-branch, .bh-channel-leaf, .bh-channel-leaf-content { display:flex; flex-direction:column; min-width:0; min-height:0; height:100%; overflow:hidden; }
+.bh-channel-leaf { position:relative; flex:1; }
+.bh-channel-leaf-content { flex:1; }
+.bh-channel-leaf-content > .bh-channel-session-host { flex:1; }
+.bh-channel-session-header [data-panel-tabs] > * { flex-shrink:0; white-space:nowrap; }
+.bh-channel-session-header [data-panel-tabs] button { white-space:nowrap; flex-shrink:0; }
+.bh-channel-session-header .bh-dock-header { height:100%; }
+.bh-channel-workspace { position:relative; display:flex; height:100%; min-width:0; min-height:0; overflow:hidden; }
+.bh-channel-message-host { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; overflow:hidden; }
+.bh-channel-message-host > .bh-message-split { flex:1; }
+.bh-channel-session-host { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; border-radius:${radius.xs}; }
+.bh-channel-session-host[hidden], .bh-channel-session-divider[hidden] { display:none; }
+.bh-channel-session-header { flex:none; height:calc(${size.row} + ${space.x1} * 2); border-bottom:var(--bh-workspace-header-gap) solid ${color.base}; cursor:grab; }
+.bh-channel-session-host > section { flex:1; min-height:0; }
+.bh-channel-session-divider { flex:0 0 var(--bh-workspace-gap); min-width:${space.x1}; background:${color.base}; cursor:col-resize; touch-action:none; }
+.bh-channel-workspace[data-split-axis="vertical"] > .bh-channel-session-divider { min-width:0; min-height:${space.x1}; cursor:row-resize; }
+.bh-channel-session-divider:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }
+.bh-channel-drop-preview { position:absolute; inset:0; background:color-mix(in srgb, ${color.accent} 14%, transparent); border:${border.focus} solid ${color.accent}; pointer-events:none; z-index:9; }
+.bh-channel-drop-preview[data-drop-side="left"] { right:50%; }
+.bh-channel-drop-preview[data-drop-side="right"] { left:50%; }
+.bh-channel-drop-preview[data-drop-side="above"] { bottom:50%; }
+.bh-channel-drop-preview[data-drop-side="below"] { top:50%; }
 `;

@@ -160,7 +160,7 @@ async function renderGroup(openBot = vi.fn(async () => undefined)) {
     });
   const item = (label: string) =>
     Array.from(
-      document.querySelectorAll<HTMLButtonElement>('.bh-menu-anchor [role="menuitem"]'),
+      document.querySelectorAll<HTMLButtonElement>('[data-pointer-menu] [role="menuitem"]'),
     ).find((button) => button.textContent === label);
   return { node, root, avatar, openMenu, item, openBot };
 }
@@ -170,14 +170,14 @@ describe('group Channel Bot avatar menu', () => {
     const view = await renderGroup();
     expect(view.avatar.getAttribute('aria-haspopup')).toBe('menu');
     await view.openMenu();
-    const labels = Array.from(document.querySelectorAll('.bh-menu-anchor [role="menuitem"]')).map(
-      (button) => button.textContent,
-    );
+    const labels = Array.from(
+      document.querySelectorAll('[data-pointer-menu] [role="menuitem"]'),
+    ).map((button) => button.textContent);
     expect(labels).toEqual(['发送消息', '@ TA', '查看资料']);
 
     await act(() => view.item('发送消息')!.click());
     expect(view.openBot).toHaveBeenLastCalledWith('ada');
-    expect(document.querySelector('.bh-menu-anchor')).toBeNull();
+    expect(document.querySelector('[data-pointer-menu]')).toBeNull();
 
     await view.openMenu();
     await act(() => view.item('查看资料')!.click());
@@ -249,7 +249,7 @@ describe('Channel sidebar member menu', () => {
             );
         });
       await open();
-      const items = Array.from(document.querySelectorAll('.bh-menu-anchor [role="menuitem"]'));
+      const items = Array.from(document.querySelectorAll('[data-pointer-menu] [role="menuitem"]'));
       expect(items.map((item) => item.textContent)).toEqual([
         '打开私聊',
         '@ TA',
@@ -265,7 +265,7 @@ describe('Channel sidebar member menu', () => {
       expect(document.activeElement).toBe(editor);
       expect(richSelectionOffsets(editor)?.end).toBe(19);
       expect(view.openBot).not.toHaveBeenCalled();
-      expect(document.querySelector('.bh-menu-anchor')).toBeNull();
+      expect(document.querySelector('[data-pointer-menu]')).toBeNull();
       await open();
       await act(() => view.item('@ TA')!.click());
       expect(editor.querySelectorAll('[data-bot-id]')).toHaveLength(1);

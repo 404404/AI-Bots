@@ -12,6 +12,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewInstance,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -20,7 +21,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useReducedMotion,
-  withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,7 +33,7 @@ import { useHostLook } from '../../host/native-host-look';
 import { shownHostName, type HostLook } from '../design/host-look';
 import { glassShadow, useDesignTheme } from '../design/theme';
 import { useMounted } from '../mounted';
-import { edge, motion, radius, scrim, space } from '../design/tokens';
+import { drawerSpring, edge, motion, radius, scrim, space } from '../design/tokens';
 import { CountBadge } from '../primitives/count-badge';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
@@ -67,27 +68,27 @@ function hidden(): void {
   hostDrawer.hidden();
 }
 
-function slide(open: boolean): void {
-  progress.value = withTiming(
+function slide(open: boolean, velocity = 0): void {
+  progress.value = withSpring(
     open ? 1 : 0,
-    { duration: motion.drawer, reduceMotion: ReduceMotion.System },
+    { ...drawerSpring, velocity, clamp: { min: 0, max: 1 }, reduceMotion: ReduceMotion.System },
     (finished) => {
       if (finished === true && !open) runOnJS(hidden)();
     },
   );
 }
 
-function settle(open: boolean): void {
+function settle(open: boolean, velocity = 0): void {
   if (open) hostDrawer.open();
   else hostDrawer.close();
-  slide(open);
+  slide(open, velocity);
 }
 
 function reveal(): void {
   hostDrawer.reveal();
 }
 
-export function focusOn(node: View): void {
+export function focusOn(node: ViewInstance): void {
   AccessibilityInfo.sendAccessibilityEvent?.(node, 'focus');
 }
 
@@ -120,7 +121,10 @@ export function HostDrawerEdge({ children }: { children: ReactNode }) {
       if (!reduced) progress.value = clamp(event.translationX / width);
     })
     .onEnd((event) => {
-      runOnJS(settle)(settleOpen(clamp(event.translationX / width), event.velocityX));
+      runOnJS(settle)(
+        settleOpen(clamp(event.translationX / width), event.velocityX),
+        event.velocityX / width,
+      );
     });
   return (
     <GestureDetector gesture={pan}>
@@ -338,7 +342,7 @@ export function HostDrawer() {
     [hosts, currentId, glanceMap, connection, list],
   );
 
-  const heading = useMounted<View>(
+  const heading = useMounted<ViewInstance>(
     (node) => {
       if (!state.open) return;
       const stopWatching = glances.watch(hosts);
@@ -357,7 +361,7 @@ export function HostDrawer() {
   );
 
   const fade = theme.scheme === 'dark' ? scrim.dark : scrim.light;
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value * fade }));
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: clamp(progress.value) * fade }));
   const panelStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (progress.value - 1) * width }],
   }));
@@ -370,14 +374,20 @@ export function HostDrawer() {
       if (!reduced) progress.value = clamp(1 + event.translationX / width);
     })
     .onEnd((event) => {
-      runOnJS(settle)(settleOpen(clamp(1 + event.translationX / width), event.velocityX));
+      runOnJS(settle)(
+        settleOpen(clamp(1 + event.translationX / width), event.velocityX),
+        event.velocityX / width,
+      );
     });
-
-  if (!state.shown) return null;
 
   return (
     <GestureDetector gesture={swipe}>
-      <View style={StyleSheet.absoluteFill} pointerEvents={state.open ? 'auto' : 'none'}>
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents={state.open ? 'auto' : 'none'}
+        accessibilityElementsHidden={!state.open}
+        importantForAccessibility={state.open ? 'auto' : 'no-hide-descendants'}
+      >
         {state.open ? <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} /> : null}
         <Animated.View
           style={[
@@ -404,7 +414,7 @@ export function HostDrawer() {
               bottom: 0,
               left: 0,
               width,
-              backgroundColor: theme.layer.sheet.fill,
+              backgroundColor: theme.overlay.fill,
               borderTopRightRadius: radius.lg,
               borderBottomRightRadius: radius.lg,
               boxShadow: glassShadow(theme.scheme),
@@ -445,6 +455,11 @@ export function HostDrawer() {
               label={t.pairAnother}
               icon={<PlusIcon color={theme.color.fg} size={icon} />}
               onPress={() => closeThen(() => hostDrawer.pairNew())}
+            />
+            <FooterRow
+              label={t.cloud.title}
+              icon={<PlusIcon color={theme.color.fg} size={icon} />}
+              onPress={() => closeThen(() => router.push('/cloud-services'))}
             />
             <FooterRow
               label={t.notifications}

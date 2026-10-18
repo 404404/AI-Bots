@@ -363,6 +363,12 @@ export function ChannelMessageBody({
   const format =
     message.format ?? (message.author.kind === 'human' && !humanMarkdown ? 'text' : 'markdown');
   if (message.contentPurged) return <div className="bh-bubble-body">{t('purge.purged')}</div>;
+  if (message.onboardingWelcome?.kind === 'tob')
+    return (
+      <div className="bh-bubble-body">
+        {t('home.greeting')} — {t('home.description')}
+      </div>
+    );
   if (message.onboardingWelcome !== undefined && actions !== undefined && channelId !== undefined)
     return <OnboardingWelcome actions={actions} channelId={channelId} t={t} />;
   if (message.sessionFailure !== undefined)

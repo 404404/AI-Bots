@@ -29,7 +29,12 @@ const layout: SerializedDockview = {
       ],
     },
   },
-  panels: {},
+  panels: Object.fromEntries(
+    [WORKSPACE_RAIL, 'channels', CHANNEL_BODY_PANEL, 'activity', 'sessions'].map((id) => [
+      id,
+      { id, contentComponent: 'panel' },
+    ]),
+  ),
   activeGroup: 'body',
 };
 
@@ -70,14 +75,24 @@ describe('workspace layout', () => {
       setItem() {},
       removeItem() {},
     };
-    expect(readChannelDock(storage)).toEqual({
-      version: 2,
+    const migrated = readChannelDock(storage)!;
+    expect(migrated).toMatchObject({
+      version: 8,
       gap: 4,
-      order: [],
+      order: ['bh:channels', CHANNEL_BODY_PANEL, 'activity-center', 'generated-files', 'bh:home'],
+      hiddenControls: [],
       members: { open: false, ratio: 0.3 },
-      layout,
-      parked,
+      sessionSeed: { open: true, hiddenControl: false },
+      channelWorkspaces: {},
+      parked: { computer: { neighbor: CHANNEL_BODY_PANEL, direction: 'below' } },
     });
+    expect(migrated.layout.panels.sessions).toBeUndefined();
+    expect(migrated.layout.panels.activity).toEqual(layout.panels.activity);
+    const migratedRows = migrated.layout.grid.root.data;
+    const originalRows = layout.grid.root.data;
+    if (!Array.isArray(migratedRows) || !Array.isArray(originalRows))
+      throw Error('Expected root branches');
+    expect(migratedRows[0]).toEqual(originalRows[0]);
     for (const [gap, expected] of [
       [-3, 0],
       [32, 16],

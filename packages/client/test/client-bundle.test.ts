@@ -104,6 +104,7 @@ beforeAll(async () => {
       },
     },
     fetch: globalThis.fetch,
+    queueMicrotask,
     TextEncoder,
     TextDecoder,
     AbortController,
@@ -179,6 +180,7 @@ describe('@botharness/ui browser bundle', () => {
       'inputTriggers',
       'layout',
       'locale',
+      'theme',
       'sessions',
       'uiWorkspace',
       'workspaces',
@@ -195,7 +197,11 @@ describe('@botharness/ui browser bundle', () => {
     }[] = [];
     const sources: unknown[] = [];
     const scoped = {
-      shortcuts: { register: () => () => undefined },
+      shortcuts: {
+        register: () => () => undefined,
+        config: { getSnapshot: () => ({ status: 'loading' }), subscribe: () => () => undefined },
+        catalog: { getSnapshot: () => [], subscribe: () => () => undefined },
+      },
       slots: {
         inject: (_name: string, callback: () => unknown) => callback(),
         register: (spec: {
@@ -265,12 +271,6 @@ describe('@botharness/ui browser bundle', () => {
         locale: 'botharness',
         inject: expect.any(Function),
         children: { 'botharness.settings.section': { kind: 'list', scope: 'root' } },
-      },
-      {
-        name: 'shell.overlay',
-        id: 'botharness-shortcut-help',
-        locale: 'botharness',
-        inject: expect.any(Function),
       },
       {
         name: 'sidebar.panellist',

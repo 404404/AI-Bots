@@ -13,6 +13,10 @@ DeepSeekBot can already do far more than DSH's native shell shows, and Humans wi
 
 - **Desktop Bot mode only.** The Bot mode layout exists only while the Client is in Bot mode at 961 px or wider. Outside Bot mode, DSH's native shell is unchanged. Below 961 px the Client falls back to today's responsive layout, where the Channel sidebar is an overlay of collapsible entries. The saved layout is kept and returns when the window widens again. Phones keep their current layout.
 
+### Channel selection preserves layout lifetime
+
+The Channel selection is not a React identity for the workspace or Dock. Switching by shortcut, roster, profile navigation, or the welcome view updates the active scope without recreating unrelated Panels. Transient conversation state and refs reset per selection generation; callbacks retained by a departed generation cannot write into the new one, even after returning to the same Channel. Composer drafts remain in the existing per-Channel draft owner. Only affected content and its scope-bound resources restart.
+
 ### Execution stays on DSH
 
 - **The Bot mode layout is presentation only.** It changes where things appear on screen. It does not change how work runs. A PersonaBot is still an abstraction on top of DSH Sessions: the Orchestrator Session, Assignment Sessions and every Bot tool call run through DSH's Session execution and its plugin ecosystem. The Human talks to a Bot rather than to a raw Session, but each turn still runs in a DSH Session. A Dock panel, including one from a third-party plugin, reaches the Host only through DSH Services and the existing Host↔Client seam, and never through a second execution path.

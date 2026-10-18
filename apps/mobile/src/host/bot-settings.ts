@@ -24,6 +24,8 @@ export interface ModelCatalogEntry {
   providerName: string;
   model: string;
   modelName: string;
+  efforts?: { id: string; name: string }[];
+  defaultEffort?: string;
   credential?: 'missing' | 'invalid';
 }
 
@@ -39,7 +41,10 @@ export interface ModelPlan {
 export interface ModelPreset {
   id: string;
   name: string;
+  revision?: number;
   orchestrator: ModelRoute;
+  assignmentDefault?: ModelRoute;
+  assignmentModels?: AssignmentModelOption[];
 }
 
 export interface BotModel {
@@ -166,6 +171,17 @@ function catalogEntry(value: unknown): ModelCatalogEntry | undefined {
     providerName: row['providerName'],
     model: row['model'],
     modelName: row['modelName'],
+    ...(Array.isArray(row['efforts'])
+      ? {
+          efforts: some(row['efforts'], (value) => {
+            const effort = record(value);
+            return text(effort?.['id']) && text(effort['name'])
+              ? { id: effort['id'], name: effort['name'] }
+              : undefined;
+          }),
+        }
+      : {}),
+    ...(text(row['defaultEffort']) ? { defaultEffort: row['defaultEffort'] } : {}),
     ...(credential === 'missing' || credential === 'invalid' ? { credential } : {}),
   };
 }
@@ -174,7 +190,17 @@ function preset(value: unknown): ModelPreset | undefined {
   const row = record(value);
   const orchestrator = route(row?.['orchestrator']);
   if (!text(row?.['id']) || !text(row['name']) || orchestrator === undefined) return undefined;
-  return { id: row['id'], name: row['name'], orchestrator };
+  const assignmentDefault = route(row['assignmentDefault']);
+  return {
+    id: row['id'],
+    name: row['name'],
+    orchestrator,
+    ...(typeof row['revision'] === 'number' ? { revision: row['revision'] } : {}),
+    ...(assignmentDefault === undefined ? {} : { assignmentDefault }),
+    ...(Array.isArray(row['assignmentModels'])
+      ? { assignmentModels: row['assignmentModels'] as AssignmentModelOption[] }
+      : {}),
+  };
 }
 
 function some<T>(rows: unknown, parse: (value: unknown) => T | undefined): T[] {
@@ -186,11 +212,18 @@ function some<T>(rows: unknown, parse: (value: unknown) => T | undefined): T[] {
     : [];
 }
 
-export async function loadBotModel(client: HostClient, slug: string): Promise<BotModel> {
+export async function loadBotModel(
+  client: HostClient,
+  slug: string,
+  requirePresets = false,
+): Promise<BotModel> {
   const [state, catalog, presets] = await Promise.all([
     client.call<unknown>('modelPlan', { slug }),
     client.call<unknown>('modelCatalog', {}),
-    client.call<unknown>('modelPresets', {}).catch(() => ({ presets: [] })),
+    client.call<unknown>('modelPresets', {}).catch((cause: unknown) => {
+      if (requirePresets) throw cause;
+      return { presets: [] };
+    }),
   ]);
   const models = record(catalog)?.['models'];
   if (!Array.isArray(models)) throw new HostAnswerInvalid('modelCatalog returned no models.');
@@ -206,6 +239,22 @@ export async function loadBotModel(client: HostClient, slug: string): Promise<Bo
     models: some(models, catalogEntry),
     ...(fallback === undefined ? {} : { fallback }),
     presets: some(record(presets)?.['presets'], preset),
+  };
+}
+
+export async function loadGlobalModel(client: HostClient): Promise<BotModel> {
+  const [catalog, presets] = await Promise.all([
+    client.call<unknown>('modelCatalog', {}),
+    client.call<unknown>('modelPresets', {}),
+  ]);
+  const models = record(catalog)?.['models'];
+  if (!Array.isArray(models)) throw new HostAnswerInvalid('modelCatalog returned no models.');
+  const fallback = route(record(catalog)?.['default']);
+  return {
+    revision: 0,
+    models: some(models, catalogEntry),
+    presets: some(record(presets)?.['presets'], preset),
+    ...(fallback === undefined ? {} : { fallback }),
   };
 }
 

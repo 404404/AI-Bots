@@ -574,11 +574,11 @@ describe('Memory Git graph sidebar', () => {
       );
     });
     expect(
-      Array.from(container.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent),
+      Array.from(document.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent),
     ).toContain('给这个版本起名');
-    const item = Array.from(
-      container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
-    ).find((button) => button.textContent === '从这里新建并切换分支');
+    const item = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(
+      (button) => button.textContent === '从这里新建并切换分支',
+    );
     expect(item).not.toBeUndefined();
     await act(async () => item?.click());
     const input = container.querySelector<HTMLInputElement>('#bh-memory-new-branch');
@@ -1264,7 +1264,7 @@ describe('Memory Git graph sidebar', () => {
     });
     expect(evolution?.querySelector('[role="menu"]')?.textContent).toContain('Git');
     await act(async () => {
-      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
         .find((item) => item.textContent === 'Git')
         ?.click();
     });
@@ -1274,7 +1274,7 @@ describe('Memory Git graph sidebar', () => {
       if (evolution?.querySelector('[role="menu"]') === null) terminology().click();
     });
     await act(async () => {
-      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
         .find((item) => item.textContent === '记忆')
         ?.click();
     });

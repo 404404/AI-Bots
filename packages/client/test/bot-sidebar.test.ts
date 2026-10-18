@@ -10,8 +10,19 @@ const captured = vi.hoisted(() => ({
     items: readonly Record<string, unknown>[];
     selectedId?: string | undefined;
     onSelect?: (id: string) => void;
-    getAnchorRect?: () => DOMRect;
+    point?: { x: number; y: number };
   }>,
+}));
+
+vi.mock('../src/client/ds/pointer-menu.js', () => ({
+  PointerMenu: (props: {
+    point: { x: number; y: number };
+    items: readonly Record<string, unknown>[];
+    onSelect?: (id: string) => void;
+  }) => {
+    captured.menus.push({ ...props, open: true });
+    return null;
+  },
 }));
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
@@ -115,6 +126,8 @@ const NO_INSTALL = { installable: false, install: { phase: 'idle' as const } };
 
 function stubActions(): BridgeActions {
   return {
+    tobHome: vi.fn(),
+    sendHome: vi.fn(),
     channelHistory: vi.fn(),
     channelHistorySources: vi.fn(),
     channelPurgePreview: vi.fn(),
@@ -251,8 +264,7 @@ function stubActions(): BridgeActions {
     refreshBotInbox: vi.fn(async () => undefined),
     openActivityCenter: vi.fn(async () => undefined),
     attachActivityCenterPanel: vi.fn(() => () => undefined),
-    refreshOverview: vi.fn(async () => undefined),
-    humanActionPage: vi.fn(async () => ({ items: [] })),
+    activityPage: vi.fn(),
     openHumanInbox: vi.fn(async () => undefined),
     refreshHumanInboxStatus: vi.fn(async () => undefined),
     refreshHumanInbox: vi.fn(async () => undefined),
@@ -288,6 +300,7 @@ function stubActions(): BridgeActions {
     applyChannelTail: vi.fn(),
     dismissFailedMessage: vi.fn(() => false),
     openSession: vi.fn(() => undefined),
+    readSessions: vi.fn(async () => []),
     refreshSessions: vi.fn(async () => undefined),
     setSessionArchived: vi.fn(async () => undefined),
     messageAttachmentTarget: vi.fn(async () => ({
@@ -1567,7 +1580,7 @@ describe('bot sidebar rows', () => {
       }),
     );
     const menu = captured.menus.at(-1)!;
-    expect(menu.getAnchorRect?.().toJSON()).toMatchObject({ x: 140, y: 180, width: 0, height: 0 });
+    expect(menu.point).toMatchObject({ x: 140, y: 180 });
     expect(menu.items[0]).toMatchObject({ id: 'profile', label: '查看资料' });
     menu.onSelect?.('profile');
     expect(profileAction).toHaveBeenCalledOnce();

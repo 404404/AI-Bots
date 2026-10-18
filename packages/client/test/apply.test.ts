@@ -94,7 +94,11 @@ function fakeScope(): FakeScope {
 
 function createScoped(specs: Spec[], disposed: Spec[], withSettings = false, withPanelInfo = true) {
   const scoped: Record<string, unknown> = {
-    shortcuts: { register: () => () => undefined },
+    shortcuts: {
+      register: () => () => undefined,
+      config: { getSnapshot: () => ({ status: 'loading' }), subscribe: () => () => undefined },
+      catalog: { getSnapshot: () => [], subscribe: () => () => undefined },
+    },
     slots: {
       inject: (_name: string, callback: () => unknown) => callback(),
       register: (spec: Spec) => {
@@ -220,10 +224,7 @@ describe('client apply', () => {
       name: 'shell.overlay',
       id: 'botharness-bot-settings',
     });
-    expect(registrations.find((spec) => spec.id === 'botharness-shortcut-help')).toMatchObject({
-      name: 'shell.overlay',
-      id: 'botharness-shortcut-help',
-    });
+    expect(registrations.find((spec) => spec.id === 'botharness-shortcut-help')).toBeUndefined();
     const specs = registrations.filter((spec) => spec.name !== 'shell.overlay');
 
     expect(specs.map((spec) => spec.name)).toEqual([
@@ -325,6 +326,9 @@ describe('client apply', () => {
     const sections = specs.filter((spec) => spec.name === 'botharness.settings.section');
     expect(sections.map(({ id, order }) => ({ id, order }))).toEqual([
       { id: 'general', order: 0 },
+      { id: 'appearance', order: 5 },
+      { id: 'notifications', order: 21 },
+      { id: 'shortcuts', order: 22 },
       { id: 'models', order: 10 },
       { id: 'auto-approval', order: 15 },
       { id: 'messaging', order: 20 },

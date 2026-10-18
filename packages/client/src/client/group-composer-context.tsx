@@ -1,3 +1,4 @@
+import { useScopedState } from './scoped-state.js';
 import { useRef, useState, type Ref, type ReactElement } from 'react';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
@@ -44,7 +45,7 @@ export function useGroupComposerContext({
   avgPerf?: AveragePerfView | undefined;
 }): ComposerContext | undefined {
   const footerSettings = useRef<ComposerFooterHandle>(null);
-  const [openChannel, setOpenChannel] = useState<string>();
+  const [openChannel, setOpenChannel] = useScopedState<string>(channel?.id);
   if (channel?.type !== 'group') return;
   const open = () => setOpenChannel(channel.id);
   return {
