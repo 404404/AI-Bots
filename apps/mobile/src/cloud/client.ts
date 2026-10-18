@@ -827,7 +827,6 @@ export class CloudClient {
     channelId: string,
     name: string,
   ) => {
-    // Replays owner-authorized issuance before handing out the locally saved key.
     await this.createAgent(id, organizationId, channelId, name);
     return this.lock(async () => {
       const entry = await this.channelEntry(id, organizationId),
