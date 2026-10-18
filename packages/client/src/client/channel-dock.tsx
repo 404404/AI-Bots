@@ -765,7 +765,7 @@ export function ChannelDock({
   storage,
 }: ChannelDockProps): ReactElement {
   const workspace = useContext(WorkspaceContext);
-  const [initial] = useState(() => readChannelDock(storage));
+  const [initial] = useState(() => readChannelDock(storage, workspace !== undefined));
   const [storageFailed, setStorageFailed] = useState(false);
   const seed = useRef(initial?.sessionSeed ?? DEFAULT_CHANNEL_WORKSPACE);
   const [channelWorkspaces, updateChannelWorkspaces] = useState(initial?.channelWorkspaces ?? {});
@@ -957,7 +957,13 @@ export function ChannelDock({
   };
 
   const onReady = ({ api: ready }: DockviewReadyEvent): void => {
-    const stored = readChannelDock(storage);
+    const stored = readChannelDock(storage, workspace !== undefined);
+    seed.current = stored?.sessionSeed ?? DEFAULT_CHANNEL_WORKSPACE;
+    botSeeds.current = stored?.botPanelSeeds ?? {};
+    orderRef.current = stored?.order ?? [WORKSPACE_HOME];
+    updateOrder(orderRef.current);
+    hiddenControlsRef.current = stored?.hiddenControls ?? [];
+    updateHiddenControls(hiddenControlsRef.current);
     parked.current = { ...stored?.parked };
     visibilityLayout.current = stored?.visibilityLayout;
     unregistered.current = Object.fromEntries(

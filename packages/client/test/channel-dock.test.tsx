@@ -752,6 +752,44 @@ it('opens Bot Inbox only inside DM Messages, supports registry navigation and sw
   expect(Object.keys(panels())).not.toContain('bot-inbox');
 });
 
+it('imports fallback panel sizes when workspace ownership is enabled after mounting', async () => {
+  const { WorkspaceContext } = await import('../src/client/workspace-context.js');
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  registry.register({ id: 'sessions', title: 'Sessions', scope: 'global', component: () => null });
+  const view = (enabled: boolean) =>
+    createElement(
+      WorkspaceContext.Provider,
+      { value: enabled ? { rail: () => createElement('nav') } : undefined },
+      createElement(ChannelDock, {
+        body: createElement('div'),
+        panels: registry.panels(),
+        registry,
+        channel: { id: 'dm', type: 'dm', botSlug: 'ada' },
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view(false)));
+  await settle();
+  const fallback = readChannelDock(storage)!;
+  const nodes = fallback.layout.grid.root.data as { size: number }[];
+  nodes[0]!.size = 570;
+  nodes[1]!.size = 430;
+  storage.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify(fallback));
+  act(() => root.render(view(true)));
+  await settle();
+  expect(readChannelDock(storage)?.sessionSeed?.ratio).toBeCloseTo(0.43);
+  expect(host.querySelector('[data-workspace-dock]')).not.toBeNull();
+});
+
 it('updates the Messages Channel title and trailing actions without replacing its draft', async () => {
   const { WorkspaceContext } = await import('../src/client/workspace-context.js');
   const registry = createDockPanelRegistry();

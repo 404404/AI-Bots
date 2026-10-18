@@ -11,6 +11,31 @@ afterEach(() => {
 });
 
 describe('workspace shell ownership', () => {
+  it('gives Windows blank headers and rail window drag while recalling titles and controls', () => {
+    document.documentElement.setAttribute('data-windows-titlebar', '');
+    const styles = document.createElement('style');
+    styles.setAttribute('data-workspace-test-styles', '');
+    styles.textContent = WORKSPACE_CSS.replaceAll('-webkit-app-region', '--test-app-region');
+    document.head.append(styles);
+    document.body.innerHTML = `<div id="root"><div data-workspace-dock>
+      <div class="dv-tabs-and-actions-container"><div class="dv-tab">
+        <div data-window-drag><button data-panel-hide>Messages</button>
+        <span data-window-drag-recall>Channel name</span><button>Settings</button></div>
+      </div></div><div class="bh-workspace-controls" data-window-drag><button>Home</button></div>
+      </div></div><div role="menu">Overlay</div>`;
+    const region = (node: Element) => getComputedStyle(node).getPropertyValue('--test-app-region');
+    for (const node of document.querySelectorAll(
+      '[data-window-drag], .dv-tab, .dv-tabs-and-actions-container',
+    ))
+      expect(region(node)).toBe('drag');
+    for (const node of document.querySelectorAll(
+      'button, [data-window-drag-recall], [role="menu"]',
+    ))
+      expect(region(node)).toBe('no-drag');
+    document.documentElement.removeAttribute('data-windows-titlebar');
+    expect(region(document.querySelector('[data-window-drag]')!)).not.toBe('drag');
+  });
+
   it('routes both native menu and keyboard command calls and restores the inherited command', () => {
     const native = vi.fn();
     const layout = Object.create({ toggleSidebar: native });
