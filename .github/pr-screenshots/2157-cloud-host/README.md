@@ -59,3 +59,9 @@ Independent synthetic staging authentication was prepared through the authorized
 Initial Metro resolved localhost to IPv6 and the Simulator could not connect to 127.0.0.1; restarting only this runner's Metro with IPv4 resolved it. A cold-start selector ran too early; the loaded page was then observed before proceeding. The generic back command is not available on the presented iOS sheet; the visible native downward-dismiss gesture returned successfully. These are retained test/setup observations, not omitted failures.
 
 The runner closed its driver and own 8091 Metro, restored both Host work policies, and released the assigned lane. Existing shared data, three untracked QA documents, physical-phone 8097 and shared Host 39100 were preserved. No native build, install, erase, Prod operation or merge occurred. Android, physical hardware diversity, Human QA and a new text-size/theme matrix are not claimed by this increment. WebSocket, organization-wide Agent membership and wider live revocation remain open goal gates.
+
+### Live completed-request permission fences
+
+After the phone run, formal `deepseekbot cloud-work` exercised the same native Tool owner against those real admitted sources. Removing the original Human refused both A forwarding replay and B execution replay (`CLOUD_WORK_DENIED`). With Human authority restored but no target grant, A forwarding replay refused (`CLOUD_FORWARD_DENIED`). B could not add a second hop, A could not target itself (`FORWARD_LIMIT`), and A could not execute after committing a forward (`CLOUD_WORK_CONFLICT`). An authorized B replay returned executed0 and canonical executionCount1; cloud history remained at sequence18. All temporary policies were restored. [Assertions](work-denials-uat.json).
+
+This closes six real completed-request denial checks; it does not simulate revocation racing a new running effect or remote Agent credential revocation. Those narrower limits remain explicit.
