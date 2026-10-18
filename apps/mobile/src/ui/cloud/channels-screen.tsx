@@ -8,7 +8,7 @@ import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
-import { KeyboardFormScroll } from '../primitives/keyboard-form';
+import { KeyboardFormScroll, renderKeyboardFormScroll } from '../primitives/keyboard-form';
 import { Text } from '../primitives/text';
 import { TextInput } from '../primitives/system-text';
 import { t } from '../strings';
@@ -137,7 +137,7 @@ function ChannelWorkspace({
     <FlatList<CloudChannel | CloudMessage>
       style={{ flex: 1, backgroundColor: theme.color.base }}
       contentInsetAdjustmentBehavior="automatic"
-      renderScrollComponent={renderChannelFormScroll}
+      renderScrollComponent={guest ? renderKeyboardFormScroll : renderChannelFormScroll}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         padding: space.x5,
