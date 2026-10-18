@@ -15,6 +15,8 @@ class StreamRevealView(context: Context, appContext: AppContext) : ExpoView(cont
   var maxGlyphs = 48
   private val observers = mutableMapOf<TextView, TextReveal>()
 
+  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) = Unit
+
   fun sync() {
     if (!active || !isAttachedToWindow) {
       clear()
