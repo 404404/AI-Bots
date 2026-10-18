@@ -648,7 +648,6 @@ export class CloudClient {
         : await this.channelEntry(id, organizationId);
       return this.channelPage(entry, organizationId, after, guest);
     });
-  /** Directory reads borrow an organization scope, then restore the selected session. */
   listConversationChannels = (id: string, organizationId: string, after?: string, guest = false) =>
     this.lock(async () => {
       let entry = await this.current(this.entry(id));

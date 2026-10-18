@@ -61,6 +61,7 @@ vi.mock('expo-router', () => {
     Stack,
     router: { push },
     useIsFocused: () => true,
+    useFocusEffect: () => {},
     useRouter: () => ({ push }),
   };
 });

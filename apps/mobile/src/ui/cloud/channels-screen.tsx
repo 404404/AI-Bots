@@ -1,7 +1,7 @@
 import { useSourceDraft } from '../../host/native-source-drafts';
 import { cloudDraftKey } from '../../host/source-drafts';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { readCloudMessages, cacheCloudMessages } from '../../cloud/native-message-cache';
@@ -106,34 +106,30 @@ function ChannelWorkspace({
   const busy = working || snapshot.busy;
   const cacheScope = cloudDraftKey(cloudViewScope(row), organizationId, initialChannelId ?? '');
   const loadedHistory = useRef(false);
-  useEffect(() => {
-    let active = true;
-    if (initialChannelId && allowed)
-      void readCloudMessages(cacheScope).then((cached) => {
-        if (
-          !active ||
-          loadedHistory.current ||
-          !cached ||
-          cached.channel.channelId !== initialChannelId
-        )
-          return;
-        setSelected(cached.channel);
-        setMessages(cached.messages);
-        setCursor(cached.messages.at(-1)?.sequence ?? 0);
-        setMore(cached.hasMore);
-      });
-    return () => {
-      active = false;
-    };
-  }, [cacheScope, initialChannelId, allowed]);
-  useEffect(() => {
-    if (selected && messages)
-      cacheCloudMessages(cloudDraftKey(cloudViewScope(row), organizationId, selected.channelId), {
-        channel: selected,
-        messages,
-        hasMore: more,
-      });
-  }, [selected, messages, more, organizationId, cloudViewScope(row)]);
+  const messageWindow = useRef<CloudMessage[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (initialChannelId && allowed)
+        void readCloudMessages(cacheScope).then((cached) => {
+          if (
+            !active ||
+            loadedHistory.current ||
+            !cached ||
+            cached.channel.channelId !== initialChannelId
+          )
+            return;
+          messageWindow.current = cached.messages;
+          setSelected(cached.channel);
+          setMessages(cached.messages);
+          setCursor(cached.messages.at(-1)?.sequence ?? 0);
+          setMore(cached.hasMore);
+        });
+      return () => {
+        active = false;
+      };
+    }, [cacheScope, initialChannelId, allowed]),
+  );
   const opened = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -210,14 +206,21 @@ function ChannelWorkspace({
       guest,
     );
     loadedHistory.current = true;
-    setMessages((old) =>
-      after
-        ? [
-            ...(old ?? []),
-            ...page.messages.filter((m) => !old?.some((o) => o.sequence === m.sequence)),
-          ]
-        : page.messages,
-    );
+    const next = after
+      ? [
+          ...messageWindow.current,
+          ...page.messages.filter(
+            (m) => !messageWindow.current.some((old) => old.sequence === m.sequence),
+          ),
+        ]
+      : page.messages;
+    messageWindow.current = next;
+    setMessages(next);
+    void cacheCloudMessages(cloudDraftKey(cloudViewScope(row), organizationId, channel.channelId), {
+      channel,
+      messages: next,
+      hasMore: page.hasMore,
+    });
     setCursor(page.nextCursor);
     setMore(page.hasMore);
   };

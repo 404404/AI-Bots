@@ -2,7 +2,6 @@ export interface DraftStorage {
   read(): Promise<unknown>;
   write(value: Record<string, string>): void;
 }
-/** Unsent text only. This store has no transport and never retries a send. */
 export function createSourceDrafts(storage: DraftStorage) {
   let values: Record<string, string> = {};
   const changed = new Set<string>();

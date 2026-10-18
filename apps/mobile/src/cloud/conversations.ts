@@ -15,7 +15,6 @@ export type CloudConversation = {
 type Port = Pick<CloudClient, 'listOrganizations' | 'listConversationChannels'>;
 type Snapshot = { busy: boolean; rows: CloudConversation[]; errors: string[] };
 
-/** A client projection, never a second authority for membership or message content. */
 export function createCloudConversations(port: Port) {
   let sources: readonly CloudRow[] = [];
   let signature = '';

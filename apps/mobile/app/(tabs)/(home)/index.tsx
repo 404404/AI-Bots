@@ -1,6 +1,6 @@
 import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
-import { Redirect, Stack, useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { fullClientParams } from '../../../src/host/full-client';
@@ -50,9 +50,11 @@ export default function HomeScreen() {
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string>();
   const enrollment = JSON.stringify(cloud.rows.map(cloudViewScope));
-  useEffect(() => {
-    if (focused && cloud.ready) void cloudConversations.refresh();
-  }, [focused, cloud.ready, enrollment]);
+  useFocusEffect(
+    useCallback(() => {
+      if (cloud.ready) void cloudConversations.refresh();
+    }, [cloud.ready, enrollment]),
+  );
   const filters = useMemo(() => {
     const choices = new Map<string, string>([['all', t.allConversations]]);
     if (saved) choices.set('computer', saved.hostName);
