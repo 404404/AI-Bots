@@ -5,6 +5,7 @@
 待复核草稿保存在现有 Operational Database，仅正式提交进入 Channel/Inbox；仅 drop 不解决 Inbox；显式 `resolve_inbox_ids` 可在 drop 成功后结清所选事项，过期或重启不自动恢复。
 原始依据与修订草稿归同一 owner，purge 清除派生内容。默认关闭，按群 opt-in；CLI 与模型使用同一契约。
 #2056 的显式恢复复用该记录：`review_action: inspect` 只返回当前授权下的有界元数据；重启后通过 `recover` 携带新观察与修正正文，保留原过期时间与预算。成功提交在同一事务留下消息 ID／意图指纹回执并清空草稿正文；重放只确认规范消息，不新增 Inbox 或恢复旧 Tool Promise。权限、来源与附件检查先于回执读回，详见 [ADR-0230](../adr/0230-group-recovery-retains-authorized-commit-receipts.md)；本票真实模型验收仍在进行。
+重启重新准入本地群任务前，Host 复查当前成员资格；已撤权且未开始副作用的可重试 Admission 记为 Host 策略忽略，保留原因，不伪造 Bot 观察或完成结论。不确定副作用继续待修复。新的 Human DM 进入独立授权回合，原撤权任务的跨 Channel 发送 fence 保持有效。
 附件 owner 的有界当前内容摘要参与观察指纹，等长文件修改也会触发重新复核；摘要不进入公开消息，不改变附件身份，也不锁住外部文件写入。
 held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0227](../adr/0227-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
 

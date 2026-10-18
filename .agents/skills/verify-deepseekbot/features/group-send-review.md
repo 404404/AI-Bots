@@ -152,3 +152,15 @@ resolves completed Inbox work without creating a no-addition draft or reaction. 
 drafts still use explicit drop with observed peer evidence. Useful replies contain the answer,
 not an explanation of task ownership or the yielding protocol. Inspect native Tool records
 as well as the final silence: a refused no-addition send followed by drop is not a clean path.
+
+## Revoked active task after restart
+
+During an active Group turn, remove the Bot's membership and interrupt its Host before
+the held result is returned. After restart, send a new neutral Human DM asking only
+whether the old work stopped. The old unauthorized task must not be re-admitted or
+receive that DM as steering; the DM must get an actual canonical reply. Inspect the old
+Admission's Host-policy ignore reason separately from the new DM's explicit resolution.
+Uncertain side effects must remain needs-repair, and an old revoked turn must still
+refuse cross-Channel sends. Regression:
+`packages/core/test/group-recovery-revoked-source.test.ts`. A fresh DM after removal of
+only pending work is a control, not a reproduction of the active-turn restart bug.

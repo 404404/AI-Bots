@@ -35,6 +35,14 @@ validation apply before recovery or receipt readback. This matters because the e
 Recovery cannot rely only on that callback for authorization. Direct CLI calls use the existing
 separate Bot-scoped diagnostic owner and execute the same Tool code.
 
+Before re-admitting interrupted local Group work at startup, the Host rechecks current
+membership. A recoverable Admission with no started side effect is retired as ignored
+when access has been revoked. This is a Host policy fact, with a stable refusal reason;
+it does not fabricate a Bot observation, Session-authored resolution or completed task.
+Uncertain side effects remain `needs-repair`. A new Human DM can then enter its own
+authorized turn rather than being steered into the revoked Group turn. The existing
+source fence still refuses cross-Channel sends from a revoked running task.
+
 Observation fingerprints also include the attachment owner's current content digest. File identity,
 name, MIME type and size alone miss same-size edits such as `10:00` becoming `11:00`. The attachment
 owner reads an authorized file descriptor in bounded chunks, rejects files above its size limit,

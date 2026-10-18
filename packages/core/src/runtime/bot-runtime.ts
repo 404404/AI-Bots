@@ -1422,6 +1422,7 @@ class BotRuntimeImplementation implements BotRuntime {
 
     if (options.database.mode === 'ready') {
       const interruptedDms = this.#recoverInterruptedAttempts();
+      this.#retireRevokedGroupRetries();
       this.#recoverPendingChannelAdmissions();
       for (const row of interruptedDms) {
         const admission = this.admitDmMessage({
@@ -5104,6 +5105,44 @@ class BotRuntimeImplementation implements BotRuntime {
       ['source-event', 'bot-inbox'],
     );
     return interruptedDms;
+  }
+
+  #retireRevokedGroupRetries(): void {
+    const retries = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT a.source_event_id, a.bot_slug, e.channel_id
+          FROM inbox_admissions a JOIN source_events e USING (source_event_id)
+         WHERE a.reason IN ('group-mention', 'group-ordinary')
+           AND a.attempt_state IN ('pending', 'retryable')
+           AND a.side_effect_started_at IS NULL AND a.ignored_at IS NULL
+           AND e.source_kind != 'bridge-message' AND e.channel_id IS NOT NULL
+      `)
+        .all(),
+    ) as Array<{ source_event_id: string; bot_slug: string; channel_id: string }>;
+    const revoked = retries.filter((row) => {
+      const channel = this.#channels.get(row.channel_id);
+      return channel === undefined || !this.#isMember(row.bot_slug, channel);
+    });
+    if (revoked.length === 0) return;
+    const at = this.#now().toISOString();
+    this.#database.transaction(
+      (database) => {
+        for (const row of revoked)
+          database
+            .prepare(`
+          UPDATE inbox_admissions
+             SET attempt_state = 'handled', handled_at = ?, ignored_at = ?,
+                 snoozed_until = NULL, wake_count = NULL, wake_interval_ms = NULL,
+                 last_error = 'Group membership revoked during recovery'
+           WHERE source_event_id = ? AND bot_slug = ?
+             AND attempt_state IN ('pending', 'retryable')
+             AND side_effect_started_at IS NULL AND ignored_at IS NULL
+        `)
+            .run(at, at, row.source_event_id, row.bot_slug);
+      },
+      ['bot-inbox'],
+    );
   }
 
   originalAttachmentRoot(
