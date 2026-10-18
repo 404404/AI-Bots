@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { FlatList, Share, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError } from '../../cloud/client';
+import { cloudViewScope } from '../../cloud/workspace-directory';
 import type { Invitation } from '../../cloud/invitation-contract';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { useDesignTheme } from '../design/theme';
@@ -29,13 +30,18 @@ function renderInvitationScroll(props: ScrollViewProps) {
   return <InvitationScroll {...props} />;
 }
 export function CloudInvitationsScreen() {
-  const { instanceId, organizationId, channelId, channelName, kind } = useLocalSearchParams<{
-    instanceId: string;
-    organizationId?: string;
-    channelId?: string;
-    channelName?: string;
-    kind?: string;
-  }>();
+  const { instanceId, organizationId, channelId, channelName, kind, accountScope } =
+    useLocalSearchParams<{
+      instanceId: string;
+      accountScope?: string;
+      organizationId?: string;
+      channelId?: string;
+      channelName?: string;
+      kind?: string;
+    }>();
+  const current = useCloudSnapshot().rows.find((r) => r.config.instanceId === instanceId);
+  if (accountScope && cloudViewScope(current) !== accountScope)
+    return <Text accessibilityRole="alert">{t.creationSourceChanged}</Text>;
   return (
     <>
       <Stack.Screen
@@ -44,7 +50,13 @@ export function CloudInvitationsScreen() {
         }}
       />
       <InvitationWorkspace
-        key={instanceId + ':' + (organizationId ?? 'inbox') + ':' + (channelId ?? kind ?? '')}
+        key={
+          cloudViewScope(current) +
+          ':' +
+          (organizationId ?? 'inbox') +
+          ':' +
+          (channelId ?? kind ?? '')
+        }
         instanceId={instanceId}
         organizationId={organizationId}
         channelId={channelId}

@@ -45,6 +45,14 @@ Cloud services exits the pairing form; its unfinished local inputs are not saved
 
 Settings shows a default-on switch at the bottom with collapsed details; pairing has no statistics control. Saved opt-outs remain off. In the shared-device QA lane, follow [the mobile statistics acceptance path](../../../../docs/mobile-statistics.md#runnable-device-acceptance): verify the one-time Web-aligned notice, privacy/source links, Settings navigation and persistent dismissal (not a collection gate), prove zero vendor requests after opt-out, then enable tagged QA and correlate pairing, live Roster and first-chat events with PostHog. Repeat on physical iOS and Android. Capture both supported languages and opt-out while offline. Web exports and injected-sender tests do not qualify device delivery.
 
+## Contextual creation (#2195)
+
+In the assigned UAT device window, preserve original accounts, pairings and files first. Capture baseline and candidate on the same installed native build. From Chats select Computer, All and an owner Organization, then open the separate bottom **+**. Check scoped actions; All must ask for a target even when only one is eligible. Dismiss via close/back/backdrop without changing tab or writing. Repeat on Activity and confirm inherited source and pending badge remain unchanged.
+
+Use only designated empty test fixtures. Through the visible Computer creation flow create a message-free Channel and open the result; independently read its ID/name/membership from the Host API/CLI. Through the Cloud form create one uniquely named UAT Channel and verify its Organization/account and returned ID through the public API. Retry a pending request explicitly without duplicates. Member and channel guest controls must not expose owner actions, and direct public writes must be denied. Test source/account replacement during preflight and form entry as refusal, never fallback. Do not send messages or invoke models for these cases.
+
+Record default/intermediate/maximum text in both themes, reachable labels, keyboard-open submit and final-row safe area. Inspect screenshots, save menu interaction video, and separately disclose Android/phone/screen-reader/Human gaps. Delete only disposable Host resources through their owner API; if the Cloud service has no deletion contract, record the bounded retained test Channel rather than editing storage. Revoke only task sessions/grants and restore original app state, preferences, QA branch and lane.
+
 ## Gotchas
 
 - Neither journey needs a model credential.

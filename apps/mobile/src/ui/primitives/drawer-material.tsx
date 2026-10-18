@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { edge, radius } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
 
-export function DrawerMaterial({ rounded = false }: { rounded?: boolean }) {
+export function DrawerMaterial({ rounded = false }: { rounded?: boolean; glassPanel?: boolean }) {
   const theme = useDesignTheme();
   return (
     <View

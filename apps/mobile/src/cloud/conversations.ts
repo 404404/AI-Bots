@@ -16,7 +16,7 @@ type Port = Pick<CloudClient, 'listOrganizations' | 'listConversationChannels'>;
 export type ConversationWorkspace = Pick<
   CloudConversation,
   'scope' | 'instanceId' | 'organizationId' | 'organizationName' | 'guest'
-> & { server: string };
+> & { server: string; role?: 'owner' | 'member' };
 type Snapshot = {
   busy: boolean;
   ready: boolean;
@@ -43,7 +43,12 @@ export function createCloudConversations(port: Port) {
     const scope = cloudViewScope(source);
     const result = new Map<string, CloudConversation>();
     const workspaces = new Map<string, ConversationWorkspace>();
-    const addWorkspace = (organizationId: string, organizationName: string, guest: boolean) => {
+    const addWorkspace = (
+      organizationId: string,
+      organizationName: string,
+      guest: boolean,
+      role?: 'owner' | 'member',
+    ) => {
       if (!workspaces.has(organizationId))
         workspaces.set(organizationId, {
           scope,
@@ -52,6 +57,7 @@ export function createCloudConversations(port: Port) {
           organizationId,
           organizationName,
           guest,
+          ...(role ? { role } : {}),
         });
     };
     const add = (
@@ -97,7 +103,7 @@ export function createCloudConversations(port: Port) {
       },
       async (organizations) => {
         for (const org of organizations) {
-          addWorkspace(org.organizationId, org.name, false);
+          addWorkspace(org.organizationId, org.name, false, org.role);
           await pages(
             async (after) => {
               const p = await port.listConversationChannels(
