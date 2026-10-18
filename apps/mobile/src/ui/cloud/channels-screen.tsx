@@ -168,7 +168,12 @@ function ChannelWorkspace({
                   onPress={() =>
                     router.push({
                       pathname: '/cloud-invitations',
-                      params: { instanceId, organizationId, channelId: selected.channelId },
+                      params: {
+                        instanceId,
+                        organizationId,
+                        channelId: selected.channelId,
+                        channelName: selected.name,
+                      },
                     })
                   }
                 />
