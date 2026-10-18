@@ -9,6 +9,7 @@ vi.mock('react-native', async () => ({
 vi.mock('@expo/ui/swift-ui/modifiers', () => ({
   accessibilityLabel: (label: string) => ({ $type: 'accessibilityLabel', label }),
   accessibilityAddTraits: (traits: string[]) => ({ $type: 'accessibilityAddTraits', traits }),
+  onLongPressGesture: (onLongPress: () => void) => ({ $type: 'onLongPressGesture', onLongPress }),
   buttonStyle: () => ({}),
   buttonBorderShape: () => ({}),
   font: () => ({}),
@@ -30,12 +31,13 @@ vi.mock('@expo/ui/swift-ui', () => {
     }: {
       onPress(): void;
       children: ReactNode;
-      modifiers: { $type: string; label?: string; traits?: string[] }[];
+      modifiers: { $type: string; label?: string; traits?: string[]; onLongPress?: () => void }[];
     }) =>
       createElement(
         'button',
         {
           onClick: onPress,
+          onContextMenu: modifiers.find((m) => m.$type === 'onLongPressGesture')?.onLongPress,
           'aria-label': modifiers.find((m) => m.$type === 'accessibilityLabel')?.label,
           'aria-pressed': modifiers.some(
             (m) => m.$type === 'accessibilityAddTraits' && m.traits?.includes('isSelected'),
@@ -52,6 +54,7 @@ it('native controls preserve selection, unread label and distinct navigation/cre
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
+  const longPress = vi.fn();
   const chats = vi.fn(),
     activity = vi.fn(),
     create = vi.fn(),
@@ -68,7 +71,7 @@ it('native controls preserve selection, unread label and distinct navigation/cre
                 activity: false,
                 count: 0,
                 onPress: chats,
-                onLongPress: vi.fn(),
+                onLongPress: longPress,
               },
               {
                 key: 'activity',
@@ -76,7 +79,7 @@ it('native controls preserve selection, unread label and distinct navigation/cre
                 activity: true,
                 count: 4,
                 onPress: activity,
-                onLongPress: vi.fn(),
+                onLongPress: longPress,
               },
             ]}
           />
@@ -89,6 +92,7 @@ it('native controls preserve selection, unread label and distinct navigation/cre
     expect(buttons[0]!.getAttribute('aria-pressed')).toBe('true');
     expect(buttons[1]!.getAttribute('aria-label')).toContain('4');
     await act(async () => {
+      buttons[0]!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
       buttons[1]!.click();
       buttons[2]!.click();
       buttons[3]!.click();
@@ -97,6 +101,7 @@ it('native controls preserve selection, unread label and distinct navigation/cre
     expect(create).toHaveBeenCalledOnce();
     expect(close).toHaveBeenCalledOnce();
     expect(chats).not.toHaveBeenCalled();
+    expect(longPress).toHaveBeenCalledOnce();
   } finally {
     act(() => root.unmount());
     host.remove();

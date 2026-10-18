@@ -7,6 +7,7 @@ import {
   font,
   foregroundStyle,
   frame,
+  onLongPressGesture,
 } from '@expo/ui/swift-ui/modifiers';
 import { Platform } from 'react-native';
 import { useDesignTheme } from '../design/theme';
@@ -37,6 +38,7 @@ export function NavigationDestinations({ items }: { items: NavigationDestination
               modifiers={[
                 buttonStyle(item.focused ? (glass ? 'glass' : 'bordered') : 'plain'),
                 buttonBorderShape('capsule'),
+                onLongPressGesture(item.onLongPress),
                 frame({ maxWidth: Infinity, maxHeight: Infinity }),
                 accessibilityLabel(accessibility),
                 accessibilityAddTraits(item.focused ? ['isSelected'] : []),
