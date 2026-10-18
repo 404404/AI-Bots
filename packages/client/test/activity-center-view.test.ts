@@ -251,3 +251,47 @@ it('keeps a newer unread query when read reconciliation returns an older snapsho
   await reading;
   expect(store.getSnapshot().humanInbox.unreadCount).toBe(1);
 });
+
+it('keeps the loaded empty panel DOM stable during a background request', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  let hold = false;
+  const releases: Array<() => void> = [];
+  const call: BridgeCall = async (endpoint) => {
+    if (endpoint === 'humanAttentionStatus')
+      return { ok: true, value: { unreadCount: 0, hasAction: false } };
+    if (endpoint === 'humanAttention') {
+      if (hold) await new Promise<void>((resolve) => releases.push(resolve));
+      return { ok: true, value: { queryVersion: 1, items: [] } };
+    }
+    throw new Error('Unexpected endpoint: ' + endpoint);
+  };
+  const actions = createActions(call, store);
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(createElement(ActivityCenterView, { actions, placement: 'panel' })),
+    );
+    expect(container.querySelectorAll('.bh-activity-section-empty')).toHaveLength(3);
+    const before = container.innerHTML;
+    hold = true;
+    let pending!: Promise<void>;
+    await act(async () => {
+      pending = activityFeedFor(actions).refresh();
+    });
+    expect(releases).toHaveLength(3);
+    expect(container.innerHTML).toBe(before);
+    await act(async () => {
+      releases.splice(0).forEach((release) => release());
+      await pending;
+    });
+    expect(container.innerHTML).toBe(before);
+  } finally {
+    await act(async () => {
+      releases.splice(0).forEach((release) => release());
+      root.unmount();
+    });
+    container.remove();
+  }
+});

@@ -294,6 +294,7 @@ export interface WireGroupJoinRequest {
 }
 
 export type RosterLiveFrame =
+  | { type: 'attention' }
   | { type: 'baseline'; placements: unknown[] }
   | { type: 'changed' }
   | { type: 'latest'; channelId: string; message: WireMessage }

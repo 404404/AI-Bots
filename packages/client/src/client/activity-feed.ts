@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { observeHumanAttention } from './messaging-defaults-live.js';
 import type { BridgeActions } from './actions.js';
 import { store, type ClientStore, type HumanInboxState } from './store.js';
 
@@ -68,8 +69,9 @@ export function createActivityFeed(
   };
   let generation = 0;
   let users = 0;
+  let stopLive: (() => void) | undefined;
+  const loaded = new Set<ActivitySection>();
   let unsubscribeMute: (() => void) | undefined;
-  let timer: ReturnType<typeof setInterval> | undefined;
   const pending = new Map<ActivitySection, Promise<void>>();
   const visible = (): ActivitySection[] =>
     state.query.category === 'all' ? [...ACTIVITY_SECTIONS] : [state.query.category];
@@ -86,8 +88,17 @@ export function createActivityFeed(
     const query = state.query;
     const sort =
       query.sort === 'default' ? (section === 'action' ? 'oldest' : 'newest') : query.sort;
-    state.pages = { ...state.pages, [section]: { ...before, status: 'loading', error: undefined } };
-    publish();
+    if (!loaded.has(section) || before.error !== undefined) {
+      state.pages = {
+        ...state.pages,
+        [section]: {
+          ...before,
+          status: loaded.has(section) ? 'ready' : 'loading',
+          error: undefined,
+        },
+      };
+      publish();
+    }
     const request = (async () => {
       try {
         const items = more ? [...before.items] : [];
@@ -113,34 +124,36 @@ export function createActivityFeed(
           if (!cursor) break;
         }
         if (version !== generation) return;
-        state.pages = {
-          ...state.pages,
-          [section]: {
-            ...before,
-            items,
-            nextCursor: cursor,
-            status: 'ready',
-            error: undefined,
-            sort,
-            botSlug: query.botSlug,
-            channelId: query.channelId,
-            snoozed: query.snoozed,
-          },
+        loaded.add(section);
+        const next: HumanInboxState = {
+          ...before,
+          items,
+          nextCursor: cursor,
+          status: 'ready',
+          error: undefined,
+          sort,
+          botSlug: query.botSlug,
+          channelId: query.channelId,
+          snoozed: query.snoozed,
         };
+        if (JSON.stringify(next) !== JSON.stringify(state.pages[section])) {
+          state.pages = { ...state.pages, [section]: next };
+          publish();
+        }
       } catch (error) {
         if (version !== generation) return;
         state.pages = {
           ...state.pages,
           [section]: {
             ...state.pages[section],
-            status: 'error',
+            status: loaded.has(section) ? 'ready' : 'error',
             error: error instanceof Error ? error.message : String(error),
           },
         };
+        publish();
       } finally {
         if (version === generation) {
           pending.delete(section);
-          publish();
         }
       }
     })();
@@ -166,6 +179,7 @@ export function createActivityFeed(
       if (JSON.stringify(query) === JSON.stringify(state.query)) return;
       generation++;
       pending.clear();
+      loaded.clear();
       state = {
         ...state,
         query,
@@ -188,6 +202,7 @@ export function createActivityFeed(
     },
     acquire() {
       if (users++ === 0) {
+        stopLive = observeHumanAttention(() => void refresh());
         let muted = JSON.stringify([...clientStore.getSnapshot().roster.muted].sort());
         unsubscribeMute = clientStore.subscribe(() => {
           const next = JSON.stringify([...clientStore.getSnapshot().roster.muted].sort());
@@ -198,15 +213,16 @@ export function createActivityFeed(
           void refresh();
         });
         void refresh();
-        timer = setInterval(() => {
-          if (!pending.size) void refresh();
-        }, 10_000);
       }
+      let released = false;
       return () => {
+        if (released) return;
+        released = true;
         if (--users === 0) {
+          stopLive?.();
+          stopLive = undefined;
           unsubscribeMute?.();
           unsubscribeMute = undefined;
-          clearInterval(timer);
           generation++;
           pending.clear();
         }
