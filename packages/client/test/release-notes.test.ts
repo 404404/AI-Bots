@@ -655,9 +655,7 @@ it('serializes installed notes before the pending restart modal', async () => {
     memoryStorage(),
   );
   await controller.enter();
-  const view = await render(
-    createElement(ReleaseNotesAnnouncement, { controller, t }),
-  );
+  const view = await render(createElement(ReleaseNotesAnnouncement, { controller, t }));
   try {
     expect(view.host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
     expect(view.host.textContent).toContain('1.3.1');
