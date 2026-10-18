@@ -1,0 +1,263 @@
+{
+  "sourceHead": "5315dfc68712aa072911b29e408e08d42a0a8961",
+  "base": "390630e0dc81b0e776758bc420c1622b2ad51981",
+  "implementation": "32fd49a3e1a283113b1693aaafbe6db215754386",
+  "date": "2026-10-18",
+  "qualification": "Draft; not stable120FPS; incremental JS caches reduce CPU but main-thread frame budget regresses",
+  "platform": {
+    "os": "Android16",
+    "architecture": "arm64",
+    "build": "Release",
+    "expo": "58.0.14",
+    "reactNative": "0.88.0",
+    "actualDisplayHz": 120,
+    "temporaryRefreshOverridesRestored": true,
+    "privateLoopbackBuild": true,
+    "sourceNativeConfigurationUnchanged": true
+  },
+  "fixture": {
+    "characters": 21492,
+    "chunks": 281,
+    "chunkIntervalMs": 32,
+    "model": "deterministic local replay; no real LLM"
+  },
+  "method": {
+    "order": "ABBAAB",
+    "runsPerVersion": 3,
+    "traceSeconds": 45,
+    "earlyWindow": [
+      2,
+      22
+    ],
+    "lateWindow": [
+      22,
+      42
+    ],
+    "noScreenshotOrHierarchyPollingDuringTrace": true,
+    "frameDeadlineCaveat": "Platform expected pipeline deadline ~20ms; use UI execution budget8.33ms separately",
+    "nativeApkEntriesCompared": 38,
+    "nativeApkDifferences": []
+  },
+  "medians": {
+    "earlyCombinedRuntimeCpuSeconds": {
+      "A": 17.402,
+      "B": 13.083
+    },
+    "earlyUiP95Ms": {
+      "A": 5.879,
+      "B": 6.84
+    },
+    "earlyUiFramesOver8_33ms": {
+      "A": 13,
+      "B": 34
+    },
+    "lateUiP95Ms": {
+      "A": 5.491,
+      "B": 6.831
+    },
+    "lateUiFramesOver8_33ms": {
+      "A": 3,
+      "B": 36
+    }
+  },
+  "runs": [
+    {
+      "version": "A",
+      "canonicalComplete": true,
+      "visibleComplete": true,
+      "observedCompleteUpperMs": 54881,
+      "mainThread": [
+        {
+          "period": "early",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.335000",
+          "p95_ui_ms": "5.529000",
+          "max_ui_ms": "11.267000",
+          "ui_frames_over_8_33ms": "10"
+        },
+        {
+          "period": "late",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.356000",
+          "p95_ui_ms": "5.439000",
+          "max_ui_ms": "9.206000",
+          "ui_frames_over_8_33ms": "3"
+        }
+      ]
+    },
+    {
+      "version": "B",
+      "canonicalComplete": true,
+      "visibleComplete": true,
+      "observedCompleteUpperMs": 53612,
+      "mainThread": [
+        {
+          "period": "early",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.721000",
+          "p95_ui_ms": "6.863000",
+          "max_ui_ms": "11.315000",
+          "ui_frames_over_8_33ms": "36"
+        },
+        {
+          "period": "late",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.251000",
+          "p95_ui_ms": "6.831000",
+          "max_ui_ms": "10.743000",
+          "ui_frames_over_8_33ms": "36"
+        }
+      ]
+    },
+    {
+      "version": "B",
+      "canonicalComplete": true,
+      "visibleComplete": true,
+      "observedCompleteUpperMs": 57073,
+      "mainThread": [
+        {
+          "period": "early",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.658000",
+          "p95_ui_ms": "6.803000",
+          "max_ui_ms": "14.829000",
+          "ui_frames_over_8_33ms": "28"
+        },
+        {
+          "period": "late",
+          "ui_frames": "2408",
+          "avg_ui_ms": "3.197000",
+          "p95_ui_ms": "6.603000",
+          "max_ui_ms": "11.099000",
+          "ui_frames_over_8_33ms": "36"
+        }
+      ]
+    },
+    {
+      "version": "A",
+      "canonicalComplete": true,
+      "visibleComplete": true,
+      "observedCompleteUpperMs": 65663,
+      "mainThread": [
+        {
+          "period": "early",
+          "ui_frames": "2409",
+          "avg_ui_ms": "3.492000",
+          "p95_ui_ms": "5.879000",
+          "max_ui_ms": "24.238000",
+          "ui_frames_over_8_33ms": "13"
+        },
+        {
+          "period": "late",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.453000",
+          "p95_ui_ms": "5.491000",
+          "max_ui_ms": "8.768000",
+          "ui_frames_over_8_33ms": "1"
+        }
+      ]
+    },
+    {
+      "version": "A",
+      "canonicalComplete": true,
+      "visibleComplete": true,
+      "observedCompleteUpperMs": 56076,
+      "mainThread": [
+        {
+          "period": "early",
+          "ui_frames": "2409",
+          "avg_ui_ms": "3.562000",
+          "p95_ui_ms": "6.062000",
+          "max_ui_ms": "13.459000",
+          "ui_frames_over_8_33ms": "15"
+        },
+        {
+          "period": "late",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.593000",
+          "p95_ui_ms": "5.750000",
+          "max_ui_ms": "11.044000",
+          "ui_frames_over_8_33ms": "4"
+        }
+      ]
+    },
+    {
+      "version": "B",
+      "canonicalComplete": true,
+      "visibleComplete": true,
+      "observedCompleteUpperMs": 54150,
+      "mainThread": [
+        {
+          "period": "early",
+          "ui_frames": "2410",
+          "avg_ui_ms": "3.717000",
+          "p95_ui_ms": "6.840000",
+          "max_ui_ms": "12.363000",
+          "ui_frames_over_8_33ms": "34"
+        },
+        {
+          "period": "late",
+          "ui_frames": "2407",
+          "avg_ui_ms": "3.310000",
+          "p95_ui_ms": "6.894000",
+          "max_ui_ms": "12.798000",
+          "ui_frames_over_8_33ms": "35"
+        }
+      ]
+    }
+  ],
+  "runtimeSourceHashes": [
+    {
+      "file": "apps/mobile/src/ui/markdown-blocks.ts",
+      "sha256": "1ef8d309cb61632f93ee8a2c4a3d930e127896ef76a263d01b302dfd8dc1fa69"
+    },
+    {
+      "file": "apps/mobile/src/ui/markdown-view.android.tsx",
+      "sha256": "642fd1dfca327b7e602ed8c67128032b3a2d055b178d78e9c7831b49db945954"
+    },
+    {
+      "file": "apps/mobile/src/ui/primitives/fading-text-model.ts",
+      "sha256": "e81119a1f36f14772a679ad01451bf7416767376c83c415ed1495ee51e5db399"
+    },
+    {
+      "file": "apps/mobile/src/ui/primitives/fading-text.tsx",
+      "sha256": "14e34ab7ae6cb7bb8da54f10a3d84300fc89ce1c14d323c1dac34182c0d083fe"
+    },
+    {
+      "file": "apps/mobile/src/ui/markdown-window.ts",
+      "sha256": "475152706df239fd43301cadf48ee5871681d197c77d1b78eb2bbcf4abe4dc2e"
+    },
+    {
+      "file": "apps/mobile/src/ui/markdown-viewport.ts",
+      "sha256": "772aebebd8223eaa0ee9402862298aadbf3d07f9e64b887f4bb6092fde02ba34"
+    },
+    {
+      "file": "apps/mobile/src/ui/chat/conversation-screen.tsx",
+      "sha256": "db28b2199b8a4997ef76a66352587fa22d8f0281a72e4667a59779c298afc96f"
+    }
+  ],
+  "rejectedPilots": [
+    {
+      "name": "48ms publication",
+      "earlyUiP95Ms": 6.842,
+      "lateUiP95Ms": 6.921,
+      "earlyUiOver8_33": 33,
+      "lateUiOver8_33": 37,
+      "disposition": "reverted; one pilot is not a matched claim"
+    },
+    {
+      "name": "continuous animation clock",
+      "disposition": "reverted; no measured improvement"
+    },
+    {
+      "name": "remove constant top0",
+      "disposition": "reverted; no established early-window improvement"
+    }
+  ],
+  "unqualified": [
+    "Actual continuous scrolling at120Hz: computer-injected touches failed; Human gestures normal; manual20s capture had no observed movement",
+    "Current cache iteration native large-font/theme/keyboard matrix and iOS",
+    "Native parser or native grapheme animator: research only, not implemented"
+  ],
+  "sourcesLocalOnly": true
+}
