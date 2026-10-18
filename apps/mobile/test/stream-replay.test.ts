@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { unlink, writeFile } from 'node:fs/promises';
+import { readFile, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,7 @@ import { afterEach, expect, it } from 'vitest';
 
 let child: ChildProcess | undefined;
 let control: string | undefined;
+let eventsFile: string | undefined;
 afterEach(async () => {
   if (child !== undefined) {
     const exit = once(child, 'exit');
@@ -20,13 +21,21 @@ afterEach(async () => {
     await unlink(control);
     control = undefined;
   }
+  if (eventsFile !== undefined) {
+    await unlink(eventsFile);
+    eventsFile = undefined;
+  }
 });
 
-async function server() {
+async function server(events = false) {
   control = join(tmpdir(), `botharness-replay-${randomUUID()}.json`);
   await writeFile(control, JSON.stringify({ slug: 'qa-bot', runId: 'first', fixture: 'smoke' }), {
     flag: 'wx',
   });
+  if (events) {
+    eventsFile = join(tmpdir(), `botharness-replay-events-${randomUUID()}.jsonl`);
+    await writeFile(eventsFile, '', { flag: 'wx' });
+  }
   child = spawn(
     process.execPath,
     [
@@ -35,6 +44,7 @@ async function server() {
       '0',
       '--control',
       control,
+      ...(eventsFile === undefined ? [] : ['--log', eventsFile]),
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   );
@@ -54,6 +64,25 @@ const post = (base: string, body: unknown) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
+
+it('timestamps producer boundaries independently of CLI startup and rendering', async () => {
+  const before = Date.now();
+  const base = await server(true);
+  await (await post(base, request('user', true))).text();
+  const entries = async () =>
+    (await readFile(eventsFile!, 'utf8'))
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  await expect.poll(entries).toHaveLength(2);
+  const events = await entries();
+  expect(events.map((event) => event.event)).toEqual(['start', 'end']);
+  for (const event of events) {
+    expect(event.at).toBeGreaterThanOrEqual(before);
+    expect(event.at).toBeLessThanOrEqual(Date.now());
+  }
+});
 
 it('sends exactly one fixture per armed run and does not consume a run for tool completion', async () => {
   const base = await server();
@@ -92,4 +121,14 @@ it('streams valid tool arguments with complete emoji and rejects invalid control
   const invalid = await post(base, request());
   expect(invalid.status).toBe(400);
   expect(await invalid.json()).toEqual({ error: { message: 'INVALID_REPLAY_REQUEST' } });
+});
+
+it('offers a long plain paragraph separately from the rich Markdown fixture', async () => {
+  const base = await server();
+  await writeFile(control!, JSON.stringify({ slug: 'qa-bot', runId: 'plain', fixture: 'plain' }));
+  const result = await (await post(base, request())).json();
+  const { body } = JSON.parse(result.choices[0].message.tool_calls[0].function.arguments);
+  expect(body.length).toBeGreaterThan(10000);
+  expect(body).not.toMatch(/[\n*\[\]`]/u);
+  expect(body.endsWith('PLAIN_REPLAY_COMPLETE')).toBe(true);
 });

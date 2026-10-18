@@ -1,9 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import * as grapheme from 'unicode-segmenter/grapheme';
+import { describe, expect, it, vi } from 'vitest';
 
 import { appendTextReveal } from '../src/ui/primitives/fading-text-model';
 import { streamReveal } from '../src/ui/design/tokens';
 
+vi.mock('unicode-segmenter/grapheme', async (original) => {
+  const actual = await original<typeof import('unicode-segmenter/grapheme')>();
+  return { ...actual, graphemeSegments: vi.fn(actual.graphemeSegments) };
+});
+
 describe('incremental text reveal', () => {
+  it('segments only the changing suffix of a long paragraph during an append', () => {
+    const text = '中文'.repeat(10000) + '👨';
+    const first = appendTextReveal(undefined, text, 1000);
+    const segment = vi.mocked(grapheme.graphemeSegments).mockClear();
+    const next = appendTextReveal(first, text + '‍👩‍👧‍👦é', 1080);
+    expect(segment.mock.calls[0]![0].length).toBeLessThan(100);
+    expect(next.prefix + next.glyphs.map((glyph) => glyph.text).join('')).toBe(next.text);
+    expect(next.glyphs.map((glyph) => glyph.text).join('')).toContain('👨‍👩‍👧‍👦é');
+  });
+
   it('preserves the appearance time of existing glyphs and settles old text into its prefix', () => {
     const first = appendTextReveal(undefined, '你好', 1000);
     const next = appendTextReveal(first, '你好，世界', 1080);
