@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { claimSidebarCommand, mountWorkspaceShell } from '../src/client/workspace-shell.js';
+import { WORKSPACE_CSS } from '../src/client/workspace-styles.js';
 
 afterEach(() => {
   document.body.innerHTML = '';
   document.documentElement.removeAttribute('data-windows-titlebar');
+  document.documentElement.removeAttribute('data-fullscreen');
+  document.head.querySelector('[data-workspace-test-styles]')?.remove();
 });
 
 describe('workspace shell ownership', () => {
@@ -37,26 +40,85 @@ describe('workspace shell ownership', () => {
     expect(layout.toggleSidebar).toBe(other);
   });
 
-  it('claims only the qualified shell and disposes all its markers', () => {
-    document.body.innerHTML =
-      '<div style="display:grid"><div><div data-slot="sidebar"></div></div><div><div data-slot="main"><div id="workspace"></div></div></div><div data-rightbar-col></div><div data-shell-overlay></div></div>';
-    const node = document.getElementById('workspace')!;
-    const layout = { toggleSidebar: vi.fn() };
-    const release = mountWorkspaceShell(node, layout, vi.fn());
-    expect(release).toBeTypeOf('function');
-    expect(document.querySelectorAll('[data-bh-workspace-frame]')).toHaveLength(1);
-    expect(mountWorkspaceShell(node, layout, vi.fn())).toBeUndefined();
-    release!();
-    expect(
-      document.querySelector(
-        '[data-bh-workspace-frame], [data-bh-workspace-main], [data-bh-workspace-sidebar]',
-      ),
-    ).toBeNull();
-    document.documentElement.setAttribute('data-windows-titlebar', '');
-    expect(mountWorkspaceShell(node, layout, vi.fn())).toBeUndefined();
-    document.documentElement.removeAttribute('data-windows-titlebar');
-    document.querySelector('[data-shell-overlay]')!.remove();
-    expect(mountWorkspaceShell(node, layout, vi.fn())).toBeUndefined();
-    expect(layout.toggleSidebar).not.toHaveBeenCalled();
-  });
+  it.each([false, true])(
+    'enables the Windows workspace without taking native chrome ownership (fullscreen=%s)',
+    (fullscreen) => {
+      document.documentElement.setAttribute('data-windows-titlebar', '');
+      if (fullscreen) document.documentElement.setAttribute('data-fullscreen', '');
+      const styles = document.createElement('style');
+      styles.setAttribute('data-workspace-test-styles', '');
+      styles.textContent = `
+        .native-frame { display:grid; padding-top:40px; box-sizing:border-box; }
+        ${WORKSPACE_CSS}
+      `;
+      document.head.append(styles);
+      document.body.innerHTML = `
+        <div class="native-frame" style="grid-template-columns:280px 1fr 0px">
+          <div><div data-slot="sidebar"></div></div>
+          <div><div data-slot="main"><div id="workspace"></div></div></div>
+          <div data-rightbar-col></div>
+          <div data-shell-bottom></div>
+          <div data-shell-overlay></div>
+        </div>`;
+      const chrome = document.createElement('div');
+      chrome.setAttribute('data-windows-menu', '');
+      const shadow = chrome.attachShadow({ mode: 'open' });
+      shadow.innerHTML =
+        '<div role="menubar"><button>Application</button><button>Edit</button></div>';
+      document.body.append(chrome);
+      const frame = document.querySelector<HTMLElement>('.native-frame')!;
+      const original = frame.outerHTML;
+      const chromeMarkup = shadow.innerHTML;
+      const nativeClick = vi.fn();
+      shadow.addEventListener('click', nativeClick);
+      const layout = { toggleSidebar: vi.fn() };
+      const originalCommand = layout.toggleSidebar;
+      const toggleChannels = vi.fn();
+      const node = document.getElementById('workspace')!;
+      for (let entry = 0; entry < 2; entry++) {
+        const release = mountWorkspaceShell(node, layout, toggleChannels);
+        expect(release).toBeTypeOf('function');
+        expect(document.body.querySelector('[data-windows-menu]')).toBe(chrome);
+        expect(shadow.innerHTML).toBe(chromeMarkup);
+        expect(getComputedStyle(frame).paddingTop).toBe('40px');
+        expect(getComputedStyle(frame).gridTemplateColumns).toBe('280px 1fr 0px');
+        const main = frame.querySelector<HTMLElement>('[data-bh-workspace-main]')!;
+        expect(getComputedStyle(main).gridColumn).toBe('1 / 3');
+        expect(getComputedStyle(main).gridRow).toBe('1');
+        expect(getComputedStyle(chrome).display).not.toBe('none');
+        for (const button of shadow.querySelectorAll('button')) button.click();
+        expect(nativeClick).toHaveBeenCalledTimes((entry + 1) * 2);
+        layout.toggleSidebar();
+        expect(toggleChannels).toHaveBeenCalledTimes(entry + 1);
+        expect(document.documentElement.hasAttribute('data-windows-titlebar')).toBe(true);
+        release!();
+        expect(frame.outerHTML).toBe(original);
+        expect(layout.toggleSidebar).toBe(originalCommand);
+      }
+    },
+  );
+
+  it.each([false, true])(
+    'claims only the qualified shell and disposes all its markers (Windows=%s)',
+    (windows) => {
+      if (windows) document.documentElement.setAttribute('data-windows-titlebar', '');
+      document.body.innerHTML =
+        '<div style="display:grid"><div><div data-slot="sidebar"></div></div><div><div data-slot="main"><div id="workspace"></div></div></div><div data-rightbar-col></div><div data-shell-overlay></div></div>';
+      const node = document.getElementById('workspace')!;
+      const layout = { toggleSidebar: vi.fn() };
+      const release = mountWorkspaceShell(node, layout, vi.fn());
+      expect(release).toBeTypeOf('function');
+      expect(document.querySelectorAll('[data-bh-workspace-frame]')).toHaveLength(1);
+      expect(mountWorkspaceShell(node, layout, vi.fn())).toBeUndefined();
+      release!();
+      expect(
+        document.querySelector(
+          '[data-bh-workspace-frame], [data-bh-workspace-main], [data-bh-workspace-sidebar]',
+        ),
+      ).toBeNull();
+      document.querySelector('[data-shell-overlay]')!.remove();
+      expect(mountWorkspaceShell(node, layout, vi.fn())).toBeUndefined();
+      expect(layout.toggleSidebar).not.toHaveBeenCalled();
+    },
+  );
 });
