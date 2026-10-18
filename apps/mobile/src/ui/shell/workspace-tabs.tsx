@@ -1,4 +1,5 @@
-import { Pressable, View } from 'react-native';
+import type { Ref } from 'react';
+import { Pressable, View, type ViewInstance } from 'react-native';
 
 import { edge, radius, space } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
@@ -12,8 +13,10 @@ export type WorkspaceTab = 'computers' | 'cloud';
 export function WorkspaceTabs({
   value,
   onChange,
+  selectedRef,
 }: {
   value: WorkspaceTab;
+  selectedRef?: Ref<ViewInstance>;
   onChange(value: WorkspaceTab): void;
 }) {
   const theme = useDesignTheme();
@@ -26,6 +29,7 @@ export function WorkspaceTabs({
         return (
           <Pressable
             key={tab}
+            ref={selected ? selectedRef : undefined}
             accessibilityRole="tab"
             accessibilityLabel={label}
             accessibilityState={{ selected }}

@@ -631,12 +631,8 @@ const en = {
   workspaceLoading: 'Loading workspaces…',
   workspaceEmpty: 'No cloud workspaces yet. Join a workspace or channel using an invitation.',
   workspaceAdd: {
-    title: 'Add',
     cloudTab: 'Cloud',
     join: 'Join by link or QR',
-    joinHint:
-      'Join a workspace and its channels, or just one invited channel. The invitation identifies the cloud service.',
-    pairHint: 'Connect a computer to use its bots and local channels.',
     noComputers: 'No paired computers yet.',
     manage: 'Manage cloud services',
   },
@@ -1558,11 +1554,8 @@ const zh: typeof en = {
   workspaceLoading: '正在加载工作区…',
   workspaceEmpty: '还没有云端工作区，可以通过邀请加入组织或频道。',
   workspaceAdd: {
-    title: '添加',
     cloudTab: '云端',
     join: '通过链接或二维码加入',
-    joinHint: '加入组织及其频道，或仅加入一个受邀频道。邀请会指明所属的云服务。',
-    pairHint: '连接电脑，使用它的 Bot 和本地频道。',
     noComputers: '还没有配对的电脑。',
     manage: '管理云服务',
   },

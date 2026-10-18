@@ -42,13 +42,12 @@ import { shownHostName, type HostLook } from '../design/host-look';
 import { glassShadow, useDesignTheme } from '../design/theme';
 import { useMounted } from '../mounted';
 import { drawerSpring, edge, motion, radius, scrim, space } from '../design/tokens';
-import { DrawerHeader } from '../primitives/drawer-header';
 import { CountBadge } from '../primitives/count-badge';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
 import { HostTile } from './host-tile';
 import { WorkspaceTabs, type WorkspaceTab } from './workspace-tabs';
-import { WorkspaceAddButton, WorkspaceAddSheet } from './workspace-add';
+import { WorkspaceAddButton } from './workspace-add';
 import {
   createHostDrawer,
   drawerWidth,
@@ -446,7 +445,6 @@ export function HostDrawer() {
   const [selectionError, setSelectionError] = useState<string>();
   const cloudRoute = pathname.startsWith('/cloud-');
   const [tab, setTab] = useState<WorkspaceTab>(cloudRoute ? 'cloud' : 'computers');
-  const [adding, setAdding] = useState(false);
   const tabMount = useMounted<ViewInstance>(() => {
     if (state.open) setTab(cloudRoute ? 'cloud' : 'computers');
   }, [state.open, cloudRoute]);
@@ -487,7 +485,7 @@ export function HostDrawer() {
     [hosts, currentId, glanceMap, connection, list],
   );
 
-  const heading = useMounted<ViewInstance>(
+  const tabFocus = useMounted<ViewInstance>(
     (node) => {
       if (!state.open) return;
       const stopWatching = glances.watch(hosts);
@@ -517,10 +515,6 @@ export function HostDrawer() {
           })),
           { kind: 'status', key: entry.instanceId + ':status', entry },
         ]);
-  const add = (action: () => void) => {
-    setAdding(false);
-    closeThen(action);
-  };
   const fade = theme.scheme === 'dark' ? scrim.dark : scrim.light;
   const backdropStyle = useAnimatedStyle(() => ({ opacity: clamp(progress.value) * fade }));
   const panelStyle = useAnimatedStyle(() => ({
@@ -542,174 +536,165 @@ export function HostDrawer() {
     });
 
   return (
-    <>
-      <GestureDetector gesture={swipe}>
-        <View
-          ref={cloudMount}
-          style={StyleSheet.absoluteFill}
-          pointerEvents={state.open ? 'auto' : 'none'}
-          accessibilityElementsHidden={!state.open}
-          importantForAccessibility={state.open ? 'auto' : 'no-hide-descendants'}
+    <GestureDetector gesture={swipe}>
+      <View
+        ref={cloudMount}
+        style={StyleSheet.absoluteFill}
+        pointerEvents={state.open ? 'auto' : 'none'}
+        accessibilityElementsHidden={!state.open}
+        importantForAccessibility={state.open ? 'auto' : 'no-hide-descendants'}
+      >
+        {state.open ? <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} /> : null}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: theme.scheme === 'dark' ? theme.layer.canvas.fill : theme.color.fg,
+            },
+            backdropStyle,
+          ]}
         >
-          {state.open ? <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} /> : null}
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: theme.scheme === 'dark' ? theme.layer.canvas.fill : theme.color.fg,
-              },
-              backdropStyle,
-            ]}
+          <Pressable
+            style={{ flex: 1 }}
+            accessibilityRole="button"
+            accessibilityLabel={t.closeWorkspaces}
+            onPress={() => settle(false)}
+          />
+        </Animated.View>
+        <Animated.View
+          accessibilityViewIsModal
+          onAccessibilityEscape={() => settle(false)}
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width,
+              backgroundColor: theme.overlay.fill,
+              borderTopRightRadius: radius.lg,
+              borderBottomRightRadius: radius.lg,
+              boxShadow: glassShadow(theme.scheme),
+              overflow: 'hidden',
+            },
+            panelStyle,
+          ]}
+        >
+          <View
+            ref={tabMount}
+            style={{
+              paddingTop: insets.top + space.x5,
+              paddingHorizontal: space.x5,
+              paddingBottom: space.x4,
+            }}
           >
-            <Pressable
-              style={{ flex: 1 }}
-              accessibilityRole="button"
-              accessibilityLabel={t.closeWorkspaces}
-              onPress={() => settle(false)}
-            />
-          </Animated.View>
-          <Animated.View
-            accessibilityViewIsModal
-            style={[
-              {
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width,
-                backgroundColor: theme.overlay.fill,
-                borderTopRightRadius: radius.lg,
-                borderBottomRightRadius: radius.lg,
-                boxShadow: glassShadow(theme.scheme),
-                overflow: 'hidden',
-              },
-              panelStyle,
-            ]}
-          >
-            <View
-              style={{
-                paddingTop: insets.top + space.x5,
-                paddingHorizontal: space.x5,
-                paddingBottom: space.x4,
-              }}
-            >
-              <DrawerHeader
-                title={t.workspaces}
-                headingRef={heading}
-                icon={<ComputerIcon color={theme.color.fg} size={theme.type.title.line} />}
-                closeLabel={t.closeWorkspaces}
-                onClose={() => settle(false)}
-              />
-            </View>
-            <View ref={tabMount} style={{ paddingHorizontal: space.x5, paddingBottom: space.x4 }}>
-              <WorkspaceTabs value={tab} onChange={setTab} />
-            </View>
-            <FlatList<WorkspaceDrawerItem>
-              key={tab}
-              style={{ flex: 1 }}
-              data={drawerRows}
-              keyExtractor={(row) => row.key}
-              contentContainerStyle={{ paddingBottom: insets.bottom + space.x4 }}
-              renderItem={({ item }) => {
-                if (item.kind === 'host') return <HostRow row={item.row} />;
-                if (item.kind === 'workspace')
-                  return (
-                    <WorkspaceRow
-                      workspace={item.workspace}
-                      server={item.server}
-                      selected={
-                        cloudRoute &&
-                        params.instanceId === item.workspace.instanceId &&
-                        params.organizationId === item.workspace.organizationId
-                      }
-                      disabled={selecting || cloud.busy || directory.busy}
-                      onPress={() => void choose(item.workspace)}
-                    />
-                  );
-                const entry = item.entry;
-                if (!entry.hasSession)
-                  return (
-                    <FooterRow
-                      label={new URL(entry.server).host + ' · ' + t.cloudJoin.signIn}
-                      icon={<CloudIcon color={theme.color.fg} size={icon} />}
-                      onPress={() => closeThen(() => router.push('/cloud-services'))}
-                    />
-                  );
+            <WorkspaceTabs value={tab} onChange={setTab} selectedRef={tabFocus} />
+          </View>
+          <FlatList<WorkspaceDrawerItem>
+            key={tab}
+            style={{ flex: 1 }}
+            data={drawerRows}
+            keyExtractor={(row) => row.key}
+            contentContainerStyle={{ paddingBottom: insets.bottom + space.x4 }}
+            renderItem={({ item }) => {
+              if (item.kind === 'host') return <HostRow row={item.row} />;
+              if (item.kind === 'workspace')
                 return (
-                  <View style={{ paddingHorizontal: space.x5, gap: space.x2 }}>
-                    {!!entry.error && (
-                      <Text accessibilityLiveRegion="polite">
-                        {new URL(entry.server).host}: {entry.error}
-                      </Text>
-                    )}
-                    {!directory.busy &&
-                      !entry.error &&
-                      entry.workspaces.length === 0 &&
-                      entry.membersAfter === null &&
-                      entry.guestsAfter === null && <Text tone="muted">{t.workspaceEmpty}</Text>}
-                    {!directory.busy &&
-                      (entry.error ||
-                        entry.membersAfter !== null ||
-                        entry.guestsAfter !== null) && (
-                        <FooterRow
-                          label={entry.error ? t.retry : t.cloudOrganizations.more}
-                          icon={<PlusIcon color={theme.color.fg} size={icon} />}
-                          onPress={() => void workspaceDirectory.more(entry.instanceId)}
-                        />
-                      )}
-                  </View>
-                );
-              }}
-              ListFooterComponent={
-                <View>
-                  {tab === 'cloud' && directory.busy && (
-                    <Text style={{ padding: space.x5 }} accessibilityLiveRegion="polite">
-                      {t.workspaceLoading}
-                    </Text>
-                  )}
-                  {tab === 'cloud' && !!selectionError && (
-                    <Text style={{ padding: space.x5 }} accessibilityLiveRegion="polite">
-                      {selectionError}
-                    </Text>
-                  )}
-                  {tab === 'cloud' &&
-                    cloud.ready &&
-                    !directory.busy &&
-                    directory.entries.length === 0 && (
-                      <Text style={{ padding: space.x5 }} tone="muted">
-                        {t.workspaceEmpty}
-                      </Text>
-                    )}
-                  {tab === 'computers' && rows.length === 0 && (
-                    <Text style={{ padding: space.x5 }} tone="muted">
-                      {t.workspaceAdd.noComputers}
-                    </Text>
-                  )}
-                  <WorkspaceAddButton onPress={() => setAdding(true)} />
-                  {tab === 'cloud' && (
-                    <FooterRow
-                      label={t.workspaceAdd.manage}
-                      icon={<CloudIcon color={theme.color.fg} size={icon} />}
-                      onPress={() => closeThen(() => router.push('/cloud-services'))}
-                    />
-                  )}
-                  <FooterRow
-                    label={t.notifications}
-                    icon={<ActivityIcon color={theme.color.fg} size={icon} />}
-                    onPress={() => closeThen(() => hostDrawer.openNotifications())}
+                  <WorkspaceRow
+                    workspace={item.workspace}
+                    server={item.server}
+                    selected={
+                      cloudRoute &&
+                      params.instanceId === item.workspace.instanceId &&
+                      params.organizationId === item.workspace.organizationId
+                    }
+                    disabled={selecting || cloud.busy || directory.busy}
+                    onPress={() => void choose(item.workspace)}
                   />
+                );
+              const entry = item.entry;
+              if (!entry.hasSession)
+                return (
+                  <FooterRow
+                    label={new URL(entry.server).host + ' · ' + t.cloudJoin.signIn}
+                    icon={<CloudIcon color={theme.color.fg} size={icon} />}
+                    onPress={() => closeThen(() => router.push('/cloud-services'))}
+                  />
+                );
+              return (
+                <View style={{ paddingHorizontal: space.x5, gap: space.x2 }}>
+                  {!!entry.error && (
+                    <Text accessibilityLiveRegion="polite">
+                      {new URL(entry.server).host}: {entry.error}
+                    </Text>
+                  )}
+                  {!directory.busy &&
+                    !entry.error &&
+                    entry.workspaces.length === 0 &&
+                    entry.membersAfter === null &&
+                    entry.guestsAfter === null && <Text tone="muted">{t.workspaceEmpty}</Text>}
+                  {!directory.busy &&
+                    (entry.error || entry.membersAfter !== null || entry.guestsAfter !== null) && (
+                      <FooterRow
+                        label={entry.error ? t.retry : t.cloudOrganizations.more}
+                        icon={<PlusIcon color={theme.color.fg} size={icon} />}
+                        onPress={() => void workspaceDirectory.more(entry.instanceId)}
+                      />
+                    )}
                 </View>
-              }
-            />
-          </Animated.View>
-        </View>
-      </GestureDetector>
-      <WorkspaceAddSheet
-        visible={adding}
-        onClose={() => setAdding(false)}
-        onPair={() => add(() => hostDrawer.pairNew())}
-        onJoin={() => add(() => router.push('/cloud-join'))}
-      />
-    </>
+              );
+            }}
+            ListFooterComponent={
+              <View>
+                {tab === 'cloud' && directory.busy && (
+                  <Text style={{ padding: space.x5 }} accessibilityLiveRegion="polite">
+                    {t.workspaceLoading}
+                  </Text>
+                )}
+                {tab === 'cloud' && !!selectionError && (
+                  <Text style={{ padding: space.x5 }} accessibilityLiveRegion="polite">
+                    {selectionError}
+                  </Text>
+                )}
+                {tab === 'cloud' &&
+                  cloud.ready &&
+                  !directory.busy &&
+                  directory.entries.length === 0 && (
+                    <Text style={{ padding: space.x5 }} tone="muted">
+                      {t.workspaceEmpty}
+                    </Text>
+                  )}
+                {tab === 'computers' && rows.length === 0 && (
+                  <Text style={{ padding: space.x5 }} tone="muted">
+                    {t.workspaceAdd.noComputers}
+                  </Text>
+                )}
+                <WorkspaceAddButton
+                  label={tab === 'computers' ? t.pairAnother : t.workspaceAdd.join}
+                  onPress={() =>
+                    closeThen(() => {
+                      if (tab === 'computers') hostDrawer.pairNew();
+                      else router.push('/cloud-join');
+                    })
+                  }
+                />
+                {tab === 'cloud' && (
+                  <FooterRow
+                    label={t.workspaceAdd.manage}
+                    icon={<CloudIcon color={theme.color.fg} size={icon} />}
+                    onPress={() => closeThen(() => router.push('/cloud-services'))}
+                  />
+                )}
+                <FooterRow
+                  label={t.notifications}
+                  icon={<ActivityIcon color={theme.color.fg} size={icon} />}
+                  onPress={() => closeThen(() => hostDrawer.openNotifications())}
+                />
+              </View>
+            }
+          />
+        </Animated.View>
+      </View>
+    </GestureDetector>
   );
 }
