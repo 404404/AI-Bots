@@ -1,6 +1,6 @@
 # ADR-0230: Cloud Agent connections use native Credentials and Messaging
 
-- Status: Accepted for the UAT Host slice; transport qualified on two Hosts; bounded-work runtime qualification pending
+- Status: Accepted for the UAT Host slice; transport and bounded model-mediated work qualified on two UAT Hosts
 - Date: 2026-10-18
 - Issue: [#2155](https://github.com/BotHarness/DeepSeekBot/issues/2155)
 
@@ -24,7 +24,7 @@ Host management uses authenticated `cloudConnections` RPC and `deepseekbot cloud
 
 Generation 101 adds a bounded work ledger in the same Operational Database. It records request hashes, execution count and outcome, not another conversation store. A durable `authorizing` intent precedes remote authorization; `started` is claimed before the fixed synchronous runtime check. Recovery from `started` reports `needs-review`, never silently repeats the effect. An `outbox` result retries delivery, including after the deadline, without running work again. A durable `forwarding` intent fixes the single-hop target before transmission; uncertain delivery can retry only that target and cannot fall back to execution. Completed/forwarded records return their existing outcome. Current authority still applies to retries. The health capability reads platform, architecture and runtime version; it accepts no arbitrary command or file path.
 
-Two isolated Hosts have qualified transport, removal, context-only authorization and crash-before-checkpoint replay through UAT. The new bounded-work owner has source tests; native model-mediated forwarding and its two-Host UAT result remain unqualified until separately recorded.
+Two isolated Hosts have qualified transport, removal, context-only authorization and crash-before-checkpoint replay through UAT. On runtime `f02c2423bce02c264548193ac738013f4eac83ab`, native model A inspected/forwarded and B inspected/executed through this owner. Canonical UAT sequences 13–15 retained the original Human/deadline and one result; A executed zero times and B once. After both Host restarts, direct CLI replay returned the same child and zero additional execution/messages. See `.github/pr-screenshots/2157-cloud-host/work-model-uat.json`. This qualifies the fixed health capability, not arbitrary side effects or a fresh mobile end-to-end run.
 
 ## Consequences
 
