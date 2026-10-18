@@ -231,7 +231,7 @@ export function PinnedPanelCards({
                   <span {...stylex.props(styles.dot)} data-pinned-panel-dot="" aria-hidden="true" />
                 ) : mark.indicator === 'unknown' ? (
                   <span
-                    {...stylex.props(styles.count)}
+                    {...stylex.props(styles.count, styles.unknown)}
                     data-pinned-panel-unknown=""
                     aria-hidden="true"
                   >
@@ -353,6 +353,7 @@ const styles = stylex.create({
     textAlign: 'center',
     fontVariantNumeric: 'tabular-nums',
   },
+  unknown: { backgroundColor: color.well, color: color.muted },
   dot: {
     position: 'absolute',
     top: space.x2,
