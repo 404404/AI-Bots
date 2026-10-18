@@ -653,3 +653,156 @@ it('denies Bot wake by default and uses the current local original-Human policy 
   });
   expect(onEvent.mock.calls[1]?.[0].mentionedAccount).toBe(false);
 });
+it('keeps cloud work authorization above explicit ordinary-message wake and queued-source consumption', async () => {
+  const { createCore } = await import('../src/plugin.js');
+  const { sourceSenderAllowed } = await import('../src/messaging/sender-access.js');
+  const f = await fixture();
+  const runs: unknown[] = [];
+  const core = createCore({
+    dshHome: createTempRoot('cloud-wake-boundary-'),
+    agents: {
+      async runOrchestrator(run) {
+        runs.push(run);
+      },
+      async runAssignment() {},
+      requestAssignment() {
+        return { delivery: 'steer' };
+      },
+      async stopAssignment() {},
+      async close() {},
+    },
+  });
+  const port = attachOperationalModule(core.operationalDatabase, 'messaging');
+  const owner = new CloudConnections(
+    port,
+    () => f.ctx.credentials,
+    new CloudTransport((...args) => f.responder()(...args)),
+  );
+  cleanup.push(async () => {
+    core.externalMessaging.close();
+    await core.runtime.close();
+    await owner.close();
+    core.operationalDatabase.close();
+  });
+  await owner.import(credential);
+  core.registry.create({ slug: 'cloud-b', displayName: 'Cloud B' });
+  core.registry.create({ slug: 'other-bot', displayName: 'Other Bot' });
+  const provider = createCloudProvider(owner);
+  type Consumer = Parameters<NonNullable<typeof provider.consume>>[0];
+  let consumer: Consumer | undefined;
+  core.externalMessaging.register({
+    ...provider,
+    async consume(input) {
+      consumer = input;
+      return () => {};
+    },
+  });
+  await core.externalMessaging.identity('cloud-b', {
+    kind: 'bind',
+    providerId: provider.id,
+    accountRef: connection.id,
+    fingerprint: connection.fingerprint,
+  });
+  const grant = await core.externalMessaging.authorize({
+    botSlug: 'cloud-b',
+    providerId: provider.id,
+    accountRef: connection.id,
+    targetRef: credential.channelId,
+    fingerprint: connection.fingerprint,
+    targetDigest: connection.fingerprint,
+  });
+  await core.externalMessaging.inbound.setEnabled('cloud-b', grant.id, true);
+  await vi.waitFor(() => expect(consumer).toBeDefined());
+  const previous = f.responder();
+  let sequence = 12;
+  const deliver = async (overrides: Record<string, unknown> = {}) => {
+    const message = msg(++sequence, { createdAt: new Date().toISOString(), ...overrides });
+    f.respond(async (url, init) =>
+      String(url).includes('/messages?')
+        ? Response.json({ messages: [message], nextCursor: sequence, hasMore: false })
+        : previous(url, init),
+    );
+    await pollCloudPage(owner, consumer!);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await core.runtime.whenIdle();
+  };
+  await deliver();
+  await core.externalMessaging.inbound.setPolicy(
+    'cloud-b',
+    grant.id,
+    { collection: 'all', wake: 'immediate', count: 1, intervalSeconds: 30 },
+    { kind: 'human' },
+  );
+  await deliver();
+  expect(runs).toHaveLength(0);
+  const request = {
+    ...work,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 300000).toISOString(),
+  };
+  const typed = {
+    kind: 'work_request',
+    payload: request,
+    authorType: 'agent',
+    authorId: request.delegation.actorId,
+  };
+  await deliver(typed);
+  expect(runs).toHaveLength(0);
+  owner.setPolicy(connection.id, 1, {
+    allowedUsers: ['user_original'],
+    forwardTargets: [],
+    environment: 'host-b',
+  });
+  await deliver({
+    ...typed,
+    payload: {
+      ...request,
+      createdAt: new Date(Date.now() - 120000).toISOString(),
+      expiresAt: new Date(Date.now() - 60000).toISOString(),
+    },
+  });
+  expect(runs).toHaveLength(0);
+  await deliver(typed);
+  expect(runs).toHaveLength(1);
+  const source = port.read((db) =>
+    db
+      .prepare(
+        "SELECT source_event_id FROM source_events WHERE source_kind='bridge-message' AND json_extract(payload_json,'$.external.event.eventId')=?",
+      )
+      .get(String(sequence)),
+  ) as { source_event_id: string };
+  expect(port.read((db) => sourceSenderAllowed(db, 'cloud-b', source.source_event_id))).toBe(true);
+  expect(port.read((db) => sourceSenderAllowed(db, 'other-bot', source.source_event_id))).toBe(
+    false,
+  );
+  owner.setPolicy(connection.id, 2, {
+    allowedUsers: [],
+    forwardTargets: [],
+    environment: 'host-b',
+  });
+  expect(port.read((db) => sourceSenderAllowed(db, 'cloud-b', source.source_event_id))).toBe(false);
+  expect(port.read((db) => sourceSenderAllowed(db, 'cloud-b', source.source_event_id, true))).toBe(
+    true,
+  );
+  const group = core.channels.createGroup({
+    name: 'Shared context',
+    members: ['cloud-b', 'other-bot'],
+  });
+  for (const slug of group.members)
+    core.channels.setGroupWakePolicy(group.id, slug, {
+      mode: 'all',
+      count: 1,
+      intervalSeconds: 30,
+    });
+  await core.externalMessaging.inbound.setChannelTarget('cloud-b', grant.id, group.id);
+  await deliver({ ...typed, text: 'Denied cloud work remains context only' });
+  await deliver({ text: 'Ordinary cloud context never authorizes local work' });
+  expect(runs).toHaveLength(1);
+  expect(core.channels.readMessages(group.id).map((m) => m.body)).toContain(
+    'Ordinary cloud context never authorizes local work',
+  );
+  await owner.remove(connection.id, 3);
+  expect(port.read((db) => sourceSenderAllowed(db, 'cloud-b', source.source_event_id, true))).toBe(
+    false,
+  );
+});

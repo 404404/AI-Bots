@@ -25,7 +25,7 @@ const emptyPolicy = (): CloudPolicy => ({
   forwardTargets: [],
   environment: 'local-host',
 });
-function parsePolicy(value: unknown): CloudPolicy {
+export function parsePolicy(value: unknown): CloudPolicy {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new ClientError('INVALID_CLOUD_POLICY');
   const p = value as Record<string, unknown>;
