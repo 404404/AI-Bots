@@ -563,32 +563,63 @@ export class CloudClient {
       return fail('ORGANIZATION_TOKEN_REQUIRED');
     return entry;
   }
-  listChannels = (id: string, organizationId: string, after?: string) =>
+  listChannels = (id: string, organizationId: string, after?: string, guest = false) =>
     this.lock(async () => {
-      const entry = await this.channelEntry(id, organizationId);
+      const entry = guest
+        ? await this.current(this.entry(id))
+        : await this.channelEntry(id, organizationId);
       const value = await this.orgRequest(
         entry,
-        '/' + organizationId + '/channels' + (after ? '?after=' + encodeURIComponent(after) : ''),
+        (guest ? '' : '/' + organizationId + '/channels') +
+          (after ? '?after=' + encodeURIComponent(after) : ''),
+        {},
+        guest ? '/api/guest-channels' : '/api/organizations',
       );
       if (
         !Array.isArray(value.channels) ||
         value.channels.length > 50 ||
-        (value.nextCursor !== null && !validChannelId(value.nextCursor))
+        (value.nextCursor !== null &&
+          !(guest
+            ? typeof value.nextCursor === 'string' && /^ci_[a-f0-9]{64}$/.test(value.nextCursor)
+            : validChannelId(value.nextCursor)))
       )
         return fail('INVALID_RESPONSE');
       return {
-        channels: value.channels.map(parseChannel),
+        channels: value.channels.map((raw) => {
+          const channel = parseChannel(raw);
+          if (
+            guest &&
+            (!/^org_[A-Za-z0-9]+$/.test(channel.organizationId ?? '') ||
+              record(raw).access !== 'guest')
+          )
+            return fail('INVALID_RESPONSE');
+          return channel;
+        }),
         nextCursor: value.nextCursor as string | null,
       };
     });
-  readMessages = (id: string, organizationId: string, channelId: string, after = 0) =>
+  readMessages = (
+    id: string,
+    organizationId: string,
+    channelId: string,
+    after = 0,
+    guest = false,
+  ) =>
     this.lock(async () => {
       if (!validChannelId(channelId) || !Number.isSafeInteger(after) || after < 0)
         return fail('INVALID_CURSOR');
-      const entry = await this.channelEntry(id, organizationId);
+      const entry = guest
+        ? await this.current(this.entry(id))
+        : await this.channelEntry(id, organizationId);
       const value = await this.orgRequest(
         entry,
-        '/' + organizationId + '/channels/' + channelId + '/messages?after=' + after,
+        (guest ? '' : '/' + organizationId + '/channels') +
+          '/' +
+          channelId +
+          '/messages?after=' +
+          after,
+        {},
+        guest ? '/api/guest-channels' : '/api/organizations',
       );
       if (
         !Array.isArray(value.messages) ||
@@ -603,7 +634,9 @@ export class CloudClient {
         messages.some(
           (m, index) => m.sequence <= (index ? messages[index - 1]!.sequence : after),
         ) ||
-        value.nextCursor !== (messages.at(-1)?.sequence ?? after)
+        (messages.length
+          ? value.nextCursor !== messages.at(-1)?.sequence
+          : !guest && value.nextCursor !== after)
       )
         return fail('INVALID_RESPONSE');
       return { messages, nextCursor: value.nextCursor as number, hasMore: value.hasMore };
@@ -615,11 +648,16 @@ export class CloudClient {
     value: string,
     channelId?: string,
   ) {
-    let entry = await this.channelEntry(id, organizationId);
+    const guest = kind === 'guest.send';
+    let entry = guest
+      ? await this.current(this.entry(id))
+      : await this.channelEntry(id, organizationId);
+    if (!entry.session?.userId || !/^org_[A-Za-z0-9]+$/.test(organizationId))
+      return fail('ORGANIZATION_TOKEN_REQUIRED');
     if (
       !value.trim() ||
       value.length > (kind === 'channel.create' ? 80 : 4000) ||
-      (kind === 'message.send' && !validChannelId(channelId))
+      (kind !== 'channel.create' && !validChannelId(channelId))
     )
       return fail('INVALID_CHANNEL_INPUT');
     const pending = entry.pendingChannelAction;
@@ -644,12 +682,14 @@ export class CloudClient {
     entry = this.entry(id);
     const result = await this.orgRequest(
       entry,
-      '/' + organizationId + '/channels' + (channelId ? '/' + channelId + '/messages' : ''),
+      (guest ? '' : '/' + organizationId + '/channels') +
+        (channelId ? '/' + channelId + '/messages' : ''),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': action.operation },
         body: JSON.stringify(kind === 'channel.create' ? { name: value } : { text: value }),
       },
+      guest ? '/api/guest-channels' : '/api/organizations',
     );
     const parsed = kind === 'channel.create' ? parseChannel(result) : parseMessage(result.message);
     if (
@@ -667,19 +707,44 @@ export class CloudClient {
     this.lock(async () =>
       parseChannel(await this.channelMutation(id, organizationId, 'channel.create', name.trim())),
     );
-  sendMessage = (id: string, organizationId: string, channelId: string, text: string) =>
+  sendMessage = (
+    id: string,
+    organizationId: string,
+    channelId: string,
+    text: string,
+    guest = false,
+  ) =>
     this.lock(async () =>
-      parseMessage(await this.channelMutation(id, organizationId, 'message.send', text, channelId)),
+      parseMessage(
+        await this.channelMutation(
+          id,
+          organizationId,
+          guest ? 'guest.send' : 'message.send',
+          text,
+          channelId,
+        ),
+      ),
     );
-  listInvitations = (id: string, organizationId?: string, after?: string) =>
+  listInvitations = (
+    id: string,
+    organizationId?: string,
+    after?: string,
+    channel?: string | true,
+  ) =>
     this.lock(async () => {
       const entry = organizationId
         ? await this.channelEntry(id, organizationId)
         : await this.current(this.entry(id));
+      if (channel && organizationId && (typeof channel !== 'string' || !validChannelId(channel)))
+        return fail('INVALID_CHANNEL');
       if (after && !validInvitationId(after)) return fail('INVALID_CURSOR');
       const prefix = organizationId
-        ? '/api/organizations/' + organizationId + '/invitations'
-        : '/api/invitations';
+        ? '/api/organizations/' +
+          organizationId +
+          (channel ? '/channels/' + channel + '/guest-invitations' : '/invitations')
+        : channel
+          ? '/api/channel-invitations'
+          : '/api/invitations';
       const value = await this.orgRequest(
         entry,
         after ? '?after=' + encodeURIComponent(after) : '',
@@ -693,13 +758,21 @@ export class CloudClient {
       )
         return fail('INVALID_RESPONSE');
       const invitations = value.invitations.map(parseInvitation);
-      if (organizationId && invitations.some((v) => v.organizationId !== organizationId))
+      if (
+        invitations.some(
+          (v) =>
+            v.role !== (channel ? 'guest' : 'member') ||
+            (organizationId && v.organizationId !== organizationId) ||
+            (typeof channel === 'string' && v.channelId !== channel),
+        )
+      )
         return fail('INVALID_RESPONSE');
       return { invitations, nextCursor: value.nextCursor as string | null };
     });
-  sendInvitation = (id: string, organizationId: string, email: string) =>
+  sendInvitation = (id: string, organizationId: string, email: string, channelId?: string) =>
     this.lock(async () => {
       let entry = await this.channelEntry(id, organizationId);
+      if (channelId !== undefined && !validChannelId(channelId)) return fail('INVALID_CHANNEL');
       email = email.trim().toLowerCase();
       if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return fail('INVALID_INVITATION_INPUT');
@@ -708,10 +781,12 @@ export class CloudClient {
         pending &&
         (pending.userId !== entry.session!.userId ||
           pending.organizationId !== organizationId ||
-          pending.email !== email)
+          pending.email !== email ||
+          pending.channelId !== channelId)
       )
         return fail('PENDING_INVITATION');
       const action = pending ?? {
+        channelId,
         organizationId,
         userId: entry.session!.userId!,
         email,
@@ -720,51 +795,75 @@ export class CloudClient {
       await this.save({ ...entry, pendingInvitation: action });
       entry = this.entry(id);
       const value = parseInvitation(
-        await this.orgRequest(entry, '/' + organizationId + '/invitations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': action.operation },
-          body: JSON.stringify({ email }),
-        }),
+        await this.orgRequest(
+          entry,
+          '/' +
+            organizationId +
+            (channelId ? '/channels/' + channelId + '/guest-invitations' : '/invitations'),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': action.operation },
+            body: JSON.stringify({ email }),
+          },
+        ),
       );
-      if (value.organizationId !== organizationId || value.email.toLowerCase() !== email)
+      if (
+        value.organizationId !== organizationId ||
+        value.email.toLowerCase() !== email ||
+        value.channelId !== channelId ||
+        value.role !== (channelId ? 'guest' : 'member')
+      )
         return fail('INVALID_RESPONSE');
       await this.save({ ...entry, pendingInvitation: undefined });
       return value;
     });
-  acceptInvitation = (id: string, invitationId: string) =>
+  acceptInvitation = (id: string, invitationId: string, guest = false) =>
     this.lock(async () => {
-      if (!validInvitationId(invitationId)) return fail('INVALID_INVITATION');
+      if (!validInvitationId(invitationId) || invitationId.startsWith('ci_') !== guest)
+        return fail('INVALID_INVITATION');
       const entry = await this.current(this.entry(id));
       const raw = await this.orgRequest(
         entry,
         '/' + invitationId + '/accept',
         { method: 'POST' },
-        '/api/invitations',
+        guest ? '/api/channel-invitations' : '/api/invitations',
       );
       const value = parseInvitation(raw);
       if (
         value.invitationId !== invitationId ||
         value.state !== 'accepted' ||
-        raw.accepted !== true
+        raw.accepted !== true ||
+        value.role !== (guest ? 'guest' : 'member')
       )
         return fail('INVALID_RESPONSE');
       return value;
     });
-  revokeInvitation = (id: string, organizationId: string, invitationId: string) =>
+  revokeInvitation = (
+    id: string,
+    organizationId: string,
+    invitationId: string,
+    channelId?: string,
+  ) =>
     this.lock(async () => {
       if (!validInvitationId(invitationId)) return fail('INVALID_INVITATION');
       const entry = await this.channelEntry(id, organizationId);
       const value = parseInvitation(
         await this.orgRequest(
           entry,
-          '/' + organizationId + '/invitations/' + invitationId + '/revoke',
+          '/' +
+            organizationId +
+            (channelId ? '/channels/' + channelId + '/guest-invitations/' : '/invitations/') +
+            invitationId +
+            '/revoke',
           { method: 'POST' },
         ),
       );
       if (
         value.invitationId !== invitationId ||
         value.organizationId !== organizationId ||
-        !['revoked', 'expired'].includes(value.state)
+        !['revoked', 'expired'].includes(value.state) ||
+        value.channelId !== channelId ||
+        value.role !== (channelId ? 'guest' : 'member')
       )
         return fail('INVALID_RESPONSE');
       return value;

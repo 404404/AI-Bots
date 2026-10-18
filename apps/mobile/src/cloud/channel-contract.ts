@@ -1,5 +1,6 @@
 import { ClientError } from './instance-contract';
 export type CloudChannel = {
+  organizationId?: string | undefined;
   channelId: string;
   name: string;
   creatorId: string;
@@ -15,7 +16,7 @@ export type CloudMessage = {
   operationId: string;
 };
 export type PendingChannelAction = {
-  kind: 'channel.create' | 'message.send';
+  kind: 'channel.create' | 'message.send' | 'guest.send';
   organizationId: string;
   userId: string;
   channelId?: string | undefined;
@@ -66,7 +67,7 @@ export function parsePendingChannelAction(value: unknown): PendingChannelAction 
   if (value === undefined) return undefined;
   const v = row(value);
   if (
-    !['channel.create', 'message.send'].includes(String(v.kind)) ||
+    !['channel.create', 'message.send', 'guest.send'].includes(String(v.kind)) ||
     typeof v.organizationId !== 'string' ||
     !/^org_[A-Za-z0-9]+$/.test(v.organizationId) ||
     typeof v.userId !== 'string' ||
@@ -76,7 +77,7 @@ export function parsePendingChannelAction(value: unknown): PendingChannelAction 
     v.value.length > (v.kind === 'channel.create' ? 80 : 4000) ||
     typeof v.operation !== 'string' ||
     !/^[A-Za-z0-9_-]{16,100}$/.test(v.operation) ||
-    (v.kind === 'message.send' ? !validChannelId(v.channelId) : v.channelId !== undefined)
+    (v.kind !== 'channel.create' ? !validChannelId(v.channelId) : v.channelId !== undefined)
   )
     return invalid();
   return v as PendingChannelAction;

@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,30 +29,34 @@ function renderChannelFormScroll(props: ScrollViewProps) {
 }
 
 export function CloudChannelsScreen() {
-  const { instanceId, organizationId } = useLocalSearchParams<{
+  const { instanceId, organizationId, guest } = useLocalSearchParams<{
     instanceId: string;
-    organizationId: string;
+    organizationId?: string;
+    guest?: string;
   }>();
   return (
     <ChannelWorkspace
-      key={instanceId + ':' + organizationId}
+      key={instanceId + ':' + (guest === 'true' ? 'guest' : organizationId)}
       instanceId={instanceId}
-      organizationId={organizationId}
+      organizationId={organizationId ?? ''}
+      guest={guest === 'true'}
     />
   );
 }
 function ChannelWorkspace({
   instanceId,
   organizationId,
+  guest,
 }: {
   instanceId: string;
   organizationId: string;
+  guest: boolean;
 }) {
   const snapshot = useCloudSnapshot(),
     theme = useDesignTheme(),
     insets = useSafeAreaInsets();
   const row = snapshot.rows.find((r) => r.config.instanceId === instanceId);
-  const allowed = !!row?.identity && row.organization?.organizationId === organizationId;
+  const allowed = !!row?.identity && (guest || row.organization?.organizationId === organizationId);
   const [channels, setChannels] = useState<CloudChannel[]>();
   const [channelCursor, setChannelCursor] = useState<string | null>(null);
   const [selected, setSelected] = useState<CloudChannel>();
@@ -66,10 +70,17 @@ function ChannelWorkspace({
     [notice, setNotice] = useState<string>();
   const busy = working || snapshot.busy;
   const pending = row?.pendingChannelAction;
-  const pendingHere = pending?.organizationId === organizationId ? pending : undefined;
+  const pendingHere = (
+    guest
+      ? pending?.kind === 'guest.send'
+      : pending?.kind !== 'guest.send' && pending?.organizationId === organizationId
+  )
+    ? pending
+    : undefined;
   const pendingCreate = pendingHere?.kind === 'channel.create' ? pendingHere : undefined;
   const pendingSend =
-    pendingHere?.kind === 'message.send' && pendingHere.channelId === selected?.channelId
+    pendingHere?.kind === (guest ? 'guest.send' : 'message.send') &&
+    pendingHere.channelId === selected?.channelId
       ? pendingHere
       : undefined;
   const box = {
@@ -92,7 +103,7 @@ function ChannelWorkspace({
     }
   };
   const reload = async (after?: string) => {
-    const page = await cloudClient.listChannels(instanceId, organizationId, after);
+    const page = await cloudClient.listChannels(instanceId, organizationId, after, guest);
     setChannels((old) =>
       after
         ? [
@@ -109,6 +120,7 @@ function ChannelWorkspace({
       organizationId,
       channel.channelId,
       after,
+      guest,
     );
     setMessages((old) =>
       after
@@ -136,7 +148,7 @@ function ChannelWorkspace({
       keyExtractor={(item) => ('sequence' in item ? 'message-' + item.sequence : item.channelId)}
       ListHeaderComponent={
         <View style={{ gap: space.x4 }}>
-          <Text variant="title">{row?.organization?.name}</Text>
+          <Text variant="title">{guest ? t.cloudGuests.title : row?.organization?.name}</Text>
           {!!error && (
             <Text accessibilityLiveRegion="polite">
               {t.cloud.error} {error}
@@ -148,6 +160,19 @@ function ChannelWorkspace({
           ) : selected ? (
             <>
               <Text variant="title">{selected.name}</Text>
+              {guest && <Text>{t.cloudGuests.hint}</Text>}
+              {!guest && row.organization?.role === 'owner' && (
+                <Button
+                  label={t.cloudGuests.manage}
+                  disabled={busy}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/cloud-invitations',
+                      params: { instanceId, organizationId, channelId: selected.channelId },
+                    })
+                  }
+                />
+              )}
               <Button
                 label={t.cloudChannels.back}
                 disabled={busy}
@@ -183,9 +208,10 @@ function ChannelWorkspace({
                     void run(async () => {
                       const result = await cloudClient.sendMessage(
                         instanceId,
-                        organizationId,
+                        guest ? selected.organizationId! : organizationId,
                         selected.channelId,
                         pendingSend?.value ?? draft,
+                        guest,
                       );
                       setDraft('');
                       setNotice(t.cloudChannels.committed + ' ' + result.sequence);
@@ -197,7 +223,7 @@ function ChannelWorkspace({
             </>
           ) : (
             <>
-              {row.organization?.role === 'owner' && (
+              {!guest && row.organization?.role === 'owner' && (
                 <View style={box}>
                   <TextInput
                     accessibilityLabel={t.cloudChannels.name}
@@ -269,7 +295,13 @@ function ChannelWorkspace({
       }
       ListEmptyComponent={
         allowed && !busy && (selected ? messages : channels) ? (
-          <Text>{selected ? t.cloudChannels.noMessages : t.cloudChannels.empty}</Text>
+          <Text>
+            {selected
+              ? t.cloudChannels.noMessages
+              : guest
+                ? t.cloudGuests.empty
+                : t.cloudChannels.empty}
+          </Text>
         ) : undefined
       }
       ListFooterComponent={

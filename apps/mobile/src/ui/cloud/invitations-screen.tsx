@@ -27,24 +27,32 @@ function renderInvitationScroll(props: ScrollViewProps) {
   return <InvitationScroll {...props} />;
 }
 export function CloudInvitationsScreen() {
-  const { instanceId, organizationId } = useLocalSearchParams<{
+  const { instanceId, organizationId, channelId, kind } = useLocalSearchParams<{
     instanceId: string;
     organizationId?: string;
+    channelId?: string;
+    kind?: string;
   }>();
   return (
     <InvitationWorkspace
-      key={instanceId + ':' + (organizationId ?? 'inbox')}
+      key={instanceId + ':' + (organizationId ?? 'inbox') + ':' + (channelId ?? kind ?? '')}
       instanceId={instanceId}
       organizationId={organizationId}
+      channelId={channelId}
+      guest={kind === 'channel' || !!channelId}
     />
   );
 }
 function InvitationWorkspace({
   instanceId,
   organizationId,
+  channelId,
+  guest,
 }: {
   instanceId: string;
   organizationId?: string | undefined;
+  channelId?: string | undefined;
+  guest: boolean;
 }) {
   const snapshot = useCloudSnapshot(),
     theme = useDesignTheme(),
@@ -62,7 +70,10 @@ function InvitationWorkspace({
     [notice, setNotice] = useState<string>();
   const busy = snapshot.busy || working;
   const pending = row?.pendingInvitation;
-  const pendingHere = pending?.organizationId === organizationId ? pending : undefined;
+  const pendingHere =
+    pending?.organizationId === organizationId && pending?.channelId === channelId
+      ? pending
+      : undefined;
   const run = async (action: () => Promise<void>) => {
     if (working) return;
     setWorking(true);
@@ -77,7 +88,12 @@ function InvitationWorkspace({
     }
   };
   const reload = async (after?: string) => {
-    const page = await cloudClient.listInvitations(instanceId, organizationId, after);
+    const page = await cloudClient.listInvitations(
+      instanceId,
+      organizationId,
+      after,
+      guest ? (channelId ?? true) : undefined,
+    );
     setItems((old) =>
       after
         ? [
@@ -110,7 +126,11 @@ function InvitationWorkspace({
       ListHeaderComponent={
         <View style={{ gap: space.x4 }}>
           <Text variant="title">
-            {organizationId ? row?.organization?.name : t.cloudInvitations.inbox}
+            {organizationId
+              ? row?.organization?.name
+              : guest
+                ? t.cloudGuests.inbox
+                : t.cloudInvitations.inbox}
           </Text>
           {!!error && (
             <Text accessibilityLiveRegion="polite">
@@ -124,7 +144,7 @@ function InvitationWorkspace({
             <>
               {!!organizationId && (
                 <View style={box}>
-                  <Text>{t.cloudInvitations.hint}</Text>
+                  <Text>{guest ? t.cloudGuests.hint : t.cloudInvitations.hint}</Text>
                   <TextInput
                     accessibilityLabel={t.cloudInvitations.email}
                     placeholder={t.cloudInvitations.email}
@@ -151,6 +171,7 @@ function InvitationWorkspace({
                           instanceId,
                           organizationId,
                           pendingHere?.email ?? email,
+                          channelId,
                         );
                         setEmail('');
                         setNotice(t.cloudInvitations.sent);
@@ -175,16 +196,18 @@ function InvitationWorkspace({
       }
       renderItem={({ item }) => (
         <View style={box}>
+          {!!item.channelName && <Text variant="title">{item.channelName}</Text>}
           {!!item.organizationName && <Text variant="title">{item.organizationName}</Text>}
           <Text selectable>{item.email}</Text>
           <Text>
-            {t.cloudOrganizations.member} · {t.cloudInvitations.states[item.state]}
+            {guest ? t.cloudGuests.role : t.cloudOrganizations.member} ·{' '}
+            {t.cloudInvitations.states[item.state]}
           </Text>
           <Text>
             {t.cloudInvitations.expires} {item.expiresAt}
           </Text>
           {organizationId
-            ? item.state === 'pending' && (
+            ? (item.state === 'pending' || (guest && item.state === 'accepted')) && (
                 <Button
                   label={t.cloudInvitations.revoke}
                   disabled={busy}
@@ -194,6 +217,7 @@ function InvitationWorkspace({
                         instanceId,
                         organizationId,
                         item.invitationId,
+                        channelId,
                       );
                       await reload();
                     })
@@ -213,11 +237,15 @@ function InvitationWorkspace({
                       const accepted = await cloudClient.acceptInvitation(
                         instanceId,
                         item.invitationId,
+                        guest,
                       );
-                      await cloudClient.useOrganization(instanceId, accepted.organizationId);
+                      if (!guest)
+                        await cloudClient.useOrganization(instanceId, accepted.organizationId);
                       router.push({
                         pathname: '/cloud-channels',
-                        params: { instanceId, organizationId: accepted.organizationId },
+                        params: guest
+                          ? { instanceId, guest: 'true' }
+                          : { instanceId, organizationId: accepted.organizationId },
                       });
                     })
                   }

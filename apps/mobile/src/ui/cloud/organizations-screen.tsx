@@ -123,6 +123,26 @@ export function CloudOrganizationsScreen() {
                 />
               </View>
               <Button
+                label={t.cloudGuests.inbox}
+                disabled={busy}
+                onPress={() =>
+                  router.push({
+                    pathname: '/cloud-invitations',
+                    params: { instanceId, kind: 'channel' },
+                  })
+                }
+              />
+              <Button
+                label={t.cloudGuests.title}
+                disabled={busy}
+                onPress={() =>
+                  router.push({
+                    pathname: '/cloud-channels',
+                    params: { instanceId, guest: 'true' },
+                  })
+                }
+              />
+              <Button
                 label={t.cloudInvitations.inbox}
                 disabled={busy}
                 onPress={() =>

@@ -570,6 +570,179 @@ describe('cloud organizations', () => {
       f.client.acceptInvitation(config.instanceId, 'invitation_test'),
     ).rejects.toMatchObject({ code: 'INVITATION_ACCESS_DENIED' });
   });
+  it('keeps direct channel grants independent of organization selection and retries guest writes after restart', async () => {
+    const f = fixture(),
+      original = f.rt.request;
+    const channelId = 'ch_' + 'b'.repeat(64),
+      invitationId = 'ci_' + 'c'.repeat(64);
+    const invitation = {
+      invitationId,
+      channelId,
+      channelName: 'External project',
+      organizationId: 'org_external',
+      email: 'b@example.test',
+      role: 'guest',
+      state: 'pending',
+      expiresAt: '2030-01-01T00:00:00Z',
+    };
+    const channel = {
+      channelId,
+      organizationId: 'org_external',
+      name: 'External project',
+      creatorId: 'user_a',
+      creatorType: 'human',
+      createdAt: '2026-10-18T00:00:00Z',
+      access: 'guest',
+    };
+    const operations: string[] = [];
+    let lose = true,
+      denied = false,
+      wrongScope = false;
+    f.rt.request = async (url, init) => {
+      if (url.includes('/api/channel-invitations'))
+        return Response.json(
+          init?.method === 'POST'
+            ? { ...invitation, accepted: true, state: 'accepted' }
+            : { invitations: [invitation], nextCursor: null },
+        );
+      if (url.includes('/api/guest-channels')) {
+        if (denied)
+          return Response.json({ error: { code: 'CHANNEL_ACCESS_DENIED' } }, { status: 403 });
+        if (url.includes('/messages')) {
+          if (init?.method === 'POST') {
+            const operation = new Headers(init.headers).get('Idempotency-Key')!;
+            operations.push(operation);
+            expect(f.stored()).toContain('guest.send');
+            if (lose) {
+              lose = false;
+              throw Error('response lost');
+            }
+            return Response.json({
+              message: {
+                sequence: 8,
+                authorId: 'user_test',
+                authorType: 'human',
+                operationId: operation,
+                text: 'Guest reply',
+                createdAt: '2026-10-18T00:00:00Z',
+              },
+            });
+          }
+          return Response.json({ messages: [], nextCursor: 7, hasMore: false });
+        }
+        return Response.json({
+          channels: [{ ...channel, access: wrongScope ? 'member' : 'guest' }],
+          nextCursor: invitationId,
+        });
+      }
+      return original(url, init);
+    };
+    let client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    expect(
+      (await client.listInvitations(config.instanceId, undefined, undefined, true)).invitations[0]
+        ?.role,
+    ).toBe('guest');
+    await client.acceptInvitation(config.instanceId, invitationId, true);
+    expect(client.getSnapshot().rows[0]?.organization).toBeUndefined();
+    expect((await client.listChannels(config.instanceId, '', undefined, true)).nextCursor).toBe(
+      invitationId,
+    );
+    expect((await client.readMessages(config.instanceId, '', channelId, 0, true)).nextCursor).toBe(
+      7,
+    );
+    await expect(client.acceptInvitation(config.instanceId, invitationId)).rejects.toMatchObject({
+      code: 'INVALID_INVITATION',
+    });
+    await expect(
+      client.sendMessage(config.instanceId, 'org_external', channelId, 'Guest reply', true),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    client = new CloudClient(f.rt);
+    await client.load();
+    await client.whoami(config.instanceId);
+    await expect(
+      client.sendMessage(
+        config.instanceId,
+        'org_external',
+        'ch_' + 'd'.repeat(64),
+        'Guest reply',
+        true,
+      ),
+    ).rejects.toMatchObject({ code: 'PENDING_CHANNEL_ACTION' });
+    expect(
+      (await client.sendMessage(config.instanceId, 'org_external', channelId, 'Guest reply', true))
+        .sequence,
+    ).toBe(8);
+    expect(operations[0]).toBe(operations[1]);
+    expect(client.getSnapshot().rows[0]?.pendingChannelAction).toBeUndefined();
+    wrongScope = true;
+    await expect(client.listChannels(config.instanceId, '', undefined, true)).rejects.toMatchObject(
+      { code: 'INVALID_RESPONSE' },
+    );
+    denied = true;
+    await expect(
+      client.readMessages(config.instanceId, '', channelId, 0, true),
+    ).rejects.toMatchObject({ code: 'CHANNEL_ACCESS_DENIED' });
+    expect(
+      f.calls.some((c) => new URLSearchParams(String(c.init?.body)).has('organization_id')),
+    ).toBe(false);
+  });
+  it('binds pending channel invitations to their channel and preserves the key across restart', async () => {
+    const f = organizationsFixture(),
+      original = f.rt.request;
+    const channelId = 'ch_' + 'a'.repeat(64),
+      invitationId = 'ci_' + 'b'.repeat(64);
+    const operations: string[] = [];
+    let lose = true;
+    f.rt.request = async (url, init) => {
+      if (!url.includes('/guest-invitations')) return original(url, init);
+      const row = {
+        invitationId,
+        channelId,
+        channelName: 'Guest project',
+        organizationId: 'org_a',
+        email: 'b@example.test',
+        role: 'guest',
+        state: url.endsWith('/revoke') ? 'revoked' : 'pending',
+        expiresAt: '2030-01-01T00:00:00Z',
+      };
+      if (url.endsWith('/revoke')) return Response.json(row);
+      if (init?.method === 'POST') {
+        operations.push(new Headers(init.headers).get('Idempotency-Key')!);
+        if (lose) {
+          lose = false;
+          throw Error('response lost');
+        }
+        return Response.json(row);
+      }
+      return Response.json({ invitations: [row], nextCursor: null });
+    };
+    let client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    await client.useOrganization(config.instanceId, 'org_a');
+    await expect(
+      client.sendInvitation(config.instanceId, 'org_a', 'b@example.test', channelId),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    client = new CloudClient(f.rt);
+    await client.load();
+    await client.whoami(config.instanceId);
+    await expect(
+      client.sendInvitation(config.instanceId, 'org_a', 'b@example.test'),
+    ).rejects.toMatchObject({ code: 'PENDING_INVITATION' });
+    expect(
+      (await client.sendInvitation(config.instanceId, 'org_a', 'b@example.test', channelId)).role,
+    ).toBe('guest');
+    expect(operations[0]).toBe(operations[1]);
+    expect(
+      (await client.listInvitations(config.instanceId, 'org_a', undefined, channelId))
+        .invitations[0]?.channelId,
+    ).toBe(channelId);
+    expect(
+      (await client.revokeInvitation(config.instanceId, 'org_a', invitationId, channelId)).state,
+    ).toBe('revoked');
+  });
   it('never treats stale owner UI or a mismatched selection response as organization authorization', async () => {
     const f = organizationsFixture();
     const client = new CloudClient(f.rt);

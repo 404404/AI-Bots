@@ -27,3 +27,7 @@ This needs a new SDK58 development binary with Expo Crypto/WebBrowser and the ca
 ## Ordinary-user onboarding extension
 
 After verified cloud identity, the client calls the instance onboarding endpoint to ensure one default workspace. The service owns the stable operation identity; the phone never chooses another user ID. A setup failure retains the session and makes Check session the retry path. `admin` and `user` are distinct server-verified instance roles; both can use workspaces, while organization membership remains separately enforced by TOB. This requires the multi-user service candidate; older instances without onboarding cannot complete this updated login flow.
+
+## Channel guest extension
+
+Direct channel invitations reuse CloudClient and independent WorkOS sessions, but acceptance never selects or joins the host organization. The app offers a separate guest-channel entry; TOB Channel DO grants are the authority. Owner issuance persists an operation bound to user, organization, channel and email. Guest sends use a distinct `guest.send` pending scope, so a retry cannot accidentally become an organization-member request. The server enforces the grant's message-sequence history floor and current revocation on every read/send. Public invitation identifiers are not credentials. This initial inbox path targets existing verified users and does not claim email delivery or new-account registration.

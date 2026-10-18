@@ -61,6 +61,14 @@ const en = {
     invalid:
       'This is not a supported cloud configuration. Use the public configuration supplied by the deployer.',
   },
+  cloudGuests: {
+    title: 'Guest channels',
+    inbox: 'Channel invitations',
+    role: 'Channel guest',
+    hint: 'Access to this channel only. Joining does not add you to its workspace. New messages are visible after you accept.',
+    manage: 'Invite channel guest',
+    empty: 'No guest channels. Accept a channel invitation first.',
+  },
   cloudInvitations: {
     title: 'Workspace invitations',
     inbox: 'Your invitations',
@@ -923,6 +931,14 @@ const zh: typeof en = {
     required: '需要重新登录。如果仍有已保存的会话，请先退出本机登录。',
     storage: '安全存储未能更新，此操作尚未完成。',
     invalid: '这不是支持的云服务配置，请使用部署者提供的公开配置。',
+  },
+  cloudGuests: {
+    title: '访客频道',
+    inbox: '频道邀请',
+    role: '频道访客',
+    hint: '仅可访问此频道，不会加入其工作区。接受邀请后可读取新消息。',
+    manage: '邀请频道访客',
+    empty: '尚无访客频道，请先接受频道邀请。',
   },
   cloudInvitations: {
     title: '工作区邀请',
