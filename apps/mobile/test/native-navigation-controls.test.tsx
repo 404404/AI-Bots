@@ -8,11 +8,13 @@ vi.mock('react-native', async () => ({
 }));
 vi.mock('@expo/ui/swift-ui/modifiers', () => ({
   accessibilityLabel: (label: string) => ({ $type: 'accessibilityLabel', label }),
+  accessibilityElement: () => ({}),
   accessibilityAddTraits: (traits: string[]) => ({ $type: 'accessibilityAddTraits', traits }),
   onLongPressGesture: (onLongPress: () => void) => ({ $type: 'onLongPressGesture', onLongPress }),
   buttonStyle: () => ({}),
   buttonBorderShape: () => ({}),
   font: () => ({}),
+  fixedSize: () => ({}),
   foregroundStyle: () => ({}),
   frame: () => ({}),
 }));

@@ -1,10 +1,12 @@
 import { Button, Host, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
 import {
   accessibilityAddTraits,
+  accessibilityElement,
   accessibilityLabel,
   buttonBorderShape,
   buttonStyle,
   font,
+  fixedSize,
   foregroundStyle,
   frame,
   onLongPressGesture,
@@ -40,6 +42,7 @@ export function NavigationDestinations({ items }: { items: NavigationDestination
                 buttonBorderShape('capsule'),
                 onLongPressGesture(item.onLongPress),
                 frame({ maxWidth: Infinity, maxHeight: Infinity }),
+                accessibilityElement('ignore'),
                 accessibilityLabel(accessibility),
                 accessibilityAddTraits(item.focused ? ['isSelected'] : []),
                 foregroundStyle(item.focused ? theme.color.fg : theme.color.muted),
@@ -68,7 +71,14 @@ export function NavigationDestinations({ items }: { items: NavigationDestination
                     </Text>
                   )}
                 </HStack>
-                <Text modifiers={[font({ textStyle: 'caption2' })]}>{label}</Text>
+                <Text
+                  modifiers={[
+                    font({ textStyle: 'caption2' }),
+                    fixedSize({ horizontal: false, vertical: true }),
+                  ]}
+                >
+                  {label}
+                </Text>
               </VStack>
             </Button>
           );

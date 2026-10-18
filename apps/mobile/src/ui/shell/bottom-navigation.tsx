@@ -82,7 +82,6 @@ function ScopedNavigationBar({
   reserved,
   scope,
 }: NavigationBarLayout & { scope: string }) {
-  const theme = useDesignTheme();
   const { saved } = useHostSession();
   const look = useHostLook(saved?.hostId);
   const directory = useCloudConversations();
@@ -167,7 +166,7 @@ function ScopedNavigationBar({
             right: insets.right + space.x5,
             bottom,
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: 'flex-end',
             gap: space.x3,
           },
           style,
@@ -202,7 +201,7 @@ function ScopedNavigationBar({
           />
         </View>
         <NavigationAction
-          size={size}
+          size={navigationBar.height}
           label={t.createHere}
           onPress={() => {
             Keyboard.dismiss();
@@ -216,7 +215,7 @@ function ScopedNavigationBar({
           key={scope}
           scope={scope}
           targets={targets}
-          size={size}
+          size={navigationBar.height}
           bottom={bottom}
           onClose={close}
           onPick={(action, target) => void choose(action, target)}
