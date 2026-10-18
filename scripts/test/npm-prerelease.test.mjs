@@ -18,6 +18,7 @@ import {
   verifyRelease,
   verifyPackedCli,
   reusePublishedProvider,
+  publishedProductProvider,
 } from '../npm-prerelease.mjs';
 import { providerReleasePlan } from '../npm-provider-release.mjs';
 import { productDsh, productImProvider } from '../product-artifacts.mjs';
@@ -105,13 +106,43 @@ function fixture(productVersion = '0.1.0-alpha.1') {
 }
 
 describe('reviewed npm prerelease', () => {
+  it('pins the published product Provider separately from historical standalone publication', () => {
+    expect(publishedProductProvider).toMatchObject({
+      name: productImProvider.name,
+      distTag: 'next',
+    });
+    expect(publishedProductProvider.version).toMatch(/^\d+\.\d+\.\d+-botharness\.\d+$/);
+    expect(publishedProductProvider.providerSource).toMatch(/^[a-f0-9]{40}$/);
+    expect(publishedProductProvider.productSource).toMatch(/^[a-f0-9]{40}$/);
+    expect(publishedProductProvider.qualification).toMatch(
+      /^https:\/\/github.com\/BotHarness\/DeepSeekBot\/actions\/runs\/\d+$/,
+    );
+    expect(publishedProductProvider.integrity).toMatch(/^sha512-[A-Za-z0-9+/]{86}==$/);
+    expect(publishedProductProvider.runtimeSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(publishedProductProvider.runtimeFiles).toBeGreaterThan(0);
+  });
+
+  it('rejects the historical standalone plan before downloading or replacing product bytes', async () => {
+    const { root, artifact, remote, rebuilt } = providerReadbackFixture();
+    const download = vi.fn();
+    await expect(
+      reusePublishedProvider(root, {
+        plan: providerReleasePlan,
+        read: async () => remote,
+        download,
+      }),
+    ).rejects.toThrow('Published Provider differs');
+    expect(download).not.toHaveBeenCalled();
+    expect(readFileSync(join(root, artifact.filename))).toEqual(rebuilt);
+  });
+
   function providerReadbackFixture() {
     const { root } = fixture();
     const inventory = JSON.parse(readFileSync(join(root, 'artifacts.json')));
     const artifact = inventory.artifacts.find((value) => value.name === productImProvider.name);
     const bytes = readFileSync(join(root, artifact.filename));
     const plan = {
-      ...providerReleasePlan,
+      ...publishedProductProvider,
       version: artifact.version,
       providerSource: productImProvider.upstream.source,
       integrity: artifact.integrity,
@@ -163,11 +194,15 @@ describe('reviewed npm prerelease', () => {
     },
   );
 
-  it('keeps first-publication preparation when the pinned Provider is absent from registry', async () => {
+  it('keeps first publication with a historical plan when the new Provider is absent', async () => {
     const { root, artifact, rebuilt } = providerReadbackFixture();
     const download = vi.fn();
     await expect(
-      reusePublishedProvider(root, { read: async () => undefined, download }),
+      reusePublishedProvider(root, {
+        plan: providerReleasePlan,
+        read: async () => undefined,
+        download,
+      }),
     ).resolves.toBe(false);
     expect(download).not.toHaveBeenCalled();
     expect(readFileSync(join(root, artifact.filename))).toEqual(rebuilt);
