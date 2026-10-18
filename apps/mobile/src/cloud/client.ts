@@ -438,7 +438,11 @@ export class CloudClient {
     value: unknown,
     organizationId = entry.session?.organizationId,
   ) {
-    const session = { ...tokenPair(value), userId: entry.session?.userId, organizationId };
+    const session = {
+      ...tokenPair(value),
+      userId: entry.session?.userId,
+      organizationId: organizationId || undefined,
+    };
     await this.save({ ...entry, session });
     return this.entry(entry.config.instanceId);
   }

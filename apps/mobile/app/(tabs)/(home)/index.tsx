@@ -119,7 +119,7 @@ export default function HomeScreen() {
           a.key.localeCompare(b.key),
       );
   }, [snapshot.roster, list, directory.rows, saved?.hostId, effectiveFilter, query]);
-  if (saved === undefined || !cloud.ready)
+  if (saved === undefined || (!cloud.ready && !cloud.error))
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator />
@@ -230,7 +230,7 @@ export default function HomeScreen() {
                     />
                   ))}
                 </ScrollView>
-                {(directory.errors.length > 0 || error) && (
+                {(directory.errors.length > 0 || cloud.error || error) && (
                   <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
                     {t.cloudListUnavailable}
                     {error ? ` (${error})` : ''}

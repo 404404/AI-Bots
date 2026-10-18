@@ -11,7 +11,12 @@ import type { RosterView } from '../src/host/client';
 
 const { push, cloudState, directoryState } = vi.hoisted(() => ({
   push: vi.fn(),
-  cloudState: { ready: true, busy: false, rows: [] as CloudRow[] },
+  cloudState: {
+    error: undefined as string | undefined,
+    ready: true,
+    busy: false,
+    rows: [] as CloudRow[],
+  },
   directoryState: { busy: false, rows: [] as CloudConversation[], errors: [] as string[] },
 }));
 const roster: RosterView = {
@@ -109,6 +114,8 @@ afterEach(() => {
   root = undefined;
   push.mockReset();
   cloudState.rows = [];
+  cloudState.ready = true;
+  cloudState.error = undefined;
   directoryState.rows = [];
 });
 
@@ -142,6 +149,13 @@ const rows = (view: HTMLElement) =>
     .map((node) => node.getAttribute('aria-label'));
 
 describe('Search at the top of Chats', () => {
+  it('keeps the Computer usable when Cloud local state cannot load', async () => {
+    cloudState.ready = false;
+    cloudState.error = 'STORAGE_UNAVAILABLE';
+    const view = await home();
+    expect(view.textContent).toContain('Ada');
+    expect(view.textContent).toContain(t.cloudListUnavailable);
+  });
   it('opens a cloud row with its account and organization while leaving the paired Computer selected', async () => {
     const config = publicInstance({
       instanceId: 'uat',
