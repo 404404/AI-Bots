@@ -48,6 +48,7 @@ describe('Agent-scoped native file Policy', () => {
         c.provide('fs', {
           sandboxMode: 'workspace-write',
           resolve: async (path: string) => ({ displayPath: path, targetKey: path }),
+          processPath: (target: { targetKey: string }) => String(target.targetKey),
           writeText: async (
             target: { displayPath: string },
             content: string,
@@ -169,6 +170,7 @@ describe('Agent-scoped native file Policy', () => {
         c.provide('fs', {
           sandboxMode: 'workspace-write',
           resolve: async (path: string) => ({ displayPath: path, targetKey: path }),
+          processPath: (target: { targetKey: string }) => String(target.targetKey),
           stat: async () => ({ type: 'file', size: 4, version: 'v1' }),
           readBytes: async (target: { displayPath: string }) => {
             reads.push(target.displayPath);
