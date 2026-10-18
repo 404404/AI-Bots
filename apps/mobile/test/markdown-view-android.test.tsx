@@ -118,3 +118,18 @@ it('preserves native-only spoiler and admonition semantics', async () => {
   const { container } = await render('||hidden||\n\n> [!NOTE]\n> Read this');
   expect(container.querySelectorAll('[data-testid="native-markdown"]')).toHaveLength(2);
 });
+
+it.each([true, false])(
+  'renders the original mixed reply tail after a delayed append (streaming=%s)',
+  async (streaming) => {
+    const { default: body } = await import('./fixtures/markdown-tail.json');
+    const prefix = body.slice(0, body.indexOf('\n最后一段'));
+    const { container, update } = await render('', streaming);
+    for (let end = 80; end < prefix.length; end += 80) await update(prefix.slice(0, end));
+    await update(prefix);
+    expect(container.textContent).toContain('第 40 行');
+    expect(container.textContent).not.toContain('REPLAY_COMPLETE');
+    await update(body);
+    expect(container.textContent).toContain('最后一段：REPLAY_COMPLETE。');
+  },
+);
