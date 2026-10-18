@@ -63,11 +63,11 @@ export const CHANNEL_DOCK_CSS =
 }
 .bh-dock .dv-tab {
   padding: 0;
-  cursor: grab;
+  cursor: default;
 }
 .bh-dock .dv-full-width-single-tab .dv-tab { flex: 1 1 0; min-width: 0; }
 .bh-dock .dv-tab:has([data-dock-header="bh:channel-body"]) { flex: 1 1 0; min-width: 0; max-width: 100%; }
-.bh-dock .dv-tab:active { cursor: grabbing; }
+.bh-dock [data-panel-hide]:active { cursor: grabbing; }
 .bh-dock .dv-tab:focus-visible,
 .bh-dock .dv-tab:focus-within { outline: none; }
 .bh-dock .dv-tab .dv-default-tab-action { display: none; }

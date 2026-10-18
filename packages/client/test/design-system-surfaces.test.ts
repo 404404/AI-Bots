@@ -92,6 +92,29 @@ describe('design-system surfaces', () => {
     expect(button('Settings')).toBeDefined();
   });
 
+  it('keeps channel identity and actions outside the close/drag title handle', () => {
+    const onHide = vi.fn();
+    const onAction = vi.fn();
+    render(
+      createElement(PanelHeader, {
+        label: 'Messages',
+        hideLabel: 'Close Messages',
+        onHide,
+        context: createElement('span', null, 'Ada'),
+        action: createElement('button', { onClick: onAction }, 'Settings'),
+      }),
+    );
+    const title = button('Close Messages');
+    expect(title.textContent).toBe('Messages');
+    expect(title.draggable).toBe(true);
+    act(() => host.querySelector<HTMLElement>('[data-panel-context]')!.click());
+    act(() => button('Settings').click());
+    expect(onAction).toHaveBeenCalledOnce();
+    expect(onHide).not.toHaveBeenCalled();
+    act(() => title.click());
+    expect(onHide).toHaveBeenCalledOnce();
+  });
+
   it('renders a static header without a toggle', () => {
     render(createElement(PanelHeader, { label: 'Members' }));
     expect(host.querySelectorAll('button')).toHaveLength(0);

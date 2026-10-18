@@ -796,6 +796,18 @@ it('updates the Messages Channel title and trailing actions without replacing it
   draft.value = 'Keep';
   const header = host.querySelector('[data-dock-header="bh:channel-body"]')!;
   expect(header.textContent).toContain('MessagesAda');
+  const titleHandle = header.querySelector<HTMLElement>('[data-panel-hide]')!;
+  const channelContext = header.querySelector<HTMLElement>('[data-panel-context]')!;
+  expect(titleHandle.textContent).toBe('Messages');
+  expect(channelContext.textContent).toBe('Ada');
+  act(() => channelContext.click());
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+  for (const target of [header, channelContext]) {
+    const drag = new Event('dragstart', { bubbles: true, cancelable: true });
+    act(() => target.dispatchEvent(drag));
+    expect(drag.defaultPrevented).toBe(true);
+  }
+
   await act(async () =>
     header.querySelector<HTMLButtonElement>('[aria-label="Channel settings"]')!.click(),
   );

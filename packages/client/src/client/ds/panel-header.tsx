@@ -43,6 +43,9 @@ const styles = stylex.create({
   },
   dimmed: { cursor: 'default', opacity: 0.6 },
   fixed: { flexGrow: 0, flexBasis: 'auto', maxWidth: '40%' },
+  compact: { flexGrow: 0, flexBasis: 'auto', cursor: 'grab' },
+  context: { display: 'flex', alignItems: 'center', minWidth: 0, flexShrink: 1 },
+  spacer: { flexGrow: 1 },
   chevron: {
     display: 'inline-flex',
     flexShrink: 0,
@@ -108,6 +111,7 @@ export function PanelHeader({
   badge,
   tabs,
   action,
+  context,
   disclosure,
   onHide,
   hideLabel,
@@ -120,6 +124,7 @@ export function PanelHeader({
   readonly badge?: ReactNode;
   readonly tabs?: ReactNode;
   readonly action?: ReactNode;
+  readonly context?: ReactNode;
   readonly disclosure?: PanelHeaderDisclosure | undefined;
   readonly onHide?: () => void;
   readonly hideLabel?: string;
@@ -139,7 +144,11 @@ export function PanelHeader({
       <span
         data-panel-label=""
         title={typeof label === 'string' ? label : undefined}
-        {...stylex.props(styles.label, fixed && styles.labelFixed, struck && styles.struck)}
+        {...stylex.props(
+          styles.label,
+          (fixed || !!onHide) && styles.labelFixed,
+          struck && styles.struck,
+        )}
       >
         {label}
       </span>
@@ -153,6 +162,7 @@ export function PanelHeader({
           type="button"
           data-panel-head=""
           data-panel-hide=""
+          data-window-drag-recall
           draggable
           aria-label={hideLabel}
           onPointerDown={(event) => {
@@ -179,7 +189,7 @@ export function PanelHeader({
             if (event.detail === 0 || !moved) onHide();
             pointer.current = undefined;
           }}
-          {...stylex.props(styles.head, fixed && styles.fixed)}
+          {...stylex.props(styles.head, fixed && styles.fixed, styles.compact)}
         >
           {content}
         </button>
@@ -223,12 +233,24 @@ export function PanelHeader({
           {content}
         </button>
       )}
+      {context === undefined ? null : (
+        <span data-panel-context="" data-window-drag-recall {...stylex.props(styles.context)}>
+          {context}
+        </span>
+      )}
+      {onHide && tabs === undefined ? (
+        <span aria-hidden="true" {...stylex.props(styles.spacer)} />
+      ) : null}
       {tabs === undefined ? null : (
-        <span data-panel-tabs="" {...stylex.props(styles.tabs)}>
+        <span data-panel-tabs="" data-window-drag-recall {...stylex.props(styles.tabs)}>
           {tabs}
         </span>
       )}
-      {action === undefined ? null : <span {...stylex.props(styles.action)}>{action}</span>}
+      {action === undefined ? null : (
+        <span data-window-drag-recall {...stylex.props(styles.action)}>
+          {action}
+        </span>
+      )}
     </div>
   );
 }
