@@ -96,6 +96,31 @@ async function fixture() {
 }
 
 describe('Tob reviewed Memory owner operations', () => {
+  it('reads multiple Bots directly without per-Bot grants, write review or an Assignment', async () => {
+    const f = await fixture();
+    const before = ['alpha', 'beta'].map((slug) => f.core.memory.snapshot(slug));
+    await f.human(async (prepare) => {
+      for (const [index, slug] of ['alpha', 'beta'].entries()) {
+        expect(f.core.grants.list(slug)).toEqual([]);
+        const snapshot = (await prepare('memory-snapshot', { slug }))!;
+        expect(snapshot.proposal).toBeUndefined();
+        const observed = (await snapshot.run(() => {})) as { sha: string };
+        const file = (await prepare('memory-file', {
+          slug,
+          sha: observed.sha,
+          path: 'MEMORY.md',
+        }))!;
+        expect(file.proposal).toBeUndefined();
+        const result = await file.run(() => {});
+        expect(result).toMatchObject({ readOnly: true, contentRole: 'data' });
+        expect(JSON.stringify(result)).toContain(
+          index === 0 ? 'Original tea preference.' : 'Keep Beta unchanged.',
+        );
+      }
+    });
+    expect(['alpha', 'beta'].map((slug) => f.core.memory.snapshot(slug))).toEqual(before);
+  });
+
   it('binds the exact target, diff, branch and HEAD, then reads the same commit on identical retry', async () => {
     const f = await fixture();
     const beta = f.core.memory.snapshot('beta');

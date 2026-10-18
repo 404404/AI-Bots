@@ -1,0 +1,35 @@
+{
+  "base": "29917b6138be51cfbd0a1a173b13e8d20e9b3207",
+  "sourceSha256": "6feb290a03987637f9bb85277e8301f3626bc3a0ade6d5654dd81c45621e6fca",
+  "capture": "Real Chrome Web Client via CUA; isolated rc.2 Host built from this source; synthetic Bots only.",
+  "model": "deepseek-official/deepseek-flash via supported per-Bot model plan. Initial opencode-go turn failed with QUOTA/429 and is retained in the private evidence.",
+  "journeys": [
+    {
+      "prompt": "你能做什么？",
+      "result": "Completed; fresh capabilities discovery; reply explicitly includes other Bots Memory/history/diff; no mutation proposal."
+    },
+    {
+      "prompt": "看看 Memory-Alpha 和 Memory-Beta 的记忆里分别记住了什么，最近有什么记忆更新，以及它们现在的工作情况。",
+      "result": "Completed; list, snapshot, file, history, diff and bot-progress executed through native Shell CLI; green tea vs black coffee accurately reported; no Assignment or per-Bot approval."
+    }
+  ],
+  "unchangedMemoryHeads": {
+    "Memory-Alpha": "d1b8bbda692aa001c4f5c78a9ba89549a691d012",
+    "Memory-Beta": "8752fbe5281d471535d9e41a5b4a9191d828dee3"
+  },
+  "checks": {
+    "focusedTests": "34 passed across Memory edit/read and content-read suites",
+    "typecheck": "passed",
+    "build": "passed",
+    "lint": "passed",
+    "format": "passed",
+    "browserConsoleErrorsWarnings": 0
+  },
+  "limits": [
+    "New prompt not rerun on native macOS Desktop; existing final-stack Desktop intentionally left running.",
+    "Full automated model-runtime driver not run; equivalent introduction and read journeys driven with CUA.",
+    "Historical before screenshot from PR #2144 uses a different theme/viewport; comparison is model behavior, not pixel layout.",
+    "No new CLI permissions/routes or aggregate attention/log/usage command coverage in this patch."
+  ],
+  "screenshots": ["after-introduction.png", "after-memory-read.png"]
+}

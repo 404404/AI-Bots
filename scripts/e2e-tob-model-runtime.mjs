@@ -840,6 +840,16 @@ try {
         JSON.stringify(ownerReadback, null, 2),
       );
       assert.match(reply.body, /模型|model/iu, 'reply should explain current model capability');
+      assert.match(
+        reply.body,
+        /记忆|memory/iu,
+        'reply should explain cross-Bot Memory stewardship',
+      );
+      assert.doesNotMatch(
+        reply.body,
+        /(?:不能|不会|无法|无权)[^。\n]{0,20}(?:读|看|访问)[^。\n]{0,30}(?:其他|其它|别的)[^。\n]{0,30}(?:记忆|[Mm]emory)|(?:cannot|can't|won't|unable to|not allowed to)[^.\n]{0,30}(?:read|access|inspect|view)[^.\n]{0,50}(?:other [Bb]ots?|their)[^.\n]{0,40}(?:memory|memories)/iu,
+        'capability introduction must not falsely deny cross-Bot Memory reads',
+      );
       assert.match(reply.body, /[？?]/u, 'reply should invite a concrete next step');
       assert.ok(
         !calls.some((call) =>

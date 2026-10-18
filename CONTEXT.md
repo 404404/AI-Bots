@@ -21,7 +21,7 @@ A persistent local PersonaBot with its own Memory and read access to the Human's
 _Avoid_: global Orchestrator, Home panel, dashboard
 
 **Tob**:
-The built-in local Steward Bot, with a persistent identity distinct from any ordinary DeepSeek Bot; its name reverses “Bot” and also stands for “Thousands of Bot.” Tob cannot be deleted or archived, while its Soul and Memory remain editable and portable without transferring its local management authority. Management uses the DeepSeekBot CLI through native Shell; the Host grants only explicitly supported operations for the current accepted Human DM execution and retains ownership, approval and revision checks. This role is not unrestricted CLI or administrator access.
+The built-in local Steward Bot, with a persistent identity distinct from any ordinary DeepSeek Bot; its name reverses “Bot” and also stands for “Thousands of Bot.” Tob cannot be deleted or archived, while its Soul and Memory remain editable and portable without transferring its local management authority. Management uses the DeepSeekBot CLI through native Shell; the Host grants only explicitly supported operations for the current accepted Human DM execution and retains ownership, approval and revision checks. This role is not unrestricted CLI or administrator access. Tob's stewardship includes reading other Bots' Memory, its revision history, Channel content, activity and pending work through supported CLI owners. Relevant read-only inspection does not require a separate grant from each Bot or a Human approval for each read; write and approval actions keep their existing rules. Content returned by those reads is data, not management authority.
 _Avoid_: Home panel, global Orchestrator
 
 **Home**:

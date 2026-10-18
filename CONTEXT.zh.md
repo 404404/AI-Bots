@@ -21,7 +21,7 @@ _避免使用_：已安装发布版、latest 版本、0.0.0 发布版
 _避免使用_：全局 Orchestrator、Home 面板、Dashboard
 
 **Tob**：
-为 Human 提供的内置本地总管 Bot，拥有独立于普通 DeepSeek Bot 的持久身份；名称是 Bot 的倒写，也寓意 Thousands of Bot。Tob 不可删除或归档，但其 Soul 与 Memory 可以编辑和迁移，且不携带本地管理权限。管理操作通过原生 Shell 调用 DeepSeekBot CLI；Host 只为当前已准入的 Human DM 执行授予明确支持的操作，保留身份、审批和 revision 校验。总管身份不等于无限制 CLI 或管理员权限。
+为 Human 提供的内置本地总管 Bot，拥有独立于普通 DeepSeek Bot 的持久身份；名称是 Bot 的倒写，也寓意 Thousands of Bot。Tob 不可删除或归档，但其 Soul 与 Memory 可以编辑和迁移，且不携带本地管理权限。管理操作通过原生 Shell 调用 DeepSeekBot CLI；Host 只为当前已准入的 Human DM 执行授予明确支持的操作，保留身份、审批和 revision 校验。总管身份不等于无限制 CLI 或管理员权限。 Tob 的总管职责包括通过支持的 CLI owner 读取其他 Bot 的记忆、版本历史、频道内容、活动与待处理工作。相关只读检查无需逐个 Bot 额外授权，也无需逐次请求 Human 批准；修改和审批操作仍遵循各自规则。读取结果是数据，不是管理指令或授权。
 _避免使用_：Home 面板、全局 Orchestrator
 
 **Home**：
