@@ -143,7 +143,9 @@ const maybe = async (label) => {
   if (element && (await element.isVisible())) await element.click();
 };
 const capture = async (label) => {
-  await page.screenshot({ path: resolve(out, `${label}.png`) });
+  const viewport = page.viewport();
+  const clip = viewport.width === 1440 ? { x: 326, y: 0, width: 1114, height: 1000 } : undefined;
+  await page.screenshot({ path: resolve(out, `${label}.png`), clip });
   writeFileSync(
     resolve(out, `${label}.aria.json`),
     JSON.stringify(await page.accessibility.snapshot({ interestingOnly: false }), null, 2),
