@@ -160,3 +160,7 @@ For retained-data acceptance, install over an existing build with the same app i
 ### Channel Agents (UAT candidate)
 
 Open Cloud channels → choose an owned channel → Channel agents. Create a named Agent, then explicitly Copy credential into its private configuration file. Only message read/send is granted in this channel; no organization membership or computer execution permission. One saved handoff can be retried after restart. Remove saved credential does not revoke the Agent; Revoke agent does. Secrets are omitted from normal snapshots/logs, and sign-out removes the saved handoff. Real UAT/native evidence is still pending for this increment.
+
+### Memory file previews
+
+Open a Bot profile, expand Memory and choose a file. PNGs open in the reader and tap to enlarge; Share uses the displayed temporary bytes. Markdown opens as a readable GFM document with Preview/Source controls. Local PNG references follow the observed document version and the same repository-relative rules as Web; pull to refresh when a document changes. External HTTPS PNGs require an explicit tap and only load when visible. Other image formats and native Git diff navigation remain future #2214 slices. Native acceptance is scheduled through the shared device QA queue; component shims and bundle exports are separate checks.
