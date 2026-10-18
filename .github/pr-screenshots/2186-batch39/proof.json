@@ -1,0 +1,74 @@
+{
+  "source": "132b33e3c9965fcb5a01066a134f2744269b2d75",
+  "ci": 39157206364,
+  "native": "494a20f1eb4f0666a2c90bc3c758af4e7ff5f46b",
+  "environment": "uat",
+  "sourceTests": 38,
+  "copy": {
+    "light": true,
+    "dark": true,
+    "canonicalClipboardByteMatch": true
+  },
+  "share": {
+    "lightOpenCancel": true,
+    "darkOpenCancel": true,
+    "externalSend": false
+  },
+  "join": {
+    "accepted": true,
+    "onlyTargetAccess": true,
+    "siblingDenied": true,
+    "noOrganizationMembership": true
+  },
+  "cleanup": {
+    "sessionsCreated": 3,
+    "sessionsRevoked": 3,
+    "latestRefreshRejected": true,
+    "allPriorActiveSessionsPreserved": true,
+    "ownedTokenFilesRemoved": true,
+    "originalAppFilesByteIdentical": true,
+    "originalCloudVaultAndHostsRestored": true,
+    "originalDisplayRestored": true,
+    "pendingInvitationCleared": true,
+    "clipboardContentRestored": true,
+    "clipboardItemMetadataRestored": false,
+    "clipboardLimitation": "Initially no text item; final empty text item. No original content lost and no invitation content remains.",
+    "sharedLaneReleased": true,
+    "newRevokedAuditRowsRetained": 1
+  },
+  "limitations": [
+    "Real isolated synthetic sessions injected using committed fixture: not Hosted AuthKit/PKCE",
+    "iOS26 Simulator only; no physical QR, Android or VoiceOver",
+    "System share sheet Chinese labels have missing glyphs; English Copy and icons visible"
+  ],
+  "firstFailures": [
+    "pnpm exec attempted verify-deps install; exact own processes stopped, direct Vitest binary passed",
+    "Early owner readback during async selection failed; completed state reread verified exact owner",
+    "Recipient checkpoint attempted while Check session still busy; later verified after completion. Drawer initially showed SESSION_BUSY and allowed retry.",
+    "First Join screenshot was an in-flight Working state and is excluded from published success images.",
+    "Cleanup comparison treated optional undefined projection fields as changes; canonical baseline fields reread unchanged.",
+    "Direct WorkOS cleanup response parsing was unconfirmed; subsequent independent exact-session and refresh audit proved revocation."
+  ],
+  "batch": 39,
+  "revoke": {
+    "newInviteRevoked": true,
+    "priorInvitesUnchanged": true,
+    "channelsEqual": true,
+    "recipientMe": 200,
+    "recipientSameUser": true,
+    "targetStatus": 403,
+    "guestEqual": true,
+    "beforeGuestCount": 0,
+    "afterGuestCount": 0
+  },
+  "screenshots": [
+    "copied-light.png",
+    "copied-dark.png",
+    "share-light.png",
+    "share-dark.png",
+    "recipient-review-light.png",
+    "recipient-channel-light.png",
+    "recipient-channel-dark.png",
+    "revoked-refresh.png"
+  ]
+}
