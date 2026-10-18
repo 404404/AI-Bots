@@ -1,5 +1,5 @@
 import type { Ref } from 'react';
-import { Pressable, View, type ViewInstance } from 'react-native';
+import { Platform, Pressable, View, type ViewInstance } from 'react-native';
 
 import { edge, radius, space } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
@@ -30,7 +30,7 @@ export function WorkspaceTabs({
           <Pressable
             key={tab}
             ref={selected ? selectedRef : undefined}
-            accessibilityRole="tab"
+            accessibilityRole={Platform.OS === 'ios' ? 'button' : 'tab'}
             accessibilityLabel={label}
             accessibilityState={{ selected }}
             onPress={() => onChange(tab)}
