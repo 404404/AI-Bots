@@ -1,4 +1,4 @@
-import { Capsule, Host } from '@expo/ui/swift-ui';
+import { Capsule, Host, RoundedRectangle } from '@expo/ui/swift-ui';
 import { accessibilityHidden, foregroundStyle, glassEffect } from '@expo/ui/swift-ui/modifiers';
 import { useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Platform, StyleSheet, View } from 'react-native';
@@ -30,11 +30,19 @@ function subscribeTransparency(notify: () => void) {
   };
 }
 
-export function DrawerMaterial({ rounded = false }: { rounded?: boolean }) {
+export function DrawerMaterial({
+  rounded = false,
+  glassPanel = false,
+}: {
+  rounded?: boolean;
+  glassPanel?: boolean;
+}) {
   const theme = useDesignTheme();
   const reduceTransparency = useSyncExternalStore(subscribeTransparency, readTransparency);
   const glass =
-    Number.parseInt(String(Platform.Version), 10) >= 26 && !reduceTransparency && !rounded;
+    Number.parseInt(String(Platform.Version), 10) >= 26 &&
+    !reduceTransparency &&
+    (!rounded || glassPanel);
   return (
     <View
       pointerEvents="none"
@@ -42,7 +50,7 @@ export function DrawerMaterial({ rounded = false }: { rounded?: boolean }) {
       style={[
         StyleSheet.absoluteFill,
         {
-          borderRadius: rounded ? radius.lg : radius.round,
+          borderRadius: glassPanel ? radius.xl : rounded ? radius.lg : radius.round,
           borderWidth: glass ? 0 : edge.hairline,
           borderColor: theme.layer.raised.edge,
           backgroundColor: glass ? 'transparent' : theme.layer.raised.fill,
@@ -56,13 +64,28 @@ export function DrawerMaterial({ rounded = false }: { rounded?: boolean }) {
           colorScheme={theme.scheme}
           pointerEvents="none"
         >
-          <Capsule
-            modifiers={[
-              foregroundStyle('transparent'),
-              glassEffect({ glass: { variant: 'regular' }, shape: 'capsule' }),
-              accessibilityHidden(),
-            ]}
-          />
+          {rounded ? (
+            <RoundedRectangle
+              cornerRadius={radius.xl}
+              modifiers={[
+                foregroundStyle('transparent'),
+                glassEffect({
+                  glass: { variant: 'regular' },
+                  shape: 'roundedRectangle',
+                  cornerRadius: radius.xl,
+                }),
+                accessibilityHidden(),
+              ]}
+            />
+          ) : (
+            <Capsule
+              modifiers={[
+                foregroundStyle('transparent'),
+                glassEffect({ glass: { variant: 'regular' }, shape: 'capsule' }),
+                accessibilityHidden(),
+              ]}
+            />
+          )}
         </Host>
       ) : null}
     </View>
