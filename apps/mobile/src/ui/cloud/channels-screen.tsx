@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError } from '../../cloud/client';
 import type { CloudChannel, CloudMessage } from '../../cloud/channel-contract';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
+import { cloudViewScope } from '../../cloud/workspace-directory';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
@@ -37,6 +38,7 @@ function renderGuestChannelFormScroll(props: ScrollViewProps) {
 }
 
 export function CloudChannelsScreen() {
+  const snapshot = useCloudSnapshot();
   const { instanceId, organizationId, guest, channelId } = useLocalSearchParams<{
     instanceId: string;
     organizationId?: string;
@@ -45,7 +47,13 @@ export function CloudChannelsScreen() {
   }>();
   return (
     <ChannelWorkspace
-      key={instanceId + ':' + (guest === 'true' ? 'guest' : organizationId) + ':' + channelId}
+      key={JSON.stringify([
+        instanceId,
+        organizationId,
+        guest,
+        channelId,
+        cloudViewScope(snapshot.rows.find((row) => row.config.instanceId === instanceId)),
+      ])}
       instanceId={instanceId}
       organizationId={organizationId ?? ''}
       guest={guest === 'true'}
@@ -84,9 +92,14 @@ function ChannelWorkspace({
   const opened = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      if (!initialChannelId || !snapshot.ready || snapshot.busy || opened.current) return;
+      if (!snapshot.ready || snapshot.busy || opened.current) return;
       opened.current = true;
       void run(async () => {
+        if (!initialChannelId) {
+          if (!row?.identity) await cloudClient.whoami(instanceId);
+          await reload();
+          return;
+        }
         const channel = await cloudClient.openChannel(
           instanceId,
           organizationId,
@@ -177,7 +190,11 @@ function ChannelWorkspace({
       keyExtractor={(item) => ('sequence' in item ? 'message-' + item.sequence : item.channelId)}
       ListHeaderComponent={
         <View style={{ gap: space.x4 }}>
-          <Text variant="title">{guest ? t.cloudGuests.title : row?.organization?.name}</Text>
+          <Text variant="title">
+            {guest
+              ? (organizationId && channels?.[0]?.organizationName) || t.cloudGuests.title
+              : row?.organization?.name}
+          </Text>
           {!!error && (
             <Text accessibilityLiveRegion="polite">
               {t.cloud.error} {error}

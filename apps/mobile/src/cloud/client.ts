@@ -50,6 +50,7 @@ export type CloudRow = {
   agentHandoff?: Omit<AgentHandoff, 'secret'> | undefined;
   config: InstanceConfig;
   hasSession: boolean;
+  sessionUserId?: string | undefined;
   identity?: Identity | undefined;
   organization?: Organization | undefined;
   pendingCreate?: { name: string; operation: string } | undefined;
@@ -174,6 +175,7 @@ export class CloudClient {
       rows: this.vault.entries.map((e) => ({
         config: e.config,
         hasSession: !!e.session,
+        sessionUserId: e.session?.userId,
         pendingCreate: e.pendingCreate,
         pendingChannelAction: e.pendingChannelAction,
         pendingInvitation: e.pendingInvitation,
@@ -417,6 +419,12 @@ export class CloudClient {
       await this.save({ ...(!changed ? old : {}), config });
       return config;
     });
+  rename = (id: string, name: string) =>
+    this.lock(async () => {
+      const entry = this.entry(id);
+      const config = parseInstance({ ...entry.config, name: name.trim() });
+      await this.save({ ...entry, config });
+    });
   private async acceptTokens(
     entry: Entry,
     value: unknown,
@@ -638,10 +646,15 @@ export class CloudClient {
       const entry = guest
         ? await this.current(this.entry(id))
         : await this.channelEntry(id, organizationId);
+      if (guest && organizationId && !/^org_[A-Za-z0-9]+$/.test(organizationId))
+        return fail('INVALID_ORGANIZATION');
+      const query = new URLSearchParams();
+      if (after) query.set('after', after);
+      if (guest && organizationId) query.set('organizationId', organizationId);
       const value = await this.orgRequest(
         entry,
         (guest ? '' : '/' + organizationId + '/channels') +
-          (after ? '?after=' + encodeURIComponent(after) : ''),
+          (query.size ? '?' + query.toString() : ''),
         {},
         guest ? '/api/guest-channels' : '/api/organizations',
       );
@@ -660,7 +673,8 @@ export class CloudClient {
           if (
             guest &&
             (!/^org_[A-Za-z0-9]+$/.test(channel.organizationId ?? '') ||
-              record(raw).access !== 'guest')
+              record(raw).access !== 'guest' ||
+              (organizationId && channel.organizationId !== organizationId))
           )
             return fail('INVALID_RESPONSE');
           return channel;

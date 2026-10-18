@@ -8,6 +8,7 @@ import {
   type CloudRuntime,
 } from '../src/cloud/client';
 import { MOBILE_REDIRECT_URI, publicInstance } from '../src/cloud/instance-contract';
+import { cloudViewScope } from '../src/cloud/workspace-directory';
 import { cloudNativeIntent } from '../src/cloud/native-intent';
 const config = publicInstance({
   instanceId: 'tob-test-uat',
@@ -100,6 +101,77 @@ async function loggedIn() {
   return f;
 }
 describe('mobile cloud session boundary', () => {
+  it('renames a connection locally without changing credentials or trusted connection scope', async () => {
+    const f = await loggedIn();
+    const before = f.client.getSnapshot().rows[0]!;
+    const stored = JSON.parse(f.stored()!);
+    const requestCount = f.calls.length;
+    f.state.offline = true;
+    await f.client.rename(config.instanceId, '  Team UAT  ');
+    const after = f.client.getSnapshot().rows[0]!;
+    expect(after.config.name).toBe('Team UAT');
+    expect(cloudViewScope(after)).toBe(cloudViewScope(before));
+    expect(after.identity).toEqual(before.identity);
+    expect(JSON.parse(f.stored()!).entries[0].session).toEqual(stored.entries[0].session);
+    expect(f.calls).toHaveLength(requestCount);
+    const reopened = new CloudClient(f.rt);
+    await reopened.load();
+    expect(reopened.getSnapshot().rows[0]?.config.name).toBe('Team UAT');
+    expect(reopened.getSnapshot().rows[0]?.hasSession).toBe(true);
+  });
+
+  it('refuses invalid names and preserves the previous name when storage fails', async () => {
+    const f = await loggedIn();
+    const before = f.stored();
+    await expect(f.client.rename(config.instanceId, '  ')).rejects.toMatchObject({
+      code: 'INVALID_INSTANCE_CONFIG',
+    });
+    await expect(f.client.rename(config.instanceId, 'bad\nname')).rejects.toMatchObject({
+      code: 'INVALID_INSTANCE_CONFIG',
+    });
+    f.state.failWrite = true;
+    await expect(f.client.rename(config.instanceId, 'New name')).rejects.toMatchObject({
+      code: 'STORAGE_UNAVAILABLE',
+    });
+    expect(f.stored()).toBe(before);
+    expect(f.client.getSnapshot().rows[0]?.config.name).toBe(config.name);
+  });
+
+  it('accepts a local display name during verified configuration import', async () => {
+    const f = fixture();
+    await f.client.importConfig(JSON.stringify({ ...config, name: 'My cloud' }));
+    expect(f.client.getSnapshot().rows[0]?.config).toEqual({ ...config, name: 'My cloud' });
+    expect(f.calls.some((call) => call.url.endsWith('/.well-known/open-cloud-groups'))).toBe(true);
+  });
+
+  it('keeps draft scope stable through refresh but separates a later signed-in account', async () => {
+    const f = fixture();
+    await f.client.importConfig(JSON.stringify(config));
+    await f.client.login(config.instanceId);
+    const original = cloudViewScope(f.client.getSnapshot().rows[0]);
+    const scopes: string[] = [];
+    let unverifiedDuringRefresh = false;
+    const stop = f.client.subscribe(() => {
+      const row = f.client.getSnapshot().rows[0];
+      scopes.push(cloudViewScope(row));
+      if (!row?.identity) unverifiedDuringRefresh = true;
+    });
+    await f.client.refresh(config.instanceId);
+    stop();
+    expect(unverifiedDuringRefresh).toBe(true);
+    expect(new Set(scopes)).toEqual(new Set([original]));
+    const restored = new CloudClient(f.rt);
+    await restored.load();
+    expect(restored.getSnapshot().rows[0]?.identity).toBeUndefined();
+    expect(cloudViewScope(restored.getSnapshot().rows[0])).toBe(original);
+    await restored.logout(config.instanceId);
+    expect(cloudViewScope(restored.getSnapshot().rows[0])).not.toBe(original);
+    f.state.user = 'user_other';
+    await restored.login(config.instanceId);
+    expect(restored.getSnapshot().rows[0]?.sessionUserId).toBe('user_other');
+    expect(cloudViewScope(restored.getSnapshot().rows[0])).not.toBe(original);
+  });
+
   it('imports, performs public PKCE, persists rotation, verifies identity, restores and logs out', async () => {
     const f = await loggedIn();
     const auth = new URL(f.state.browserUrl);
@@ -587,6 +659,7 @@ describe('cloud organizations', () => {
     const channel = {
       channelId,
       organizationId: 'org_external',
+      organizationName: 'External workspace',
       name: 'External project',
       creatorId: 'user_a',
       creatorType: 'human',
@@ -605,6 +678,8 @@ describe('cloud organizations', () => {
             : { invitations: [invitation], nextCursor: null },
         );
       if (url.includes('/api/guest-channels')) {
+        const requestedOrg = new URL(url).searchParams.get('organizationId');
+        if (requestedOrg) expect(requestedOrg).toBe('org_external');
         if (denied)
           return Response.json({ error: { code: 'CHANNEL_ACCESS_DENIED' } }, { status: 403 });
         if (url.includes('/messages')) {
@@ -648,6 +723,10 @@ describe('cloud organizations', () => {
     expect((await client.listChannels(config.instanceId, '', undefined, true)).nextCursor).toBe(
       invitationId,
     );
+    expect(
+      (await client.listChannels(config.instanceId, 'org_external', undefined, true)).channels[0]
+        ?.organizationName,
+    ).toBe('External workspace');
     expect((await client.readMessages(config.instanceId, '', channelId, 0, true)).nextCursor).toBe(
       7,
     );

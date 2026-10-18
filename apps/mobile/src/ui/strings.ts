@@ -14,6 +14,10 @@ function toolGroup(tool: string): ToolGroup {
 const en = {
   dialogFailed: 'That did not go through. Try again.',
   openMention: (name: string) => `Open chat with ${name}`,
+  connectionName: 'Name on this phone',
+  connectionNameOptional: 'Optional — use the original name',
+  renameConnection: 'Rename connection',
+  saveConnectionName: 'Save name',
   cloud: {
     title: 'Cloud services',
     hint: 'Import the UAT configuration supplied by your deployer. Cloud sign-in is separate from pairing a computer.',
@@ -626,6 +630,17 @@ const en = {
     'device-credential-missing': 'this phone has no pairing for your computer.',
     unreachable: 'cannot reach your computer.',
   } satisfies Record<PushRefusal, string>,
+  workspaces: 'Workspaces',
+  closeWorkspaces: 'Close workspaces',
+  workspaceGuest: 'Guest · invited channels only',
+  workspaceLoading: 'Loading workspaces…',
+  workspaceEmpty: 'No cloud workspaces yet. Join a workspace or channel using an invitation.',
+  workspaceAdd: {
+    cloudTab: 'Cloud',
+    join: 'Join by link or QR',
+    noComputers: 'No paired computers yet.',
+    manage: 'Manage cloud services',
+  },
   computers: 'Computers',
   computersHint:
     'Each paired computer is a separate workspace. Notifications come from all of them.',
@@ -952,6 +967,10 @@ const en = {
 const zh: typeof en = {
   dialogFailed: '操作没有成功，请重试。',
   openMention: (name: string) => `打开与${name}的私聊`,
+  connectionName: '在这台手机上的名称',
+  connectionNameOptional: '选填，默认使用原名称',
+  renameConnection: '重命名连接',
+  saveConnectionName: '保存名称',
   cloud: {
     title: '云服务',
     hint: '导入部署者提供的 UAT 配置。云服务登录与电脑配对相互独立。',
@@ -1538,6 +1557,17 @@ const zh: typeof en = {
     'device-unknown': '电脑已不认识这台手机。',
     'device-credential-missing': '这台手机没有与电脑配对。',
     unreachable: '连不上你的电脑。',
+  },
+  workspaces: '工作区',
+  closeWorkspaces: '关闭工作区列表',
+  workspaceGuest: '访客 · 仅受邀频道',
+  workspaceLoading: '正在加载工作区…',
+  workspaceEmpty: '还没有云端工作区，可以通过邀请加入组织或频道。',
+  workspaceAdd: {
+    cloudTab: '云端',
+    join: '通过链接或二维码加入',
+    noComputers: '还没有配对的电脑。',
+    manage: '管理云服务',
   },
   computers: '电脑',
   computersHint: '每台配对的电脑是一个独立的工作区，所有电脑的通知都会发到这台手机。',

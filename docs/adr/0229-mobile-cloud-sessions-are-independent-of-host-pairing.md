@@ -41,3 +41,13 @@ Explicit Copy credential replays owner-authorized issuance to verify current rig
 ## Fixed work requests
 
 The same cloud client lets an organization member request one fixed health check from a channel Agent. It saves an operation, actual signed-in user, target/channel and five-minute deadline in SecureStore before sending, then validates the returned canonical request. Retry after restart preserves the deadline and operation. Clearing that record or signing out is only local cleanup, not remote cancellation. TOB owns request/result messages; the Agent runtime separately owns its allow-list and execution ledger. A cloud membership never substitutes for local work authority. The initial UI uses explicit history reload, with no DSH or WebSocket claim.
+
+## Unified workspace navigation
+
+The root navigation shell hosts one shared workspace drawer, available from the existing computer chip and cloud screen headers. Its virtualized list has Computers and Cloud workspaces sections; choosing a computer returns to that Host's Chats, while cloud selection leaves Host pairing unchanged.
+
+Cloud workspace rows are a disposable projection of current organization memberships and current channel-guest grants, keyed by instance and organization. Membership wins when both apply. A verified guest response may expose only the granted channel's organization name; that metadata does not create membership. Guest selection uses the guest-channel endpoint filtered by organization and never refreshes a token into that organization. Every channel request still enforces current server authority.
+
+Opening the drawer refreshes the projection. Pagination preserves separate membership and guest cursors, including empty filtered pages. Closing or changing configured sessions invalidates in-flight display updates. No directory or grant cache is persisted. Sign-in, loading, empty, failure and retry states remain explicit. Native switching, maximum text sizes, revocation and separate platform acceptance must be recorded before claiming this navigation slice complete.
+
+The display scope also includes the stored session's user ID. This is a local cache-partition hint, never admission: restored sessions still have no verified `identity`, and every operation uses the existing server checks. The hint remains stable during refresh while live identity is temporarily cleared, preserving drafts; logout, account replacement or critical instance configuration changes reset channel view state. A cancelled directory read stops before issuing the next page-source request and cannot publish results into the next account's directory.
