@@ -30,6 +30,7 @@ import type { BotModePrefsSnapshot } from '../src/client/bot-mode-prefs.js';
 import { BotModeSidebar, type BotModeSidebarProps } from '../src/client/bot-mode-sidebar.js';
 import { createDockPanelRegistry } from '../src/client/dock-panels.js';
 import { en, type BotHarnessTranslate } from '../src/client/locale.js';
+import { installTypedLive, type TypedLive } from '../src/client/messaging-defaults-live.js';
 import { store } from '../src/client/store.js';
 
 const t = ((key: keyof typeof en, params?: Record<string, string>) =>
@@ -204,4 +205,37 @@ describe('Bot mode sidebar', () => {
     expect(card.querySelector('[data-pinned-panel-dot]')).not.toBeNull();
     act(() => store.setHumanInbox({ unreadCount: 0, hasAction: false }));
   });
+});
+
+it('updates the entry badge from the shared live stream and releases it on unmount', async () => {
+  vi.useFakeTimers();
+  let handlers!: Parameters<TypedLive['roster']>[0];
+  const stop = vi.fn();
+  const uninstall = installTypedLive({
+    roster: (next) => {
+      handlers = next;
+      return stop;
+    },
+    activity: () => () => {},
+  });
+  try {
+    const { calls } = render();
+    handlers.baseline([]);
+    await vi.advanceTimersByTimeAsync(30);
+    const count = calls.refreshHumanInboxStatus.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(calls.refreshHumanInboxStatus).toHaveBeenCalledTimes(count);
+    handlers.attention?.();
+    handlers.attention?.();
+    await vi.advanceTimersByTimeAsync(30);
+    expect(calls.refreshHumanInboxStatus).toHaveBeenCalledTimes(count + 1);
+    act(() => root?.unmount());
+    root = undefined;
+    expect(stop).toHaveBeenCalledTimes(1);
+  } finally {
+    act(() => root?.unmount());
+    root = undefined;
+    uninstall();
+    vi.useRealTimers();
+  }
 });

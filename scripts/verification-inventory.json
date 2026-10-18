@@ -1316,6 +1316,14 @@
       "sha256": "401f5733fa76d7151a247abda68a0fd8914e7b3fca18675539366dfd395dab95"
     },
     {
+      "path": "scripts/e2e-activity-live.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Task-local real browser: idle and slow-read stability, live cross-Channel message and request arrivals, read/source identity, actual WebSocket reconnect, snooze expiry, answer resolution and bounded CLI watch.",
+      "task": 2230,
+      "sha256": "8ee130b84250a3ca375fc7ac46452c6a6f897ffd008b546ec5c107de93f7c303"
+    },
+    {
       "path": "scripts/e2e-inbox-tool-approval.mjs",
       "category": "mapped",
       "behaviors": ["desktop.activity-center.inline-tool-approval"],

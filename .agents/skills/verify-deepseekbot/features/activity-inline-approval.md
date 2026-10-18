@@ -71,3 +71,25 @@ own runtime checks before claiming them. Human QA remains a separate gate.
 ## Three-section and search follow-up
 
 Verify all three headers on page and narrow/wide Dock, light/dark. Collapse each independently, reload and reopen the panel to verify persistence; arrivals must not reopen a collapsed section. Open Search notifications in the header, type a matching query and a no-result query, then close with Escape or the clear button. Verify focus returns to the search trigger and browsing never marks read or consumes approvals. Search matches beyond the first page through Host `humanAttention` query version 1; unread summaries search eligible message bodies before grouping. Verify Bot/Channel filters, default/chronological sort, handled history and per-section pagination, including stale responses after a search switch and failed-page retry. The CLI equivalent is `deepseekbot inbox --category replies --search <text> --sort mentions-first`; an old Host must refuse the versioned query instead of silently returning unfiltered data.
+
+## Live Activity refresh
+
+Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-activity-live.mjs`
+on a fresh task-local Host after `doctor`. This journey observes 12 idle seconds with no list
+polling, delays background reads by 350ms without replacing the loaded empty DOM, creates a
+real reply in another Channel, marks it read through Activity, closes the browser's actual
+WebSocket while offline, and checks canonical unread recovery after reconnect. Source navigation
+must reveal the same message ID in the conversation. A second disposable Bot asks a real native
+question: its Activity card appears, snoozes, returns at expiry and disappears after an answer.
+The journey also runs `inbox-watch` against that same Host and saves its bounded JSON result.
+
+QA Bots use the already configured `deepseek-official/deepseek-flash` route; override only these
+Bots with `BH_QA_PROVIDER` / `BH_QA_MODEL` if that catalog route is unavailable. The shared AX
+default may return QUOTA even when the alternate configured route works. Preserve that failure;
+never treat Host health or a mocked reply as proof of model usability. The browser instrumentation
+only closes its transport or delays its own requests; it does not fabricate messages or requests.
+
+Also compare the three empty sections on full page (600×1000) and Dock (1440×1000), light/dark,
+with the base revision: background reads must preserve text and section heights. Screenshots,
+ARIA, canonical item/message/Source Event IDs and console failures stay in the instance evidence.
+Human QA and native mobile behavior remain separate from these Web checks.

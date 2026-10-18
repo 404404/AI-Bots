@@ -353,6 +353,7 @@ deepseekbot grants <bot-id>
 ```bash
 deepseekbot inbox --category action --limit 20
 deepseekbot inbox --category replies --search budget --unread --sort mentions-first
+deepseekbot inbox-watch --category unread --watch-seconds 10
 deepseekbot inbox-status
 deepseekbot inbox-dismiss <item-id> --source-key <source-event-id>
 deepseekbot inbox-snooze <item-id> --source-key <source-event-id> --until 2026-10-15T09:00:00Z
@@ -372,6 +373,8 @@ deepseekbot grant-write-set <bot-id> --grant <grant-id> --disabled
 deepseekbot private-mcp-set <bot-id> --server <name> --enabled
 deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
+
+`inbox-watch` 先订阅现有已认证 roster 实时流，再读取基线。观测 1–60 秒（默认 10 秒）后，仅输出一个 JSON，包含 `initial`、`current` 和 `invalidations` 数量。两次快照沿用 `inbox` 的 Human Inbox 查询与筛选；中间事件仅通知数据失效，不另存通知。流提前中断返回编码拒绝。`--timeout` 应长于观测窗口。
 
 `inbox --search <文字>` 在分页前搜索安全的 Activity 摘要、Channel 名称和 Bot slug（最多 200 字符）。`--unread` 仅保留未读的个人消息，不隐藏待处理事项。`--sort newest|oldest` 按时间排序；`--category replies --sort mentions-first` 将提及排在回复前。使用 `--cursor` 时须保持筛选条件不变。搜索、未读筛选和提及排序要求查询版本 1；旧 Host 返回 `host-query-unsupported`，不会静默返回部分结果。
 

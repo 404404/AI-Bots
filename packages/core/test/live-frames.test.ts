@@ -459,3 +459,36 @@ describe('live frames on the native stream carrier', () => {
     ).rejects.toMatchObject({ code: 'invalid' });
   });
 });
+
+it('multiplexes attention invalidations on both roster carriers and bounds a slow typed reader', async () => {
+  let changed!: () => void;
+  let released = 0;
+  const hub = createChannelLiveHub(
+    createChannelStore({ rootDir: root() }),
+    undefined,
+    undefined,
+    (notify) => {
+      changed = notify;
+      return () => {
+        released++;
+      };
+    },
+  );
+  hubs.push(hub);
+  const abort = new AbortController();
+  const typed = hub.followRoster(abort.signal)[Symbol.asyncIterator]();
+  const sse = openLiveFrames((request) => hub.open(request), 'scope=roster', '', abort.signal);
+  await typed.next();
+  await sse.next();
+  changed();
+  expect((await typed.next()).value).toEqual({ type: 'attention' });
+  expect((await sse.next()).value).toEqual({ event: 'human-attention/changed', data: '{}' });
+  for (let i = 0; i < 10; i++) changed();
+  expect((await typed.next()).value).toEqual({ type: 'attention' });
+  const pending = typed.next();
+  abort.abort();
+  expect((await pending).done).toBe(true);
+  await sse.return(undefined);
+  hub.close();
+  expect(released).toBe(1);
+});
