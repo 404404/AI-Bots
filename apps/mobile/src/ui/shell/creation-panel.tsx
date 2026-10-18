@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   creationActions,
   targetsFor,
@@ -19,7 +19,6 @@ import {
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { NavigationMaterial } from './navigation-material';
-import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { ComputerIcon, CloudIcon, PersonIcon, ChatsIcon, ShareIcon } from './icons';
 import { t } from '../strings';
@@ -53,9 +52,8 @@ export function CreationPanel({
 }) {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
-  const { width, height, fontScale } = useWindowDimensions();
+  const { height } = useWindowDimensions();
   const [choosing, setChoosing] = useState<CreationAction>();
-  const singleColumn = fontScale > 1.3 || width < 360 || !!choosing;
   const actions = creationActions(scope, targets);
   const choices = choosing ? targetsFor(choosing, scope, targets) : [];
   const pick = (action: CreationAction) => {
@@ -110,10 +108,14 @@ export function CreationPanel({
                 }
                 ListEmptyComponent={<Text>{t.noCreationTargets}</Text>}
                 ListFooterComponent={
-                  <Button label={t.back} disabled={busy} onPress={() => setChoosing(undefined)} />
+                  <CreationMenuRow
+                    label={t.back}
+                    disabled={busy}
+                    onPress={() => setChoosing(undefined)}
+                  />
                 }
                 renderItem={({ item: target }) => (
-                  <Button
+                  <CreationMenuRow
                     disabled={busy}
                     label={target.name}
                     icon={
@@ -136,41 +138,18 @@ export function CreationPanel({
                   {t.createHere}
                 </Text>
                 {!!error && <Text accessibilityRole="alert">{error}</Text>}
-                <View
-                  style={{
-                    flexDirection: singleColumn ? 'column' : 'row',
-                    flexWrap: 'wrap',
-                    gap: space.x3,
-                  }}
-                >
+                <View style={{ gap: space.x1 }}>
                   {actions.map((action) => {
                     const Icon =
                       action === 'channel' ? ChatsIcon : action === 'bot' ? PersonIcon : ShareIcon;
                     return (
-                      <Pressable
+                      <CreationMenuRow
                         key={action}
-                        accessibilityRole="button"
-                        accessibilityLabel={creationLabel(action)}
+                        label={creationLabel(action)}
                         disabled={busy}
                         onPress={() => pick(action)}
-                        style={({ pressed }) => ({
-                          width: singleColumn ? '100%' : '47%',
-                          minHeight: theme.touch,
-                          borderRadius: radius.lg,
-                          padding: space.x4,
-                          gap: space.x3,
-                          alignItems: 'center',
-                          backgroundColor: pressed
-                            ? theme.layer.raised.chosen
-                            : theme.layer.well.fill,
-                          opacity: busy ? 0.5 : 1,
-                        })}
-                      >
-                        <Icon color={theme.color.fg} size={theme.type.title.line} />
-                        <Text strong style={{ textAlign: 'center' }}>
-                          {creationLabel(action)}
-                        </Text>
-                      </Pressable>
+                        icon={<Icon color={theme.color.fg} size={theme.type.title.line} />}
+                      />
                     );
                   })}
                 </View>
@@ -183,5 +162,53 @@ export function CreationPanel({
         </View>
       </View>
     </Modal>
+  );
+}
+
+function CreationMenuRow({
+  label,
+  icon,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  icon?: ReactNode;
+  disabled: boolean;
+  onPress(): void;
+}) {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        alignSelf: 'stretch',
+        flexDirection: 'row',
+        alignItems: 'center',
+        minHeight: theme.touch,
+        borderRadius: radius.lg,
+        paddingHorizontal: space.x3,
+        paddingVertical: space.x3,
+        gap: space.x3,
+        backgroundColor: pressed ? theme.layer.raised.chosen : undefined,
+        opacity: disabled ? 0.5 : 1,
+      })}
+    >
+      {icon && (
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{ flexShrink: 0 }}
+        >
+          {icon}
+        </View>
+      )}
+      <Text strong style={{ flex: 1, textAlign: 'left' }}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
