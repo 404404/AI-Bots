@@ -40,6 +40,10 @@ const fixtures = {
     () =>
       '这是一个没有段落换行的长段落，用来检查连续增长的文字是否稳定。**加粗内容**、[链接](https://example.com)、&amp; 与家庭表情👨‍👩‍👧‍👦应保持完整。',
   ).join(''),
+  plain:
+    '连续长段落用于检查逐字淡入的成本。已经显示的文字保持清晰，新字平稳出现，标点带来短暂呼吸，缓冲在输入变慢时继续供给文字。'.repeat(
+      320,
+    ) + 'PLAIN_REPLAY_COMPLETE',
   rich:
     '# 格式验收\n\n中文 **加粗与 _嵌套斜体_**、~~删除线~~、`inline &amp;`、&amp;、[链接](https://example.com) 和 👨‍👩‍👧‍👦。  \n硬换行\n\n3. 第三项\n4. 第四项\n   - 嵌套列表\n\n- [x] 已完成\n- [ ] 未完成\n\n> 引用第一段\n>\n> 引用第二段\n\n```ts\n' +
     Array.from({ length: 120 }, (_, i) => `const row${i} = "中文<&amp;>🙂";`).join('\n') +

@@ -122,3 +122,13 @@ it('streams valid tool arguments with complete emoji and rejects invalid control
   expect(invalid.status).toBe(400);
   expect(await invalid.json()).toEqual({ error: { message: 'INVALID_REPLAY_REQUEST' } });
 });
+
+it('offers a long plain paragraph separately from the rich Markdown fixture', async () => {
+  const base = await server();
+  await writeFile(control!, JSON.stringify({ slug: 'qa-bot', runId: 'plain', fixture: 'plain' }));
+  const result = await (await post(base, request())).json();
+  const { body } = JSON.parse(result.choices[0].message.tool_calls[0].function.arguments);
+  expect(body.length).toBeGreaterThan(10000);
+  expect(body).not.toMatch(/[\n*\[\]`]/u);
+  expect(body.endsWith('PLAIN_REPLAY_COMPLETE')).toBe(true);
+});

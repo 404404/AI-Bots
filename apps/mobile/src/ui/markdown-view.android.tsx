@@ -6,7 +6,7 @@ import { Lexer } from 'marked';
 import remend from 'remend';
 
 import { useDesignTheme } from './design/theme';
-import { markdownBlocks, textMarkdownSupported } from './markdown-blocks';
+import { createMarkdownBlocks, textMarkdownSupported } from './markdown-blocks';
 import { MarkdownText } from './markdown-text';
 import { markdownStyle } from './markdown-style';
 import { space } from './design/tokens';
@@ -72,7 +72,8 @@ const MarkdownDocument = memo(function MarkdownDocument({
   streaming = false,
 }: MarkdownProps) {
   const theme = useDesignTheme();
-  const blocks = useMemo(() => markdownBlocks(source), [source]);
+  const parse = useMemo(() => createMarkdownBlocks(), []);
+  const blocks = useMemo(() => parse(source), [parse, source]);
   const viewport = useMarkdownViewport();
   const window = useMemo(() => createMarkdownWindow(), []);
   const [, measureVersion] = useState(0);
