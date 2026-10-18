@@ -10,10 +10,13 @@ Native macOS DeepSeek Harness 0.2.1-rc.2, isolated synthetic Profile. No browser
 - `new-bot-empty.jpg` / `created-group-members.jpg`: candidate with the same creation and welcome-removal code, before the final navigation-failure guard; real approved Tob CLI creation and actual membership, no default Bot message.
 - `model-gate.jpg`: candidate before final navigation guard; cleared default in this isolated Profile, then native setup/cancel/save verified and unsent draft restored.
 
+- `step5-dark.jpg`: final candidate, dark theme, fifth step and retained draft.
+- `narrow-desktop.jpg`: final candidate at 1744 × 1200; existing narrow Desktop conversation shell. Restoring 2522 × 1640 returned Home, its draft and step five. This is not mobile Home verification.
+
 ## Verification boundaries
 
-Passed: 172 focused tests (13 files), lint including CLI parity, format, typecheck and build. Native model setup/cancel, real approved Bot/group creation, new Bot empty DM, same Tob DM, fifth-step action/readback, layout-tip replay, global resize and Home close/reopen restoration, and quiet legacy unfinished migration.
+Passed: 172 focused tests (13 files), lint including CLI parity, format, typecheck and build. Native model setup/cancel, real approved Bot/group creation, new Bot empty DM, same Tob DM, fifth-step action/readback, layout-tip replay, global resize and Home close/reopen restoration, quiet legacy unfinished migration, dark Home, and narrow-window/wide-window restoration.
 
-Open native gates: actual global/child title drag placement, child resizing/reopen, dark/narrow screenshots. Drag attempts did not visibly move panels and the native control subsequently returned `noWindowsAvailable`; cause is not established. The theme was changed in the isolated Profile, but the final dark guide screenshot was not qualified. Legacy completed/skipped cases, denial/pending invitation and recovery edges have source coverage; their full native matrix is not claimed.
+Open native gates: actual global/child title drag placement and child resizing/reopen. Drag attempts did not visibly move panels and the native control subsequently returned `noWindowsAvailable`; cause is not established. Later native window Raise restored normal clicks and captures; another child-divider drag still did not visibly resize the panel. These remaining interaction gates are not attributed to an automation failure without evidence. Legacy completed/skipped cases, denial/pending invitation and recovery edges have source coverage; their full native matrix is not claimed.
 
 Screenshots show synthetic data only. This slice excludes mobile Web. Keep the PR unmerged pending remaining Desktop qualification and Human review.
