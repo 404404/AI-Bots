@@ -892,3 +892,111 @@ describe('channel Agent private handoff', () => {
     expect(f.stored()).not.toContain(secret);
   });
 });
+
+describe('cloud health check requests', () => {
+  async function setup() {
+    const f = organizationsFixture();
+    f.state.role = 'member';
+    const client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    await client.useOrganization(config.instanceId, 'org_a');
+    const original = f.rt.request;
+    let lose = true;
+    const submissions: { operation: string; body: Record<string, string> }[] = [];
+    const channelId = 'ch_' + 'a'.repeat(64),
+      actorId = 'ag_' + 'b'.repeat(64);
+    f.rt.request = async (url, init) => {
+      if (!url.endsWith('/work-requests')) return original(url, init);
+      const body = JSON.parse(String(init?.body));
+      const operation = new Headers(init?.headers).get('Idempotency-Key')!;
+      expect(JSON.parse(f.stored()!).entries[0].pendingWork.operation).toBe(operation);
+      submissions.push({ operation, body });
+      if (lose) {
+        lose = false;
+        throw Error('response lost');
+      }
+      return Response.json({
+        message: {
+          sequence: 1,
+          authorType: 'human',
+          authorId: 'user_test',
+          operationId: operation,
+          text: 'Health check requested',
+          createdAt: new Date(f.rt.now()).toISOString(),
+          kind: 'work_request',
+          payload: {
+            version: 1,
+            requestId:
+              'wr_' + (await f.rt.digest(JSON.stringify([channelId, 'user_test', operation]))),
+            channelId,
+            requesterUserId: 'user_test',
+            targetActorId: actorId,
+            capability: 'health-check',
+            expiresAt: body.expiresAt,
+          },
+        },
+      });
+    };
+    return { ...f, client, submissions, channelId, actorId };
+  }
+  it('allows members, persists before send and retries the same request after restart without extending expiry', async () => {
+    const f = await setup();
+    await expect(
+      f.client.requestHealthCheck(config.instanceId, 'org_a', f.channelId, f.actorId),
+    ).rejects.toThrow();
+    const saved = f.client.getSnapshot().rows[0]!.pendingWork!;
+    const restarted = new CloudClient(f.rt);
+    await restarted.load();
+    await restarted.whoami(config.instanceId);
+    await expect(
+      restarted.requestHealthCheck(config.instanceId, 'org_a', f.channelId, 'ag_' + 'c'.repeat(64)),
+    ).rejects.toThrow('PENDING_WORK_REQUEST');
+    f.rt.now = () => 2000000;
+    await restarted.requestHealthCheck(config.instanceId, 'org_a', f.channelId, f.actorId);
+    expect(f.submissions).toHaveLength(2);
+    expect(f.submissions[0]).toEqual(f.submissions[1]);
+    expect(f.submissions[1]!.body.expiresAt).toBe(saved.expiresAt);
+    expect(restarted.getSnapshot().rows[0]?.pendingWork).toBeUndefined();
+  });
+  it('does not send if secure persistence fails and clears the pending record on logout', async () => {
+    const f = await setup();
+    const write = f.rt.write;
+    f.rt.write = async () => {
+      throw Error('storage');
+    };
+    await expect(
+      f.client.requestHealthCheck(config.instanceId, 'org_a', f.channelId, f.actorId),
+    ).rejects.toThrow('STORAGE_UNAVAILABLE');
+    expect(f.submissions).toHaveLength(0);
+    f.rt.write = write;
+    await expect(
+      f.client.requestHealthCheck(config.instanceId, 'org_a', f.channelId, f.actorId),
+    ).rejects.toThrow();
+    expect(f.client.getSnapshot().rows[0]?.pendingWork).toBeDefined();
+    await f.client.logout(config.instanceId);
+    expect(f.client.getSnapshot().rows[0]?.pendingWork).toBeUndefined();
+    expect(f.stored()).not.toContain('pendingWork');
+  });
+  it('rejects a mismatched server target and preserves retry state; removing it sends no cancellation', async () => {
+    const f = await setup();
+    const original = f.rt.request;
+    f.rt.request = async (url, init) => {
+      const response = await original(url, init);
+      if (!url.endsWith('/work-requests')) return response;
+      const body = await response.json();
+      body.message.payload.targetActorId = 'ag_' + 'c'.repeat(64);
+      return Response.json(body);
+    };
+    await expect(
+      f.client.requestHealthCheck(config.instanceId, 'org_a', f.channelId, f.actorId),
+    ).rejects.toThrow();
+    await expect(
+      f.client.requestHealthCheck(config.instanceId, 'org_a', f.channelId, f.actorId),
+    ).rejects.toThrow('INVALID_RESPONSE');
+    expect(f.client.getSnapshot().rows[0]?.pendingWork).toBeDefined();
+    await f.client.clearPendingWork(config.instanceId);
+    expect(f.submissions).toHaveLength(2);
+    expect(f.client.getSnapshot().rows[0]?.pendingWork).toBeUndefined();
+  });
+});

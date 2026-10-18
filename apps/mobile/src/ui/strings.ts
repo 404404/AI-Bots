@@ -63,6 +63,14 @@ const en = {
   },
   cloudAgents: {
     title: 'Channel agents',
+    request: 'Request health check',
+    retryWork: 'Retry health check request',
+    workHint:
+      'Requests expire after five minutes. The Agent must separately allow your user on its own device. Results appear in this channel.',
+    workSent: 'Request sent. Return to the channel and reload messages for the result.',
+    workPending:
+      'A request is unconfirmed. Retry in its original channel, or remove the local retry record. Removing it does not cancel work already sent.',
+    clearWork: 'Remove local retry record',
     name: 'Agent name',
     create: 'Create agent',
     retry: 'Retry creation',
@@ -953,6 +961,13 @@ const zh: typeof en = {
   },
   cloudAgents: {
     title: '频道 Agent',
+    request: '请求健康检查',
+    retryWork: '重试健康检查请求',
+    workHint: '请求五分钟后过期。Agent 需要在它自己的设备上另行授权你的用户。结果会回到本频道。',
+    workSent: '请求已发送。请返回频道刷新消息查看结果。',
+    workPending:
+      '请求结果待确认。请在原频道重试，或移除本机重试记录；移除记录不会取消已经发出的工作。',
+    clearWork: '移除本机重试记录',
     name: 'Agent 名称',
     create: '创建 Agent',
     retry: '重试创建',

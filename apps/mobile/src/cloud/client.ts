@@ -1,3 +1,4 @@
+import { parsePendingWork, type PendingWork } from './work-contract';
 import { parseAgent, parseAgentHandoff, validAgentId, type AgentHandoff } from './agent-contract';
 import {
   parseInvitation,
@@ -41,6 +42,7 @@ type Entry = {
   pendingCreate?: { name: string; operation: string } | undefined;
   pendingChannelAction?: PendingChannelAction | undefined;
   pendingInvitation?: PendingInvitation | undefined;
+  pendingWork?: PendingWork | undefined;
 };
 type Vault = { version: 1; entries: Entry[] };
 export type CloudRow = {
@@ -52,6 +54,7 @@ export type CloudRow = {
   pendingCreate?: { name: string; operation: string } | undefined;
   pendingChannelAction?: PendingChannelAction | undefined;
   pendingInvitation?: PendingInvitation | undefined;
+  pendingWork?: PendingWork | undefined;
 };
 export type CloudSnapshot = {
   ready: boolean;
@@ -173,6 +176,7 @@ export class CloudClient {
         pendingCreate: e.pendingCreate,
         pendingChannelAction: e.pendingChannelAction,
         pendingInvitation: e.pendingInvitation,
+        pendingWork: e.pendingWork,
         agentHandoff: e.agentHandoff
           ? {
               actorId: e.agentHandoff.actorId,
@@ -238,6 +242,7 @@ export class CloudClient {
               pendingCreate,
               pendingChannelAction: parsePendingChannelAction(e.pendingChannelAction),
               pendingInvitation: parsePendingInvitation(e.pendingInvitation),
+              pendingWork: parsePendingWork(e.pendingWork),
               agentHandoff: parseAgentHandoff(e.agentHandoff),
               session: {
                 ...session,
@@ -741,6 +746,76 @@ export class CloudClient {
         ),
       ),
     );
+  requestHealthCheck = (
+    id: string,
+    organizationId: string,
+    channelId: string,
+    targetActorId: string,
+  ) =>
+    this.lock(async () => {
+      let entry = await this.channelEntry(id, organizationId);
+      if (!validChannelId(channelId) || !validAgentId(targetActorId))
+        return fail('INVALID_WORK_INPUT');
+      const pending = entry.pendingWork;
+      if (
+        pending &&
+        (pending.organizationId !== organizationId ||
+          pending.channelId !== channelId ||
+          pending.userId !== entry.session?.userId ||
+          pending.targetActorId !== targetActorId)
+      )
+        return fail('PENDING_WORK_REQUEST');
+      const action: PendingWork = pending ?? {
+        organizationId,
+        channelId,
+        targetActorId,
+        userId: entry.session!.userId!,
+        expiresAt: new Date(this.rt.now() + 300000).toISOString(),
+        operation: this.rt.random(),
+      };
+      parsePendingWork(action);
+      await this.save({ ...entry, pendingWork: action });
+      entry = this.entry(id);
+      const result = await this.orgRequest(
+        entry,
+        '/' + organizationId + '/channels/' + channelId + '/work-requests',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': action.operation },
+          body: JSON.stringify({
+            targetActorId,
+            capability: 'health-check',
+            expiresAt: action.expiresAt,
+          }),
+        },
+      );
+      const message = parseMessage(result.message),
+        raw = record(result.message),
+        request = record(raw.payload);
+      const requestId =
+        'wr_' +
+        (await this.rt.digest(JSON.stringify([channelId, action.userId, action.operation])));
+      if (
+        message.authorType !== 'human' ||
+        message.authorId !== action.userId ||
+        message.operationId !== action.operation ||
+        raw.kind !== 'work_request' ||
+        request.version !== 1 ||
+        request.requestId !== requestId ||
+        request.channelId !== channelId ||
+        request.requesterUserId !== action.userId ||
+        request.targetActorId !== targetActorId ||
+        request.capability !== 'health-check' ||
+        request.expiresAt !== action.expiresAt
+      )
+        return fail('INVALID_RESPONSE');
+      await this.save({ ...entry, pendingWork: undefined });
+      return message;
+    });
+  clearPendingWork = (id: string) =>
+    this.lock(async () => {
+      await this.save({ ...this.entry(id), pendingWork: undefined });
+    });
   listAgents = (id: string, organizationId: string, channelId: string, after?: string) =>
     this.lock(async () => {
       const entry = await this.channelEntry(id, organizationId);

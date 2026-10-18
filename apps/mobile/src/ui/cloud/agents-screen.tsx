@@ -126,6 +126,21 @@ function Agents({
             <Text>{t.cloudInvitations.required}</Text>
           ) : (
             <>
+              <Text>{t.cloudAgents.workHint}</Text>
+              {!!row?.pendingWork && (
+                <View style={box}>
+                  <Text>{t.cloudAgents.workPending}</Text>
+                  <Button
+                    label={t.cloudAgents.clearWork}
+                    disabled={busy}
+                    onPress={() =>
+                      void run(async () => {
+                        await cloudClient.clearPendingWork(instanceId);
+                      })
+                    }
+                  />
+                </View>
+              )}
               {owner && (
                 <View style={box}>
                   <Text>{t.cloudAgents.hint}</Text>
@@ -215,6 +230,32 @@ function Agents({
           <Text>
             {t.cloudInvitations.expires} {item.expiresAt}
           </Text>
+          {item.state === 'active' && (
+            <Button
+              label={
+                row?.pendingWork?.targetActorId === item.actorId
+                  ? t.cloudAgents.retryWork
+                  : t.cloudAgents.request
+              }
+              disabled={
+                busy ||
+                (!!row?.pendingWork &&
+                  (row.pendingWork.targetActorId !== item.actorId ||
+                    row.pendingWork.channelId !== channelId))
+              }
+              onPress={() =>
+                void run(async () => {
+                  await cloudClient.requestHealthCheck(
+                    instanceId,
+                    organizationId,
+                    channelId,
+                    item.actorId,
+                  );
+                  setNotice(t.cloudAgents.workSent);
+                })
+              }
+            />
+          )}
           {owner && item.state === 'active' && (
             <Button
               label={t.cloudAgents.revoke}
