@@ -17,6 +17,8 @@ Native macOS DeepSeek Harness 0.2.1-rc.2, isolated synthetic Profile. No browser
 
 Passed: 172 focused tests (13 files), lint including CLI parity, format, typecheck and build. Native model setup/cancel, real approved Bot/group creation, new Bot empty DM, same Tob DM, fifth-step action/readback, layout-tip replay, global resize and Home close/reopen restoration, quiet legacy unfinished migration, dark Home, and narrow-window/wide-window restoration.
 
-Open native gates: actual global/child title drag placement and child resizing/reopen. Drag attempts did not visibly move panels and the native control subsequently returned `noWindowsAvailable`; cause is not established. Later native window Raise restored normal clicks and captures; another child-divider drag still did not visibly resize the panel. These remaining interaction gates are not attributed to an automation failure without evidence. Legacy completed/skipped cases, denial/pending invitation and recovery edges have source coverage; their full native matrix is not claimed.
+Human QA accepted on 2026-10-18: the user explicitly confirmed macOS Desktop drag placement and child-panel resizing work correctly on this candidate. `human-accepted-layout.jpg` captures the resulting native layout: Home closed, original Tob DM visible, Sessions above Memory Files in the right child column, with adjusted width. This is a post-acceptance screenshot, not a recording of the user's gestures. Earlier agent gestures did not visibly move/resize panels and later returned `noWindowsAvailable`; that attempt remains an automation-evidence limitation and is superseded for acceptance by the user's direct confirmation.
 
-Screenshots show synthetic data only. This slice excludes mobile Web. Keep the PR unmerged pending remaining Desktop qualification and Human review.
+Legacy completed/skipped cases, denial/pending invitation and recovery edges have source coverage; their full native matrix is not claimed. Mobile Web remains a later slice.
+
+Screenshots show synthetic data only. This slice excludes mobile Web. The user authorized merge after CI and review pass; publishing a release is outside this task.
