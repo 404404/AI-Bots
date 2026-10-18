@@ -75,19 +75,26 @@ function NavigationLayout() {
   );
 }
 
-function NavigationBar({
+type NavigationBarLayout = TabBarProps & { size: number; bottom: number; reserved: number };
+
+function NavigationBar(props: NavigationBarLayout) {
+  const [scope] = useConversationFilter();
+  return <ScopedNavigationBar key={scope} {...props} scope={scope} />;
+}
+
+function ScopedNavigationBar({
   state,
   emitter,
   navigateToTab,
   size,
   bottom,
   reserved,
-}: TabBarProps & { size: number; bottom: number; reserved: number }) {
+  scope,
+}: NavigationBarLayout & { scope: string }) {
   const theme = useDesignTheme();
   const { saved } = useHostSession();
   const look = useHostLook(saved?.hostId);
   const directory = useCloudConversations();
-  const [scope] = useConversationFilter();
   const targets = creationTargets(
     saved ? { hostId: saved.hostId, name: shownHostName(look, saved.hostName) } : undefined,
     directory.workspaces,
@@ -107,7 +114,7 @@ function NavigationBar({
     () => () => {
       generation.current++;
     },
-    [scope],
+    [],
   );
   const hidden = useChromeHidden();
   const progress = useChromeProgress();
