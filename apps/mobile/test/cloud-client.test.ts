@@ -385,6 +385,53 @@ function organizationsFixture() {
   return { ...f, state, operations };
 }
 describe('cloud organizations', () => {
+  it.each([true, false])(
+    'lists another organization and cold-restores the selected workspace (has selection: %s)',
+    async (selected) => {
+      const f = organizationsFixture();
+      const original = f.rt.request;
+      f.rt.request = async (url, init) => {
+        if (url.endsWith('/org_b/access') && !f.state.denied)
+          return Response.json({ organizationId: 'org_b', role: 'member' });
+        if (url.endsWith('/org_b/channels')) {
+          expect(f.state.selected).toBe('org_b');
+          return Response.json({
+            channels: [
+              {
+                channelId: 'ch_' + 'b'.repeat(64),
+                name: 'Elsewhere',
+                creatorId: 'user_test',
+                creatorType: 'human',
+                createdAt: '2026-10-18T00:00:00Z',
+              },
+            ],
+            nextCursor: null,
+          });
+        }
+        return original(url, init);
+      };
+      const client = new CloudClient(f.rt);
+      await client.importConfig(JSON.stringify(config));
+      await client.login(config.instanceId);
+      if (selected) await client.useOrganization(config.instanceId, 'org_a');
+      const page = await client.listConversationChannels(config.instanceId, 'org_b');
+      expect(page.channels[0]?.name).toBe('Elsewhere');
+      expect(client.getSnapshot().rows[0]?.organization?.organizationId).toBe(
+        selected ? 'org_a' : undefined,
+      );
+      if (selected) expect(f.state.selected).toBe('org_a');
+      const restored = new CloudClient(f.rt);
+      await restored.load();
+      expect(restored.getSnapshot().ready).toBe(true);
+      await restored.whoami(config.instanceId);
+      expect(JSON.stringify(page)).not.toContain('secret-refresh');
+      f.state.denied = true;
+      await expect(
+        client.listConversationChannels(config.instanceId, 'org_b'),
+      ).rejects.toMatchObject({ code: 'ORGANIZATION_ACCESS_DENIED' });
+    },
+  );
+
   it('creates, selects through WorkOS refresh, updates, and revalidates the same organization after restart', async () => {
     const f = organizationsFixture();
     const client = new CloudClient(f.rt);
