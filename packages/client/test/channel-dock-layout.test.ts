@@ -73,6 +73,17 @@ describe('Bot mode layout persistence', () => {
     });
   });
 
+  it('round-trips the optional pre-hide grid and ignores a damaged snapshot', () => {
+    const storage = memoryStorage();
+    writeChannelDock({ layout, parked: {}, visibilityLayout: layout }, storage);
+    expect(readChannelDock(storage)?.visibilityLayout).toEqual(layout);
+    storage.setItem(
+      CHANNEL_DOCK_STORAGE_KEY,
+      JSON.stringify({ version: 8, layout, parked: {}, visibilityLayout: { panels: {} } }),
+    );
+    expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  });
+
   it('validates and preserves rail visibility preferences', () => {
     const storage = memoryStorage();
     storage.setItem(

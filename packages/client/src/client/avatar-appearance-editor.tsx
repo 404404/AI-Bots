@@ -829,6 +829,7 @@ export function AvatarAppearanceEditor({
       <div className="bh-avatar-editor">
         <div className="bh-avatar-editor-preview" data-avatar-preview>
           <PersonaBotAvatar
+            preview={draft !== undefined}
             personaBotId={bot.slug}
             name={bot.displayName}
             src={bot.avatar}

@@ -121,7 +121,13 @@ export function Workspace({
             () => options.prefs.source.getSnapshot().sendKey,
           );
           return (
-            <HomePanel actions={options.actions} registry={registry} t={t} sendKey={sendKey} />
+            <HomePanel
+              actions={options.actions}
+              registry={registry}
+              t={t}
+              sendKey={sendKey}
+              onEditHumanName={() => options.openBotSettings('messaging')}
+            />
           );
         },
       });
@@ -357,7 +363,7 @@ function WorkspaceRail({
         )}
 
       <Tooltip label={t('panel.settings')} side="right">
-        <button aria-label={t('panel.settings')} onClick={options.openBotSettings}>
+        <button aria-label={t('panel.settings')} onClick={() => options.openBotSettings()}>
           <ChannelSidebarIcon name="settings" />
         </button>
       </Tooltip>

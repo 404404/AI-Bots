@@ -14,6 +14,8 @@ import { isBotPrimaryColor, type BotPrimaryColor } from './primary-color.js';
 export interface PersonaBotRecord {
   slug: string;
   displayName: string;
+  displayNameCustomized?: true;
+  avatarCustomized?: true;
   roles?: string[];
 
   tag?: string;
@@ -145,6 +147,8 @@ export function isPersonaBotRecord(value: unknown, slug: string): value is Perso
   if (record['slug'] !== slug) return false;
   if (typeof record['displayName'] !== 'string') return false;
   if (typeof record['createdAt'] !== 'string') return false;
+  for (const key of ['displayNameCustomized', 'avatarCustomized'])
+    if (record[key] !== undefined && record[key] !== true) return false;
   if (record['paused'] !== undefined && typeof record['paused'] !== 'boolean') return false;
   if (record['computerAccess'] !== undefined && typeof record['computerAccess'] !== 'boolean')
     return false;
