@@ -1,10 +1,11 @@
 import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
 import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import { prefetchInbox } from '../../../src/host/inbox';
 import { useHostLook } from '../../../src/host/native-host-look';
 import { cloudClient, useCloudSnapshot } from '../../../src/cloud/native';
 import { cloudConversations, useCloudConversations } from '../../../src/cloud/native-conversations';
@@ -33,14 +34,48 @@ type Row =
   | { key: string; type: 'computer'; conversation: Conversation; pinned: boolean; at?: string }
   | { key: string; type: 'cloud'; conversation: CloudConversation; pinned: false; at?: string };
 export default function HomeScreen() {
-  const router = useRouter();
   const focused = useIsFocused();
-  const onScroll = useChromeScroll(focused);
-  const bottom = useFloatingTabInset();
   const { saved, client, inbox } = useHostSession();
-  const look = useHostLook(saved?.hostId);
   const snapshot = useHostSnapshot(client, focused);
   const list = useInbox(inbox, focused);
+  return (
+    <HomeContent saved={saved} client={client} inbox={inbox} snapshot={snapshot} list={list} />
+  );
+}
+
+const HomeContent = memo(function HomeContent({
+  saved,
+  client,
+  inbox,
+  snapshot,
+  list,
+}: {
+  saved: ReturnType<typeof useHostSession>['saved'];
+  client: ReturnType<typeof useHostSession>['client'];
+  inbox: ReturnType<typeof useHostSession>['inbox'];
+  snapshot: ReturnType<typeof useHostSnapshot>;
+  list: ReturnType<typeof useInbox>;
+}) {
+  const router = useRouter();
+  const prepared = useRef<typeof client>(undefined);
+  useFocusEffect(
+    useCallback(() => {
+      if (client === undefined || prepared.current === client) return;
+      let stop: (() => void) | undefined;
+      const idle = requestIdleCallback(() => {
+        prepared.current = client;
+        router.prefetch('/activity');
+        stop = prefetchInbox(client, { activity: true, section: 'action' });
+      });
+      return () => {
+        cancelIdleCallback(idle);
+        stop?.();
+      };
+    }, [router, client]),
+  );
+  const onScroll = useChromeScroll();
+  const bottom = useFloatingTabInset();
+  const look = useHostLook(saved?.hostId);
   const cloud = useCloudSnapshot();
   const directory = useCloudConversations();
   const [query, setQuery] = useState('');
@@ -268,4 +303,4 @@ export default function HomeScreen() {
       </HostDrawerEdge>
     </>
   );
-}
+});

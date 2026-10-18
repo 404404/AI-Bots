@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from 'react';
+import { act, useLayoutEffect, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { push, platform, showActionSheetWithOptions, alert } = vi.hoisted(() => ({
   push: vi.fn(),
@@ -41,8 +41,8 @@ vi.mock('expo-router', () => {
     Stack,
     router: { push },
     useIsFocused: () => true,
-    useFocusEffect: () => {},
-    useRouter: () => ({ push }),
+    useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]),
+    useRouter: () => ({ push, prefetch: () => undefined }),
   };
 });
 vi.mock('../src/host/host-session', () => ({
@@ -85,9 +85,17 @@ import { appDialogs } from '../src/ui/primitives/dialog-state';
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 let root: Root | undefined;
+beforeEach(() => {
+  vi.stubGlobal(
+    'requestIdleCallback',
+    vi.fn(() => 1),
+  );
+  vi.stubGlobal('cancelIdleCallback', vi.fn());
+});
 let host: HTMLElement | undefined;
 afterEach(() => {
   act(() => root?.unmount());
+  vi.unstubAllGlobals();
   host?.remove();
   root = undefined;
   push.mockReset();

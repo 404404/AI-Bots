@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from 'react';
+import { act, useLayoutEffect, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CloudRow } from '../src/cloud/client';
 import type { CloudConversation } from '../src/cloud/conversations';
@@ -70,8 +70,8 @@ vi.mock('expo-router', () => {
     Stack,
     router: { push },
     useIsFocused: () => true,
-    useFocusEffect: () => {},
-    useRouter: () => ({ push }),
+    useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]),
+    useRouter: () => ({ push, prefetch: () => undefined }),
   };
 });
 vi.mock('../src/host/host-session', () => ({
@@ -108,11 +108,19 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 let root: Root | undefined;
 let host: HTMLElement | undefined;
+beforeEach(() => {
+  vi.stubGlobal(
+    'requestIdleCallback',
+    vi.fn(() => 1),
+  );
+  vi.stubGlobal('cancelIdleCallback', vi.fn());
+});
 afterEach(() => {
   act(() => root?.unmount());
   host?.remove();
   root = undefined;
   push.mockReset();
+  vi.unstubAllGlobals();
   cloudState.rows = [];
   cloudState.ready = true;
   cloudState.error = undefined;

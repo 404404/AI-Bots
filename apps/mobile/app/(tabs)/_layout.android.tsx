@@ -1,5 +1,4 @@
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
-import { useSegments } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
@@ -58,7 +57,6 @@ function AndroidTabLayout() {
   const insets = useSafeAreaInsets();
   const { width, fontScale } = useWindowDimensions();
   const pending = useActivityCount().count ?? 0;
-  const activitySelected = useSegments().includes('(activity)');
   const scale = Math.max(1, fontScale);
   const barWidth = Math.min(
     width - insets.left - insets.right - space.x6 * 2,
@@ -137,7 +135,7 @@ function AndroidTabLayout() {
                   focused={focused}
                   color={color}
                   count={pending}
-                  countVisible={!activitySelected}
+                  countVisible={!focused}
                 >
                   <ActivityIcon color={color} size={theme.type.title.line} />
                 </NavigationIcon>
