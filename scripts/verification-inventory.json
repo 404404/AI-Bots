@@ -568,6 +568,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
       "task": 2214,
       "gap": "Native decoding/sharing remains queued; SVG is the bounded static subset, editor/file-card/mobile diff paths remain #2214."
+    },
+    {
+      "id": "desktop.local-appearance",
+      "label": "Save independent device-local DeepSeekBot mode, palettes and Primary with explicit Client CLI control",
+      "source": "packages/client/src/client/appearance-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/local-appearance.md",
+      "task": 2258,
+      "gap": "Native restart and different-Host restore require the task-owned Desktop procedure; Human QA is separate."
     }
   ],
   "scripts": [
@@ -1884,6 +1892,14 @@
       "reason": "Matched main/candidate current/Markdown/working/history/narrow images, genuine pixels and animation advancement, version/MIME original-byte exports and rejected SVG external-resource loads.",
       "task": 2214,
       "sha256": "f781c109dba94abe6bae2b3a41b2db0d68a86e3dd3f6a0904ebe5dbf536c0391"
+    },
+    {
+      "path": "scripts/e2e-local-appearance.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.local-appearance"],
+      "reason": "Runs actual scoped theme controls, local persistence and explicit Client-targeted CLI against an isolated Host; no model call.",
+      "task": 2258,
+      "sha256": "d96263dc55463e905e5220c773f9c17fbc988be3d065fa9b83221880c3a58bb5"
     }
   ],
   "native": [

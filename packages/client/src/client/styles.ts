@@ -3310,7 +3310,7 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
   --bh-bubble-me-fill: var(--bh-bubble-me-fill-light, color-mix(in srgb, ${color.accent} 90%, ${color.fg}));
   --bh-bubble-me-ink: var(--bh-bubble-me-ink-light, ${color.onAccent});
 }
-body[data-ds-dark-theme] .bh-message-group-me {
+:root:has(style[data-bh-appearance="dark"]) .bh-message-group-me {
   --bh-bubble-me-fill: var(--bh-bubble-me-fill-dark, ${color.accent});
   --bh-bubble-me-ink: var(--bh-bubble-me-ink-dark, ${color.onAccent});
 }

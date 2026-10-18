@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import {
   legacyChannelSplit,
   MESSAGE_LEAF,
@@ -30,7 +31,7 @@ import {
 } from 'react';
 
 import * as stylex from '@stylexjs/stylex';
-import { Menu, Tooltip, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Tooltip, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
 import {
   DockviewReact,
   type DockviewApi,

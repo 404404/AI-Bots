@@ -1,3 +1,8 @@
+import { refreshBotPrimaryColors } from './bot-primary-color.js';
+import { Appearance } from './appearance.js';
+import { mountAppearance } from './appearance-scope.js';
+import { mountAppearanceControl } from './appearance-control.js';
+import { bindBotAppearance } from './bot-color-scheme.js';
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client';
 import { AppearanceSection } from './appearance-settings.js';
 import { KeyboardSettings, setWorkShortcutNotice } from './keyboard-settings.js';
@@ -186,6 +191,25 @@ export function installStyles(): () => void {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => clearConversationDrafts);
   const storage = defaultStorage();
+  const appearance = new Appearance(storage, () =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light',
+  );
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    const offScheme = bindBotAppearance(appearance);
+    const offStyle = mountAppearance(appearance);
+    const offColors = appearance.subscribe(refreshBotPrimaryColors);
+    refreshBotPrimaryColors();
+    const offControl = mountAppearanceControl(appearance);
+    return () => {
+      offControl();
+      offColors();
+      offStyle();
+      offScheme();
+    };
+  });
   const hmrView =
     typeof window === 'undefined'
       ? undefined
@@ -777,11 +801,7 @@ export function apply(ctx: ClientContext): void {
           children: { 'botharness.settings.layout': { kind: 'list', scope: 'root' } },
           inject: () => ({
             ...botModePrefsFace(prefs),
-            themeSource: {
-              getSnapshot: () => ctx.theme.getTheme(),
-              subscribe: (listener: () => void) => ctx.on('theme/change', listener),
-              set: (value: string) => ctx.theme.setTheme(value),
-            },
+            appearance,
             localeSource: {
               getSnapshot: () => ctx.locale.getSnapshot(),
               subscribe: (listener: () => void) => ctx.locale.subscribe(listener),

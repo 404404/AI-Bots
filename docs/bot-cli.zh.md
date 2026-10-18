@@ -932,3 +932,19 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 指定 `--image-reference` 后，`--path` 表示 Markdown 文档，`--image-revision` 表示该文档的版本；回执另含 `reference`。相对路径从文档所在目录解析，`/chart.png` 从 Memory Repository 根解析。支持百分号编码的空格和 Unicode，以及仍在仓库内的上级路径；拒绝根目录越界、`.git`、反斜线、URL 协议和逃逸符号链接。图片读取前后均检查可变文档版本；index 和历史图片不会回退到工作区。图片来自加载时的所选来源，后续可变图片变更通过刷新查看。外部 HTTPS 图片只由 Client 在明确点击后加载，Host 与 CLI 不请求外部 URL。
 
 使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应的原始图片字节、检测所得 MIME 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。图片上限为 25 MiB、单边 16,384 像素及解码后 4000 万像素。GIF/WebP 保留原动画，上限 256 帧，全部帧画布像素之和不超过 4000 万。SVG 另有 1 MiB UTF-8 源文件、10,000 XML 节点、64 层深度、64 KiB CSS 和 20,000 展开节点预算。静态 SVG 子集支持常用形状、文字、CSS、渐变、箭头标记、裁剪及有界内部引用；拒绝脚本、事件处理器、外来 HTML、图片、滤镜、动画、外部引用、DTD、处理指令和引用循环。SVG 始终作为图片资源，不插入页面标记；成功导出保留原始 SVG 字节。原文件下载与“打开当前文件”仍为独立操作。
+
+## 设备本地 DeepSeekBot 外观
+
+`appearance-clients` 列出已认证 Host 上在线 Client 的 id 和平台。必须明确选择一个；重载后会生成新 id。此功能控制 DeepSeekBot 自己的外观，不修改 DSH 原生 Host 主题。
+
+```bash
+deepseekbot appearance-clients --host http://127.0.0.1:PORT --token-file /private/host-token
+deepseekbot appearance-get --client-id CLIENT_ID --host http://127.0.0.1:PORT --token-file /private/host-token
+printf '%s' '{"preference":"dark","mode":"dark","preset":"mist-purple","primary":"#9876cb"}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+`REVISION` 使用读取结果中的 `snapshot.config.revision`。`preference` 可为 `light`、`dark`、`system`。设置 `preset`（`classic-blue` / `mist-purple`）或六位十六进制 `primary` 时必须明确 `mode`（`light` / `dark`）。选预设会清除该模式的 Primary 覆盖；同一补丁仍可指定新 Primary。保留另一模式和未知后续字段。
+
+成功输出一份 JSON，代表目标 Client 已确认本地保存；再读取并检查 UI。Web 按浏览器/站点保存；Desktop 按应用保存，不含 Host 键。其他浏览器配置与 Desktop 不会收到该命令；同站点标签页按设计共享本地存储。
+
+拒绝码包括 `appearance-client-required`、`appearance-client-stale`、`appearance-client-unavailable`、`appearance-client-busy`、`appearance-client-timeout`、`appearance-revision-required`、`appearance-revision-conflict`、`appearance-invalid-input`、`appearance-storage-invalid`、`appearance-storage-unavailable`。已投递后的超时结果不确定，应先重读再重试。不提供离线队列、广播、Host 偏好副本，也不调用模型。

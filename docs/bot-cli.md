@@ -948,3 +948,19 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 With `--image-reference`, `--path` names the Markdown document and `--image-revision` identifies that document, not the image. The receipt includes `reference`. Relative images resolve from the document directory, `/chart.png` from the Memory Repository root. Percent-encoded spaces/Unicode and in-root parent traversal work; root escape, `.git`, backslashes, URL schemes and symlink escape are refused. The route revalidates mutable document content before and after reading the image; index/commit images never fall back to the worktree. It returns the selected source's image at load time; refresh the view to observe later mutable image changes. External HTTPS images are a Client-only explicit-load action; the Host/CLI do not fetch external URLs.
 
 Use the exact metadata from the selected file/diff side. The authenticated Host returns those original image bytes and their detected MIME, or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. Preview limits are 25 MiB per image, 16,384 pixels per axis and 40 million decoded pixels. GIF/WebP keep their original animation within 256 frames and 40 million canvas pixels across all frames. SVG additionally allows at most 1 MiB UTF-8, 10,000 XML nodes, depth 64, 64 KiB CSS and 20,000 expanded nodes. The static SVG subset accepts ordinary shapes, text, CSS, gradients, markers, clipping and bounded internal references; scripts, event handlers, foreign HTML, images, filters, animation, external references, DTDs, processing instructions and reference cycles are refused. SVG stays an image resource, never inserted markup, and all successful exports preserve the original SVG bytes. Original-file download and Open current file remain separate actions.
+
+## Device-local DeepSeekBot appearance
+
+`appearance-clients` lists the online Client ids and platform on the authenticated Host. Select one explicitly; a new mount/reload gets a new id. This controls DeepSeekBot, not the DSH-native Host theme.
+
+```bash
+deepseekbot appearance-clients --host http://127.0.0.1:PORT --token-file /private/host-token
+deepseekbot appearance-get --client-id CLIENT_ID --host http://127.0.0.1:PORT --token-file /private/host-token
+printf '%s' '{"preference":"dark","mode":"dark","preset":"mist-purple","primary":"#9876cb"}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+Use `snapshot.config.revision` from the read as `REVISION`. Patch fields: `preference` is `light`, `dark` or `system`; `mode` is `light` or `dark` and is required with `preset` (`classic-blue` / `mist-purple`) or `primary` (six-digit hex). Selecting a preset resets that mode's Primary unless the same patch supplies another. Other mode and unknown future fields are retained.
+
+A successful command emits one JSON document after the target Client acknowledges local storage; read it back and inspect the UI. Web persists per browser/site; Desktop per application regardless of Host. Other browser profiles and Desktop do not receive the command. Same-site tabs share local storage intentionally.
+
+Refusals include `appearance-client-required`, `appearance-client-stale`, `appearance-client-unavailable`, `appearance-client-busy`, `appearance-client-timeout`, `appearance-revision-required`, `appearance-revision-conflict`, `appearance-invalid-input`, `appearance-storage-invalid` and `appearance-storage-unavailable`. A timeout after delivery has an unknown outcome: read again before retrying. There is no offline queue, broadcast, Host preference mirror or model call.

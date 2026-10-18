@@ -2249,6 +2249,7 @@ window.__ModuleLoader__.load({
 						role: "listbox",
 						"aria-label": label,
 						className: "bh-combobox-list",
+						"data-bh-appearance-owned": "",
 						style: {
 							...position,
 							width: root.current?.getBoundingClientRect().width ?? 200,
@@ -2315,6 +2316,17 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region packages/client/src/client/appearance-scope.ts
+		const APPEARANCE_CLASS = "bh-appearance-scope";
+		//#endregion
+		//#region packages/client/src/client/appearance-primitives.tsx
+		function Menu(props) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				...props,
+				listClassName: [APPEARANCE_CLASS, props.listClassName].filter(Boolean).join(" ")
+			});
+		}
+		//#endregion
 		//#region packages/client/src/client/ds/pill-button.tsx
 		const pillStyles = { pill: {
 			k1xSpc: "bhx3nfvp2",
@@ -2339,10 +2351,10 @@ window.__ModuleLoader__.load({
 		} };
 		//#endregion
 		//#region packages/client/src/client/ds/select.tsx
-		function Select({ label, value, options, onChange, disabled = false, align = "end", autoFocus = false }) {
+		function Select({ label, value, options, onChange, disabled = false, align = "end", autoFocus = false, reselect = false }) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const current = options.find((option) => option.value === value);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Menu, {
 				open: open && !disabled,
 				portal: true,
 				align,
@@ -2354,7 +2366,7 @@ window.__ModuleLoader__.load({
 				onSelect: (id) => {
 					setOpen(false);
 					const next = options.find((option) => option.value === id);
-					if (next !== void 0 && next.value !== value) onChange(next.value);
+					if (next !== void 0 && (reselect || next.value !== value)) onChange(next.value);
 				},
 				onClose: () => {
 					setOpen(false);

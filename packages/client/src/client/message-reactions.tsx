@@ -182,6 +182,7 @@ export function MessageReactionSurface({
       aria-label={t('message.react')}
       aria-orientation="horizontal"
       data-reaction-picker=""
+      data-bh-appearance-owned=""
       className={stylex.props(styles.picker).className}
       style={{ left: 0, top: 0 }}
       onKeyDown={moveFocus}
