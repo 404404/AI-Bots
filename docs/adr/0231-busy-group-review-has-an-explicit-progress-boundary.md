@@ -1,4 +1,4 @@
-# ADR-0229: Busy Group review has an explicit progress boundary
+# ADR-0231: Busy Group review has an explicit progress boundary
 
 - Status: Proposed; implementation and verification under #2055
 - Date: 2026-10-18

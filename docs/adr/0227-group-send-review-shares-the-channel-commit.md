@@ -31,7 +31,7 @@ read nor a dropped draft resolves work automatically.
 A held send persists its identity, owner, original/current draft, basis, expiry and retry count
 in the existing Operational Database. It produces no public message or downstream Admission.
 The initial #2053 policy allowed one explicit revision or unchanged recheck. The busy-Group
-policy now extends that boundary to two rechecks and an explicit progress decision (ADR-0229). Drop is separate from Inbox resolution. Ten-minute expiry and a different
+policy now extends that boundary to two rechecks and an explicit progress decision (ADR-0231). Drop is separate from Inbox resolution. Ten-minute expiry and a different
 Host boot fail closed; positive restart recovery belongs to #2056. Purging a Channel source
 also clears that Channel's derived send drafts. Revocation, Bot status, Session ownership and
 source-content fences remain independent checks at commit.
