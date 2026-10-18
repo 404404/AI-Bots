@@ -2,9 +2,10 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ClientError } from '../src/cloud/instance-contract';
+import { ClientError, publicInstance, MOBILE_REDIRECT_URI } from '../src/cloud/instance-contract';
 const state = vi.hoisted(() => ({
   initialChannelId: 'channel_a' as string | undefined,
+  userId: 'user_a',
   messages: vi.fn(),
   read: vi.fn(),
   remove: vi.fn(),
@@ -35,7 +36,6 @@ vi.mock('../src/host/native-source-drafts', async () => {
   const { useState } = await import('react');
   return { useSourceDraft: () => useState('') };
 });
-vi.mock('../src/cloud/workspace-directory', () => ({ cloudViewScope: () => 'account_a' }));
 vi.mock('../src/cloud/native-message-cache', () => ({
   readCloudMessages: state.read,
   removeCloudMessages: state.remove,
@@ -53,14 +53,24 @@ vi.mock('../src/cloud/native', () => ({
     busy: false,
     rows: [
       {
-        config: { instanceId: 'uat' },
+        config: publicInstance({
+          instanceId: 'uat',
+          environment: 'uat',
+          server: 'https://uat.example.test',
+          clientId: 'client_test',
+          issuer: 'https://api.workos.com/user_management/client_test',
+          authkitDomain: 'test-staging.authkit.app',
+          mobileRedirectUri: MOBILE_REDIRECT_URI,
+        }),
         hasSession: true,
-        sessionUserId: 'user_a',
+        sessionUserId: state.userId,
         organization: { role: 'member', name: 'A' },
       },
     ],
   }),
 }));
+import { cloudViewScope } from '../src/cloud/workspace-directory';
+import { useCloudSnapshot } from '../src/cloud/native';
 import { CloudChannelsScreen } from '../src/ui/cloud/channels-screen';
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const cached = {
@@ -69,6 +79,7 @@ const cached = {
   hasMore: false,
 };
 beforeEach(() => {
+  state.userId = 'user_a';
   state.list.mockReset().mockResolvedValue({
     channels: [{ channelId: 'channel_b', name: 'B' }],
     nextCursor: null,
@@ -176,7 +187,7 @@ describe('cloud channel cached access', () => {
     expect(button).toBeDefined();
     await act(async () => button!.click());
     expect(state.remove).toHaveBeenCalledWith(
-      JSON.stringify(['cloud', 'account_a', 'org_a', 'channel_b']),
+      JSON.stringify(['cloud', cloudViewScope(useCloudSnapshot().rows[0]), 'org_a', 'channel_b']),
     );
     act(() => root.unmount());
   });
@@ -199,4 +210,39 @@ describe('cloud channel cached access', () => {
       act(() => root.unmount());
     },
   );
+});
+
+it('removes the previous account channel rows while the replacement directory is loading', async () => {
+  state.initialChannelId = undefined;
+  const node = document.createElement('div');
+  const root = createRoot(node);
+  await act(async () => root.render(<CloudChannelsScreen />));
+  expect(node.textContent).toContain('Open channel: B');
+  state.userId = 'user_b';
+  state.list.mockReturnValueOnce(new Promise(() => {}));
+  await act(async () => root.render(<CloudChannelsScreen />));
+  expect(node.textContent).not.toContain('Open channel: B');
+  act(() => root.unmount());
+});
+
+it('does not hydrate old account cached history after the account is replaced', async () => {
+  let finish!: (value: typeof cached) => void;
+  state.read.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  state.open.mockResolvedValue(cached.channel);
+  state.messages.mockResolvedValue({ messages: [], hasMore: false });
+  const node = document.createElement('div');
+  const root = createRoot(node);
+  await act(async () => root.render(<CloudChannelsScreen />));
+  state.userId = 'user_b';
+  state.read.mockResolvedValueOnce(null);
+  state.open.mockRejectedValueOnce(new ClientError('CHANNEL_ACCESS_DENIED'));
+  await act(async () => root.render(<CloudChannelsScreen />));
+  await act(async () => finish(cached));
+  expect(node.textContent).not.toContain('Cached private text');
+  expect(node.textContent).not.toContain('Private channel');
+  act(() => root.unmount());
 });
