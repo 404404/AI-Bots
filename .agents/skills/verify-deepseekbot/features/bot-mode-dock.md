@@ -15,6 +15,7 @@ At 961px and wider on a qualified rc.2 Web/macOS shell, the workspace contains a
 - `live-content`: moving rail/panels or dragging the companion preserves mounted content and unsent drafts.
 - `empty-states`: Sessions, Inbox, Channels search, files, schedules, group work and Messages use a centered panel icon above their description; loading/errors stay distinct. Workspace content has 2px on each side, with no doubled native-sidebar inset. Check empty → populated and window resizing.
 - `global-panels`: Activity Center opens before or after selecting a Channel. Channel-scoped panels without a Channel show an empty state.
+- `rail-window-drag`: in a windowed macOS Desktop, drag the unused Control Rail space below the switches to move the native window. The switch list, including its reorder gaps, remains outside the native drag region; verify clicks, right-click visibility menu and icon reordering still work. Panel-title dragging must move a panel rather than the window. Compare the native window position before/after and retain screenshots; full-screen movement is not a valid check.
 - `macos-chrome`: only the traffic-light corner gets clearance; other panels start at the top. Move the rail to every column and verify native window dragging, fullscreen and restored native layout.
 - `fallback`: below 961px retain the responsive UI without overwriting the saved workspace.
 
