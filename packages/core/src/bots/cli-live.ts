@@ -1,3 +1,4 @@
+import { prepareCloud, prepareCloudWork } from './cli-cloud.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -185,6 +186,14 @@ const CONTROL_COMMANDS = [
 export const LIVE_COMMANDS = [
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
+  {
+    command: 'cloud',
+    description: 'manage an explicit cloud Agent connection (private JSON through stdin)',
+  },
+  {
+    command: 'cloud-work',
+    description: 'run the cloud_work Tool directly for a Bot using JSON from stdin',
+  },
   ...MODELS_USAGE_COMMANDS,
   ...CHANNEL_COMMANDS,
   ...HOST_ADMIN_COMMANDS,
@@ -688,6 +697,16 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (command === 'cloud-work') {
+    const input = await prepareCloudWork(rest, values, io);
+    const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));
+    return host.rpc('cloudWork', input);
+  }
+  if (command === 'cloud') {
+    const input = await prepareCloud(rest, values, io);
+    const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));
+    return host.rpc('cloudConnections', { input });
+  }
   if (MESSAGING_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareMessaging(command as MessagingCommand, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));

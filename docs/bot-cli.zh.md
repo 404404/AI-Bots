@@ -840,3 +840,11 @@ deepseekbot release-restart --confirm
 这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
 
 受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。
+
+### 云端 Agent 连接（UAT）
+
+`deepseekbot cloud list` 从选定的在线 Host 读取公开连接状态。用 `deepseekbot cloud import --input-stdin < /absolute/private-agent.json` 导入操作者确认可信的 TOB Agent 凭证；Host 核验实例、频道和 Agent 身份后，才把秘密写入原生 Credentials。不要把凭证值放在命令参数中。导入的账号出现在 `cloud list` 和已有 Apps 界面，再通过已有 `im-bind <bot> --app <cloud-id>` 命令／界面明确绑定本地 Bot。导入不切换手机／CLI 的 Human 组织，也不创建 Bot。
+
+`deepseekbot cloud policy --input-stdin` 接收 `{ "id": "cloud-<fingerprint>", "revision": 1, "policy": { "allowedUsers": ["user_..."], "forwardTargets": [], "environment": "host-a" } }`。它记录本地工作授权范围，不绕过原生工具权限。`deepseekbot cloud remove --input-stdin --confirm` 接收 `{ "id": "cloud-<fingerprint>", "revision": 2 }`；先读取实际最新修订号。移除会先停用流量再删除秘密，返回 `credentialRemoved: false` 时需要重试清理。两个 Host 的执行与运行证据仍由 #2155 跟踪，以上命令示例不代表验收通过。
+
+`deepseekbot cloud-work <bot> --input-stdin` 调用与 Bot 相同的受限 `cloud_work` 工具。传入 `{ "operation": "inspect", "source_event_id": "im-..." }` 读取权威请求和已配置的转交目标；`execute` 只执行固定运行时检查；`forward` 另需指定这些目标中的 `target_actor_id`。输入不能指定 Human 身份、请求正文或任意命令。每次操作均核验当前来源访问、绑定和本地策略。不确定时使用相同来源、操作和目标重试：结果补发不会重复检查；中断执行返回 `needs-review`；尝试转交后不能改为本地执行。`f02c2423b` 已通过模型介导的双 Host 固定检查，以及两端重启后的直接重试；不代表任意工作或新一轮手机闭环已验证。

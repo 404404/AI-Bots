@@ -3074,7 +3074,7 @@ export function createOutboundMessaging(options: {
               throw new MessagingError('grant-revoked');
             enabledBinding(acceptedGrant.bindingId, acceptedIdentity);
             assertConversationAllowed(latest, postScope);
-            database.read((db) => checkPostLimit(db, acceptedGrant.bindingId, true));
+            if (report) database.read((db) => checkPostLimit(db, acceptedGrant.bindingId, true));
             return !controller.signal.aborted;
           } catch (error) {
             postFenceReason =
@@ -3163,6 +3163,7 @@ export function createOutboundMessaging(options: {
                       );
                     }
                     return entry.provider.reply!({
+                      operationId: id.id,
                       accountRef: acceptedGrant.accountRef,
                       fingerprint: acceptedGrant.fingerprint,
                       route,
@@ -3189,6 +3190,7 @@ export function createOutboundMessaging(options: {
                 ? entry.provider.postConversation !== undefined &&
                   (acceptedGrant.origin === 'implicit' || entry.provider.post === undefined)
                   ? entry.provider.postConversation({
+                      operationId: id.id,
                       accountRef: acceptedGrant.accountRef,
                       fingerprint: acceptedGrant.fingerprint,
                       conversationId: conversationId!,
@@ -3201,6 +3203,7 @@ export function createOutboundMessaging(options: {
                         new MessagingProviderError('capability-unavailable', 'not-started'),
                       )
                     : entry.provider.post({
+                        operationId: id.id,
                         accountRef: acceptedGrant.accountRef,
                         targetRef: acceptedGrant.targetRef,
                         fingerprint: acceptedGrant.fingerprint,
@@ -3211,6 +3214,8 @@ export function createOutboundMessaging(options: {
                         beforeSend: beforePost,
                       })
                 : entry.provider.send({
+                    operationId: id.id,
+                    beforeSend: beforePost,
                     accountRef: acceptedGrant.accountRef,
                     targetRef: acceptedGrant.targetRef,
                     fingerprint: acceptedGrant.fingerprint,
