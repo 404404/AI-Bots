@@ -353,6 +353,7 @@ deepseekbot grants <bot-id>
 ```bash
 deepseekbot inbox --category action --limit 20
 deepseekbot inbox --category replies --search budget --unread --sort mentions-first
+deepseekbot inbox-watch --category unread --watch-seconds 10
 deepseekbot inbox-status
 deepseekbot inbox-dismiss <item-id> --source-key <source-event-id>
 deepseekbot inbox-snooze <item-id> --source-key <source-event-id> --until 2026-10-15T09:00:00Z
@@ -374,6 +375,8 @@ deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
 
 `inbox-status` 请求完整的消息分类摘要，返回 `unreadCount`、`hasAction`，以及支持该能力的 Host 返回的 `messageCounts: { replies, other }`。分类在可见性与 Channel 免打扰过滤后，对未读 Source Event 去重并分成个人消息和其他消息；已读保留的提及／回复、已处理请求不点亮消息红点。该摘要不受 Activity 分页和浏览器筛选影响。旧 Host 可能省略 `messageCounts`，缺失不代表零。control rail 红点偏好只在当前浏览器和 Host origin 保存，不改动 CLI 返回的真实状态。
+
+`inbox-watch` 先订阅现有已认证 roster 实时流，再读取基线。观测 1–60 秒（默认 10 秒）后，仅输出一个 JSON，包含 `initial`、`current` 和 `invalidations` 数量。两次快照沿用 `inbox` 的 Human Inbox 查询与筛选；中间事件仅通知数据失效，不另存通知。流提前中断返回编码拒绝。`--timeout` 应长于观测窗口。
 
 `inbox --search <文字>` 在分页前搜索安全的 Activity 摘要、Channel 名称和 Bot slug（最多 200 字符）。`--unread` 仅保留未读的个人消息，不隐藏待处理事项。`--sort newest|oldest` 按时间排序；`--category replies --sort mentions-first` 将提及排在回复前。使用 `--cursor` 时须保持筛选条件不变。搜索、未读筛选和提及排序要求查询版本 1；旧 Host 返回 `host-query-unsupported`，不会静默返回部分结果。
 
@@ -917,5 +920,15 @@ Host 重启后先检查草稿、重新读取群聊，再通过同一个
 ```bash
 deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
 ```
+
+`memory-file`、`memory-working-diff` 和 `memory-commit-diff` 对 `.md` / `.markdown` 额外返回 `markdown` 文档（或 `before` / `after` 文档）：包括 `source`、文档字节 SHA-256 `revision`、`status` 和原始 UTF-8 `body`。每个文档最多 4 MiB，单次提交查询返回的文档正文合计最多 4 MiB；原有逐行 diff 限制独立保留。JSON 不携带渲染 HTML 或图片字节。
+
+导出内嵌本地 PNG 时，传入文档版本和原始引用：
+
+```bash
+deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document-source> --image-revision <document-revision> --image-reference ../chart.png --out /absolute/new-chart.png
+```
+
+指定 `--image-reference` 后，`--path` 表示 Markdown 文档，`--image-revision` 表示该文档的版本；回执另含 `reference`。相对路径从文档所在目录解析，`/chart.png` 从 Memory Repository 根解析。支持百分号编码的空格和 Unicode，以及仍在仓库内的上级路径；拒绝根目录越界、`.git`、反斜线、URL 协议和逃逸符号链接。图片读取前后均检查可变文档版本；index 和历史图片不会回退到工作区。图片来自加载时的所选来源，后续可变图片变更通过刷新查看。外部 HTTPS 图片只由 Client 在明确点击后加载，Host 与 CLI 不请求外部 URL。
 
 使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应 PNG 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。首片支持不超过 25 MiB、单边不超过 16,384 像素、总像素不超过 4000 万的 PNG；其余格式沿用原行为。原文件下载与“打开当前文件”仍为独立操作。

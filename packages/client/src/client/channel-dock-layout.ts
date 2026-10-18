@@ -1,4 +1,4 @@
-import { WORKSPACE_HOME } from './workspace-context.js';
+import { WORKSPACE_HOME, WORKSPACE_RAIL } from './workspace-context.js';
 import {
   BOT_WORKSPACE_PANELS,
   parseChannelSplit,
@@ -108,6 +108,7 @@ function isPosition(value: unknown): value is DockPosition {
 
 export function readChannelDock(
   storage: ChannelDockStorage | undefined = browserStorage(),
+  workspace = false,
 ): StoredChannelDock | undefined {
   try {
     const raw = storage?.getItem(CHANNEL_DOCK_STORAGE_KEY);
@@ -176,7 +177,14 @@ export function readChannelDock(
         : {}),
       parked: parked as Record<string, DockPosition>,
     };
-    const normalized = migrateWorkPanel(restored);
+    const fallback =
+      workspace &&
+      Number(value['version']) >= 4 &&
+      !restored.layout.panels[WORKSPACE_RAIL] &&
+      ['sessions', ...BOT_WORKSPACE_PANELS].some(
+        (id) => restored.layout.panels[id] || restored.parked[id],
+      );
+    const normalized = migrateWorkPanel(fallback ? migrateFallbackWorkspace(restored) : restored);
     const sessions =
       Number(value['version']) < 4 ? migrateSessionsWorkspace(normalized) : normalized;
     const children = Number(value['version']) >= 6 ? sessions : migrateBotWorkspaces(sessions);
@@ -196,9 +204,9 @@ export function readChannelDock(
             ],
           }
         : children;
-    if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION) {
+    if (value['version'] !== CHANNEL_DOCK_LAYOUT_VERSION || fallback) {
       try {
-        const backups = ['before-home-v8'];
+        const backups = fallback ? ['before-workspace-shell'] : ['before-home-v8'];
         if (Number(value['version']) < 7) backups.push('before-channel-splits-v7');
         if (Number(value['version']) < 6) backups.push('before-bot-workspace-v6');
         if (Number(value['version']) < 5) backups.push('before-bot-workspace-v5');
@@ -215,6 +223,28 @@ export function readChannelDock(
   } catch {
     return undefined;
   }
+}
+
+function migrateFallbackWorkspace(stored: StoredChannelDock): StoredChannelDock {
+  let next = stored;
+  const seeds = { ...stored.botPanelSeeds };
+  for (const id of ['sessions', ...BOT_WORKSPACE_PANELS]) {
+    if (!next.layout.panels[id] && !next.parked[id]) continue;
+    const moved = movePanelIntoWorkspace(next, id);
+    const parked = next.parked[id];
+    const fraction =
+      parked?.size?.[
+        parked.direction === 'left' || parked.direction === 'right' ? 'width' : 'height'
+      ];
+    const seed = {
+      ...moved.seed,
+      ...(!moved.seed.open && fraction ? { ratio: Math.min(0.8, Math.max(0.2, fraction)) } : {}),
+    };
+    next = moved.stored;
+    if (id === 'sessions') next = { ...next, sessionSeed: seed };
+    else seeds[id] = seed;
+  }
+  return { ...next, botPanelSeeds: seeds };
 }
 
 export function writeChannelDock(

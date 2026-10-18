@@ -1,3 +1,4 @@
+import { MemoryMarkdownDiff, MemoryMarkdownToggle } from './memory-markdown-view.js';
 import { MemoryImageDiff } from './memory-image-view.js';
 import { useState, type ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
@@ -29,6 +30,7 @@ export function MemoryCommitView({
 }): ReactElement {
   const [revision, setRevision] = useState(0);
   const [wrap, setWrap] = useState(true);
+  const [preview, setPreview] = useState(false);
   const [detail, setDetail] = useState<MemoryGitCommitDiff>();
   const [error, setError] = useState<string>();
   const mount = useMountedResource<HTMLDivElement>(() => {
@@ -68,6 +70,14 @@ export function MemoryCommitView({
             <span>{detail.subject}</span>
           )}
         </div>
+        {detail?.files.some((file) => file.markdown !== undefined) ? (
+          <MemoryMarkdownToggle
+            preview={preview}
+            onToggle={() => setPreview((v) => !v)}
+            diff
+            t={t}
+          />
+        ) : null}
         <MemoryDiffWrapButton wrap={wrap} onToggle={() => setWrap((value) => !value)} t={t} />
       </div>
       {error !== undefined ? (
@@ -88,7 +98,14 @@ export function MemoryCommitView({
               path={file.path}
               status={file.status}
               preview={
-                file.images === undefined || botSlug === undefined ? undefined : (
+                botSlug !== undefined && file.markdown !== undefined && preview ? (
+                  <MemoryMarkdownDiff
+                    slug={botSlug}
+                    path={file.path}
+                    markdown={file.markdown}
+                    t={t}
+                  />
+                ) : file.images === undefined || botSlug === undefined ? undefined : (
                   <MemoryImageDiff slug={botSlug} path={file.path} images={file.images} t={t} />
                 )
               }

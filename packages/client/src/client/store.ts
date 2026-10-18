@@ -521,6 +521,7 @@ export interface ClientStore {
   setConfig(config: RosterConfig): void;
   setRosterStatus(status: ClientStatus, error: string | undefined): void;
   setRoster(bots: readonly BotSummary[], channels: readonly ChannelSummary[]): void;
+  setRosterPreviews(bots: readonly BotSummary[], channels: readonly ChannelSummary[]): void;
   applyActivity(snapshot: PersonaBotActivitySnapshot): void;
   setActivitySync(sync: ClientState['activitySync']): void;
   setGit(git: GitAvailability): void;
@@ -789,6 +790,9 @@ export function createStore(): ClientStore {
     },
     setRoster(bots, channels) {
       update({ bots: bots.map(withActivity), channels, status: 'ready', error: undefined });
+    },
+    setRosterPreviews(bots, channels) {
+      update({ bots: bots.map(withActivity), channels });
     },
     applyActivity(snapshot) {
       if (activity?.generation === snapshot.generation && snapshot.revision <= activity.revision)

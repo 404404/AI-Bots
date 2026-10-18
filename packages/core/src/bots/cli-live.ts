@@ -112,6 +112,7 @@ export const LIVE_OPTIONS = {
   'token-file': { type: 'string' },
   'image-source': { type: 'string' },
   'image-revision': { type: 'string' },
+  'image-reference': { type: 'string' },
   timeout: { type: 'string' },
   'message-id': { type: 'string' },
   outcome: { type: 'string' },
@@ -324,7 +325,7 @@ export const LIVE_COMMANDS = [
   {
     command: 'memory-image',
     description:
-      'export version-bound Memory PNG bytes (--path --image-source --image-revision --out)',
+      'export version-bound Memory PNG bytes (--path --image-source --image-revision [--image-reference] --out)',
   },
   { command: 'memory-file-target', description: 'resolve a memory file path for a Bot' },
   { command: 'memory-graph', description: "read a Bot's memory commit graph" },
@@ -374,6 +375,7 @@ interface LiveValues
   'token-file'?: string;
   'image-source'?: string;
   'image-revision'?: string;
+  'image-reference'?: string;
   timeout?: string;
   'message-id'?: string;
   body?: string;
@@ -1535,13 +1537,29 @@ async function runMemoryCommand(
         io,
         AbortSignal.timeout(timeoutMs(values.timeout)),
       );
+      const reference = values['image-reference'];
       const { bytes, response } = await host.http(
-        '/api/botharness/memory/image?' + new URLSearchParams({ slug, path, source, revision }),
+        '/api/botharness/memory/image?' +
+          new URLSearchParams({
+            slug,
+            path,
+            source,
+            revision,
+            ...(reference === undefined ? {} : { reference }),
+          }),
       );
       if (response.headers.get('content-type') !== 'image/png')
         throw new CliLiveError('host-protocol-error', 'Expected a PNG image');
       writeFileSync(out, bytes, { flag: 'wx' });
-      return { path, source, revision, mime: 'image/png', bytes: bytes.length, out };
+      return {
+        path,
+        source,
+        revision,
+        ...(reference === undefined ? {} : { reference }),
+        mime: 'image/png',
+        bytes: bytes.length,
+        out,
+      };
     }
     case 'memory-file':
       [method, args] = ['memoryFile', { channelId, path: required('path', 'path <file>') }];

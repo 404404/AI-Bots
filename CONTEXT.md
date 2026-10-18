@@ -830,6 +830,28 @@ _Avoid_: panel control, panel control sidebar, App Sidebar, Channel list
 An independently identifiable unit of the Bot workspace with a named purpose and scope, whose placement and size belong to its owning workspace. Content Panels present data without owning its authority; the Workspace Control Rail is the special full-height control Panel.
 _Avoid_: Dock panel, widget, view, pane, sidebar, DSH main panel
 
+The following Panel categories name the agreed authoring target from the [Panel plugin design discussion](docs/research/2026-10-19-panel-plugin-design-discussion.md); they do not assert that external authoring or fixed-Bot binding is already implemented.
+
+**Global Panel**:
+A Panel with a purpose independent of the active Channel and without a required binding to one PersonaBot or Channel, such as the Profile-wide Task Kanban.
+_Avoid_: global Channel, all-Bot permission
+
+**Bot-bound Panel**:
+A Panel whose subject is one PersonaBot, such as a Bot's 3D companion. Within Messages it follows the PersonaBot DM and is absent from Group Channels; an explicitly bound Global-workspace instance retains its selected Bot independently of Channel selection.
+_Avoid_: fixed Panel, fixed-position Panel, Bot-only Channel subpanel
+
+**Channel-bound Panel**:
+A Panel whose subject is one Channel and whose use can apply to both PersonaBot DM Channels and Group Channels, such as Channel files. It normally follows the current Channel in the Channel workspace; an explicitly bound instance identifies its selected Channel independently of placement.
+_Avoid_: Bot-bound Panel, DM-only Panel
+
+**Group-channel-bound Panel**:
+A Channel-bound Panel whose use requires a Group Channel, such as group membership. Group-only applicability restricts the eligible Channel, rather than introducing a different binding mechanism.
+_Avoid_: group-member Bot Panel, Group-only permission
+
+**Task**:
+In the Panel Plugin authoring target (ADR-0234, T2 #2223; implementation pending), a Task is a persistent work item shared within one Profile, with stable identity, title, description, status and latest progress managed by Humans and Bots. It is distinct from a Session-local plan or Assignment Session; changing a Task does not itself start execution.
+_Avoid_: Session plan, Assignment Session, automatic execution job
+
 **Panel header**:
 The title and action area of a content Panel, containing its icon, name and Panel-specific actions. It belongs to that Panel wherever the Panel is placed. The content-sized icon-and-name title handle closes the Panel on click and moves it on drag; Channel identity, tabs and action controls are outside that handle. In macOS Desktop, unused header space moves the native window.
 _Avoid_: sidebar tab, Channel header (when referring to the Panel's own title bar)
@@ -839,7 +861,7 @@ The area of a content Panel that presents its information and interactions benea
 _Avoid_: Channel body, sidebar entry, main pane
 
 **Panel scope**:
-The context that determines a Panel's owning workspace and the information it presents: Channel subpanels follow the active Channel, while global Panels remain meaningful independently of it. Scope is independent of position and visibility; hiding a Panel does not delete its underlying Channel, Session or other domain data.
+In the existing layout, the context that determines a Panel's owning workspace and displayed information. The agreed authoring target separates workspace placement from Bot or Channel binding; neither placement, binding nor visibility grants access or changes ownership of the underlying domain data.
 _Avoid_: left/right scope, sidebar scope
 
 **Channel list panel**:

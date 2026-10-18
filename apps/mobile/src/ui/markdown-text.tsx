@@ -19,12 +19,14 @@ export function MarkdownText({
   selectable,
   reveal = false,
   nativeReveal = nativeStreamReveal,
+  renderInlineBlock,
 }: {
   tokens: Token[];
   color: string;
   selectable: boolean;
   reveal?: boolean;
   nativeReveal?: boolean;
+  renderInlineBlock?(tokens: Token[], heading: boolean): ReactNode;
 }) {
   const theme = useDesignTheme();
   const visible = (entries: Token[]) =>
@@ -35,7 +37,10 @@ export function MarkdownText({
   };
   const block = (token: Token, index: number, animate: boolean): ReactNode => {
     if (token.type === 'space' || token.type === 'def' || token.type === 'checkbox') return null;
-    if (isMarkdownTable(token)) return <MarkdownTable key={index} table={token} color={color} />;
+    if (isMarkdownTable(token))
+      return (
+        <MarkdownTable key={index} table={token} color={color} renderCell={renderInlineBlock} />
+      );
     if (token.type === 'hr')
       return (
         <View
@@ -127,6 +132,15 @@ export function MarkdownText({
       );
     const children = 'tokens' in token ? token.tokens : undefined;
     const text = 'text' in token && typeof token.text === 'string' ? token.text : token.raw;
+    if (renderInlineBlock !== undefined)
+      return (
+        <View key={index}>
+          {renderInlineBlock(
+            children ?? [{ type: 'text', raw: text, text }],
+            token.type === 'heading',
+          )}
+        </View>
+      );
     const paragraph = (
       <Text
         key={index}

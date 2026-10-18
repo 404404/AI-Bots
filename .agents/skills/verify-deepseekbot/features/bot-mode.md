@@ -1,6 +1,6 @@
 # Bot mode entry and the protected Tob
 
-Bot mode swaps the native DSH session view for the BotHarness conversation view. On qualified Web/macOS windows at least 961px wide it opens the [workspace](bot-mode-dock.md); other shells retain the original Bot mode sidebar fallback (ADR-0203). On the first entry into a fresh Profile, the product prepares protected Tob and opens Home. See [Home and Tob](tob-home.md) for the current first-run journey. Existing ordinary DeepSeek Bots and their welcome letters remain unchanged.
+Bot mode swaps the native DSH session view for the BotHarness conversation view. On structurally qualified Web/macOS/Windows windows at least 961px wide it opens the [workspace](bot-mode-dock.md); other shells retain the original Bot mode sidebar fallback (ADR-0203). On the first entry into a fresh Profile, the product prepares protected Tob and opens Home. See [Home and Tob](tob-home.md) for the current first-run journey. Existing ordinary DeepSeek Bots and their welcome letters remain unchanged.
 
 ## Sub-features
 

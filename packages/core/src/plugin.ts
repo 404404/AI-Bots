@@ -131,6 +131,7 @@ import { createProviderCredentialHealth } from './models/credential-health.js';
 import { createModelRouteReadiness } from './models/readiness.js';
 import { createBotAvatarHttp, botAvatarUrl, BOT_AVATAR_PATH } from './bots/avatar-http.js';
 import { BOT_BANNER_PATH, createBotBannerHttp } from './bots/banner-http.js';
+import { watchHumanAttention } from './runtime/human-attention-live.js';
 import { createChannelLiveHub, CHANNEL_STREAM_PATH, type ChannelLiveHub } from './channels/live.js';
 import type { ChannelDraftEvent } from './channels/draft.js';
 import { DeveloperModeSkillGate } from './logs/skill.js';
@@ -725,6 +726,15 @@ export function createCore(
       onChange: (changed) => states.onActivity(() => changed()),
     },
     () => contentPurge.redactions(),
+    (changed) =>
+      watchHumanAttention(
+        operationalDatabase,
+        (notify) =>
+          states.onActivity((event) => {
+            if (event.cause === 'attention-changed') notify();
+          }),
+        changed,
+      ),
   );
   if (operationalDatabase.mode === 'ready')
     for (const bot of registry.list())

@@ -216,3 +216,134 @@ describe('version-bound Memory PNGs through the owning service and byte route', 
     );
   });
 });
+
+describe('Markdown versions and inline PNGs through the Memory boundary', () => {
+  it('returns exact document sides and reads each image from the same HEAD, index or worktree', async () => {
+    const { root, memory, git, save, http } = fixture();
+    mkdirSync(join(root, 'notes'));
+    const path = 'notes/read me.md';
+    const bodies = ['# Before', '# Staged', '# Current'].map(
+      (heading) => `${heading}\n\n![Figure](../preview.png)\n`,
+    );
+    save(one);
+    writeFileSync(join(root, path), bodies[0]!);
+    git('add', '.');
+    git('commit', '-m', 'Illustrated note');
+    const oldHead = git('rev-parse', 'HEAD');
+    save(two);
+    writeFileSync(join(root, path), bodies[1]!);
+    git('add', '.');
+    save(three);
+    writeFileSync(join(root, path), bodies[2]!);
+    const read = async (
+      document: NonNullable<ReturnType<typeof memory.readAccepted>>['markdown'],
+      reference = '../preview.png',
+    ) => {
+      const response = await http(
+        new Request(
+          'http://host/api/botharness/memory/image?' +
+            new URLSearchParams({
+              slug: 'atlas',
+              path,
+              source: document!.source,
+              revision: document!.revision!,
+              reference,
+            }),
+        ),
+      );
+      expect(response.status).toBe(200);
+      return Buffer.from(await response.arrayBuffer());
+    };
+    const currentFile = memory.readAccepted('atlas', path)!.markdown!;
+    expect(currentFile.body).toBe(bodies[2]);
+    expect(await read(currentFile)).toEqual(three);
+    const staged = memory.workingDiff('atlas', path, 'staged').markdown!;
+    const unstaged = memory.workingDiff('atlas', path, 'unstaged').markdown!;
+    const current = memory.workingDiff('atlas', path, 'current').markdown!;
+    expect([staged.before!.body, staged.after!.body, unstaged.after!.body]).toEqual(bodies);
+    expect(staged.before!.source).toBe(oldHead);
+    for (const [document, bytes] of [
+      [staged.before, one],
+      [staged.after, two],
+      [unstaged.before, two],
+      [unstaged.after, three],
+      [current.before, one],
+      [current.after, three],
+    ] as const)
+      expect(await read(document)).toEqual(bytes);
+    git('commit', '-m', 'Staged illustrated note');
+    const historical = memory
+      .gitCommitDiff('atlas', git('rev-parse', 'HEAD'))
+      .files.find((f) => f.path === path)!.markdown!;
+    rmSync(join(root, 'preview.png'));
+    rmSync(join(root, path));
+    expect(historical.before!.body).toBe(bodies[0]);
+    expect(historical.after!.body).toBe(bodies[1]);
+    expect(await read(historical.before)).toEqual(one);
+    expect(await read(historical.after)).toEqual(two);
+    expect(await read(historical.after, '/preview.png')).toEqual(two);
+  });
+
+  it('keeps root/nested Unicode paths jailed and refuses stale documents and unavailable historical images', async () => {
+    const { root, memory, git, save, http } = fixture();
+    mkdirSync(join(root, 'notes'));
+    save(one, false, '图 片.png');
+    const path = 'notes/a.md';
+    writeFileSync(join(root, path), '# Note\n![Image](../图%20片.png)');
+    git('add', '.');
+    git('commit', '-m', 'Document');
+    const document = memory.readAccepted('atlas', path)!.markdown!;
+    const request = (reference: string, source = document.source, revision = document.revision!) =>
+      http(
+        new Request(
+          'http://host/api/botharness/memory/image?' +
+            new URLSearchParams({ slug: 'atlas', path, source, revision, reference }),
+        ),
+      );
+    expect(Buffer.from(await (await request('../图%20片.png')).arrayBuffer())).toEqual(one);
+    for (const reference of [
+      '../../图 片.png',
+      '/%2e%2e/图%20片.png',
+      '../.git/config',
+      '/../.git/config',
+      'file:///private/a.png',
+      'https://example.invalid/a.png',
+      '//host/a.png',
+      '../a\\b.png',
+      '%00.png',
+      '%ZZ.png',
+    ]) {
+      const response = await request(reference);
+      expect(response.status).toBe(400);
+    }
+    expect((await request('/missing.png')).status).toBe(404);
+    writeFileSync(join(root, path), '# Replaced note');
+    const stale = await request('../图%20片.png');
+    expect(stale.status).toBe(409);
+    expect((await stale.json()).error.code).toBe('memory-image-stale');
+    expect((await request('../图%20片.png', 'HEAD')).status).toBe(400);
+    const revision = memory.readAccepted('atlas', path)!.markdown!.revision!;
+    symlinkSync(join(root, '.git', 'config'), join(root, 'escape.png'));
+    expect((await request('../escape.png', 'worktree', revision)).status).toBe(404);
+  });
+
+  it('reports an absent document side and bounded invalid text without binary decoding', () => {
+    const { root, memory, git } = fixture();
+    writeFileSync(join(root, 'new.md'), '# New\n');
+    expect(memory.workingDiff('atlas', 'new.md', 'untracked').markdown?.before).toBeUndefined();
+    expect(memory.workingDiff('atlas', 'new.md', 'untracked').markdown?.after?.body).toBe(
+      '# New\n',
+    );
+    git('add', '.');
+    git('commit', '-m', 'Added');
+    rmSync(join(root, 'new.md'));
+    const deleted = memory.workingDiff('atlas', 'new.md', 'current').markdown!;
+    expect(deleted.after).toBeUndefined();
+    expect(deleted.before?.body).toBe('# New\n');
+    writeFileSync(join(root, 'binary.md'), Buffer.from([0xff, 0]));
+    expect(memory.readAccepted('atlas', 'binary.md')?.markdown?.status).toBe('unsupported');
+    writeFileSync(join(root, 'huge.md'), '');
+    truncateSync(join(root, 'huge.md'), 4 * 1024 * 1024 + 1);
+    expect(memory.readAccepted('atlas', 'huge.md')?.markdown?.status).toBe('too-large');
+  });
+});

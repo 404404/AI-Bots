@@ -12,6 +12,8 @@ export function renderMarkdownInline(
   theme: DesignTheme,
   reveal = false,
   color = theme.color.fg,
+  openLink: (url: string) => void = (url: string) =>
+    void Linking.openURL(url).catch(() => undefined),
 ): ReactNode[] {
   const last = entries.findLastIndex((token) => token.type !== 'br');
   const textNode = (text: string, key: number) =>
@@ -30,19 +32,37 @@ export function renderMarkdownInline(
     if (token.type === 'strong')
       return (
         <InlineText key={index} style={{ fontWeight: theme.weight.strong }}>
-          {renderMarkdownInline(token.tokens ?? [], theme, reveal && index === last, color)}
+          {renderMarkdownInline(
+            token.tokens ?? [],
+            theme,
+            reveal && index === last,
+            color,
+            openLink,
+          )}
         </InlineText>
       );
     if (token.type === 'em')
       return (
         <InlineText key={index} style={{ fontStyle: 'italic' }}>
-          {renderMarkdownInline(token.tokens ?? [], theme, reveal && index === last, color)}
+          {renderMarkdownInline(
+            token.tokens ?? [],
+            theme,
+            reveal && index === last,
+            color,
+            openLink,
+          )}
         </InlineText>
       );
     if (token.type === 'del')
       return (
         <InlineText key={index} style={{ textDecorationLine: 'line-through' }}>
-          {renderMarkdownInline(token.tokens ?? [], theme, reveal && index === last, color)}
+          {renderMarkdownInline(
+            token.tokens ?? [],
+            theme,
+            reveal && index === last,
+            color,
+            openLink,
+          )}
         </InlineText>
       );
     if (token.type === 'link')
@@ -51,18 +71,19 @@ export function renderMarkdownInline(
           key={index}
           accessibilityRole="link"
           style={{ color: theme.color.accent, textDecorationLine: 'underline' }}
-          onPress={() => void Linking.openURL(decodeHTML(token.href)).catch(() => undefined)}
+          onPress={() => openLink(decodeHTML(token.href))}
         >
           {renderMarkdownInline(
             token.tokens ?? [],
             theme,
             reveal && index === last,
             theme.color.accent,
+            openLink,
           )}
         </InlineText>
       );
     if (token.type === 'text' && token.tokens !== undefined)
-      return renderMarkdownInline(token.tokens, theme, reveal && index === last, color);
+      return renderMarkdownInline(token.tokens, theme, reveal && index === last, color, openLink);
     const text = 'text' in token && typeof token.text === 'string' ? token.text : token.raw;
     return textNode(token.type === 'escape' ? text : decodeHTML(text).replace(/\n/g, ' '), index);
   });

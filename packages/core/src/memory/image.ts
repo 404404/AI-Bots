@@ -34,18 +34,17 @@ export class MemoryImageError extends Error {
     super(message);
   }
 }
-type Git = (root: string, args: string[], maxBuffer?: number) => Buffer;
+export type MemoryGit = (root: string, args: string[], maxBuffer?: number) => Buffer;
 
-export function readMemoryImage(
+export function readMemoryBytes(
   root: string,
   input: string,
   source: string,
-  git: Git,
-): { image: MemoryImage; bytes?: Buffer } {
+  git: MemoryGit,
+  maxBytes = MAX_MEMORY_IMAGE_BYTES,
+): { status: MemoryImage['status']; bytes?: Buffer } {
   const path = toMemoryRelativePath(input);
-  const fail = (status: MemoryImage['status']): { image: MemoryImage } => ({
-    image: { source, status },
-  });
+  const fail = (status: MemoryImage['status']) => ({ status });
   let bytes: Buffer;
   if (source === 'worktree') {
     const target = resolveMemoryPath(root, path);
@@ -68,7 +67,7 @@ export function readMemoryImage(
       const latest = statSync(current);
       if (!before.isFile() || before.dev !== latest.dev || before.ino !== latest.ino)
         return fail('stale');
-      if (before.size > MAX_MEMORY_IMAGE_BYTES) return fail('too-large');
+      if (before.size > maxBytes) return fail('too-large');
       bytes = Buffer.alloc(before.size + 1);
       let count = 0;
       while (count < bytes.length) {
@@ -79,7 +78,7 @@ export function readMemoryImage(
       const after = fstatSync(fd);
       const finalPath = realpathSync(resolveMemoryPath(root, path));
       const final = statSync(finalPath);
-      if (count > MAX_MEMORY_IMAGE_BYTES) return fail('too-large');
+      if (count > maxBytes) return fail('too-large');
       if (
         count !== before.size ||
         after.size !== before.size ||
@@ -127,9 +126,8 @@ export function readMemoryImage(
     if (source === 'index' && metadata[2] !== '0') return fail('stale');
     if (!oid || !/^[0-9a-f]{40}$/u.test(oid)) return fail('unsupported');
     const size = Number(git(root, ['cat-file', '-s', oid]).toString());
-    if (!Number.isSafeInteger(size) || size < 0 || size > MAX_MEMORY_IMAGE_BYTES)
-      return fail('too-large');
-    bytes = git(root, ['cat-file', 'blob', oid], MAX_MEMORY_IMAGE_BYTES + 1);
+    if (!Number.isSafeInteger(size) || size < 0 || size > maxBytes) return fail('too-large');
+    bytes = git(root, ['cat-file', 'blob', oid], maxBytes + 1);
     if (
       source === 'index' &&
       git(root, ['--literal-pathspecs', 'ls-files', '--stage', '-z', '--', path]).toString() !==
@@ -137,6 +135,19 @@ export function readMemoryImage(
     )
       return fail('stale');
   }
+  return { status: 'ready', bytes };
+}
+
+export function readMemoryImage(
+  root: string,
+  input: string,
+  source: string,
+  git: MemoryGit,
+): { image: MemoryImage; bytes?: Buffer } {
+  const fail = (status: MemoryImage['status']) => ({ image: { source, status } });
+  const result = readMemoryBytes(root, input, source, git);
+  const bytes = result.bytes;
+  if (result.status !== 'ready' || bytes === undefined) return fail(result.status);
   if (
     bytes.length < 33 ||
     !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ||

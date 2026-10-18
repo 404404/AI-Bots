@@ -367,6 +367,7 @@ deepseekbot grants <bot-id>
 ```bash
 deepseekbot inbox --category action --limit 20
 deepseekbot inbox --category replies --search budget --unread --sort mentions-first
+deepseekbot inbox-watch --category unread --watch-seconds 10
 deepseekbot inbox-status
 deepseekbot inbox-dismiss <item-id> --source-key <source-event-id>
 deepseekbot inbox-snooze <item-id> --source-key <source-event-id> --until 2026-10-15T09:00:00Z
@@ -388,6 +389,8 @@ deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
 
 `inbox-status` requests the complete message-category summary and returns `unreadCount`, `hasAction` and, on a supporting Host, `messageCounts: { replies, other }`. The categories partition distinct unread Source Events after visibility and Channel mute rules; read retained personal messages and handled requests do not trigger a message indicator. These are complete counts, independent of Activity pagination or browser filters. A legacy Host may omit `messageCounts`; missing data is not zero. The control-rail indicator preference is browser/Host-origin-local presentation and does not change this CLI state.
+
+`inbox-watch` subscribes to the existing authenticated roster stream before its baseline read. It observes for 1–60 seconds (default 10), then emits one JSON document with `initial`, `current` and the number of `invalidations`. Both snapshots use the same Human Inbox query and filters as `inbox`; intermediate events are invalidations, not a second notification store. An interrupted stream is a coded refusal. Set `--timeout` longer than the observation window.
 
 `inbox --search <text>` searches safe Activity summaries, Channel names and Bot slugs before pagination (maximum 200 characters). `--unread` restricts personal messages to unread entries and leaves pending actions intact. `--sort newest|oldest` orders each category; `--category replies --sort mentions-first` puts mentions before replies. Keep filters unchanged when using `--cursor`. Search, unread filtering and mention ordering require query version 1; an older Host fails with `host-query-unsupported` instead of returning partial results.
 
@@ -933,5 +936,15 @@ the same message ID, including after another restart. Inspection cannot include
 ```bash
 deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
 ```
+
+Markdown `.md` / `.markdown` results from `memory-file`, `memory-working-diff` and `memory-commit-diff` additionally expose a `markdown` document (or `before` / `after` documents): `source`, `revision` (SHA-256 of the document bytes), `status`, and the exact UTF-8 `body`. Diff previews have independent text budgets: 4 MiB per document and 4 MiB total document bodies per commit query; line-diff limits stay unchanged. No rendered HTML or image bodies enter these JSON results.
+
+For an inline local PNG, pass the document's source/revision and the authored reference:
+
+```bash
+deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document-source> --image-revision <document-revision> --image-reference ../chart.png --out /absolute/new-chart.png
+```
+
+With `--image-reference`, `--path` names the Markdown document and `--image-revision` identifies that document, not the image. The receipt includes `reference`. Relative images resolve from the document directory, `/chart.png` from the Memory Repository root. Percent-encoded spaces/Unicode and in-root parent traversal work; root escape, `.git`, backslashes, URL schemes and symlink escape are refused. The route revalidates mutable document content before and after reading the image; index/commit images never fall back to the worktree. It returns the selected source's image at load time; refresh the view to observe later mutable image changes. External HTTPS images are a Client-only explicit-load action; the Host/CLI do not fetch external URLs.
 
 Use the exact metadata from the selected file/diff side. The authenticated Host returns that PNG or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. This first image slice supports PNG up to 25 MiB, 16,384 pixels per axis and 40 million pixels; other formats retain their existing behavior. Original-file download and Open current file remain separate actions.
