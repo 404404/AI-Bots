@@ -12,6 +12,12 @@ const group = (surfaces, extra = {}) => ({
 });
 
 describe('UI and CLI coverage inventory', () => {
+  it('uses the same Client inventory keys on Windows and POSIX', () => {
+    const source = `storage.setItem('theme', value); const ui = <SettingsRow title="Theme" />;`;
+    const expected = uiSurfacesFrom(client, source);
+    expect(expected).toHaveLength(2);
+    expect(uiSurfacesFrom(client.replaceAll('/', '\\'), source)).toEqual(expected);
+  });
   it('uses the same inventory keys and Client detection for Windows paths', () => {
     const source = `storage.setItem('theme', value); const ui = <SettingsRow title={t('theme')} />;`;
     expect(uiSurfacesFrom(client.replaceAll('/', '\\'), source)).toEqual(

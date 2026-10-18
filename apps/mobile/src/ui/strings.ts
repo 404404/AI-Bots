@@ -12,6 +12,7 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  dialogFailed: 'That did not go through. Try again.',
   openMention: (name: string) => `Open chat with ${name}`,
   cloud: {
     title: 'Cloud services',
@@ -949,6 +950,7 @@ const en = {
 };
 
 const zh: typeof en = {
+  dialogFailed: '操作没有成功，请重试。',
   openMention: (name: string) => `打开与${name}的私聊`,
   cloud: {
     title: '云服务',
