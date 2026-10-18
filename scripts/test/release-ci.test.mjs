@@ -62,6 +62,19 @@ describe('release verification protection', () => {
     expect(gate('true', 'success', 'skipped', true)).toBe(false);
     expect(release.jobs.prepare.needs).toEqual(['verification', 'verify-fallback']);
   });
+  it('allows publishing after reused verification but blocks unsuccessful preparation', () => {
+    for (const result of ['success', 'failure', 'cancelled', 'skipped']) {
+      expect(expression(release.jobs.publish.if, { needs: { prepare: { result } } })).toBe(
+        result === 'success',
+      );
+    }
+    expect(
+      expression(release.jobs.publish.if, {
+        needs: { prepare: { result: 'success' } },
+        cancelled: true,
+      }),
+    ).toBe(false);
+  });
   it('preserves exact-package qualification and Human publication approval', () => {
     expect(
       release.jobs.prepare.steps.some((step) =>

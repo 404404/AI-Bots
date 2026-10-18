@@ -121,6 +121,7 @@ jobs:
 
   publish:
     needs: prepare
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 180
     environment: npm-release
