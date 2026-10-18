@@ -77,7 +77,10 @@ in its existing draft JSON in the same transaction as the formal Channel append.
 override retains that terminal audit record. No additional database generation, content store,
 Session manager or scheduler is introduced. Permission, membership, active-Bot, stopped-turn,
 Session ownership, source purge and expiry checks still precede the commit. Override does not
-cross a Host restart; positive recovery remains #2056.
+implicitly cross a Host restart. With [ADR-0232](0232-group-recovery-retains-authorized-commit-receipts.md),
+explicit recovery requires a fresh observation and retains the same exhausted budget, version
+and spent-override marker. An exhausted draft needs both recovery and its one explicit
+override; neither action replenishes the other.
 
 The existing direct `bot-tool ... channel_send --args-stdin` command invokes this same Consumer.
 Tool traces distinguish exhausted review, explicit override, peer yield and snoozed work;

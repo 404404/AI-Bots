@@ -12,12 +12,29 @@ observed basis. The Human sees only committed replies in canonical history.
 - Recheck: explicit `draft_id` and `observation_id` allow two revisions or unchanged rechecks.
 - Drop: `drop: true` abandons the draft independently of Inbox resolution.
 - Refuse: revoked membership, purged source, expired draft or restarted Host cannot auto-send.
+- Recover: `channel_send` with `review_action: inspect` exposes own metadata only. After an actual
+  isolated Host restart, a new `channel_read` observation and `review_action: recover` can revise
+  the pending draft. Old observation, expiry, owner and membership checks remain effective.
+- Confirm: a committed draft receipt returns the same canonical message ID on unchanged replay;
+  the message, DM action notice and Inbox Admission counts must not increase.
 - Review: the pilot retains complete paired histories and separate runtime/judge usage.
 - Human preference: two full-history cards accept one Left/Right choice, save it and advance;
   dimensions and reasons are not required. “两边差不多” and “不好判断” are explicit outcomes; the last-choice button reveals per-arm tokens and known cost only after a choice. Skip leaves the pair unreviewed; undo and changes
   preserve previous choices. Legacy rubric scores retain their original review mode.
 
 ## How to get to it (user POV)
+
+For #2056, preserve the isolated Profile and session evidence, hold a draft, stop only that Host,
+restart it, then supply a correction and explicitly resume. Inspect the complete Group history
+and native Tool trace before and after restart. It must show one corrected formal message.
+Also inspect lifecycle failures emitted before the Host becomes ready: a restored runtime must
+wait for its native credentials Provider instead of publishing a spurious model-readiness error.
+Zero failed provider requests does not prove there were no preflight Session failures.
+Use direct `bot-tool` calls to inspect/recover/replay the same contract without the model;
+include changed-body, wrong-owner, expired, purged and revoked cases. Discard a successful send
+response at the transport seam and verify canonical message identity and unchanged Admission
+counts, rather than inferring deduplication from a success status. Count usage across restart.
+No new #2056 model cohort has yet been qualified; the issue records its frozen run protocol.
 
 Create a local Group with two Bots and mentions-only wake settings. Enable it with
 `deepseekbot group-send-review <channel> --accept`. Mention one Bot with a request; correct
@@ -103,8 +120,22 @@ pilot Profiles remain immutable evidence, not supported upgrade sources. In a Gr
 than 20 historical messages, send without an observation: the held delta must include the latest
 Human correction and permit a corrected recheck. With an existing observation and more than
 20 intervening changes, the delta is incomplete and a retry cannot silently skip omitted content.
-After successful submission, inspect returns no pending draft and explicit reuse is refused;
-the Channel retains exactly one committed reply.
+After successful submission, no pending draft remains. With #2056, explicit inspection returns
+the authorized commit receipt and identical replay returns its original message ID; changed
+content is refused. The Channel retains exactly one committed reply.
+
+`scripts/fixtures/group-recovery-fault.mjs` is an opt-in evaluation Plugin, installed only
+in a task's isolated Profile. Its native DSH `tools/execute` waterfall runs the real send,
+then loses one committed result or holds one result for an actual Host restart. It matches
+an explicitly armed Group, saves the real outcome separately, honors cancellation and
+bounds an abandoned hold at 20 seconds. It is absent from the product Bundle. A simulated
+Tool-result loss must be labelled separately from an actual HTTP transport loss.
+
+Recovery evidence also covers a same-size attachment edit after the fresh Channel read:
+change `10:00` to `11:00` in the authorized file before the recovery send. The old draft must
+remain uncommitted. Current file-content digests are private observation evidence, not another
+attachment identity; unavailable or oversized files refuse fresh evidence. Tests exercise the
+attachment owner's bounded full-content read and the real Core restart path.
 
 As directed by the Human on 2026-10-18, future cohorts use DSH to run actual Bot Sessions.
 The current GPT-6 Astra assistant reads full Session, conversation and Tool records to assess
@@ -174,3 +205,24 @@ history judgment. Keep v1/v2 cohorts frozen and label their remaining responsibi
 unobserved future cost separately; do not pool them with v3 or reactivate their stopped Bots.
 Snoozed work alone is not a successful task. Human history remains committed messages, with decision
 diagnostics separate. Capture the real Group history in the Web Client and inspect console.
+
+## Combined bounded review and restart recovery
+
+Exhaust the two rechecks, restart the isolated Host, edit a required fact, inspect the
+existing draft and read the Group again. A plain recovery remains exhausted. A recovery
+with a current-version, still-unused explicit override can commit only after the fresh
+observation covers every required message and still matches canonical content. A subsequent
+change consumes that override without sending; another restart cannot replenish it.
+Replay a successful override after restart: the same message ID and unchanged canonical
+Source/placement/Admission counts prove deduplication. Inspection with override arguments
+must refuse. Regression: `packages/core/test/group-send-recovery.test.ts`.
+
+During an active Group turn, remove the Bot's membership and interrupt its Host before
+the held result is returned. After restart, send a new neutral Human DM asking only
+whether the old work stopped. The old unauthorized task must not be re-admitted or
+receive that DM as steering; the DM must get an actual canonical reply. Inspect the old
+Admission's Host-policy ignore reason separately from the new DM's explicit resolution.
+Uncertain side effects must remain needs-repair, and an old revoked turn must still
+refuse cross-Channel sends. Regression:
+`packages/core/test/group-recovery-revoked-source.test.ts`. A fresh DM after removal of
+only pending work is a control, not a reproduction of the active-turn restart bug.

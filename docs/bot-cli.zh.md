@@ -166,6 +166,16 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 携带 `draft_id`、新观察凭据和改写（或保持原文）的 `body` 复核，最多两次。`drop: true` 配合 `draft_id`
 和空 `body` 放弃草稿，不会解决 Inbox 事项。`expired`、`refused`、`requires-review` 停止自动发送。
 凭据不能跨 Bot owner 或 Group 使用。
+
+发送中断后，通过同一条直接 Tool 命令传入
+`{"channel_id":"...","body":"","review_action":"inspect"}`，读取自己最多 20 条草稿／回执元数据，
+待处理记录优先，并返回 `hasMore`；指定 `draft_id` 可查更早的准确记录。检查不发送消息、不结清 Inbox。
+Host 重启后，先读取当前群聊，再用 `review_action:"recover"`、`draft_id`、新 `observation_id`
+和修正后的 `body` 恢复。旧观察无效，过期时间及已消耗的复核预算不重置。
+已提交回执给出原 `messageId`，可读取规范消息核实；同 `draft_id`、同正文重放只返回原消息 ID，
+不新增消息或 Admission。正文变化返回 `draft-commit-content-changed`。成员、owner、来源和附件仍须
+通过当前授权检查；直接 runner 可能在 Tool 执行前拒绝已撤权的群。
+
 主动让话使用同一条 `bot-tool <bot> channel_send --args-stdin`，传入
 `{"channel_id":"...","body":"","drop":true,"draft_id":"...","observation_id":"...","yield_to_message_ids":["..."]}`。
 先读同伴完整答复；`review.peerMessageIds` 标出已完整返回的同伴消息。成功返回
@@ -869,3 +879,12 @@ deepseekbot release-restart --confirm
 这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
 
 受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。
+
+### 恢复已耗尽复核额度的群聊草稿
+
+Host 重启后先检查草稿、重新读取群聊，再通过同一个
+`bot-tool ... channel_send --args-stdin` 命令同时传入 `review_action: "recover"`、
+`freshness_override`（当前 `draftVersion` 与理由）、新 `observation_id`、原 `draft_id`
+和修正后的正文。恢复不会重置两次复核额度或已消耗的显式继续机会；提交前又有未读变化
+仍会拒绝。成功的显式继续也保留提交回执，重启后以相同意图重试只返回原消息 ID。
+仅检查元数据时不能携带 `freshness_override` 或其他修改参数。

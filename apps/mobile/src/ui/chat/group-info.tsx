@@ -24,7 +24,6 @@ import {
   SettingsSection,
 } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
-import { SheetScreen } from '../primitives/sheet-screen';
 import { ChevronRightIcon, MoreIcon, PlusIcon } from '../shell/icons';
 import { t } from '../strings';
 import { GroupMark } from './group-mark';
@@ -249,12 +248,14 @@ export function GroupInfoSheet({
   pickAvatar,
   onOpenBot,
   onDisbanded,
+  background,
 }: {
   info: GroupInfo;
   actions: GroupActions;
   pickAvatar(): Promise<string | undefined>;
   onOpenBot(slug: string): void;
   onDisbanded(): void;
+  background?: ReactNode;
 }) {
   const theme = useDesignTheme();
   const [busy, setBusy] = useState<string | undefined>();
@@ -342,6 +343,7 @@ export function GroupInfoSheet({
           <SheetCallout tone="danger">{error}</SheetCallout>
         </View>
       )}
+      {background}
       <SettingsSection title={t.groupSettingsSection}>
         <SettingsRow
           title={t.groupName}
@@ -391,7 +393,7 @@ export function GroupInfoSheet({
 
   return (
     <>
-      <SheetScreen>
+      <View style={{ flex: 1 }}>
         <SectionList
           sections={groupRows(info)}
           keyExtractor={(row) => row.key}
@@ -428,7 +430,7 @@ export function GroupInfoSheet({
             </SettingsGroupItem>
           )}
         />
-      </SheetScreen>
+      </View>
       <InviteSheet
         visible={sheet === 'invite'}
         candidates={info.candidates}

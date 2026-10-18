@@ -63,7 +63,7 @@ export type ReviewDraft = {
   version?: number;
   requiredReview?: Seen[];
   requiredObservationSerial?: number;
-  terminationReason?: 'stopped';
+  requiredObservationBoot?: string;
   overrideAttemptedAt?: string;
   override?: {
     actor: string;
@@ -75,6 +75,23 @@ export type ReviewDraft = {
     at: string;
     messageId: string;
   };
+  committed?: { messageId: string; intent: string; at: string };
+  recoveredAt?: string;
+  terminationReason?: 'stopped';
+};
+
+export type DraftInspection = {
+  status: 'inspected';
+  channelId: string;
+  hasMore: boolean;
+  drafts: {
+    draftId: string;
+    state: string;
+    sourceEventId: string;
+    expiresAt: string;
+    requiresRecovery: boolean;
+    messageId?: string;
+  }[];
 };
 
 export class GroupSendReview {
@@ -88,6 +105,7 @@ export class GroupSendReview {
       sourceEventId: string,
       message: ChannelMessage,
     ) => ChannelMessage = (_sourceEventId, message) => message,
+    readonly attachmentContentVersions: (message: ChannelMessage) => string[] = () => [],
   ) {}
 
   enabled(channelId: string): boolean {
@@ -122,7 +140,7 @@ export class GroupSendReview {
       seen.set(message.id, {
         id: message.id,
         revision: message.channelRevision,
-        hash: fingerprint(message),
+        hash: this.#observedFingerprint(message),
         readSerial,
       });
     }
@@ -135,6 +153,82 @@ export class GroupSendReview {
 
   inspect(owner: string, channelId: string, draftId: string): ReviewDraft | undefined {
     return this.database.read((db) => this.#load(db, owner, channelId, draftId));
+  }
+
+  inspectRecords(
+    owner: string,
+    channelId: string,
+    draftId?: string,
+  ): DraftInspection | SendReviewOutcome {
+    return this.database.transaction((db) => {
+      const records =
+        draftId === undefined
+          ? db
+              .prepare(`SELECT record_json FROM group_send_review_drafts WHERE owner = ? AND channel_id = ?
+          ORDER BY CASE WHEN json_extract(record_json, '$.state') IN ('held', 'requires-review') THEN 0 ELSE 1 END,
+          json_extract(record_json, '$.expires') DESC, id DESC LIMIT 21`)
+              .all(owner, channelId)
+              .map((row) => JSON.parse(String(row.record_json)) as ReviewDraft)
+          : [this.#load(db, owner, channelId, draftId)].filter(
+              (value): value is ReviewDraft => value !== undefined,
+            );
+      if (draftId !== undefined && records.length === 0)
+        return { status: 'refused', channelId, draftId, reason: 'draft-unavailable' };
+      return {
+        status: 'inspected',
+        channelId,
+        hasMore: records.length > 20,
+        drafts: records.slice(0, 20).map((draft) => {
+          const botSlug = draft.original.author.kind === 'bot' ? draft.original.author.slug : '';
+          requireSourceEffects(db, draft.sourceEventId, botSlug);
+          if (
+            draft.state !== 'committed' &&
+            draft.state !== 'dropped' &&
+            draft.expires <= this.now().getTime()
+          ) {
+            draft.state = 'expired';
+            this.#save(db, draft);
+          }
+          return {
+            draftId: draft.id,
+            state: draft.state,
+            sourceEventId: draft.sourceEventId,
+            expiresAt: new Date(draft.expires).toISOString(),
+            requiresRecovery:
+              (draft.state === 'held' || draft.state === 'requires-review') &&
+              draft.boot !== this.#boot,
+            ...(draft.committed ? { messageId: draft.committed.messageId } : {}),
+          };
+        }),
+      };
+    });
+  }
+
+  replay(
+    owner: string,
+    channelId: string,
+    draftId: string,
+    message: ChannelMessage,
+  ): string | undefined {
+    return this.database.read((db) => {
+      const draft = this.#load(db, owner, channelId, draftId);
+      if (draft?.state !== 'committed' || !draft.committed) return undefined;
+      const refuse = (reason: string): never => {
+        throw new SendReviewRequired({ status: 'refused', channelId, draftId, reason });
+      };
+      const botSlug = message.author.kind === 'bot' ? message.author.slug : '';
+      requireSourceEffects(db, draft.sourceEventId, botSlug);
+      if (fingerprint(message) !== draft.committed.intent)
+        return refuse('draft-commit-content-changed');
+      const row = db
+        .prepare(
+          'SELECT source_event_id FROM channel_placements WHERE channel_id = ? AND message_id = ?',
+        )
+        .get(channelId, draft.committed.messageId);
+      if (!row) return refuse('committed-message-unavailable');
+      requireSourceEffects(db, String(row.source_event_id), botSlug);
+      return draft.committed.messageId;
+    });
   }
 
   stop(botSlug: string): void {
@@ -199,8 +293,9 @@ export class GroupSendReview {
               !isChannelNotice(message) &&
               !message.sessionFailure &&
               !!message.body.trim() &&
-              fingerprint(this.projectMessageAttachments(String(row.source_event_id), message)) ===
-                seen.hash
+              this.#observedFingerprint(
+                this.projectMessageAttachments(String(row.source_event_id), message),
+              ) === seen.hash
             );
           });
         if (!validPeers)
@@ -252,6 +347,7 @@ export class GroupSendReview {
       observationId?: string;
       draftId?: string;
       freshnessOverride?: FreshnessOverride;
+      recover?: boolean;
     },
   ): SendReviewOutcome | undefined {
     const { owner, channelId, message } = input;
@@ -301,9 +397,10 @@ export class GroupSendReview {
         this.#save(db, previous);
         return fail('expired', 'draft-expired');
       }
-      if (previous.boot !== this.#boot) return fail('requires-review', 'host-restarted');
       if (previous.state !== 'held' && previous.state !== 'requires-review')
         return fail('refused', 'draft-terminal');
+      if (previous.boot !== this.#boot && !input.recover)
+        return fail('requires-review', 'host-restarted');
       if (!input.draftId) return fail('held', 'use-explicit-draft-id');
       if (input.freshnessOverride) {
         if (previous.overrideAttemptedAt)
@@ -328,6 +425,8 @@ export class GroupSendReview {
       observation.expires > this.now().getTime()
         ? observation.seen
         : [];
+    if (input.recover && (!previous || basis.length === 0))
+      return fail('refused', 'recovery-requires-draft-and-fresh-observation');
     const draft: ReviewDraft = previous ?? {
       id,
       owner,
@@ -351,6 +450,7 @@ export class GroupSendReview {
             (item) =>
               item.id === required.id &&
               (item.hash === required.hash ||
+                (previous.requiredObservationBoot ?? previous.boot) !== this.#boot ||
                 (item.readSerial ?? 0) >
                   (previous.requiredObservationSerial ?? Number.MAX_SAFE_INTEGER)),
           ),
@@ -359,6 +459,10 @@ export class GroupSendReview {
         return fail('refused', 'override-context-not-observed');
     } else if (previous) draft.attempts += 1;
     if (previous) draft.version = (draft.version ?? 1) + 1;
+    if (input.recover && draft.boot !== this.#boot) {
+      draft.boot = this.#boot;
+      draft.recoveredAt = this.now().toISOString();
+    }
     draft.current = message;
     const priorBasis = draft.basis;
     draft.basis = basis;
@@ -390,7 +494,7 @@ export class GroupSendReview {
             {
               id: String(row.message_id),
               revision: Number(row.revision),
-              hash: fingerprint(
+              hash: this.#observedFingerprint(
                 this.projectMessageAttachments(String(row.source_event_id), content),
               ),
             },
@@ -407,6 +511,7 @@ export class GroupSendReview {
         draft.state = 'requires-review';
         draft.requiredReview = currentBasis;
         draft.requiredObservationSerial = this.#observationSerial;
+        draft.requiredObservationBoot = this.#boot;
         this.#save(db, draft);
         return {
           ...fail('requires-review', 'override-context-changed-defer'),
@@ -416,7 +521,6 @@ export class GroupSendReview {
           read: { channel_id: channelId, limit: 20 },
         };
       }
-      draft.state = 'committed';
       draft.override = {
         actor: owner,
         reason: input.freshnessOverride.reason.trim(),
@@ -427,13 +531,14 @@ export class GroupSendReview {
         at: this.now().toISOString(),
         messageId: message.id,
       };
-      this.#save(db, draft);
+      this.#commit(db, draft, message);
       return undefined;
     }
     if (basis.length === 0 || changed.length > 0) {
       draft.state = draft.attempts >= MAX_RECHECKS ? 'requires-review' : 'held';
       draft.requiredReview = currentBasis;
       draft.requiredObservationSerial = this.#observationSerial;
+      draft.requiredObservationBoot = this.#boot;
       this.#save(db, draft);
       return {
         ...fail(
@@ -448,10 +553,27 @@ export class GroupSendReview {
         read: { channel_id: channelId, limit: 20 },
       };
     }
-    db.prepare(
-      'DELETE FROM group_send_review_drafts WHERE id = ? AND owner = ? AND channel_id = ?',
-    ).run(id, owner, channelId);
+    this.#commit(db, draft, message);
     return undefined;
+  }
+
+  #commit(db: DatabaseSync, draft: ReviewDraft, message: ChannelMessage): void {
+    draft.state = 'committed';
+    draft.committed = {
+      messageId: message.id,
+      intent: fingerprint(message),
+      at: this.now().toISOString(),
+    };
+    draft.original = {
+      id: draft.original.id,
+      at: draft.original.at,
+      author: draft.original.author,
+      body: '',
+    };
+    draft.current = { id: message.id, at: message.at, author: message.author, body: '' };
+    draft.basis = [];
+    draft.initialBasis = [];
+    this.#save(db, draft);
   }
 
   #progress(
@@ -474,6 +596,12 @@ export class GroupSendReview {
         ? { choices, suggestedSnoozeUntil: new Date(this.now().getTime() + 30_000).toISOString() }
         : {}),
     };
+  }
+
+  #observedFingerprint(message: ChannelMessage): string {
+    return createHash('sha256')
+      .update(JSON.stringify([fingerprint(message), this.attachmentContentVersions(message)]))
+      .digest('hex');
   }
 
   #load(db: DatabaseSync, owner: string, channelId: string, id: string): ReviewDraft | undefined {

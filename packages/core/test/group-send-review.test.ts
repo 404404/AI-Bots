@@ -457,7 +457,12 @@ describe('Group send review through the same direct model tools', () => {
       expect(core.channels.message(channelId, sent.messageId)?.body).toBe('Confirmed 11:00');
       expect(
         core.runtime.groupSendReview!.inspect('direct:ada', channelId, held.draftId!),
-      ).toBeUndefined();
+      ).toMatchObject({
+        state: 'committed',
+        committed: { messageId: sent.messageId },
+        original: { body: '' },
+        current: { body: '' },
+      });
       const retry = await tool('channel_send', {
         body: 'Duplicate 11:00',
         draft_id: held.draftId,
@@ -952,7 +957,7 @@ describe('busy Group progress through the direct tool', () => {
         },
       });
       const repeated = await f.tool('channel_send', override);
-      expect(repeated.status).toBe('refused');
+      expect(repeated).toMatchObject({ status: 'committed', messageId: committed.messageId });
       expect(
         f.core.channels.readMessages(f.channelId).filter((m) => m.author.kind === 'bot'),
       ).toHaveLength(1);

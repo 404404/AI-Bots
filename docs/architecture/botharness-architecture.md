@@ -4,6 +4,10 @@
 #2054 复用该 owner：held 标出实际返回的同伴正式消息；Bot 可引用这些消息显式让话，或提交独立补充。Host 只核对引用是否真实观察且仍有效，不判断语义重复，也不自动结清 Inbox；让话依据随现有草稿 JSON 保存。
 待复核草稿保存在现有 Operational Database，仅正式提交进入 Channel/Inbox；仅 drop 不解决 Inbox；显式 `resolve_inbox_ids` 可在 drop 成功后结清所选事项，过期或重启不自动恢复。
 原始依据与修订草稿归同一 owner，purge 清除派生内容。默认关闭，按群 opt-in；CLI 与模型使用同一契约。
+#2056 的显式恢复复用该记录：`review_action: inspect` 只返回当前授权下的有界元数据；重启后通过 `recover` 携带新观察与修正正文，保留原过期时间与预算。成功提交在同一事务留下消息 ID／意图指纹回执并清空草稿正文；重放只确认规范消息，不新增 Inbox 或恢复旧 Tool Promise。权限、来源与附件检查先于回执读回，详见 [ADR-0232](../adr/0232-group-recovery-retains-authorized-commit-receipts.md)；本票真实模型验收仍在进行。
+组合两票时，复核记录保存观察所属 Host，避免跨重启比较进程内序号；新观察仍须覆盖全部必读消息并通过当前内容／附件指纹检查。恢复不重置版本、额度或已用的显式继续机会。显式继续与普通发送共享同一原子提交回执。
+重启重新准入本地群任务前，Host 复查当前成员资格；已撤权且未开始副作用的可重试 Admission 记为 Host 策略忽略，保留原因，不伪造 Bot 观察或完成结论。不确定副作用继续待修复。新的 Human DM 进入独立授权回合，原撤权任务的跨 Channel 发送 fence 保持有效。
+附件 owner 的有界当前内容摘要参与观察指纹，等长文件修改也会触发重新复核；摘要不进入公开消息，不改变附件身份，也不锁住外部文件写入。
 held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0227](../adr/0227-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
 
 忙群最多进行两次复核，耗尽后明确 drop、既有 Inbox snooze 或一次显式继续申请（freshness_override）。显式继续仍原子核对当前消息；出现未读变化则拒绝本次申请，保留责任并延后，不能跳过新纠正。
@@ -1043,6 +1047,10 @@ The optional application-defined `setupVersion: 1` / `describeSetup(channel)` ca
 ### Mobile presentation (#2028)
 
 The Expo client keeps profile read caching and reply presentation separate from Host authority. One native drawer stack owns the handle and nested settings/history/edit routes; editor components reuse their Host command ports without creating another modal. Profile usage exposes the same reported lower-bound total and partial marker as global usage, while the underlying strict usage query keeps unknown totals distinct. A bounded TanStack Query resource is scoped to each authenticated Host client and Bot/DM identity; profile navigation opens the native shell before data arrives, reuses successful sections during refresh and retains them on partial failure. Conversation publishes stable timeline snapshots and separately subscribed live draft bodies. A disposable conversation-level playback owner retains a separate grapheme cursor and input reserve, controls semantic release cadence, and carries the same row through draft-to-commit draining without changing canonical messages. Its ticks notify only the active bubble; historical messages render directly. Reading history holds the visual cursor until a completed return gesture or explicit jump. Covered Chats views detach roster/Inbox view subscriptions and catch up on focus while the shared transports keep receiving events. A device-local Streaming / Complete bubbles preference controls whether draft playback is shown. Android renders supported Markdown as stable, memoized source blocks using synchronous React Native text/layout, with enriched-renderer fallback for images and native-only extensions; iOS retains its existing renderer. Neither cache nor preference changes Channel persistence, draft ingestion or model execution. Native text visibility and frame timing require their own device evidence; see [ADR-0219](../adr/0219-mobile-presentation-keeps-caches-and-stream-buffers-local.md).
+
+### Mobile chat backgrounds (#2118)
+
+The Expo app owns a device-local default and optional saved-Host-ID/Channel-ID overrides, separate from Host appearance and PersonaBot Profile Banner. Its transactional editor commits versioned local metadata before publishing a new effective choice. Normalized owned JPEG basenames rebase under the current document container; image reclamation protects committed references, live drafts and in-flight imports. Unreadable metadata falls back safely without collecting images. One stable canvas/image/theme-veil layer sits outside scrolling and keyboard-responsive content. This introduces no Host API, model action, Memory or message authority; see [ADR-0228](../adr/0228-mobile-chat-backgrounds-are-transactional-device-local-presentation.md).
 
 ### Optional mobile statistics (#1935)
 
