@@ -390,7 +390,8 @@ describe('Tob scoped CLI broker', () => {
     });
   });
   it('bounds body size and rejects malformed requests', async () => {
-    const f = await fixture();
+    const prepareOperation = vi.fn();
+    const f = await fixture({ prepareOperation });
     const headers = {
       authorization: 'Bearer ' + f.broker.token,
       'content-type': 'application/json',
@@ -400,13 +401,19 @@ describe('Tob scoped CLI broker', () => {
       headers,
       body: '{',
     });
+    expect(malformed.status).toBe(400);
     expect(await malformed.json()).toMatchObject({ error: { code: 'invalid-request' } });
     const large = await fetch(f.broker.endpoint + '/invoke', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ huge: 'x'.repeat(3 * 1024 * 1024) }),
+      body:
+        JSON.stringify({ command: 'settings-set', args: update() }) + ' '.repeat(3 * 1024 * 1024),
     });
     expect(large.status).toBe(413);
+    expect(await large.json()).toMatchObject({ error: { code: 'request-too-large' } });
+    expect(prepareOperation).not.toHaveBeenCalled();
+    expect(f.approve).not.toHaveBeenCalled();
+    expect(f.writeSetting).not.toHaveBeenCalled();
   });
   it('rejects another mutation while one operation awaits approval', async () => {
     let entered!: () => void, release!: () => void;
