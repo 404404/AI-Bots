@@ -1,25 +1,18 @@
-import { createContext, useContext } from 'react';
+import { useContext } from 'react';
 import { Pressable, View } from 'react-native';
 
-import type { RosterBot } from '../../host/client';
 import type { ConversationMessage } from '../../host/conversation';
 import type { WireMention } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { MarkdownView } from '../markdown-view';
-import { InlineText, Text } from '../primitives/text';
+import { Text } from '../primitives/text';
 import { t } from '../strings';
+import { MessageIdentities } from './message-identities';
 import { leadingMessageMentions, messageMentionRuns, mentionIdentity } from './message-mentions';
 
 const AVATAR = 20;
-const NO_BOTS: readonly RosterBot[] = [];
-
-export const MessageIdentities = createContext<{
-  bots: readonly RosterBot[];
-  openBot?: (id: string) => void;
-}>({ bots: NO_BOTS });
-
 function MentionBadge({ mention }: { mention: WireMention }) {
   const theme = useDesignTheme();
   const { bots, openBot } = useContext(MessageIdentities);
@@ -61,7 +54,6 @@ export function MessageBody({
   streaming: boolean;
 }) {
   const theme = useDesignTheme();
-  const { bots, openBot } = useContext(MessageIdentities);
   const human = message.author === 'human';
   const ink = human ? 'onAccent' : 'fg';
   const leading = leadingMessageMentions(message.body, message.mentions);
@@ -80,36 +72,21 @@ export function MessageBody({
           <Text tone="muted">…</Text>
         ) : null
       ) : human ? (
-        <Text tone={ink}>
+        <View
+          style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.x1 }}
+        >
           {messageMentionRuns(text, leading === undefined ? message.mentions : []).map(
             (run, index) => {
-              if (run.mention === undefined) return run.text;
-              const { bot, label } = mentionIdentity(run.mention, bots);
-              const enabled = bot !== undefined && openBot !== undefined;
-              return (
-                <InlineText
-                  key={index}
-                  {...(enabled
-                    ? {
-                        accessibilityRole: 'link' as const,
-                        accessibilityLabel: t.openMention(label),
-                        onPress: () => openBot(bot.slug),
-                      }
-                    : {})}
-                  style={{
-                    fontWeight: theme.weight.strong,
-                    backgroundColor: theme.layer.raised.fill,
-                    color: theme.color.fg,
-                    borderRadius: radius.xs,
-                    textDecorationLine: 'underline',
-                  }}
-                >
-                  @{label}
-                </InlineText>
-              );
+              if (run.mention === undefined)
+                return (
+                  <Text key={index} tone={ink} style={{ flexShrink: 1 }}>
+                    {run.text}
+                  </Text>
+                );
+              return <MentionBadge key={index} mention={run.mention} />;
             },
           )}
-        </Text>
+        </View>
       ) : (
         <MarkdownView
           source={text}

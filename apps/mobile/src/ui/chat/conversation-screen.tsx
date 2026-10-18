@@ -68,7 +68,7 @@ import {
 } from './mention-draft';
 import { MentionSuggestions } from './mention-suggestions';
 import { PlaybackBubble, type Speaker } from './message-bubble';
-import { MessageIdentities } from './message-body';
+import { MessageIdentities } from './message-identities';
 import { copyMessage, shareText } from './message-menu';
 import type { Rect } from './menu-placement';
 import { chatRows, messageGroups, type ChatRow } from './message-groups';
