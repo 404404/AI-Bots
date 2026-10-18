@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError } from '../../cloud/client';
 import type { CloudChannel, CloudMessage } from '../../cloud/channel-contract';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
+import { cloudViewScope } from '../../cloud/workspace-directory';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
@@ -37,6 +38,7 @@ function renderGuestChannelFormScroll(props: ScrollViewProps) {
 }
 
 export function CloudChannelsScreen() {
+  const snapshot = useCloudSnapshot();
   const { instanceId, organizationId, guest, channelId } = useLocalSearchParams<{
     instanceId: string;
     organizationId?: string;
@@ -45,7 +47,13 @@ export function CloudChannelsScreen() {
   }>();
   return (
     <ChannelWorkspace
-      key={instanceId + ':' + organizationId + ':' + guest + ':' + channelId}
+      key={JSON.stringify([
+        instanceId,
+        organizationId,
+        guest,
+        channelId,
+        cloudViewScope(snapshot.rows.find((row) => row.config.instanceId === instanceId)),
+      ])}
       instanceId={instanceId}
       organizationId={organizationId ?? ''}
       guest={guest === 'true'}

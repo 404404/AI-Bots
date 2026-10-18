@@ -8,6 +8,7 @@ import {
   type CloudRuntime,
 } from '../src/cloud/client';
 import { MOBILE_REDIRECT_URI, publicInstance } from '../src/cloud/instance-contract';
+import { cloudViewScope } from '../src/cloud/workspace-directory';
 import { cloudNativeIntent } from '../src/cloud/native-intent';
 const config = publicInstance({
   instanceId: 'tob-test-uat',
@@ -100,6 +101,34 @@ async function loggedIn() {
   return f;
 }
 describe('mobile cloud session boundary', () => {
+  it('keeps draft scope stable through refresh but separates a later signed-in account', async () => {
+    const f = fixture();
+    await f.client.importConfig(JSON.stringify(config));
+    await f.client.login(config.instanceId);
+    const original = cloudViewScope(f.client.getSnapshot().rows[0]);
+    const scopes: string[] = [];
+    let unverifiedDuringRefresh = false;
+    const stop = f.client.subscribe(() => {
+      const row = f.client.getSnapshot().rows[0];
+      scopes.push(cloudViewScope(row));
+      if (!row?.identity) unverifiedDuringRefresh = true;
+    });
+    await f.client.refresh(config.instanceId);
+    stop();
+    expect(unverifiedDuringRefresh).toBe(true);
+    expect(new Set(scopes)).toEqual(new Set([original]));
+    const restored = new CloudClient(f.rt);
+    await restored.load();
+    expect(restored.getSnapshot().rows[0]?.identity).toBeUndefined();
+    expect(cloudViewScope(restored.getSnapshot().rows[0])).toBe(original);
+    await restored.logout(config.instanceId);
+    expect(cloudViewScope(restored.getSnapshot().rows[0])).not.toBe(original);
+    f.state.user = 'user_other';
+    await restored.login(config.instanceId);
+    expect(restored.getSnapshot().rows[0]?.sessionUserId).toBe('user_other');
+    expect(cloudViewScope(restored.getSnapshot().rows[0])).not.toBe(original);
+  });
+
   it('imports, performs public PKCE, persists rotation, verifies identity, restores and logs out', async () => {
     const f = await loggedIn();
     const auth = new URL(f.state.browserUrl);

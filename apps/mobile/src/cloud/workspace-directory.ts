@@ -1,5 +1,11 @@
 import { cloudError, type CloudClient, type CloudRow } from './client';
-import { ClientError } from './instance-contract';
+import { ClientError, connectionKey } from './instance-contract';
+
+export function cloudViewScope(row: CloudRow | undefined): string {
+  return JSON.stringify(
+    row ? [connectionKey(row.config), row.hasSession, row.sessionUserId ?? null] : null,
+  );
+}
 
 export type CloudWorkspace = {
   instanceId: string;
@@ -27,7 +33,7 @@ export function createWorkspaceDirectory(port: DirectoryPort) {
     state = next;
     for (const listener of listeners) listener();
   };
-  const page = async (entry: WorkspaceDirectoryEntry) => {
+  const page = async (entry: WorkspaceDirectoryEntry, epoch: number) => {
     const workspaces = new Map(
       entry.workspaces.map((workspace) => [workspace.organizationId, workspace]),
     );
@@ -47,10 +53,12 @@ export function createWorkspaceDirectory(port: DirectoryPort) {
         });
       }
     }
+    if (epoch !== revision) return undefined;
     if (guestsAfter !== null) {
       const guests = await port.listChannels(entry.instanceId, '', guestsAfter, true);
       if (guests.nextCursor && guests.nextCursor === guestsAfter)
         throw new ClientError('INVALID_RESPONSE');
+      if (epoch !== revision) return undefined;
       guestsAfter = guests.nextCursor;
       for (const channel of guests.channels) {
         if (!channel.organizationId || !channel.organizationName)
@@ -77,16 +85,19 @@ export function createWorkspaceDirectory(port: DirectoryPort) {
       for (const entry of entries) {
         if (epoch !== revision) return;
         if (!entry.hasSession) continue;
-        let next: WorkspaceDirectoryEntry;
+        let next: WorkspaceDirectoryEntry | undefined;
         try {
-          next = await page(entry);
+          next = await page(entry, epoch);
         } catch (error) {
           next = { ...entry, error: cloudError(error) };
         }
-        if (epoch !== revision) return;
+        if (epoch !== revision || !next) return;
+        const result = next;
         publish({
           busy: true,
-          entries: state.entries.map((row) => (row.instanceId === next.instanceId ? next : row)),
+          entries: state.entries.map((row) =>
+            row.instanceId === result.instanceId ? result : row,
+          ),
         });
       }
       if (epoch === revision) publish({ ...state, busy: false });

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createWorkspaceDirectory } from '../src/cloud/workspace-directory';
+import { createWorkspaceDirectory, cloudViewScope } from '../src/cloud/workspace-directory';
 import { publicInstance, MOBILE_REDIRECT_URI } from '../src/cloud/instance-contract';
 import type { CloudRow } from '../src/cloud/client';
 
@@ -33,6 +33,35 @@ const guest = (organizationId: string) => ({
 });
 
 describe('workspace directory authority and lifecycle', () => {
+  it('discards view state across accounts, logout and trust replacement while preserving ordinary refreshes', () => {
+    const accountA: CloudRow = {
+      ...row(),
+      sessionUserId: 'user_a',
+      identity: { userId: 'user_a', instanceId: 'uat-one', instanceRole: 'user' },
+    };
+    const accountB: CloudRow = {
+      ...accountA,
+      sessionUserId: 'user_b',
+      identity: { userId: 'user_b', instanceId: 'uat-one', instanceRole: 'user' },
+    };
+    expect(cloudViewScope(accountA)).not.toBe(cloudViewScope(accountB));
+    expect(cloudViewScope(accountA)).not.toBe(cloudViewScope(row('uat-one', false)));
+    expect(cloudViewScope(accountA)).not.toBe(cloudViewScope(row()));
+    expect(cloudViewScope(accountA)).not.toBe(
+      cloudViewScope({
+        ...accountA,
+        config: { ...accountA.config, server: 'https://replacement.example.test' },
+      }),
+    );
+    expect(cloudViewScope(accountA)).toBe(
+      cloudViewScope({
+        ...accountA,
+        identity: { ...accountA.identity! },
+        organization: member('org_other'),
+      }),
+    );
+  });
+
   it('keeps instances separate, deduplicates guest channels and prefers organization membership', async () => {
     const directory = createWorkspaceDirectory({
       listOrganizations: async () => ({ organizations: [member('org_member')], nextCursor: null }),
@@ -115,9 +144,10 @@ describe('workspace directory authority and lifecycle', () => {
       await blocked;
       return { organizations: [member('org_old')], nextCursor: null };
     });
+    const guests = vi.fn(async () => ({ channels: [], nextCursor: null }));
     const directory = createWorkspaceDirectory({
       listOrganizations: members,
-      listChannels: async () => ({ channels: [], nextCursor: null }),
+      listChannels: guests,
     });
     const loading = directory.refresh([row()]);
     await Promise.resolve();
@@ -126,6 +156,7 @@ describe('workspace directory authority and lifecycle', () => {
     finish?.();
     await loading;
     await next;
+    expect(guests).not.toHaveBeenCalled();
     expect(directory.getSnapshot()).toMatchObject({
       busy: false,
       entries: [{ instanceId: 'uat-two', workspaces: [] }],

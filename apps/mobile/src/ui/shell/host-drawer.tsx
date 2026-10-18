@@ -27,9 +27,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
 import { cloudError } from '../../cloud/client';
-import { connectionKey } from '../../cloud/instance-contract';
 import {
   createWorkspaceDirectory,
+  cloudViewScope,
   type CloudWorkspace,
   type WorkspaceDirectoryEntry,
 } from '../../cloud/workspace-directory';
@@ -444,9 +444,7 @@ export function HostDrawer() {
   const [selectionError, setSelectionError] = useState<string>();
   const cloudRoute = pathname.startsWith('/cloud-');
   const currentId = cloudRoute ? undefined : saved?.hostId;
-  const cloudKey = JSON.stringify(
-    cloud.rows.map((row) => [connectionKey(row.config), row.hasSession]),
-  );
+  const cloudKey = JSON.stringify(cloud.rows.map(cloudViewScope));
   const cloudMount = useMounted<ViewInstance>(() => {
     if (!state.open || !cloud.ready) return;
     void workspaceDirectory.refresh(cloud.rows);

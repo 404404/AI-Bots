@@ -50,6 +50,7 @@ export type CloudRow = {
   agentHandoff?: Omit<AgentHandoff, 'secret'> | undefined;
   config: InstanceConfig;
   hasSession: boolean;
+  sessionUserId?: string | undefined;
   identity?: Identity | undefined;
   organization?: Organization | undefined;
   pendingCreate?: { name: string; operation: string } | undefined;
@@ -174,6 +175,7 @@ export class CloudClient {
       rows: this.vault.entries.map((e) => ({
         config: e.config,
         hasSession: !!e.session,
+        sessionUserId: e.session?.userId,
         pendingCreate: e.pendingCreate,
         pendingChannelAction: e.pendingChannelAction,
         pendingInvitation: e.pendingInvitation,
