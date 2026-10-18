@@ -210,7 +210,12 @@ export function MemoryPreviewImage({
           ) : null}
         </>
       )}
-      <ImageViewer attachment={viewer} onClose={() => setViewer(undefined)} onShare={share} />
+      <ImageViewer
+        cachePolicy="none"
+        attachment={viewer}
+        onClose={() => setViewer(undefined)}
+        onShare={share}
+      />
     </View>
   );
 }

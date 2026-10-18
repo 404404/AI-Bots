@@ -66,8 +66,10 @@ function ZoomableImage({
   attachment,
   onClose,
   onShare,
+  cachePolicy,
 }: {
   attachment: MessageAttachment;
+  cachePolicy: 'none' | 'memory-disk';
   onClose(): void;
   onShare(attachment: MessageAttachment): Promise<void>;
 }) {
@@ -218,7 +220,7 @@ function ZoomableImage({
                 <Image
                   source={attachment.source}
                   recyclingKey={attachment.key}
-                  cachePolicy={attachment.local ? 'none' : 'memory-disk'}
+                  cachePolicy={cachePolicy}
                   contentFit="contain"
                   accessibilityLabel={attachment.name}
                   accessibilityHint={t.viewerHint}
@@ -269,8 +271,10 @@ export function ImageViewer({
   attachment,
   onClose,
   onShare,
+  cachePolicy = 'memory-disk',
 }: {
   attachment: MessageAttachment | undefined;
+  cachePolicy?: 'none' | 'memory-disk';
   onClose(): void;
   onShare(attachment: MessageAttachment): Promise<void>;
 }) {
@@ -288,6 +292,7 @@ export function ImageViewer({
           attachment={attachment}
           onClose={onClose}
           onShare={onShare}
+          cachePolicy={cachePolicy}
         />
       )}
     </Modal>

@@ -1,7 +1,8 @@
 import { createContext } from 'react';
-import type { ViewInstance } from 'react-native';
 
-type MeasuredView = Pick<ViewInstance, 'measureInWindow'>;
+type MeasuredView = {
+  measureInWindow(read: (x: number, y: number, width: number, height: number) => void): void;
+};
 
 export function createMemoryVisibility(frame: () => MeasuredView | null) {
   const listeners = new Set<() => void>();

@@ -3,7 +3,7 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../src/ui/chat/image-viewer', () => ({ ImageViewer: () => null }));
+vi.mock('../src/ui/chat/image-viewer', () => ({ ImageViewer: vi.fn(() => null) }));
 vi.mock('../src/host/share-attachment', () => ({ shareAttachment: vi.fn() }));
 vi.mock('../src/ui/chat/message-menu', () => ({ copyMessage: vi.fn() }));
 vi.mock('../src/ui/primitives/fading-text', () => ({ FadingText: () => null }));
@@ -215,6 +215,8 @@ it('waits for visibility and explicit external permission, then cleans temporary
   expect(stage.observe).toHaveBeenCalledOnce();
   await act(async () => show?.());
   expect(io.fetch).toHaveBeenCalledOnce();
+  const { ImageViewer } = await import('../src/ui/chat/image-viewer');
+  expect(vi.mocked(ImageViewer).mock.calls.at(-1)?.[0]).toMatchObject({ cachePolicy: 'none' });
   expect(io.fetch.mock.calls[0]?.[0]).toEqual({ uri: 'https://images.test/pic.png', headers: {} });
   expect(view.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('External diagram');
   act(() => root?.unmount());
