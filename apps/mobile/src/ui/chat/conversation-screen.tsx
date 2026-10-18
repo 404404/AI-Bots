@@ -1,3 +1,5 @@
+import { useSourceDraft } from '../../host/native-source-drafts';
+import { hostDraftKey } from '../../host/source-drafts';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View, type ViewInstance } from 'react-native';
@@ -92,15 +94,17 @@ export type ChatPlace =
   | { kind: 'channel'; channelId: string | undefined };
 
 export function ConversationScreen({
+  expectedHostId,
   place,
   focus,
   latestWindowOnly = false,
 }: {
   place: ChatPlace;
+  expectedHostId?: string | undefined;
   focus: string | undefined;
   latestWindowOnly?: boolean;
 }) {
-  const { client } = useHostSession();
+  const { client, saved } = useHostSession();
   const focused = useIsFocused();
   const roster = useHostSnapshot(client, focused).roster;
   const router = useRouter();
@@ -113,10 +117,12 @@ export function ConversationScreen({
   );
   const bot =
     place.kind === 'dm' ? roster?.bots.find((entry) => entry.slug === place.slug) : undefined;
+  if (expectedHostId && saved?.hostId !== expectedHostId) return <Text>{t.sourceChanged}</Text>;
   return (
     <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
       <MessageIdentities.Provider value={identities}>
         <ChatConversation
+          key={JSON.stringify([saved?.hostId, place])}
           place={place}
           focus={focus}
           latestWindowOnly={latestWindowOnly}
@@ -261,7 +267,13 @@ function ChatConversation({
   const playback = useStreamPlayback(conversation, display.loaded && display.mode === 'streaming');
   const snapshot = useConversationTimelineSnapshot(conversation, playback);
   const shownDrafts = display.loaded && display.mode === 'streaming' ? snapshot.drafts : NO_DRAFTS;
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useSourceDraft(
+    hostDraftKey(
+      saved?.hostId ?? '',
+      place.kind,
+      (place.kind === 'dm' ? place.slug : place.channelId) ?? '',
+    ),
+  );
   const [mentions, setMentions] = useState<SelectedMention[]>([]);
   const [caret, setCaret] = useState(0);
   const [selection, setSelection] = useState<{ start: number; end: number }>();
@@ -401,6 +413,7 @@ function ChatConversation({
   };
 
   const send = () => {
+    if (host.connection.status !== 'connected') return;
     const { body, tags } = submittedMessage(draft, mentions);
     if ((body === '' && files.length === 0) || conversation === undefined) return;
     if (tags.allBotMention?.preview.recipients.length === 0) return;
@@ -650,7 +663,7 @@ function ChatConversation({
                       ? t.messageBot(`#${channel.name}`)
                       : t.messagePlaceholder
                 }
-                disabled={conversation === undefined}
+                disabled={conversation === undefined || host.connection.status !== 'connected'}
                 files={files}
                 canAttach={files.length < MAX_PICKED}
                 dictation={dictation.state.status}

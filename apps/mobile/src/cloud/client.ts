@@ -646,42 +646,76 @@ export class CloudClient {
       const entry = guest
         ? await this.current(this.entry(id))
         : await this.channelEntry(id, organizationId);
-      if (guest && organizationId && !/^org_[A-Za-z0-9]+$/.test(organizationId))
-        return fail('INVALID_ORGANIZATION');
-      const query = new URLSearchParams();
-      if (after) query.set('after', after);
-      if (guest && organizationId) query.set('organizationId', organizationId);
-      const value = await this.orgRequest(
-        entry,
-        (guest ? '' : '/' + organizationId + '/channels') +
-          (query.size ? '?' + query.toString() : ''),
-        {},
-        guest ? '/api/guest-channels' : '/api/organizations',
-      );
-      if (
-        !Array.isArray(value.channels) ||
-        value.channels.length > 50 ||
-        (value.nextCursor !== null &&
-          !(guest
-            ? typeof value.nextCursor === 'string' && /^ci_[a-f0-9]{64}$/.test(value.nextCursor)
-            : validChannelId(value.nextCursor)))
-      )
-        return fail('INVALID_RESPONSE');
-      return {
-        channels: value.channels.map((raw) => {
-          const channel = parseChannel(raw);
-          if (
-            guest &&
-            (!/^org_[A-Za-z0-9]+$/.test(channel.organizationId ?? '') ||
-              record(raw).access !== 'guest' ||
-              (organizationId && channel.organizationId !== organizationId))
-          )
-            return fail('INVALID_RESPONSE');
-          return channel;
-        }),
-        nextCursor: value.nextCursor as string | null,
-      };
+      return this.channelPage(entry, organizationId, after, guest);
     });
+  /** Directory reads borrow an organization scope, then restore the selected session. */
+  listConversationChannels = (id: string, organizationId: string, after?: string, guest = false) =>
+    this.lock(async () => {
+      let entry = await this.current(this.entry(id));
+      if (guest) return this.channelPage(entry, organizationId, after, true);
+      if (!/^org_[A-Za-z0-9]+$/.test(organizationId)) return fail('INVALID_ORGANIZATION');
+      const previous = entry.session?.organizationId ?? '';
+      if (previous === organizationId) return this.channelPage(entry, organizationId, after, false);
+      await this.orgRequest(entry, '/' + organizationId + '/access');
+      entry = await this.rotate(entry, organizationId);
+      let result: Awaited<ReturnType<CloudClient['channelPage']>>;
+      let restoreFailed = false;
+      try {
+        result = await this.channelPage(entry, organizationId, after, false);
+      } finally {
+        try {
+          await this.rotate(this.entry(id), previous);
+        } catch {
+          this.organizations.delete(id);
+          this.publish();
+          restoreFailed = true;
+        }
+      }
+      if (restoreFailed) return fail('ORGANIZATION_RESTORE_REQUIRED');
+      return result;
+    });
+  private async channelPage(
+    entry: Entry,
+    organizationId: string,
+    after: string | undefined,
+    guest: boolean,
+  ) {
+    if (guest && organizationId && !/^org_[A-Za-z0-9]+$/.test(organizationId))
+      return fail('INVALID_ORGANIZATION');
+    const query = new URLSearchParams();
+    if (after) query.set('after', after);
+    if (guest && organizationId) query.set('organizationId', organizationId);
+    const value = await this.orgRequest(
+      entry,
+      (guest ? '' : '/' + organizationId + '/channels') +
+        (query.size ? '?' + query.toString() : ''),
+      {},
+      guest ? '/api/guest-channels' : '/api/organizations',
+    );
+    if (
+      !Array.isArray(value.channels) ||
+      value.channels.length > 50 ||
+      (value.nextCursor !== null &&
+        !(guest
+          ? typeof value.nextCursor === 'string' && /^ci_[a-f0-9]{64}$/.test(value.nextCursor)
+          : validChannelId(value.nextCursor)))
+    )
+      return fail('INVALID_RESPONSE');
+    return {
+      channels: value.channels.map((raw) => {
+        const channel = parseChannel(raw);
+        if (
+          guest &&
+          (!/^org_[A-Za-z0-9]+$/.test(channel.organizationId ?? '') ||
+            record(raw).access !== 'guest' ||
+            (organizationId && channel.organizationId !== organizationId))
+        )
+          return fail('INVALID_RESPONSE');
+        return channel;
+      }),
+      nextCursor: value.nextCursor as string | null,
+    };
+  }
   readMessages = (
     id: string,
     organizationId: string,

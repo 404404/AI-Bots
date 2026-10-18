@@ -1,3 +1,4 @@
+import { SourceName } from './source-name';
 import { Pressable } from 'react-native';
 
 import type { RosterChannel } from '../../host/client';
@@ -43,9 +44,7 @@ export function ChannelTitle({
       })}
     >
       <GroupMark avatar={channel?.avatar} size={MARK} corner={radius.round} />
-      <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
-        {name}
-      </Text>
+      <SourceName name={name} source="computer" />
       {members === undefined ? null : (
         <Text variant="meta" tone="muted" numberOfLines={1}>
           {members}

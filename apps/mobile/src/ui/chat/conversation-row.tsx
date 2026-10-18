@@ -1,3 +1,4 @@
+import { SourceName } from './source-name';
 import { Pressable, View } from 'react-native';
 
 import { BotAvatar } from '../bot-avatar';
@@ -90,9 +91,7 @@ export function ConversationRow({
             gap: space.x3,
           }}
         >
-          <Text strong numberOfLines={1} ellipsizeMode="tail" style={{ flex: 1, minWidth: 0 }}>
-            {title}
-          </Text>
+          <SourceName name={title} source="computer" />
           {time === '' ? null : (
             <Text variant="meta" tone="subtle" numberOfLines={1} style={{ flexShrink: 0 }}>
               {time}

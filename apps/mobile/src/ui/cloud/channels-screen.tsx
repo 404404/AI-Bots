@@ -1,7 +1,10 @@
+import { useSourceDraft } from '../../host/native-source-drafts';
+import { cloudDraftKey } from '../../host/source-drafts';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { readCloudMessages, cacheCloudMessages } from '../../cloud/native-message-cache';
 import { cloudError } from '../../cloud/client';
 import type { CloudChannel, CloudMessage } from '../../cloud/channel-contract';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
@@ -39,12 +42,18 @@ function renderGuestChannelFormScroll(props: ScrollViewProps) {
 
 export function CloudChannelsScreen() {
   const snapshot = useCloudSnapshot();
-  const { instanceId, organizationId, guest, channelId } = useLocalSearchParams<{
+  const { instanceId, organizationId, guest, channelId, accountScope } = useLocalSearchParams<{
+    accountScope?: string;
     instanceId: string;
     organizationId?: string;
     guest?: string;
     channelId?: string;
   }>();
+  if (
+    accountScope &&
+    accountScope !== cloudViewScope(snapshot.rows.find((r) => r.config.instanceId === instanceId))
+  )
+    return <Text>{t.cloudSourceChanged}</Text>;
   return (
     <ChannelWorkspace
       key={JSON.stringify([
@@ -76,19 +85,55 @@ function ChannelWorkspace({
     theme = useDesignTheme(),
     insets = useSafeAreaInsets();
   const row = snapshot.rows.find((r) => r.config.instanceId === instanceId);
-  const allowed = !!row?.identity && (guest || row.organization?.organizationId === organizationId);
+  const allowed = !!row?.hasSession && !!row.sessionUserId;
   const [channels, setChannels] = useState<CloudChannel[]>();
   const [channelCursor, setChannelCursor] = useState<string | null>(null);
   const [selected, setSelected] = useState<CloudChannel>();
   const [messages, setMessages] = useState<CloudMessage[]>();
   const [cursor, setCursor] = useState(0),
     [more, setMore] = useState(false);
-  const [name, setName] = useState(''),
-    [draft, setDraft] = useState('');
+  const [name, setName] = useState('');
+  const [draft, setDraft] = useSourceDraft(
+    cloudDraftKey(
+      cloudViewScope(row),
+      organizationId,
+      selected?.channelId ?? initialChannelId ?? '',
+    ),
+  );
   const [working, setWorking] = useState(false),
     [error, setError] = useState<string>(),
     [notice, setNotice] = useState<string>();
   const busy = working || snapshot.busy;
+  const cacheScope = cloudDraftKey(cloudViewScope(row), organizationId, initialChannelId ?? '');
+  const loadedHistory = useRef(false);
+  useEffect(() => {
+    let active = true;
+    if (initialChannelId && allowed)
+      void readCloudMessages(cacheScope).then((cached) => {
+        if (
+          !active ||
+          loadedHistory.current ||
+          !cached ||
+          cached.channel.channelId !== initialChannelId
+        )
+          return;
+        setSelected(cached.channel);
+        setMessages(cached.messages);
+        setCursor(cached.messages.at(-1)?.sequence ?? 0);
+        setMore(cached.hasMore);
+      });
+    return () => {
+      active = false;
+    };
+  }, [cacheScope, initialChannelId, allowed]);
+  useEffect(() => {
+    if (selected && messages)
+      cacheCloudMessages(cloudDraftKey(cloudViewScope(row), organizationId, selected.channelId), {
+        channel: selected,
+        messages,
+        hasMore: more,
+      });
+  }, [selected, messages, more, organizationId, cloudViewScope(row)]);
   const opened = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -164,6 +209,7 @@ function ChannelWorkspace({
       after,
       guest,
     );
+    loadedHistory.current = true;
     setMessages((old) =>
       after
         ? [
@@ -265,7 +311,6 @@ function ChannelWorkspace({
                 onPress={() => {
                   setSelected(undefined);
                   setMessages(undefined);
-                  setDraft('');
                   setNotice(undefined);
                 }}
               />
@@ -371,7 +416,6 @@ function ChannelWorkspace({
                 void run(async () => {
                   setSelected(item);
                   setMessages(undefined);
-                  setDraft('');
                   await history(item);
                 })
               }

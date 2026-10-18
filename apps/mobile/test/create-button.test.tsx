@@ -10,6 +10,14 @@ const { push, platform, showActionSheetWithOptions, alert } = vi.hoisted(() => (
   alert: vi.fn(),
 }));
 
+vi.mock('../src/cloud/native', () => ({
+  useCloudSnapshot: () => ({ ready: true, busy: false, rows: [] }),
+  cloudClient: {},
+}));
+vi.mock('../src/cloud/native-conversations', () => ({
+  useCloudConversations: () => ({ busy: false, rows: [], errors: [] }),
+  cloudConversations: { refresh: async () => {} },
+}));
 vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
 vi.mock('react-native', async () => ({
   ...(await import('./react-native-shim')),

@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   display: { mode: 'streaming', loaded: true },
 }));
 
+vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', () => {}] }));
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
   Stack: { Screen: () => null },
