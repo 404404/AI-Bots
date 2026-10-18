@@ -2,8 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { cloudError, type Organization } from '../../cloud/client';
+import { cloudError, type CloudSnapshot, type Organization } from '../../cloud/client';
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
+import { cloudViewScope } from '../../cloud/workspace-directory';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
@@ -14,6 +15,19 @@ import { t } from '../strings';
 export function CloudOrganizationsScreen() {
   const { instanceId } = useLocalSearchParams<{ instanceId: string }>();
   const snapshot = useCloudSnapshot();
+  const row = snapshot.rows.find((r) => r.config.instanceId === instanceId);
+  return (
+    <OrganizationWorkspace key={cloudViewScope(row)} instanceId={instanceId} snapshot={snapshot} />
+  );
+}
+
+function OrganizationWorkspace({
+  instanceId,
+  snapshot,
+}: {
+  instanceId: string;
+  snapshot: CloudSnapshot;
+}) {
   const row = snapshot.rows.find((r) => r.config.instanceId === instanceId);
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
