@@ -587,6 +587,7 @@ describe('cloud organizations', () => {
     const channel = {
       channelId,
       organizationId: 'org_external',
+      organizationName: 'External workspace',
       name: 'External project',
       creatorId: 'user_a',
       creatorType: 'human',
@@ -605,6 +606,8 @@ describe('cloud organizations', () => {
             : { invitations: [invitation], nextCursor: null },
         );
       if (url.includes('/api/guest-channels')) {
+        const requestedOrg = new URL(url).searchParams.get('organizationId');
+        if (requestedOrg) expect(requestedOrg).toBe('org_external');
         if (denied)
           return Response.json({ error: { code: 'CHANNEL_ACCESS_DENIED' } }, { status: 403 });
         if (url.includes('/messages')) {
@@ -648,6 +651,10 @@ describe('cloud organizations', () => {
     expect((await client.listChannels(config.instanceId, '', undefined, true)).nextCursor).toBe(
       invitationId,
     );
+    expect(
+      (await client.listChannels(config.instanceId, 'org_external', undefined, true)).channels[0]
+        ?.organizationName,
+    ).toBe('External workspace');
     expect((await client.readMessages(config.instanceId, '', channelId, 0, true)).nextCursor).toBe(
       7,
     );

@@ -1,6 +1,7 @@
 import { ClientError } from './instance-contract';
 export type CloudChannel = {
   organizationId?: string | undefined;
+  organizationName?: string | undefined;
   channelId: string;
   name: string;
   creatorId: string;
@@ -35,6 +36,10 @@ export const validChannelId = (value: unknown): value is string =>
 export function parseChannel(value: unknown): CloudChannel {
   const v = row(value);
   if (
+    (v.organizationName !== undefined &&
+      (typeof v.organizationName !== 'string' ||
+        !v.organizationName ||
+        v.organizationName.length > 120)) ||
     !validChannelId(v.channelId) ||
     typeof v.name !== 'string' ||
     !v.name ||

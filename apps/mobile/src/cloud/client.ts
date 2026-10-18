@@ -638,10 +638,15 @@ export class CloudClient {
       const entry = guest
         ? await this.current(this.entry(id))
         : await this.channelEntry(id, organizationId);
+      if (guest && organizationId && !/^org_[A-Za-z0-9]+$/.test(organizationId))
+        return fail('INVALID_ORGANIZATION');
+      const query = new URLSearchParams();
+      if (after) query.set('after', after);
+      if (guest && organizationId) query.set('organizationId', organizationId);
       const value = await this.orgRequest(
         entry,
         (guest ? '' : '/' + organizationId + '/channels') +
-          (after ? '?after=' + encodeURIComponent(after) : ''),
+          (query.size ? '?' + query.toString() : ''),
         {},
         guest ? '/api/guest-channels' : '/api/organizations',
       );
@@ -660,7 +665,8 @@ export class CloudClient {
           if (
             guest &&
             (!/^org_[A-Za-z0-9]+$/.test(channel.organizationId ?? '') ||
-              record(raw).access !== 'guest')
+              record(raw).access !== 'guest' ||
+              (organizationId && channel.organizationId !== organizationId))
           )
             return fail('INVALID_RESPONSE');
           return channel;

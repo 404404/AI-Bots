@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
+import { router, usePathname, useGlobalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   ActionSheetIOS,
@@ -25,6 +25,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { cloudClient, useCloudSnapshot } from '../../cloud/native';
+import { cloudError } from '../../cloud/client';
+import { connectionKey } from '../../cloud/instance-contract';
+import {
+  createWorkspaceDirectory,
+  type CloudWorkspace,
+  type WorkspaceDirectoryEntry,
+} from '../../cloud/workspace-directory';
 import { createHostClient } from '../../host/client';
 import { createHostGlances, liveGlance, type HostStatus } from '../../host/host-glance';
 import { hostSession, useHostSession, useHostSnapshot, useInbox } from '../../host/host-session';
@@ -47,10 +55,14 @@ import {
   settleOpen,
   type HostDrawerRow,
 } from './host-drawer-model';
-import { ActivityIcon, MoreIcon, PlusIcon } from './icons';
+import { ActivityIcon, CloudIcon, ComputerIcon, MoreIcon, PlusIcon } from './icons';
 
 export const hostDrawer = createHostDrawer({
-  switchTo: (hostId) => hostSession.switchTo(hostId),
+  switchTo: async (hostId) => {
+    const switched = await hostSession.switchTo(hostId);
+    if (switched) router.replace('/');
+    return switched;
+  },
   pair: () => router.push('/pair'),
   notifications: () => router.push('/notifications'),
 });
@@ -60,6 +72,7 @@ const glances = createHostGlances((host) =>
 );
 
 const progress = makeMutable(0);
+const workspaceDirectory = createWorkspaceDirectory(cloudClient);
 
 const DRAG_START = 10;
 const VERTICAL_FAIL = 15;
@@ -324,6 +337,92 @@ function FooterRow({ label, icon, onPress }: { label: string; icon: ReactNode; o
   );
 }
 
+export function WorkspaceButton() {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      onPress={openHostDrawer}
+      accessibilityRole="button"
+      accessibilityLabel={t.workspaces}
+      style={({ pressed }) => ({
+        minWidth: theme.touch,
+        minHeight: theme.touch,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: radius.round,
+        backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
+      })}
+    >
+      <ComputerIcon color={theme.color.fg} size={theme.type.title.line} />
+    </Pressable>
+  );
+}
+
+type WorkspaceDrawerItem =
+  | { kind: 'heading'; key: string; label: string }
+  | { kind: 'host'; key: string; row: HostDrawerRow }
+  | { kind: 'workspace'; key: string; workspace: CloudWorkspace; server: string }
+  | { kind: 'status'; key: string; entry: WorkspaceDirectoryEntry };
+
+function WorkspaceRow({
+  workspace,
+  server,
+  selected,
+  disabled,
+  onPress,
+}: {
+  workspace: CloudWorkspace;
+  server: string;
+  selected: boolean;
+  disabled: boolean;
+  onPress(): void;
+}) {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={[
+        workspace.name,
+        workspace.role === 'guest' ? t.workspaceGuest : t.cloudOrganizations[workspace.role],
+        new URL(server).host,
+      ].join(', ')}
+      accessibilityState={{ selected, disabled }}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.x4,
+        padding: space.x4,
+        minHeight: theme.touch + space.x6,
+        backgroundColor: pressed || selected ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+      })}
+    >
+      <HostTile
+        hostName={workspace.name}
+        avatar={{ kind: 'initial' }}
+        size={theme.touch}
+        fill={theme.layer.sheet.inset}
+        letter={theme.color.fg}
+      />
+      <View style={{ flex: 1, gap: space.x1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x2 }}>
+          <Text strong style={{ flexShrink: 1 }}>
+            {workspace.name}
+          </Text>
+          <CloudIcon color={theme.color.subtle} size={theme.type.body.size} />
+        </View>
+        <Text variant="meta" tone="muted">
+          {workspace.role === 'guest' ? t.workspaceGuest : t.cloudOrganizations[workspace.role]}
+        </Text>
+        <Text variant="meta" tone="muted">
+          {new URL(server).host}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export function HostDrawer() {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
@@ -334,7 +433,48 @@ export function HostDrawer() {
   const connection = useHostSnapshot(client).connection;
   const list = useInbox(inbox);
   const glanceMap = useSyncExternalStore(glances.subscribe, glances.getSnapshot);
-  const currentId = saved?.hostId;
+  const pathname = usePathname();
+  const params = useGlobalSearchParams<{ instanceId?: string; organizationId?: string }>();
+  const cloud = useCloudSnapshot();
+  const directory = useSyncExternalStore(
+    workspaceDirectory.subscribe,
+    workspaceDirectory.getSnapshot,
+  );
+  const [selecting, setSelecting] = useState(false);
+  const [selectionError, setSelectionError] = useState<string>();
+  const cloudRoute = pathname.startsWith('/cloud-');
+  const currentId = cloudRoute ? undefined : saved?.hostId;
+  const cloudKey = JSON.stringify(
+    cloud.rows.map((row) => [connectionKey(row.config), row.hasSession]),
+  );
+  const cloudMount = useMounted<ViewInstance>(() => {
+    if (!state.open || !cloud.ready) return;
+    void workspaceDirectory.refresh(cloud.rows);
+    return () => workspaceDirectory.clear();
+  }, [state.open, cloud.ready, cloudKey]);
+  const choose = async (workspace: CloudWorkspace) => {
+    if (selecting || cloud.busy || directory.busy) return;
+    setSelecting(true);
+    setSelectionError(undefined);
+    try {
+      if (workspace.role === 'guest') await cloudClient.whoami(workspace.instanceId);
+      else await cloudClient.useOrganization(workspace.instanceId, workspace.organizationId);
+      closeThen(() =>
+        router.push({
+          pathname: '/cloud-channels',
+          params: {
+            instanceId: workspace.instanceId,
+            organizationId: workspace.organizationId,
+            guest: workspace.role === 'guest' ? 'true' : 'false',
+          },
+        }),
+      );
+    } catch (error) {
+      setSelectionError(cloudError(error));
+    } finally {
+      setSelecting(false);
+    }
+  };
   const icon = theme.type.title.size + space.x2;
 
   const rows = useMemo(
@@ -360,6 +500,20 @@ export function HostDrawer() {
     [state.open, hosts],
   );
 
+  const drawerRows: WorkspaceDrawerItem[] = [
+    { kind: 'heading', key: 'computers', label: t.computers },
+    ...rows.map((row): WorkspaceDrawerItem => ({ kind: 'host', key: 'host:' + row.hostId, row })),
+    { kind: 'heading', key: 'cloud', label: t.cloudOrganizations.title },
+    ...directory.entries.flatMap((entry): WorkspaceDrawerItem[] => [
+      ...entry.workspaces.map((workspace): WorkspaceDrawerItem => ({
+        kind: 'workspace',
+        key: entry.instanceId + ':' + workspace.organizationId,
+        workspace,
+        server: entry.server,
+      })),
+      { kind: 'status', key: entry.instanceId + ':status', entry },
+    ]),
+  ];
   const fade = theme.scheme === 'dark' ? scrim.dark : scrim.light;
   const backdropStyle = useAnimatedStyle(() => ({ opacity: clamp(progress.value) * fade }));
   const panelStyle = useAnimatedStyle(() => ({
@@ -383,6 +537,7 @@ export function HostDrawer() {
   return (
     <GestureDetector gesture={swipe}>
       <View
+        ref={cloudMount}
         style={StyleSheet.absoluteFill}
         pointerEvents={state.open ? 'auto' : 'none'}
         accessibilityElementsHidden={!state.open}
@@ -401,7 +556,7 @@ export function HostDrawer() {
           <Pressable
             style={{ flex: 1 }}
             accessibilityRole="button"
-            accessibilityLabel={t.closeComputers}
+            accessibilityLabel={t.closeWorkspaces}
             onPress={() => settle(false)}
           />
         </Animated.View>
@@ -427,46 +582,119 @@ export function HostDrawer() {
             ref={heading}
             accessible
             accessibilityRole="header"
-            accessibilityLabel={t.computers}
+            accessibilityLabel={t.workspaces}
             style={{
               paddingTop: insets.top + space.x5,
               paddingHorizontal: space.x5,
               paddingBottom: space.x4,
             }}
           >
-            <Text variant="display">{t.computers}</Text>
+            <Text variant="display">{t.workspaces}</Text>
           </View>
-          <FlatList
+          <FlatList<WorkspaceDrawerItem>
             style={{ flex: 1 }}
-            data={rows}
-            keyExtractor={(row) => row.hostId}
-            contentContainerStyle={{ paddingBottom: space.x4 }}
-            renderItem={({ item }) => <HostRow row={item} />}
-          />
-          <View
-            style={{
-              borderTopWidth: edge.hairline,
-              borderTopColor: theme.layer.sheet.divider,
-              paddingTop: space.x3,
-              paddingBottom: insets.bottom + space.x3,
+            data={drawerRows}
+            keyExtractor={(row) => row.key}
+            contentContainerStyle={{ paddingBottom: insets.bottom + space.x4 }}
+            renderItem={({ item }) => {
+              if (item.kind === 'host') return <HostRow row={item.row} />;
+              if (item.kind === 'heading')
+                return (
+                  <Text strong tone="muted" style={{ padding: space.x4 }}>
+                    {item.label}
+                  </Text>
+                );
+              if (item.kind === 'workspace')
+                return (
+                  <WorkspaceRow
+                    workspace={item.workspace}
+                    server={item.server}
+                    selected={
+                      cloudRoute &&
+                      params.instanceId === item.workspace.instanceId &&
+                      params.organizationId === item.workspace.organizationId
+                    }
+                    disabled={selecting || cloud.busy || directory.busy}
+                    onPress={() => void choose(item.workspace)}
+                  />
+                );
+              const entry = item.entry;
+              if (!entry.hasSession)
+                return (
+                  <FooterRow
+                    label={new URL(entry.server).host + ' · ' + t.cloudJoin.signIn}
+                    icon={<CloudIcon color={theme.color.fg} size={icon} />}
+                    onPress={() => closeThen(() => router.push('/cloud-services'))}
+                  />
+                );
+              return (
+                <View style={{ paddingHorizontal: space.x5, gap: space.x2 }}>
+                  {!!entry.error && (
+                    <Text accessibilityLiveRegion="polite">
+                      {new URL(entry.server).host}: {entry.error}
+                    </Text>
+                  )}
+                  {!directory.busy &&
+                    !entry.error &&
+                    entry.workspaces.length === 0 &&
+                    entry.membersAfter === null &&
+                    entry.guestsAfter === null && <Text tone="muted">{t.workspaceEmpty}</Text>}
+                  {!directory.busy &&
+                    (entry.error || entry.membersAfter !== null || entry.guestsAfter !== null) && (
+                      <FooterRow
+                        label={entry.error ? t.retry : t.cloudOrganizations.more}
+                        icon={<PlusIcon color={theme.color.fg} size={icon} />}
+                        onPress={() => void workspaceDirectory.more(entry.instanceId)}
+                      />
+                    )}
+                </View>
+              );
             }}
-          >
-            <FooterRow
-              label={t.pairAnother}
-              icon={<PlusIcon color={theme.color.fg} size={icon} />}
-              onPress={() => closeThen(() => hostDrawer.pairNew())}
-            />
-            <FooterRow
-              label={t.cloud.title}
-              icon={<PlusIcon color={theme.color.fg} size={icon} />}
-              onPress={() => closeThen(() => router.push('/cloud-services'))}
-            />
-            <FooterRow
-              label={t.notifications}
-              icon={<ActivityIcon color={theme.color.fg} size={icon} />}
-              onPress={() => closeThen(() => hostDrawer.openNotifications())}
-            />
-          </View>
+            ListFooterComponent={
+              <View>
+                {directory.busy && (
+                  <Text style={{ padding: space.x5 }} accessibilityLiveRegion="polite">
+                    {t.workspaceLoading}
+                  </Text>
+                )}
+                {!!selectionError && (
+                  <Text style={{ padding: space.x5 }} accessibilityLiveRegion="polite">
+                    {selectionError}
+                  </Text>
+                )}
+                {cloud.ready && !directory.busy && directory.entries.length === 0 && (
+                  <Text style={{ padding: space.x5 }} tone="muted">
+                    {t.workspaceEmpty}
+                  </Text>
+                )}
+                <FooterRow
+                  label={t.cloudJoin.title}
+                  icon={<PlusIcon color={theme.color.fg} size={icon} />}
+                  onPress={() => closeThen(() => router.push('/cloud-join'))}
+                />
+                <FooterRow
+                  label={t.cloudOrganizations.create}
+                  icon={<PlusIcon color={theme.color.fg} size={icon} />}
+                  onPress={() => closeThen(() => router.push('/cloud-services'))}
+                />
+                <FooterRow
+                  label={t.pairAnother}
+                  icon={<PlusIcon color={theme.color.fg} size={icon} />}
+                  onPress={() => closeThen(() => hostDrawer.pairNew())}
+                />
+                <FooterRow
+                  label={t.cloud.title}
+                  icon={<CloudIcon color={theme.color.fg} size={icon} />}
+                  onPress={() => closeThen(() => router.push('/cloud-services'))}
+                />
+                <FooterRow
+                  label={t.notifications}
+                  icon={<ActivityIcon color={theme.color.fg} size={icon} />}
+                  onPress={() => closeThen(() => hostDrawer.openNotifications())}
+                />
+              </View>
+            }
+          />
         </Animated.View>
       </View>
     </GestureDetector>

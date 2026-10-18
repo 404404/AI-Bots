@@ -24,10 +24,11 @@ References: [Apple toolbars](https://developer.apple.com/design/human-interface-
 
 The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-with-settings-and-hosts-in-the-header.md): what the Human does most sits under the thumb, and what they do rarely sits in the header.
 
-- **Hosts are workspaces.** Each paired computer is a Host.
+- **One workspace drawer, two connection types.** Computers are paired Hosts; cloud workspaces belong to an explicitly trusted TOB instance. The existing left drawer is shared across both, with Computers and Cloud workspaces sections. Cloud headers expose the same workspace switcher. A guest sees the organization initial/name and “invited channels only”; selecting it shows only current channel grants. Instance domains disambiguate identically named workspaces. The list and its join/create/pair actions scroll together at large text sizes.
+- **Computer workspaces.** Each paired computer is a Host.
   - The app stays connected to every paired Host at once.
   - The Chats list and every chat show one Host at a time. The Chats header has a Slack-style band in the accent colour (a muted accent in dark mode); the list sits on a panel with rounded top corners below it.
-  - The **Host chip** at the top left shows the Host's initial tile, its name and ▾. Tapping it opens the **Host drawer**.
+  - The **Host chip** at the top left shows the Host's initial tile, its name and ▾. Tapping it opens the shared **workspace drawer**.
   - **Customize computer** sets how each Host looks, kept on the phone per Host. It is a form sheet with a live preview of the band, opened from that Host's ⋯ menu in the Host drawer (or a long press on its row), so each paired Host is customized where it is listed.
     - Name: a local name shown in the Host chip and the drawer instead of the Host's own name; clearing it goes back to the Host's name.
     - Avatar: the initial tile (default), one of eight pixel portraits from the PersonaBot avatar generator, or a photo cropped square.

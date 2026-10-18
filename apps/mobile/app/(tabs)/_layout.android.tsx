@@ -12,7 +12,6 @@ import { useDesignTheme } from '../../src/ui/design/theme';
 import { Text } from '../../src/ui/primitives/text';
 import { edge, edgeFade, navigationBar, radius, space } from '../../src/ui/design/tokens';
 import { FloatingTabInset } from '../../src/ui/shell/floating-tab-inset';
-import { HostDrawer } from '../../src/ui/shell/host-drawer';
 import { ActivityIcon, ChatsIcon } from '../../src/ui/shell/icons';
 import { NavigationButton } from '../../src/ui/shell/navigation-button.android';
 import { NavigationIcon } from '../../src/ui/shell/navigation-icon.android';
@@ -146,7 +145,6 @@ function AndroidTabLayout() {
             }}
           />
         </Tabs>
-        <HostDrawer />
       </View>
     </FloatingTabInset.Provider>
   );

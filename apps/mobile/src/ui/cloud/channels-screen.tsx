@@ -45,7 +45,7 @@ export function CloudChannelsScreen() {
   }>();
   return (
     <ChannelWorkspace
-      key={instanceId + ':' + (guest === 'true' ? 'guest' : organizationId) + ':' + channelId}
+      key={instanceId + ':' + organizationId + ':' + guest + ':' + channelId}
       instanceId={instanceId}
       organizationId={organizationId ?? ''}
       guest={guest === 'true'}
@@ -84,9 +84,14 @@ function ChannelWorkspace({
   const opened = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      if (!initialChannelId || !snapshot.ready || snapshot.busy || opened.current) return;
+      if (!snapshot.ready || snapshot.busy || opened.current) return;
       opened.current = true;
       void run(async () => {
+        if (!initialChannelId) {
+          if (!row?.identity) await cloudClient.whoami(instanceId);
+          await reload();
+          return;
+        }
         const channel = await cloudClient.openChannel(
           instanceId,
           organizationId,
@@ -177,7 +182,11 @@ function ChannelWorkspace({
       keyExtractor={(item) => ('sequence' in item ? 'message-' + item.sequence : item.channelId)}
       ListHeaderComponent={
         <View style={{ gap: space.x4 }}>
-          <Text variant="title">{guest ? t.cloudGuests.title : row?.organization?.name}</Text>
+          <Text variant="title">
+            {guest
+              ? (organizationId && channels?.[0]?.organizationName) || t.cloudGuests.title
+              : row?.organization?.name}
+          </Text>
           {!!error && (
             <Text accessibilityLiveRegion="polite">
               {t.cloud.error} {error}
