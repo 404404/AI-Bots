@@ -39,3 +39,27 @@ it('does not advertise layout controls when the responsive workspace is unavaila
     searchSettings(rows, 'Enter', zhTranslate).some((row) => row.section === 'messaging'),
   ).toBe(true);
 });
+
+it('matches pinyin and English words in the Chinese interface', () => {
+  expect(searchSettings(rows, 'jianju', zhTranslate)[0]).toMatchObject({ title: '面板间距' });
+  expect(searchSettings(rows, 'mbjj', zhTranslate)[0]).toMatchObject({ title: '面板间距' });
+  expect(searchSettings(rows, 'notifications', zhTranslate)[0]).toMatchObject({
+    section: 'notifications',
+    title: '通知',
+  });
+  expect(searchSettings(rows, 'tongzhi', zhTranslate)[0]).toMatchObject({
+    section: 'notifications',
+  });
+});
+
+it('lists every section for a bare settings query and finds sections by common words', () => {
+  expect(
+    searchSettings(rows, 'shezhi', zhTranslate)
+      .filter((row) => row.target === undefined)
+      .map((row) => row.section),
+  ).toEqual(['appearance', 'messaging', 'notifications', 'browser']);
+  expect(searchSettings(rows, 'waiguan', zhTranslate)[0]).toMatchObject({
+    section: 'appearance',
+    title: '界面设置',
+  });
+});

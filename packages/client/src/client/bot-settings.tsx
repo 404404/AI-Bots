@@ -35,9 +35,15 @@ export interface BotSettingsSectionRow {
   readonly layoutAvailable?: boolean;
 }
 
+export interface BotSettingsTarget {
+  readonly title: string;
+  readonly nonce: number;
+}
+
 export interface BotSettingsSnapshot {
   readonly open: boolean;
   readonly sectionId: string | undefined;
+  readonly target?: BotSettingsTarget | undefined;
 }
 
 export interface BotSettingsSectionSource {
@@ -58,20 +64,33 @@ export class BotSettings {
     };
   };
 
-  readonly open = (sectionId?: string): void => {
-    this.#set({ open: true, sectionId: sectionId ?? this.#snapshot.sectionId });
+  readonly open = (sectionId?: string, target?: string): void => {
+    this.#set({
+      open: true,
+      sectionId: sectionId ?? this.#snapshot.sectionId,
+      target: this.#target(target),
+    });
   };
 
-  readonly select = (sectionId: string): void => {
-    this.#set({ ...this.#snapshot, sectionId });
+  readonly select = (sectionId: string, target?: string): void => {
+    this.#set({ ...this.#snapshot, sectionId, target: this.#target(target) });
   };
 
   readonly close = (): void => {
-    this.#set({ ...this.#snapshot, open: false });
+    this.#set({ ...this.#snapshot, open: false, target: undefined });
   };
 
+  #target(title: string | undefined): BotSettingsTarget | undefined {
+    return title === undefined ? undefined : { title, nonce: Date.now() };
+  }
+
   #set(next: BotSettingsSnapshot): void {
-    if (next.open === this.#snapshot.open && next.sectionId === this.#snapshot.sectionId) return;
+    if (
+      next.open === this.#snapshot.open &&
+      next.sectionId === this.#snapshot.sectionId &&
+      next.target === this.#snapshot.target
+    )
+      return;
     this.#snapshot = next;
     for (const listener of this.#listeners) listener();
   }
@@ -92,7 +111,7 @@ export function BotSettingsView({
   const state = useSyncExternalStore(botSettings.subscribe, botSettings.getSnapshot);
   const registered = useSyncExternalStore(sections.subscribe, sections.getSnapshot);
   const [query, setQuery] = useState('');
-  const [target, setTarget] = useState<{ title: string; nonce: number } | undefined>();
+  const target = state.target;
   const locate = useMountedResource<HTMLDivElement>(
     (root) => {
       for (const item of root.querySelectorAll('[data-settings-highlight]'))
@@ -139,7 +158,6 @@ export function BotSettingsView({
     rows[0];
   const close = (): void => {
     setQuery('');
-    setTarget(undefined);
     botSettings.close();
   };
   return (
@@ -158,10 +176,7 @@ export function BotSettingsView({
                   type="button"
                   key={`${result.section}:${result.title}`}
                   onClick={() => {
-                    botSettings.select(result.section);
-                    setTarget(
-                      result.target ? { title: result.target, nonce: Date.now() } : undefined,
-                    );
+                    botSettings.select(result.section, result.target);
                     setQuery('');
                   }}
                 >
@@ -176,7 +191,6 @@ export function BotSettingsView({
         ) : undefined
       }
       onSelect={(id) => {
-        setTarget(undefined);
         setQuery('');
         botSettings.select(id);
       }}

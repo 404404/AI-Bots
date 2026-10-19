@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { Input } from '@deepseek-ai/dsh-client-ui-primitives';
 import { en, zh, type BotHarnessKey, type BotHarnessTranslate } from './locale.js';
 import type { BotSettingsSectionRow } from './bot-settings.js';
+import { searchTextMatches, searchTextScore } from './search-match.js';
 
 const SETTINGS_INDEX: Readonly<Record<string, readonly BotHarnessKey[]>> = {
   general: ['onboarding.settings.title'],
@@ -50,6 +51,32 @@ const SETTINGS_INDEX: Readonly<Record<string, readonly BotHarnessKey[]>> = {
   'data-privacy': ['backup.title', 'telemetry.row.title'],
 };
 
+const SECTION_LABELS: Readonly<Record<string, BotHarnessKey>> = {
+  general: 'botSettings.section.general',
+  appearance: 'botSettings.section.appearance',
+  notifications: 'botSettings.section.notifications',
+  shortcuts: 'shortcuts.title',
+  models: 'botSettings.section.models',
+  messaging: 'botSettings.section.messaging',
+  'auto-approval': 'botSettings.section.autoApproval',
+  'im-apps': 'botSettings.section.imApps',
+  companions: 'botSettings.section.companions',
+  devices: 'botSettings.section.devices',
+  'data-privacy': 'botSettings.section.dataPrivacy',
+  advanced: 'botSettings.section.advanced',
+  about: 'botSettings.section.about',
+};
+
+const SECTION_ALIASES: Readonly<Record<string, string>> = {
+  appearance: '外观 皮肤 主题 theme skin look',
+  shortcuts: '快捷键 键位 热键 hotkey keybinding',
+  models: '模型 model',
+  notifications: '提醒 alert',
+  'im-apps': '飞书 Lark Feishu Slack Discord',
+  devices: '手机 phone mobile',
+  'data-privacy': '备份 隐私 backup privacy',
+};
+
 const SEARCH_ALIASES: Partial<Record<BotHarnessKey, string>> = {
   'sendKey.row.title': 'Enter Shift+Enter Ctrl+Enter 回车 发送',
   'settings.language': '中文 English language 语言',
@@ -69,12 +96,27 @@ export function searchSettings(
   query: string,
   t: BotHarnessTranslate,
 ): SettingsSearchResult[] {
-  const terms = query.trim().toLocaleLowerCase().split(/\s+/u).filter(Boolean);
+  const terms = query.trim().split(/\s+/u).filter(Boolean);
   if (!terms.length) return [];
-  const matches = (text: string) => terms.every((term) => text.toLocaleLowerCase().includes(term));
-  return rows.flatMap((row) => {
-    const results: SettingsSearchResult[] = matches(row.label)
-      ? [{ section: row.id, title: row.label, page: row.label }]
+  const matches = (texts: readonly string[]) =>
+    terms.every((term) => texts.some((text) => searchTextMatches(text, term)));
+  const touches = (texts: readonly string[]) =>
+    terms.some((term) => texts.some((text) => searchTextMatches(text, term)));
+  const rank = (texts: readonly string[]) =>
+    Math.min(9, ...texts.map((text) => searchTextScore(text, query) ?? 9));
+  const scored = rows.flatMap((row) => {
+    const sectionKey = SECTION_LABELS[row.id];
+    const names = [
+      row.label,
+      ...(sectionKey === undefined ? [] : [en[sectionKey], zh[sectionKey]]),
+    ];
+    const page = [...names, ...(SECTION_ALIASES[row.id] ?? '').split(' ')];
+    const results: (SettingsSearchResult & { score: number })[] = matches([
+      ...page,
+      'settings',
+      '设置',
+    ])
+      ? [{ section: row.id, title: row.label, page: row.label, score: rank(names) }]
       : [];
     for (const key of SETTINGS_INDEX[row.id] ?? []) {
       if (
@@ -82,15 +124,25 @@ export function searchSettings(
         ['workspace.appearance', 'workspace.gap', 'dock.reset'].includes(key)
       )
         continue;
-      if (!matches([row.label, t(key), en[key], zh[key], SEARCH_ALIASES[key] ?? ''].join(' ')))
-        continue;
+      const own = [t(key), en[key], zh[key], ...(SEARCH_ALIASES[key] ?? '').split(' ')];
+      if (!touches(own) || !matches([...page, ...own])) continue;
       const title = t(key);
       if (results.some((result) => result.title === title)) continue;
       const targetKey = key.startsWith('settings.theme.') ? 'settings.theme' : key;
-      results.push({ section: row.id, title, target: t(targetKey), page: row.label });
+      results.push({
+        section: row.id,
+        title,
+        target: t(targetKey),
+        page: row.label,
+        score: rank(own),
+      });
     }
     return results;
   });
+  return scored
+    .map((result, index) => ({ result, index }))
+    .sort((left, right) => left.result.score - right.result.score || left.index - right.index)
+    .map(({ result: { score: _score, ...result } }) => result);
 }
 
 export function SettingsSearch({
