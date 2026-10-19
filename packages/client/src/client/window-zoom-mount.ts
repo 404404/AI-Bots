@@ -10,6 +10,7 @@ import { mountZoomTooltips } from './window-zoom-tooltips.js';
 export interface ZoomCompatibility {
   version: 1;
   desktopVersion: '0.2.1-rc.2';
+  platform?: 'macos' | 'windows';
   acquire(): Promise<() => void>;
 }
 export interface ZoomSurface {
@@ -58,9 +59,11 @@ export function mountWindowZoom(options: {
       win.location.protocol !== 'dsh-app:' ||
       win.location.hostname !== 'app' ||
       shortcuts.runtime !== 'desktop' ||
-      shortcuts.platform !== 'macos' ||
+      !['macos', 'windows'].includes(shortcuts.platform) ||
       compatibility?.version !== 1 ||
-      compatibility.desktopVersion !== '0.2.1-rc.2'
+      compatibility.desktopVersion !== '0.2.1-rc.2' ||
+      (shortcuts.platform === 'windows' && compatibility.platform !== 'windows') ||
+      (compatibility.platform !== undefined && compatibility.platform !== shortcuts.platform)
     )
       return;
     const release = await compatibility.acquire();
@@ -96,6 +99,7 @@ export function mountWindowZoom(options: {
           aliases: ['window', 'zoom'],
           defaults: {
             'desktop:macos': { code, modifiers: shift ? ['primary', 'shift'] : ['primary'] },
+            'desktop:windows': { code, modifiers: shift ? ['primary', 'shift'] : ['primary'] },
           },
           regions: ['page', 'editable', 'terminal'],
           modals: ['other'],

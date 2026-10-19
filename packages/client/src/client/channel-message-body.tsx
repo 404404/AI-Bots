@@ -343,6 +343,7 @@ export function ChannelMessageBody({
   nativeChatT?: NativeChatFailureText | undefined;
   toolApprovalDecision?:
     | 'allowed-once'
+    | 'allowed-always-tool'
     | 'allowed-always-exact'
     | 'allowed-always-all'
     | 'rejected'

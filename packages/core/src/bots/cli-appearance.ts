@@ -1,4 +1,4 @@
-import { WALLPAPER_COMMANDS, runWallpaperCommand } from './cli-wallpaper.js';
+import { WALLPAPER_COMMANDS, WALLPAPER_OPTIONS, runWallpaperCommand } from './cli-wallpaper.js';
 import { CliLiveError } from './cli-live-error.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 export const APPEARANCE_COMMANDS = [
@@ -31,6 +31,7 @@ export const APPEARANCE_COMMANDS = [
   },
 ] as const;
 export const APPEARANCE_OPTIONS = {
+  ...WALLPAPER_OPTIONS,
   'client-id': { type: 'string' },
   'confirm-reset': { type: 'boolean' },
   'expected-wallpaper-revision': { type: 'string' },
@@ -46,6 +47,7 @@ export async function runAppearanceCommand(
     mode?: string;
     'confirm-reset'?: boolean;
     'expected-wallpaper-revision'?: string;
+    'wallpaper-item'?: string;
   },
   io: BotCreateCliIo,
   connect: () => Promise<{

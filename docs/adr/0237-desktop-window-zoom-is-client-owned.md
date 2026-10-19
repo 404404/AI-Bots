@@ -60,7 +60,16 @@ transaction. Native plugin management remains the ordinary Bundle installation p
 installation-first Bundle lookup rejects this same-name plain-library override, and the DSH
 CLI refuses the managed Desktop Profile. Those observed refusals are preserved; the downstream
 offline installer is explicit additional opt-in, not an automatic product install hook.
-It refuses non-macOS platforms, an app release other than 0.2.1-rc.2, other theme overrides,
+The Windows candidate uses the same explicit offline transaction and lease. It reads the
+selected executable's `FileVersion` (which retains the RC suffix), locates its bundled pnpm
+under `resources/runtime/primary-runtime/dependencies`, and queries Windows processes with
+CIM before and after the transaction. Any process of the selected executable prevents setup;
+the installer never stops it. Windows junctions must resolve to the product-owned theme,
+and a macOS-only payload is refused. Writer-lock cleanup compares file identity and leaves
+another writer's replacement intact. Windows native qualification remains a separate gate in
+[#2270](https://github.com/BotHarness/DeepSeekBot/issues/2270); candidate activation is not a
+claim that its full matrix has passed.
+It refuses Linux, an app release other than 0.2.1-rc.2, other theme overrides,
 unqualified artifacts and the obsolete grouped composition. Restart the Host/Desktop after
 setup; configuration success is not a runtime qualification claim. This opt-in is additional
 to ordinary product installation. Disable it before uninstalling the product; disable removes
@@ -81,6 +90,14 @@ The current native protocol rejects numberpad codes. In
 [#2318](https://github.com/BotHarness/DeepSeekBot/issues/2318), the Human confirmed default reset
 as the delivery scope and retained numberpad support as an explicit pinned-version limitation.
 Neither a Client-only key substitution nor a competing input router is introduced.
+
+The Windows candidate requires the real shell's `win32` marker, the exact boot release and a
+platform-matching `windows` lease before mounting. The native Shortcut Service identifies its
+platform as `windows`, independently of the shell marker. Its defaults use `primary` with
+Equal, Shift+Equal, Minus and Digit0, producing Ctrl shortcuts and resetting to the saved
+default. Explicit assignments and unbinding retain the native precedence. No Windows corner
+reservation or alternate input listener is introduced. Numberpad codes remain outside the
+pinned native protocol; disclose that limitation instead of inventing another route.
 
 ## CLI and lifecycle
 

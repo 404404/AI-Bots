@@ -55,7 +55,11 @@ Use application adapters for both API generations rather than raising the instal
 - **Always pass `DSH_HOME`** — without it commands silently target `~/.dsh` and initialize profiles there.
 - `cordis.patch.yml` is the bisect tool: disable a plugin (`- id: botharness-core` / `disabled: true`) or override config, no reinstall needed.
 
+A saved AX model id may disappear from the pinned native catalog. Preserve the launcher's refusal; do not misdiagnose it as a missing credential or silently rewrite the shared selection. For this task's launch only, set `BOTHARNESS_AX_MODEL` to the current catalog model (normally `deepseek-v4.1-flash`), then verify an actual DM reply. The launcher retains catalog validation and the existing private key source.
+
 ## Pitfall log
+
+Native approval `never` means reject before the answerer waterfall, even under `danger-full-access`; it does not mean automatic approval. In #2080, combining that policy with a BotHarness Human-only permission-management exception swallowed the intended card. Top-level Bot Full Access now uses `ask` and answers ordinary requests automatically at its existing application responder; delegated Subagents keep their native policy. Verify both an ordinary action and a permission-management Human card on the real Host.
 
 On DSH `0.2.1-rc.2`, the first-run Preview Notice can hide a shell whose Settings entry now lives under the account menu. An older verification prelude that waits for a visible `Settings` button before dismissing overlays times out although Client diagnostics report `shell-ready`. Preserve the failure capture, dismiss the actual `Continue` dialog, then address the observed `Bot mode` or `Account menu` entry by accessible name. This qualifies shell navigation only; it does not establish a model reply or native IM delivery.
 
@@ -376,3 +380,32 @@ underlying timeout source. Do not report that cohort as console-error-free, infe
 painting from the stream, or add guest reload/recreation to conceal it. Preserve the full
 request/failure/reconnect sequence without auth data and distinguish a page exception or
 failed reconnection from this measured sequence.
+
+### Windows Desktop zoom candidate (#2270)
+
+On the official Windows 0.2.1-rc.2 executable, `FileVersion` retains `0.2.1-rc.2` while
+`ProductVersion` reports only `0.2.1.0`. Qualify the former. The real shell publishes `win32`;
+the Shortcut Service names its platform `windows`. Verify both independently and retain the
+exact boot-release and platform-matching compatibility lease checks. Native caption controls
+remain Windows-owned; the macOS 88×40 corner does not apply.
+
+Windows absolute module paths need `pathToFileURL` before dynamic ESM import. The workspace
+chrome and Select/Tooltip QA scripts failed before their fixtures loaded until their Vite
+import used a file URL. External pnpm invocations use `pnpmCommand`, rather than executing a
+Windows command shim directly. After those fixes, the real dependency fixtures passed;
+fixture pixels still do not qualify native Desktop guests.
+
+The Windows input tool emitted Ctrl+= with an empty physical `KeyboardEvent.code`, producing
+no native zoom dispatch. A Human's physical Ctrl+0 produced `Digit0`, one native event, one
+zoom handler invocation and one storage write, restoring saved 120% from current 144% while
+retaining the draft and selection. Record the driver limitation separately from application
+behavior; use the [desktop zoom journey](../verify-deepseekbot/features/desktop-window-zoom.md)
+for the remaining input, IME, guest, DPI and lifecycle gates. A source test or a Client DOM
+event is not a substitute for the native route.
+
+An immutable Provider's provenance records the DSH version of its pinned input, while an
+artifact manifest records the current composed Host. After the RC2 upgrade, comparing those
+different facts rejected an otherwise hash-matching installed package. Compare provenance
+to `productImProvider.upstream.dsh`, preserve source and runtime digest checks, and qualify
+the current composition separately. Do not rewrite the original Provider provenance to make
+it look newly qualified.

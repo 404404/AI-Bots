@@ -5,6 +5,7 @@ export const INBOX_OPTIONS = {
   category: { type: 'string' },
   'watch-seconds': { type: 'string' },
   channel: { type: 'string' },
+  request: { type: 'string' },
   sort: { type: 'string' },
   search: { type: 'string' },
   unread: { type: 'boolean' },
@@ -23,6 +24,10 @@ export const INBOX_OPTIONS = {
 } as const;
 
 export const INBOX_COMMANDS = [
+  {
+    command: 'grant-request-approve',
+    description: 'approve persistent read/write for one workspace request (needs --confirm)',
+  },
   {
     command: 'inbox-watch',
     description: 'observe live inbox changes for a bounded time and return one JSON snapshot',
@@ -82,6 +87,8 @@ export interface InboxValues {
   session?: string;
   'source-key'?: string;
   source?: string;
+  request?: string;
+  workspace?: string;
   section?: string;
   unsectioned?: boolean;
   index?: string;
@@ -339,6 +346,20 @@ function prepare(
       const grantId = required(values.grant, 'grant', command);
       confirmed(command, values);
       return { method: 'grantRevoke', args: { slug, grantId } };
+    }
+    case 'grant-request-approve': {
+      const [slug] = positionals(command, rest, 1, 'exactly one bot id');
+      confirmed(command, values);
+      return {
+        method: 'grantRequestApprove',
+        args: {
+          slug,
+          channelId: required(values.channel, 'channel', command),
+          requestMessageId: required(values.request, 'request', command),
+          workspaceId: required(values.workspace, 'workspace', command),
+          acknowledgeReadWrite: true,
+        },
+      };
     }
     case 'grant-write-set': {
       const [slug] = positionals(command, rest, 1, 'exactly one bot id');

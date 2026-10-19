@@ -2,7 +2,7 @@ import { useSourceDraft } from '../../host/native-source-drafts';
 import { hostDraftKey } from '../../host/source-drafts';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, View, type ViewInstance } from 'react-native';
+import { FlatList, Platform, Pressable, View, type ViewInstance } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -529,7 +529,7 @@ function ChatConversation({
             roster={roster}
             count={item.activityCount ?? 1}
             dmSlug={slug}
-            lifted={item.message.id === actionsFor?.message.id}
+            lifted={Platform.OS === 'web' && item.message.id === actionsFor?.message.id}
             onLongPress={(anchor, label, target) =>
               setActionsFor({
                 message: { ...item.message, body: label },
@@ -583,7 +583,7 @@ function ChatConversation({
           onOpenImage={setViewing}
           onShare={share}
           onLongPress={openActions}
-          lifted={item.message.id === actionsFor?.message.id}
+          lifted={Platform.OS === 'web' && item.message.id === actionsFor?.message.id}
           {...(botDm ? {} : { onReact: react })}
           botName={botName}
           speaker={
@@ -828,11 +828,7 @@ function ChatConversation({
               />
             </SpeakerStageContext.Provider>
           </MarkdownViewportContext.Provider>
-          <EdgeFade
-            edge="bottom"
-            height={composerHeight + edgeFade.bottom}
-            fade={edgeFade.bottom}
-          />
+          <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
           {latest.away ? (
             <View
               pointerEvents="box-none"
@@ -849,7 +845,7 @@ function ChatConversation({
           ) : null}
         </Animated.View>
       </KeyboardChatFrame>
-      <EdgeFade edge="top" height={headerHeight + edgeFade.top} fade={edgeFade.top} />
+      <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
       <ChatHeader
         left={<HeaderBackButton onPress={leave} />}
         center={

@@ -230,6 +230,7 @@ export function createApprovalTemplateLibrary(dir?: string): ApprovalTemplateLib
 
 const POLICY_CHANGE_PATTERNS: readonly RegExp[] = [
   /approval-template-set\b/iu,
+  /grant-request-approve\b|grantRequestApprove\b|grant-write-set\b/iu,
   /approval-reviewer[\s\S]*\b(set|edit|delete|rm|remove)\b/iu,
   /approval-reviewer\.json/iu,
   /botApprovalTemplateSet|approvalReviewerModelSet|approvalTemplateUpdate|approvalTemplateDelete/u,
