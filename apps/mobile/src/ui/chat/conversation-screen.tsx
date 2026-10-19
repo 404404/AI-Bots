@@ -959,8 +959,8 @@ function ChatConversation({
                 position: 'absolute',
                 bottom: composerHeight + space.x4,
                 left: 0,
-                right: 0,
-                alignItems: 'center',
+                right: space.x4,
+                alignItems: 'flex-end',
               }}
             >
               <JumpToLatest unseen={latest.unseen} onPress={latest.jumpToLatest} />

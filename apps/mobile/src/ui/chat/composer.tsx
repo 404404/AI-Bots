@@ -34,7 +34,12 @@ import {
   PlusIcon,
   RecordingStopIcon,
 } from '../shell/icons';
-import { ComposerCircleButton, ComposerFieldMaterial, rippleFeedback } from './composer-chrome';
+import {
+  ComposerCircleButton,
+  ComposerFieldMaterial,
+  composerPrimary,
+  rippleFeedback,
+} from './composer-chrome';
 import { DraftEditor } from './draft-editor';
 import { haptic } from '../haptics';
 import { t } from '../strings';
@@ -79,7 +84,7 @@ function RoundButton({
       android_ripple={
         rippleFeedback
           ? {
-              color: pressTint(filled ? theme.color.onAccent : theme.color.fg),
+              color: pressTint(filled ? composerPrimary(theme).ink : theme.color.fg),
               borderless: true,
               radius: size / 2,
             }
@@ -92,7 +97,7 @@ function RoundButton({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: filled
-          ? theme.color.accent
+          ? composerPrimary(theme).fill
           : pressed && !rippleFeedback
             ? pressTint(theme.color.fg)
             : undefined,
@@ -235,14 +240,14 @@ function VoiceButton({
         borderRadius: radius.round,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: filled ? theme.color.accent : undefined,
+        backgroundColor: filled ? composerPrimary(theme).fill : undefined,
       }}
     >
       {active && !held ? (
-        <RecordingStopIcon color={theme.color.onAccent} size={theme.type.title.line} />
+        <RecordingStopIcon color={composerPrimary(theme).ink} size={theme.type.title.line} />
       ) : (
         <MicIcon
-          color={filled ? theme.color.onAccent : theme.color.muted}
+          color={filled ? composerPrimary(theme).ink : theme.color.muted}
           size={theme.type.title.line}
         />
       )}
@@ -507,7 +512,7 @@ export function Composer({
           onSend();
         }}
       >
-        <ArrowUpIcon color={theme.color.onAccent} size={icon} />
+        <ArrowUpIcon color={composerPrimary(theme).ink} size={icon} />
       </RoundButton>
     ) : (
       <VoiceButton

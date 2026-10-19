@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { pressTint, useDesignTheme } from '../design/theme';
+import { pressTint, useDesignTheme, type DesignTheme } from '../design/theme';
 import { radius } from '../design/tokens';
+
+export function composerPrimary(theme: DesignTheme): { fill: string; ink: string } {
+  return { fill: theme.color.accent, ink: theme.color.onAccent };
+}
 
 export const rippleFeedback = true;
 

@@ -3,9 +3,13 @@ import { accessibilityHidden, foregroundStyle, glassEffect } from '@expo/ui/swif
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { pressTint, useDesignTheme } from '../design/theme';
+import { pressTint, useDesignTheme, type DesignTheme } from '../design/theme';
 import { edge, radius } from '../design/tokens';
 import { useLiquidGlass } from '../primitives/drawer-material';
+
+export function composerPrimary(theme: DesignTheme): { fill: string; ink: string } {
+  return { fill: theme.color.fg, ink: theme.color.base };
+}
 
 export const rippleFeedback = false;
 
