@@ -82,7 +82,10 @@ export function ToolApprovalCard({
     if (botSlug === undefined) return;
     let active = true;
     let poll: ReturnType<typeof setTimeout> | undefined;
-    if (companionTarget && effectiveDecision === undefined) setStatus('loading');
+    if (effectiveDecision === undefined) {
+      setStatus('loading');
+      setError(undefined);
+    }
     const refreshExecution = (): void => {
       if (request.role !== 'assignment' || actions.toolApprovalExecutionState === undefined) return;
       void actions.toolApprovalExecutionState(cardChannelId, message.id).then(
@@ -123,8 +126,7 @@ export function ToolApprovalCard({
           }
         },
         () => {
-          if (active)
-            setStatus(companionTarget || surface === 'activity' ? 'unavailable' : 'expired');
+          if (active) setStatus('unavailable');
         },
       );
     };
@@ -230,7 +232,7 @@ export function ToolApprovalCard({
             },
             () => {
               if (!mounted.current) return;
-              setStatus(companionTarget || surface === 'activity' ? 'unavailable' : 'expired');
+              setStatus('unavailable');
               setError(errorMessage(cause));
             },
           );
@@ -308,8 +310,7 @@ export function ToolApprovalCard({
         : effectiveDecision === 'allowed-once'
           ? 'allowed'
           : 'remembered'
-      : status === 'expired' ||
-          (status === 'unavailable' && companionTarget === undefined && surface !== 'activity')
+      : status === 'expired'
         ? 'expired'
         : undefined;
   const details = open ? (
@@ -488,7 +489,7 @@ export function ToolApprovalCard({
             onClick={() => decide('allowed-once')}
           >
             {t(
-              busy && surface === 'activity' && busyChoice === 'allowed-once'
+              busy && busyChoice === 'allowed-once'
                 ? 'activityInbox.submitting'
                 : 'approval.allowOnce',
             )}
@@ -502,7 +503,7 @@ export function ToolApprovalCard({
             onClick={() => decide('allowed-always-tool')}
           >
             {t(
-              busy && surface === 'activity' && busyChoice === 'allowed-always-tool'
+              busy && busyChoice === 'allowed-always-tool'
                 ? 'activityInbox.submitting'
                 : 'approval.allowAlways',
             )}
@@ -515,11 +516,7 @@ export function ToolApprovalCard({
             aria-busy={busy && busyChoice === 'rejected'}
             onClick={() => decide('rejected')}
           >
-            {t(
-              busy && surface === 'activity' && busyChoice === 'rejected'
-                ? 'activityInbox.submitting'
-                : 'approval.reject',
-            )}
+            {t(busy && busyChoice === 'rejected' ? 'activityInbox.submitting' : 'approval.reject')}
           </Button>
         </div>
       ) : status === 'loading' || status === 'unavailable' ? (
@@ -527,7 +524,7 @@ export function ToolApprovalCard({
           {t(status === 'loading' ? 'approval.loading' : 'companion.requestUnavailable')}
         </div>
       ) : null}
-      {(companionTarget || surface === 'activity') && status === 'unavailable' ? (
+      {status === 'unavailable' ? (
         <div className="bh-message-card-actions">
           <Button
             variant="outline"

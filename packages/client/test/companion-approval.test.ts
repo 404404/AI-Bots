@@ -186,8 +186,10 @@ it.each([
         ).click(),
       );
       if (decisionBeforeProjection) {
-        expect(button('拒绝').disabled).toBe(true);
-        button('拒绝').blur();
+        const pendingButton = node.querySelector<HTMLButtonElement>('[aria-busy="true"]')!;
+        expect(pendingButton.disabled).toBe(true);
+        expect(pendingButton.textContent).toBe('提交中…');
+        pendingButton.blur();
         if (movedFocus) node.querySelector<HTMLButtonElement>('.bh-companion-character')!.focus();
         await act(async () => releaseDecision!());
         if (!movedFocus) expect(document.activeElement).toBe(document.body);

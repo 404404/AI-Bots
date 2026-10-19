@@ -38,3 +38,9 @@ For a baseline capture, provide `--capture-report <private-json> --expect-legacy
 ## Single-click copy acceptance
 
 The ordinary card explains same Bot, same tool and current authorization scope before selection; different inputs are covered. Click Always allow once: it submits the persistent decision directly, without another confirmation dialog or button. The A shortcut does the same. Check Chinese and English copy in Channel, Activity and companion cards; no cross-tool business category is promised. Settings retain rule revocation.
+
+## Submission and recovery
+
+All three card surfaces show Submitting on the selected action and disable decisions while the request is in flight. A failed status read remains unavailable, not expired. Recheck request reads current Host state without replaying a decision; an actual Host expiry stays expired. The component regression suite covers failed initial reads, failed submission followed by failed status reads, and same-tick duplicate clicks. Browser recovery still needs a real interrupted connection; component coverage is not browser proof.
+
+For first-time setup, the homepage instruction names the actual Allow once button. Full Access copy states that turning it off restores workspace permissions for chat and new Assignments, while existing Assignments retain their creation-time permission.

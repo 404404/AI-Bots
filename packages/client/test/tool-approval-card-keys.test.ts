@@ -51,10 +51,17 @@ const actions = (): BridgeActions =>
     },
   }) as unknown as BridgeActions;
 
-const render = async (value: ChannelMessage = message()): Promise<HTMLElement> => {
+const render = async (
+  value: ChannelMessage = message(),
+  overrides: Partial<BridgeActions> = {},
+): Promise<HTMLElement> => {
   await act(async () => {
     root.render(
-      createElement(ToolApprovalCard, { message: value, actions: actions(), t: zhTranslate }),
+      createElement(ToolApprovalCard, {
+        message: value,
+        actions: { ...actions(), ...overrides },
+        t: zhTranslate,
+      }),
     );
   });
   await act(async () => {
@@ -168,6 +175,131 @@ describe('Tool approval card layout', () => {
     expect(card.querySelector('.bh-tool-approval-details-body')).toBeNull();
     expect(card.querySelector('button')).toBeNull();
     expect(card.textContent).toBe('终端 · 已拒绝');
+  });
+});
+
+describe('Tool approval recovery and duplicate clicks', () => {
+  const button = (card: HTMLElement, label: string): HTMLButtonElement => {
+    const found = [...card.querySelectorAll<HTMLButtonElement>('button')].find(
+      (candidate) => candidate.textContent === label,
+    );
+    expect(found, `Expected button: ${label}`).toBeDefined();
+    return found!;
+  };
+
+  it('lets a Channel card retry a failed status read without calling it expired', async () => {
+    const readState = vi
+      .fn<NonNullable<BridgeActions['toolApprovalState']>>()
+      .mockRejectedValueOnce(new Error('Connection interrupted'))
+      .mockResolvedValue({ status: 'pending' });
+    const card = await render(message(), { toolApprovalState: readState });
+
+    expect(card.textContent).not.toContain(zhTranslate('approval.outcome.expired'));
+    expect(card.textContent).toContain(zhTranslate('companion.requestUnavailable'));
+    expect(card.querySelector('.bh-tool-approval-actions')).toBeNull();
+    await act(async () => button(card, zhTranslate('companion.retryRequest')).click());
+
+    expect(readState).toHaveBeenCalledTimes(2);
+    expect(button(card, zhTranslate('approval.allowAlways')).disabled).toBe(false);
+    expect(decisions).toEqual([]);
+    await act(async () => button(card, zhTranslate('approval.allowAlways')).click());
+    expect(decisions).toEqual(['allowed-always-tool']);
+  });
+
+  it('revalidates after failed submission and status reads without replaying the decision', async () => {
+    const submit = vi
+      .fn<BridgeActions['decideToolApproval']>()
+      .mockRejectedValueOnce(new Error('Response lost'))
+      .mockResolvedValue(undefined);
+    const readState = vi
+      .fn<NonNullable<BridgeActions['toolApprovalState']>>()
+      .mockResolvedValue({ status: 'pending' });
+    const readStatus = vi
+      .fn<BridgeActions['toolApprovalStatus']>()
+      .mockRejectedValueOnce(new Error('Still offline'));
+    const card = await render(message(), {
+      decideToolApproval: submit,
+      toolApprovalState: readState,
+      toolApprovalStatus: readStatus,
+    });
+    await act(async () => button(card, zhTranslate('approval.allowAlways')).click());
+
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(card.textContent).not.toContain(zhTranslate('approval.outcome.expired'));
+    expect(card.textContent).toContain(zhTranslate('companion.requestUnavailable'));
+    await act(async () => button(card, zhTranslate('companion.retryRequest')).click());
+
+    expect(readState).toHaveBeenCalledTimes(2);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(button(card, zhTranslate('approval.allowAlways')).disabled).toBe(false);
+    await act(async () => button(card, zhTranslate('approval.allowAlways')).click());
+    expect(submit).toHaveBeenCalledTimes(2);
+    expect(submit).toHaveBeenLastCalledWith('dm-ada', 'request', 'allowed-always-tool');
+  });
+
+  it('does not replay an accepted decision when its response was lost and revalidation says expired', async () => {
+    const submit = vi.fn<BridgeActions['decideToolApproval']>(
+      async (_channel, _message, outcome) => {
+        decisions.push(outcome);
+        throw new Error('Accepted by Host, but response lost');
+      },
+    );
+    const readState = vi.fn<NonNullable<BridgeActions['toolApprovalState']>>(async () =>
+      decisions.length === 0 ? { status: 'pending' } : { status: 'expired' },
+    );
+    const readStatus = vi
+      .fn<BridgeActions['toolApprovalStatus']>()
+      .mockRejectedValueOnce(new Error('Connection still unavailable'));
+    const card = await render(message(), {
+      decideToolApproval: submit,
+      toolApprovalState: readState,
+      toolApprovalStatus: readStatus,
+    });
+    await act(async () => button(card, zhTranslate('approval.allowAlways')).click());
+
+    expect(decisions).toEqual(['allowed-always-tool']);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(card.textContent).toContain(zhTranslate('companion.requestUnavailable'));
+    expect(card.textContent).not.toContain(zhTranslate('approval.outcome.expired'));
+    await act(async () => button(card, zhTranslate('companion.retryRequest')).click());
+
+    expect(readState).toHaveBeenCalledTimes(2);
+    expect(card.textContent).toContain(zhTranslate('approval.outcome.expired'));
+    expect(card.querySelector('.bh-tool-approval-actions')).toBeNull();
+    expect(card.querySelector('button')).toBeNull();
+    await press(card, 'a');
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(decisions).toEqual(['allowed-always-tool']);
+  });
+
+  it('submits a same-tick double click once and visibly shows the pending decision', async () => {
+    let finish: (() => void) | undefined;
+    const submit = vi.fn<BridgeActions['decideToolApproval']>(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const card = await render(message(), { decideToolApproval: submit });
+    const always = button(card, zhTranslate('approval.allowAlways'));
+    await act(async () => {
+      always.click();
+      always.click();
+    });
+
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledWith('dm-ada', 'request', 'allowed-always-tool');
+    expect(always.disabled).toBe(true);
+    expect(always.getAttribute('aria-busy')).toBe('true');
+    expect(always.textContent).toBe(zhTranslate('activityInbox.submitting'));
+    expect(
+      [...card.querySelectorAll<HTMLButtonElement>('.bh-tool-approval-actions button')].every(
+        (candidate) => candidate.disabled,
+      ),
+    ).toBe(true);
+    await act(async () => finish!());
+    expect(card.querySelector('.bh-tool-approval-actions')).toBeNull();
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 });
 

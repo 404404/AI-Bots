@@ -306,8 +306,7 @@ export const zh = {
   'onboarding.short.model': '配置模型',
   'onboarding.short.modelHint': '选择模型，然后告诉总管你想做什么。',
   'onboarding.short.bot': '请总管创建一个 Bot',
-  'onboarding.short.botHint':
-    '描述你需要的助手。总管随后会请你批准创建，选择「仅批准这一次」即可。',
+  'onboarding.short.botHint': '描述你需要的助手。总管随后会请你批准创建，选择「允许这次」即可。',
   'onboarding.short.botPrompt': '帮我创建一个叫「学习助手」的 Bot，帮助我制定学习计划。',
   'onboarding.short.group': '创建一个群聊',
   'onboarding.short.groupHint': '{name} 已就绪。先和它打个招呼，再请总管把它加入新群聊。',
@@ -3447,7 +3446,7 @@ export const zh = {
   'grant.section': '文件夹',
   'access.title': '完全访问',
   'access.description':
-    '普通操作可访问所有文件，无需逐次确认；权限变更仍需确认。关闭后按工作区权限执行。',
+    '普通操作可访问所有文件，无需逐次确认；权限变更仍需确认。关闭后，聊天和新事项恢复工作区权限；已有事项保留原权限。',
   'access.confirmTitle': '开启危险文件权限？',
   'access.confirmRisk':
     '此 Bot 的聊天会话和之后新建的事项可访问工作区外的任何文件，命令不再逐次提问。别人在群聊或 IM 里发来的内容也可能诱导它执行操作。修改持续权限或审批策略仍需单独确认。开启后可以把范围改成“仅新事项”。关闭开关会让聊天会话恢复受限，但不会降低已有危险事项的权限。',
@@ -7454,7 +7453,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'grant.section': 'Folders',
   'access.title': 'Full access',
   'access.description':
-    'Ordinary work can access all files without repeated prompts. Permission changes still need confirmation. When off, workspace permissions apply.',
+    'Ordinary work can access all files without repeated prompts. Permission changes still need confirmation. Turning this off restores workspace permissions for chat and new Assignments; existing Assignments keep their permissions.',
   'access.confirmTitle': 'Enable dangerous file access?',
   'access.confirmRisk':
     "This Bot's chat Session and its new Assignments may access any file outside their workspace and will not ask for each command. Content other people send in a Group or IM could steer it into acting. Persistent permission and approval-policy changes still need individual confirmation. Turning this off confines the chat Session again but does not downgrade existing dangerous Assignments.",
