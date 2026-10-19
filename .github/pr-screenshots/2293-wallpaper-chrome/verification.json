@@ -1,0 +1,35 @@
+{
+  "scope": "#2293; wallpaper-active Bot workspace only; no upstream edits",
+  "checks": {
+    "clientTests": {
+      "passed": 2035,
+      "skipped": 1
+    },
+    "chromiumCascadeCases": 32,
+    "nativeMacOSZoomCases": 68,
+    "lint": "passed",
+    "typecheck": "passed",
+    "format": "passed",
+    "changelog": "passed",
+    "fullBuild": "passed",
+    "cdpCachedConsole": {
+      "exceptions": 0,
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "retained": {
+    "macOSWindowSafeArea": "88 x 40 physical CSS pixels",
+    "fullscreenCorner": "hidden",
+    "nativeControls": "present in AX; native fullscreen entry/exit exercised",
+    "defaultCanvas": "restored after wallpaper disposal in browser fixture",
+    "originalMedia": "original bytes and crop restored after testing",
+    "effectiveAppearance": "restored via Client CLI; fresh revision and empty default material objects expected"
+  },
+  "limits": [
+    "Human QA pending",
+    "Native Host diagnostic collector unavailable; CDP cached console is narrower evidence",
+    "Native video codecs and Windows/Linux are not newly qualified",
+    "macOS system screen-sharing indicator is retained"
+  ]
+}
