@@ -38,6 +38,16 @@ export interface SceneState {
   wandering: boolean;
   ready: boolean;
 }
+export interface SceneChoices {
+  camera: CameraView;
+  mood: Mood;
+  shading: CharacterShading;
+}
+export interface StageCallbacks {
+  loading(value: string): void;
+  error(value: string): void;
+  changed(state: SceneState): void;
+}
 export interface Stage {
   update(snapshot: BotPresentationSnapshot): void;
   command(command: MotionCommand): void;
@@ -49,8 +59,8 @@ export interface Stage {
 export function mountStage(
   host: HTMLElement,
   model: string,
-  status: (value: string) => void,
-  changed: (state: SceneState) => void,
+  { loading, error, changed }: StageCallbacks,
+  initial: SceneChoices = { camera: 'desk', mood: 'auto', shading: 'mtoon' },
 ): Stage {
   for (const key of Object.keys(host.dataset))
     if (key !== 'vrmStage' && key.startsWith('vrm')) delete host.dataset[key];
@@ -68,7 +78,7 @@ export function mountStage(
   let modelScale = 1;
   let phase = 0;
   let gait = 0;
-  let cameraView: CameraView = 'desk';
+  let cameraView: CameraView = initial.camera;
   let previousState = '';
   let width = 0,
     height = 0,
@@ -82,7 +92,7 @@ export function mountStage(
   scene.add(actor);
   const gaze = new Object3D();
   scene.add(gaze);
-  const camera = new PerspectiveCamera(36, 1, 0.05, 100);
+  const camera = new PerspectiveCamera(38, 1, 0.05, 100);
   const renderer = new WebGLRenderer({ alpha: true, antialias: true });
   const releaseLilToon = enableLilToon(renderer);
   renderer.shadowMap.enabled = true;
@@ -125,13 +135,13 @@ export function mountStage(
     const portrait = view === 'portrait';
     const target = portrait
       ? new Vector3(motion.x, 1.16 - motion.seated * 0.1, motion.z)
-      : new Vector3(camera.aspect < 0.8 ? 0.4 : 0.1, 1.02, -0.05);
+      : new Vector3(camera.aspect < 0.8 ? 0.15 : 0.05, 1.2, -0.1);
     const offset =
       view === 'room'
         ? new Vector3(-2.5, 1.5, 4.4)
         : portrait
           ? new Vector3(-0.45, 0.12, 1.55)
-          : new Vector3(1.12, 0.22, 1.65);
+          : new Vector3(0.35, 0.3, 2.7);
     const aspectScale = Math.max(1, Math.min(1.25, 0.75 / camera.aspect));
     offset.multiplyScalar(aspectScale);
     controls.target.copy(target);
@@ -192,10 +202,13 @@ export function mountStage(
     last = time;
     const daylight = room?.update(reduced.matches ? 0 : delta);
     if (daylight) {
-      ambient.intensity = 0.35 + daylight.daylight * 0.25 + daylight.twilight * 0.1;
-      fill.intensity = 0.45 + daylight.daylight * 0.4 + daylight.twilight * 0.2;
-      key.intensity = 0.6 + daylight.daylight * 0.5;
-      scene.environmentIntensity = 0.15 + daylight.daylight * 0.3 + daylight.twilight * 0.15;
+      ambient.intensity = 0.14 + daylight.daylight * 0.46 + daylight.twilight * 0.2;
+      fill.intensity = 0.18 + daylight.daylight * 0.67 + daylight.twilight * 0.35;
+      key.intensity = 0.28 + daylight.daylight * 0.82 + daylight.twilight * 0.25;
+      key.color
+        .setHex(0x9fb2ff)
+        .lerp(new Color(0xffd8b8), Math.min(1, daylight.daylight + daylight.twilight));
+      scene.environmentIntensity = 0.06 + daylight.daylight * 0.39 + daylight.twilight * 0.2;
       host.dataset.vrmHour = daylight.hour.toFixed(3);
       host.dataset.vrmAssets = room?.assets;
     }
@@ -358,13 +371,14 @@ export function mountStage(
   reduced.addEventListener('change', reconcile);
   const lost = (event: Event) => {
     event.preventDefault();
-    status('3D rendering interrupted. Retry to reload the character.');
+    loading('');
+    error('3D rendering interrupted. Retry to reload the character.');
     reconcile();
   };
   renderer.domElement.addEventListener('webglcontextlost', lost);
   const loader = new GLTFLoader();
   loader.register((parser) => new VRMLoaderPlugin(parser));
-  status('Loading character…');
+  loading('Loading character…');
   void loader
     .loadAsync(model)
     .then((gltf) => {
@@ -380,6 +394,10 @@ export function mountStage(
       vrm = loaded;
       shading = createCharacterShading(loaded.scene);
       host.dataset.vrmShading = 'mtoon';
+      if (initial.shading !== 'mtoon') {
+        shading.select(initial.shading);
+        host.dataset.vrmShading = initial.shading;
+      }
       VRMUtils.rotateVRM0(loaded);
       actor.add(loaded.scene);
       loaded.scene.traverse((object) => {
@@ -404,6 +422,8 @@ export function mountStage(
       );
       hipDrop = (hips?.y ?? 0.9) + floorOffset - seatHeight - 0.07;
       room = createRoom(seatHeight);
+      room.setMood(initial.mood);
+      host.dataset.vrmMood = initial.mood;
       scene.remove(key);
       scene.add(room.root);
       scene.add(key);
@@ -435,16 +455,17 @@ export function mountStage(
       }
       if (loaded.lookAt) loaded.lookAt.target = gaze;
       gaze.position.copy(camera.position);
-      fitCamera('desk');
+      fitCamera(initial.camera);
       notify();
-      status('');
+      loading('');
       host.dataset.vrmLoaded = 'true';
       host.dataset.vrmLoadMs = String(Math.round(performance.now() - started));
       reconcile();
     })
     .catch(() => {
-      if (!disposed)
-        status('Character could not load. Bot activity and messages remain available.');
+      if (disposed) return;
+      loading('');
+      error('Character could not load. Bot activity and messages remain available.');
     });
   return {
     update(snapshot) {

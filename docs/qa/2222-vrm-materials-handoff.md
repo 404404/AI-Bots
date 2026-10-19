@@ -1,14 +1,21 @@
 # T1 materials and room — implementation handoff
 
-2026-10-19. **Work in progress, not accepted, do not merge.** The Human requested an immediate branch push so Claude can take over. Continue only T1 #2222 / draft PR #2265; do not start T2–T15.
+2026-10-19. **Work in progress, not accepted, do not merge.** Continue only T1 #2222 / draft PR #2265; do not start T2–T15.
 
-## Current work
+## Current state (room iteration 3)
 
-- Branch: `codex/2222-vrm-companion`. Previous verified room checkpoint: `19b3cf9cb2abdaa476395116ded7ec71be43114b`.
-- Task: `codex/local/01a15013-2dcf-7c81-ae2d-48141ea916e2`.
-- [Current claim](https://github.com/BotHarness/DeepSeekBot/issues/2222#issuecomment-6260075560). This checkpoint hands off that scope; the next runner should leave its own claim.
-- The Human wants a substantial improvement toward _Chill with You Lo-Fi Story_: actual 3D furniture/exterior, dynamic local-time lighting, convincing wood/fabric/metal, desk and ergonomic chair, soft clouds. The last accepted implementation is still visually too simple. Do not equate a successful build with matching the reference.
-- The canvas must fill **only the Panel body**, with the app sidebar/chat retained. Fullscreen dialog and its controls were removed. Resize the native chat/Panel split; its value is the chat share, so ArrowLeft enlarges the scene.
+- Branch `claude/project-thread-wwzsop` carries iteration 3 on top of `codex/2222-vrm-companion` merged with current main. Results and evidence: [QA report, Room iteration 3](2222-vrm-companion.md#room-iteration-3--isolated-host-headless-chromium).
+- Iteration 2 loads in an isolated Host; the stuck "Loading character" did not reproduce. An intermittent remount of the whole BotHarness shell (outside this Panel, cause undiagnosed) is the most likely explanation for a reset or reloading view; the Panel now keeps its choices across remounts and no longer shows loading as an error with Retry.
+- Iteration 3 adds the plaster back wall with framed window and curtains, soft shader clouds, glow sun/moon, darker lamp-lit night and a wider desk camera. Verified only with headless Chromium/SwiftShader pixels, not in the Human's Chrome or on a GPU.
+
+## Next work, in order
+
+1. Human visual review against _Chill with You_ in their Chrome: desk composition, wall/curtain colors, cloud look, night exposure, and whether lilToon at night is acceptable without lamp light on the character.
+2. If accepted, decide whether `codex/2222-vrm-companion` (PR #2265) takes these commits; otherwise iterate on the feedback.
+3. Separately diagnose the BotHarness shell remount (sidebar, regions and every Panel rebuilt 28–75 s after load in about a third of isolated sessions, no plugin rebuild event). It is not part of T1.
+4. Remaining from the earlier list: native Desktop/GPU performance sampling, alpha/outline review on a real GPU, exact-head PR explainer.
+
+The sections below are the iteration 1–2 record and remain accurate for what they describe.
 
 ## Implemented, with verification boundaries
 
@@ -45,7 +52,7 @@ Older expanded-room screenshots and QA at the previous checkpoint are historical
 - Select QA Ada DM → VRM Companion → Scene controls. Compare MToon/lilToon under identical Sunset and Desk view. Inspect a fresh screenshot after the frame renders. The user's light theme should remain unchanged.
 - Source: `packages/vrm-companion/src/client/{stage,room,outdoors,materials,chair,decor,shading,index}.ts*`. Selected glTF is embedded through `tsdown.config.ts`, not a new Host route. Run the Client builder with `config:false` to avoid accidental full config expansion.
 
-## Next work, in order
+## Iteration 2 next work (superseded)
 
 1. Recover Chrome and diagnose the iteration-2 loading state with `verify-app observe`; confirm all new shaders/materials actually render.
 2. Compare against the supplied game reference again: adjust camera/desk composition, chair scale/contact, cloud silhouette/color and room exposure. The current checkpoint is explicitly not visually complete.

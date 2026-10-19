@@ -1,5 +1,6 @@
 import {
   CanvasTexture,
+  DoubleSide,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   RepeatWrapping,
@@ -76,6 +77,13 @@ export function createRoomMaterials() {
       clearcoatRoughness: 0.25,
     }),
     brass: new MeshStandardMaterial({ color: 0xb69362, roughness: 0.3, metalness: 0.75 }),
-    plaster: new MeshStandardMaterial({ color: 0xa58c78, roughness: 1 }),
+    plaster: new MeshStandardMaterial({ color: 0xb59a84, roughness: 1 }),
+    linen: new MeshStandardMaterial({
+      color: 0xe2d2b6,
+      bumpMap: weave,
+      bumpScale: 0.002,
+      roughness: 0.92,
+      side: DoubleSide,
+    }),
   };
 }

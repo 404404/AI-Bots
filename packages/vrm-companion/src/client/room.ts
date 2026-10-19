@@ -69,13 +69,42 @@ export function createRoom(seatHeight: number) {
   for (const x of [-2.08, 2.08]) box(x, 1.45, -1.25, 0.2, 2.9, 0.12, dark);
   box(0, 2.94, 0.25, 4.4, 0.12, 3.1, cream);
   box(2.07, 0.08, 0.25, 0.05, 0.16, 3, dark);
-  box(0, 0.3, -1.14, 4.2, 0.6, 0.14, wood);
   const outdoors = createOutdoors();
   root.add(outdoors.root);
-  for (const x of [-1.98, -0.72, 0.6, 1.98]) box(x, 1.72, -1.08, 0.07, 2.16, 0.12, dark);
-  for (const y of [0.65, 2.78]) box(0, y, -1.05, 4.04, 0.08, 0.19, dark);
+  const { plaster } = materials;
+  const opening = { left: -1.3, right: 1.1, bottom: 0.95, top: 2.45 };
+  const middle = (opening.bottom + opening.top) / 2;
+  const span = opening.top - opening.bottom;
+  box(0, opening.bottom / 2, -1.2, 4.2, opening.bottom, 0.12, plaster);
+  box(0, (opening.top + 2.9) / 2, -1.2, 4.2, 2.9 - opening.top, 0.12, plaster);
+  box((opening.left - 2.1) / 2, middle, -1.2, opening.left + 2.1, span, 0.12, plaster);
+  box((opening.right + 2.1) / 2, middle, -1.2, 2.1 - opening.right, span, 0.12, plaster);
+  const centre = (opening.left + opening.right) / 2;
+  const width = opening.right - opening.left;
+  for (const x of [opening.left, opening.right])
+    box(x, middle, -1.17, 0.08, span + 0.08, 0.2, dark);
+  box(centre, opening.top, -1.17, width + 0.08, 0.08, 0.2, dark);
+  box(centre, middle, -1.2, 0.045, span, 0.06, dark);
+  box(centre, opening.bottom + span * 0.68, -1.2, width, 0.035, 0.05, dark);
+  box(centre, opening.bottom, -1.08, width + 0.3, 0.05, 0.3, wood);
   box(0, 0.6, -0.98, 4.15, 0.09, 0.38, wood);
+  const rod = cylinder(centre, opening.top + 0.16, -1.04, 0.012, 0.012, width + 0.9, brass);
+  rod.rotation.z = Math.PI / 2;
+  const curtainGeometry = new PlaneGeometry(0.5, opening.top - 0.45, 32, 1);
+  const folds = curtainGeometry.getAttribute('position');
+  for (let i = 0; i < folds.count; i++)
+    folds.setZ(i, Math.sin(folds.getX(i) * 38) * 0.025 + Math.sin(folds.getX(i) * 11) * 0.015);
+  curtainGeometry.computeVertexNormals();
+  const curtains: Mesh[] = [];
+  for (const x of [opening.left - 0.12, opening.right + 0.12]) {
+    const curtain = new Mesh(curtainGeometry, materials.linen);
+    curtain.position.set(x, opening.top + 0.14 - (opening.top - 0.45) / 2, -1.06);
+    curtain.castShadow = curtain.receiveShadow = true;
+    root.add(curtain);
+    curtains.push(curtain);
+  }
   box(-0.2, tableY, 0.52, 3.2, 0.09, 0.8);
+  box(-0.2, tableY - 0.09, 0.88, 3.0, 0.1, 0.03);
   for (const x of [-1.55, 1.15])
     for (const z of [0.21, 0.83]) box(x, tableY / 2, z, 0.07, tableY, 0.07, dark);
   root.add(createChair(seatHeight, materials));
@@ -192,7 +221,7 @@ export function createRoom(seatHeight: number) {
   cylinder(-0.25, tableY + 0.06, 0.5, 0.14, 0.14, 0.035, dark);
   const stem = cylinder(-0.25, tableY + 0.32, 0.5, 0.018, 0.018, 0.5, brass);
   stem.rotation.z = -0.18;
-  const shade = cylinder(-0.12, tableY + 0.58, 0.5, 0.08, 0.2, 0.22, dark);
+  const shade = cylinder(-0.13, tableY + 0.56, 0.5, 0.065, 0.16, 0.18, dark);
   shade.rotation.z = -0.3;
   const bulb = new Mesh(
     new SphereGeometry(0.035, 12, 8),
@@ -227,6 +256,8 @@ export function createRoom(seatHeight: number) {
       wisp.rotation.y = elapsed * 0.2 + i;
       (wisp.material as MeshBasicMaterial).opacity = Math.sin(age * Math.PI) * 0.06;
     }
+    for (let i = 0; i < curtains.length; i++)
+      curtains[i]!.rotation.x = Math.sin(elapsed * 0.35 + i * 1.7) * 0.012;
     for (let i = 0; i < leaves.length; i++)
       leaves[i]!.rotation.z = (i - 3) * 0.28 + Math.sin(elapsed * 0.6 + i) * 0.025;
     const time = outdoors.update(seconds, mood);
@@ -235,7 +266,7 @@ export function createRoom(seatHeight: number) {
       .lerp(new Color(0xffe2b6), time.daylight)
       .lerp(new Color(0xffac69), time.twilight);
     sun.intensity = 0.35 + time.daylight * 1.7 + time.twilight * 1.2;
-    lamp.intensity = 0.42 - time.daylight * 0.2;
+    lamp.intensity = 0.3 + (1 - time.daylight) * 2.2 + time.twilight * 0.4;
     sun.position.copy(time.sunDirection).multiplyScalar(5);
     return time;
   };

@@ -7,8 +7,15 @@ import type {
   DockPanelProps,
   PanelServices,
 } from '@botharness/ui/panels';
-import { mountStage, type Stage, type SceneState, type CameraView } from './stage.js';
+import {
+  mountStage,
+  type Stage,
+  type SceneState,
+  type CameraView,
+  type SceneChoices,
+} from './stage.js';
 import type { Mood } from './room.js';
+import type { CharacterShading } from './shading.js';
 
 export const name = 'botharness-vrm-companion-client';
 export const inject = ['dockPanels', 'botPresentation'];
@@ -22,26 +29,33 @@ const CSS = `
 [data-vrm-header] > [data-vrm-status]{padding:4px 8px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 [data-vrm-instance-actions]{position:absolute;right:12px;top:12px;z-index:2}
 [data-vrm-error]{position:absolute;inset:35% 12px auto;z-index:2;background:var(--dsw-alias-bg-base);padding:12px}
+[data-vrm-loading]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;padding:4px 8px;border-radius:var(--dsw-radius-md);color:var(--dsw-alias-label-secondary);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 [data-vrm-actions]{display:flex;gap:8px;flex-wrap:wrap}
 [data-vrm-controls]{position:absolute;bottom:12px;left:12px;max-width:calc(100% - 24px);padding:8px 12px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent);backdrop-filter:blur(12px)}
 [data-vrm-controls] summary{cursor:pointer;color:var(--dsw-alias-label-secondary);padding:4px 0}
 [data-vrm-controls] [data-vrm-actions]{margin-top:8px}
 [data-vrm-instance-actions]{padding:4px 8px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 `;
+const remembered = new Map<string, SceneChoices>();
 function Character({ view }: { view: BotPresentationView }) {
   const snapshot = useSyncExternalStore(view.subscribe, view.getSnapshot, view.getSnapshot);
   const cleanup = useRef<(() => void) | undefined>();
   const stageRef = useRef<Stage>();
-  const [shading, setShading] = useState<'mtoon' | 'liltoon'>('mtoon');
+  const key = snapshot.botId;
+  const initial = remembered.get(key) ?? { camera: 'desk', mood: 'auto', shading: 'mtoon' };
+  const [shading, setShading] = useState<CharacterShading>(initial.shading);
   const [scene, setScene] = useState<SceneState>({
     phase: 'seated',
     wandering: false,
     ready: false,
   });
-  const [camera, setCamera] = useState<CameraView>('desk');
-  const [mood, setMood] = useState<Mood>('auto');
+  const [camera, setCamera] = useState<CameraView>(initial.camera);
+  const [mood, setMood] = useState<Mood>(initial.mood);
+  const [loading, setLoading] = useState('');
   const [error, setError] = useState('');
   const [revision, retry] = useState(0);
+  const remember = (change: Partial<SceneChoices>) =>
+    remembered.set(key, { ...(remembered.get(key) ?? initial), ...change });
   const mount = useCallback(
     (node: HTMLDivElement | null) => {
       cleanup.current?.();
@@ -49,11 +63,18 @@ function Character({ view }: { view: BotPresentationView }) {
       stageRef.current = undefined;
       if (!node) return;
       try {
-        setCamera('desk');
-        setShading('mtoon');
-        setMood('auto');
+        const choices = remembered.get(key) ?? initial;
+        setCamera(choices.camera);
+        setShading(choices.shading);
+        setMood(choices.mood);
+        setError('');
         setScene({ phase: 'seated', wandering: false, ready: false });
-        const stage = mountStage(node, __VRM_MODEL__, setError, setScene);
+        const stage = mountStage(
+          node,
+          __VRM_MODEL__,
+          { loading: setLoading, error: setError, changed: setScene },
+          choices,
+        );
         stageRef.current = stage;
         const update = () => stage.update(view.getSnapshot());
         update();
@@ -66,7 +87,7 @@ function Character({ view }: { view: BotPresentationView }) {
         setError('3D is unavailable. Bot activity and messages remain available.');
       }
     },
-    [view, revision],
+    [view, revision, key],
   );
   return (
     <section
@@ -91,6 +112,11 @@ function Character({ view }: { view: BotPresentationView }) {
         </div>
         {snapshot.attention && <div role="status">{snapshot.attention}</div>}
       </div>
+      {loading && !error && (
+        <div role="status" data-vrm-loading="">
+          {loading}
+        </div>
+      )}
       {error && (
         <div role="status" data-vrm-error="">
           {error}
@@ -108,6 +134,7 @@ function Character({ view }: { view: BotPresentationView }) {
               onClick={() => {
                 stageRef.current?.shading(value);
                 setShading(value);
+                remember({ shading: value });
               }}
             >
               {value === 'mtoon' ? 'MToon' : 'lilToon'}
@@ -123,6 +150,7 @@ function Character({ view }: { view: BotPresentationView }) {
               onClick={() => {
                 stageRef.current?.camera(value);
                 setCamera(value);
+                remember({ camera: value });
               }}
             >
               {value === 'desk' ? 'Desk view' : value === 'room' ? 'Room view' : 'Portrait view'}
@@ -168,6 +196,7 @@ function Character({ view }: { view: BotPresentationView }) {
               onClick={() => {
                 stageRef.current?.mood(value);
                 setMood(value);
+                remember({ mood: value });
               }}
             >
               {value === 'auto' ? 'Local time' : value === 'sunset' ? 'Sunset' : 'Night'}

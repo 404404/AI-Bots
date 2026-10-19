@@ -1,7 +1,5 @@
 # VRM companion Panel
 
-Current WIP override: the expanded dialog was removed in the material iteration. Do not drive Expand/Return below; resize the native Panel split instead. Scene controls now includes MToon/lilToon. Re-run both shaders, real Activity/speaking and narrow/wide Panel coverage after the pending visual work; see [handoff](../../../../docs/qa/2222-vrm-materials-handoff.md).
-
 ## Sub-features
 
 - Independent native Bundle installation, activation, removal and reinstall.
@@ -9,7 +7,8 @@ Current WIP override: the expanded dialog was removed in the material iteration.
 - Current/live Activity plus committed own-DM output drive independent body and speaking channels.
 - Pause/disconnect/hidden/close cancel playback; reconnect never speaks history.
 - Per-instance renderer disposal, late model loads, reduced motion, resizing and visible fallback on WebGL loss.
-- Full-body Panel canvas with overlay controls, expanded same-renderer dialog, desk/room/portrait cameras, seated keyboard contact and bounded stand/walk/return choreography.
+- Full-body Panel canvas with overlay controls, desk/room/portrait cameras, seated keyboard contact and bounded stand/walk/return choreography. The scene is widened by resizing the native Panel split; there is no expanded dialog.
+- Reversible MToon/lilToon shading comparison; camera, room time and shading survive a remount of the same Bot's view.
 - Spatial exterior, local-time sky/sun/lamp lighting, explicit sunset/night previews, and reduced-motion-aware ambient movement.
 
 ## How to get to it (user POV)
@@ -34,10 +33,10 @@ The lifecycle phase selects the named QA Group, checks the missing contextual en
 
 ## Gotchas
 
-For the room journey, use the authorized browser's visible controls: open Scene controls, select Room view, Stand up, then Walk around; observe actual position changes, choose Sit down, and verify the same chair position. Return to Desk view and compare Local time, Sunset and Night. Expand scene and return/Escape must preserve the same renderer and pose. Send a uniquely marked real DM; capture a nonzero mouth frame and the committed text, then correlate the message ID using the online `channel-messages` CLI. Inspect hands, knees and chair contact in pixels as well as phase attributes.
+For the room journey, use the authorized browser's visible controls: open Scene controls, select Room view, Stand up, then Walk around; observe actual position changes, choose Sit down, and verify the same chair position. Return to Desk view and compare Local time, Sunset and Night, each under MToon and lilToon. Close and reopen VRM Companion: the chosen camera, room time and shading must return, and loading must show only a transient status, never Retry. Send a uniquely marked real DM; capture a nonzero mouth frame and the committed text, then correlate the message ID using the online `channel-messages` CLI. Inspect hands, knees and chair contact in pixels as well as phase attributes.
 
-The canvas must cover its entire Panel content box in both a narrow dock and the expanded dialog. Scene controls and speech are overlays. Keep the Chrome acceptance tab visible for motion/performance sampling: operating-system occlusion may throttle frames even when `document.visibilityState` remains visible. Do not report such a sample as foreground frame rate. Capture fresh pixels after an action settles; a browser accessibility snapshot can update before the next rendered screenshot.
+The canvas must cover its entire Panel content box at narrow and wide splits; focus the Panel's separator and press ArrowLeft to widen the scene (its value is the chat share). Scene controls and speech are overlays. Keep the Chrome acceptance tab visible for motion/performance sampling: operating-system occlusion may throttle frames even when `document.visibilityState` remains visible. Do not report such a sample as foreground frame rate. Capture fresh pixels after an action settles; a browser accessibility snapshot can update before the next rendered screenshot.
 
-The existing workspace remembers Messages visibility separately from Channel selection. A closed Messages panel must be opened from the rail. Both hidden fallback and visible workspace sidebars can contain the same accessible name; target visible controls. More than two long-lived streams make network-idle waits unsuitable: wait for DOM and the loaded character instead. The generic screenshot helper's old Settings precondition does not match this native shell; use this dedicated journey.
+The existing workspace remembers Messages visibility separately from Channel selection. A closed Messages panel must be opened from the rail. Both hidden fallback and visible workspace sidebars can contain the same accessible name; target visible controls. More than two long-lived streams make network-idle waits unsuitable: wait for DOM and the loaded character instead. In headless Chromium the SwiftShader WebGL path (`--use-angle=swiftshader --enable-unsafe-swiftshader`) renders the scene; it qualifies pixels, not frame rate. The whole BotHarness shell was observed to remount intermittently 28–75 seconds after page load in about a third of sessions in an isolated Host (not a plugin rebuild event); the VRM view reloads but keeps its choices. Re-read the stage after long waits instead of assuming the same renderer. The generic screenshot helper's old Settings precondition does not match this native shell; use this dedicated journey.
 
 The machine's Go quota may be exhausted even when configuration checks pass. Preserve the QUOTA receipt and use only an already configured authorized model route. A real committed reply is required for a speaking claim. The current sample model and silent text clock do not establish audio lip-sync, arbitrary model compatibility, native Desktop performance or Human acceptance.

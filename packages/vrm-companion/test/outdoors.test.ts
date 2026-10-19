@@ -16,19 +16,20 @@ describe('room environment', () => {
     expect(outdoors.update(0, 'night').hour).toBe(23);
   });
 
-  it('moves spatial clouds without rebuilding or growing the scene', () => {
+  it('moves soft cloud layers without rebuilding or growing the scene', () => {
     const outdoors = createOutdoors();
-    const cloud = outdoors.root.children.find((child) =>
-      child.children.some((puff) => puff instanceof InstancedMesh),
-    )!;
-    const initial = cloud.position.x;
+    const layers = outdoors.root.children.filter((child) => child instanceof InstancedMesh);
+    expect(layers.length).toBeGreaterThan(1);
+    const initial = outdoors.cloudX(0);
     const count = outdoors.root.children.length;
     outdoors.update(30, 'sunset');
-    expect(cloud.position.x).not.toBe(initial);
+    expect(outdoors.cloudX(0)).not.toBe(initial);
     expect(outdoors.root.children.length).toBe(count);
-    const paused = cloud.position.x;
+    const paused = outdoors.cloudX(0);
     outdoors.update(0, 'sunset');
-    expect(cloud.position.x).toBe(paused);
+    expect(outdoors.cloudX(0)).toBe(paused);
+    outdoors.update(3600, 'sunset');
+    expect(Math.abs(outdoors.cloudX(0))).toBeLessThanOrEqual(26);
     expect(outdoors.root.children.some((child) => child instanceof Points)).toBe(true);
     expect(outdoors.root.children.some((child) => child instanceof Mesh)).toBe(true);
   });
