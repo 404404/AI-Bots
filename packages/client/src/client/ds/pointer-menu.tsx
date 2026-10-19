@@ -30,9 +30,9 @@ export function pointerMenuPosition(
 type PointerMenuProps = Omit<
   ComponentProps<typeof Menu>,
   'open' | 'portal' | 'getAnchorRect' | 'side' | 'align' | 'className'
-> & { point: MenuPoint };
+> & { point: MenuPoint; container?: Element };
 
-export function PointerMenu({ point, ...props }: PointerMenuProps) {
+export function PointerMenu({ point, container = document.body, ...props }: PointerMenuProps) {
   const mount = useMountedResource<HTMLSpanElement>(
     (node) => {
       const menu = node.querySelector<HTMLElement>('[role="menu"]');
@@ -80,7 +80,7 @@ export function PointerMenu({ point, ...props }: PointerMenuProps) {
     <span ref={mount} data-pointer-menu="" {...stylex.props(styles.origin)}>
       <Menu {...props} open portal={false} className={stylex.props(styles.menu).className} />
     </span>,
-    document.body,
+    container,
   );
 }
 

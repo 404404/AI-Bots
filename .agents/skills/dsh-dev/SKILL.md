@@ -313,3 +313,14 @@ finish the build, then restart only that task-owned desktop with the same Profil
 directory. Stop the owned process before future full builds; never disable third-party Plugins
 or erase the Profile to recover this development sequencing failure. A Client-only iteration
 and an installed immutable product build are separate paths.
+
+### Zoomed settings navigation and native portals (#2269)
+
+In pinned 0.2.1-rc.2, root CSS zoom changes the body's local layout width but leaves
+`matchMedia('(max-width: 648px)')` tied to the original viewport. At 430%, a wide Settings
+sidebar survives in a 293px local layout. The native Modal also scales its frame overlay
+padding, leaving only 235 viewport pixels for the card. Measure the local body width and
+normalize only the application Settings overlay's safe-area padding; keep the card zoomed.
+The native Menu's portaled anchor can be multiplied again (observed y=1247 in an 820px
+viewport). The compact application section picker reuses the existing viewport menu owner,
+which clamps and converts coordinates. This does not qualify other native dropdowns.

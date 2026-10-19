@@ -47,6 +47,8 @@ export function mountWindowZoom(options: {
   const disposers: (() => void)[] = [];
   const root = doc?.documentElement;
   const oldZoom = root?.style.zoom;
+  const oldLayoutZoom = root?.style.getPropertyValue('--bh-window-zoom');
+  const oldLayoutPriority = root?.style.getPropertyPriority('--bh-window-zoom');
   const ready = (async () => {
     if (
       !doc ||
@@ -70,9 +72,13 @@ export function mountWindowZoom(options: {
     try {
       const instance = new WindowZoom(options.storage, (level) => {
         root.style.zoom = String(1.2 ** level);
+        root.style.setProperty('--bh-window-zoom', String(1.2 ** level));
       });
       disposers.push(() => {
         root.style.zoom = oldZoom ?? '';
+        if (oldLayoutZoom)
+          root.style.setProperty('--bh-window-zoom', oldLayoutZoom, oldLayoutPriority);
+        else root.style.removeProperty('--bh-window-zoom');
       });
       const definitions = [
         ['increase', 'Equal', false, 1],
