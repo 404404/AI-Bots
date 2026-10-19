@@ -33,12 +33,19 @@ export const SHORTCUT_ACTION_IDS: readonly ShortcutActionId[] = [
 
 export const DEFAULT_SHORTCUT_BINDINGS: ShortcutBindingMap = {
   'bot-mode': { code: 'Backquote', mod: false, alt: true, shift: false },
-  'quick-switcher': { code: 'KeyK', mod: true, alt: false, shift: false },
+  'quick-switcher': { code: 'KeyK', mod: false, alt: true, shift: false },
   'conversation-prev': { code: 'ArrowUp', mod: false, alt: true, shift: false },
   'conversation-next': { code: 'ArrowDown', mod: false, alt: true, shift: false },
   'unread-prev': { code: 'ArrowUp', mod: false, alt: true, shift: true },
   'unread-next': { code: 'ArrowDown', mod: false, alt: true, shift: true },
   help: { code: 'Slash', mod: true, alt: false, shift: false },
+};
+
+export const LEGACY_QUICK_SWITCHER_BINDING: ShortcutBinding = {
+  code: 'KeyK',
+  mod: true,
+  alt: false,
+  shift: false,
 };
 
 const REPEATABLE: ReadonlySet<ShortcutActionId> = new Set([
@@ -246,7 +253,16 @@ export class ShortcutBindings {
   }
 
   matches(action: ShortcutActionId, event: ShortcutKeyboardEvent): boolean {
-    return bindingMatches(this.#bindings[action], event, this.mac(), REPEATABLE.has(action));
+    if (bindingMatches(this.#bindings[action], event, this.mac(), REPEATABLE.has(action)))
+      return true;
+    return (
+      action === 'quick-switcher' &&
+      !this.isCustom(action) &&
+      !SHORTCUT_ACTION_IDS.some((other) =>
+        sameBinding(this.#bindings[other], LEGACY_QUICK_SWITCHER_BINDING),
+      ) &&
+      bindingMatches(LEGACY_QUICK_SWITCHER_BINDING, event, this.mac())
+    );
   }
 
   text(action: ShortcutActionId): string {
