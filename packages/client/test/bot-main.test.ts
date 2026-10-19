@@ -392,7 +392,7 @@ describe('Bot main Sessions pane', () => {
     expect(markup).toContain('data-channel-menu-caret=""');
     expect(markup).toMatch(/<span data-conversation-title="" class="[^"]+">Ada<\/span>/);
     expect(markup).not.toContain('bh-channel-sidebar-title');
-    expect(markup).toContain('class="bh-chat-top-fade"');
+    expect(markup).not.toContain('bh-chat-top-fade');
     expect(markup).not.toContain('研究发布状态');
     expect(markup).not.toContain('Ada 空闲');
     expect(markup).not.toContain('bh-composer-activity-status');

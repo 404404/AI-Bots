@@ -2982,15 +2982,6 @@ button.bh-profile-heat-cell:focus-visible {
   outline: ${border.focus} solid var(--dsw-alias-label-primary);
   outline-offset: 2px;
 }
-.bh-chat-top-fade {
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 2;
-  height: 96px;
-  background: var(--dsw-alias-bg-base);
-  mask-image: linear-gradient(to bottom, var(--dsw-alias-label-primary) 16%, transparent 100%);
-  pointer-events: none;
-}
 .bh-content {
   flex: 1;
   min-height: 0;
@@ -3030,6 +3021,9 @@ button.bh-profile-heat-cell:focus-visible {
   position: relative;
 }
 .bh-chat-body {
+  --bh-chat-mask-bottom: var(--bh-activity-overlay-inset, 0px);
+  mask-image: linear-gradient(to bottom, transparent, black min(var(--bh-chat-mask-top, ${space.x6}), 20%), black calc(100% - ${space.x3} - var(--bh-chat-mask-bottom)), transparent calc(100% - var(--bh-chat-mask-bottom)));
+  mask-mode: alpha;
   position: relative;
   z-index: 1;
   flex: 1;
@@ -3044,6 +3038,7 @@ button.bh-profile-heat-cell:focus-visible {
 /* The faded composer status gives its reserved space back only after the
    fade, so the working rows slide down instead of jumping onto its text. */
 .bh-chat-pane[data-activity-concealed='true'] .bh-chat-body {
+  --bh-chat-mask-bottom: 0px;
   padding-bottom: ${space.x3};
   transition-delay: 160ms;
 }
@@ -3957,17 +3952,6 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
   padding: 0 ${space.x2};
   color: var(--dsw-alias-label-secondary);
   font-size: var(--dsh-content-font-size);
-}
-/* Scrolled into history, the status sits over messages, so it carries a
-   backdrop that fades in from the chat background above it. */
-.bh-composer-activity-status { isolation: isolate; }
-.bh-composer-activity-status::before {
-  content: '';
-  position: absolute;
-  inset: -12px 0 -6px;
-  z-index: -1;
-  background: linear-gradient(to bottom, transparent, var(--dsw-alias-bg-base) 12px);
-  pointer-events: none;
 }
 /* At the latest message the working rows already show every active Bot, so
    the status only fades out: it stays the screen-reader live region. */

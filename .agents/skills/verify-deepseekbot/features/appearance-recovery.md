@@ -31,3 +31,9 @@ Native macOS uses a task-owned official Desktop and application directory. Perfo
 - Layout is byte-for-byte unchanged during recovery. Dock reload can reorder JSON keys and round leaf sizes by less than one pixel; compare topology/fields and bounded geometry after reload rather than raw serialized text.
 - Current-mode clear is not a list of per-Panel editors; individual edits remain Header context-menu-only.
 - Human QA and Windows native are separate gates; this journey is not a substitute for earlier slices' individual runtime proofs.
+
+## Human QA correction: message-history edges
+
+Scroll a populated Channel with a green Panel body, then with a transparent body over wallpaper, in light and dark modes. Only history content should fade at top/bottom; header, composer and activity controls remain unmasked. Compare matched before/after captures. Read computed alpha-mask mode, check that the old colored overlay and activity pseudo-element are absent, compare masked/unmasked center pixels, and confirm input and reload work. The diagnostic journey uses a memberless test group and actual committed Human messages without model calls. Run the same journey in the task-owned official macOS Desktop.
+
+Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-message-history-mask.mjs`; `--baseline` captures the preceding code. Native runs additionally require `BH_NATIVE_HOST_LOG` and `BH_NATIVE_BROWSER_URL` for the previously identified task application; add `--native`. The native driver expects Chinese controls, the Web driver English. Original fixture bytes, authenticated URLs, local paths and console captures remain private.
