@@ -9,8 +9,8 @@ public final class ScrollEdgeElementModule: Module {
       Prop("edge") { (view: ScrollEdgeElementView, edge: String) in
         view.edge = edge == "top" ? .top : .bottom
       }
-      Prop("marker") { (view: ScrollEdgeElementView, marker: String) in
-        view.marker = marker
+      Prop("revision") { (view: ScrollEdgeElementView, _: String) in
+        view.refresh()
       }
     }
   }
@@ -21,12 +21,7 @@ final class ScrollEdgeElementView: ExpoView {
     didSet { attach() }
   }
 
-  var marker = "none" {
-    didSet { updateMarker() }
-  }
-
   private var interaction: UIInteraction?
-  private var markerView: UIView?
 
   override func didMoveToWindow() {
     super.didMoveToWindow()
@@ -35,33 +30,19 @@ final class ScrollEdgeElementView: ExpoView {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    if let markerView {
-      markerView.frame = bounds
-      if subviews.last !== markerView { bringSubviewToFront(markerView) }
-    }
     attach()
   }
 
-  private func updateMarker() {
-    markerView?.removeFromSuperview()
-    markerView = nil
-    let view: UIView
-    switch marker {
-    case "label":
-      let label = UILabel()
-      label.text = " "
-      view = label
-    case "fill":
-      view = UIView()
-      view.backgroundColor = UIColor.black.withAlphaComponent(0.011)
-    default:
-      return
+  func refresh() {
+    if let interaction { removeInteraction(interaction) }
+    interaction = nil
+    DispatchQueue.main.async { [weak self] in self?.attach() }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+      guard let self, let interaction = self.interaction else { return }
+      self.removeInteraction(interaction)
+      self.interaction = nil
+      self.attach()
     }
-    view.isUserInteractionEnabled = false
-    view.isAccessibilityElement = false
-    addSubview(view)
-    markerView = view
-    setNeedsLayout()
   }
 
   private func attach() {
