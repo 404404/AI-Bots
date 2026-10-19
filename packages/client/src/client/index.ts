@@ -1067,6 +1067,7 @@ export function apply(ctx: ClientContext): void {
           dockPanels,
           profileCards,
           appearance,
+          wallpaper,
           nativeChatT,
           nativeSessions,
           prefs,

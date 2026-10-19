@@ -33,6 +33,7 @@ export interface OnboardingViewState {
   layoutComplete?: boolean;
   evidence?: ChecklistEvidence | undefined;
   experience?: 'memory' | 'im' | undefined;
+  intro?: { step: number; hidden: boolean } | undefined;
   busy: boolean;
   error?: string | undefined;
 }
@@ -99,7 +100,7 @@ export class OnboardingController {
           try {
             localStorage.removeItem(`botharness/onboarding/layout-v2/${receipt.profileId}`);
           } catch {}
-          this.update({ layoutComplete: false });
+          this.update({ layoutComplete: false, intro: { step: 0, hidden: false } });
         }
         if (opening) this.revealHome?.();
       }
@@ -134,6 +135,40 @@ export class OnboardingController {
     } catch (error) {
       this.update({ error: errorMessage(error) });
     }
+  }
+  introPending(): boolean {
+    const receipt = this.state.receipt;
+    if (!receipt?.journey || receipt.journey.done || receipt.tutorial !== 'not-started')
+      return false;
+    try {
+      return localStorage.getItem(introKey(receipt.profileId)) !== '1';
+    } catch {
+      return true;
+    }
+  }
+  openIntro(): void {
+    this.update({ intro: { step: 0, hidden: false } });
+  }
+  setIntroStep(step: number): void {
+    if (this.state.intro) this.update({ intro: { ...this.state.intro, step } });
+  }
+  hideIntro(hidden: boolean): void {
+    if (this.state.intro) this.update({ intro: { ...this.state.intro, hidden } });
+  }
+  async closeIntro(): Promise<void> {
+    const receipt = this.state.receipt;
+    if (!this.state.intro) return;
+    this.update({ intro: undefined });
+    if (!receipt) return;
+    try {
+      localStorage.setItem(introKey(receipt.profileId), '1');
+    } catch {}
+    if (
+      receipt.tutorial === 'not-started' &&
+      document.querySelector('[data-workspace-enabled]') !== null
+    )
+      await this.refresh(undefined, 'start', undefined, true);
+    else this.revealHome?.();
   }
   private revealHome: (() => void) | undefined;
   attachHome(reveal: () => void): () => void {
@@ -448,6 +483,9 @@ export class OnboardingController {
       this.update({ busy: false, sendOpen: Boolean(this.state.pending) && !this.state.modelOpen });
     }
   }
+}
+function introKey(profileId: string): string {
+  return `botharness/onboarding/intro-v1/${profileId}`;
 }
 const controllers = new WeakMap<BridgeActions, OnboardingController>();
 export function onboardingFor(actions: BridgeActions): OnboardingController {

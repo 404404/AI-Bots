@@ -16,6 +16,7 @@ import type { DockPanelRegistry } from './dock-panels.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { CHANNEL_BODY_PANEL } from './channel-dock-layout.js';
 import { OnboardingModelDialog } from './onboarding-view.js';
+import { receiveHomeMessages } from './home-requests.js';
 import { openModelsSettingsAndReturn } from './bot-settings-open.js';
 import { errorMessage } from './bridge.js';
 import { color, space, text } from './ds/tokens.stylex.js';
@@ -237,19 +238,19 @@ export function HomePanel({
     for (const item of added) startUpload(item);
     return next.caret;
   };
-  const submit = async () => {
+  const submit = async (text = draft) => {
     if (
       !home ||
       !ready ||
       sending.current ||
-      (!hasVisibleText(draft) && !uploads.length) ||
+      (!hasVisibleText(text) && !uploads.length) ||
       uploads.some((x) => x.status !== 'ready' || !x.ref)
     )
       return;
     sending.current = true;
     setBusy(true);
     setError(undefined);
-    const body = draft.trim();
+    const body = text.trim();
     const request =
       pending.current?.body === body
         ? pending.current
@@ -291,8 +292,17 @@ export function HomePanel({
       setBusy(false);
     }
   };
+  const requests = useMountedResource<HTMLSpanElement>(() => {
+    if (!home || ready === undefined) return;
+    return receiveHomeMessages((body) => {
+      saveDraft(body);
+      if (ready && !uploadsRef.current.length) void submit(body);
+      else setFocusSignal((value) => value + 1);
+    });
+  }, [home, ready]);
   return (
     <div ref={mount} {...stylex.props(styles.root)} data-home-panel>
+      <span ref={requests} hidden aria-hidden="true" />
       <div {...stylex.props(styles.content)}>
         <HomeWelcome
           actions={actions}
@@ -333,7 +343,7 @@ export function HomePanel({
             }}
             t={t}
             onChange={saveDraft}
-            onSubmit={submit}
+            onSubmit={() => submit()}
           />
         )}
         <TobOnboarding
