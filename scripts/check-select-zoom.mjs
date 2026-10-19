@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stylexPlugin } from './stylex-plugin.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -97,7 +97,7 @@ createRoot(document.getElementById('app')).render(<App/>);
 `,
 );
 const { build } = await import(
-  createRequire(require.resolve('vitest/package.json')).resolve('vite')
+  pathToFileURL(createRequire(require.resolve('vitest/package.json')).resolve('vite')).href
 );
 const store = join(root, 'node_modules/.pnpm');
 const puppeteer = createRequire(

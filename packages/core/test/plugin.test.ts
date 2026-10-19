@@ -562,6 +562,7 @@ describe('plugin entry', () => {
       'grantCreate',
       'grantRevoke',
       'grantWriteSet',
+      'grantRequestApprove',
       'assignmentAccessGet',
       'assignmentAccessSet',
       'toolApprovalRules',

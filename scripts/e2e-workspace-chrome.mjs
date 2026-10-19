@@ -3,13 +3,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stylexPlugin } from './stylex-plugin.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(join(root, 'package.json'));
 const { createServer: createViteServer } = await import(
-  createRequire(require.resolve('vitest/package.json')).resolve('vite')
+  pathToFileURL(createRequire(require.resolve('vitest/package.json')).resolve('vite')).href
 );
 const vite = await createViteServer({
   configFile: false,

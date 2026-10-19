@@ -295,6 +295,34 @@ describe('Human Inbox, assignment, Session and approval-rule commands', () => {
     ]);
   });
 
+  it('approves directory requests through the shared Host command only with explicit confirmation', async () => {
+    const live = await host(echo);
+    const args = [
+      'grant-request-approve',
+      'ada',
+      '--channel',
+      'dm-ada',
+      '--request',
+      'r1',
+      '--workspace',
+      'w1',
+    ];
+    expect((await invoke(args, live.url)).json.error.code).toBe('usage');
+    await invoke([...args, '--confirm'], live.url);
+    expect(live.calls).toEqual([
+      {
+        method: 'grantRequestApprove',
+        args: {
+          slug: 'ada',
+          channelId: 'dm-ada',
+          requestMessageId: 'r1',
+          workspaceId: 'w1',
+          acknowledgeReadWrite: true,
+        },
+      },
+    ]);
+  });
+
   it('lists and revokes always-allow rules, and revokes grants online, only with --confirm', async () => {
     const live = await host(echo);
     await invoke(['tool-approval-rules', 'ada'], live.url);

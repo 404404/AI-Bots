@@ -1,7 +1,8 @@
-import { useId, useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { Fragment, useId, useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import {
   IconSearchOutlineRegular,
+  IconSettingsOutlineRegular,
   Input,
   ShortcutKeys,
 } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -15,6 +16,7 @@ import { Modal } from './modal.js';
 import type { ShortcutBindings } from './shortcut-bindings.js';
 import { useMountedResource } from './mounted-resource.js';
 import { rankQuickSwitcher, type QuickSwitcherEntry } from './quick-switcher-rank.js';
+import type { SettingsSearchResult } from './settings-search.js';
 import type { BotSummary } from './store.js';
 
 const styles = stylex.create({
@@ -118,6 +120,16 @@ const styles = stylex.create({
     fontSize: text.metaSize,
     lineHeight: text.metaLine,
   },
+  groupHeading: {
+    paddingInline: space.x1,
+    listStyle: 'none',
+  },
+  settingIcon: {
+    boxSizing: 'border-box',
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.divider,
+  },
   hint: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -125,8 +137,20 @@ const styles = stylex.create({
   },
 });
 
+export const QUICK_SWITCHER_SETTINGS_LIMIT = 12;
+
+export interface QuickSwitcherSettings {
+  search(query: string): readonly SettingsSearchResult[];
+  open(result: SettingsSearchResult): void;
+}
+
+type QuickSwitcherItem =
+  | { readonly kind: 'channel'; readonly entry: QuickSwitcherEntry }
+  | { readonly kind: 'setting'; readonly result: SettingsSearchResult };
+
 export interface QuickSwitcherProps {
   entries: readonly QuickSwitcherEntry[];
+  settings?: QuickSwitcherSettings | undefined;
   bots: ReadonlyMap<string, BotSummary>;
   activityOf: (bot: BotSummary) => PersonaBotActivityState;
   shortcutBindings: ShortcutBindings;
@@ -137,6 +161,7 @@ export interface QuickSwitcherProps {
 
 export function QuickSwitcher({
   entries,
+  settings,
   bots,
   activityOf,
   shortcutBindings,
@@ -148,8 +173,23 @@ export function QuickSwitcher({
   const [active, setActive] = useState(0);
   const listId = useId();
   const results = useMemo(() => rankQuickSwitcher(entries, query), [entries, query]);
-  const activeIndex = results.length === 0 ? -1 : Math.min(active, results.length - 1);
-  const activeEntry = activeIndex < 0 ? undefined : results[activeIndex];
+  const settingResults = useMemo(
+    () =>
+      settings === undefined || query.trim().length === 0
+        ? []
+        : settings.search(query).slice(0, QUICK_SWITCHER_SETTINGS_LIMIT),
+    [settings, query],
+  );
+  const items: QuickSwitcherItem[] = [
+    ...results.map((entry) => ({ kind: 'channel' as const, entry })),
+    ...settingResults.map((result) => ({ kind: 'setting' as const, result })),
+  ];
+  const activeIndex = items.length === 0 ? -1 : Math.min(active, items.length - 1);
+  const activeItem = activeIndex < 0 ? undefined : items[activeIndex];
+  const openItem = (item: QuickSwitcherItem): void => {
+    if (item.kind === 'channel') onOpen(item.entry);
+    else settings?.open(item.result);
+  };
   const optionId = (index: number): string => `${listId}-option-${index}`;
   const scrollActive = useMountedResource<HTMLLIElement>(
     (node) => {
@@ -158,8 +198,8 @@ export function QuickSwitcher({
     [activeIndex],
   );
   const move = (delta: number): void => {
-    if (results.length === 0) return;
-    setActive((activeIndex + delta + results.length) % results.length);
+    if (items.length === 0) return;
+    setActive((activeIndex + delta + items.length) % items.length);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.nativeEvent.isComposing) return;
@@ -175,7 +215,7 @@ export function QuickSwitcher({
     }
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (activeEntry !== undefined) onOpen(activeEntry);
+      if (activeItem !== undefined) openItem(activeItem);
       return;
     }
     if (shortcutBindings.matches('quick-switcher', event)) {
@@ -226,53 +266,80 @@ export function QuickSwitcher({
       />
       {results.length === 0 ? null : <p {...stylex.props(styles.heading)}>{heading}</p>}
       <ul id={listId} role="listbox" aria-label={heading} {...stylex.props(styles.list)}>
-        {results.map((entry, index) => (
-          <li
-            key={entry.channel.id}
-            id={optionId(index)}
-            ref={index === activeIndex ? scrollActive : undefined}
-            role="option"
-            aria-selected={index === activeIndex}
-            data-channel-id={entry.channel.id}
-            onMouseMove={() => {
+        {items.map((item, index) => {
+          const rowProps = {
+            id: optionId(index),
+            ref: index === activeIndex ? scrollActive : undefined,
+            role: 'option',
+            'aria-selected': index === activeIndex,
+            onMouseMove: () => {
               if (index !== activeIndex) setActive(index);
-            }}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onOpen(entry)}
-            {...stylex.props(styles.row, index === activeIndex && styles.active)}
-          >
-            {entry.bot === undefined ? (
-              <GroupChannelIcon
-                channel={entry.channel}
-                bots={bots}
-                className={stylex.props(styles.icon).className ?? ''}
-                groupClassName="bh-group-channel-icon"
-                size={28}
-                hashSize={18}
-                t={t}
-              />
-            ) : (
-              <PersonaBotAvatar
-                t={t}
-                personaBotId={entry.bot.slug}
-                name={entry.bot.displayName}
-                src={entry.bot.avatar}
-                appearance={entry.bot.appearance}
-                avatarSeed={entry.bot.avatarSeed}
-                state={activityOf(entry.bot)}
-                activity={entry.bot.activity}
-                attention={entry.bot.attention}
-                size={28}
-              />
-            )}
-            <span {...stylex.props(styles.copy)}>
-              <span {...stylex.props(styles.name)}>{entry.name}</span>
-              <span {...stylex.props(styles.meta)}>{subtitle(entry)}</span>
-            </span>
-          </li>
-        ))}
+            },
+            onMouseDown: (event: { preventDefault(): void }) => event.preventDefault(),
+            onClick: () => openItem(item),
+            ...stylex.props(styles.row, index === activeIndex && styles.active),
+          };
+          if (item.kind === 'setting') {
+            const { result } = item;
+            return (
+              <Fragment key={`setting:${result.section}:${result.title}`}>
+                {index === results.length ? (
+                  <li role="presentation" {...stylex.props(styles.heading, styles.groupHeading)}>
+                    {t('quickSwitcher.settings')}
+                  </li>
+                ) : null}
+                <li {...rowProps} data-settings-section={result.section}>
+                  <span {...stylex.props(styles.icon, styles.settingIcon)}>
+                    <IconSettingsOutlineRegular size={16} />
+                  </span>
+                  <span {...stylex.props(styles.copy)}>
+                    <span {...stylex.props(styles.name)}>{result.title}</span>
+                    <span {...stylex.props(styles.meta)}>
+                      {result.title === result.page
+                        ? t('settings.nav')
+                        : `${t('settings.nav')} · ${result.page}`}
+                    </span>
+                  </span>
+                </li>
+              </Fragment>
+            );
+          }
+          const { entry } = item;
+          return (
+            <li key={entry.channel.id} {...rowProps} data-channel-id={entry.channel.id}>
+              {entry.bot === undefined ? (
+                <GroupChannelIcon
+                  channel={entry.channel}
+                  bots={bots}
+                  className={stylex.props(styles.icon).className ?? ''}
+                  groupClassName="bh-group-channel-icon"
+                  size={28}
+                  hashSize={18}
+                  t={t}
+                />
+              ) : (
+                <PersonaBotAvatar
+                  t={t}
+                  personaBotId={entry.bot.slug}
+                  name={entry.bot.displayName}
+                  src={entry.bot.avatar}
+                  appearance={entry.bot.appearance}
+                  avatarSeed={entry.bot.avatarSeed}
+                  state={activityOf(entry.bot)}
+                  activity={entry.bot.activity}
+                  attention={entry.bot.attention}
+                  size={28}
+                />
+              )}
+              <span {...stylex.props(styles.copy)}>
+                <span {...stylex.props(styles.name)}>{entry.name}</span>
+                <span {...stylex.props(styles.meta)}>{subtitle(entry)}</span>
+              </span>
+            </li>
+          );
+        })}
       </ul>
-      {results.length === 0 ? (
+      {items.length === 0 ? (
         <p role="status" {...stylex.props(styles.empty)}>
           {empty ? t('quickSwitcher.empty') : t('quickSwitcher.noMatches')}
         </p>

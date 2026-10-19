@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { OperationalDatabaseModulePort } from '../database/owner.js';
 import { parseToolApprovalActor, type ToolApprovalActor } from './tool-approval-actor.js';
 
-export type ToolRuleKind = 'exact' | 'all-opaque' | 'secret-cli';
+export type ToolRuleKind = 'exact' | 'tool' | 'all-opaque' | 'secret-cli';
 
 export function secretCliKind(input: string): string | undefined {
   let args: unknown;
@@ -121,10 +121,18 @@ export function createToolApprovalRuleStore(
               .prepare(
                 `SELECT * FROM tool_approval_rules
          WHERE bot_slug = ? AND role = ? AND scope_key = ? AND active = 1 AND revoked_at IS NULL
-           AND ((kind = 'exact' AND tool_name = ? AND input = ?) OR kind = 'all-opaque')
+           AND ((kind = 'exact' AND tool_name = ? AND input = ?)
+             OR (kind = 'tool' AND tool_name = ?) OR kind = 'all-opaque')
          ORDER BY CASE kind WHEN 'exact' THEN 0 ELSE 1 END, created_at DESC`,
               )
-              .all(input.botSlug, input.role, input.scopeKey, input.toolName, input.input),
+              .all(
+                input.botSlug,
+                input.role,
+                input.scopeKey,
+                input.toolName,
+                input.input,
+                input.toolName,
+              ),
       ) as unknown as RuleRow[];
       for (const row of rows) {
         const rule = record(row);
