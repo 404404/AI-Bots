@@ -17,6 +17,8 @@ On both platforms the system's own design and components are the standard: Apple
 
 Older rules below that prescribe a custom surface where a native component exists (for example the OCAT-inspired Android choice menus, or iOS menus shown as alerts) describe the current implementation, not the target. Change them to the native component when the screen is next touched, and update the rule in the same change.
 
+Android predictive back is on (`android.predictiveBackGestureEnabled`). Back closes the topmost surface before it leaves the screen: an in-screen surface that is not its own route, such as the composer's attach tray, holds the screen with Expo Router's `usePreventRemove` and closes itself; the full client steps back through its web history first, while its floating exit still leaves at once. Do not add `BackHandler` listeners for new surfaces.
+
 ## Android application dialogs
 
 - Application-owned menus and confirmations use `showAppDialog` and the root `AppDialogHost`, matching the accepted OCAT-inspired Settings surfaces. Do not call React Native `Alert.alert` directly from a screen or feature. On iOS `showAppDialog` shows the system alert and is for confirmations only; iOS menus follow [iOS menus and native controls](#ios-menus-and-native-controls). Operating-system permission prompts, photo pickers and the share sheet remain system-owned.

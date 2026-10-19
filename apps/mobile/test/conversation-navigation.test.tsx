@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
 vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', () => {}] }));
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
+  usePreventRemove: () => {},
   Stack: { Screen: () => null },
   useRouter: () => ({
     canGoBack: () => state.history.length > 1,

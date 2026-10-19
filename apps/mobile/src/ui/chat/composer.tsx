@@ -4,6 +4,7 @@ import {
   Image,
   Keyboard,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   View,
@@ -17,6 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePreventRemove } from 'expo-router';
 
 import type { PickSource, PickedFile } from '../../host/pick-files';
 import { useDesignTheme } from '../design/theme';
@@ -397,6 +399,9 @@ export function Composer({
       });
   };
   const listening = dictating(dictation);
+  usePreventRemove(Platform.OS === 'android' && menu && canAttach && !listening, () =>
+    setMenu(false),
+  );
   const actions = composerActions({
     text: value,
     files: files.length,
