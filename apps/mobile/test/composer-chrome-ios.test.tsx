@@ -48,14 +48,20 @@ function Bar() {
   );
 }
 
+const frostedSurface = expect.stringMatching(/^#[0-9a-f]{8}$/iu);
+
 it('floats + and the field on separate Liquid Glass shapes on iOS 26', async () => {
   await act(async () => root.render(<Bar />));
   const button = container.querySelector('button[aria-label="Attach"]')!;
   expect(button.querySelector('[data-material="circle"]')).not.toBeNull();
   expect(container.querySelector('[data-material="rounded-22"]')).not.toBeNull();
   expect(native.effects).toEqual([
-    { glass: { variant: 'regular' }, shape: 'circle' },
-    { glass: { variant: 'regular' }, shape: 'roundedRectangle', cornerRadius: 22 },
+    { glass: { variant: 'regular', tint: frostedSurface }, shape: 'circle' },
+    {
+      glass: { variant: 'regular', tint: frostedSurface },
+      shape: 'roundedRectangle',
+      cornerRadius: 22,
+    },
   ]);
 });
 
