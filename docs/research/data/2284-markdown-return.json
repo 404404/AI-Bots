@@ -372,5 +372,19 @@
     "Exact old-message centering remains unqualified",
     "iOS native and ProMotion 120 FPS untested",
     "Broader history/combined performance continues under #2283"
-  ]
+  ],
+  "environment": {
+    "refreshHz": 120,
+    "manufacturer": "Xiaomi",
+    "model": "24090RA29C",
+    "privateBuildOverlay": "loopback-only network access",
+    "batch": "windows-markdown-return-2284",
+    "runtimeOverlay": "e952589cb0a70cd38cd9dc9bc7e5e661ee54584a",
+    "qaBranch": "qa/windows-batch-2284",
+    "android": "16",
+    "qaBase": "024d1c675b246b8ef1e402fa4d4d557d270bebf3",
+    "baselineQaCommit": "579dbd2439f87d3fd9921bec48112de7a4256aaa",
+    "api": 36,
+    "abi": "arm64"
+  }
 }

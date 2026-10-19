@@ -6,6 +6,8 @@ The candidate restores the complete latest Markdown message when a rapid return 
 
 Base: `024d1c675b246b8ef1e402fa4d4d557d270bebf3`. Runtime candidate: `e952589cb0a70cd38cd9dc9bc7e5e661ee54584a`. Both minified arm64 Release APKs use the same native dependencies and private test-only loopback access. The baseline APK was built from `554e28a00c1f7c0e58d611c2b408421e8d235f70`, whose runtime is equivalent to merged main. APK hashes and sanitized results are in the companion JSON; no instrumentation is included in either accepted arm.
 
+Device: Xiaomi model `24090RA29C`, Android 16 (API 36), arm64; actual render mode was verified at 120 Hz. QA batch: `windows-markdown-return-2284`, branch `qa/windows-batch-2284` at base `024d1c675b246b8ef1e402fa4d4d557d270bebf3`, with the two runtime files copied from candidate `e952589cb0a70cd38cd9dc9bc7e5e661ee54584a` and a private loopback-only build overlay. Baseline binary came from QA commit `579dbd2439f87d3fd9921bec48112de7a4256aaa`. Both APK hashes identify the exact installed artifacts; device identifiers and local configuration stay private.
+
 ## Reproduction and cause
 
 One owned synthetic conversation contains 300 unique, ordered messages: 240 plain, 30 code and 30 table messages, totaling 32,961 UTF-16 units. The final table is complete before testing. Twelve 120 ms flings with 700 ms pauses, followed by Return to latest and a five-second settle, reproduced the blank heading/table in all three minimized baseline repetitions. Three flings passed twice; six flings failed once out of three; the initial 24-fling exploratory run passed. All outcomes remain in private evidence.
