@@ -329,7 +329,15 @@ describe('push registration with a real Host gateway', () => {
     expect(session.getSnapshot()).toEqual({ status: 'on', failed: [] });
     expect(await hostPush.settings(h.saved)).toEqual({
       registered: true,
+      enabled: true,
       preferences: { approval: true, question: true, 'private-input': true, reply: true },
+      quietChannelIds: [],
+    });
+    expect((await hostPush.setQuiet(h.saved, 'g1', true)).quietChannelIds).toEqual(['g1']);
+    expect((await hostPush.setEnabled(h.saved, false)).enabled).toBe(false);
+    expect(await hostPush.setEnabled(h.saved, true)).toMatchObject({
+      enabled: true,
+      quietChannelIds: ['g1'],
     });
 
     h.raise('approval:1');
