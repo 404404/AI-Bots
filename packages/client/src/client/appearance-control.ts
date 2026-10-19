@@ -1,7 +1,11 @@
+import { WallpaperError } from './wallpaper-store.js';
+import type { Wallpaper } from './wallpaper.js';
+import { createWallpaperControl } from './wallpaper-control.js';
 import { Appearance, AppearanceError, object } from './appearance.js';
 
-export function mountAppearanceControl(owner: Appearance): () => void {
+export function mountAppearanceControl(owner: Appearance, wallpaper?: Wallpaper): () => void {
   const abort = new AbortController();
+  const media = wallpaper ? createWallpaperControl(wallpaper) : undefined;
   let registration: { clientId: string; token: string } | undefined;
   const post = async (body: Record<string, unknown>) => {
     const response = await fetch('./api/botharness/appearance-control', {
@@ -33,21 +37,33 @@ export function mountAppearanceControl(owner: Appearance): () => void {
           try {
             if (typeof command.expiresAt !== 'number' || Date.now() > command.expiresAt)
               throw new AppearanceError('appearance-request-stale');
-            owner.refresh();
-            if (owner.getSnapshot().error) throw new AppearanceError(owner.getSnapshot().error!);
-            if (command.patch !== undefined && typeof command.expectedRevision !== 'string')
-              throw new AppearanceError('appearance-revision-required');
-            result = {
-              targets: owner.targets(),
-              snapshot:
-                command.patch === undefined
-                  ? owner.getSnapshot()
-                  : owner.update(command.patch, command.expectedRevision as string),
-            };
+            if (command.wallpaper !== undefined) {
+              if (!media) throw new WallpaperError('wallpaper-unavailable');
+              result = await media.execute(
+                command.wallpaper,
+                command.expectedRevision,
+                command.expiresAt,
+              );
+            } else {
+              owner.refresh();
+              if (owner.getSnapshot().error) throw new AppearanceError(owner.getSnapshot().error!);
+              if (command.patch !== undefined && typeof command.expectedRevision !== 'string')
+                throw new AppearanceError('appearance-revision-required');
+              result = {
+                targets: owner.targets(),
+                snapshot:
+                  command.patch === undefined
+                    ? owner.getSnapshot()
+                    : owner.update(command.patch, command.expectedRevision as string),
+              };
+            }
           } catch (error) {
             result = {
               error: {
-                code: error instanceof AppearanceError ? error.code : 'appearance-client-failed',
+                code:
+                  error instanceof AppearanceError || error instanceof WallpaperError
+                    ? error.code
+                    : 'appearance-client-failed',
               },
             };
           }
@@ -70,6 +86,7 @@ export function mountAppearanceControl(owner: Appearance): () => void {
   void run();
   return () => {
     abort.abort();
+    media?.dispose();
     if (registration)
       void fetch('./api/botharness/appearance-control', {
         method: 'POST',

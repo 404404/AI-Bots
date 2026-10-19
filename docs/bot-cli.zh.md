@@ -962,3 +962,15 @@ printf '%s' '{"mode":"light","materials":{"header":{"color":"#e9ddf6","opacity":
 目标拒绝码：`appearance-target-unavailable`、`appearance-target-duplicate`、`appearance-target-invalid`，不会替换成另一个 Panel。关闭 Panel 保留覆盖，切换全局主题也保留。嵌套目标在后续切片接入。
 
 嵌套外观复用 `appearance-targets` 和 `appearance-set`。已注册的 Memory 文件／演化、Browser／Computer 和独立贡献均使用稳定功能目标；`dock:memory-details` 由文件预览、提交详情和工作区变更共享，`dock:generated-files` 对应频道文件侧面板。未覆盖字段直接继承当前模式全局设置。隐藏面板保留外观；卸载贡献后拒绝写入，重新注册可恢复。恢复父面板不会清除子面板覆盖。
+
+### 本机图片壁纸
+
+先用 `appearance-clients` 明确选择在线 Web 或桌面 Client，再用 `wallpaper-get --client-id <id>` 读取 `wallpaper.revision`。壁纸修订号独立于外观修订号；写操作必须传入该 `--expected-revision`（初始为 `empty`）：
+
+```bash
+deepseekbot wallpaper-import --client-id <id> --expected-revision <revision> --file ./image.png
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --patch-stdin < crop.json
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
+```
+
+`crop.json` 只含 `{ "x": 0.5, "y": 0.5, "zoom": 1.5 }`：中心坐标范围 0–1，缩放 1–5。导入也可用 `--patch-stdin` 指定裁切。文件在 CLI 所在机器读取，须为非空、可解码且不超过 20 MiB 的图片，再按顺序分块传给指定 Client。原始字节只保存在该 Client，成功输出只有元数据和新修订号。离线或过期目标、修订冲突、无效媒体或裁切、上传过期及存储失败均返回明确错误码。请求送达后超时须先重读，不能自动重放导入。Web 与桌面各自保存，不以 Host 为键。

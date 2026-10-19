@@ -1,6 +1,8 @@
+import { WALLPAPER_COMMANDS, runWallpaperCommand } from './cli-wallpaper.js';
 import { CliLiveError } from './cli-live-error.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 export const APPEARANCE_COMMANDS = [
+  ...WALLPAPER_COMMANDS,
   {
     command: 'appearance-targets',
     description: 'list functional Panel appearance targets on an explicit --client-id',
@@ -26,12 +28,15 @@ export async function runAppearanceCommand(
     'client-id'?: string;
     'expected-revision'?: string;
     'patch-stdin'?: boolean;
+    file?: string;
   },
   io: BotCreateCliIo,
   connect: () => Promise<{
     http(path: string, body?: Record<string, unknown>): Promise<{ bytes: Uint8Array }>;
   }>,
 ) {
+  if (command.startsWith('wallpaper-'))
+    return runWallpaperCommand(command, rest, values, io, connect);
   if (rest.length || (command !== 'appearance-clients' && !values['client-id']))
     throw new CliLiveError('usage', 'Specify exactly one --client-id from appearance-clients.');
   if (command === 'appearance-clients' && values['client-id'])

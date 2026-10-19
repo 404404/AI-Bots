@@ -693,7 +693,16 @@
         "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialOpacity')}",
         "setting:packages/client/src/client/appearance-panel-settings.tsx:{t( field === 'color' ? 'appearance.materialColor' : field === 'opacity' ? 'appearance.materialOpacity' : 'appearance.materialBlur', )}"
       ],
-      "commands": ["appearance-clients", "appearance-get", "appearance-set", "appearance-targets"]
+      "commands": [
+        "appearance-clients",
+        "appearance-get",
+        "appearance-set",
+        "appearance-targets",
+        "wallpaper-get",
+        "wallpaper-import",
+        "wallpaper-crop",
+        "wallpaper-remove"
+      ]
     }
   ]
 }

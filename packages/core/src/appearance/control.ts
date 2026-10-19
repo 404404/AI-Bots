@@ -5,6 +5,7 @@ interface Command {
   id: string;
   expiresAt: number;
   patch?: unknown;
+  wallpaper?: unknown;
   expectedRevision?: string;
 }
 interface Client {
@@ -37,13 +38,18 @@ export function createAppearanceControl(now = Date.now) {
           clients: [...clients.values()].map(({ id, platform }) => ({ id, platform })),
         });
       const raw = await request.text();
-      if (raw.length > 4096) return refused('appearance-invalid-input', 400);
+      if (raw.length > 270000) return refused('appearance-invalid-input', 400);
       let input: Record<string, unknown>;
       try {
         input = record(JSON.parse(raw));
       } catch {
         return refused('appearance-invalid-input', 400);
       }
+      if (
+        raw.length > 4096 &&
+        !(input.action === 'request' && record(input.wallpaper).action === 'append')
+      )
+        return refused('appearance-invalid-input', 400);
       if (input.action === 'register') {
         if (clients.size >= 32) return refused('appearance-client-limit');
         if (input.platform !== 'web' && input.platform !== 'desktop')
@@ -61,6 +67,8 @@ export function createAppearanceControl(now = Date.now) {
       const client = clients.get(input.clientId);
       if (!client) return refused('appearance-client-stale', 404);
       if (input.action === 'request') {
+        if (input.patch !== undefined && input.wallpaper !== undefined)
+          return refused('appearance-invalid-input', 400);
         if (input.patch !== undefined && typeof input.expectedRevision !== 'string')
           return refused('appearance-revision-required', 400);
         if (client.pending) return refused('appearance-client-busy');
@@ -68,6 +76,9 @@ export function createAppearanceControl(now = Date.now) {
         const command: Command = {
           id: randomUUID(),
           expiresAt: now() + 8000,
+          ...(input.wallpaper === undefined
+            ? {}
+            : { wallpaper: input.wallpaper, expectedRevision: input.expectedRevision as string }),
           ...(input.patch === undefined
             ? {}
             : { patch: input.patch, expectedRevision: input.expectedRevision as string }),

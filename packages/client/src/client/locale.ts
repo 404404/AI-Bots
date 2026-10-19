@@ -33,6 +33,16 @@ export const zh = {
   'settings.noResults': '没有找到匹配的设置',
   'settings.theme': '主题',
   'appearance.local': '仅用于这台设备上的 DeepSeekBot；Web 与桌面端分别保存。',
+  'wallpaper.title': '壁纸',
+  'wallpaper.local': '仅保存在当前设备。图片最大 20 MB；先取景，点击使用后保存。',
+  'wallpaper.failed': '图片未能解码或保存。请检查格式、大小和可用空间；原壁纸保持不变。',
+  'wallpaper.upload': '上传图片',
+  'wallpaper.recrop': '重新取景',
+  'wallpaper.remove': '移除壁纸',
+  'wallpaper.cropHelp': '拖动图片调整位置，使用缩放选择取景。',
+  'wallpaper.preview': '壁纸取景预览',
+  'wallpaper.zoom': '缩放',
+  'wallpaper.use': '使用',
   'appearance.saveFailed': '无法保存外观设置，请重试。上次保存的设置保持不变。',
   'appearance.lightPreset': '浅色配色',
   'appearance.darkPreset': '深色配色',
@@ -3763,6 +3773,18 @@ export function zhTranslate(key: BotHarnessKey | string, params?: Record<string,
 }
 
 export const en = {
+  'wallpaper.title': 'Wallpaper',
+  'wallpaper.local':
+    'Saved only on this device. Images up to 20 MB; preview and choose Use to save.',
+  'wallpaper.failed':
+    'The image could not be decoded or saved. Check its format, size and available space; the previous wallpaper is unchanged.',
+  'wallpaper.upload': 'Upload image',
+  'wallpaper.recrop': 'Adjust crop',
+  'wallpaper.remove': 'Remove wallpaper',
+  'wallpaper.cropHelp': 'Drag the image to position it, then adjust the zoom.',
+  'wallpaper.preview': 'Wallpaper crop preview',
+  'wallpaper.zoom': 'Zoom',
+  'wallpaper.use': 'Use',
   'workspace.home': 'Home',
   'workspace.storageFailed':
     'Layout could not be saved. Your previous layout is retained; this session remains usable.',
