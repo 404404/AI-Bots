@@ -4,6 +4,7 @@ The controlled reproduction covers a local Human DM with two currently accepted 
 
 - Starting main: `b0e35529c7197402e79820d2ca737b392caec9ff`.
 - Candidate implementation: `7f4aaadd7a5de33a6210a008196bdd09e54cc067`.
+- Integrated current main: `33334b22cb7d9e79f667b171d089c71df2dc572a`; clean native replay after the integrated build at `2c1c9142c3bf8eb7831302ec03d910ab90c4851c`, with no browser console issues.
 - Runtime: the repository-pinned DSH `0.2.1-rc.2`, isolated Profiles, synthetic private accounts and a controlled in-process IM Provider.
 - Operation: installed `gh --version`, with a synthetic `GH_TOKEN` supplied only through native private-account references; no GitHub API request or global authentication change.
 
@@ -26,7 +27,7 @@ Passed checks:
 - Four focused core files: 53 tests.
 - Seven origin/continuation/schedule/approval/command files: 56 tests, overlapping the first run's origin cases.
 - Six docs/CI-plan/verification/source-policy files: 66 tests.
-- Repository lint, changelog checks, root TypeScript check, source build and touched-file formatting.
+- Repository lint, changelog checks, root TypeScript check, source build and touched-file formatting. After current-main integration, lint, TypeScript, full build and 28 origin/native-continuation/inventory tests passed again.
 - Synchronized docs site build, including slides and 606 generated pages. Chinese OG font regenerated after content synchronization; final font bytes equal the starting main bytes.
 
 ## Environment observations and limits

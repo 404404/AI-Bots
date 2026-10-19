@@ -38,5 +38,7 @@
     },
     "visibleReply": "QA-2290-OK"
   },
-  "candidateConsoleIssues": 0
+  "candidateConsoleIssues": 0,
+  "integratedMain": "33334b22cb7d9e79f667b171d089c71df2dc572a",
+  "integratedSource": "2c1c9142c3bf8eb7831302ec03d910ab90c4851c"
 }
