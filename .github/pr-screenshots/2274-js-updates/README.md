@@ -11,3 +11,5 @@ Runtime baseline: `3d6c44689e540f9e1fae97476dcf7269663a48af`. Candidate producti
 - `rich-scroll-margin.png` / `rich-back-bottom.png`: visible scroll away and return to ending.
 
 These images verify rendering/interaction only. Timing comes from separate uninstrumented Release captures; see the [report](../../../docs/research/2274-android-js-updates.md). No stable 120 FPS claim.
+
+The complete font/theme matrix is published: `font-{a,b}-{10,13,20}-{light,dark}.png` (12 captures). A is baseline, B is candidate; 10/13/20 mean font scale 1.0/1.3/2.0.
