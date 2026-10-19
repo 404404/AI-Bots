@@ -65,6 +65,8 @@ function failureSummary(
       return t('failure.timeout');
     case 'SERVER':
       return t('failure.server');
+    case 'CONTEXT_WINDOW_EXCEEDED':
+      return t('failure.contextWindow');
     default:
       return t('failure.generic');
   }
@@ -102,6 +104,9 @@ function SessionFailureNotice({
           <code className="bh-session-failure-code">{failure.code}</code>
         )}
       </div>
+      {failure.code === 'CONTEXT_WINDOW_EXCEEDED' ? (
+        <div className="bh-session-failure-context">{t('failure.contextWindowHint')}</div>
+      ) : null}
       {failure.context === undefined ? null : (
         <div className="bh-session-failure-context">
           {t('failure.assignmentContext', { context: failure.context })}

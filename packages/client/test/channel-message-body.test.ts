@@ -543,6 +543,23 @@ describe('Channel message body', () => {
     expect(markup.includes('打开模型设置')).toBe(actionable);
   });
 
+  it('names a context overflow and tells the Human what to do next', () => {
+    const markup = render({ kind: 'bot', slug: 'ada' }, 'Session failed', {
+      sessionFailure: {
+        role: 'orchestrator',
+        sessionId: 'session-overflow',
+        code: 'CONTEXT_WINDOW_EXCEEDED',
+        detail: 'Raw overflow diagnostic',
+        requestMessageId: 'human-1',
+      },
+    });
+    expect(markup).toContain('对话上下文已满');
+    expect(markup).toContain('自动压缩未能恢复。请缩小请求后重试');
+    expect(markup).toContain('Raw overflow diagnostic');
+    expect(markup).not.toContain('请查看错误详情');
+    expect(markup).not.toContain('打开模型设置');
+  });
+
   it('renders server-sniffed images inline and files as downloads', () => {
     const hash = `sha256:${'a'.repeat(64)}`;
     const markup = render({ kind: 'human' }, '', {

@@ -31,8 +31,8 @@ export function mountWallpaper(owner: Wallpaper): () => void {
 :root .bh-workspace-mount[data-wallpaper-active] .bh-dock[data-workspace-dock] .dv-dockview,
 :root .bh-workspace-mount[data-wallpaper-active] .bh-channel-session-divider,
 :root .bh-workspace-mount[data-wallpaper-active] .bh-message-member-divider { background:transparent; }
-:root .bh-workspace-mount[data-wallpaper-active] .dv-tabs-and-actions-container { border-bottom-color:transparent; }
-:root .bh-workspace-mount[data-wallpaper-active] > .bh-workspace-chrome { background:var(--bh-global-body-fill); backdrop-filter:blur(var(--bh-global-body-blur)); }
+:root .bh-workspace-mount[data-workspace-enabled][data-wallpaper-active] .bh-dock[data-workspace-dock] .bh-dock-theme .dv-groupview :is(.dv-tabs-and-actions-container, .bh-channel-session-header) { border-bottom-color:transparent; background-clip:padding-box; }
+:root[data-platform="darwin"]:not([data-fullscreen]) .bh-workspace-mount[data-workspace-enabled][data-wallpaper-active] > .bh-workspace-chrome { background:transparent; backdrop-filter:none; }
 `;
   document.head.append(style);
   const resize = new ResizeObserver(() => paint());
@@ -50,7 +50,7 @@ export function mountWallpaper(owner: Wallpaper): () => void {
       if (frame) {
         frame.setAttribute('data-wallpaper-active', '');
         frame.prepend(layer);
-        resize.observe(frame);
+        resize.observe(layer);
       }
     }
     if (!frame || !current) {
@@ -80,12 +80,12 @@ export function mountWallpaper(owner: Wallpaper): () => void {
         }
       }
     }
-    const box = frame.getBoundingClientRect();
+    const box = getComputedStyle(layer);
     const placement = wallpaperPlacement(
       current.width,
       current.height,
-      box.width,
-      box.height,
+      Number.parseFloat(box.width),
+      Number.parseFloat(box.height),
       current.crop,
     );
     for (const [key, value] of Object.entries(placement))

@@ -1,6 +1,8 @@
-import { createElement, Fragment } from 'react';
+// @vitest-environment jsdom
+import { act, createElement, Fragment, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const captured = vi.hoisted(() => ({
   menus: [] as Array<Record<string, unknown>>,
@@ -39,6 +41,26 @@ import { shortcutKeyLabel } from '../src/client/ds/kbd.js';
 import { zh, zhTranslate, type BotHarnessKey } from '../src/client/locale.js';
 
 const t = zhTranslate;
+const mounted: Array<{ root: Root; container: HTMLDivElement }> = [];
+afterEach(() => {
+  for (const { root, container } of mounted.splice(0)) {
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+function renderAndOpenMenus(node: ReactNode): string {
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  mounted.push({ root, container });
+  act(() => root.render(node));
+  const markup = container.innerHTML;
+  for (const button of container.querySelectorAll<HTMLButtonElement>('[aria-haspopup="menu"]')) {
+    act(() => button.click());
+    act(() => button.click());
+  }
+  return markup;
+}
 
 function snapshot(patch?: Partial<BotModePrefsSnapshot>): BotModePrefsSnapshot {
   return {
@@ -77,7 +99,7 @@ function renderSection(
     setDeveloperMode: setDeveloperMode as never,
     setAutoAcceptGroupInvites: setAutoAcceptGroupInvites as never,
   } as never;
-  return renderToStaticMarkup(
+  return renderAndOpenMenus(
     createElement(
       Fragment,
       null,
@@ -118,6 +140,7 @@ function iconMenu(): Record<string, unknown> {
 }
 
 beforeEach(() => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   captured.menus.length = 0;
   captured.switches.length = 0;
 });
@@ -165,11 +188,11 @@ describe('Bot mode setting rows', () => {
     ).toEqual(['system', 'reduce', 'full']);
 
     const onSelect = motionMenu()['onSelect'] as (id: string) => void;
-    onSelect('full');
+    act(() => onSelect('full'));
     expect(setMotionPreference).toHaveBeenCalledWith('full');
 
     setMotionPreference.mockClear();
-    onSelect('unrelated');
+    act(() => onSelect('unrelated'));
     expect(setMotionPreference).not.toHaveBeenCalled();
   });
 
@@ -178,11 +201,11 @@ describe('Bot mode setting rows', () => {
     renderSection(snapshot(), setSortMode);
 
     const onSelect = lastMenu()['onSelect'] as (id: string) => void;
-    onSelect('manual');
+    act(() => onSelect('manual'));
     expect(setSortMode).toHaveBeenCalledWith('manual');
 
     setSortMode.mockClear();
-    onSelect('unrelated');
+    act(() => onSelect('unrelated'));
     expect(setSortMode).not.toHaveBeenCalled();
   });
 
@@ -228,7 +251,7 @@ it('shows default Group auto-accept and writes its native switch', () => {
 
 describe('send key setting', () => {
   function renderSendKey(apple: boolean, sendKey: 'enter' | 'mod-enter', setSendKey = vi.fn()) {
-    const markup = renderToStaticMarkup(
+    const markup = renderAndOpenMenus(
       createElement(SendKeySetting, {
         t,
         apple,
@@ -265,7 +288,7 @@ describe('send key setting', () => {
     expect(items[2]?.markup).toMatch(/>Ctrl<\/kbd>.*>↵<\/kbd>.*发送/u);
     expect(items[2]?.markup).not.toContain('⌘');
     const onSelect = menuWithItem('mod-enter')['onSelect'] as (id: string) => void;
-    onSelect('mod-enter');
+    act(() => onSelect('mod-enter'));
     expect(setSendKey).toHaveBeenCalledWith('mod-enter');
   });
 
