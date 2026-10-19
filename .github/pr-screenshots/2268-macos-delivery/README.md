@@ -28,3 +28,25 @@ even with a staging-only empty Bundle, because installation metadata wins. Those
 invalidate the prior headless result as Desktop installation proof. The explicit closed-app
 installer is a downstream package transaction and changes no installed app files. Fresh native
 acceptance of the final installer is recorded separately below when completed.
+
+
+## Actual macOS Desktop delivery — 2026-10-19
+
+The [native delivery record](native-desktop-20261019.json) supersedes the earlier headless-only
+activation, Host-switch and pending-IME limits. The installed final setup command refused a
+running Desktop; closed-app enable loaded the lease after a real native restart. Disable
+restored the original theme, retained the zoom document and preserved the original `ui-theme`
+font settings. Re-enable retained a native-UI font write of 15px. Direct installed CLI
+reset/set readback passed against the explicit native Client.
+
+Native Host A → independent native Host B → A reused the same browser data without concurrent
+windows; level 2 (144%), default 0 (100%) and the exact document revision were identical at
+every stop. This qualifies restart-based local-Host switching, not a remote Host selector.
+The final native image uses the integrated S1/S2 stack identified in the JSON, with a synthetic
+unsent draft. It is actual Desktop capture; the earlier source matrices remain separate proof.
+
+![Integrated native Desktop at 144%](native-window-144.png)
+
+The Human explicitly accepted real Chinese IME candidate/draft/zoom protection. Final visual
+QA for wallpaper/header in both native window modes is pending; Windows/Linux stay in #2270.
+No PR has been merged and no release has been published.
