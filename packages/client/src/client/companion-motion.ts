@@ -199,8 +199,7 @@ export class CompanionMotion {
       } else {
         if (walking) x = this.clampX(x + direction * 18 * dt);
         const floor = this.groundAt(x);
-        if (y !== floor)
-          y = y < floor ? floor : Math.max(floor, y - 480 * dt);
+        if (y !== floor) y = y < floor ? floor : Math.max(floor, y - 480 * dt);
       }
       this.tiltVelocity += (90 * (target - tilt) - 9 * this.tiltVelocity) * dt;
       tilt += this.tiltVelocity * dt;
