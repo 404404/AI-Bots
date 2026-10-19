@@ -1269,6 +1269,15 @@ function sessionFailureDetails(error: unknown): { code?: string; status?: number
   };
 }
 
+const CONTEXT_WINDOW_EXCEEDED_NOTICE =
+  "This conversation's context is full and automatic compaction could not recover it. Retry with a smaller request, for example ask for one part of a large file or command output instead of all of it.";
+
+function sessionFailureBody(details: { code?: string; detail: string }): string {
+  if (details.code === 'CONTEXT_WINDOW_EXCEEDED')
+    return `Session failed: CONTEXT_WINDOW_EXCEEDED: ${CONTEXT_WINDOW_EXCEEDED_NOTICE}`;
+  return `Session failed: ${details.code === undefined ? '' : details.code + ': '}${details.detail}`;
+}
+
 class BotRuntimeImplementation implements BotRuntime {
   readonly #requireExecution: BotRuntimeOptions['requireExecution'];
   readonly #externalMessaging: OutboundMessaging | undefined;
@@ -4796,7 +4805,7 @@ class BotRuntimeImplementation implements BotRuntime {
       id: `session-failure-${randomUUID()}`,
       at: this.#now().toISOString(),
       author: { kind: 'bot', slug: input.botSlug },
-      body: `Session failed: ${details.code === undefined ? '' : details.code + ': '}${details.detail}`,
+      body: sessionFailureBody(details),
       format: 'text',
       sessionFailure: {
         ...failure,
