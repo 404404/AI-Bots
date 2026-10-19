@@ -50,7 +50,7 @@ export function mountWallpaper(owner: Wallpaper): () => void {
       if (frame) {
         frame.setAttribute('data-wallpaper-active', '');
         frame.prepend(layer);
-        resize.observe(frame);
+        resize.observe(layer);
       }
     }
     if (!frame || !current) {
@@ -80,12 +80,12 @@ export function mountWallpaper(owner: Wallpaper): () => void {
         }
       }
     }
-    const box = frame.getBoundingClientRect();
+    const box = getComputedStyle(layer);
     const placement = wallpaperPlacement(
       current.width,
       current.height,
-      box.width,
-      box.height,
+      Number.parseFloat(box.width),
+      Number.parseFloat(box.height),
       current.crop,
     );
     for (const [key, value] of Object.entries(placement))
