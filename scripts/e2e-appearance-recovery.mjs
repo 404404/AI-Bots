@@ -67,6 +67,11 @@ const cli = async (...args) => {
 };
 const click = (name) => page.locator(`::-p-aria(${name}[role="button"])`).click();
 const select = async (name, value) => {
+  if (await page.$(`[role="radiogroup"][aria-label="${name}"]`)) {
+    await page.locator(`::-p-aria(${value}[role="radio"])`).click();
+    await pause();
+    return;
+  }
   await click(name);
   await page.locator(`::-p-aria(${value}[role="menuitem"])`).click();
   await pause();
@@ -138,21 +143,30 @@ const record = () =>
         q.onerror = reject;
         q.onsuccess = () => {
           const db = q.result;
-          const r = db.transaction('assets').objectStore('assets').get('current');
-          r.onsuccess = () => {
-            const v = r.result;
-            resolve(
-              v
-                ? {
-                    revision: v.revision,
-                    kind: v.kind,
-                    size: v.blob.size,
-                    crop: v.crop,
-                    poster: v.poster?.size,
-                  }
-                : null,
-            );
-            db.close();
+          const store = db.transaction('assets').objectStore('assets');
+          const index = store.get('library');
+          index.onsuccess = () => {
+            if (!index.result?.active) {
+              resolve(null);
+              db.close();
+              return;
+            }
+            const r = store.get('item:' + index.result.active);
+            r.onsuccess = () => {
+              const v = r.result;
+              resolve(
+                v
+                  ? {
+                      revision: index.result.revision,
+                      kind: v.kind,
+                      size: v.blob.size,
+                      crop: v.crop,
+                      poster: v.poster?.size,
+                    }
+                  : null,
+              );
+              db.close();
+            };
           };
         };
       }),
@@ -212,11 +226,11 @@ const defaults = async () => {
   assert.equal(await record(), null);
 };
 const beginReset = async () => {
-  await click('Restore all default appearance…');
+  await click('Restore defaults…');
   await page.waitForSelector('[data-appearance-reset-confirmation]');
 };
 const confirm = async () => {
-  await click('Confirm full appearance reset');
+  await click('Restore defaults');
   await page.waitForFunction(() => !document.querySelector('[data-appearance-reset-confirmation]'));
   await pause();
 };
@@ -316,7 +330,7 @@ try {
     await page.bringToFront();
 
     await screenshot('readable-recovery');
-    await click('Clear all Panel overrides in this mode');
+    await click('Clear panel settings');
     const cleared = await read();
     assert.equal(cleared.modes.light.panels, undefined);
     assert.deepEqual(cleared.modes.dark, before.modes.dark);
@@ -362,7 +376,7 @@ try {
     assert.equal((await read()).preference, 'system');
     assert.deepEqual(await record(), image);
     await page
-      .locator('::-p-text(Palettes and Panels were reset, but wallpaper removal failed)')
+      .locator('::-p-text(Colors were restored, but wallpapers could not be removed)')
       .wait();
     await screenshot('partial-reset');
     await page.evaluate(() => {
@@ -377,7 +391,7 @@ try {
     await seed();
     await media('wallpaper-import', ['--file', videoPath]);
     await page.waitForSelector('[data-bh-wallpaper] video');
-    await click('Adjust crop');
+    await click('Adjust crop · Wallpaper 1');
     await page.waitForSelector('[data-wallpaper-preview] video');
     await page.evaluate(() => {
       window.acceptedVideo = document.querySelector('[data-bh-wallpaper] video');
@@ -400,7 +414,9 @@ try {
       ],
     );
     await screenshot('reset-video-complete');
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(videoPath);
+    await (await page.$('input[aria-label="Add wallpaper"]')).uploadFile(videoPath);
+    await page.waitForSelector('[data-wallpaper-item]');
+    await click('Adjust crop · Wallpaper 1');
     await page.waitForSelector('[data-wallpaper-preview] video');
     await beginReset();
     await confirm();

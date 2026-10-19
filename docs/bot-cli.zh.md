@@ -1043,6 +1043,17 @@ deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
 
 同一组壁纸命令也支持最大 100 MiB 的视频。提交前，指定 Client 必须实际播放解码并生成封面；不会转码原文件。`wallpaper-get` 返回临时观测的 `playback.state`（`playing`、`paused`、`poster`、`inactive`），降级时附带明确 `reason`。播放失败或之后的运行环境无法解码时使用已保存封面。图片上限仍为 20 MiB；兼容性按运行环境与编码分别验证，传输成功不等于可播放。
 
+壁纸是最多 24 项的壁纸库。导入会加入媒体并立即显示。`wallpaper-get` 返回 `wallpaper.library`：每项的 `id`、`kind`、大小和裁切，选中的 `active` 项以及轮播设置；`wallpaper.current` 是当前显示的那一项。
+
+```bash
+deepseekbot wallpaper-select --client-id <id> --expected-revision <revision> --wallpaper-item <item-id|none>
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision> --wallpaper-item <item-id>
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --wallpaper-item <item-id> --patch-stdin < crop.json
+echo '{"interval":900000,"shuffle":true}' | deepseekbot wallpaper-rotation --client-id <id> --expected-revision <revision> --patch-stdin
+```
+
+不带 `--wallpaper-item` 时，裁切和删除作用于当前显示的那一项。`none` 保留壁纸库但不显示壁纸。删除当前显示项会切到下一项。`interval` 取 `0`（关闭）、`60000`、`300000`、`900000`（默认）、`1800000` 或 `3600000` 毫秒；`shuffle` 随机顺序，且不会连续两次显示同一项。轮播按时钟计算，同一 Client 的所有窗口显示同一项，无需额外写入。全部恢复会清空壁纸库。
+
 ### 外观恢复
 
 先读取 `appearance-get --client-id <id>` 与 `wallpaper-get --client-id <id>`，两者修订号独立。

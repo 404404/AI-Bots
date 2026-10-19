@@ -1069,6 +1069,17 @@ deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
 
 The same wallpaper commands also accept videos up to 100 MiB. Import must actually play/decode on the selected Client and generate a poster before committing; originals are not transcoded. `wallpaper-get` returns transient `playback.state` (`playing`, `paused`, `poster`, `inactive`) and a coded `reason` when degraded. The saved poster is used if playback fails or a later runtime cannot decode an accepted video. Image limits remain 20 MiB. Support is runtime/codec-specific; a successful transport alone does not prove playback.
 
+Wallpapers form a library of up to 24 items. Import adds the media and shows it. `wallpaper-get` returns `wallpaper.library` with each item's `id`, `kind`, size and crop, the chosen `active` item and the rotation settings; `wallpaper.current` is the item on screen now.
+
+```bash
+deepseekbot wallpaper-select --client-id <id> --expected-revision <revision> --wallpaper-item <item-id|none>
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision> --wallpaper-item <item-id>
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --wallpaper-item <item-id> --patch-stdin < crop.json
+echo '{"interval":900000,"shuffle":true}' | deepseekbot wallpaper-rotation --client-id <id> --expected-revision <revision> --patch-stdin
+```
+
+Without `--wallpaper-item`, crop and remove act on the item on screen. `none` keeps the library but shows no wallpaper. Removing the item on screen moves on to the next one. `interval` is `0` (off), `60000`, `300000`, `900000` (default), `1800000` or `3600000` milliseconds; `shuffle` picks a random order without repeating an item twice in a row. Rotation follows the clock, so every window of that Client shows the same item without extra writes. Full appearance reset empties the library.
+
 ### Appearance recovery
 
 Read `appearance-get --client-id <id>` and `wallpaper-get --client-id <id>` first; their revisions are independent.
