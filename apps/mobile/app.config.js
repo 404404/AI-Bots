@@ -14,7 +14,12 @@ module.exports = ({ config }) => {
       ? {
           name: 'DeepSeekBot',
           scheme: 'deepseekbot',
-          android: { ...config.android, package: 'app.deepseekbot.mobile' },
+          android: {
+            ...config.android,
+            package: 'app.deepseekbot.mobile',
+            // EAS file variable with the Firebase config for FCM push; builds without it still work, without push.
+            ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
+          },
         }
       : {}),
   };

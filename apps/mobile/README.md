@@ -155,7 +155,7 @@ npx eas-cli build:version:get -p all -e store-test   # once: compare with App St
 npx eas-cli build --profile store-test --platform all --auto-submit
 ```
 
-`--auto-submit` uploads iOS to TestFlight (`ascAppId` in `eas.json`) and Android to the Play internal track as a draft, which is rolled out in Play Console. Google Play needs one manual AAB upload before the API (and so `eas submit`) can upload, plus a Google service account key in EAS credentials. Android push needs FCM credentials (`npx eas-cli credentials`); without them the app works but cannot register for notifications.
+`--auto-submit` uploads iOS to TestFlight (`ascAppId` in `eas.json`) and Android to the Play internal track as a draft, which is rolled out in Play Console. Google Play needs one manual AAB upload before the API (and so `eas submit`) can upload, plus a Google service account key in EAS credentials. Android push needs two things from the Firebase project for `app.deepseekbot.mobile`: its `google-services.json`, stored as the EAS file environment variable `GOOGLE_SERVICES_JSON` (`npx eas-cli env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret --environment production --environment preview`), which `app.config.js` passes to `android.googleServicesFile`; and the FCM V1 service account key, uploaded with `npx eas-cli credentials`. Without them the app works but cannot register for notifications.
 
 ## Optional statistics
 
