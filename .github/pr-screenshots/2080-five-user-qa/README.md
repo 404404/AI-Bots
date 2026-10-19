@@ -23,3 +23,9 @@ The mobile and breaker reviews additionally reproduced unavailable-as-expired an
 The browser connection first timed out, then Chrome disappeared from the supported browser inventory even after the Human brought its tab forward. No alternative browser-control mechanism was used. Host doctor remained healthy. Client diagnostics also recorded an unclassified exception and shell-lost/remounted events: the browser console must be inspected after reconnection before declaring the Client clean.
 
 Still required: corrected-copy screenshots; one-click Always allow and changed-input success in the latest build; revoke/reject/Full Access browser cases; real 375px and slow-3G checks; junk/back/double-click browser case; five-persona rerun and final frequency ranking. Existing earlier qualified evidence remains historical. CI success does not satisfy this browser gate. PR remains draft; do not merge.
+
+## Edge continuation (2026-10-20)
+
+The Human authorized the local Edge fallback. Captures 08–10 use its default 1994 × 1178 viewport. 08 shows the pending three-action card; 09 shows saved permission and the real B output; 10 shows the changed-input C request and reply without another card. The parent activated Always allow by keyboard after an unsuccessful mouse attempt. No second confirmation was presented. The sanitized [native proof](edge-proof.json) records three successful pwsh calls and only two Human decisions, with one active current-tool rule. Only harmless output commands were used.
+
+These frames continue the old ax2080-copy Host, launched from c1f31e530. The shared Client was rebuilt during this run; these images therefore do not qualify the recovery fixes at an exact source revision. They prove the ordinary remembered-tool flow and preserve the actual A/B/C outputs. A fresh 35d2838bb Host on 7093 is being tested separately. The five-persona and after-fix gates above remain open.
