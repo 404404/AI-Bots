@@ -8,7 +8,7 @@ import {
 import { useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Platform, StyleSheet, View } from 'react-native';
 
-import { edge, pointer, radius } from '../design/tokens';
+import { edge, edgeFade, pointer, radius } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
 
 let reduced = true;
@@ -76,13 +76,13 @@ export function EdgeMaterial({ edge: side, solid }: { edge: 'top' | 'bottom'; so
       pointerEvents="none"
     >
       <Mask modifiers={[accessibilityHidden(), ignoreSafeArea({ edges: 'all' })]}>
-        <Rectangle modifiers={[foregroundStyle({ type: 'material', material: 'thin' })]} />
+        <Rectangle modifiers={[foregroundStyle({ type: 'material', material: 'ultraThin' })]} />
         <Mask.Content>
           <Rectangle
             modifiers={[
               foregroundStyle({
                 type: 'linearGradient',
-                colors: [pointer.rim, `${pointer.rim}00`],
+                colors: edgeFade.blur.map((alpha) => `${pointer.rim}${alpha}`),
                 startPoint: { x: 0.5, y: top ? solid : 1 - solid },
                 endPoint: { x: 0.5, y: top ? 1 : 0 },
               }),
