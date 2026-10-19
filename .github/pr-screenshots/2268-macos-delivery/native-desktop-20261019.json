@@ -31,14 +31,14 @@
     "outcome": "Actual installed CLI -> native Host -> Client owner -> readback"
   },
   "nativeInputAndPresentation": {
-    "observedLevels": [0.83, 1, 1.2, 1.44],
     "draft": "Synthetic Chinese/English composer draft retained across actual zoom actions",
     "fontSize": 15,
     "ordinaryEqual": "Prior physical Human plain Cmd+= acceptance remains the ordinary-key proof; CUA Equal may carry Shift",
     "IME": "Human explicitly accepted real Chinese candidate/draft/zoom preservation in this task; no claim that synthetic composition proves IME",
     "consoleObservation": "No warning/error/pageerror recorded during the observed final-package input segment; not an all-startup log audit",
     "wallpaperWindowMode": "Whole native window inspected at83%/144%; full content viewport and themed panel headers",
-    "fullscreen": "Native fullscreen geometry reached full viewport; final Human visual response pending"
+    "fullscreen": "Human accepted final package in windowed and fullscreen modes: wallpaper fills, no top/corner white base, panels and zoom settings normal",
+    "observedPercentLabels": [83, 100, 120, 144]
   },
   "failuresPreserved": [
     "Managed Desktop CLI rejects the desktop Profile",
@@ -55,12 +55,22 @@
     "lint": "passed after launcher inventory audit",
     "format": "passed",
     "types": "passed",
-    "build": "passed"
+    "build": "passed",
+    "fullClient": {
+      "filesPassed": 269,
+      "filesSkipped": 1,
+      "testsPassed": 2035,
+      "testsSkipped": 1
+    }
   },
   "remaining": [
-    "Final Human visual acceptance of wallpaper/header in both native window modes",
-    "S2 broader independent embedded-page and native popup matrix",
+    "S2 broader independent embedded-page/native-popup matrix remains tracked in #2269",
     "Windows/Linux deferred to #2270; no platform claim"
   ],
-  "screenshots": ["native-window-144.png"]
+  "screenshots": ["native-window-144.png"],
+  "humanQA": {
+    "result": "passed",
+    "scope": "Final actual packed macOS windowed/fullscreen wallpaper, header/corner, panels and zoom Settings; real IME accepted earlier in this task",
+    "humanResponse": "都正常"
+  }
 }
