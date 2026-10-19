@@ -47,6 +47,33 @@ export function rowStatus(row: Conversation, now: Date): RowStatus {
   return Number.isFinite(at) && now.getTime() - at < DONE_WINDOW_MS ? 'done' : 'none';
 }
 
+export function rowLabel(
+  row: Conversation,
+  title: string,
+  status: RowStatus,
+  preview: string,
+): string {
+  const spoken =
+    status === 'none' ||
+    t.rowStatus[status] === preview ||
+    (status === 'needs-you' && row.needsYou > 0)
+      ? undefined
+      : t.rowStatus[status];
+  return [
+    title,
+    spoken,
+    row.needsYou > 0 ? t.needsYouCount(row.needsYou) : undefined,
+    row.unread > 0
+      ? row.muted
+        ? t.mutedUnread(row.unread)
+        : t.unreadCount(row.unread)
+      : undefined,
+    preview === '' ? undefined : preview,
+  ]
+    .filter((part) => part !== undefined)
+    .join(', ');
+}
+
 export function countBadge(attention: Attention): CountBadgeState {
   if (attention.needsYou > 0) return { tone: 'needs-you', count: attention.needsYou };
   if (attention.unread > 0)

@@ -7,6 +7,7 @@ import {
   conversations,
   countBadge,
   DONE_WINDOW_MS,
+  rowLabel,
   rowStatus,
   searchConversations,
   shortTime,
@@ -215,6 +216,16 @@ describe('Row status', () => {
     ).toBe('none');
     expect(rowStatus(row({ previewAuthor: { kind: 'human' } }, { unread: 1 }), now)).toBe('none');
     expect(rowStatus(row({}), now)).toBe('none');
+  });
+
+  it('reads the status once in the row label', () => {
+    expect(rowLabel(row({ paused: true }), 'Ada', 'paused', 'Paused')).toBe('Ada, Paused');
+    expect(rowLabel(row({ state: 'working' }), 'Ada', 'working', 'Sure')).toBe(
+      'Ada, Working, Sure',
+    );
+    expect(rowLabel(row({}, { needsYou: 2 }), 'Ada', 'needs-you', 'Done')).toBe(
+      'Ada, 2 need you, Done',
+    );
   });
 });
 
