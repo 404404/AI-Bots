@@ -66,9 +66,7 @@
       "version": "0.2.1-rc.2",
       "commit": "332895e"
     },
-    "themeIds": [
-      "@deepseek-ai/dsh-client-ui-theme"
-    ],
+    "themeIds": ["@deepseek-ai/dsh-client-ui-theme"],
     "compatibilityVersion": 1
   },
   "nativeInput": {
