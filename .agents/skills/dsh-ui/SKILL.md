@@ -26,7 +26,7 @@ The in-harness UI is part of the shell, not a standalone app (ADR-0028): style w
 - **Baseline externals only** in the client bundle; adding one updates the bundle contract test in the same commit.
 - **Modes unwind**: shadows and listeners reconcile from a single store and dispose cleanly.
 
-- **Pointer menus have one positioning owner**: use `ds/PointerMenu` for every application right-click menu. Pass unmodified `clientX/clientY`; never add feature-local offsets or construct a coordinate proxy anchor. See the coordinate contract in `references/native-contract.md`. Native anchored dropdowns continue to use `Menu`, except the qualified compact Settings picker under whole-window zoom; its owning-Modal container contract is recorded in the native-contract reference.
+- **Pointer menus have one positioning owner**: use `ds/PointerMenu` for every application right-click menu. Pass unmodified `clientX/clientY`; never add feature-local offsets or construct a coordinate proxy anchor. See the coordinate contract in `references/native-contract.md`. Native anchored dropdowns continue to use `Menu`, except the measured compact Settings picker and shared `ds/Select` under whole-window zoom; its owning-Modal container contract is recorded in the native-contract reference.
 
 ## Reference
 
