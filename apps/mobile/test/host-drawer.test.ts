@@ -147,6 +147,12 @@ describe('Host drawer', () => {
     expect(drawerWidth(390)).toBe(332);
     expect(drawerWidth(900)).toBe(360);
   });
+
+  it('follows the Material 3 modal drawer on Android: up to 360dp, leaving 56dp of scrim', () => {
+    expect(drawerWidth(390, 'android')).toBe(334);
+    expect(drawerWidth(411, 'android')).toBe(355);
+    expect(drawerWidth(900, 'android')).toBe(360);
+  });
 });
 
 describe('Host rows', () => {
