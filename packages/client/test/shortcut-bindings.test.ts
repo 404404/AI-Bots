@@ -138,6 +138,18 @@ describe('default shortcut bindings', () => {
     expect(defaults.text('unread-prev')).toBe('Alt+Shift+↑');
   });
 
+  it('opens Bot settings with Ctrl+, or ⌘+,', () => {
+    expect(defaults.matches('settings', key(',', 'Comma', { ctrlKey: true }))).toBe(true);
+    expect(mac.matches('settings', key(',', 'Comma', { metaKey: true }))).toBe(true);
+    expect(mac.matches('settings', key(',', 'Comma', { ctrlKey: true }))).toBe(false);
+    expect(defaults.matches('settings', key(',', 'Comma', { ctrlKey: true, altKey: true }))).toBe(
+      false,
+    );
+    expect(defaults.matches('settings', key(',', 'Comma'))).toBe(false);
+    expect(defaults.text('settings')).toBe('Ctrl+,');
+    expect(mac.text('settings')).toBe('⌘,');
+  });
+
   it('opens the list with Ctrl+/ or ⌘+/', () => {
     expect(defaults.matches('help', key('/', 'Slash', { ctrlKey: true }))).toBe(true);
     expect(mac.matches('help', key('/', 'Slash', { metaKey: true }))).toBe(true);

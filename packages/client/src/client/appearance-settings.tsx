@@ -4,11 +4,17 @@ import type { Wallpaper } from './wallpaper.js';
 import { AppearanceMaterialSettings } from './appearance-material-settings.js';
 import { useSyncExternalStore, type ReactNode, type ReactElement } from 'react';
 import type { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client';
-import { APPEARANCE_PRIMARY, type Appearance, type AppearancePatch } from './appearance.js';
+import type { Appearance, AppearancePatch } from './appearance.js';
 import type { PropsLocale, PropsRenderSlots, InjectFace } from '@deepseek-ai/dsh-client-ui-slots';
 import type { BotModePrefsFace } from './bot-mode-prefs.js';
 import { BotIconSetting, MotionSetting } from './bot-mode-setting-rows.js';
-import { SettingsRows, SettingsRow } from './ds/settings-row.js';
+import { SettingsRows, SettingsRow, SettingsSection } from './ds/settings-row.js';
+import {
+  ColorSchemePicker,
+  PrimaryColorPicker,
+  ThemePresetPicker,
+  applyPreset,
+} from './appearance-pickers.js';
 import { Select } from './ds/select.js';
 import { Note } from './ds/note.js';
 
@@ -24,7 +30,6 @@ export function AppearanceSection(
     PropsRenderSlots<'botharness.settings.layout'>,
 ): ReactElement {
   const { t, appearance, wallpaper, localeSource, renderSlot } = props;
-  const media = useSyncExternalStore(wallpaper.subscribe, wallpaper.getSnapshot);
   const theme = useSyncExternalStore(appearance.subscribe, appearance.getSnapshot);
   const locale = useSyncExternalStore(localeSource.subscribe, localeSource.getSnapshot);
   const change = (patch: AppearancePatch) => {
@@ -35,61 +40,35 @@ export function AppearanceSection(
   return (
     <SettingsRows>
       <Note>{t('appearance.local')}</Note>
-      <AppearanceRecoverySettings appearance={appearance} wallpaper={wallpaper} t={t} />
       {theme.error && <Note tone="danger">{t('appearance.saveFailed')}</Note>}
-      <SettingsRow
-        title={t('settings.theme')}
-        control={
-          <Select
-            label={t('settings.theme')}
-            value={theme.config.preference}
-            options={[
-              { value: 'system', label: t('settings.theme.system') },
-              { value: 'light', label: t('settings.theme.light') },
-              { value: 'dark', label: t('settings.theme.dark') },
-            ]}
-            onChange={(preference) => change({ preference })}
-          />
-        }
-      />
-      {(['light', 'dark'] as const).map((mode) => (
-        <div key={mode}>
-          <SettingsRow
-            title={t(mode === 'light' ? 'appearance.lightPreset' : 'appearance.darkPreset')}
-            control={
-              <Select
-                label={t(mode === 'light' ? 'appearance.lightPreset' : 'appearance.darkPreset')}
-                value={theme.config.modes[mode].preset}
-                reselect
-                options={[
-                  { value: 'classic-blue', label: t('appearance.classicBlue') },
-                  { value: 'mist-purple', label: t('appearance.mistPurple') },
-                  { value: 'forest-green', label: t('appearance.forestGreen') },
-                  { value: 'warm-amber', label: t('appearance.warmAmber') },
-                ]}
-                onChange={(preset) => change({ mode, preset })}
-              />
-            }
-          />
-          <SettingsRow
-            title={t(mode === 'light' ? 'appearance.lightPrimary' : 'appearance.darkPrimary')}
-            control={
-              <input
-                type="color"
-                aria-label={t(
-                  mode === 'light' ? 'appearance.lightPrimary' : 'appearance.darkPrimary',
-                )}
-                value={
-                  theme.config.modes[mode].primary ??
-                  APPEARANCE_PRIMARY[theme.config.modes[mode].preset][mode]
-                }
-                onChange={(event) => change({ mode, primary: event.currentTarget.value })}
-              />
-            }
-          />
-        </div>
-      ))}
-      <WallpaperSettings key={media.resourceVersion} owner={wallpaper} t={t} />
+      <SettingsSection title={t('settings.theme')}>
+        <ColorSchemePicker
+          value={theme.config.preference}
+          config={theme.config}
+          t={t}
+          onChange={(preference) => change({ preference })}
+        />
+      </SettingsSection>
+      <SettingsSection title={t('appearance.palette')}>
+        <ThemePresetPicker
+          config={theme.config}
+          t={t}
+          onSelect={(preset) => applyPreset(appearance, preset)}
+        />
+        <SettingsRow
+          title={t('appearance.primary')}
+          control={(['light', 'dark'] as const).map((mode) => (
+            <PrimaryColorPicker
+              key={mode}
+              mode={mode}
+              config={theme.config.modes[mode]}
+              t={t}
+              onChange={(primary) => change({ mode, primary })}
+            />
+          ))}
+        />
+      </SettingsSection>
+      <WallpaperSettings owner={wallpaper} appearance={appearance} t={t} />
       <AppearanceMaterialSettings appearance={appearance} snapshot={theme} t={t} />
       <MotionSetting {...props} />
       <BotIconSetting {...props} />
@@ -105,6 +84,7 @@ export function AppearanceSection(
         }
       />
       {renderSlot('botharness.settings.layout', {}) as unknown as ReactNode}
+      <AppearanceRecoverySettings appearance={appearance} wallpaper={wallpaper} t={t} />
     </SettingsRows>
   );
 }

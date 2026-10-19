@@ -45,6 +45,11 @@ const cli = async (command, args = [], patch) => {
 };
 const click = (name) => page.locator(`::-p-aria(${name}[role="button"])`).click();
 const select = async (name, value) => {
+  if (await page.$(`[role="radiogroup"][aria-label="${name}"]`)) {
+    await page.locator(`::-p-aria(${value}[role="radio"])`).click();
+    await pause();
+    return;
+  }
   await click(name);
   await page.locator(`::-p-aria(${value}[role="menuitem"])`).click();
   await pause();

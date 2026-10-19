@@ -98,6 +98,7 @@ import {
 } from './channel-sidebar-builtins.js';
 import { webShortcutBlocked, webModalOpen, webShortcutHelpQuestion } from './channel-shortcuts.js';
 import { ShortcutBindings } from './shortcut-bindings.js';
+import { mountSettingsShortcut } from './settings-shortcut.js';
 import {
   browserNotificationApi,
   DesktopNotificationPrefs,
@@ -624,6 +625,15 @@ export function apply(ctx: ClientContext): void {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, 'botharness: keyboard shortcut list');
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    return mountSettingsShortcut({
+      document,
+      bindings: shortcutBindings,
+      botSettings,
+      active: () => store.getSnapshot().mode === 'bot',
+    });
+  }, 'botharness: Bot settings keyboard shortcut');
   ctx.effect(() => {
     if (typeof document === 'undefined') return () => {};
     return mountTabTitle(store, document);
