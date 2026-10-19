@@ -17,7 +17,9 @@ module.exports = ({ config }) => {
           android: {
             ...config.android,
             package: 'app.deepseekbot.mobile',
-            ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
+            ...(process.env.GOOGLE_SERVICES_JSON
+              ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
+              : {}),
           },
         }
       : {}),
