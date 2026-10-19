@@ -365,7 +365,7 @@ export const zh = {
   'intro.welcome.next': '先花一分钟把这里布置成你喜欢的样子，然后我们就开始吧。',
   'intro.founder.title': '创始人的话',
   'intro.founder.body':
-    '在开发 DeepSeekBot 的时候，我还是一名在读的人机交互（HCI）学生。开发过程中我发表了 HAI 论文，现在我管理的 Agents 每过 3 个月就会翻一倍。\n我相信在未来，IM 软件里 Bots 的数量会多于 Human。DeepSeekBot 就是看着这样的终局，抱着这样的想法被不断打磨的：\n1. 做下一个 Agents 时代的 IM 软件；\n2. 继承 DeepSeek Harness 的开放，坚持 everything is plugin 的理念。\n打磨它的不仅有我，还有这个开源社区里的每一个人、每一个 Bot。',
+    '在开发 DeepSeekBot 的时候，我还是一名在读的人机交互（HCI）学生。开发过程中我发表了 HAI 论文，现在我管理的 Agents 每过 3 个月就会翻一倍。\n我相信在未来，IM 软件里 Bots 的数量会多于人类。DeepSeekBot 就是看着这样的终局，抱着这样的想法被不断打磨的：\n1. 做下一个 Agents 时代的 IM 软件；\n2. 继承 DeepSeek Harness 的开放，坚持 everything is plugin 的理念。\n打磨它的不仅有我，还有这个开源社区里的每一个人、每一个 Bot。',
   'intro.founder.signature': '—— DoodleBear',
   'intro.reviews.title': '用户评价',
   'intro.reviews.clean': '“界面做得挺清爽的，功能多但不乱，找东西很快。”',
@@ -4284,7 +4284,7 @@ export const en = {
   'intro.welcome.next': 'Take a minute to make this place yours, then let’s get started.',
   'intro.founder.title': 'From the founder',
   'intro.founder.body':
-    'When I started building DeepSeekBot, I was a student in Human-Computer Interaction (HCI). Along the way I published a paper at HAI, and the agents I manage now double every three months.\nI believe that one day IM apps will hold more bots than humans. DeepSeekBot has been shaped with that future in mind, around two ideas:\n1. Build the IM app for the next era of agents.\n2. Carry on the openness of DeepSeek Harness, where everything is a plugin.\nIt is shaped not only by me, but by this open-source community: every person and every bot.',
+    'When I started building DeepSeekBot, I was a student in human-computer interaction (HCI). Along the way I published a paper at HAI, and the agents I manage now double every three months.\nI believe that one day IM apps will hold more bots than humans. DeepSeekBot has been shaped with that future in mind, around two ideas:\n1. Build the IM app for the next era of agents.\n2. Carry on the openness of DeepSeek Harness, where everything is a plugin.\nIt is shaped not only by me, but by this open-source community: every person and every bot.',
   'intro.founder.signature': '— DoodleBear',
   'intro.reviews.title': 'What people say',
   'intro.reviews.clean': '“Clean and uncluttered. Lots of features, yet I find things fast.”',
