@@ -92,8 +92,17 @@ zoom changes pass; unadapted native Tooltip fails192/204 cases. The complete
 [source Tooltip matrix](tooltip-source-matrix.json) is separate from native pixels.
 
 The original broad native/input, installer and Host-switch records retain their version and
-scope. macOS Human/native behavior qualification is complete for these representative
-supported paths. #2299 is prepared to close only #2269 after review and merge; it stays Draft
-and unmerged. Current full CI has a separate mobile Expo-doctor dependency-version failure;
-no bypass or successful-CI claim is made. Unknown app versions, arbitrary third-party pages
-and Windows/Linux remain outside this qualification.
+scope. macOS Human/native behavior qualification covers these representative supported paths.
+Default reset and numberpad bindings have not shipped: the pinned native protocol rejects
+numberpad codes, and reset remains Settings/CLI/custom-bindable without a default. This
+outstanding original requirement is tracked explicitly in #2318; it has not been waived or
+counted as passing S2 acceptance. #2299 closes only the bounded #2269 delivery after review
+and merge; it stays Draft and unmerged. The separate mobile Expo-doctor failure is fixed by
+dependency PR #2317 for #2314; fresh CI for the updated stack remains a separate gate.
+Unknown app versions, arbitrary third-party pages and Windows/Linux remain outside this
+qualification.
+
+The review follow-up restores the native tooltip's original `data-side` together with its
+translation and maximum width on disposal. A source regression forces a bottom-to-top flip
+and verifies restoration plus observer shutdown. Existing .16 native screenshots predate
+this cleanup-only change and are not relabeled as a new native run.
