@@ -276,3 +276,41 @@ it('uses committed revisions even when a pending Human message ends the visible 
   });
   f.stop();
 });
+
+it.each([
+  { status: 'opening' as const, fromCache: true },
+  { status: 'interrupted' as const, fromCache: false },
+])('shows recovered history directly after $status and plays subsequent replies', (initial) => {
+  vi.useFakeTimers();
+  const known = {
+    id: 'known',
+    revision: 50,
+    at: '2026-10-19T00:00:00.000Z',
+    author: 'bot' as const,
+    bot: 'ada',
+    body: 'cached answer',
+    attachments: [],
+    delivery: 'committed' as const,
+  };
+  const f = fixture({ ...initial, messages: [known] });
+  f.playback.setFollowing(false);
+  const recovered = { ...known, id: 'recovered', revision: 51, body: 'recovered answer' };
+  f.update({ status: 'live', fromCache: false, messages: [known, recovered] });
+  expect(f.playback.getBubble(known.id)).toBeUndefined();
+  expect(f.playback.getBubble(recovered.id)).toBeUndefined();
+  expect(vi.getTimerCount()).toBe(0);
+  const historical = { ...known, id: 'history', revision: 49, body: 'older answer' };
+  const reply = { ...known, id: 'new', revision: 52, body: 'new answer'.repeat(30) };
+  f.update({ messages: [historical, known, recovered, reply] });
+  expect(f.playback.getBubble(historical.id)).toBeUndefined();
+  expect(f.playback.getBubble(recovered.id)).toBeUndefined();
+  expect(f.playback.getBubble(reply.id)).toMatchObject({ message: { body: '' }, streaming: true });
+  f.playback.setFollowing(true);
+  vi.advanceTimersByTime(30000);
+  expect(f.playback.getBubble(reply.id)).toMatchObject({
+    message: { body: reply.body },
+    streaming: false,
+  });
+  expect(f.playback.getBubble(recovered.id)).toBeUndefined();
+  f.stop();
+});
