@@ -2,6 +2,7 @@ import { TobOnboarding } from './tob-onboarding.js';
 import { HomeWelcome } from './home-welcome.js';
 import { HomeOverview } from './home-overview.js';
 import { ChannelComposer, type ChannelComposerUpload } from './channel-composer.js';
+import { hasVisibleText } from '../../../core/src/channels/message-preview.js';
 import type { ComposerSendKey } from './composer-send-key.js';
 import { uploadChannelAttachment } from './bridge.js';
 import { insertAttachmentReferences, removeAttachmentReferences } from './attachment-refs.js';
@@ -241,7 +242,7 @@ export function HomePanel({
       !home ||
       !ready ||
       sending.current ||
-      (!draft.trim() && !uploads.length) ||
+      (!hasVisibleText(draft) && !uploads.length) ||
       uploads.some((x) => x.status !== 'ready' || !x.ref)
     )
       return;

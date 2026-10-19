@@ -52,7 +52,8 @@ import type {
 } from '../release/service.js';
 import type { TelemetryStatus } from '../telemetry/service.js';
 import type { OverviewMemory } from '../memory/overview.js';
-import type { ApprovalReviewerModelView, OverviewUsage } from './methods.js';
+import type { ApprovalReviewerModelView, IdleCompactionView, OverviewUsage } from './methods.js';
+import type { ManualCompactionResult } from '../runtime/idle-compaction.js';
 import type { PersonaBotActivitySnapshot } from '../state/bot-state.js';
 import type { HumanAssignmentContext } from '../runtime/assignment-human-context.js';
 import type { ThreadReceptionInput } from '../messaging/thread-policy.js';
@@ -635,6 +636,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
   botNewSession(slug: string): Promise<{ started: true }> {
     return unwrapAsync(this.methods.botNewSession({ slug }));
   }
+
+  botCompact(slug: string): Promise<ManualCompactionResult> {
+    return unwrapAsync(this.methods.botCompact({ slug }));
+  }
   channelBotStop(
     channelId: string,
     botSlug: string,
@@ -881,6 +886,22 @@ export class BotharnessBridgeService extends TypertRemoteService {
 
   approvalReviewerModelSet(model: ModelRoute | null): Promise<ApprovalReviewerModelView> {
     return unwrapAsync(this.methods.approvalReviewerModelSet({ model }));
+  }
+
+  idleCompaction(): IdleCompactionView {
+    return unwrap(this.methods.idleCompaction({}));
+  }
+
+  idleCompactionSet(enabled: boolean): IdleCompactionView {
+    return unwrap(this.methods.idleCompactionSet({ enabled }));
+  }
+
+  idleCompactionCacheLifetimeSet(
+    provider: string,
+    model: string,
+    seconds: number | null,
+  ): IdleCompactionView {
+    return unwrap(this.methods.idleCompactionCacheLifetimeSet({ provider, model, seconds }));
   }
 
   standingLimitsSet(slug: string, soul: number, coreMemory: number): { bot: PersonaBotDetail } {
@@ -1833,6 +1854,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'modelPlanInherit',
   'channelRetry',
   'botNewSession',
+  'botCompact',
   'channelBotStop',
   'modelCatalog',
   'modelPresets',
@@ -1974,6 +1996,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'botApprovalTemplateSet',
   'approvalReviewerModel',
   'approvalReviewerModelSet',
+  'idleCompaction',
+  'idleCompactionSet',
+  'idleCompactionCacheLifetimeSet',
   'standingLimitsSet',
   'botAvatarSet',
   'botAppearanceSet',

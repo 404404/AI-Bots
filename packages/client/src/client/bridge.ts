@@ -2276,6 +2276,58 @@ export async function startGitInstall(call: BridgeCall): Promise<GitAvailability
   return parseGitAvailability(await unwrap(call, 'gitInstall', {}));
 }
 
+export interface IdleCompactionStatus {
+  enabled: boolean;
+  settingReadable: boolean;
+}
+
+export function parseIdleCompactionStatus(value: unknown): IdleCompactionStatus {
+  const item =
+    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+  if (typeof item['enabled'] !== 'boolean') throw new Error('invalid idle compaction status');
+  return { enabled: item['enabled'], settingReadable: item['settingReadable'] !== false };
+}
+
+export interface BotCompactResult {
+  outcome: 'compacted' | 'nothing' | 'busy' | 'not-loaded';
+  tokensBefore: number | null;
+  tokensAfter: number | null;
+}
+
+export function parseBotCompactResult(value: unknown): BotCompactResult {
+  const item =
+    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+  const outcome = item['outcome'];
+  if (
+    outcome !== 'compacted' &&
+    outcome !== 'nothing' &&
+    outcome !== 'busy' &&
+    outcome !== 'not-loaded'
+  )
+    throw new Error('invalid compaction result');
+  const tokens = (raw: unknown) =>
+    typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 ? raw : null;
+  return {
+    outcome,
+    tokensBefore: tokens(item['tokensBefore']),
+    tokensAfter: tokens(item['tokensAfter']),
+  };
+}
+
+export async function loadIdleCompaction(
+  call: BridgeCall,
+  signal?: AbortSignal,
+): Promise<IdleCompactionStatus> {
+  return parseIdleCompactionStatus(await unwrap(call, 'idleCompaction', {}, signal));
+}
+
+export async function setIdleCompaction(
+  call: BridgeCall,
+  enabled: boolean,
+): Promise<IdleCompactionStatus> {
+  return parseIdleCompactionStatus(await unwrap(call, 'idleCompactionSet', { enabled }));
+}
+
 export async function loadTelemetryStatus(
   call: BridgeCall,
   signal?: AbortSignal,
