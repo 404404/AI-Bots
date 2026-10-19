@@ -1,4 +1,5 @@
 import { createWindowZoomControl, WINDOW_ZOOM_CONTROL_PATH } from './window-zoom/control.js';
+import { APPEARANCE_CONTROL_PATH, createAppearanceControl } from './appearance/control.js';
 import { CloudConnections } from './cloud/connections.js';
 import { createCloudProvider } from './cloud/provider.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
@@ -2315,6 +2316,19 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         await off();
       };
     }, 'botharness: targeted window zoom delivery');
+    connectionCtx.effect(() => {
+      const control = createAppearanceControl();
+      const off = connection.fetch.register({
+        path: APPEARANCE_CONTROL_PATH,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: control.fetch,
+      });
+      return async () => {
+        control.dispose();
+        await off();
+      };
+    }, 'botharness: explicit Client-local appearance control');
     connectionCtx.effect(() => {
       return connection.fetch.register({
         path: CHANNEL_STREAM_PATH,

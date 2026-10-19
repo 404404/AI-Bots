@@ -199,6 +199,7 @@ export function ChannelWorkspace({
             >
               <div
                 className="bh-channel-session-header"
+                data-appearance-header={id}
                 onDragStart={(event) => {
                   if (!channelId || !(event.target as Element).closest('[data-panel-hide]')) {
                     event.preventDefault();
@@ -216,7 +217,9 @@ export function ChannelWorkspace({
               >
                 {panel.header}
               </div>
-              {panel.content}
+              <div className="bh-channel-subpanel-body" data-appearance-body={id}>
+                {panel.content}
+              </div>
             </section>
           ),
           containers.get(id)!,

@@ -188,6 +188,7 @@ export function ChannelDeliveryReceipt({
               aria-label={t('message.delivery.label')}
               tabIndex={-1}
               className="bh-delivery-panel"
+              data-bh-appearance-owned=""
               style={{
                 left: position?.left ?? 0,
                 top: position?.top ?? 0,

@@ -112,6 +112,7 @@ export function DmComposerUsagePopover({
     <div
       ref={mount}
       className="bh-composer-usage-popover"
+      data-bh-appearance-owned=""
       role="dialog"
       aria-labelledby={titleId}
       tabIndex={-1}

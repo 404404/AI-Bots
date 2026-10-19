@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import {
   createContext,
   useContext,
@@ -9,7 +10,6 @@ import {
 } from 'react';
 import {
   IconChevronRightOutlineRegular,
-  Menu,
   MenuItemButton,
   MenuSurface,
   Tooltip,
