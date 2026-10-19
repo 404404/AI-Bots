@@ -1,5 +1,8 @@
 import {
+  AdditiveBlending,
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
   CylinderGeometry,
@@ -8,14 +11,16 @@ import {
   Mesh,
   MeshBasicMaterial,
   PointLight,
+  Points,
+  PointsMaterial,
   SphereGeometry,
   SRGBColorSpace,
   TubeGeometry,
   Vector3,
-  type BufferGeometry,
   type Material,
 } from 'three';
 import type { createRoomMaterials } from './materials.js';
+import { createPaper } from './paper.js';
 
 type Materials = ReturnType<typeof createRoomMaterials>;
 const BOOK_COLORS = [
@@ -324,13 +329,44 @@ export function createProps(surface: number, sill: number, materials: Materials)
   flame.scale.set(1, 1.8, 1);
   flame.position.set(1.0, sill + 0.13, -0.92);
   root.add(flame);
-  const cushion = add(new BoxGeometry(0.42, 0.12, 0.3), toon(0xd98c6a), -0.2, sill + 0.1, -0.95);
-  cushion.rotation.set(0.15, 0.25, 0.05);
+
+  const motes = Array.from({ length: 70 }, (_, i) => [
+    -0.6 + ((i * 0.618) % 1) * 1.8,
+    0.8 + ((i * 0.381) % 1) * 1.3,
+    -0.95 + ((i * 0.733) % 1) * 1.2,
+    i * 1.7,
+  ]);
+  const motePositions = new Float32Array(motes.length * 3);
+  const moteGeometry = new BufferGeometry();
+  moteGeometry.setAttribute('position', new BufferAttribute(motePositions, 3));
+  const moteMaterial = new PointsMaterial({
+    color: 0xfff0c8,
+    size: 0.012,
+    transparent: true,
+    depthWrite: false,
+    blending: AdditiveBlending,
+    opacity: 0,
+  });
+  const dust = new Points(moteGeometry, moteMaterial);
+  dust.frustumCulled = false;
+  root.add(dust);
+  const paper = createPaper(surface, sill, materials);
+  root.add(paper.root);
+  textures.push(...paper.textures);
 
   return {
     root,
     textures,
     update(seconds: number, night: number) {
+      paper.update(seconds, 1);
+      for (let i = 0; i < motes.length; i++) {
+        const [x, y, z, phase] = motes[i]!;
+        motePositions[i * 3] = x! + Math.sin(seconds * 0.13 + phase!) * 0.14;
+        motePositions[i * 3 + 1] = y! + Math.sin(seconds * 0.09 + phase! * 1.3) * 0.2;
+        motePositions[i * 3 + 2] = z! + Math.cos(seconds * 0.11 + phase!) * 0.1;
+      }
+      moteGeometry.attributes.position!.needsUpdate = true;
+      moteMaterial.opacity = (1 - night) * 0.6;
       const now = new Date();
       const minutes = now.getMinutes() + now.getSeconds() / 60;
       minuteHand.rotation.y = -(minutes / 60) * Math.PI * 2;

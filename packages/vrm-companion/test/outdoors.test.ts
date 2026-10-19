@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { InstancedMesh, Mesh, Points } from 'three';
+import { InstancedMesh, LineSegments, Mesh, Points } from 'three';
 import { createOutdoors } from '../src/client/outdoors.js';
 
 afterEach(() => vi.useRealTimers());
@@ -32,5 +32,18 @@ describe('room environment', () => {
     expect(Math.abs(outdoors.cloudX(0))).toBeLessThanOrEqual(26);
     expect(outdoors.root.children.some((child) => child instanceof Points)).toBe(true);
     expect(outdoors.root.children.some((child) => child instanceof Mesh)).toBe(true);
+  });
+
+  it('eases rain in and out and dims the sun while wet', () => {
+    const outdoors = createOutdoors();
+    const rain = outdoors.root.children.find((child) => child instanceof LineSegments)!;
+    expect(outdoors.update(0, 'sunset', 'clear').wet).toBe(0);
+    expect(rain.visible).toBe(false);
+    const easing = outdoors.update(0.5, 'sunset', 'rain').wet;
+    expect(easing).toBeGreaterThan(0);
+    expect(easing).toBeLessThan(1);
+    expect(outdoors.update(5, 'sunset', 'rain').wet).toBe(1);
+    expect(rain.visible).toBe(true);
+    expect(outdoors.update(0, 'sunset', 'clear').wet).toBe(0);
   });
 });

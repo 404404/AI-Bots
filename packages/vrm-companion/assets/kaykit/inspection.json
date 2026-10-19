@@ -88,7 +88,7 @@
       "min": [
         -0.5,
         -0.10000038146972656,
-        -1.1970611168976575E-08
+        -1.1970611168976575e-08
       ],
       "max": [
         0.5000001192092896,
@@ -135,6 +135,186 @@
         1.8000001907348633,
         1.2240597009658813,
         1.600000023841858
+      ],
+      "material": {
+        "name": "furniture_texture",
+        "pbrMetallicRoughness": {
+          "baseColorTexture": {
+            "index": 0
+          },
+          "metallicFactor": 0,
+          "roughnessFactor": 0.5
+        }
+      }
+    },
+    {
+      "name": "cactus_small_A",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/cactus_small_A.gltf",
+      "vertices": 244,
+      "triangles": 252,
+      "primitiveCount": 1,
+      "node": {
+        "mesh": 0,
+        "name": "cactus_small_A"
+      },
+      "min": [
+        -0.24999238550662994,
+        -3.6954881466044753e-07,
+        -0.24999842047691345
+      ],
+      "max": [
+        0.25000762939453125,
+        0.5516003370285034,
+        0.25000157952308655
+      ],
+      "dimensions": [
+        0.5000000149011612,
+        0.5516007065773181,
+        0.5
+      ],
+      "material": {
+        "name": "furniture_texture",
+        "pbrMetallicRoughness": {
+          "baseColorTexture": {
+            "index": 0
+          },
+          "metallicFactor": 0,
+          "roughnessFactor": 0.5
+        }
+      }
+    },
+    {
+      "name": "cactus_medium_A",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/cactus_medium_A.gltf",
+      "vertices": 464,
+      "triangles": 448,
+      "primitiveCount": 1,
+      "node": {
+        "mesh": 0,
+        "name": "cactus_medium_A"
+      },
+      "min": [
+        -0.4399626851081848,
+        1.8132850527763367e-06,
+        -0.4184218943119049
+      ],
+      "max": [
+        0.43994686007499695,
+        0.8272479176521301,
+        0.4184219241142273
+      ],
+      "dimensions": [
+        0.8799095451831818,
+        0.8272461043670774,
+        0.8368438184261322
+      ],
+      "material": {
+        "name": "furniture_texture",
+        "pbrMetallicRoughness": {
+          "baseColorTexture": {
+            "index": 0
+          },
+          "metallicFactor": 0,
+          "roughnessFactor": 0.5
+        }
+      }
+    },
+    {
+      "name": "pictureframe_small_A",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/pictureframe_small_A.gltf",
+      "vertices": 88,
+      "triangles": 60,
+      "primitiveCount": 1,
+      "node": {
+        "mesh": 0,
+        "name": "pictureframe_small_A"
+      },
+      "min": [
+        -0.2500000596046448,
+        -0.30000007152557373,
+        -3.7620480952682556e-08
+      ],
+      "max": [
+        0.2500000596046448,
+        0.30000007152557373,
+        0.20000004768371582
+      ],
+      "dimensions": [
+        0.5000001192092896,
+        0.6000001430511475,
+        0.20000008530419677
+      ],
+      "material": {
+        "name": "furniture_texture",
+        "pbrMetallicRoughness": {
+          "baseColorTexture": {
+            "index": 0
+          },
+          "metallicFactor": 0,
+          "roughnessFactor": 0.5
+        }
+      }
+    },
+    {
+      "name": "pillow_A",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/pillow_A.gltf",
+      "vertices": 69,
+      "triangles": 86,
+      "primitiveCount": 1,
+      "node": {
+        "mesh": 0,
+        "name": "pillow_A"
+      },
+      "min": [
+        -0.32500001788139343,
+        -0.09999999403953552,
+        -0.25
+      ],
+      "max": [
+        0.32499998807907104,
+        0.10000000149011612,
+        0.2500000596046448
+      ],
+      "dimensions": [
+        0.6500000059604645,
+        0.19999999552965164,
+        0.5000000596046448
+      ],
+      "material": {
+        "name": "furniture_texture",
+        "pbrMetallicRoughness": {
+          "baseColorTexture": {
+            "index": 0
+          },
+          "metallicFactor": 0,
+          "roughnessFactor": 0.5
+        }
+      }
+    },
+    {
+      "name": "book_single",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/book_single.gltf",
+      "vertices": 112,
+      "triangles": 68,
+      "primitiveCount": 1,
+      "node": {
+        "mesh": 0,
+        "name": "book_single"
+      },
+      "min": [
+        -0.12999913096427917,
+        -0.2499997317790985,
+        -0.17745713889598846
+      ],
+      "max": [
+        0.13000085949897766,
+        0.25000014901161194,
+        0.18754282593727112
+      ],
+      "dimensions": [
+        0.25999999046325684,
+        0.49999988079071045,
+        0.3649999648332596
       ],
       "material": {
         "name": "furniture_texture",
@@ -208,6 +388,66 @@
       "bytes": 3071,
       "sha256": "7a8748dbe6dc428aa45dbef650c7d10bccee41e823c832ecd9a95b870675aa59",
       "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/shelf_B_small_decorated.gltf"
+    },
+    {
+      "file": "cactus_small_A.gltf",
+      "bytes": 3071,
+      "sha256": "4e2d93fb22b7f6097f3726b1fc513647873428224c01b17abdbe79c01c1e959b",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/cactus_small_A.gltf"
+    },
+    {
+      "file": "cactus_small_A.bin",
+      "bytes": 9320,
+      "sha256": "43dae3699635f54fb84199b7a998c1144690c3e54d6c3fc3c045c38aa54f7fdc",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/cactus_small_A.bin"
+    },
+    {
+      "file": "cactus_medium_A.gltf",
+      "bytes": 3072,
+      "sha256": "902c48a87bf8e48a2d72055485eaaeae3aefd91224e5af914aeb42fca99759a8",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/cactus_medium_A.gltf"
+    },
+    {
+      "file": "cactus_medium_A.bin",
+      "bytes": 17536,
+      "sha256": "be9378a1328b82751ac651de9387d7b20db4ffbb5e1c087b0e634a00ebf7cc0f",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/cactus_medium_A.bin"
+    },
+    {
+      "file": "pictureframe_small_A.gltf",
+      "bytes": 3073,
+      "sha256": "4482cf85a994f9ba3ef45fe490858e5633ef0f09767f79a8511b826024e1de85",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/pictureframe_small_A.gltf"
+    },
+    {
+      "file": "pictureframe_small_A.bin",
+      "bytes": 3176,
+      "sha256": "e0e7dd8c5fcbc564e19934d9b820942aaa0637c1a7112e714d56db9d90926db6",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/pictureframe_small_A.bin"
+    },
+    {
+      "file": "pillow_A.gltf",
+      "bytes": 3029,
+      "sha256": "c24247361c709675257b516dfab950708adf8c086710e8a1fc85e572ea5ebb61",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/pillow_A.gltf"
+    },
+    {
+      "file": "pillow_A.bin",
+      "bytes": 2724,
+      "sha256": "9a295dd293a96e518b0388d3cfcbc7c0ce491e46cfe2c5e3affa016b99e8c0ff",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/pillow_A.bin"
+    },
+    {
+      "file": "book_single.gltf",
+      "bytes": 3056,
+      "sha256": "7b86695b060681fc6de8ac70fc1f24b870edcaf84bfe4ed98b7e706ae594d464",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/book_single.gltf"
+    },
+    {
+      "file": "book_single.bin",
+      "bytes": 3992,
+      "sha256": "0aa0921f471184039e85488a80041a0b4aee6f68589ad53077eea03f4659d66c",
+      "source": "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0/main/addons/kaykit_furniture_bits/Assets/gltf/book_single.bin"
     }
   ]
 }

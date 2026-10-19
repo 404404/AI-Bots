@@ -14,7 +14,7 @@ import {
   type CameraView,
   type SceneChoices,
 } from './stage.js';
-import type { Mood } from './room.js';
+import type { Mood, Weather } from './room.js';
 import type { CharacterShading } from './shading.js';
 
 export const name = 'botharness-vrm-companion-client';
@@ -43,7 +43,12 @@ function Character({ view }: { view: BotPresentationView }) {
   const cleanup = useRef<(() => void) | undefined>();
   const stageRef = useRef<Stage>();
   const key = snapshot.botId;
-  const initial = remembered.get(key) ?? { camera: 'desk', mood: 'auto', shading: 'mtoon' };
+  const initial = remembered.get(key) ?? {
+    camera: 'desk',
+    mood: 'auto',
+    weather: 'clear',
+    shading: 'mtoon',
+  };
   const [shading, setShading] = useState<CharacterShading>(initial.shading);
   const [scene, setScene] = useState<SceneState>({
     phase: 'seated',
@@ -52,6 +57,7 @@ function Character({ view }: { view: BotPresentationView }) {
   });
   const [camera, setCamera] = useState<CameraView>(initial.camera);
   const [mood, setMood] = useState<Mood>(initial.mood);
+  const [weather, setWeather] = useState<Weather>(initial.weather);
   const [loading, setLoading] = useState('');
   const [error, setError] = useState('');
   const [revision, retry] = useState(0);
@@ -78,6 +84,7 @@ function Character({ view }: { view: BotPresentationView }) {
         setCamera(choices.camera);
         setShading(choices.shading);
         setMood(choices.mood);
+        setWeather(choices.weather);
         setError('');
         setScene({ phase: 'seated', wandering: false, ready: false });
         const stage = mountStage(
@@ -232,6 +239,22 @@ function Character({ view }: { view: BotPresentationView }) {
               }}
             >
               {value === 'auto' ? 'Local time' : value === 'sunset' ? 'Sunset' : 'Night'}
+            </Button>
+          ))}
+        </div>
+        <div data-vrm-actions="" role="group" aria-label="Weather">
+          {(['clear', 'rain'] as const).map((value) => (
+            <Button
+              key={value}
+              disabled={!scene.ready}
+              aria-pressed={weather === value}
+              onClick={() => {
+                stageRef.current?.weather(value);
+                setWeather(value);
+                remember({ weather: value });
+              }}
+            >
+              {value === 'clear' ? 'Clear' : 'Rain'}
             </Button>
           ))}
         </div>

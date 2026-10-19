@@ -101,6 +101,18 @@ Date: 2026-10-19. Same scratch harness and SwiftShader caveat, 960 × 540 frames
 - **Panel shapes.** In a narrow docked Panel (about 770 × 816 in the isolated Host) the first framing lost the monitor, so the desk view now pulls back by up to 1.8× as the panel narrows; a 770 × 816 frame keeps the monitor, books, mug, character and window.
 - **Comparison.** Reference and Panel at sunset and night, plus room and portrait views: `room-composition.jpg`.
 
+## Weather, screen and desk motion (Human feedback)
+
+Date: 2026-10-19. Same scratch harness and SwiftShader caveat, 960 × 600 frames.
+
+- **Feedback.** Model and shader detail, scene richness, weather and cloud rendering; specifically background weather with moving clouds and rain, a simulated computer screen with glow, spill and changing content, desk clutter such as open books and paper moving in the wind, more motion overall, and suitable external low-poly models.
+- **Weather.** Scene controls gained **Clear** and **Rain** (`data-vrm-weather`), remembered with the other scene choices. Rain eases in over about a second: 1,400 animated streaks outside, a grey overcast sky and clouds, faded sun, moon and stars, sunlight cut by 65 %, and a shader pane of droplets sliding down the window glass. Clouds were redrawn as two rows of lobes with three toon tones, a light rim and a darker base, lit from the current sun or moon direction.
+- **Screen.** The monitor is a live canvas redrawn at 10 fps from the Bot's Activity: working types code line by line with a blinking cursor, thinking adds a scrolling log with a spinner, waiting and blocked show an amber or red dialog, and idle or away-from-desk shows a music player with album art, the local time, an equaliser and a progress bar. A coloured point light in front of the screen and a glow behind the bezel follow the mode and grow at night. The five screens rendered on their own were checked for content before the scene shots.
+- **Desk motion.** An open book turns a page every 16 s with a curled, eased flip; three ruled sheets (two on the desk, one on the window seat) lift and ripple at their free edge in slow gusts; 70 dust motes drift in daylight and fade at night.
+- **External models.** Five more CC0 KayKit Furniture Bits models (two cacti, a small picture frame, a pillow that replaces the procedural cushion, a single book) were added unchanged, with source URLs, sizes and SHA-256 in `assets/kaykit/inspection.json`; they add 914 triangles and use the same toon materials. VRoid Hub, opengameart and other model sites are not reachable from the agent environment.
+- **Frames.** Sunset working, rainy night thinking, night idle with the music player, and the room view in rain at sunset: `room-weather.jpg`.
+- **Not done this round.** Object outlines (inverted hull) and further character shader work were left for the next round.
+
 ## Acceptance limits and next action
 
 The model is a licensed technical sample; its provenance and license accompany the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

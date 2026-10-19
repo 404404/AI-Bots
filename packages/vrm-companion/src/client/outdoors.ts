@@ -4,6 +4,7 @@ import {
   Color,
   CylinderGeometry,
   Group,
+  LineSegments,
   Float32BufferAttribute,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -17,9 +18,11 @@ import {
   ShaderMaterial,
   SphereGeometry,
   TorusGeometry,
+  Vector2,
 } from 'three';
 
 export type SkyTime = 'auto' | 'sunset' | 'night';
+export type Weather = 'clear' | 'rain';
 export function createOutdoors() {
   const root = new Group();
   const sky = new ShaderMaterial({
@@ -67,6 +70,8 @@ export function createOutdoors() {
       light: { value: new Color() },
       shade: { value: new Color() },
       rim: { value: new Color() },
+      sunDir: { value: new Vector2(0, 1) },
+      cover: { value: 0 },
     },
     vertexShader: `attribute float seed; varying vec2 vUv; varying float vSeed;
       void main() {
@@ -74,7 +79,7 @@ export function createOutdoors() {
         vSeed = seed;
         gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
       }`,
-    fragmentShader: `uniform vec3 light; uniform vec3 shade; uniform vec3 rim;
+    fragmentShader: `uniform vec3 light; uniform vec3 shade; uniform vec3 rim; uniform vec2 sunDir; uniform float cover;
       varying vec2 vUv; varying float vSeed;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float noise(vec2 p){
@@ -85,28 +90,40 @@ export function createOutdoors() {
       }
       float fbm(vec2 p){
         float v = 0.0, a = 0.5;
-        for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+        for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
         return v;
       }
       void main() {
         vec2 p = vUv * 2.0 - 1.0;
         float body = 0.0;
-        for (int i = 0; i < 5; i++) {
+        vec2 nrm = vec2(0.0, 1.0);
+        for (int i = 0; i < 9; i++) {
           float k = float(i);
-          vec2 center = vec2(-0.48 + 0.24 * k, -0.18 + 0.16 * sin(vSeed * 7.0 + k * 1.9));
-          float r = 0.24 + 0.12 * fract(sin(vSeed * 13.0 + k) * 91.7) + (k == 2.0 ? 0.08 : 0.0);
-          body = max(body, 1.0 - length((p - center) / vec2(r * 1.15, r)));
+          float row = k < 5.0 ? 0.0 : 1.0;
+          float slot = k < 5.0 ? k : k - 5.0;
+          vec2 center = row == 0.0
+            ? vec2(-0.56 + 0.28 * slot, -0.28 + 0.08 * sin(vSeed * 7.0 + k * 1.9))
+            : vec2(-0.36 + 0.24 * slot, 0.02 + 0.14 * fract(sin(vSeed * 5.0 + k) * 41.3));
+          float r = (row == 0.0 ? 0.26 : 0.22) + 0.1 * fract(sin(vSeed * 13.0 + k) * 91.7);
+          r *= 1.0 - row * step(0.6, fract(sin(vSeed * 3.0 + k) * 17.1)) * 0.6;
+          vec2 d = (p - center) / vec2(r * 1.1, r);
+          float lobe = 1.0 - length(d);
+          if (lobe > body) { body = lobe; nrm = normalize(d + vec2(0.0, 0.0001)); }
         }
-        body *= smoothstep(-0.62, -0.38, p.y);
-        float n = fbm(p * 2.6 + vSeed * 17.0);
-        vec2 edge = smoothstep(vec2(1.0), vec2(0.78), abs(p));
-        float density = (body + (n - 0.5) * 0.5) * edge.x * edge.y;
-        float alpha = smoothstep(0.02, 0.32, density);
+        body = max(body, cover * 0.12 * smoothstep(0.9, 0.3, length(p)));
+        body *= smoothstep(-0.5, -0.38, p.y);
+        float n = fbm(p * 3.1 + vSeed * 17.0);
+        vec2 edge = smoothstep(vec2(1.0), vec2(0.8), abs(p));
+        float density = (body + (n - 0.5) * 0.18) * edge.x * edge.y;
+        float alpha = smoothstep(0.0, 0.05, density);
         if (alpha < 0.01) discard;
-        float lit = smoothstep(-0.45, 0.55, p.y + (n - 0.5) * 0.35);
-        vec3 color = mix(shade, light, lit);
-        color = mix(color, rim, smoothstep(0.25, 0.02, density) * 0.5);
-        gl_FragColor = vec4(color, alpha * 0.96);
+        float facing = dot(nrm, normalize(sunDir)) * 0.6 + 0.4 + (n - 0.5) * 0.25;
+        float tone = facing > 0.55 ? 1.0 : facing > 0.15 ? 0.55 : 0.0;
+        vec3 color = mix(shade, light, tone);
+        float lip = smoothstep(0.1, 0.0, density) * step(0.35, dot(nrm, normalize(sunDir)));
+        color = mix(color, rim, lip * 0.85);
+        color = mix(color, shade * 0.85, smoothstep(-0.25, -0.42, p.y) * 0.6);
+        gl_FragColor = vec4(color, alpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
@@ -134,8 +151,8 @@ export function createOutdoors() {
         x: (i - 3) * 7 + layer * 2.3,
         y: -0.6 + layer * 0.9 + Math.sin(i * 2.3 + layer) * 0.7,
         z: -10 - layer * 8,
-        w: 5.2 + (i % 3) * 1.4 + layer * 1.6,
-        h: 2.6 + (i % 2) * 0.6 + layer * 0.7,
+        w: 8 + (i % 3) * 2 + layer * 2.4,
+        h: 4.6 + (i % 2) * 1 + layer * 1.2,
         speed: 0.03 + (2 - layer) * 0.02,
       });
     }
@@ -192,9 +209,48 @@ export function createOutdoors() {
   starGeometry.setAttribute('position', new Float32BufferAttribute(stars, 3));
   const starMaterial = new PointsMaterial({ color: 0xe6ecff, size: 0.055, transparent: true });
   root.add(new Points(starGeometry, starMaterial));
+  const drops = 1400;
+  const streaks = new Float32Array(drops * 6);
+  const ends = new Float32Array(drops * 2);
+  for (let i = 0; i < drops; i++) {
+    const x = Math.sin(i * 91.3) * 4.5;
+    const y = (Math.sin(i * 47.9) * 0.5 + 0.5) * 6;
+    const z = -1.5 - (Math.sin(i * 13.7) * 0.5 + 0.5) * 7;
+    streaks.set([x, y, z, x, y, z], i * 6);
+    ends.set([0, 1], i * 2);
+  }
+  const rainGeometry = new BufferGeometry();
+  rainGeometry.setAttribute('position', new Float32BufferAttribute(streaks, 3));
+  rainGeometry.setAttribute('end', new Float32BufferAttribute(ends, 1));
+  const rainMaterial = new ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: { time: { value: 0 }, amount: { value: 0 }, tint: { value: new Color() } },
+    vertexShader: `attribute float end; uniform float time; varying float vEnd;
+      void main() {
+        vec3 p = position;
+        float speed = 7.0 + fract(p.x * 7.13) * 3.0;
+        p.y = mod(p.y - time * speed, 6.0) - 0.8;
+        p += vec3(0.05, 0.32, 0.0) * end;
+        vEnd = end;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }`,
+    fragmentShader: `uniform float amount; uniform vec3 tint; varying float vEnd;
+      void main() {
+        gl_FragColor = vec4(tint, amount * mix(0.55, 0.0, vEnd));
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
+  const rain = new LineSegments(rainGeometry, rainMaterial);
+  rain.frustumCulled = false;
+  root.add(rain);
+  let wet = 0;
   let seconds = 0;
-  const update = (dt: number, mode: SkyTime) => {
+  const update = (dt: number, mode: SkyTime, weather: Weather = 'clear') => {
     seconds += dt;
+    const target = weather === 'rain' ? 1 : 0;
+    wet = dt === 0 ? target : wet + (target - wet) * Math.min(1, dt * 0.8);
     const now = new Date();
     const hour =
       mode === 'sunset'
@@ -212,6 +268,11 @@ export function createOutdoors() {
       .horizon!.value.set(0x58678e)
       .lerp(new Color(0xdbe5d3), daylight)
       .lerp(new Color(0xff8d4e), twilight);
+    const overcast = new Color(0x2a3140)
+      .lerp(new Color(0x7d8794), daylight)
+      .lerp(new Color(0x8a6f6a), twilight);
+    sky.uniforms.zenith!.value.lerp(overcast, wet * 0.8);
+    sky.uniforms.horizon!.value.lerp(overcast.clone().multiplyScalar(1.25), wet * 0.75);
     const angle = ((hour - 6) / 12) * Math.PI;
     sun.position.set(12 * Math.cos(angle), 6 + 14 * Math.sin(angle), -24);
     sun.visible = hour >= 5 && hour <= 19.5;
@@ -236,7 +297,20 @@ export function createOutdoors() {
       .rim!.value.set(0x8f9fc8)
       .lerp(new Color(0xffffff), daylight)
       .lerp(new Color(0xffe2b0), twilight);
-    starMaterial.opacity = Math.max(0, 1 - daylight * 8 - twilight);
+    starMaterial.opacity = Math.max(0, 1 - daylight * 8 - twilight) * (1 - wet);
+    const grey = new Color(0x3a4150).lerp(new Color(0x9aa3ad), daylight);
+    cloudMaterial.uniforms.light!.value.lerp(grey, wet * 0.75);
+    cloudMaterial.uniforms.shade!.value.lerp(grey.clone().multiplyScalar(0.6), wet * 0.75);
+    cloudMaterial.uniforms.rim!.value.lerp(grey, wet * 0.75);
+    cloudMaterial.uniforms.cover!.value = wet;
+    sunMaterial.uniforms.opacity!.value *= 1 - wet * 0.9;
+    moonMaterial.uniforms.opacity!.value = 1 - wet * 0.9;
+    rainMaterial.uniforms.time!.value = seconds;
+    rainMaterial.uniforms.amount!.value = wet;
+    rainMaterial.uniforms.tint!.value.set(0x9fb2cc).lerp(new Color(0xd8e2ee), daylight);
+    rain.visible = wet > 0.01;
+    const light = daylight > 0.05 || twilight > 0.05 ? sun.position : moon.position;
+    cloudMaterial.uniforms.sunDir!.value.set(light.x * 0.08, light.y - 2).normalize();
     for (const cloud of clouds) {
       const x = ((((cloud.x + seconds * cloud.speed + 26) % 52) + 52) % 52) - 26;
       placement.makeScale(cloud.w, cloud.h, 1).setPosition(x, cloud.y, cloud.z);
@@ -249,7 +323,7 @@ export function createOutdoors() {
       balloon.group.position.y = balloon.y + Math.sin(seconds * 0.12 + balloon.phase) * 0.25;
       balloon.group.rotation.z = Math.sin(seconds * 0.09 + balloon.phase) * 0.035;
     }
-    return { daylight, twilight, hour, sunDirection: sun.position.clone().normalize() };
+    return { daylight, twilight, hour, wet, sunDirection: sun.position.clone().normalize() };
   };
   update(0, 'auto');
   return {

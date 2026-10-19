@@ -31,6 +31,11 @@ export function createDecor(
   const placements = [
     { name: 'book_set', scale: 0.36, x: -0.62, y: tableY + 0.045, z: 0.3, yaw: Math.PI },
     { name: 'shelf_B_small_decorated', scale: 0.65, x: 1.69, y: 0, z: -0.72, yaw: 0 },
+    { name: 'cactus_small_A', scale: 0.32, x: 0.42, y: 0.645, z: -0.95, yaw: 0.6 },
+    { name: 'cactus_medium_A', scale: 0.42, x: 1.55, y: 0.645, z: -0.95, yaw: -0.4 },
+    { name: 'pictureframe_small_A', scale: 0.42, x: 1.22, y: 0.645, z: -0.99, yaw: 0.3 },
+    { name: 'pillow_A', scale: 0.75, x: -0.2, y: 0.645, z: -0.96, yaw: 0.25 },
+    { name: 'book_single', scale: 0.5, x: 0.72, y: 0.645, z: -0.98, yaw: Math.PI / 2 },
   ];
   for (const placement of placements) {
     const source = __ROOM_ASSETS__[placement.name];

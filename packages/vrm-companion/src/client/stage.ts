@@ -30,7 +30,7 @@ import type { BotPresentationSnapshot } from '@botharness/ui/panels';
 import { RoomMotion, type MotionCommand } from './motion.js';
 import { FACE_EXPRESSIONS, FaceBlend, dominantFace, faceTarget, type FaceWeights } from './face.js';
 import { IdleScheduler, type IdleAction } from './idle.js';
-import { createRoom, type Mood } from './room.js';
+import { createRoom, type Mood, type Weather } from './room.js';
 import { enableLilToon } from '@mochiya/three-liltoon';
 import { createCharacterShading, type CharacterShading } from './shading.js';
 
@@ -43,6 +43,7 @@ export interface SceneState {
 export interface SceneChoices {
   camera: CameraView;
   mood: Mood;
+  weather: Weather;
   shading: CharacterShading;
 }
 export interface StageCallbacks {
@@ -55,6 +56,7 @@ export interface Stage {
   command(command: MotionCommand): void;
   camera(view: CameraView): void;
   mood(value: Mood): void;
+  weather(value: Weather): void;
   shading(value: CharacterShading): void;
   dispose(): void;
 }
@@ -65,7 +67,7 @@ export function mountStage(
   host: HTMLElement,
   model: string,
   { loading, error, changed }: StageCallbacks,
-  initial: SceneChoices = { camera: 'desk', mood: 'auto', shading: 'mtoon' },
+  initial: SceneChoices = { camera: 'desk', mood: 'auto', weather: 'clear', shading: 'mtoon' },
 ): Stage {
   for (const key of Object.keys(host.dataset))
     if (key !== 'vrmStage' && key.startsWith('vrm')) delete host.dataset[key];
@@ -235,6 +237,7 @@ export function mountStage(
       phase += delta;
       const activity = latest?.activity ?? 'idle';
       const live = latest?.sync === 'live' && latest.available && !latest.paused;
+      room?.setScreen(live && motion.phase === 'seated' ? activity : 'idle');
       motion.step(delta, {
         enabled: !!live,
         idle: activity === 'idle' && !latest?.speaking,
@@ -570,8 +573,10 @@ export function mountStage(
       );
       hipDrop = (hips?.y ?? 0.9) + floorOffset - seatHeight - 0.07;
       room = createRoom(seatHeight);
+      room.setWeather(initial.weather);
       room.setMood(initial.mood);
       host.dataset.vrmMood = initial.mood;
+      host.dataset.vrmWeather = initial.weather;
       scene.remove(key);
       scene.add(room.root);
       scene.add(key);
@@ -630,6 +635,10 @@ export function mountStage(
     mood(value) {
       room?.setMood(value);
       host.dataset.vrmMood = value;
+    },
+    weather(value) {
+      room?.setWeather(value);
+      host.dataset.vrmWeather = value;
     },
     shading(value) {
       shading?.select(value);

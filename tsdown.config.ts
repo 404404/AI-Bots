@@ -168,7 +168,15 @@ export const vrmCompanionClientBundleOptions: UserConfig = {
     ),
     __ROOM_ASSETS__: JSON.stringify(
       Object.fromEntries(
-        ['book_set', 'shelf_B_small_decorated'].map((name) => [name, roomAsset(name)]),
+        [
+          'book_set',
+          'shelf_B_small_decorated',
+          'cactus_small_A',
+          'cactus_medium_A',
+          'pictureframe_small_A',
+          'pillow_A',
+          'book_single',
+        ].map((name) => [name, roomAsset(name)]),
       ),
     ),
   },

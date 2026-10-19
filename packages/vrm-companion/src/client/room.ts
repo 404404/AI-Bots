@@ -1,7 +1,6 @@
 import {
   BackSide,
   BoxGeometry,
-  CanvasTexture,
   Color,
   CylinderGeometry,
   DirectionalLight,
@@ -17,21 +16,23 @@ import {
   Points,
   SphereGeometry,
   SpotLight,
-  SRGBColorSpace,
   TorusGeometry,
   Vector3,
+  ShaderMaterial,
   type Material,
   type Texture,
 } from 'three';
-import { createOutdoors, type SkyTime } from './outdoors.js';
+import { createOutdoors, type SkyTime, type Weather } from './outdoors.js';
 import { CHAIR } from './motion.js';
 import { createRoomMaterials } from './materials.js';
 import { createChair } from './chair.js';
 import { createDecor } from './decor.js';
 import { createProps } from './props.js';
+import { createScreen } from './screen.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 export type Mood = SkyTime;
+export type { Weather };
 export function createRoom(seatHeight: number) {
   const root = new Group();
   const materials = createRoomMaterials();
@@ -97,6 +98,38 @@ export function createRoom(seatHeight: number) {
   box(centre, opening.bottom + span * 0.68, -1.2, width, 0.035, 0.05, dark);
   box(centre, opening.bottom, -1.08, width + 0.3, 0.05, 0.3, wood);
   box(0, 0.6, -0.98, 4.15, 0.09, 0.38, wood);
+  const glass = new ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: { time: { value: 0 }, amount: { value: 0 } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform float time; uniform float amount; varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      void main() {
+        float alpha = 0.0;
+        float light = 0.0;
+        for (int layer = 0; layer < 2; layer++) {
+          vec2 grid = vec2(26.0, 16.0) * (1.0 + float(layer) * 0.7);
+          vec2 uv = vUv * grid;
+          vec2 id = floor(uv);
+          float h = hash(id + float(layer) * 7.3);
+          if (h < 0.78) continue;
+          float slide = fract(time * (0.04 + h * 0.08) + h * 9.0);
+          vec2 at = vec2(0.5 + (h - 0.7) * 0.6, 0.85 - slide * 0.7);
+          vec2 d = (fract(uv) - at) * vec2(1.0, grid.y / grid.x * 1.6);
+          float drop = smoothstep(0.1, 0.06, length(d));
+          float trail = smoothstep(0.05, 0.0, abs(d.x)) * step(0.0, d.y) * smoothstep(0.6, 0.0, d.y) * 0.35;
+          alpha = max(alpha, max(drop, trail));
+          light = max(light, drop * smoothstep(0.05, -0.08, d.y + d.x));
+        }
+        gl_FragColor = vec4(mix(vec3(0.55, 0.62, 0.72), vec3(0.95, 0.97, 1.0), light), alpha * amount * 0.4);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
+  const pane = new Mesh(new PlaneGeometry(width, span), glass);
+  pane.position.set(centre, middle, -1.175);
+  root.add(pane);
   const rod = cylinder(centre, opening.top + 0.16, -1.04, 0.012, 0.012, width + 0.9, brass);
   rod.rotation.z = Math.PI / 2;
   const curtainGeometry = new PlaneGeometry(0.5, opening.top - 0.45, 14, 1);
@@ -139,25 +172,9 @@ export function createRoom(seatHeight: number) {
   box(-0.65, surface + 0.008, 0.8, 0.24, 0.016, 0.18, dark);
   box(-0.65, surface + 0.16, 0.85, 0.04, 0.3, 0.025, dark);
   box(-0.65, surface + 0.36, 0.83, 0.62, 0.37, 0.03, cream);
-  const screenCanvas = document.createElement('canvas');
-  screenCanvas.width = 512;
-  screenCanvas.height = 288;
-  const screen2d = screenCanvas.getContext('2d')!;
-  screen2d.fillStyle = '#263b48';
-  screen2d.fillRect(0, 0, 512, 288);
-  screen2d.fillStyle = '#9fb4b3';
-  screen2d.fillRect(24, 25, 150, 10);
-  for (let i = 0; i < 12; i++) {
-    screen2d.fillStyle = i % 3 === 0 ? '#d8b38b' : '#688b93';
-    screen2d.fillRect(24 + (i % 3) * 12, 56 + i * 16, 140 + ((i * 47) % 280), 5);
-  }
-  const screenTexture = new CanvasTexture(screenCanvas);
-  screenTexture.colorSpace = SRGBColorSpace;
-  textures.push(screenTexture);
-  const screen = new Mesh(
-    new PlaneGeometry(0.6, 0.34),
-    new MeshBasicMaterial({ map: screenTexture }),
-  );
+  const display = createScreen(0.6, 0.34);
+  textures.push(...display.textures);
+  const screen = display.mesh;
   screen.rotation.y = Math.PI;
   screen.position.set(-0.65, surface + 0.36, 0.814);
   root.add(screen);
@@ -168,6 +185,9 @@ export function createRoom(seatHeight: number) {
   for (const part of root.children.slice(monitorStart, -1)) monitor.attach(part);
   monitor.position.set(0.4, tableY, 0.8);
   monitor.rotation.y = -0.6;
+  monitor.updateMatrixWorld(true);
+  display.light.position.copy(screen.localToWorld(new Vector3(0, -0.05, 0.28)));
+  root.add(display.light);
   box(0.6, surface + 0.002, 0.25, 0.8, 0.004, 0.32, materials.fabric);
   box(0.57, surface + 0.013, 0.21, 0.35, 0.018, 0.125, dark).rotation.x = -0.05;
   const keys = new InstancedMesh(
@@ -331,6 +351,7 @@ export function createRoom(seatHeight: number) {
   sun.shadow.normalBias = 0.015;
   root.add(sun);
   let mood: Mood = 'auto';
+  let weather: Weather = 'clear';
   let elapsed = 0;
   const update = (seconds: number) => {
     elapsed += seconds;
@@ -351,13 +372,17 @@ export function createRoom(seatHeight: number) {
       curtains[i]!.rotation.x = Math.sin(elapsed * 0.35 + i * 1.7) * 0.012;
     for (let i = 0; i < leaves.length; i++)
       leaves[i]!.rotation.z = (i - 3) * 0.28 + Math.sin(elapsed * 0.6 + i) * 0.025;
-    const time = outdoors.update(seconds, mood);
-    props.update(elapsed, Math.max(0, 1 - time.daylight - time.twilight * 0.4));
+    const time = outdoors.update(seconds, mood, weather);
+    glass.uniforms.time!.value = elapsed;
+    glass.uniforms.amount!.value = time.wet;
+    const night = Math.max(0, 1 - time.daylight - time.twilight * 0.4);
+    props.update(elapsed, night);
+    display.update(seconds, elapsed, night);
     sun.color
       .setHex(0x91a7e8)
       .lerp(new Color(0xffe2b6), time.daylight)
       .lerp(new Color(0xffac69), time.twilight);
-    sun.intensity = 0.35 + time.daylight * 1.7 + time.twilight * 1.2;
+    sun.intensity = (0.35 + time.daylight * 1.7 + time.twilight * 1.2) * (1 - time.wet * 0.65);
     lamp.intensity = 0.8 + (1 - time.daylight) * 3.6 + time.twilight * 1.2;
     glow.intensity = lamp.intensity * 0.15;
     sky.color
@@ -372,6 +397,9 @@ export function createRoom(seatHeight: number) {
     mood = value;
     update(0);
   };
+  const setWeather = (value: Weather) => {
+    weather = value;
+  };
   update(0);
   return {
     root,
@@ -381,6 +409,8 @@ export function createRoom(seatHeight: number) {
     mugWrist,
     mugRim,
     setMood,
+    setWeather,
+    setScreen: display.setMode,
     update,
     get assets() {
       return decor.state();

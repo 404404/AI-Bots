@@ -4,6 +4,7 @@ section: Added
 
 ## en
 
+- Scene controls can switch the weather to rain, with streaks outside, an overcast sky and droplets running down the window; clouds are drawn with toon shading lit from the sun or moon. The monitor shows what the Bot is doing (typing code, a scrolling log, a dialog, or a music player at idle) and its glow lights the desk at night, and an open book turns its pages while loose papers and dust move in the breeze ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - The desk view is recomposed after Chill with You: the monitor stands in front of the character, the camera sits beside the desk for a three-quarter view, the sunset is warmer and redder, and VRoid models load with the same seated choreography ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - The room is now furnished like a lived-in study corner (a book hutch, desk clutter, a drawer cabinet, a rug, a poster, a clock showing local time, a floor lamp and string lights that brighten at night), and Scene controls can load your own `.vrm` file, including VRoid models, for the session without uploading it ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - Room objects now follow real-world proportions (a smaller cup, keyboard, monitor and lamp) in a low-poly, flat toon-shaded style with a blue night and a warm desk-lamp pool ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
@@ -16,6 +17,7 @@ section: Added
 
 ## zh
 
+- Scene controls 可以切换为雨天：窗外下雨、天空转阴、雨滴沿玻璃滑落；云层改为随太阳或月亮方向受光的 toon 着色。显示器内容跟随 Bot 的状态（敲代码、滚动日志、对话框，空闲时是音乐播放器），入夜后屏幕光会照亮桌面；桌上翻开的书会自己翻页，纸张和灰尘随窗外的风轻轻飘动（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 桌边视角参照 Chill with You 重新构图：显示器放到角色正前方，镜头移到桌边侧前方呈 3/4 视角，日落更暖更红；VRoid 模型也能以同样的坐姿和动作载入（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 房间布置得更有生活感：书架、桌面小物、抽屉柜、地毯、海报、显示本地时间的挂钟，以及入夜会亮起的落地灯和窗边彩灯；Scene controls 还可以打开本机的 `.vrm` 文件（包括 VRoid 模型），仅在本次会话中使用，不会上传（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 房间物件改为真实世界比例（更小的杯子、键盘、显示器和台灯），采用 low poly 平涂 toon 着色；夜晚为蓝调，由台灯在桌面投下暖光（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。

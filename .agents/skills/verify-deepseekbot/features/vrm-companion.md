@@ -13,6 +13,7 @@
 - Scene controls load a local `.vrm` file for the session (`data-vrm-model=file|sample`; `data-vrm-spec` is `0` for VRM 0.x such as VRoid, `1` otherwise) and switch back to the sample.
 - Reversible MToon/lilToon shading comparison; camera, room time and shading survive a remount of the same Bot's view.
 - Spatial exterior, local-time sky/sun/lamp lighting, explicit sunset/night previews, and reduced-motion-aware ambient movement.
+- Clear/Rain weather from Scene controls (`data-vrm-weather`), with rain streaks, overcast sky and droplets on the glass; the monitor's content and glow follow the current Activity, with a music player at idle.
 
 ## How to get to it (user POV)
 
