@@ -116,14 +116,14 @@ it('installs the Desktop override offline using the selected app package manager
     f.pnpm,
     'add',
     '@deepseek-ai/dsh-client-ui-theme@link:node_modules/deepseekbot/desktop-theme',
-    '--ignore-scripts',
+    '--config.ignore-scripts=true',
   ]);
   expect(configureDesktopZoom({ ...f, action: 'disable' }).changed).toBe(true);
   expect(f.run.mock.calls.at(-1)[1]).toEqual([
     f.pnpm,
     'remove',
     '@deepseek-ai/dsh-client-ui-theme',
-    '--ignore-scripts',
+    '--config.ignore-scripts=true',
   ]);
   expect(readFileSync(join(f.directory, 'cordis.patch.yml'), 'utf8')).toBe(
     'native preference unchanged',
