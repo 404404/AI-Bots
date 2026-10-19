@@ -6,6 +6,7 @@ interface Command {
   expiresAt: number;
   patch?: unknown;
   wallpaper?: unknown;
+  recovery?: unknown;
   expectedRevision?: string;
 }
 interface Client {
@@ -67,7 +68,9 @@ export function createAppearanceControl(now = Date.now) {
       const client = clients.get(input.clientId);
       if (!client) return refused('appearance-client-stale', 404);
       if (input.action === 'request') {
-        if (input.patch !== undefined && input.wallpaper !== undefined)
+        if (
+          [input.patch, input.wallpaper, input.recovery].filter((v) => v !== undefined).length > 1
+        )
           return refused('appearance-invalid-input', 400);
         if (input.patch !== undefined && typeof input.expectedRevision !== 'string')
           return refused('appearance-revision-required', 400);
@@ -76,6 +79,9 @@ export function createAppearanceControl(now = Date.now) {
         const command: Command = {
           id: randomUUID(),
           expiresAt: now() + 8000,
+          ...(input.recovery === undefined
+            ? {}
+            : { recovery: input.recovery, expectedRevision: input.expectedRevision as string }),
           ...(input.wallpaper === undefined
             ? {}
             : { wallpaper: input.wallpaper, expectedRevision: input.expectedRevision as string }),

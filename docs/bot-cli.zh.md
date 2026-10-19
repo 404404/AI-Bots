@@ -976,3 +976,14 @@ deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
 `crop.json` 只含 `{ "x": 0.5, "y": 0.5, "zoom": 1.5 }`：中心坐标范围 0–1，缩放 1–5。导入也可用 `--patch-stdin` 指定裁切。文件在 CLI 所在机器读取，须为非空、可解码且不超过 20 MiB 的图片，再按顺序分块传给指定 Client。原始字节只保存在该 Client，成功输出只有元数据和新修订号。离线或过期目标、修订冲突、无效媒体或裁切、上传过期及存储失败均返回明确错误码。请求送达后超时须先重读，不能自动重放导入。Web 与桌面各自保存，不以 Host 为键。
 
 同一组壁纸命令也支持最大 100 MiB 的视频。提交前，指定 Client 必须实际播放解码并生成封面；不会转码原文件。`wallpaper-get` 返回临时观测的 `playback.state`（`playing`、`paused`、`poster`、`inactive`），降级时附带明确 `reason`。播放失败或之后的运行环境无法解码时使用已保存封面。图片上限仍为 20 MiB；兼容性按运行环境与编码分别验证，传输成功不等于可播放。
+
+### 外观恢复
+
+先读取 `appearance-get --client-id <id>` 与 `wallpaper-get --client-id <id>`，两者修订号独立。
+
+```bash
+deepseekbot appearance-clear-panels --client-id <id> --mode light --expected-revision <appearance-revision>
+deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-revision> --expected-wallpaper-revision <media-revision> --confirm-reset
+```
+
+清除只移除指定模式的全部功能面板覆盖，包含已保存但当前未注册的目标；主题、全局材质、主色、另一模式、媒体和布局不变。全部恢复必须带 `--confirm-reset`，重置两套配色、模式和覆盖，并移除共享媒体；不修改 DSH、Bot 身份或业务数据。偏好写入失败时不开始媒体清理。`appearance-reset-wallpaper-failed` 表示默认配色已保存、媒体清理失败；须重读两个 owner，再用新修订号重试。不宣称 localStorage 与 IndexedDB 是同一事务，不自动重放已送达但超时的操作。

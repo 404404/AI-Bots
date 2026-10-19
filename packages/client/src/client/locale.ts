@@ -43,6 +43,19 @@ export const zh = {
   'wallpaper.state.poster': '正在显示静态封面',
   'wallpaper.state.inactive': '未在 Bot 模式播放',
   'wallpaper.playbackFailed': '视频播放不可用或被阻止，请检查格式并重新导入。',
+  'recovery.title': '恢复外观',
+  'recovery.scope':
+    '只清除当前{mode}模式的全部面板覆盖；主题、全局材质、主色、壁纸和布局保持不变。',
+  'recovery.clear': '清除当前模式全部面板覆盖',
+  'recovery.reset': '恢复全部默认外观…',
+  'recovery.confirmTitle': '恢复全部默认外观？',
+  'recovery.confirmBody':
+    '这会恢复 DeepSeekBot 的浅深两套配色、模式选择和所有面板覆盖，并移除共享壁纸及本机副本。不会改变 DSH、Bot 身份、业务数据或布局。',
+  'recovery.confirm': '确认恢复全部外观',
+  'recovery.done': '全部外观已恢复，壁纸已移除。',
+  'recovery.cleared': '当前模式的全部面板覆盖已清除。',
+  'recovery.partial': '配色和面板已恢复，但壁纸未能移除。当前壁纸仍保留；请重试。',
+  'recovery.failed': '未能完成恢复。请检查存储或并发修改，重读当前设置后重试。',
   'wallpaper.title': '壁纸',
   'wallpaper.local': '仅保存在当前设备。图片最大 20 MB，视频最大 100 MB；先取景，点击使用后保存。',
   'wallpaper.failed': '媒体未能解码或保存。请检查格式、大小和可用空间；原壁纸保持不变。',
@@ -3794,6 +3807,21 @@ export const en = {
   'wallpaper.state.inactive': 'Not playing outside Bot mode',
   'wallpaper.playbackFailed':
     'Video playback is unavailable or blocked. Check its format and import it again.',
+  'recovery.title': 'Appearance recovery',
+  'recovery.scope':
+    'Clear all Panel overrides only in the current {mode} mode. Keep its theme, global materials, primary color, wallpaper and layout.',
+  'recovery.clear': 'Clear all Panel overrides in this mode',
+  'recovery.reset': 'Restore all default appearance…',
+  'recovery.confirmTitle': 'Restore all default appearance?',
+  'recovery.confirmBody':
+    'Reset both DeepSeekBot palettes, mode selection and all Panel overrides, and remove the shared wallpaper and local copy. DSH, Bot identity, business data and layout are unchanged.',
+  'recovery.confirm': 'Confirm full appearance reset',
+  'recovery.done': 'All appearance defaults restored and wallpaper removed.',
+  'recovery.cleared': 'All Panel overrides in this mode were cleared.',
+  'recovery.partial':
+    'Palettes and Panels were reset, but wallpaper removal failed. The current wallpaper is retained; retry to finish.',
+  'recovery.failed':
+    'Recovery did not finish. Check storage or concurrent edits, reread the current settings and retry.',
   'wallpaper.title': 'Wallpaper',
   'wallpaper.local':
     'Saved only on this device. Images up to 20 MB, videos up to 100 MB; preview and choose Use to save.',

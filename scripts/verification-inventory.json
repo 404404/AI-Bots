@@ -608,6 +608,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/video-wallpaper.md",
       "task": 2263,
       "gap": "Actual codecs and native minimize/restart require the task-owned runtime; Human QA remains separate."
+    },
+    {
+      "id": "desktop.appearance-recovery",
+      "label": "Clear current-mode overrides or confirm full local appearance/media reset with truthful retry",
+      "source": "packages/client/src/client/appearance-recovery-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/appearance-recovery.md",
+      "task": 2264,
+      "gap": "Native restart follows the task-owned Desktop procedure; Windows and Human QA remain separate."
     }
   ],
   "scripts": [
@@ -1972,6 +1980,14 @@
       "reason": "Actual loop frames, background pause/resume, decode error and saved poster restoration, explicit Client CLI and exit cleanup.",
       "task": 2263,
       "sha256": "797e435677bf35161bd314b80c57e229220d845d2c24910ba89b593ab299e6db"
+    },
+    {
+      "path": "scripts/e2e-appearance-recovery.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.appearance-recovery"],
+      "reason": "Real current-mode clear, confirmed image/video reset, failure preservation/partial retry, preview cleanup, CLI and independent Client isolation.",
+      "task": 2264,
+      "sha256": "30f6f9fe940150bfd9f5eeb3804a6b59cf7ed420e2392e093ccc63e8cfb103f3"
     }
   ],
   "native": [

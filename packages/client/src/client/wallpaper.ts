@@ -25,6 +25,7 @@ export interface WallpaperPreview {
   release(): void;
 }
 export interface WallpaperSnapshot {
+  resourceVersion: number;
   ready: boolean;
   revision: string;
   current?: {
@@ -86,7 +87,7 @@ export async function decodeWallpaper(blob: Blob): Promise<WallpaperPreview> {
   return decodeVideoWallpaper(blob);
 }
 export class Wallpaper {
-  #snapshot: WallpaperSnapshot = { ready: false, revision: 'empty' };
+  #snapshot: WallpaperSnapshot = { ready: false, revision: 'empty', resourceVersion: 0 };
   #listeners = new Set<() => void>();
   #record: WallpaperRecord | undefined;
   #resource: WallpaperPreview | undefined;
@@ -131,6 +132,7 @@ export class Wallpaper {
     this.#resource = resource;
     this.#emit({
       ready: true,
+      resourceVersion: this.#snapshot.resourceVersion + 1,
       revision: record?.revision ?? 'empty',
       ...(record?.kind === 'video'
         ? {
@@ -262,7 +264,7 @@ export class Wallpaper {
     this.#emit({ ...this.#snapshot, playback });
   }
   describe() {
-    const { current, ...snapshot } = this.#snapshot;
+    const { current, resourceVersion: _resourceVersion, ...snapshot } = this.#snapshot;
     return {
       ...snapshot,
       ...(current

@@ -992,3 +992,14 @@ deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
 `crop.json` contains exactly `{ "x": 0.5, "y": 0.5, "zoom": 1.5 }`: center coordinates 0–1 and zoom 1–5. Import optionally accepts the same crop through `--patch-stdin`. The file is read on the CLI machine, must be a nonempty decodable image no larger than 20 MiB, and is transferred in ordered bounded chunks. Only the selected Client stores the original bytes. Successful stdout reports metadata and the new revision; no file path or media bytes are returned. Offline/stale Clients, revision conflicts, invalid media/crop, expired uploads and storage failures return coded refusals. A timeout after delivery requires a fresh read before retry; never automatically replay the import. Web and Desktop storage are independent, and neither is keyed by Host.
 
 The same wallpaper commands also accept videos up to 100 MiB. Import must actually play/decode on the selected Client and generate a poster before committing; originals are not transcoded. `wallpaper-get` returns transient `playback.state` (`playing`, `paused`, `poster`, `inactive`) and a coded `reason` when degraded. The saved poster is used if playback fails or a later runtime cannot decode an accepted video. Image limits remain 20 MiB. Support is runtime/codec-specific; a successful transport alone does not prove playback.
+
+### Appearance recovery
+
+Read `appearance-get --client-id <id>` and `wallpaper-get --client-id <id>` first; their revisions are independent.
+
+```bash
+deepseekbot appearance-clear-panels --client-id <id> --mode light --expected-revision <appearance-revision>
+deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-revision> --expected-wallpaper-revision <media-revision> --confirm-reset
+```
+
+Clear removes all functional Panel overrides only in the explicit mode, including unregistered saved targets; theme/materials/Primary, the other mode, media and layout stay unchanged. Full reset requires `--confirm-reset`, defaults both palettes/mode/overrides, and removes shared media. It never changes DSH, Bot identity or business data. A preference write failure leaves media untouched. `appearance-reset-wallpaper-failed` means defaults were committed but media cleanup failed; reread both owners and retry with fresh revisions. The command does not claim a single transaction across localStorage and IndexedDB, nor automatically replay a delivered timeout.
