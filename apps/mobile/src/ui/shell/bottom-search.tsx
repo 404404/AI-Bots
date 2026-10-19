@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Keyboard, View } from 'react-native';
+import { Keyboard, Platform, View } from 'react-native';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDesignTheme } from '../design/theme';
-import { space } from '../design/tokens';
+import { fab, space } from '../design/tokens';
 import { SearchField } from '../primitives/search-field';
 import { useFloatingTabInset } from './floating-tab-inset';
 import { NavigationAction } from './navigation-action';
@@ -51,7 +51,7 @@ export function BottomSearch({
       style={{
         position: 'absolute',
         left: insets.left + space.x5,
-        right: insets.right + space.x5,
+        right: insets.right + space.x5 + (Platform.OS === 'android' ? fab.size + GAP : 0),
         bottom: lift,
       }}
     >

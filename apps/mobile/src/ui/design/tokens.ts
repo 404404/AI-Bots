@@ -40,6 +40,24 @@ export const navigationBar = {
     dark: '0 2px 8px rgba(0, 0, 0, 0.12)',
   },
 } as const;
+export const materialNavigationBar = {
+  height: 64,
+  indicatorWidth: 56,
+  indicatorHeight: 32,
+  iconLabelGap: 4,
+  elevation: 3,
+} as const;
+export const fab = {
+  size: 56,
+  radius: 16,
+  margin: 16,
+  elevation: 6,
+  menuItemHeight: 56,
+  menuItemGap: 4,
+  menuItemPadding: 24,
+  menuIconGap: 8,
+  menuCloseGap: 8,
+} as const;
 export const environmentTab = { maxWidth: 220 } as const;
 export const modalRail = { maxWidth: 360 } as const;
 export const pairingScan = { maxSize: 200, widthRatio: 0.5 } as const;
