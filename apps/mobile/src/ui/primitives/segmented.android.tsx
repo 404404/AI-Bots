@@ -113,7 +113,7 @@ export function Segmented<T extends string>({
                 activeContainerColor: layer.chosen,
                 activeContentColor: theme.color.fg,
                 activeBorderColor: theme.color.muted,
-                inactiveContainerColor: layer.fill,
+                inactiveContainerColor: 'transparent',
                 inactiveContentColor: theme.color.fg,
                 inactiveBorderColor: theme.color.muted,
               }}
