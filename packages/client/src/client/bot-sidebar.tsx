@@ -1255,7 +1255,9 @@ export function BotSidebar({
     ? visibleChannelIds
     : [...railPinnedChannels, ...railChannels].map((channel) => channel.id);
   const shortcutIdsRef = useRef<readonly string[]>(shortcutIds);
+  const openConversationRef = useRef(onOpenConversation);
   shortcutIdsRef.current = shortcutIds;
+  openConversationRef.current = onOpenConversation;
   const navigationIdsRef = useRef<readonly string[]>([]);
   navigationIdsRef.current = [...railPinnedChannels, ...railChannels].map((channel) => channel.id);
   const dragActiveRef = useRef(false);
@@ -1304,6 +1306,7 @@ export function BotSidebar({
       const channel = store.getSnapshot().channels.find((candidate) => candidate.id === id);
       if (channel === undefined) return;
       event.preventDefault();
+      openConversationRef.current?.();
       void (channel.botSlug === undefined
         ? actions.openChannel(id)
         : actions.openBot(channel.botSlug));
@@ -1349,6 +1352,7 @@ export function BotSidebar({
       const channel = snapshot.channels.find((candidate) => candidate.id === id);
       if (channel === undefined) return;
       event.preventDefault();
+      openConversationRef.current?.();
       void (channel.botSlug === undefined
         ? actions.openChannel(channel.id)
         : actions.openBot(channel.botSlug));

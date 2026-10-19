@@ -26,5 +26,5 @@ export function plainMarkdown(body: string): string {
 }
 
 export function hasVisibleText(value: string): boolean {
-  return /[^\s\u200b-\u200d\u2060\ufeff]/u.test(value);
+  return /[^\s\u200b-\u200f\u2060\ufeff]/u.test(value);
 }

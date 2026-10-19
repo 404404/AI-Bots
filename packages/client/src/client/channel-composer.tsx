@@ -1419,7 +1419,7 @@ export function ChannelComposer({
         </button>
         <div className="bh-composer-footer">
           {stop?.label !== undefined &&
-          value.trim().length === 0 &&
+          !hasVisibleText(value) &&
           attachments.length === 0 &&
           shortcutOptions.length === 0 ? (
             <Tooltip label={stop.label} side="top" portal delayMs={350}>

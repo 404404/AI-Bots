@@ -22,7 +22,7 @@ describe('plainMarkdown', () => {
 
 describe('hasVisibleText', () => {
   it('treats whitespace and zero-width characters as empty', () => {
-    expect(hasVisibleText(' \n\u200b\u200c\u200d\u2060\ufeff')).toBe(false);
+    expect(hasVisibleText(' \n\u200b\u200c\u200d\u200e\u200f\u2060\ufeff')).toBe(false);
     expect(hasVisibleText('\u200bhi')).toBe(true);
   });
 });
