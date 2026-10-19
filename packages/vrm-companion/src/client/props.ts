@@ -10,6 +10,7 @@ import {
   Group,
   Mesh,
   MeshBasicMaterial,
+  PlaneGeometry,
   PointLight,
   Points,
   PointsMaterial,
@@ -21,6 +22,7 @@ import {
 } from 'three';
 import type { createRoomMaterials } from './materials.js';
 import { createPaper } from './paper.js';
+import { createCorner } from './corner.js';
 
 type Materials = ReturnType<typeof createRoomMaterials>;
 const BOOK_COLORS = [
@@ -55,7 +57,25 @@ export function createProps(surface: number, sill: number, materials: Materials)
     material: Material,
     parent: Group = root,
   ) => add(new BoxGeometry(w, h, d), material, x, y, z, parent);
-  const palette = BOOK_COLORS.map((color) => toon(color));
+  const spine = document.createElement('canvas');
+  spine.width = 32;
+  spine.height = 128;
+  const ink = spine.getContext('2d')!;
+  ink.fillStyle = '#d6d6d6';
+  ink.fillRect(0, 0, 32, 128);
+  ink.fillStyle = '#ffffff';
+  ink.fillRect(0, 14, 32, 26);
+  ink.fillStyle = '#5a5050';
+  ink.fillRect(8, 22, 16, 3);
+  ink.fillRect(10, 29, 12, 2);
+  ink.fillStyle = '#9a9090';
+  ink.fillRect(0, 8, 32, 2);
+  ink.fillRect(0, 108, 32, 2);
+  ink.fillRect(12, 114, 8, 8);
+  const spineTexture = new CanvasTexture(spine);
+  spineTexture.colorSpace = SRGBColorSpace;
+  textures.push(spineTexture);
+  const palette = BOOK_COLORS.map((color) => toon(color, { map: spineTexture }));
   const books = (
     parent: Group,
     x: number,
@@ -89,7 +109,8 @@ export function createProps(surface: number, sill: number, materials: Materials)
   };
 
   const hutch = new Group();
-  hutch.position.set(-1.38, surface, 0.52);
+  hutch.position.set(-1.84, surface, -0.42);
+  hutch.rotation.y = Math.PI / 2;
   root.add(hutch);
   for (const x of [-0.25, 0.25]) block(x, 0.21, 0, 0.022, 0.42, 0.24, wood, hutch);
   for (const y of [0.011, 0.2, 0.41]) block(0, y, 0, 0.522, 0.022, 0.24, wood, hutch);
@@ -330,6 +351,100 @@ export function createProps(surface: number, sill: number, materials: Materials)
   flame.position.set(1.0, sill + 0.13, -0.92);
   root.add(flame);
 
+  const calendar = new Group();
+  calendar.position.set(-0.04, surface, 0.74);
+  calendar.rotation.y = 0.9;
+  root.add(calendar);
+  const now = new Date();
+  const page = document.createElement('canvas');
+  page.width = 96;
+  page.height = 96;
+  const marker = page.getContext('2d')!;
+  marker.fillStyle = '#f6efe0';
+  marker.fillRect(0, 0, 96, 96);
+  marker.fillStyle = '#c2563f';
+  marker.fillRect(0, 0, 96, 24);
+  marker.fillStyle = '#f6efe0';
+  marker.font = '600 15px sans-serif';
+  marker.textAlign = 'center';
+  marker.fillText(now.toLocaleString('en', { month: 'short' }).toUpperCase(), 48, 18);
+  marker.fillStyle = '#3a3030';
+  marker.font = '700 46px sans-serif';
+  marker.fillText(String(now.getDate()), 48, 74);
+  marker.fillStyle = '#9a9090';
+  marker.fillRect(20, 84, 56, 3);
+  const pageTexture = new CanvasTexture(page);
+  pageTexture.colorSpace = SRGBColorSpace;
+  textures.push(pageTexture);
+  for (const side of [-1, 1]) {
+    const leaf = block(
+      0,
+      0.045,
+      side * 0.022,
+      0.1,
+      0.1,
+      0.004,
+      side > 0 ? toon(0xffffff, { map: pageTexture }) : cream,
+      calendar,
+    );
+    leaf.rotation.x = side * 0.42;
+  }
+  block(0, 0.002, 0, 0.1, 0.004, 0.08, dark, calendar);
+
+  const jar = new Group();
+  jar.position.set(0.28, sill, -0.9);
+  root.add(jar);
+  add(
+    new CylinderGeometry(0.045, 0.045, 0.13, 10, 1, true),
+    new MeshBasicMaterial({
+      color: 0xcfe0e6,
+      transparent: true,
+      opacity: 0.25,
+      side: DoubleSide,
+      depthWrite: false,
+    }),
+    0,
+    0.065,
+    0,
+    jar,
+  ).castShadow = false;
+  block(0, 0.135, 0, 0.07, 0.015, 0.07, materials.brass, jar);
+  const fireflies: Mesh[] = [];
+  const fireflyMaterial = new MeshBasicMaterial({ color: 0xffe08a });
+  for (let i = 0; i < 9; i++) {
+    const light = new Mesh(new SphereGeometry(0.006, 4, 3), fireflyMaterial);
+    light.position.set(Math.cos(i * 2.4) * 0.025, 0.02 + i * 0.011, Math.sin(i * 2.4) * 0.025);
+    jar.add(light);
+    fireflies.push(light);
+  }
+  const jarLight = new PointLight(0xffc870, 0, 0.6, 2);
+  jarLight.position.set(0, 0.08, 0.05);
+  jar.add(jarLight);
+
+  const prints = [
+    [1.42, 1.5, 0.26, 0.34, '#e58a6a', '#3b2f5c'],
+    [1.82, 1.42, 0.22, 0.28, '#7fb6c8', '#f6efe0'],
+    [1.6, 1.12, 0.3, 0.2, '#9fd09a', '#2f3b3f'],
+  ] as const;
+  for (const [x, y, w, h, a, b] of prints) {
+    const art = document.createElement('canvas');
+    art.width = 64;
+    art.height = 64;
+    const brush = art.getContext('2d')!;
+    brush.fillStyle = b;
+    brush.fillRect(0, 0, 64, 64);
+    brush.fillStyle = a;
+    brush.beginPath();
+    brush.arc(40, 26, 14, 0, Math.PI * 2);
+    brush.fill();
+    brush.fillRect(0, 44, 64, 20);
+    const artTexture = new CanvasTexture(art);
+    artTexture.colorSpace = SRGBColorSpace;
+    textures.push(artTexture);
+    block(x, y, -1.135, w + 0.03, h + 0.03, 0.02, dark);
+    add(new PlaneGeometry(w, h), toon(0xffffff, { map: artTexture }), x, y, -1.124);
+  }
+
   const motes = Array.from({ length: 70 }, (_, i) => [
     -0.6 + ((i * 0.618) % 1) * 1.8,
     0.8 + ((i * 0.381) % 1) * 1.3,
@@ -351,6 +466,9 @@ export function createProps(surface: number, sill: number, materials: Materials)
   dust.frustumCulled = false;
   root.add(dust);
   const paper = createPaper(surface, sill, materials);
+  const corner = createCorner(surface, materials);
+  root.add(corner.root);
+  textures.push(...corner.textures);
   root.add(paper.root);
   textures.push(...paper.textures);
 
@@ -359,6 +477,7 @@ export function createProps(surface: number, sill: number, materials: Materials)
     textures,
     update(seconds: number, night: number) {
       paper.update(seconds, 1);
+      corner.update(seconds);
       for (let i = 0; i < motes.length; i++) {
         const [x, y, z, phase] = motes[i]!;
         motePositions[i * 3] = x! + Math.sin(seconds * 0.13 + phase!) * 0.14;
@@ -380,6 +499,10 @@ export function createProps(surface: number, sill: number, materials: Materials)
         );
       }
       flame.scale.set(1, 1.8 + Math.sin(seconds * 9) * 0.25, 1);
+      fireflyMaterial.color.setHex(0xffe08a).multiplyScalar(0.4 + night * 2.2);
+      jarLight.intensity = night * 0.35;
+      for (let i = 0; i < fireflies.length; i++)
+        fireflies[i]!.scale.setScalar(0.6 + 0.5 * Math.sin(seconds * (1.3 + i * 0.2) + i));
     },
   };
 }

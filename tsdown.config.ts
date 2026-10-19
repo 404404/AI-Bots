@@ -164,7 +164,7 @@ export const vrmCompanionClientBundleOptions: UserConfig = {
     'process.env.NODE_ENV': JSON.stringify('production'),
     __VRM_MODEL__: JSON.stringify(
       'data:model/gltf-binary;base64,' +
-        readFileSync(join(ROOT_DIR, 'packages/vrm-companion/assets/sample.vrm')).toString('base64'),
+        readFileSync(join(ROOT_DIR, 'packages/vrm-companion/assets/avatar-sample-a.vrm')).toString('base64'),
     ),
     __ROOM_ASSETS__: JSON.stringify(
       Object.fromEntries(

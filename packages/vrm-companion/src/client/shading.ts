@@ -1,4 +1,4 @@
-import { Mesh, type Material, type Object3D } from 'three';
+import { Mesh, type Color, type Material, type Object3D } from 'three';
 import { MToonMaterial } from '@pixiv/three-vrm';
 import { LilToonMaterial } from '@mochiya/three-liltoon';
 
@@ -8,6 +8,7 @@ export function createCharacterShading(root: Object3D) {
   const meshes: { mesh: Mesh; material: Material | Material[] }[] = [];
   const replacements = new Map<MToonMaterial, LilToonMaterial>();
   const outlines = new Map<MToonMaterial, boolean>();
+  const surfaces = new Set<MToonMaterial>();
   let active: CharacterShading = 'mtoon';
   root.traverse((object) => {
     if (!(object instanceof Mesh)) return;
@@ -19,6 +20,10 @@ export function createCharacterShading(root: Object3D) {
         continue;
       }
       if (replacements.has(source)) continue;
+      surfaces.add(source);
+      source.color.multiplyScalar(0.9);
+      source.parametricRimFresnelPowerFactor = 3.5;
+      source.parametricRimLiftFactor = 0;
       const converted = new LilToonMaterial({
         name: source.name + ' · lilToon',
         color: source.color,
@@ -79,6 +84,9 @@ export function createCharacterShading(root: Object3D) {
   };
   return {
     select,
+    rim(color: Color) {
+      for (const surface of surfaces) surface.parametricRimColorFactor.copy(color);
+    },
     update() {
       if (active !== 'liltoon') return;
       for (const [source, target] of replacements) {
@@ -103,6 +111,7 @@ export function createCharacterShading(root: Object3D) {
       for (const material of replacements.values()) material.dispose();
       replacements.clear();
       outlines.clear();
+      surfaces.clear();
       meshes.length = 0;
     },
   };

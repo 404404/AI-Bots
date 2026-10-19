@@ -128,6 +128,8 @@ export function mountStage(
   renderer.shadowMap.type = PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   const post = createPost(renderer);
+  const rim = new Color();
+  const warm = new Color();
   let effects = initial.effects !== false;
   host.dataset.vrmEffects = effects ? 'on' : 'off';
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%';
@@ -241,6 +243,15 @@ export function mountStage(
         .lerp(new Color(0xffd8b8), Math.min(1, daylight.daylight + daylight.twilight));
       scene.environmentIntensity = 0.06 + daylight.daylight * 0.39 + daylight.twilight * 0.2;
       post.grade(daylight);
+      shading?.rim(
+        rim
+          .setRGB(0.22, 0.2, 0.18)
+          .lerp(warm.setRGB(0.75, 0.32, 0.12), daylight.twilight)
+          .lerp(
+            warm.setRGB(0.12, 0.2, 0.42),
+            Math.max(0, 1 - daylight.daylight - daylight.twilight),
+          ),
+      );
       host.dataset.vrmHour = daylight.hour.toFixed(3);
       host.dataset.vrmAssets = room?.assets;
     }

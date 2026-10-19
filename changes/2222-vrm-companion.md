@@ -4,6 +4,7 @@ section: Added
 
 ## en
 
+- The default character is now VRoid's AvatarSample_A, and the room is rebuilt around an L-shaped desk with a turntable, laptop, wall shelf and corkboard on the side wing. A hanging plant, a firefly jar, wall prints, a desk calendar showing today's date and labelled book spines make the room denser, the character gets a warm or cool rim light from the time of day, and the desk lamp no longer washes out the hands ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - A new **Lo-fi look**, on by default, gives the room the hand-drawn feel of Chill with You: outlines, a soft glow around lights, halftone shadows, a warm sunset and cool night grade, and a vignette; **Plain** turns it off. The sun now has a ringed halo and birds occasionally fly past the window ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - Scene controls can switch the weather to rain, with streaks outside, an overcast sky and droplets running down the window; clouds are drawn with toon shading lit from the sun or moon. The monitor shows what the Bot is doing (typing code, a scrolling log, a dialog, or a music player at idle) and its glow lights the desk at night, and an open book turns its pages while loose papers and dust move in the breeze ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - The desk view is recomposed after Chill with You: the monitor stands in front of the character, the camera sits beside the desk for a three-quarter view, the sunset is warmer and redder, and VRoid models load with the same seated choreography ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
@@ -18,6 +19,7 @@ section: Added
 
 ## zh
 
+- 默认角色换成 VRoid 的 AvatarSample_A；房间改为 L 型书桌，侧桌上有唱片机、笔记本电脑、墙上置物架和软木留言板。吊篮绿植、萤火虫玻璃罐、墙上小画、显示当天日期的台历和带书标的书脊让画面更丰富；角色会随时间带上暖色或冷色的轮廓光，台灯也不再把手照得过曝（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 新增默认开启的 **Lo-fi look**，让房间更接近 Chill with You 的手绘感：物体描边、灯光柔光、暗部网点、日落暖红与夜晚冷蓝的调色以及暗角；选择 **Plain** 可以关闭。太阳带上了光环，窗外偶尔有鸟飞过（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - Scene controls 可以切换为雨天：窗外下雨、天空转阴、雨滴沿玻璃滑落；云层改为随太阳或月亮方向受光的 toon 着色。显示器内容跟随 Bot 的状态（敲代码、滚动日志、对话框，空闲时是音乐播放器），入夜后屏幕光会照亮桌面；桌上翻开的书会自己翻页，纸张和灰尘随窗外的风轻轻飘动（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 桌边视角参照 Chill with You 重新构图：显示器放到角色正前方，镜头移到桌边侧前方呈 3/4 视角，日落更暖更红；VRoid 模型也能以同样的坐姿和动作载入（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。

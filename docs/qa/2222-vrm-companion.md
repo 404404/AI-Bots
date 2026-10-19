@@ -123,9 +123,20 @@ Date: 2026-10-19. Same scratch harness and SwiftShader caveat, 960 × 540 frames
 - **Scene.** The sun is larger with concentric halo rings and a brighter core that blooms; five birds cross the sky every 70 s in clear daylight or twilight; the lamp bulb and lit shade interior are bright enough to glow; two more papers lie on the desk; the desk camera moved closer to the character (target 0.5, 1.02, 0.1; offset 0.88, 0.18, 0.72).
 - **Frames.** Reference and Panel side by side at sunset and in rainy night: `chill-compare-2.jpg`; room view at sunset: `room-lofi.jpg`.
 
+## VRoid default, L-shaped desk and density (Human feedback)
+
+Date: 2026-10-19. Same scratch harness and SwiftShader caveat, 960 × 540 frames.
+
+- **Feedback.** Switch the model; lighting and shader quality and information density are still well short of Chill with You; the model is about 60 % of its detail; the room layout should have more style, for example an L-shaped desk.
+- **Model.** VRoid Project's AvatarSample_A (provided by Vain; VRoid Hub conditions allow redistribution and modification without credit) is now the bundled default, closest to the reference's short-haired character with headphones. Its 4096 px texture atlases were downscaled to 2048 px (thumbnail 256 px) by rewriting only the GLB image buffers, so the file is 13.3 MB instead of 26.8 MB; geometry, materials, bones, expressions, spring bones and metadata are untouched. It loads as VRM 0.x (`data-vrm-spec=0`) with happy, relaxed, sad and angry expressions. The previous technical sample and its VRM Public License PDF were removed.
+- **Layout.** The desk is now L-shaped: the main top was shortened to end at x −1.5 and a 0.6 m wing runs along the left wall to the window seat. The book hutch moved onto the wing facing the chair; the wing also carries a turntable whose record spins, four leaning record sleeves, an open laptop with a sunset wallpaper, a small speaker, a wall shelf with books, a figurine and a plant, and a corkboard with photos and sticky notes.
+- **Density.** Book spines have a label band and marks; a desk calendar shows the real month and date; a firefly jar on the window seat glows and twinkles at night with its own small light; three framed prints hang right of the window; a hanging pothos at the top of the window sways.
+- **Lighting.** The lamp spotlight now targets the desk in front of the book and mug and is about 35 % weaker at night, so the hands are no longer blown out. MToon surfaces get a rim light that follows the time of day (neutral by day, warm orange at sunset, blue at night), and their base color is reduced by 10 % so pale skin and white clothes keep shading under the room lights.
+- **Frames.** Reference beside the Panel at sunset and in rainy night, plus night portrait and the night room view with the L-shaped desk: `chill-compare-3.jpg`.
+
 ## Acceptance limits and next action
 
-The model is a licensed technical sample; its provenance and license accompany the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.
+The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.
 
 Open the isolated Host, select VRM QA Ada, open Messages and choose VRM Companion. Send a normal DM and inspect the posture and mouth timing; pin Ada/Bob globally, switch to the QA Group, then return to the DM. Give feedback on character size, motion strength and text/speaking pacing. Keep #2222 open until that feedback and any required fixes are recorded.
 

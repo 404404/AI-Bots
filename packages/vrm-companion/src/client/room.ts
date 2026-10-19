@@ -146,10 +146,18 @@ export function createRoom(seatHeight: number) {
     curtains.push(curtain);
   }
   const surface = tableY + 0.045;
-  box(-0.2, surface - 0.02, 0.52, 3.2, 0.04, 0.72);
-  box(-0.2, surface - 0.07, 0.86, 3.0, 0.06, 0.02);
-  for (const x of [-1.55, 1.15])
-    for (const z of [0.22, 0.82]) box(x, (surface - 0.04) / 2, z, 0.05, surface - 0.04, 0.05, dark);
+  box(-0.06, surface - 0.02, 0.52, 2.92, 0.04, 0.72);
+  box(-0.04, surface - 0.07, 0.86, 2.86, 0.06, 0.02);
+  box(-1.79, surface - 0.02, 0.06, 0.6, 0.04, 1.64);
+  box(-1.5, surface - 0.07, -0.2, 0.02, 0.06, 1.1);
+  for (const [x, z] of [
+    [1.3, 0.22],
+    [1.3, 0.82],
+    [-2.02, 0.82],
+    [-2.02, -0.68],
+    [-1.56, -0.68],
+  ] as const)
+    box(x, (surface - 0.04) / 2, z, 0.05, surface - 0.04, 0.05, dark);
   root.add(createChair(seatHeight, materials));
   cylinder(CHAIR.x, seatHeight / 2, CHAIR.z, 0.03, 0.04, seatHeight, dark);
   for (let i = 0; i < 5; i++) {
@@ -340,7 +348,7 @@ export function createRoom(seatHeight: number) {
   lampRoot.add(lamp);
   lamp.position.copy(bulb.position);
   lampRoot.updateMatrixWorld(true);
-  lamp.target.position.set(0.5, surface, 0.2);
+  lamp.target.position.set(0.22, surface, 0.5);
   root.add(lamp.target);
   const glow = new PointLight(0xffb36a, 0.4, 1.6, 2);
   glow.position.copy(bulb.position);
@@ -388,7 +396,7 @@ export function createRoom(seatHeight: number) {
       .lerp(new Color(0xffe2b6), time.daylight)
       .lerp(new Color(0xffac69), time.twilight);
     sun.intensity = (0.35 + time.daylight * 1.7 + time.twilight * 1.2) * (1 - time.wet * 0.65);
-    lamp.intensity = 0.8 + (1 - time.daylight) * 3.6 + time.twilight * 1.2;
+    lamp.intensity = 0.6 + (1 - time.daylight) * 2.4 + time.twilight * 0.6;
     glow.intensity = lamp.intensity * 0.15;
     sky.color
       .setHex(0x4a5a9a)
