@@ -40,7 +40,7 @@ import { bubbleCorners, bubbleRow, bubbleShape, type BubbleGroup } from './bubbl
 import { MessageAttachments } from './message-attachments';
 import { openMessageMenu } from './message-menu';
 import { ReactionChips } from './message-reactions';
-import type { Rect } from './message-sheet';
+import type { Rect } from './menu-placement';
 import { SpeakerRow, type Speaker } from './speaker-row';
 
 export type { Speaker } from './speaker-row';
@@ -52,7 +52,7 @@ export function deliveryLabel(message: ConversationMessage): string | undefined 
   return message.revision === undefined ? t.sent : undefined;
 }
 
-function BubbleBody({
+export function BubbleBody({
   message,
   group,
   onOpenImage = () => {},
@@ -64,7 +64,7 @@ function BubbleBody({
   group: BubbleGroup;
   onOpenImage?: (attachment: MessageAttachment) => void;
   onShare?: (attachment: MessageAttachment) => Promise<void>;
-  fill?: { maxWidth?: DimensionValue } | undefined;
+  fill?: { maxWidth?: DimensionValue; width?: number; maxHeight?: number } | undefined;
   streaming?: boolean;
 }) {
   const theme = useDesignTheme();
@@ -75,6 +75,7 @@ function BubbleBody({
       style={{
         ...bubbleShape(human, group),
         ...fill,
+        overflow: fill?.maxHeight === undefined ? 'visible' : 'hidden',
         backgroundColor: human ? theme.color.accent : theme.color.surface,
         gap: space.x2,
         opacity: human && message.delivery === 'pending' ? 0.7 : 1,

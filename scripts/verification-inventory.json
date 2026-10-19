@@ -1501,9 +1501,9 @@
     },
     {
       "path": "scripts/e2e-mobile-reactions-web.mjs",
-      "category": "needs-repair",
+      "category": "historical-regression",
       "behaviors": ["phone.timeline"],
-      "reason": "The long-press message menu is now a native SwiftUI/Compose bottom sheet with no Expo Web rendering, so its long-press island and placement checks no longer apply; keep only the reaction-chip checks before use.",
+      "reason": "Own task Host and Expo Web export with seeded messages; reactions/long-press details in Web, not native touch proof.",
       "task": 1967,
       "sha256": "469bdb30738542f5b7eb913788c727b028a71849e29fb98e1dced4f50f3339de"
     },

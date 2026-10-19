@@ -6,6 +6,7 @@ import {
   HStack,
   Host,
   Image,
+  RNHostView,
   ScrollView,
   Spacer,
   Text,
@@ -46,6 +47,7 @@ import {
   type MessageMenuAction,
   type MessageMenuTarget,
 } from './message-sheet';
+import { MessageSheetText } from './message-sheet-text';
 
 export {
   dismissQueue,
@@ -177,6 +179,11 @@ function SheetContent({
           </HStack>
         </ScrollView>
       ) : null}
+      {target.activity === undefined ? null : (
+        <RNHostView matchContents={{ vertical: true }}>
+          <MessageSheetText body={message.body} />
+        </RNHostView>
+      )}
       {menuGroups(messageMenuActions(message, target.activity)).map((group) => (
         <VStack
           key={group.map((action) => action.key).join()}

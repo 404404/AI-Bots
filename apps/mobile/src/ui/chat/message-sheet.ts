@@ -1,9 +1,8 @@
 import { reactable, type ConversationMessage } from '../../host/conversation';
 import { t } from '../strings';
 import type { BubbleGroup } from './bubble-shape';
+import type { Rect } from './menu-placement';
 import { separatorLabel } from './message-groups';
-
-export type Rect = { x: number; y: number; width: number; height: number };
 
 export type ActivityMenuLink = { label?: string; onOpen?: () => void };
 export type MessageMenuTarget = {

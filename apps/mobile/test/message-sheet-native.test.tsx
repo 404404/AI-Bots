@@ -16,15 +16,18 @@ const labelOf = (modifiers?: Modifier[]) =>
   modifiers?.find((modifier) => modifier.label !== undefined)?.label ??
   modifiers?.find((modifier) => modifier.description !== undefined)?.description;
 
-vi.mock('react-native', async () => ({
-  ...(await import('./react-native-shim')),
-  StyleSheet: { absoluteFill: {} },
-  Platform: {
-    get OS() {
-      return native.os;
+vi.mock('react-native', async () => {
+  const shim = await import('./react-native-shim');
+  return {
+    ...shim,
+    StyleSheet: { ...shim.StyleSheet, absoluteFill: {} },
+    Platform: {
+      get OS() {
+        return native.os;
+      },
     },
-  },
-}));
+  };
+});
 vi.mock('expo-symbols', () => ({
   SymbolView: ({ name }: { name: { android: string } }) =>
     createElement('i', { 'data-symbol': name.android }),
@@ -98,6 +101,7 @@ vi.mock('@expo/ui/swift-ui', () => {
     Host: box('div'),
     Image: ({ systemName }: { systemName: string }) =>
       createElement('i', { 'data-symbol': systemName }),
+    RNHostView: ({ children }: { children: ReactNode }) => children,
     ScrollView: box('div'),
     Spacer: () => null,
     Text: ({ children }: { children: ReactNode }) => createElement('span', null, children),
@@ -238,6 +242,7 @@ describe('iOS message sheet', () => {
       );
       expect(button?.getAttribute('aria-selected')).toBe(String(emoji === '🔥'));
     }
+    expect(host?.textContent).not.toContain(bot.body);
     expect(rows()).toEqual([
       ['doc.on.doc', t.copy],
       ['square.and.arrow.up', t.shareText],
@@ -275,6 +280,7 @@ describe('iOS message sheet', () => {
     };
     const { handlers, render } = mount(ios.MessageActions, { target });
     expect(byLabel(t.activityRow.actions)).not.toBeNull();
+    expect(host?.textContent).toContain(bot.body);
     expect(byLabel(t.reactions)).toBeNull();
     expect(rows()[1]).toEqual(['arrow.up.forward.app', t.activityRow.openMemory]);
     act(() => byLabel(t.copy)?.click());
@@ -332,6 +338,7 @@ describe('Android message sheet', () => {
       target: { message: bot, anchor, group, activity: { label: 'Open memory', onOpen } },
     });
     expect(byLabel(t.reactions)).toBeNull();
+    expect(host?.textContent).toContain(bot.body);
     expect(rows()[1]).toEqual(['open_in_new', 'Open memory']);
     const items = [...(host?.querySelectorAll('li') ?? [])];
     act(() => items[1]?.click());

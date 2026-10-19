@@ -33,6 +33,7 @@ import {
   runAction,
   type MessageActionsProps,
 } from './message-sheet';
+import { MessageSheetText } from './message-sheet-text';
 
 export {
   dismissQueue,
@@ -104,6 +105,14 @@ export function MessageActions({
               })}
             </Row>
           ) : null}
+          {target.activity === undefined ? null : (
+            <RNHostView
+              matchContents={{ vertical: true }}
+              modifiers={[padding(space.x5, space.x3, space.x5, space.x4)]}
+            >
+              <MessageSheetText body={message.body} />
+            </RNHostView>
+          )}
           {groups.map((group, index) => (
             <Fragment key={group.map((action) => action.key).join()}>
               {index === 0 && !reactions ? null : <HorizontalDivider />}
