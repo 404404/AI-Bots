@@ -8,6 +8,7 @@ import {
   type MenuItem,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
+import { hasVisibleText } from '../../../core/src/channels/message-preview.js';
 import { errorMessage } from './bridge.js';
 import { ungroupedLabel } from './labels.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -283,7 +284,7 @@ export function CreateChannelModal({
       }
       labels={dialogLabels(t)}
       submitLabel={t('common.create')}
-      submitDisabled={trimmed.length === 0}
+      submitDisabled={!hasVisibleText(trimmed)}
       busy={creating}
       error={error === undefined ? undefined : t('create.failed', { error })}
       onCancel={onCancel}
