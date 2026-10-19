@@ -41,6 +41,18 @@ All six candidate font/theme cases restore the table after the rapid twelve-flin
 
 The extended candidate run crosses older history with 24 flings; stage captures retain complete content and no ellipses. The sampled native accessibility text/bounds remain identical over a five-second idle; this is a stationary-position check, not a claim of pixel-perfect anchoring through all pagination/momentum. Returning restores the complete latest table. Focus navigation exposes both the older table (message 230) and code block (message 235) in actual pixels; both return actions restore the full latest table. Precise centering is not qualified. Canonical history re-read: 300 unique messages, two pages, every body exactly matches the fixture.
 
+### iOS acceptance status
+
+All six iOS Dynamic Type/theme cases below are **blocked / untested**. This batch runs on Windows with the Human-designated Android runner; it has no assigned Mac, iOS Simulator or physical-iPhone runner for this PR. The separate iOS work tracked by #2176 was not taken over. Android captures and the successful iOS JS bundle build do not establish native iOS acceptance. Although the viewport reaction is Android-active, the shared conversation ref attachment changed, so the platform record remains explicit.
+
+| iOS text size         | Light              | Dark               |
+| --------------------- | ------------------ | ------------------ |
+| Default               | Blocked / untested | Blocked / untested |
+| Intermediate          | Blocked / untested | Blocked / untested |
+| Maximum accessibility | Blocked / untested | Blocked / untested |
+
+An assigned iOS batch must verify complete Markdown, distant-history return, focus navigation and reachable composer/actions in those six cases. This PR supplies no iOS native or ProMotion acceptance result.
+
 ## Automated checks and limits
 
 The focused viewport/window suite passes 9 tests. Full mobile suite: 819 passed, 9 skipped, with the existing process-only English Intl test shim for this machine's Chinese locale. Root/mobile types and lint pass. The static Standards and Spec reviews have no actionable findings at the runtime commit. CI and external review remain separate gates.
