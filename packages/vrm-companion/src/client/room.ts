@@ -14,6 +14,7 @@ import {
   SphereGeometry,
   SRGBColorSpace,
   TorusGeometry,
+  Vector3,
 } from 'three';
 import { createOutdoors, type SkyTime } from './outdoors.js';
 import { CHAIR } from './motion.js';
@@ -171,16 +172,20 @@ export function createRoom(seatHeight: number) {
   const decor = createDecor(tableY);
   root.add(decor.root);
   box(-0.85, tableY + 0.055, 0.4, 0.22, 0.007, 0.16, cream).rotation.y = 0.2;
+  const mug = new Group();
+  const mugHome = new Vector3(0.02, tableY, 0.3);
+  mug.position.copy(mugHome);
+  root.add(mug);
   const cup = new Mesh(new CylinderGeometry(0.085, 0.075, 0.18, 32, 1, true), cream);
-  cup.position.set(-0.12, tableY + 0.14, 0.3);
+  cup.position.set(0, 0.14, 0);
   cup.castShadow = true;
-  root.add(cup);
+  mug.add(cup);
   const coffee = new MeshStandardMaterial({ color: 0x21120c, roughness: 0.22 });
-  cylinder(-0.12, tableY + 0.215, 0.3, 0.078, 0.078, 0.005, coffee);
+  mug.add(cylinder(0, 0.215, 0, 0.078, 0.078, 0.005, coffee));
   const rim = new Mesh(new TorusGeometry(0.082, 0.006, 8, 32), cream);
   rim.rotation.x = Math.PI / 2;
-  rim.position.set(-0.12, tableY + 0.23, 0.3);
-  root.add(rim);
+  rim.position.set(0, 0.23, 0);
+  mug.add(rim);
   const steam: Mesh[] = [];
   for (let i = 0; i < 4; i++) {
     const material = new MeshBasicMaterial({
@@ -193,9 +198,11 @@ export function createRoom(seatHeight: number) {
     root.add(wisp);
     steam.push(wisp);
   }
+  const mugGrip = new Vector3(0.07, 0.15, -0.07);
   const handle = new Mesh(new TorusGeometry(0.055, 0.015, 8, 20), cream);
-  handle.position.set(-0.02, tableY + 0.15, 0.3);
-  root.add(handle);
+  handle.position.copy(mugGrip);
+  handle.rotation.y = Math.PI / 4;
+  mug.add(handle);
   box(1.58, 0.8, -0.85, 0.44, 0.28, 0.2, cream);
   for (const x of [1.46, 1.7]) {
     const speaker = new Mesh(new CylinderGeometry(0.09, 0.09, 0.012, 24), dark);
@@ -248,13 +255,14 @@ export function createRoom(seatHeight: number) {
       const age = (elapsed * 0.16 + i / steam.length) % 1;
       const wisp = steam[i]!;
       wisp.position.set(
-        -0.12 + Math.sin(elapsed * 0.7 + i) * 0.025,
-        tableY + 0.25 + age * 0.3,
-        0.3,
+        mug.position.x + Math.sin(elapsed * 0.7 + i) * 0.025,
+        mug.position.y + 0.25 + age * 0.3,
+        mug.position.z,
       );
       wisp.scale.setScalar(0.4 + age);
       wisp.rotation.y = elapsed * 0.2 + i;
-      (wisp.material as MeshBasicMaterial).opacity = Math.sin(age * Math.PI) * 0.06;
+      const resting = Math.max(0, 1 - mug.position.distanceTo(mugHome) * 8);
+      (wisp.material as MeshBasicMaterial).opacity = Math.sin(age * Math.PI) * 0.06 * resting;
     }
     for (let i = 0; i < curtains.length; i++)
       curtains[i]!.rotation.x = Math.sin(elapsed * 0.35 + i * 1.7) * 0.012;
@@ -278,6 +286,9 @@ export function createRoom(seatHeight: number) {
   return {
     root,
     tableY,
+    mug,
+    mugHome,
+    mugGrip,
     setMood,
     update,
     get assets() {

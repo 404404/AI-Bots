@@ -4,6 +4,7 @@ section: Added
 
 ## en
 
+- While the Bot is idle, the seated character now occasionally looks toward the window, stretches, rests its chin on a hand, sips from its cup or glances at you, and returns to the keyboard as soon as the Bot gets to work ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - The character's face now follows what the Bot is doing: relaxed at idle, a thoughtful upward look while thinking, focused while working, an expectant smile while waiting and a troubled look when blocked, easing between them and warming up while speaking ([#2304](https://github.com/BotHarness/DeepSeekBot/issues/2304)).
 - The room now has a framed window in a plaster wall with linen curtains, soft drawn clouds and a glowing sun, a darker night lit by the desk lamp, and a desk view that keeps the lamp, cup and character in frame. MToon/lilToon remains a reversible comparison, scene choices survive the view reloading, and loading no longer looks like an error; final visual acceptance remains pending ([#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)).
 
@@ -12,6 +13,7 @@ section: Added
 
 ## zh
 
+- Bot 空闲时，坐在桌前的角色会不时看向窗外、伸懒腰、托腮、端起杯子喝一口或看你一眼；Bot 一开始工作就平滑回到键盘（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 角色的表情现在跟随 Bot 的状态：空闲时放松，思考时视线上移、若有所思，工作时专注，等待时带着期待的微笑，受阻时显得困扰；表情之间平滑过渡，说话时更柔和明亮（[#2304](https://github.com/BotHarness/DeepSeekBot/issues/2304)）。
 - 房间改为灰泥墙上的窗框与亚麻窗帘、柔和的绘制云层和发光太阳；夜晚整体变暗，由台灯照亮桌面；桌边视角同时保留台灯、杯子和角色。MToon／lilToon 仍可切换对比，视图重新加载后保留场景选择，加载状态不再显示为错误；最终视觉验收尚未完成（[#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)）。
 

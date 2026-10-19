@@ -63,6 +63,15 @@ Date: 2026-10-19. Sub-issue [#2304](https://github.com/BotHarness/DeepSeekBot/is
 - **Close-ups.** A scratch harness mounted the same `mountStage` with each Activity snapshot and captured a portrait close-up per state; dominant face: idle → relaxed, thinking → sad, working → angry, waiting → happy, blocked → sad, working + speaking → happy, reconnecting → neutral (`face-activities.jpg`).
 - **Real DM.** `QA-FACE-1019b` to VRM QA Ada (DeepSeek V4.1 Flash via opencode-go) moved the Panel idle → thinking → working → speaking (mouth 0.2) → idle; `bot-trace` recorded `bash` `sleep 12` then `channel_send`. The stage reported the thinking face while thinking and the relaxed idle face after the reply. Software rendering runs at a few frames per second, so the blend visibly lags the label by a few seconds there.
 
+## Idle gestures (#2305)
+
+Date: 2026-10-19. Sub-issue [#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305). Same isolated Host and SwiftShader caveat.
+
+- **Gestures.** Window glance (head and torso turn toward the window side), stretch (both arms released from the keyboard and raised, eyes closed), chin rest (right hand to the chin), sip (right hand reaches the mug handle, carries the mug to the mouth and back, steam fades while it is lifted) and a smiling glance at the viewer. The mug handle now faces the character so the hand can reach it; the mug moved 0.14 m toward the keyboard.
+- **Close-ups.** A scratch harness forced each gesture at a fixed progress through the real `mountStage` (`idle-gestures.jpg`). Inspected for hand contact, arm crossing and mug position; the first window pose twisted the torso enough to fold the keyboard arm and was reduced.
+- **Natural trigger.** In the isolated Host, VRM QA Ada at idle started `stretch` after 8.1 s of render time with no input.
+- **Work.** `QA-IDLE-1019` (real DM, DeepSeek V4.1 Flash) moved the Panel to thinking and working; `data-vrm-idle` stayed `none` throughout. Retreat from a gesture already in progress is covered by unit tests, not by a captured frame.
+
 ## Acceptance limits and next action
 
 The model is a licensed technical sample; its provenance and license accompany the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

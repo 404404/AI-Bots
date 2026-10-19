@@ -28,7 +28,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { VRMLoaderPlugin, VRMUtils, type VRM, type VRMHumanBoneName } from '@pixiv/three-vrm';
 import type { BotPresentationSnapshot } from '@botharness/ui/panels';
 import { RoomMotion, type MotionCommand } from './motion.js';
-import { FACE_EXPRESSIONS, FaceBlend, dominantFace, faceTarget } from './face.js';
+import { FACE_EXPRESSIONS, FaceBlend, dominantFace, faceTarget, type FaceWeights } from './face.js';
+import { IdleScheduler, type IdleAction } from './idle.js';
 import { createRoom, type Mood } from './room.js';
 import { enableLilToon } from '@mochiya/three-liltoon';
 import { createCharacterShading, type CharacterShading } from './shading.js';
@@ -73,6 +74,7 @@ export function mountStage(
   let visible = true;
   let latest: BotPresentationSnapshot | undefined;
   const motion = new RoomMotion();
+  const idle = new IdleScheduler();
   let room: ReturnType<typeof createRoom> | undefined;
   let shading: ReturnType<typeof createCharacterShading> | undefined;
   let hipDrop = 0;
@@ -238,14 +240,47 @@ export function mountStage(
       const blend = 1 - Math.exp(-delta * 10);
       const sit = motion.seated;
       const walk = Math.sin(gait) * 0.28 * motion.stride;
-      pose('spine', sway + (working ? 0.04 : 0), 0, 0, blend);
-      const looking = talking || waiting || blocked;
+      const resting =
+        !!live &&
+        activity === 'idle' &&
+        !latest?.speaking &&
+        motion.phase === 'seated' &&
+        sit >= 1 &&
+        !reduced.matches;
+      const idleFrame = idle.step(delta, resting);
+      const doing = (action: IdleAction) => (idleFrame.action === action ? idleFrame.weight : 0);
+      const outside = doing('window');
+      const stretch = doing('stretch');
+      const chin = doing('chin');
+      const sip = doing('sip');
+      const glance = doing('glance');
+      const drinkPath = (progress: number) => {
+        const span = (from: number, to: number) =>
+          Math.max(0, Math.min(1, (progress - from) / (to - from)));
+        return {
+          reach: span(0, 0.22) - span(0.86, 1),
+          lift: span(0.24, 0.42) - span(0.68, 0.84),
+        };
+      };
+      const drink = sip ? drinkPath(idleFrame.progress) : { reach: 0, lift: 0 };
+      host.dataset.vrmIdle = idleFrame.action ?? 'none';
+      pose(
+        'spine',
+        sway + (working ? 0.04 : 0) - stretch * 0.14 + sip * drink.reach * 0.1 * (1 - drink.lift),
+        -outside * 0.3 - sip * drink.reach * 0.2,
+        0,
+        blend,
+      );
+      const looking = talking || waiting || blocked || glance > 0.5;
       const desk = room?.tableY ?? 0.75;
       const desiredGaze = looking
-        ? camera.position
+        ? camera.position.clone()
         : thinking && live
           ? new Vector3(motion.x - 0.9, desk + 1.6, motion.z + 1.2)
-          : new Vector3(-0.36, desk + 0.48, 0.78);
+          : sip > 0 && room
+            ? room.mug.getWorldPosition(new Vector3())
+            : new Vector3(-0.36, desk + 0.48, 0.78);
+      if (outside > 0) desiredGaze.lerp(new Vector3(-2.4, desk + 1.1, -0.9), outside);
       gaze.position.lerp(desiredGaze, reduced.matches ? 1 : blend);
       const head = vrm.humanoid.getNormalizedBoneNode('head');
       const headPosition =
@@ -257,18 +292,40 @@ export function mountStage(
       );
       pose(
         'head',
-        thinking ? -0.1 : blocked ? 0.1 : working && !talking ? 0.08 : sway,
-        Math.max(-0.35, Math.min(0.35, yaw * 0.4)) + (waiting ? -0.1 : 0),
-        talking ? Math.sin(phase * 5) * 0.025 : 0,
+        (thinking ? -0.1 : blocked ? 0.1 : working && !talking ? 0.08 : sway) -
+          stretch * 0.25 +
+          chin * 0.06 -
+          sip * drink.lift * 0.22,
+        Math.max(-0.35, Math.min(0.35, yaw * 0.4)) + (waiting ? -0.1 : 0) - outside * 0.25,
+        (talking ? Math.sin(phase * 5) * 0.025 : 0) - chin * 0.14,
         blend,
       );
       const typing = working && moving ? Math.sin(phase * 8) * 0.025 : 0;
-      pose('leftUpperArm', -sit * 1.05 + walk + typing, 0, -1.4, blend);
-      pose('rightUpperArm', -sit * 1.05 - walk - typing, 0, 1.4, blend);
-      pose('leftLowerArm', -0.12 - sit * 0.28 - (thinking ? 0.15 : 0), 0, 0, blend);
+      const mix = (from: number, to: number, amount: number) => from + (to - from) * amount;
+      pose(
+        'leftUpperArm',
+        mix(-sit * 1.05 + walk + typing, -0.2, stretch),
+        0,
+        mix(-1.4, 1.15, stretch),
+        blend,
+      );
+      pose(
+        'rightUpperArm',
+        mix(-sit * 1.05 - walk - typing, -0.2, stretch),
+        0,
+        mix(1.4, -1.15, stretch),
+        blend,
+      );
+      pose(
+        'leftLowerArm',
+        mix(-0.12 - sit * 0.28 - (thinking ? 0.15 : 0), -0.35, stretch),
+        0,
+        0,
+        blend,
+      );
       pose(
         'rightLowerArm',
-        -0.12 - sit * 0.28 - (talking ? Math.sin(phase * 2) * 0.06 : 0),
+        mix(-0.12 - sit * 0.28 - (talking ? Math.sin(phase * 2) * 0.06 : 0), -0.35, stretch),
         0,
         0,
         blend,
@@ -279,7 +336,26 @@ export function mountStage(
       pose('rightLowerLeg', (sit * Math.PI) / 2 + Math.max(0, walk) * 1.4, 0, 0, blend);
       pose('leftFoot', -Math.max(0, -walk) * 0.4, 0, 0, blend);
       pose('rightFoot', -Math.max(0, walk) * 0.4, 0, 0, blend);
-      if (sit > 0 && room) {
+      const reach = sit * (1 - stretch);
+      let rightGoal: Vector3 | undefined;
+      let rightWeight = 0;
+      if (room && head && (chin > 0 || sip > 0)) {
+        actor.updateMatrixWorld(true);
+        const facing = new Vector3(Math.sin(motion.yaw), 0, Math.cos(motion.yaw));
+        const mouth = head
+          .getWorldPosition(new Vector3())
+          .addScaledVector(facing, 0.11 * modelScale)
+          .add(new Vector3(0, 0.02 * modelScale, 0));
+        if (chin > 0) {
+          rightGoal = mouth.clone().add(new Vector3(0.02, -0.07 * modelScale, 0));
+          rightWeight = chin;
+        } else {
+          const handle = room.mugHome.clone().add(room.mugGrip);
+          rightGoal = handle.lerp(mouth, drink.lift);
+          rightWeight = sip * drink.reach;
+        }
+      }
+      if (reach > 0 && room) {
         for (const side of ['left', 'right'] as const) {
           const upper = vrm.humanoid.getNormalizedBoneNode(`${side}UpperArm`);
           const lower = vrm.humanoid.getNormalizedBoneNode(`${side}LowerArm`);
@@ -289,12 +365,10 @@ export function mountStage(
           const a = upper.getWorldPosition(new Vector3());
           const b = lower.getWorldPosition(new Vector3());
           const c = hand.getWorldPosition(new Vector3());
-          const goal = c
-            .clone()
-            .lerp(
-              new Vector3(side === 'left' ? 0.72 : 0.42, room.tableY + 0.1 + typing, 0.16),
-              sit,
-            );
+          const keys = new Vector3(side === 'left' ? 0.72 : 0.42, room.tableY + 0.1 + typing, 0.16);
+          const free = side === 'right' && rightGoal ? rightWeight : 0;
+          if (free > 0 && rightGoal) keys.lerp(rightGoal, free);
+          const goal = c.clone().lerp(keys, reach);
           const lengthA = a.distanceTo(b),
             lengthB = b.distanceTo(c);
           const direction = goal.clone().sub(a).normalize();
@@ -324,9 +398,16 @@ export function mountStage(
           );
           hand.quaternion.slerp(
             hand.parent!.getWorldQuaternion(new Quaternion()).invert().multiply(wrist),
-            sit,
+            reach * (1 - free * 0.8),
           );
         }
+      }
+      if (room) {
+        const carried = sip * Math.min(drink.reach, Math.max(0, Math.min(1, drink.lift * 4)));
+        const hand = vrm.humanoid.getNormalizedBoneNode('rightHand');
+        room.mug.position.copy(room.mugHome);
+        if (carried > 0 && hand)
+          room.mug.position.lerp(hand.getWorldPosition(new Vector3()).sub(room.mugGrip), carried);
       }
       const expressions = vrm.expressionManager;
       if (expressions?.getExpression('aa'))
@@ -334,11 +415,14 @@ export function mountStage(
       const blink = moving && phase % 4 < 0.16 ? Math.sin(((phase % 4) / 0.16) * Math.PI) : 0;
       if (expressions?.getExpression('blink')) expressions.setValue('blink', blink);
       if (expressions && face) {
-        const weights = face.step(
-          faceTarget(latest, phase, reduced.matches),
-          delta,
-          reduced.matches,
-        );
+        const target = faceTarget(latest, phase, reduced.matches);
+        const accent: Partial<FaceWeights> = {
+          relaxed: Math.max(stretch * 0.75, sip * drink.lift * 0.5, chin * 0.3),
+          happy: Math.max(glance * 0.45, chin * 0.15),
+        };
+        for (const [name, value] of Object.entries(accent) as [keyof FaceWeights, number][])
+          target[name] = Math.max(target[name], value);
+        const weights = face.step(target, delta, reduced.matches);
         for (const name of FACE_EXPRESSIONS)
           if (face.available.has(name)) expressions.setValue(name, weights[name]);
         host.dataset.vrmFace = dominantFace(weights);
