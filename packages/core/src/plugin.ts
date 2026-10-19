@@ -1,3 +1,4 @@
+import { createWindowZoomControl, WINDOW_ZOOM_CONTROL_PATH } from './window-zoom/control.js';
 import { APPEARANCE_CONTROL_PATH, createAppearanceControl } from './appearance/control.js';
 import { CloudConnections } from './cloud/connections.js';
 import { createCloudProvider } from './cloud/provider.js';
@@ -2300,6 +2301,21 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         };
       }
     ).connection;
+    connectionCtx.effect(() => {
+      const control = createWindowZoomControl(Date.now, (phase, detail) =>
+        ctx.logger.info('window-zoom-control %j', { phase, ...detail }),
+      );
+      const off = connection.fetch.register({
+        path: WINDOW_ZOOM_CONTROL_PATH,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: control.fetch,
+      });
+      return async () => {
+        control.dispose();
+        await off();
+      };
+    }, 'botharness: targeted window zoom delivery');
     connectionCtx.effect(() => {
       const control = createAppearanceControl();
       const off = connection.fetch.register({

@@ -949,6 +949,32 @@ With `--image-reference`, `--path` names the Markdown document and `--image-revi
 
 Use the exact metadata from the selected file/diff side. The authenticated Host returns those original image bytes and their detected MIME, or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. Preview limits are 25 MiB per image, 16,384 pixels per axis and 40 million decoded pixels. GIF/WebP keep their original animation within 256 frames and 40 million canvas pixels across all frames. SVG additionally allows at most 1 MiB UTF-8, 10,000 XML nodes, depth 64, 64 KiB CSS and 20,000 expanded nodes. The static SVG subset accepts ordinary shapes, text, CSS, gradients, markers, clipping and bounded internal references; scripts, event handlers, foreign HTML, images, filters, animation, external references, DTDs, processing instructions and reference cycles are refused. SVG stays an image resource, never inserted markup, and all successful exports preserve the original SVG bytes. Original-file download and Open current file remain separate actions.
 
+## Desktop window zoom (controlled S1)
+
+`window-zoom-clients` lists active targets. Select one `--client-id`; commands never choose a
+window implicitly. `window-zoom-get` reads the Client-owned snapshot. A write requires the
+returned `document.revision` as `--expected-revision`:
+
+```sh
+deepseekbot window-zoom-clients --host <host> --token-file <private-file>
+deepseekbot window-zoom-get --client-id <id> --host <host> --token-file <private-file>
+deepseekbot window-zoom-set --client-id <id> --zoom-level=-1 --expected-revision <revision> --host <host> --token-file <private-file>
+deepseekbot window-zoom-reset --client-id <id> --expected-revision <revision> --host <host> --token-file <private-file>
+```
+
+Levels are integers -8…8; the factor is `1.2 ** level`. Use `--zoom-default` with `window-zoom-set`
+to save the device default and apply it to the current window. A normal set changes only the
+current window; reset restores its saved default. Negative arguments use `--zoom-level=-1`.
+The stable desktop origin stores this locally; the Host only relays requests. Browser Clients
+and desktops without the qualified compatibility composition do not register targets.
+
+`zoom-client-stale`, `zoom-client-unavailable`, `zoom-revision-conflict` and storage errors are
+refusals, not successful fallback writes. A timeout/cancellation after delivery has an unknown
+write outcome: read the same live Client before deciding what to do; never retry blindly.
+Restarting the Client changes its delivery ID; list again. The desktop's primary-window state
+survives independently. See [S1](https://github.com/BotHarness/DeepSeekBot/issues/2268) for native
+qualification limits. No model or Host-side preference copy is involved.
+
 ## Device-local DeepSeekBot appearance
 
 `appearance-clients` lists the online Client ids and platform on the authenticated Host. Select one explicitly; a new mount/reload gets a new id. This controls DeepSeekBot, not the DSH-native Host theme.

@@ -1,3 +1,5 @@
+import { mountWindowZoomControl } from './window-zoom-control.js';
+import { mountWindowZoom, type ZoomCompatibility } from './window-zoom-mount.js';
 import { Wallpaper } from './wallpaper.js';
 import { createWallpaperStore } from './wallpaper-store.js';
 import { mountWallpaper } from './wallpaper-layer.js';
@@ -224,6 +226,20 @@ export function apply(ctx: ClientContext): void {
       ? undefined
       : takeHmrView(window as unknown as Record<string, unknown>);
   const t = ctx.locale.bind(LOCALE_NS);
+  const zoom = mountWindowZoom({
+    document: typeof document === 'undefined' ? undefined : document,
+    window: typeof window === 'undefined' ? undefined : window,
+    shortcuts: ctx.shortcuts,
+    storage,
+    onReady: mountWindowZoomControl,
+    compatibility:
+      typeof window === 'undefined'
+        ? undefined
+        : (window as unknown as { __botharnessWindowZoomCompatibility?: ZoomCompatibility })
+            .__botharnessWindowZoomCompatibility,
+    t,
+  });
+  ctx.effect(() => () => zoom.dispose(), 'botharness: device-local window zoom');
   const nativeChatT = ctx.locale.bind('chat');
   const call = createBridgeCall(ctx);
   const profileContext = async (): Promise<{ profileId: string }> => {
@@ -801,7 +817,11 @@ export function apply(ctx: ClientContext): void {
           order: 0,
           label: () => t('botSettings.section.general'),
           locale: LOCALE_NS,
-          inject: () => ({ actions, closeBotSettings: botSettings.close }),
+          inject: () => ({
+            actions,
+            closeBotSettings: botSettings.close,
+            zoomSurface: zoom.surface,
+          }),
         },
         GeneralSection,
       ),

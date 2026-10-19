@@ -278,3 +278,38 @@ The Windows 1.4.0 fallback also writes layout version 8 while keeping Sessions a
 ## Additional verified pitfall — #2214
 
 A bundled Markdown dependency can resolve its package-internal condition imports to Node implementations even in a Client build. With `react-markdown` / `vfile` in the pinned tsdown/Rolldown toolchain, the Client required `node:process`, `node:path` and `node:url`; the real DSH loader refused the plugin before Bot mode could mount. Explicit browser export conditions alone did not change vfile's `#minpath` / `#minproc` / `#minurl` resolution. Resolve those three imports only inside vfile to its shipped `.browser.js` implementations in the Client build, retain the native external baseline, and verify both the actual built Bundle and a cold browser boot. Do not add Node modules to the shell baseline or install a global process shim. The browser condition also selects DOM entity decoding; the Bundle execution test needs a real DOM for that browser-only code.
+
+
+## Additional verified pitfalls — #2268 desktop zoom composition
+
+The npm `dsh-client-ui-theme` 0.2.1-rc.2 Host artifact imports Schemastery as ESM.
+A generated local copy that rewrites this to `createRequire.resolve()`'s CommonJS entry
+can fail full Profile startup with an ESM/CJS loading race. Keep the canonical ESM singleton
+(`lib/index.mjs`) and verify by importing the generated Host, then cold-booting a complete
+isolated Profile. Do not infer native startup from a syntax-only transformation test.
+
+The same release's shortcut `normalizeBinding` rejects `NumpadAdd`, `NumpadSubtract` and
+`Numpad0`. Validate contributed defaults against the real pinned protocol before registering;
+a thrown registration must revoke earlier commands, restore owned compatibility resources,
+and expose a refusal. Do not silently turn a failed zoom mount into apparent success.
+
+### Native desktop restart and private CLI launch metadata
+
+The pinned desktop worker chooses a new loopback HTTP port and process launch token on a real
+restart. A previously saved CLI endpoint can be unreachable; substituting the new port with the
+old token correctly refuses login. For the isolated zoom QA Profile, the launcher's task-only
+Bundle consumes the public `webServer.getOrigin()` and `connection.authenticatedUrl()` methods
+and writes fresh 0600 machine-local CLI metadata. It adds no listener or product route. Never
+publish its token or private metadata, weaken authentication, or attribute this refusal to the
+feature's Host relay before refreshing the launch credentials.
+
+### Stop the owned desktop before a full linked build
+
+`pnpm build` cleans the Client output directories before writing the new bundles. A running
+linked native Profile can hot-load during that missing-file interval. In the pinned RC, the
+first failed script load can poison the current module-loader generation and leave later
+bundle requests marked as skipped even after files return. Preserve the first crash report,
+finish the build, then restart only that task-owned desktop with the same Profile and user-data
+directory. Stop the owned process before future full builds; never disable third-party Plugins
+or erase the Profile to recover this development sequencing failure. A Client-only iteration
+and an installed immutable product build are separate paths.
