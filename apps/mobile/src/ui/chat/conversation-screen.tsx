@@ -61,6 +61,7 @@ import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
 import { Composer } from './composer';
 import { EdgeFade, HeaderBackButton } from './header-chrome';
+import { ScrollEdgeElement, nativeScrollEdge } from '../primitives/scroll-edge-element';
 import { barLabelStyle, glassHeader, useHeaderOverlap } from './native-header';
 import { useFollowLatest } from './follow-latest';
 import { useMarkRead } from './mark-read';
@@ -769,7 +770,7 @@ function ChatConversation({
         }
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
-          <View>
+          <ScrollEdgeElement edge="bottom">
             {botDm ? (
               <View style={{ padding: space.x5, alignItems: 'center' }}>
                 <Text variant="meta" tone="muted">
@@ -811,7 +812,7 @@ function ChatConversation({
                 onCancelDictation={dictation.cancel}
               />
             )}
-          </View>
+          </ScrollEdgeElement>
         }
       >
         {notice === undefined ? null : (
@@ -948,7 +949,9 @@ function ChatConversation({
               />
             </SpeakerStageContext.Provider>
           </MarkdownViewportContext.Provider>
-          <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
+          {nativeScrollEdge ? null : (
+            <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
+          )}
           {latest.away ? (
             <View
               pointerEvents="box-none"
