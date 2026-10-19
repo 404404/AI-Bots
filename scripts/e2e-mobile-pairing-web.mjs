@@ -225,6 +225,9 @@ async function main() {
     steps.push('asked the Host for a pairing offer, pointed at the phone origin');
 
     page = await browser.newPage();
+    // The app picks its language from the browser locale; pin English so the journey's text
+    // checks hold on a machine set to Chinese.
+    await (await page.createCDPSession()).send('Emulation.setLocaleOverride', { locale: 'en-US' });
     await page.emulate({
       viewport: { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
       userAgent:
@@ -249,10 +252,25 @@ async function main() {
     await shot('1-pair-screen');
     steps.push('opened the app: it starts on the pairing screen');
 
-    await page.type(
-      'input[placeholder^="deepseekbot://pair"], textarea[placeholder^="deepseekbot://pair"]',
-      link,
-    );
+    const linkField =
+      'input[placeholder^="deepseekbot://pair"], textarea[placeholder^="deepseekbot://pair"]';
+    const linkValue = () =>
+      page.$eval(linkField, (field) => /** @type {HTMLInputElement} */ (field).value);
+    await page.type(linkField, 'deepseekbot://pair?p=not-a-pairing-link');
+    await page.locator('::-p-aria(Pair)').click();
+    await text('This is not a DeepSeekBot pairing link');
+    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
+    await shot('1b-bad-link-refused-dark');
+    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+    await shot('1b-bad-link-refused-light');
+    await page.emulateMediaFeatures([]);
+    checks.badLinkNamesTheLink = !(await page.evaluate(() =>
+      document.body.innerText.includes('pairing code'),
+    ));
+    checks.badLinkClearsField = (await linkValue()) === '';
+    steps.push('pasted a broken link: it says the link is wrong and empties the field');
+
+    await page.type(linkField, link);
     await page.locator('::-p-aria(Pair)').click();
     await text(displayName);
     await shot('2-roster-after-pairing');
