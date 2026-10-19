@@ -60,7 +60,10 @@ export default function RootLayout() {
                   ...sheetScreenOptions(design, true),
                 }}
               />
-              <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
+              <Stack.Screen
+                name="pair"
+                options={{ title: t.pairTitle, ...sheetScreenOptions(design, true) }}
+              />
               <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
               <Stack.Screen
                 name="cloud-join"

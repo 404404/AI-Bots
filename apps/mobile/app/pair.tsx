@@ -14,6 +14,8 @@ import { pairHost, type PairingFailure } from '../src/host/pairing';
 import { mobileTelemetry } from '../src/telemetry/native';
 import type { PairingMethod } from '../src/telemetry/schema';
 import { Button } from '../src/ui/primitives/button';
+import { DrawerHeader } from '../src/ui/primitives/drawer-header';
+import { useDesignTheme } from '../src/ui/design/theme';
 import { KeyboardFormScroll } from '../src/ui/primitives/keyboard-form';
 import { cloudAvailable } from '../src/cloud/available';
 import { t } from '../src/ui/strings';
@@ -25,6 +27,7 @@ function deviceName(): string {
 
 export default function PairScreen() {
   const theme = useTheme();
+  const design = useDesignTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ p?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
@@ -82,9 +85,13 @@ export default function PairScreen() {
     <KeyboardFormScroll
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      style={{ flex: 1, backgroundColor: theme.background }}
+      style={{ flex: 1, backgroundColor: design.overlay.fill }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
+      <DrawerHeader
+        title={t.pairTitle}
+        {...(router.canGoBack() ? { onClose: () => router.back() } : {})}
+      />
       {cloudAvailable && (
         <Button label={t.cloud.title} onPress={() => router.dismissTo('/cloud-services')} />
       )}
@@ -100,7 +107,7 @@ export default function PairScreen() {
           aspectRatio: 1,
           borderRadius: 16,
           overflow: 'hidden',
-          backgroundColor: theme.surface,
+          backgroundColor: design.layer.raised.fill,
           alignItems: 'center',
           justifyContent: 'center',
         }}

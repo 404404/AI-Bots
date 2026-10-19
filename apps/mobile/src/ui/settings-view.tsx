@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import type { ConnectionState } from '../host/client';
 import type { OverviewUsage } from '../host/usage';
 import { SHEET_GROUP } from './chat/sheet';
 import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
+import { DrawerHeader } from './primitives/drawer-header';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
 import { errorText, Notice } from './request-parts';
@@ -65,40 +66,7 @@ export function SettingsView({
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
-        <View
-          style={{
-            flexDirection: theme.largeText ? 'column' : 'row',
-            alignItems: theme.largeText ? 'stretch' : 'center',
-            gap: space.x3,
-            marginRight: -space.x3,
-          }}
-        >
-          <Text
-            variant="title"
-            accessibilityRole="header"
-            style={theme.largeText ? undefined : { flex: 1 }}
-          >
-            {t.settings}
-          </Text>
-          <Pressable
-            onPress={actions.onClose}
-            accessibilityRole="button"
-            accessibilityLabel={t.done}
-            style={({ pressed }) => ({
-              alignSelf: theme.largeText ? 'flex-end' : 'auto',
-              minWidth: theme.touch,
-              minHeight: theme.touch,
-              paddingHorizontal: space.x3,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Text tone="accent" strong>
-              {t.done}
-            </Text>
-          </Pressable>
-        </View>
+        <DrawerHeader title={t.settings} closeLabel={t.done} onClose={actions.onClose} />
         <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
         <SettingsSection title={t.modelSettings.title} on={SHEET_GROUP}>
           <SettingsRow
