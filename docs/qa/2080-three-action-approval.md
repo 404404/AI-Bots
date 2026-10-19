@@ -33,3 +33,9 @@ Schema generation 104 is a one-way binary compatibility boundary: an older Host 
 This slice covers Channel Web + online CLI with shared-card component checks. It does not qualify native mobile approval UI, new IM rule creation, every Shell Provider or the complete restart/recovery matrix. Directory authorization remains the separate confirmed read/write command from the first slice. #2080 remains open for later slices.
 
 Public screenshots and sanitized canonical/native proof: [capture provenance](../../.github/pr-screenshots/2080-simple-approval/README.md). Run instructions: [feature map](../../.agents/skills/verify-deepseekbot/features/tool-approval-simple.md).
+
+## Copy alignment follow-up (2026-10-20)
+
+The ordinary card now says that Always allow remembers this Bot using this tool in the current authorization scope, including different inputs. The shortcut label uses the same wording and no longer promises a second risk confirmation. Selection submits immediately; the existing mouse-click regression now asserts exactly one persistent decision and no confirmation dialog. No runtime policy, schema or matching boundary changes in this follow-up.
+
+Focused card, companion, Activity, persisted-rule and coordinator tests pass (64 tests). Current copy still needs manual visual acceptance: local browser observation was blocked by browser policy, so no alternate browser surface was used and no new screenshot is claimed. Earlier captures above prove the prior layout/behavior, not the updated wording. On a Host built from the PR head, open the prepared ordinary approval card in Chinese or English, read the scope note, and select Always allow once; verify it submits without another confirmation. Repeat through Activity or the companion, which share this component. The final exact-head CI and runtime qualification are recorded in the PR handoff comment.

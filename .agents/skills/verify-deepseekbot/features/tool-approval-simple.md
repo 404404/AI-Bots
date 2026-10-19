@@ -34,3 +34,7 @@ For a baseline capture, provide `--capture-report <private-json> --expect-legacy
 - The current shell has a Preview Notice and a workspace rail. Dismiss the actual Continue dialog before navigating; do not wait for a Settings button hidden under the account menu.
 - Preserve a failed run and observe before retrying. A model that refuses to call the requested tool is a failed model-path attempt, not a successful approval test.
 - Native mobile UI, IM new-rule creation, every Shell Provider, and the full recovery matrix are not qualified by this Web slice. Mobile reads the new history value while retaining its legacy decision behavior until its own qualified slice.
+
+## Single-click copy acceptance
+
+The ordinary card explains same Bot, same tool and current authorization scope before selection; different inputs are covered. Click Always allow once: it submits the persistent decision directly, without another confirmation dialog or button. The A shortcut does the same. Check Chinese and English copy in Channel, Activity and companion cards; no cross-tool business category is promised. Settings retain rule revocation.

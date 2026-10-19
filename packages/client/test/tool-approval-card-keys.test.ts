@@ -154,6 +154,8 @@ describe('Tool approval card layout', () => {
         .querySelector<HTMLButtonElement>('.bh-tool-approval-actions .bh-request-secondary')!
         .click(),
     );
+    expect(decisions).toEqual(['allowed-always-tool']);
+    expect(card.querySelector('[role="dialog"]')).toBeNull();
     expect(card.querySelector('.bh-tool-approval-details-body')).toBeNull();
   });
   it('collapses to the category and outcome once decided', async () => {
