@@ -6,6 +6,7 @@ import type { OverviewUsage } from '../host/usage';
 import { SHEET_GROUP } from './chat/sheet';
 import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
+import { DrawerHeader } from './primitives/drawer-header';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
 import { errorText, Notice } from './request-parts';
@@ -64,6 +65,7 @@ export function SettingsView({
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
+        <DrawerHeader title={t.settings} />
         <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
         <SettingsSection title={t.modelSettings.title} on={SHEET_GROUP}>
           <SettingsRow
