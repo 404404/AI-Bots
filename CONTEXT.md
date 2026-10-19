@@ -30,6 +30,7 @@ _Avoid_: Tob, Bot Profile, Channel subpanel
 
 **PersonaBot**:
 A first-class bot entity owned by the Host: a durable identity with a Git-backed Memory Repository that spans Sessions, Chats, and Workspaces and can hold several Sessions at once. Its Soul is optional content within Memory, not the identity itself.
+Visible UI text calls it **Bot**; see [UI copy](docs/agents/ui-copy.md).
 _Avoid_: bot (bare), agent, assistant, robot
 
 **Archived PersonaBot**:

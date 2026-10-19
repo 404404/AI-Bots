@@ -306,7 +306,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 6. **Motion and haptics are limited.**
    - Motion uses Reanimated, only for bubble entry, a held bubble's lift, the message menu, card collapse, the status dot, the Host drawer, the image viewer's gestures and the composer growing line by line (up to five lines, then it scrolls).
    - Haptics fire only on send, approve or deny, submitting a choice, and opening a message's menu.
-7. **Copy lives in `src/ui/strings.ts`.** Internal ids and protocol names stay out of the UI.
+7. **Copy lives in `src/ui/strings.ts`** and follows [UI copy](../../docs/agents/ui-copy.md): say Bot, keep hints and captions short and plain. Internal ids and protocol names stay out of the UI.
 8. **UI PRs show the change.** Follow the [visual evidence rules](../../docs/agents/pr-ui-visual-evidence.md). Font, keyboard, native chrome and native control behavior require native captures and interaction checks; web previews are supplementary. Record source checks, platform-native results and Human QA separately.
 
 ## System text and large-text acceptance
