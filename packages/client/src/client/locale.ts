@@ -3360,9 +3360,9 @@ export const zh = {
   'approval.allowKind': '总是允许此类',
   'approval.allowKindRisk':
     '“总是允许此类”之后，这个程序用同一账号、同一组环境变量名运行时不再询问，参数不限。',
-  'approval.allowAll': '始终允许这里所有无法预览的工具',
+  'approval.allowAll': '始终允许这里除密钥命令外的所有工具',
   'approval.allowAllRisk':
-    '此 Bot 的当前角色和工作区以后运行任何无法预览的工具时都不再询问；这些工具可能访问授权目录之外。工作区授权变化会使此规则失效。',
+    '此 Bot 的当前角色和工作区以后运行除密钥命令外的任何工具时都不再询问；这些工具可能访问授权目录之外。工作区授权变化会使此规则失效。',
   'approval.confirmAll': '确认始终允许',
   'approval.cancel': '取消',
   'approval.ruleSaved': '已保存自动批准规则并批准本次调用',
@@ -3447,7 +3447,7 @@ export const zh = {
   'access.sessionWarning': '此事项以危险文件权限创建；关闭 Bot 开关不会改变它。',
   'approval.revokeRule': '撤销规则',
   'approval.exactRule': '相同调用：{tool}',
-  'approval.allRule': '这里所有无法预览的工具',
+  'approval.allRule': '这里除密钥命令外的所有工具',
   'approval.secretCliRule': '密钥命令：{program}（账号 {account}）',
   'approval.reject': '拒绝',
   'approval.approved': '已批准这一次调用',
@@ -7346,9 +7346,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.allowKind': 'Always allow this kind',
   'approval.allowKindRisk':
     'Always allow lets this program run with any arguments, without asking, for the same account and environment variable names.',
-  'approval.allowAll': 'Always allow every tool without a preview here',
+  'approval.allowAll': 'Always allow every tool here except secret commands',
   'approval.allowAllRisk':
-    'This Bot role and workspace will no longer ask before tools without a preview. They may access files outside authorized folders. Changing workspace grants invalidates this rule.',
+    'This Bot role and workspace will no longer ask before any tool except secret commands. Tools may access files outside authorized folders. Changing workspace grants invalidates this rule.',
   'approval.confirmAll': 'Confirm always allow',
   'approval.cancel': 'Cancel',
   'approval.ruleSaved': 'Automatic approval rule saved; this call was approved',
@@ -7439,7 +7439,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'This Assignment was created with dangerous file access; turning off the Bot setting will not change it.',
   'approval.revokeRule': 'Revoke rule',
   'approval.exactRule': 'Exact call: {tool}',
-  'approval.allRule': 'Every tool without a preview here',
+  'approval.allRule': 'Every tool here except secret commands',
   'approval.secretCliRule': 'Secret command: {program} (account {account})',
   'approval.reject': 'Reject',
   'approval.approved': 'This call was approved',
