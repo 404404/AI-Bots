@@ -25,7 +25,18 @@ final class ScrollEdgeElementView: ExpoView {
 
   override func didMoveToWindow() {
     super.didMoveToWindow()
+    NotificationCenter.default.removeObserver(self)
+    if window != nil {
+      for name in [UIResponder.keyboardDidShowNotification, UIResponder.keyboardDidHideNotification] {
+        NotificationCenter.default.addObserver(
+          self, selector: #selector(keyboardSettled), name: name, object: nil)
+      }
+    }
     attach()
+  }
+
+  @objc private func keyboardSettled() {
+    refresh()
   }
 
   override func layoutSubviews() {

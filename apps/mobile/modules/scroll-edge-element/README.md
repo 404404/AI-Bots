@@ -5,7 +5,8 @@ scroll edge effect on iOS 26, the way a system toolbar does. It wraps its
 children in a view that carries a `UIScrollEdgeElementContainerInteraction`
 for the nearest sibling scroll view, so UIKit draws the soft edge under it. UIKit shapes that edge when the
 interaction is added, so the `revision` prop re-adds it whenever the
-container's height or the keyboard changes.
+container's height or the keyboard changes, and the view re-adds it again once
+the keyboard has finished showing or hiding.
 
 The chat composer uses it for the bottom edge; the native header already gives
 the top edge. Before iOS 26 the view is a plain container.
