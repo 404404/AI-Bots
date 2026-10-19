@@ -324,10 +324,15 @@ export function createRoom(seatHeight: number) {
   shade.rotation.x = -0.5;
   shade.castShadow = true;
   lampRoot.add(shade);
-  shade.add(new Mesh(shadeGeometry, new MeshBasicMaterial({ color: 0xffd9a0, side: BackSide })));
+  shade.add(
+    new Mesh(
+      shadeGeometry,
+      new MeshBasicMaterial({ color: new Color(0xffd9a0).multiplyScalar(1.6), side: BackSide }),
+    ),
+  );
   const bulb = new Mesh(
     new SphereGeometry(0.022, 6, 4),
-    new MeshBasicMaterial({ color: 0xffe2a8 }),
+    new MeshBasicMaterial({ color: new Color(0xffe2a8).multiplyScalar(4) }),
   );
   bulb.position.copy(head).add(new Vector3(0, -0.06, -0.05));
   lampRoot.add(bulb);

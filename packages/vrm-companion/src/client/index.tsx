@@ -48,6 +48,7 @@ function Character({ view }: { view: BotPresentationView }) {
     mood: 'auto',
     weather: 'clear',
     shading: 'mtoon',
+    effects: true,
   };
   const [shading, setShading] = useState<CharacterShading>(initial.shading);
   const [scene, setScene] = useState<SceneState>({
@@ -58,6 +59,7 @@ function Character({ view }: { view: BotPresentationView }) {
   const [camera, setCamera] = useState<CameraView>(initial.camera);
   const [mood, setMood] = useState<Mood>(initial.mood);
   const [weather, setWeather] = useState<Weather>(initial.weather);
+  const [effects, setEffects] = useState(initial.effects);
   const [loading, setLoading] = useState('');
   const [error, setError] = useState('');
   const [revision, retry] = useState(0);
@@ -85,6 +87,7 @@ function Character({ view }: { view: BotPresentationView }) {
         setShading(choices.shading);
         setMood(choices.mood);
         setWeather(choices.weather);
+        setEffects(choices.effects);
         setError('');
         setScene({ phase: 'seated', wandering: false, ready: false });
         const stage = mountStage(
@@ -255,6 +258,22 @@ function Character({ view }: { view: BotPresentationView }) {
               }}
             >
               {value === 'clear' ? 'Clear' : 'Rain'}
+            </Button>
+          ))}
+        </div>
+        <div data-vrm-actions="" role="group" aria-label="Look">
+          {([true, false] as const).map((value) => (
+            <Button
+              key={String(value)}
+              disabled={!scene.ready}
+              aria-pressed={effects === value}
+              onClick={() => {
+                stageRef.current?.effects(value);
+                setEffects(value);
+                remember({ effects: value });
+              }}
+            >
+              {value ? 'Lo-fi look' : 'Plain'}
             </Button>
           ))}
         </div>

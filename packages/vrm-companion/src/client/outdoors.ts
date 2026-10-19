@@ -40,7 +40,7 @@ export function createOutdoors() {
   });
   const dome = new Mesh(new SphereGeometry(60, 32, 24), sky);
   root.add(dome);
-  const glow = (core: number, halo: number) =>
+  const glow = (core: number, halo: number, rings = 0) =>
     new ShaderMaterial({
       transparent: true,
       depthWrite: false,
@@ -51,13 +51,14 @@ export function createOutdoors() {
           float d=length(vUv*2.0-1.0);
           float disk=1.0-smoothstep(${core.toFixed(3)}-0.02,${core.toFixed(3)},d);
           float haze=pow(max(0.0,1.0-d),${halo.toFixed(1)})*0.55;
-          gl_FragColor=vec4(tint*(1.0+disk*0.4),clamp(disk+haze,0.0,1.0)*opacity);
+          haze+=pow(max(0.0,1.0-d),1.2)*smoothstep(0.55,1.0,0.5+0.5*cos(d*30.0))*${rings.toFixed(2)};
+          gl_FragColor=vec4(tint*(1.0+disk*2.2),clamp(disk+haze,0.0,1.0)*opacity);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
     });
-  const sunMaterial = glow(0.16, 2.2);
-  const sun = new Mesh(new PlaneGeometry(9, 9), sunMaterial);
+  const sunMaterial = glow(0.12, 2.2, 0.22);
+  const sun = new Mesh(new PlaneGeometry(13, 13), sunMaterial);
   root.add(sun);
   const moonMaterial = glow(0.2, 3);
   moonMaterial.uniforms.tint!.value.set(0xdbe7ff);
@@ -245,6 +246,17 @@ export function createOutdoors() {
   const rain = new LineSegments(rainGeometry, rainMaterial);
   rain.frustumCulled = false;
   root.add(rain);
+  const birdMaterial = new MeshBasicMaterial({ color: 0x3a2a35, transparent: true });
+  const wingGeometry = new PlaneGeometry(0.42, 0.06).translate(0.21, 0, 0);
+  const birds = Array.from({ length: 5 }, (_, i) => {
+    const group = new Group();
+    const left = new Mesh(wingGeometry, birdMaterial);
+    const right = new Mesh(wingGeometry, birdMaterial);
+    right.scale.x = -1;
+    group.add(left, right);
+    root.add(group);
+    return { group, left, right, phase: i * 1.37, lead: (i % 3) * 0.9 + Math.floor(i / 3) * 0.5 };
+  });
   let wet = 0;
   let seconds = 0;
   const update = (dt: number, mode: SkyTime, weather: Weather = 'clear') => {
@@ -322,6 +334,19 @@ export function createOutdoors() {
     for (const balloon of balloons) {
       balloon.group.position.y = balloon.y + Math.sin(seconds * 0.12 + balloon.phase) * 0.25;
       balloon.group.rotation.z = Math.sin(seconds * 0.09 + balloon.phase) * 0.035;
+    }
+    const flock = (seconds % 70) / 70;
+    birdMaterial.opacity = Math.min(1, daylight + twilight) * (1 - wet);
+    for (const bird of birds) {
+      bird.group.visible = birdMaterial.opacity > 0.02;
+      bird.group.position.set(
+        -22 + flock * 44 - bird.lead * 1.4,
+        9 + bird.lead * 0.6 + Math.sin(seconds * 0.6 + bird.phase) * 0.3,
+        -20 - bird.phase,
+      );
+      const flap = 0.25 + Math.sin(seconds * 7 + bird.phase * 3) * 0.45;
+      bird.left.rotation.z = flap;
+      bird.right.rotation.z = -flap;
     }
     return { daylight, twilight, hour, wet, sunDirection: sun.position.clone().normalize() };
   };

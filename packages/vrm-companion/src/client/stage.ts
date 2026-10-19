@@ -33,6 +33,7 @@ import { IdleScheduler, type IdleAction } from './idle.js';
 import { createRoom, type Mood, type Weather } from './room.js';
 import { enableLilToon } from '@mochiya/three-liltoon';
 import { createCharacterShading, type CharacterShading } from './shading.js';
+import { createPost } from './post.js';
 
 export type CameraView = 'desk' | 'room' | 'portrait';
 export interface SceneState {
@@ -45,6 +46,7 @@ export interface SceneChoices {
   mood: Mood;
   weather: Weather;
   shading: CharacterShading;
+  effects: boolean;
 }
 export interface StageCallbacks {
   loading(value: string): void;
@@ -57,6 +59,7 @@ export interface Stage {
   camera(view: CameraView): void;
   mood(value: Mood): void;
   weather(value: Weather): void;
+  effects(value: boolean): void;
   shading(value: CharacterShading): void;
   dispose(): void;
 }
@@ -67,7 +70,13 @@ export function mountStage(
   host: HTMLElement,
   model: string,
   { loading, error, changed }: StageCallbacks,
-  initial: SceneChoices = { camera: 'desk', mood: 'auto', weather: 'clear', shading: 'mtoon' },
+  initial: SceneChoices = {
+    camera: 'desk',
+    mood: 'auto',
+    weather: 'clear',
+    shading: 'mtoon',
+    effects: true,
+  },
 ): Stage {
   for (const key of Object.keys(host.dataset))
     if (key !== 'vrmStage' && key.startsWith('vrm')) delete host.dataset[key];
@@ -118,6 +127,9 @@ export function mountStage(
   generator.dispose();
   renderer.shadowMap.type = PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  const post = createPost(renderer);
+  let effects = initial.effects !== false;
+  host.dataset.vrmEffects = effects ? 'on' : 'off';
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%';
   renderer.domElement.setAttribute('aria-label', 'VRM character');
   host.append(renderer.domElement);
@@ -145,13 +157,13 @@ export function mountStage(
     const portrait = view === 'portrait';
     const target = portrait
       ? new Vector3(motion.x, 1.16 - motion.seated * 0.1, motion.z)
-      : new Vector3(0.42, 1.04, 0.08);
+      : new Vector3(0.5, 1.02, 0.1);
     const offset =
       view === 'room'
         ? new Vector3(1.9, 1.5, 4.0)
         : portrait
           ? new Vector3(0.8, 0.12, 1.15)
-          : new Vector3(0.98, 0.2, 0.78);
+          : new Vector3(0.88, 0.18, 0.72);
     const aspectScale =
       view === 'desk'
         ? Math.max(1, Math.min(1.8, 1.7 / camera.aspect))
@@ -228,6 +240,7 @@ export function mountStage(
         .setHex(0x9fb2ff)
         .lerp(new Color(0xffd8b8), Math.min(1, daylight.daylight + daylight.twilight));
       scene.environmentIntensity = 0.06 + daylight.daylight * 0.39 + daylight.twilight * 0.2;
+      post.grade(daylight);
       host.dataset.vrmHour = daylight.hour.toFixed(3);
       host.dataset.vrmAssets = room?.assets;
     }
@@ -478,13 +491,18 @@ export function mountStage(
     }
     controls.update();
     shading?.update();
-    renderer.render(scene, camera);
+    let calls = 0;
+    if (effects) calls = post.render(scene, camera);
+    else {
+      renderer.render(scene, camera);
+      calls = renderer.info.render.calls;
+    }
     frames++;
     elapsed += delta;
     host.dataset.vrmFrames = String(frames);
     host.dataset.vrmGeometries = String(renderer.info.memory.geometries);
     host.dataset.vrmTextures = String(renderer.info.memory.textures);
-    host.dataset.vrmCalls = String(renderer.info.render.calls);
+    host.dataset.vrmCalls = String(calls);
     host.dataset.vrmSeconds = elapsed.toFixed(2);
   };
   const reconcile = () => {
@@ -500,6 +518,7 @@ export function mountStage(
     height = box.height;
     if (width > 0 && height > 0) {
       renderer.setSize(width, height, false);
+      post.setSize(width, height);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       fitCamera(cameraView);
@@ -636,6 +655,10 @@ export function mountStage(
       room?.setMood(value);
       host.dataset.vrmMood = value;
     },
+    effects(value) {
+      effects = value;
+      host.dataset.vrmEffects = value ? 'on' : 'off';
+    },
     weather(value) {
       room?.setWeather(value);
       host.dataset.vrmWeather = value;
@@ -658,6 +681,7 @@ export function mountStage(
       room?.dispose();
       shading?.dispose();
       releaseLilToon();
+      post.dispose();
       environmentMap.dispose();
       if (vrm) {
         actor.remove(vrm.scene);

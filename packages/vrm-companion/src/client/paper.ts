@@ -73,6 +73,8 @@ export function createPaper(surface: number, sill: number, materials: Materials)
   sheet(1.15, surface + 0.002, 0.22, 2.6, 0.5);
   sheet(1.2, surface + 0.004, 0.2, 2.2, 0.8);
   sheet(0.3, sill + 0.003, -0.84, 0.1, 1);
+  sheet(-0.22, surface + 0.002, 0.42, 0.5, 0.2);
+  sheet(-0.02, surface + 0.003, 0.72, 1.1, 0.25);
 
   const book = new Group();
   book.position.set(0.16, surface, 0.5);

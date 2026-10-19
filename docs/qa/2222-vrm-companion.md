@@ -113,6 +113,16 @@ Date: 2026-10-19. Same scratch harness and SwiftShader caveat, 960 × 600 frames
 - **Frames.** Sunset working, rainy night thinking, night idle with the music player, and the room view in rain at sunset: `room-weather.jpg`.
 - **Not done this round.** Object outlines (inverted hull) and further character shader work were left for the next round.
 
+## Lo-fi look (Human feedback)
+
+Date: 2026-10-19. Same scratch harness and SwiftShader caveat, 960 × 540 frames.
+
+- **Feedback.** Better each round; Vain estimated the match with Chill with You at 65–70 % and asked for 85 %.
+- **Gap analysis.** Against the reference frames, the largest remaining differences were the screen treatment (outlines, glow, halftone, colour grade, atmosphere), the sun, and framing; the character design itself (glasses, jacket) depends on the loaded VRM.
+- **Screen pass.** The scene renders into a multisampled half-float target with a depth texture. A composite pass draws dark outlines where depth jumps between near objects (fading beyond 3–5 m so clouds and sky stay clean), adds a quarter-resolution blurred glow of values above 2.4, darkens deep shadows with a 45° halftone dot screen, grades toward warm red with orange haze at sunset and cool blue-teal at night (grey haze in rain), and applies a vignette before ACES tone mapping. **Lo-fi look** / **Plain** in Scene controls switches it (`data-vrm-effects`).
+- **Scene.** The sun is larger with concentric halo rings and a brighter core that blooms; five birds cross the sky every 70 s in clear daylight or twilight; the lamp bulb and lit shade interior are bright enough to glow; two more papers lie on the desk; the desk camera moved closer to the character (target 0.5, 1.02, 0.1; offset 0.88, 0.18, 0.72).
+- **Frames.** Reference and Panel side by side at sunset and in rainy night: `chill-compare-2.jpg`; room view at sunset: `room-lofi.jpg`.
+
 ## Acceptance limits and next action
 
 The model is a licensed technical sample; its provenance and license accompany the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.
