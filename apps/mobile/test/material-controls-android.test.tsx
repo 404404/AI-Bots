@@ -29,30 +29,37 @@ vi.mock('react-native', async () => ({
       props.children,
     ),
 }));
-vi.mock('@expo/ui/jetpack-compose', () => ({
-  Host: ({ children }: { children: ReactNode }) => children,
-  Text: ({ children }: { children: ReactNode }) => createElement('span', {}, children),
-  SingleChoiceSegmentedButtonRow: ({ children }: { children: ReactNode }) =>
-    createElement('div', { 'data-testid': 'segmented-row' }, children),
-  SegmentedButton: Object.assign(
-    (props: { selected: boolean; onClick(): void; children: ReactNode }) =>
-      createElement(
-        'button',
-        { 'data-testid': 'segment', 'aria-pressed': props.selected, onClick: props.onClick },
-        props.children,
-      ),
-    { Label: ({ children }: { children: ReactNode }) => children },
-  ),
-  Slider: (props: { value: number; onValueChange(value: number): void }) =>
-    createElement('input', {
-      'data-testid': 'native-slider',
-      value: props.value,
-      onChange: (event: { target: { value: string } }) =>
-        props.onValueChange(Number(event.target.value)),
-    }),
-  RadioButton: (props: { selected: boolean }) =>
-    createElement('i', { 'data-testid': 'native-radio', 'data-selected': props.selected }),
-}));
+const rows = vi.hoisted(() => new Set<symbol>());
+vi.mock('@expo/ui/jetpack-compose', async () => {
+  const { useRef } = await import('react');
+  return {
+    Host: ({ children }: { children: ReactNode }) => children,
+    Text: ({ children }: { children: ReactNode }) => createElement('span', {}, children),
+    SingleChoiceSegmentedButtonRow: ({ children }: { children: ReactNode }) => {
+      const row = useRef(Symbol('row'));
+      rows.add(row.current);
+      return createElement('div', { 'data-testid': 'segmented-row' }, children);
+    },
+    SegmentedButton: Object.assign(
+      (props: { selected: boolean; onClick(): void; children: ReactNode }) =>
+        createElement(
+          'button',
+          { 'data-testid': 'segment', 'aria-pressed': props.selected, onClick: props.onClick },
+          props.children,
+        ),
+      { Label: ({ children }: { children: ReactNode }) => children },
+    ),
+    Slider: (props: { value: number; onValueChange(value: number): void }) =>
+      createElement('input', {
+        'data-testid': 'native-slider',
+        value: props.value,
+        onChange: (event: { target: { value: string } }) =>
+          props.onValueChange(Number(event.target.value)),
+      }),
+    RadioButton: (props: { selected: boolean }) =>
+      createElement('i', { 'data-testid': 'native-radio', 'data-selected': props.selected }),
+  };
+});
 vi.mock('@expo/ui/jetpack-compose/modifiers', () => ({ fillMaxWidth: () => ({}) }));
 
 import { PercentageSlider } from '../src/ui/primitives/percentage-slider.android';
@@ -137,4 +144,22 @@ it('hides the decorative Material radio from accessibility', async () => {
   const radio = view.querySelector('[data-testid="native-radio"]')!;
   expect(radio.getAttribute('data-selected')).toBe('true');
   expect(radio.closest('[aria-hidden="true"]')).not.toBeNull();
+});
+
+it('rebuilds the native segmented row when the option set changes, so each segment gets its new shape', async () => {
+  const options = (extended: boolean) => [
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: '7 days' },
+    ...(extended ? [{ value: 'month', label: '4 weeks' }] : []),
+  ];
+  const render = (extended: boolean) => (
+    <Segmented label="Period" value="week" options={options(extended)} onChange={() => {}} />
+  );
+  const view = await mount(render(false));
+  rows.clear();
+  await act(async () => root!.render(render(false)));
+  const steady = rows.size;
+  await act(async () => root!.render(render(true)));
+  expect(view.querySelectorAll('[data-testid="segment"]')).toHaveLength(3);
+  expect(rows.size).toBe(steady + 1);
 });

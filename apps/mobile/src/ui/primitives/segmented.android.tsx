@@ -34,7 +34,10 @@ export function Segmented<T extends string>({
         matchContents={{ vertical: true }}
         style={{ width: '100%' }}
       >
-        <SingleChoiceSegmentedButtonRow modifiers={[fillMaxWidth()]}>
+        <SingleChoiceSegmentedButtonRow
+          key={options.map((option) => option.value).join('\n')}
+          modifiers={[fillMaxWidth()]}
+        >
           {options.map((option) => (
             <SegmentedButton
               key={option.value}
