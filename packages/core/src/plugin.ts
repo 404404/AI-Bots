@@ -1564,6 +1564,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     log: (event) => ctx.logger.info(`idle-compaction ${JSON.stringify(event)}`),
   });
   ctx.effect(() => () => idleCompaction.close(), 'botharness: idle compaction');
+  const compactBot = (slug: string) => {
+    const sessionId = core.runtime.currentOrchestratorSessionId?.(slug);
+    return sessionId === undefined
+      ? Promise.resolve({ outcome: 'not-loaded' as const, tokensBefore: null, tokensAfter: null })
+      : idleCompaction.compactNow(sessionId);
+  };
   let reviewLogs: LogDatabase | undefined;
   try {
     reviewLogs = openLogDatabase({ dir: join(dshHome, 'botharness') });
@@ -2136,6 +2142,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         });
       },
       rescan: () => idleCompaction.rescan(ctx.agents.list().map((agent) => agent.session.id)),
+      compactBot,
     },
     composerIdentity: () =>
       composerRecoveryIdentity(
@@ -2287,6 +2294,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     startFreshOrchestrator: (slug, assertCurrent) =>
       core.runtime.startFreshOrchestrator!(slug, assertCurrent),
     turnRunning: (slug) => core.runtime.turnRunning!(slug),
+    compact: compactBot,
   };
   const tobBotCreationOperations = createTobBotCreationOperations({
     registry: core.registry,

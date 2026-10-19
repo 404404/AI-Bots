@@ -1138,6 +1138,7 @@ function ConversationView({
   >(scopeKey, undefined);
   const [recallNotice, setRecallNotice] = useScopedState<string>(scopeKey);
   const [submissionNotice, setSubmissionNotice] = useScopedState<string>(scopeKey);
+  const [compactNotice, setCompactNotice] = useScopedState<string>(scopeKey);
   const submissionChannelId = draftScope === undefined ? undefined : state.conversation.channel?.id;
   const readSubmissions = () =>
     submissionChannelId === undefined
@@ -1758,6 +1759,28 @@ function ConversationView({
     setSelectedMemoryView(undefined);
     setProfileViewOpen(true);
   };
+  const compactProfileBot = async (): Promise<void> => {
+    if (profileBot === undefined) return;
+    setCompactNotice(t('composerCompact.running'));
+    try {
+      const result = await actions.compactBot(profileBot.slug);
+      const tokens = (value: number | null) => (value === null ? '?' : value.toLocaleString());
+      setCompactNotice(
+        result.outcome === 'compacted'
+          ? t('composerCompact.done', {
+              before: tokens(result.tokensBefore),
+              after: tokens(result.tokensAfter),
+            })
+          : result.outcome === 'busy'
+            ? t('composerCompact.busy')
+            : result.outcome === 'not-loaded'
+              ? t('composerCompact.notLoaded')
+              : t('composerCompact.nothing'),
+      );
+    } catch {
+      setCompactNotice(t('composerCompact.failed'));
+    }
+  };
   const conversationShortcuts: ComposerShortcut[] = [
     ...(dmComposerContext === undefined
       ? []
@@ -1773,6 +1796,13 @@ function ConversationView({
             label: t('composerCommand.sessions'),
             icon: <ChannelSidebarIcon name="text-quote" />,
             run: () => sidebar.openTab('conversation'),
+          },
+          {
+            id: 'compact' as const,
+            label: t('composerCommand.compact'),
+            icon: <ChannelSidebarIcon name="archive" />,
+            disabled: compactNotice === t('composerCompact.running'),
+            run: () => void compactProfileBot(),
           },
         ]),
     {
@@ -2989,6 +3019,11 @@ function ConversationView({
                   <p role="status">{submissionNotice}</p>
                 )}
                 {recallNotice === undefined ? null : <p role="status">{recallNotice}</p>}
+                {compactNotice === undefined ? null : (
+                  <p role="status" data-compact-notice="">
+                    {compactNotice}
+                  </p>
+                )}
                 {recovery.versions.length > 1 ? (
                   <section aria-label={t('composer.draftConflict')}>
                     <p role="alert">{t('composer.draftConflict')}</p>
