@@ -6,7 +6,7 @@
 - Ordinary Channel, Activity and companion reuse renders Allow once / Always allow / Reject.
 - Always allow remembers only the selected tool in the current Bot/role/authority scope; changed inputs match, another tool or revoked rule does not.
 - Human-only management keeps the middle action disabled with a reason. Full Access ordinary actions do not ask, while permission management can reach the native Human decision path.
-- Schema generation 103 preserves legacy rules and normalizes old top-level Full Access Assignment approval policy without widening its permissions.
+- Schema generation 104 preserves legacy rules and normalizes old top-level Full Access Assignment approval policy without widening its permissions.
 
 ## How to get to it (user POV)
 

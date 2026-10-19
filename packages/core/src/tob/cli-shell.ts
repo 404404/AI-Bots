@@ -18,6 +18,9 @@ export interface TobCliShellOptions {
 
   cliPath?: string;
 }
+const CLI_APPROVAL_WAIT_MS = 10 * 60 * 1000;
+const CLI_COMMAND = /(^|[\s;&|(`])deepseekbot(\s|$)/mu;
+
 interface Invocation {
   execution: ToolExecution;
   active: boolean;
@@ -100,7 +103,17 @@ export function installTobCliShell(
       return shell.sandboxMode;
     }
     resolve(request: ShellExecRequest): ShellExecSpec {
-      return shell.resolve(request);
+      const call = invocation.getStore();
+      if (
+        call?.active !== true ||
+        !CLI_COMMAND.test(request.command) ||
+        options.capture(call.execution) === undefined
+      )
+        return shell.resolve(request);
+      return shell.resolve({
+        ...request,
+        timeoutMs: Math.max(request.timeoutMs ?? 0, CLI_APPROVAL_WAIT_MS),
+      });
     }
     async execute(spec: ShellExecSpec): Promise<ShellExecution> {
       const call = invocation.getStore();

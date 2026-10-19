@@ -57,6 +57,16 @@ export function TobOnboarding({
           : 'layout';
   const number = ['model', 'bot', 'group', 'layout', 'chat'].indexOf(step) + 1;
   const created = client.bots.find((bot) => bot.slug === journey.botSlug);
+  const name = created?.displayName ?? journey.botSlug ?? '';
+  const greet =
+    journey.botSlug === undefined ? null : (
+      <Button
+        variant={step === 'group' ? 'primary' : 'ghost'}
+        onClick={() => openChannel('dm-' + journey.botSlug)}
+      >
+        {t('onboarding.short.openBot', { name })}
+      </Button>
+    );
   return (
     <section
       {...stylex.props(styles.card)}
@@ -66,40 +76,35 @@ export function TobOnboarding({
       <div {...stylex.props(styles.heading)}>
         <strong>{t(`onboarding.short.${step}`)}</strong>
         <span {...stylex.props(styles.copy)}>
-          {t('onboarding.short.progress', { step: String(number) })}
+          {t('onboarding.short.progress', { done: String(number - 1) })}
         </span>
       </div>
-      <p {...stylex.props(styles.copy)}>{t(`onboarding.short.${step}Hint`)}</p>
+      <p {...stylex.props(styles.copy)}>{t(`onboarding.short.${step}Hint`, { name })}</p>
       {hasDraft && (step === 'bot' || step === 'group') ? (
         <p {...stylex.props(styles.copy)}>{t('onboarding.short.draft')}</p>
       ) : null}
       <div {...stylex.props(styles.actions)}>
+        {step === 'group' ? greet : null}
         {step === 'model' || step === 'chat' ? null : step === 'layout' ? (
           <Button variant="ghost" onClick={() => void controller.startTour()}>
             {t(state.layoutComplete ? 'onboarding.restart' : 'onboarding.short.tour')}
           </Button>
         ) : (
           <Button
-            variant="ghost"
+            variant={step === 'bot' ? 'primary' : 'ghost'}
             disabled={hasDraft || state.busy}
             onClick={() =>
               suggest(
                 step === 'bot'
                   ? t('onboarding.short.botPrompt')
-                  : t('onboarding.short.groupPrompt', {
-                      name: created?.displayName ?? journey.botSlug!,
-                    }),
+                  : t('onboarding.short.groupPrompt', { name }),
               )
             }
           >
             {t('onboarding.short.suggest')}
           </Button>
         )}
-        {journey.botSlug ? (
-          <Button variant="ghost" onClick={() => openChannel('dm-' + journey.botSlug)}>
-            {t('onboarding.short.openBot')}
-          </Button>
-        ) : null}
+        {step === 'group' ? null : greet}
         {journey.groupChannelId ? (
           <Button variant="ghost" onClick={() => openChannel(journey.groupChannelId!)}>
             {t('onboarding.short.openGroup')}

@@ -261,7 +261,10 @@ export function ToolApprovalCard({
   const compact = companionTarget !== undefined;
   const size = compact ? 'sm' : 'md';
   const summary = approvalSummary(request.toolName, request.input);
-  const botCreate = request.toolName === 'bot_create' ? botCreateArgs(request.input) : undefined;
+  const botCreate =
+    request.toolName === 'bot_create' || request.toolName === 'deepseekbot create'
+      ? botCreateArgs(request.input)
+      : undefined;
   const category = t(
     botCreate !== undefined
       ? 'approval.category.bot'
@@ -334,7 +337,7 @@ export function ToolApprovalCard({
         {t(
           request.toolName === 'channel_attachment_open'
             ? 'approval.originalRisk'
-            : request.toolName === 'bot_create'
+            : botCreate !== undefined
               ? 'approval.botCreateRisk'
               : request.toolName === 'secret_cli'
                 ? 'approval.secretCliRisk'
@@ -433,7 +436,12 @@ export function ToolApprovalCard({
             {preview}
           </button>
           {botCreate === undefined ? null : (
-            <BotCreateApprovalPreview args={botCreate} preview={request.botCreatePreview} t={t} />
+            <BotCreateApprovalPreview
+              args={botCreate}
+              preview={request.botCreatePreview}
+              compact={compact && !open}
+              t={t}
+            />
           )}
           {details}
         </>

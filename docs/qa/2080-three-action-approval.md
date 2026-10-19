@@ -20,7 +20,7 @@ Latest-main integration CI [39296414196](https://github.com/BotHarness/DeepSeekB
 
 ## Automated checks
 
-- Current-tool store: restart persistence, changed inputs, isolation by Bot/role/scope/tool and revocation; legacy exact/broad retention; real generation 102 → 103 migration; top-level Full Access snapshot preserves mode, Grant and revision while moving never → ask.
+- Current-tool store: restart persistence, changed inputs, isolation by Bot/role/scope/tool and revocation; legacy exact/broad retention; real generation 103 → 104 migration; top-level Full Access snapshot preserves mode, Grant and revision while moving never → ask.
 - Approval coordinator: Human-only mutation skips legacy/current rules and Reviewer; Full Access ordinary answer and execution-time revocation check; decision → persisted rule → changed-input match → other-tool ask → revoke → ask.
 - Runtime and Grant policy: root Full Access uses ask; delegated native Subagent policy remains separately owned. Runtime file suite passed 20/20 when run serially, then 21/21 after the latest-main context-overflow addition. A broad concurrent Windows run timed out an unrelated image-read case and hit cleanup EPERM; no timeout was raised.
 - Shared Web card, companion, Activity and history regression tests pass. Secret/MCP, Channel approval and operational database checks pass (53 tests). Mobile history recognizes allowed-always-tool (34 conversation tests); no native mobile UI claim.
@@ -28,7 +28,7 @@ Latest-main integration CI [39296414196](https://github.com/BotHarness/DeepSeekB
 
 ## Limits and recovery
 
-Schema generation 103 is a one-way binary compatibility boundary: an older Host must refuse the newer database. Revoke remembered rules through their owner, restore the desired mode through the existing access setting, and forward recover; do not downgrade by editing SQL. Legacy rules keep their meaning and can be revoked.
+Schema generation 104 is a one-way binary compatibility boundary: an older Host must refuse the newer database. Revoke remembered rules through their owner, restore the desired mode through the existing access setting, and forward recover; do not downgrade by editing SQL. Legacy rules keep their meaning and can be revoked.
 
 This slice covers Channel Web + online CLI with shared-card component checks. It does not qualify native mobile approval UI, new IM rule creation, every Shell Provider or the complete restart/recovery matrix. Directory authorization remains the separate confirmed read/write command from the first slice. #2080 remains open for later slices.
 

@@ -1,4 +1,5 @@
 import { GroupActivityRows } from './group-activity-rows.js';
+import { hasVisibleText } from '../../../core/src/channels/message-preview.js';
 import {
   composerSlashQuery,
   composerShortcutOptions,
@@ -1084,6 +1085,10 @@ export function ChannelComposer({
       return;
     }
     if (!shouldSubmitComposerKey(event, sendKey)) return;
+    if (!hasVisibleText(value) && attachments.length === 0) {
+      event.preventDefault();
+      return;
+    }
     if (mentions.some((item) => item.kind === 'all-bots' && item.preview.recipients.length === 0)) {
       event.preventDefault();
       return;
@@ -1093,7 +1098,7 @@ export function ChannelComposer({
   };
 
   return (
-    <div className="bh-composer-shell" data-bh-tour="composer">
+    <div className="bh-composer-shell" data-bh-tour="composer" data-companion-avoid>
       {allBotNotice === undefined ? null : (
         <div className="bh-muted" role="status">
           {allBotNotice}
@@ -1414,7 +1419,7 @@ export function ChannelComposer({
         </button>
         <div className="bh-composer-footer">
           {stop?.label !== undefined &&
-          value.trim().length === 0 &&
+          !hasVisibleText(value) &&
           attachments.length === 0 &&
           shortcutOptions.length === 0 ? (
             <Tooltip label={stop.label} side="top" portal delayMs={350}>
@@ -1437,7 +1442,7 @@ export function ChannelComposer({
               icon={<IconSendOutlineRegular size={16} />}
               aria-label={sending ? t('message.sending') : t('composer.send')}
               disabled={
-                (value.trim().length === 0 && attachments.length === 0) ||
+                (!hasVisibleText(value) && attachments.length === 0) ||
                 sending ||
                 mentions.some(
                   (item) => item.kind === 'all-bots' && item.preview.recipients.length === 0,

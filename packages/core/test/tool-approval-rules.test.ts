@@ -152,7 +152,7 @@ describe('durable tool approval rules', () => {
     let owner = mountOperationalDatabase({
       dshHome: home,
       schemaPlan: defineSchemaPlan(
-        BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 102),
+        BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 103),
       ),
     });
     const store = () =>
