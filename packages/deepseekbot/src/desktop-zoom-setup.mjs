@@ -147,7 +147,7 @@ function configureProfileZoom({
           ...(packageCommand?.args ?? ['plugin', '--profile', profile]),
           action === 'enable' ? 'add' : 'remove',
           action === 'enable' ? `${theme}@${ownedLink}` : theme,
-          ...(packageCommand ? ['--ignore-scripts'] : []),
+          ...(packageCommand ? ['--config.ignore-scripts=true'] : []),
         ],
         options,
       );
