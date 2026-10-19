@@ -12,6 +12,7 @@ import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { prepareDesktopZoomCompatibility } from './desktop-zoom-compat.mjs';
+import { prepareDesktopZoomQa } from './desktop-zoom-qa.mjs';
 import { developmentProfileManifest } from './dev-profile.mjs';
 const source = process.cwd();
 const { devSecretEnvironment } = await import(
@@ -196,11 +197,19 @@ try {
     symlinkSync(target, themeLink);
     writeFileSync(manifest, JSON.stringify(data, null, 2));
   }
+  prepareDesktopZoomQa(root);
   await launch();
   await ready(true);
+  const cliAccessFile = join(root, 'cli-access.json');
+  const cliAccess = JSON.parse(readFileSync(cliAccessFile, 'utf8'));
+  if (cliAccess.desktopPid !== ownedPid()) throw Error('Stale desktop CLI access metadata');
   writeFileSync(
     join(root, 'owned-instance.json'),
-    JSON.stringify({ pid: ownedPid(), debugPort: port }),
+    JSON.stringify({
+      pid: ownedPid(),
+      debugPort: port,
+      cliAccessFile,
+    }),
     { mode: 0o600 },
   );
   console.log('Isolated S1 desktop ready; private metadata: ' + join(root, 'owned-instance.json'));

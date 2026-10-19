@@ -20,6 +20,11 @@ Build the linked worktree, then run `scripts/e2e-desktop-zoom-launch.mjs` on mac
 a temporary Profile, user-data directory and debug port, and stops only that exact process.
 This is a launcher and prerequisite probe, not an acceptance pass. Keep private login data
 out of published logs. Select only the uniquely identified isolated window for native input.
+The task-only QA Bundle writes the current loopback Host origin and a private token-file path to
+`cli-access.json` inside the launcher's isolated root. Launch tokens and native worker ports change
+on actual restart; use this fresh metadata rather than an old endpoint. Token and metadata files
+are 0600 and remain machine-local. The helper uses existing `webServer` / `connection` Providers
+and adds no listener or product API.
 
 Use `window-zoom-clients` to obtain an explicit live Client ID. `window-zoom-get` returns its
 revision; `window-zoom-set --zoom-level=1 --expected-revision <revision>` and

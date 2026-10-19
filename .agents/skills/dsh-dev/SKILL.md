@@ -292,3 +292,13 @@ The same release's shortcut `normalizeBinding` rejects `NumpadAdd`, `NumpadSubtr
 `Numpad0`. Validate contributed defaults against the real pinned protocol before registering;
 a thrown registration must revoke earlier commands, restore owned compatibility resources,
 and expose a refusal. Do not silently turn a failed zoom mount into apparent success.
+
+### Native desktop restart and private CLI launch metadata
+
+The pinned desktop worker chooses a new loopback HTTP port and process launch token on a real
+restart. A previously saved CLI endpoint can be unreachable; substituting the new port with the
+old token correctly refuses login. For the isolated zoom QA Profile, the launcher's task-only
+Bundle consumes the public `webServer.getOrigin()` and `connection.authenticatedUrl()` methods
+and writes fresh 0600 machine-local CLI metadata. It adds no listener or product route. Never
+publish its token or private metadata, weaken authentication, or attribute this refusal to the
+feature's Host relay before refreshing the launch credentials.
