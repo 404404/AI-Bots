@@ -13,7 +13,7 @@ import {
   TURN_ONLY_BOT_TOOLS,
 } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { FakeAgentHost } from './dsh-agent-host-fixture.js';
-import { createTempRoot, FIXED_NOW } from './helpers.js';
+import { createTempRoot, FIXED_NOW, trackTestOwner } from './helpers.js';
 import { createTestRegistry } from './registry-fixture.js';
 import { createTestWorkspaceGrants } from './workspace-grant-fixture.js';
 
@@ -30,7 +30,9 @@ function setup() {
   expect(registry.create({ slug: 'ada', displayName: 'Ada' }).ok).toBe(true);
   const channels = createChannelStore({ rootDir: join(home, 'channels'), now: FIXED_NOW });
   const dm = channels.getOrCreateDm('ada', 'Ada')!;
-  const owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+  const owner = trackTestOwner(
+    mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN }),
+  );
   const host = new FakeAgentHost({ kind: 'completed' });
   const agents = createDshBotAgentAdapter({
     agents: host,
@@ -50,6 +52,23 @@ function setup() {
 }
 
 describe('direct Bot tool runner', () => {
+  it('requests a workspace through the same production tool without the model', async () => {
+    const { runtime, channels, dm } = setup();
+    try {
+      await runtime.runDirectBotTool!(
+        'ada',
+        'request_workspace_grant',
+        { reason: 'Write the selected project', channel_id: dm.id },
+        new AbortController().signal,
+      );
+      expect(channels.readMessages(dm.id)).toContainEqual(
+        expect.objectContaining({ grantRequest: true, body: 'Write the selected project' }),
+      );
+    } finally {
+      await runtime.close();
+    }
+  });
+
   it('lists runtime Bot tools while cloud_work has its dedicated direct CLI', () => {
     const { runtime } = setup();
     const listed = runtime.directBotTools!().map((tool) => tool.name);

@@ -383,6 +383,12 @@ export function WindowCompanionView({
         obstacles = [...document.querySelectorAll<HTMLElement>('[data-companion-avoid]')].flatMap(
           (element) => {
             const box = element.getBoundingClientRect();
+            const inset = Math.max(
+              0,
+              Number.parseFloat(
+                getComputedStyle(element).getPropertyValue('--bh-companion-avoid-inset'),
+              ) || 0,
+            );
             return box.width === 0 ||
               box.top >= stage.bottom ||
               box.bottom <= stage.bottom - CHARACTER_SIZE
@@ -391,7 +397,7 @@ export function WindowCompanionView({
                   {
                     left: box.left - stage.left,
                     right: box.right - stage.left,
-                    height: stage.bottom - box.top + 4,
+                    height: stage.bottom - box.top + inset + 4,
                   },
                 ];
           },
