@@ -2505,6 +2505,19 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       if (channel === undefined) throw new Error('Group Channel not found');
       return allBotPreview(channel, isBotActive, options.botDisplayName ?? (() => undefined));
     },
+    grantRequestResolution(channelId, requestMessageId) {
+      const row = database.read((db) =>
+        db
+          .prepare(`SELECT e.payload_json, e.source_event_id
+        FROM source_events e JOIN channel_placements p ON p.source_event_id = e.source_event_id
+        WHERE p.channel_id = ? AND json_extract(e.payload_json, '$.grantRequestResolution.requestMessageId') = ?
+        LIMIT 1`)
+          .get(channelId, requestMessageId),
+      ) as { payload_json: string } | undefined;
+      if (!row) return undefined;
+      const payload = JSON.parse(row.payload_json) as ChannelMessage;
+      return allMessages(channelId).find((message) => message.id === payload.id);
+    },
     async appendMessageOnce(id, message, preview, origin, canCommit) {
       const result = append(id, message, true, preview, origin, canCommit);
       return result ?? { status: 'missing' };

@@ -4,6 +4,22 @@
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
+      "id": "desktop.approval.three-actions",
+      "label": "Remember only the current tool through three actions and keep Full Access permission management Human-only",
+      "source": "packages/core/src/workspaces/tool-approval.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/tool-approval-simple.md",
+      "task": 2080,
+      "gap": "Web/online CLI first slice; native mobile, IM new-rule authority and all Provider/recovery variants remain later qualification."
+    },
+    {
+      "id": "desktop.grants.request-write-continue",
+      "label": "Approve persistent workspace write authority and continue the original native-file task",
+      "source": "packages/core/src/workspaces/grant-requests.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/workspace-request-write.md",
+      "task": 2080,
+      "gap": "Mobile, full restart recovery and arbitrary native Provider isolation remain subsequent slices."
+    },
+    {
       "id": "messaging.im-dm-commands",
       "label": "Handle whole-text IM DM commands with current authority and canonical Outbox replies",
       "source": "packages/core/src/messaging/im-commands.ts",
@@ -643,6 +659,22 @@
     }
   ],
   "scripts": [
+    {
+      "path": "scripts/e2e-tool-approval-simple.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.approval.three-actions"],
+      "reason": "Task-owned isolated Windows Host; real native pwsh requests, Web Always allow, changed inputs, other-tool/CLI/revoke checks and Full Access Human-only management.",
+      "task": 2080,
+      "sha256": "ae02a942c136a8b8875eb21e5cbc703931654c564bf1a1a0fbf0b891fb7f0d79"
+    },
+    {
+      "path": "scripts/e2e-workspace-request-write.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.grants.request-write-continue"],
+      "reason": "Task-owned isolated Host and temporary folder; real Web confirmation, authoritative Grant readback, native Orchestrator/Assignment file writes and same-task reply. No mobile or full recovery claim.",
+      "task": 2080,
+      "sha256": "3ca8a16e8efddeacfb82c601917884d2944a716c573447347d934f8fd22a0991"
+    },
     {
       "path": "scripts/e2e-bot-session-folders.mjs",
       "category": "mapped",
@@ -1737,7 +1769,7 @@
       "behaviors": ["desktop.grants.temporary-read-revoke"],
       "reason": "Dedicated temporary sample outside Host data; actual Web Grant authorization, direct attachment-import read, explicit CLI revocation, same-read denial and before/after visible evidence. No model/native file tool/Shell security claim.",
       "task": 1974,
-      "sha256": "4d06c35370b6a936c644e5f662d33644f30201a3203a92f6fbefebb0cefc0cf4"
+      "sha256": "eedc6f54d818cf732e4537965fde803a20a1375e5375f308c60e3f09abed4d03"
     },
     {
       "path": "scripts/e2e-bot-mode-exit.mjs",

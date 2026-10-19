@@ -523,7 +523,7 @@ export interface OrchestratorChannelAccess {
     maxBytes: number;
     signal?: AbortSignal;
   }): Promise<{ ref: ChannelAttachmentRef; data: Uint8Array }>;
-  requestGrant(reason: string): Promise<ChannelMessage>;
+  requestGrant(reason: string, channelId?: string): Promise<ChannelMessage>;
   contacts(input?: BotContactQuery): BotContactPage;
   createGroup(name: string): ChannelRecord;
   inviteGroup(input: { channelId: string; targetBotSlug: string }): GroupInvitation;
@@ -979,7 +979,7 @@ function permissionFromRow(row: AssignmentRow): AssignmentPermissionSnapshot | u
     row.workspace_id === null ||
     row.primary_cwd === null ||
     (row.permission_mode !== 'workspace-write' && row.permission_mode !== 'danger-full-access') ||
-    row.approval_policy !== (row.permission_mode === 'workspace-write' ? 'ask' : 'never') ||
+    row.approval_policy !== 'ask' ||
     row.preset_revision === null
   )
     return undefined;
@@ -6065,8 +6065,8 @@ class BotRuntimeImplementation implements BotRuntime {
         }
         return { ref: downloaded.ref, data };
       },
-      requestGrant: async (reason) => {
-        const channel = resolve();
+      requestGrant: async (reason, channelId) => {
+        const channel = resolve(channelId);
         if (
           channel.type === 'group'
             ? !channel.members.includes(botSlug)
@@ -6084,6 +6084,7 @@ class BotRuntimeImplementation implements BotRuntime {
           author: { kind: 'bot', slug: botSlug },
           body,
           grantRequest: true,
+          grantRequestOwner: this.#registry.get(botSlug)!.createdAt,
         };
         const appended = await this.#channels.appendMessage(channel.id, message, {
           sessionId,
@@ -6910,7 +6911,7 @@ class BotRuntimeImplementation implements BotRuntime {
       workspaceId: grant.workspaceId,
       primaryCwd: grant.workspacePath,
       mode: access.mode,
-      approval: access.mode === 'danger-full-access' ? 'never' : 'ask',
+      approval: 'ask',
       presetRevision: access.revision,
     };
     const key = input.key === undefined ? undefined : requireNonBlank(input.key, 'Continuity Key');

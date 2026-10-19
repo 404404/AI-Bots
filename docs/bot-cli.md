@@ -94,6 +94,7 @@ deepseekbot send-status <bot-id> --message-id <receipt-message-id>
 deepseekbot channel-messages <channel-id> --host http://127.0.0.1:31917 --limit 20
 deepseekbot tool-approval-status <channel-id> --message-id <card-id>
 deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-once
+deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-always-tool
 deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-always-kind
 deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome rejected
 deepseekbot user-question-status <channel-id> --message-id <card-id>
@@ -128,7 +129,7 @@ deepseekbot workspace-create /srv/bots/workspace
 deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 ```
 
-`access-set` refuses `danger-full-access` unless `--acknowledge-risk` is given: full access lets the Bot run any command and use the Browser and Computer without an approval card. `--scope chat` also applies it to the Bot's own chat; `assignments` keeps it to new Assignments. `settings` returns `{ns, revision, value}` for one namespace; `settings-set` reads a JSON object of fields from stdin and applies it against that revision, so a concurrent change fails instead of being overwritten. Only fields the Host marks as live can be changed this way. `workspace-create` takes an absolute path and returns the Host workspace, whose id `grant-create` uses.
+`access-set` refuses `danger-full-access` unless `--acknowledge-risk` is given: full access lets the Bot perform ordinary work and use the Browser and Computer without routine approval cards; permission and approval-policy management still needs an individual Human decision. `--scope chat` also applies it to the Bot's own chat; `assignments` keeps it to new Assignments. `settings` returns `{ns, revision, value}` for one namespace; `settings-set` reads a JSON object of fields from stdin and applies it against that revision, so a concurrent change fails instead of being overwritten. Only fields the Host marks as live can be changed this way. `workspace-create` takes an absolute path and returns the Host workspace, whose id `grant-create` uses.
 
 ### Channels and groups
 
@@ -709,6 +710,17 @@ The model verbs manage the same records afterwards: `model-presets` lists the pr
 
 `channels` lists channels and `channel-messages` reads one page newest-first (`--limit`, `--before`). `grants` lists a Bot's workspace grants while `grant-revoke` and `grant-write-set` manage them; creating a grant needs the Host workspace registry and stays a Host-side action. `schedules` lists a Bot's schedules; `schedule-create` takes `--title`, `--prompt`, and exactly one trigger (`--every` seconds, `--daily`/`--weekly` time plus `--weekdays`, `--once-date` plus `--once-time`, or `--cron`), with `--timezone` required for calendar triggers; `schedule-update`/`schedule-delete`/`schedule-history` address a schedule by `--sid`; `schedule-run-now` records a manual firing that the Host executes on start; `schedule-preview` renders upcoming occurrences for a trigger without a bot. `pairings` lists a Bot's IM pairing requests. Missing schedules fail `unknown-schedule`; deleting one reports `removed`.
 
+### Approve one Workspace request online
+
+```bash
+deepseekbot inbox --category action --bot <bot-id>
+deepseekbot workspace-options
+deepseekbot grant-request-approve <bot-id> --channel <channel-id> --request <message-id> --workspace <workspace-id> --confirm
+deepseekbot grants <bot-id>
+```
+
+`grant-request-approve` uses the same Owner-only Host command as the Web request card. The Host commits persistent read/write authority and the Grant-linked resolution together before continuing the original task through its existing Inbox. It also upgrades an existing read-only Grant after this explicit confirmation. Repeating the same approved request reads back the existing decision; it does not create another Grant or wake. A revoked or changed target is refused. An old tool approval is not a Workspace request: use this command rather than `tool-approval-decide`. Missing `--confirm` is `usage`; unavailable or stale authority returns a coded refusal. This is an online command, not an offline database repair.
+
 ## Memory
 
 `memory-snapshot`, `memory-file --path`, `memory-history [--limit]`, and `memory-diff --sha` read the Bot memory store; `memory-save --path (--body | --body-stdin)` writes one file and commits it. `--expected-head` defaults to the current HEAD (pass it explicitly for compare-and-swap); `--edit-id` defaults to a fresh UUID and makes repeat submissions idempotent. A stale head or a no-change write fails with `memory-conflict`, a missing file reads back `null`, and malformed shas fail `invalid-input`.
@@ -1090,3 +1102,9 @@ deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-re
 ```
 
 Clear removes all functional Panel overrides only in the explicit mode, including unregistered saved targets; theme/materials/Primary, the other mode, media and layout stay unchanged. Full reset requires `--confirm-reset`, defaults both palettes/mode/overrides, and removes shared media. It never changes DSH, Bot identity or business data. A preference write failure leaves media untouched. `appearance-reset-wallpaper-failed` means defaults were committed but media cleanup failed; reread both owners and retry with fresh revisions. The command does not claim a single transaction across localStorage and IndexedDB, nor automatically replay a delivered timeout.
+
+### Three-action tool approval (#2080)
+
+`tool-approval-decide ... --outcome allowed-always-tool` matches the Web card's Always allow: it approves the current call and persists the current tool in this Bot/role/authorization scope. Later different inputs match; another tool or changed scope does not. `tool-approval-rules` returns kind `tool`; `tool-approval-rule-revoke --confirm` restores prompting. Existing exact/broad/Secret rules are not reinterpreted. Permission/policy changes cannot be remembered; the Host returns a coded refusal for an unavailable Always allow action. Secret CLI keeps its program/account/variable-name restriction, and MCP service remembering keeps its independent access checks.
+
+Full Access now retains native `ask` so recognized permission changes can reach the Human, while ordinary requests in its explicitly selected scope are automatically answered without routine cards. The selected mode/scope and existing Assignment permissions are not widened. A native `never` policy still means deterministic rejection; it is not bypassed. Directory grants still use `grant-request-approve --confirm`.
