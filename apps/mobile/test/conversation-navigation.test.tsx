@@ -24,7 +24,11 @@ const state = vi.hoisted(() => ({
 vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', () => {}] }));
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
-  Stack: { Screen: () => null },
+  Stack: {
+    Screen: ({ options }: { options: { headerLeft?: () => ReactNode } }) => (
+      <header>{options.headerLeft?.() ?? null}</header>
+    ),
+  },
   useRouter: () => ({
     canGoBack: () => state.history.length > 1,
     back: () => state.history.pop(),
@@ -65,8 +69,11 @@ vi.mock('../src/host/pick-files', () => ({ MAX_PICKED: 10, pickFiles: vi.fn() })
 vi.mock('../src/host/speech', () => ({
   useDictation: () => ({ state: { status: 'idle' }, mountRef: () => undefined }),
 }));
+vi.mock('../src/ui/chat/native-header', () => ({
+  glassHeader: true,
+  useHeaderOverlap: () => 80,
+}));
 vi.mock('../src/ui/chat/header-chrome', () => ({
-  ChatHeader: ({ left }: { left: ReactNode }) => <header>{left}</header>,
   HeaderBackButton: ({ onPress }: { onPress(): void }) => (
     <button type="button" onClick={onPress}>
       Header back
@@ -75,7 +82,6 @@ vi.mock('../src/ui/chat/header-chrome', () => ({
   EdgeFade: ({ edge, height }: { edge: string; height: number }) => (
     <span data-edge={edge} data-height={height} />
   ),
-  useChatHeaderHeight: () => 80,
 }));
 vi.mock('../src/ui/primitives/keyboard-frame', () => ({
   KeyboardChatFrame: ({ children, composer }: { children: ReactNode; composer: ReactNode }) => (
@@ -257,10 +263,11 @@ describe('missing conversation navigation', () => {
       });
     }
 
-    it(`${name}: header back still returns to Activity`, async () => {
+    it(`${name}: leaves back to Activity to the native header back button`, async () => {
       state.history = ['/activity', route];
-      await press(await render(place), 'Header back');
-      expect(state.history).toEqual(['/activity']);
+      const view = await render(place);
+      expect(view.querySelector('header button')).toBeNull();
+      expect(state.history).toEqual(['/activity', route]);
     });
 
     it(`${name}: header back falls back to Chats without history`, async () => {

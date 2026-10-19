@@ -5,10 +5,8 @@ import type { RosterBot } from '../../host/client';
 import { BotAvatar } from '../bot-avatar';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
-import { DrawerMaterial, useLiquidGlass } from '../primitives/drawer-material';
 import { t } from '../strings';
 import { botDotTone } from './bot-tone';
-import { headerGlassFill } from './header-chrome';
 
 const AVATAR = 28;
 const DOT = space.x3;
@@ -23,7 +21,6 @@ export function ChatTitle({
   onPress(): void;
 }) {
   const theme = useDesignTheme();
-  const glass = useLiquidGlass();
   const status = bot === undefined ? undefined : bot.paused ? t.paused : t.state[bot.state];
   const name = bot?.displayName ?? fallback;
   return (
@@ -42,10 +39,9 @@ export function ChatTitle({
         paddingLeft: bot === undefined ? theme.touch / 2 : (theme.touch - AVATAR) / 2,
         paddingRight: bot === undefined ? theme.touch / 2 : (theme.touch - DOT) / 2,
         borderRadius: radius.round,
-        ...headerGlassFill(theme, glass, pressed),
+        backgroundColor: pressed ? theme.layer.raised.pressed : undefined,
       })}
     >
-      {glass ? <DrawerMaterial /> : null}
       {bot === undefined ? null : <BotAvatar bot={bot} size={AVATAR} ring={false} />}
       <SourceName name={name} source="computer" />
       {bot === undefined ? null : (

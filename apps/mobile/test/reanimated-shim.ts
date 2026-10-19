@@ -9,6 +9,7 @@ const FlatList = (props: {
   keyExtractor(row: unknown): string;
   renderItem(info: { item: unknown }): ReactNode;
   ListHeaderComponent?: ReactNode;
+  ListFooterComponent?: ReactNode;
   ListEmptyComponent?: ReactNode;
 }) =>
   createElement(
@@ -19,6 +20,7 @@ const FlatList = (props: {
     ...props.data.map((row) =>
       createElement(Fragment, { key: props.keyExtractor(row) }, props.renderItem({ item: row })),
     ),
+    props.ListFooterComponent ?? null,
   );
 
 const View = (props: Props) => createElement('div', null, props.children);

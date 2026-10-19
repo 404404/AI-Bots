@@ -10,15 +10,17 @@ import { useDesignTheme } from './design/theme';
 export function OpenFullClientButton({
   target,
   round = false,
+  bar = false,
 }: {
   target: FullClientTarget;
   round?: boolean;
+  bar?: boolean;
 }) {
   const router = useRouter();
   const open = () => router.push({ pathname: '/full-client', params: fullClientParams(target) });
-  if (round)
+  if (round || bar)
     return (
-      <HeaderCircleButton label={t.openFullClient} onPress={open}>
+      <HeaderCircleButton label={t.openFullClient} onPress={open} plain={bar}>
         <FullClientIcon />
       </HeaderCircleButton>
     );
