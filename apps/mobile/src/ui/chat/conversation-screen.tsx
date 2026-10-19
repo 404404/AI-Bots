@@ -2,7 +2,7 @@ import { useSourceDraft } from '../../host/native-source-drafts';
 import { hostDraftKey } from '../../host/source-drafts';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View, type ViewInstance } from 'react-native';
+import { FlatList, Pressable, View, type ViewInstance } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -86,6 +86,7 @@ import { Text } from '../primitives/text';
 import { MarkdownViewportContext } from '../markdown-viewport';
 import { KeyboardChatFrame } from '../primitives/keyboard-frame';
 import { t } from '../strings';
+import { LoadingIndicator } from '../primitives/loading-indicator';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
 const NO_DRAFTS: ConversationDraftReference[] = [];
@@ -802,7 +803,7 @@ function ChatConversation({
                         gap: space.x2,
                       }}
                     >
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                       <Text variant="meta" tone="muted">
                         {t.olderLoading}
                       </Text>
@@ -820,7 +821,7 @@ function ChatConversation({
                 ListEmptyComponent={
                   snapshot.status === 'opening' ? (
                     <View style={{ padding: space.x6, alignItems: 'center' }}>
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                     </View>
                   ) : undefined
                 }

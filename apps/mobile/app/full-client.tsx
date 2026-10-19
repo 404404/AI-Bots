@@ -2,7 +2,7 @@ import { Text } from '../src/ui/primitives/system-text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { fullClientSource, fullClientTarget, type FullClientParams } from '../src/host/full-client';
 import { useHostSession, useHostSnapshot } from '../src/host/host-session';
@@ -10,6 +10,7 @@ import { FloatingExit } from '../src/ui/floating-exit';
 import { FullClientView } from '../src/ui/full-client-view';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
+import { LoadingIndicator } from '../src/ui/primitives/loading-indicator';
 
 export default function FullClientScreen() {
   const theme = useTheme();
@@ -69,7 +70,7 @@ export default function FullClientScreen() {
         </View>
       ) : saved === undefined || route === '' ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator />
+          <LoadingIndicator />
         </View>
       ) : (
         <View style={{ flex: 1 }}>
@@ -91,7 +92,7 @@ export default function FullClientScreen() {
                 backgroundColor: theme.background,
               }}
             >
-              <ActivityIndicator />
+              <LoadingIndicator />
             </View>
           ) : null}
         </View>

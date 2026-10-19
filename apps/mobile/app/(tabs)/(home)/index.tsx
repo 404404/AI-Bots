@@ -1,7 +1,7 @@
 import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
 import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import {
   refreshQuietChannels,
@@ -41,6 +41,7 @@ import { useFloatingTabInset } from '../../../src/ui/shell/floating-tab-inset';
 import { openConversation } from '../../../src/ui/shell/open-conversation';
 import { useChromeScroll, useScrollChrome } from '../../../src/ui/shell/scroll-chrome';
 import { t } from '../../../src/ui/strings';
+import { LoadingIndicator } from '../../../src/ui/primitives/loading-indicator';
 
 type Row =
   | {
@@ -213,7 +214,7 @@ const HomeContent = memo(function HomeContent({
   if (saved === undefined || (!cloud.ready && !cloud.error))
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
+        <LoadingIndicator />
       </View>
     );
   if (saved === null && cloud.rows.length === 0)
@@ -318,7 +319,7 @@ const HomeContent = memo(function HomeContent({
                       environment.key === computerEnvironmentKey(saved.hostId)) &&
                     !snapshot.roster &&
                     snapshot.connection.status === 'connecting') ? (
-                    <ActivityIndicator />
+                    <LoadingIndicator />
                   ) : (
                     <Text tone="muted" style={{ padding: space.x6 }}>
                       {query ? t.searchNoMatch(query.trim()) : t.cloudChannels.empty}
