@@ -1,12 +1,12 @@
 import { useId, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { frosted, pressTint, useDesignTheme, type DesignTheme } from '../design/theme';
 import { edge, edgeFade, radius, space } from '../design/tokens';
 import { DrawerMaterial, EdgeMaterial, useLiquidGlass } from '../primitives/drawer-material';
-import { ChevronLeftIcon } from '../shell/icons';
+import { BackIcon } from '../shell/back-icon';
 import { t } from '../strings';
 
 const ICON = 22;
@@ -90,7 +90,17 @@ export function HeaderCircleButton({
   );
 }
 
-export function headerGlassFill(theme: DesignTheme, glass: boolean, pressed: boolean) {
+export function headerGlassFill(
+  theme: DesignTheme,
+  glass: boolean,
+  pressed: boolean,
+  os: string = Platform.OS,
+) {
+  if (os === 'android')
+    return {
+      borderWidth: 0,
+      backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
+    };
   if (glass)
     return {
       borderWidth: 0,
@@ -107,7 +117,7 @@ export function HeaderBackButton({ onPress }: { onPress(): void }) {
   const theme = useDesignTheme();
   return (
     <HeaderCircleButton label={t.back} onPress={onPress}>
-      <ChevronLeftIcon color={theme.color.fg} size={ICON} />
+      <BackIcon color={theme.color.fg} size={ICON} />
     </HeaderCircleButton>
   );
 }

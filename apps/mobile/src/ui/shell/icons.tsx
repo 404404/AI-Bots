@@ -69,6 +69,10 @@ export function ChevronLeftIcon(props: IconProps) {
   return <Glyph {...props} d="m15 6-6 6 6 6" />;
 }
 
+export function ArrowBackIcon(props: IconProps) {
+  return <Glyph {...props} d="M19 12H5m7 7-7-7 7-7" />;
+}
+
 export function ChevronRightIcon(props: IconProps) {
   return <Glyph {...props} d="m9 6 6 6-6 6" />;
 }

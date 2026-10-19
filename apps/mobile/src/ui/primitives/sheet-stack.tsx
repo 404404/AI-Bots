@@ -4,7 +4,7 @@ import { Stack, useNavigation } from 'expo-router';
 import type { NativeStackHeaderProps } from 'expo-router/native-stack';
 import { Platform, Pressable, View } from 'react-native';
 import { space } from '../design/tokens';
-import { ChevronLeftIcon } from '../shell/icons';
+import { BackIcon } from '../shell/back-icon';
 import { t } from '../strings';
 import { Text } from './text';
 
@@ -38,7 +38,7 @@ function SheetStackHeader({ back, navigation, options, route }: NativeStackHeade
             justifyContent: 'center',
           }}
         >
-          <ChevronLeftIcon color={theme.color.fg} size={theme.type.title.line} />
+          <BackIcon color={theme.color.fg} size={theme.type.title.line} />
         </Pressable>
       )}
       <Text accessibilityRole="header" variant="title" strong numberOfLines={1} style={{ flex: 1 }}>
