@@ -176,7 +176,8 @@ describe('intro modal', () => {
     };
     expect(step()).toBe('welcome');
     expect(dialog().textContent).toContain('你好，我是托布');
-    expect(dialog().querySelector('[data-founder-note]')).not.toBeNull();
+    expect(dialog().querySelectorAll('[data-founder-note] p')).toHaveLength(5);
+    expect(dialog().textContent).toContain('everything is plugin');
     await click('下一步');
     expect(step()).toBe('theme');
     await act(async () =>

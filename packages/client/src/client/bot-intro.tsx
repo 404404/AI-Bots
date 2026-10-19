@@ -25,6 +25,7 @@ import { appearanceMaterials } from './appearance-materials.js';
 import { AppearanceMaterialSettings } from './appearance-material-settings.js';
 import { WallpaperSettings } from './wallpaper-settings.js';
 import type { Wallpaper } from './wallpaper.js';
+import { CommunityIcon } from './community-icons.js';
 import { COMMUNITY, cachedGithubStars, fetchGithubStars, formatStars } from './community-links.js';
 import { requestHomeMessage } from './home-requests.js';
 import type { BotHarnessKey, BotHarnessTranslate } from './locale.js';
@@ -54,9 +55,9 @@ const STARTERS: readonly BotHarnessKey[] = [
 
 const styles = stylex.create({
   dialog: {
-    width: dialog.wide,
+    width: dialog.medium,
     maxWidth: '100%',
-    height: '720px',
+    height: '600px',
     maxHeight: '100%',
     display: 'flex',
     flexDirection: 'column',
@@ -191,6 +192,7 @@ const styles = stylex.create({
     borderRadius: radius.lg,
     backgroundColor: color.surface,
   },
+  note: { display: 'flex', flexDirection: 'column', gap: space.x2 },
   signature: { margin: 0, alignSelf: 'flex-end', color: color.muted, fontSize: text.bodySize },
   section: { display: 'flex', flexDirection: 'column', gap: space.x4, minWidth: 0 },
   sectionTitle: {
@@ -311,7 +313,7 @@ const styles = stylex.create({
     height: size.nav,
     borderRadius: radius.md,
     backgroundColor: color.surface,
-    color: color.accent,
+    color: color.fg,
   },
   linkText: { display: 'flex', flexDirection: 'column', flexGrow: 1, minWidth: 0 },
   linkTitle: { fontWeight: text.strong, fontSize: text.titleSize, lineHeight: text.titleLine },
@@ -497,9 +499,15 @@ function WelcomeStep({ t }: { t: BotHarnessTranslate }): ReactElement {
       </div>
       <section {...stylex.props(styles.letter)} aria-label={t('intro.founder.title')}>
         <h3 {...stylex.props(styles.sectionTitle)}>{t('intro.founder.title')}</h3>
-        <p {...stylex.props(styles.copy)} data-founder-note>
-          {t('intro.founder.body')}
-        </p>
+        <div {...stylex.props(styles.note)} data-founder-note>
+          {t('intro.founder.body')
+            .split('\n')
+            .map((line) => (
+              <p key={line} {...stylex.props(styles.copy)}>
+                {line}
+              </p>
+            ))}
+        </div>
         <p {...stylex.props(styles.signature)}>{t('intro.founder.signature')}</p>
       </section>
     </>
@@ -803,7 +811,7 @@ function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
         data-community="github"
       >
         <span {...stylex.props(styles.linkIcon)}>
-          <ChannelSidebarIcon name="git-branch" size={20} />
+          <CommunityIcon name="github" />
         </span>
         <span {...stylex.props(styles.linkText)}>
           <span {...stylex.props(styles.linkTitle)}>{t('intro.community.github')}</span>
@@ -824,7 +832,7 @@ function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
         data-community="discord"
       >
         <span {...stylex.props(styles.linkIcon)}>
-          <ChannelSidebarIcon name="messages-circle" size={20} />
+          <CommunityIcon name="discord" />
         </span>
         <span {...stylex.props(styles.linkText)}>
           <span {...stylex.props(styles.linkTitle)}>{t('intro.community.discord')}</span>
@@ -834,7 +842,7 @@ function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
       </a>
       <div {...stylex.props(styles.link)} data-community="qq">
         <span {...stylex.props(styles.linkIcon)}>
-          <ChannelSidebarIcon name="messages-square" size={20} />
+          <CommunityIcon name="qq" />
         </span>
         <span {...stylex.props(styles.linkText)}>
           <span {...stylex.props(styles.linkTitle)}>{t('intro.community.qq')}</span>
