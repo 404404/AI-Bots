@@ -152,6 +152,13 @@ const open = async () => {
   await (await page.waitForSelector('.bh-tool-approval-card[tabindex="0"]')).scrollIntoView();
 };
 const capture = async (name) => {
+  const reject = await page.$(
+    '.bh-tool-approval-card[tabindex="0"] ::-p-aria([name="Reject"][role="button"])',
+  );
+  if (reject) {
+    await reject.scrollIntoView();
+    await new Promise((done) => setTimeout(done, 350));
+  }
   await page.screenshot({ path: resolve(output, name + '.png') });
   save(name + '.aria.json', await page.accessibility.snapshot({ interestingOnly: false }));
   save(name + '.diagnostics.json', await readClientDiagnostics(instance));
@@ -281,6 +288,8 @@ try {
       true,
     );
     await capture('full-access-human-only');
+    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+    await capture('full-access-human-only-light');
     decide(guardRequest, 'rejected');
     report.fullAccessHumanOnlyCard = true;
     report.stage = 'evidence';

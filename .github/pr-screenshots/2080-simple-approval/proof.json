@@ -1,0 +1,94 @@
+{
+  "status": "pass",
+  "actions": ["Allow once", "Always allow", "Reject"],
+  "changedInputWithoutCard": true,
+  "otherToolStillAsks": true,
+  "revocationAndCliOnce": true,
+  "fullAccessOrdinaryWithoutCard": true,
+  "fullAccessHumanOnlyCard": true,
+  "console": [],
+  "sourceCommit": "a84f9dd12ac9b890d8a748ca77db3502b4ecdffc",
+  "sourceDirty": false,
+  "nativeVersion": "0.2.1-rc.2",
+  "platform": "Windows",
+  "model": "opencode-go/deepseek-v4.1-flash",
+  "rule": {
+    "kind": "tool",
+    "toolName": "pwsh",
+    "input": "",
+    "revokedAfterTest": true
+  },
+  "nativeCalls": [
+    {
+      "name": "pwsh",
+      "callId": "call_00_2vijwa3fz0u797s6fftfbocg",
+      "args": {
+        "description": "Verify the approval action choices",
+        "command": "Write-Output 'APPROVAL_SIMPLE_ONE'",
+        "sandbox_permissions": "danger-full-access",
+        "justification": "May I run this harmless marker to verify the approval buttons?"
+      },
+      "outcome": "ok",
+      "result": "APPROVAL_SIMPLE_ONE\r\n",
+      "approval": "allowed-once"
+    },
+    {
+      "name": "pwsh",
+      "callId": "call_00_e31j3vo8canm9pvr26jwialf",
+      "args": {
+        "command": "Write-Output 'APPROVAL_SIMPLE_TWO'",
+        "description": "Verify the approval action choices",
+        "justification": "May I run this harmless marker to verify the approval buttons?",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "outcome": "ok",
+      "result": "APPROVAL_SIMPLE_TWO\r\n",
+      "approval": "allowed-once"
+    },
+    {
+      "name": "bot_create",
+      "callId": "call_00_x3o1co6fotjbjm6l5ymzlxbi",
+      "args": {
+        "display_name": "2080 Pending Creation",
+        "description": "Synthetic QA creation, reject this request"
+      },
+      "outcome": "denied",
+      "result": "Error: Human approval was rejected",
+      "approval": "rejected"
+    },
+    {
+      "name": "pwsh",
+      "callId": "call_00_dlwum11ocw62k6whggm0obbd",
+      "args": {
+        "command": "Write-Output 'APPROVAL_SIMPLE_REVOKED'",
+        "description": "Verify the approval action choices",
+        "justification": "May I run this harmless marker to verify the approval buttons?",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "outcome": "ok",
+      "result": "APPROVAL_SIMPLE_REVOKED\r\n",
+      "approval": "allowed-once"
+    },
+    {
+      "name": "pwsh",
+      "callId": "call_00_w030ibpsnxjypakuia8oi9ru",
+      "args": {
+        "command": "Write-Output 'APPROVAL_SIMPLE_FULL'",
+        "description": "Verify the approval action choices"
+      },
+      "outcome": "ok",
+      "result": "APPROVAL_SIMPLE_FULL\r\n"
+    },
+    {
+      "name": "pwsh",
+      "callId": "call_00_e0ouz58mqs3hmhci5ja3vge9",
+      "args": {
+        "command": "deepseekbot grant-write-set synthetic-unavailable --grant synthetic-unavailable --enabled",
+        "description": "Exercise the permission-management approval card"
+      },
+      "outcome": "denied",
+      "result": "Error: Human approval was rejected",
+      "approval": "rejected"
+    }
+  ]
+}

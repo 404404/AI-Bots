@@ -657,7 +657,7 @@
       "behaviors": ["desktop.approval.three-actions"],
       "reason": "Task-owned isolated Windows Host; real native pwsh requests, Web Always allow, changed inputs, other-tool/CLI/revoke checks and Full Access Human-only management.",
       "task": 2080,
-      "sha256": "8d458c04a5f5aba572b2f8455675bb2760507b4c88819c1bd89e430a6f297c9c"
+      "sha256": "be941cab2c67cb6fb20ed9cbabaeca89eacc29f180da4034c7f2c37d1ac454e5"
     },
     {
       "path": "scripts/e2e-workspace-request-write.mjs",
