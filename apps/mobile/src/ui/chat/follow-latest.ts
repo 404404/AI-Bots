@@ -54,7 +54,6 @@ export function useFollowLatest<Row>(
   const [ready, setReady] = useState(false);
   const followingNow = useRef(true);
   const dragging = useRef(false);
-  const jumping = useRef(false);
   const latestId = useRef<string | undefined>(undefined);
   latestId.current = messages.at(-1)?.id;
   const hasRows = useRef(false);
@@ -105,7 +104,6 @@ export function useFollowLatest<Row>(
   }, [onFollowingChange]);
 
   const follow = useCallback(() => {
-    jumping.current = false;
     if (!followingNow.current) onFollowingChange?.(true);
     followingNow.current = true;
     setFollowing(true);
@@ -144,17 +142,13 @@ export function useFollowLatest<Row>(
 
   const onScroll = useCallback(
     (event: ScrollEvent) => {
-      if (!atLatest(measureEvent(event)) && !jumping.current) {
-        setAway(true);
-        hold();
-      }
+      measureEvent(event);
     },
-    [measureEvent, hold],
+    [measureEvent],
   );
 
   const onScrollBeginDrag = useCallback(() => {
     dragging.current = true;
-    jumping.current = false;
     hold();
   }, [hold]);
 
@@ -171,7 +165,6 @@ export function useFollowLatest<Row>(
     (event: ScrollEvent) => {
       const distance = measureEvent(event);
       if (dragging.current) return;
-      jumping.current = false;
       settle(distance);
     },
     [measureEvent, settle],
@@ -196,7 +189,6 @@ export function useFollowLatest<Row>(
 
   const jumpToLatest = useCallback(() => {
     follow();
-    jumping.current = true;
     scrollToLatest(true);
   }, [scrollToLatest, follow]);
 
@@ -208,6 +200,7 @@ export function useFollowLatest<Row>(
     jumpToLatest,
     listProps: {
       onScroll,
+      onScrollToTop: hold,
       onScrollBeginDrag,
       onScrollEndDrag,
       onMomentumScrollEnd,

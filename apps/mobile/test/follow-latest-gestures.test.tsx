@@ -189,7 +189,38 @@ describe('following a growing conversation', () => {
     expect(view.current.away).toBe(false);
     act(() => view.current.listProps.onMomentumScrollEnd(event(0)));
     act(() => view.current.listProps.onScroll(event(200)));
+    expect(view.current.away).toBe(false);
+    act(() => view.current.listProps.onScrollBeginDrag());
     expect(view.current.away).toBe(true);
+    view.unmount();
+  });
+
+  it('opens at the newest message when the list reports a scroll at the top before it is pinned', () => {
+    const view = mount([message('a', 'bot'), message('b', 'human')], 100);
+    act(() => view.current.listProps.onLayout(layout(LAYOUT)));
+    act(() => view.current.listProps.onScroll(event(CONTENT - LAYOUT + 100)));
+    act(() => view.current.listProps.onContentSizeChange(0, CONTENT / 2));
+    act(() => view.current.listProps.onScroll(event(CONTENT - LAYOUT, 0, CONTENT)));
+    act(() => view.current.listProps.onContentSizeChange(0, CONTENT));
+    flushFrames();
+    expect(view.scrollToOffset).toHaveBeenLastCalledWith({ offset: END, animated: false });
+    expect(view.current.away).toBe(false);
+    expect(view.current.ready).toBe(true);
+    expect(view.following).not.toHaveBeenCalled();
+    view.unmount();
+  });
+
+  it('leaves the latest message when the status bar scrolls the list to the top', () => {
+    const view = mount([message('a', 'bot')]);
+    act(() => view.current.listProps.onLayout(layout(LAYOUT)));
+    act(() => view.current.listProps.onContentSizeChange(0, CONTENT));
+    flushFrames();
+    view.scrollToOffset.mockClear();
+    act(() => view.current.listProps.onScrollToTop());
+    expect(view.current.away).toBe(true);
+    act(() => view.current.listProps.onContentSizeChange(0, CONTENT + 100));
+    flushFrames();
+    expect(view.scrollToOffset).not.toHaveBeenCalled();
     view.unmount();
   });
 

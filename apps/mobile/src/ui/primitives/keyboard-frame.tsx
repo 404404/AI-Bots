@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, View, type ColorValue, type LayoutChangeEvent } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { space } from '../design/tokens';
 
 export interface KeyboardChatFrameProps {
   children: ReactNode;
@@ -23,10 +26,15 @@ export function KeyboardChatFrame({
   onMount,
   onComposerLayout,
 }: KeyboardChatFrameProps) {
+  const bottom = useSafeAreaInsets().bottom;
   return (
     <View ref={onMount} style={{ flex: 1, backgroundColor }}>
       {background}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="padding"
+        keyboardVerticalOffset={-Math.max(0, bottom - space.x3)}
+      >
         <View style={{ flex: 1 }}>
           {children}
           <View

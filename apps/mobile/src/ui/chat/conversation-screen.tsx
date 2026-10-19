@@ -7,6 +7,7 @@ import {
   FlatList,
   Platform,
   Pressable,
+  useWindowDimensions,
   View,
   type ViewInstance,
 } from 'react-native';
@@ -234,6 +235,7 @@ function ChatConversation({
   const theme = useDesignTheme();
   const router = useRouter();
   const headerOverlap = useHeaderOverlap();
+  const { width: windowWidth } = useWindowDimensions();
   const { client, inbox, saved } = useHostSession();
   const host = useHostSnapshot(client, focused);
   const dm = place.kind === 'dm';
@@ -635,15 +637,23 @@ function ChatConversation({
       onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
     />
   ) : botDm ? (
-    <Text strong numberOfLines={1} style={{ textAlign: 'center' }}>
-      {channelDetails.members
-        .map(
-          (member) =>
-            roster?.bots.find((entry) => entry.slug === member)?.displayName ??
-            t.activityRow.unavailableBot,
-        )
-        .join('、')}
-    </Text>
+    <View
+      style={{
+        minHeight: theme.touch,
+        justifyContent: 'center',
+        paddingHorizontal: theme.touch / 2,
+      }}
+    >
+      <Text strong numberOfLines={1}>
+        {channelDetails.members
+          .map(
+            (member) =>
+              roster?.bots.find((entry) => entry.slug === member)?.displayName ??
+              t.activityRow.unavailableBot,
+          )
+          .join('、')}
+      </Text>
+    </View>
   ) : (
     <ChannelTitle
       channel={channel}
@@ -660,6 +670,10 @@ function ChatConversation({
       <OpenFullClientButton target={{ kind: 'channel', channelId }} bar />
     ) : null;
   const ios = Platform.OS === 'ios';
+  const back = <HeaderBackButton plain onPress={leave} />;
+  const titleItem = (
+    <View style={{ maxWidth: windowWidth - (theme.touch + space.x5) * 3 }}>{title}</View>
+  );
   const notice = hostRefused
     ? t.refused
     : snapshot.status === 'refused'
@@ -698,9 +712,25 @@ function ChatConversation({
           headerShadowVisible: false,
           headerBackButtonDisplayMode: 'minimal',
           ...(ios && !glassHeader ? { headerBlurEffect: 'systemChromeMaterial' as const } : {}),
-          headerTitle: () => title,
-          headerRight: () => trailing,
-          ...(canGoBack ? {} : { headerLeft: () => <HeaderBackButton plain onPress={leave} /> }),
+          ...(ios
+            ? {
+                title: '',
+                headerTitle: '',
+                headerBackVisible: canGoBack,
+                unstable_headerLeftItems: () => [
+                  ...(canGoBack ? [] : [{ type: 'custom' as const, element: back }]),
+                  { type: 'spacing' as const, spacing: 0 },
+                  { type: 'custom' as const, element: titleItem },
+                ],
+                unstable_headerRightItems: () =>
+                  trailing === null ? [] : [{ type: 'custom' as const, element: trailing }],
+              }
+            : {
+                headerTitleAlign: 'left' as const,
+                headerTitle: () => title,
+                headerRight: () => trailing,
+                ...(canGoBack ? {} : { headerLeft: () => back }),
+              }),
         }}
       />
       <KeyboardChatFrame

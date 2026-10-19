@@ -1,4 +1,3 @@
-import { SourceName } from './source-name';
 import { Pressable } from 'react-native';
 
 import type { RosterChannel } from '../../host/client';
@@ -30,7 +29,7 @@ export function ChannelTitle({
       disabled={channel === undefined}
       onPress={onPress}
       style={({ pressed }) => ({
-        maxWidth: '100%',
+        flexShrink: 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.x3,
@@ -42,12 +41,9 @@ export function ChannelTitle({
       })}
     >
       <GroupMark avatar={channel?.avatar} size={MARK} corner={radius.round} />
-      <SourceName name={name} source="computer" />
-      {members === undefined ? null : (
-        <Text variant="meta" tone="muted" numberOfLines={1}>
-          {members}
-        </Text>
-      )}
+      <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
+        {name}
+      </Text>
     </Pressable>
   );
 }

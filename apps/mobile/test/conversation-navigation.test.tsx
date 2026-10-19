@@ -25,8 +25,24 @@ vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', 
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
   Stack: {
-    Screen: ({ options }: { options: { headerLeft?: () => ReactNode } }) => (
-      <header>{options.headerLeft?.() ?? null}</header>
+    Screen: ({
+      options,
+    }: {
+      options: {
+        headerLeft?: () => ReactNode;
+        headerBackVisible?: boolean;
+        unstable_headerLeftItems?: () => Array<{ type: string; element?: ReactNode }>;
+      };
+    }) => (
+      <header data-back-visible={String(options.headerBackVisible)}>
+        {options.unstable_headerLeftItems?.().map((item, index) => (
+          <span key={index} data-item={item.type}>
+            {item.element}
+          </span>
+        )) ??
+          options.headerLeft?.() ??
+          null}
+      </header>
     ),
   },
   useRouter: () => ({
@@ -124,6 +140,7 @@ vi.mock('../src/ui/chat/working-status', () => ({
 vi.mock('../src/ui/chat/time-separator', () => ({ TimeSeparator: () => null }));
 vi.mock('../src/ui/open-full-client', () => ({ OpenFullClientButton: () => null }));
 
+import { Platform } from 'react-native';
 import { ConversationScreen, type ChatPlace } from '../src/ui/chat/conversation-screen';
 import { t } from '../src/ui/strings';
 import { edgeFade } from '../src/ui/design/tokens';
@@ -274,6 +291,35 @@ describe('missing conversation navigation', () => {
       state.history = [route];
       await press(await render(place), 'Header back');
       expect(state.history).toEqual(['/']);
+    });
+
+    it(`${name}: iOS puts back and the title capsule in separate leading bar items`, async () => {
+      const os = Platform.OS;
+      Object.assign(Platform, { OS: 'ios' });
+      try {
+        state.history = [route];
+        const alone = await render(place);
+        const header = alone.querySelector('header')!;
+        expect(header.dataset['backVisible']).toBe('false');
+        expect([...header.children].map((item) => (item as HTMLElement).dataset['item'])).toEqual([
+          'custom',
+          'spacing',
+          'custom',
+        ]);
+        await press(alone, 'Header back');
+        expect(state.history).toEqual(['/']);
+        act(() => root?.unmount());
+        state.history = ['/activity', route];
+        const stacked = (await render(place)).querySelector('header')!;
+        expect(stacked.dataset['backVisible']).toBe('true');
+        expect(stacked.querySelector('button')).toBeNull();
+        expect([...stacked.children].map((item) => (item as HTMLElement).dataset['item'])).toEqual([
+          'spacing',
+          'custom',
+        ]);
+      } finally {
+        Object.assign(Platform, { OS: os });
+      }
     });
   }
 
