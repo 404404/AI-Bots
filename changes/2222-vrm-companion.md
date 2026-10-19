@@ -4,6 +4,7 @@ section: Added
 
 ## en
 
+- The room is now furnished like a lived-in study corner (a book hutch, desk clutter, a drawer cabinet, a rug, a poster, a clock showing local time, a floor lamp and string lights that brighten at night), and Scene controls can load your own `.vrm` file, including VRoid models, for the session without uploading it ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - Room objects now follow real-world proportions (a smaller cup, keyboard, monitor and lamp) in a low-poly, flat toon-shaded style with a blue night and a warm desk-lamp pool ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - While the Bot is idle, the seated character now occasionally looks toward the window, stretches, rests its chin on a hand, sips from its cup or glances at you, and returns to the keyboard as soon as the Bot gets to work ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - The character's face now follows what the Bot is doing: relaxed at idle, a thoughtful upward look while thinking, focused while working, an expectant smile while waiting and a troubled look when blocked, easing between them and warming up while speaking ([#2304](https://github.com/BotHarness/DeepSeekBot/issues/2304)).
@@ -14,6 +15,7 @@ section: Added
 
 ## zh
 
+- 房间布置得更有生活感：书架、桌面小物、抽屉柜、地毯、海报、显示本地时间的挂钟，以及入夜会亮起的落地灯和窗边彩灯；Scene controls 还可以打开本机的 `.vrm` 文件（包括 VRoid 模型），仅在本次会话中使用，不会上传（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 房间物件改为真实世界比例（更小的杯子、键盘、显示器和台灯），采用 low poly 平涂 toon 着色；夜晚为蓝调，由台灯在桌面投下暖光（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - Bot 空闲时，坐在桌前的角色会不时看向窗外、伸懒腰、托腮、端起杯子喝一口或看你一眼；Bot 一开始工作就平滑回到键盘（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 角色的表情现在跟随 Bot 的状态：空闲时放松，思考时视线上移、若有所思，工作时专注，等待时带着期待的微笑，受阻时显得困扰；表情之间平滑过渡，说话时更柔和明亮（[#2304](https://github.com/BotHarness/DeepSeekBot/issues/2304)）。

@@ -82,6 +82,14 @@ Date: 2026-10-19. Same scratch harness through the real `mountStage`, with both 
 - **Natural trigger.** In the isolated Host, VRM QA Ada at idle started `stretch` after 8.1 s of render time with no input.
 - **Work.** `QA-IDLE-1019` (real DM, DeepSeek V4.1 Flash) moved the Panel to thinking and working; `data-vrm-idle` stayed `none` throughout. Retreat from a gesture already in progress is covered by unit tests, not by a captured frame.
 
+## Richer room and model files (Human feedback)
+
+Date: 2026-10-19. Same scratch harness and SwiftShader caveat.
+
+- **Feedback.** The cup and keyboard were better, the low-poly direction was fine, but the room was still rough; also try official free models such as VRoid's.
+- **Props.** Desk hutch with procedurally sized books, sprout and reed diffuser; pen cup, phone, notebooks, coaster and succulent on the desk; a three-drawer cabinet; an octagonal rug; baseboards; a star-chart poster; a wall clock driven by local time; a floor lamp; string lights across the window; a candle, a book stack and a cushion on the window seat. The floor lamp, string lights and candle follow the room's darkness. Desk, room and night views: `room-props.jpg`.
+- **Model files.** VRoid Hub and its CC0 sample models are not reachable from the agent environment, and downloading needs a signed-in account, so no VRoid model is bundled. Scene controls gained **Open VRM file…**, which loads a local `.vrm` through an object URL for that Bot's view in the page session (`data-vrm-model="file"`), and **Sample character**. VRM 0.x models are rotated to face the camera and their normalized-bone rotations are mirrored (x and z negated, wrist targets turned 180°), as three-vrm requires; `data-vrm-spec` reports `0` or `1`. In the isolated Host, choosing a local copy of the sample switched the view to `data-vrm-model=file`, reloaded it (`data-vrm-spec=1`, loaded) with the file name shown as pressed, and **Sample character** returned it to `sample`. The VRM 0.x path is untested until a real VRM 0.x file is provided.
+
 ## Acceptance limits and next action
 
 The model is a licensed technical sample; its provenance and license accompany the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

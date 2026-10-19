@@ -60,6 +60,7 @@ export interface Stage {
 }
 const GRIP = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
 const SIDEWAYS = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2);
+const TURNED = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI);
 export function mountStage(
   host: HTMLElement,
   model: string,
@@ -82,6 +83,7 @@ export function mountStage(
   let hipDrop = 0;
   let floorOffset = 0;
   let modelScale = 1;
+  let legacy = false;
   let phase = 0;
   let gait = 0;
   let cameraView: CameraView = initial.camera;
@@ -195,7 +197,9 @@ export function mountStage(
     const initial = base.get(bone) ?? node.quaternion.clone();
     base.set(bone, initial);
     node.quaternion.slerp(
-      initial.clone().multiply(new Quaternion().setFromEuler(new Euler(x, y, z))),
+      initial
+        .clone()
+        .multiply(new Quaternion().setFromEuler(new Euler(legacy ? -x : x, y, legacy ? -z : z))),
       reduced.matches ? 1 : factor,
     );
   };
@@ -424,6 +428,7 @@ export function mountStage(
           );
           const held = side === 'right' && rightGrip;
           if (held) wrist.slerp(rightGrip!, free);
+          if (legacy) wrist.multiply(TURNED);
           hand.quaternion.slerp(
             hand.parent!.getWorldQuaternion(new Quaternion()).invert().multiply(wrist),
             held ? reach : reach * (1 - free * 0.8),
@@ -535,6 +540,8 @@ export function mountStage(
         shading.select(initial.shading);
         host.dataset.vrmShading = initial.shading;
       }
+      legacy = loaded.meta.metaVersion === '0';
+      host.dataset.vrmSpec = legacy ? '0' : '1';
       VRMUtils.rotateVRM0(loaded);
       actor.add(loaded.scene);
       loaded.scene.traverse((object) => {

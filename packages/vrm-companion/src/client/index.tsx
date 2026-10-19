@@ -37,6 +37,7 @@ const CSS = `
 [data-vrm-instance-actions]{padding:4px 8px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 `;
 const remembered = new Map<string, SceneChoices>();
+const models = new Map<string, { name: string; url: string }>();
 function Character({ view }: { view: BotPresentationView }) {
   const snapshot = useSyncExternalStore(view.subscribe, view.getSnapshot, view.getSnapshot);
   const cleanup = useRef<(() => void) | undefined>();
@@ -54,6 +55,16 @@ function Character({ view }: { view: BotPresentationView }) {
   const [loading, setLoading] = useState('');
   const [error, setError] = useState('');
   const [revision, retry] = useState(0);
+  const [model, setModel] = useState(models.get(key));
+  const picker = useRef<HTMLInputElement>(null);
+  const choose = (next: { name: string; url: string } | undefined) => {
+    const previous = models.get(key);
+    if (previous) URL.revokeObjectURL(previous.url);
+    if (next) models.set(key, next);
+    else models.delete(key);
+    setModel(next);
+    retry((n) => n + 1);
+  };
   const remember = (change: Partial<SceneChoices>) =>
     remembered.set(key, { ...(remembered.get(key) ?? initial), ...change });
   const mount = useCallback(
@@ -71,7 +82,7 @@ function Character({ view }: { view: BotPresentationView }) {
         setScene({ phase: 'seated', wandering: false, ready: false });
         const stage = mountStage(
           node,
-          __VRM_MODEL__,
+          models.get(key)?.url ?? __VRM_MODEL__,
           { loading: setLoading, error: setError, changed: setScene },
           choices,
         );
@@ -96,6 +107,7 @@ function Character({ view }: { view: BotPresentationView }) {
       data-vrm-bot={snapshot.botId}
       data-vrm-activity={snapshot.activity}
       data-vrm-speaking={snapshot.speaking}
+      data-vrm-model={model ? 'file' : 'sample'}
     >
       <div data-vrm-stage="" ref={mount} />
       <div data-vrm-header="">
@@ -125,6 +137,26 @@ function Character({ view }: { view: BotPresentationView }) {
       )}
       <details data-vrm-controls="">
         <summary>Scene controls · {scene.phase}</summary>
+        <div data-vrm-actions="" role="group" aria-label="Character model">
+          <Button aria-pressed={!model} onClick={() => model && choose(undefined)}>
+            Sample character
+          </Button>
+          <Button aria-pressed={!!model} onClick={() => picker.current?.click()}>
+            {model ? model.name : 'Open VRM file…'}
+          </Button>
+          <input
+            ref={picker}
+            type="file"
+            accept=".vrm,model/gltf-binary"
+            hidden
+            aria-label="VRM file"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = '';
+              if (file) choose({ name: file.name, url: URL.createObjectURL(file) });
+            }}
+          />
+        </div>
         <div data-vrm-actions="" role="group" aria-label="Character shading">
           {(['mtoon', 'liltoon'] as const).map((value) => (
             <Button

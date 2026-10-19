@@ -27,6 +27,7 @@ import { CHAIR } from './motion.js';
 import { createRoomMaterials } from './materials.js';
 import { createChair } from './chair.js';
 import { createDecor } from './decor.js';
+import { createProps } from './props.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 export type Mood = SkyTime;
@@ -193,7 +194,7 @@ export function createRoom(seatHeight: number) {
   box(-0.68, surface + 0.004, 0.55, 0.076, 0.002, 0.076, materials.toon(0xf1d27a)).rotation.y =
     -0.3;
   const mug = new Group();
-  const mugHome = new Vector3(0.18, tableY, 0.3);
+  const mugHome = new Vector3(0.18, tableY + 0.004, 0.3);
   mug.position.copy(mugHome);
   root.add(mug);
   const cup = new Mesh(new CylinderGeometry(0.041, 0.038, 0.095, 12, 1, true), cream);
@@ -226,6 +227,9 @@ export function createRoom(seatHeight: number) {
   handle.rotation.y = Math.PI / 2;
   mug.add(handle);
   const sill = 0.645;
+  const props = createProps(surface, sill, materials);
+  root.add(props.root);
+  textures.push(...props.textures);
   box(1.5, sill + 0.1, -0.9, 0.38, 0.2, 0.11, cream);
   for (const x of [1.39, 1.61]) {
     const speaker = new Mesh(new CylinderGeometry(0.06, 0.06, 0.01, 10), dark);
@@ -338,6 +342,7 @@ export function createRoom(seatHeight: number) {
     for (let i = 0; i < leaves.length; i++)
       leaves[i]!.rotation.z = (i - 3) * 0.28 + Math.sin(elapsed * 0.6 + i) * 0.025;
     const time = outdoors.update(seconds, mood);
+    props.update(elapsed, Math.max(0, 1 - time.daylight - time.twilight * 0.4));
     sun.color
       .setHex(0x91a7e8)
       .lerp(new Color(0xffe2b6), time.daylight)

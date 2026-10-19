@@ -10,6 +10,7 @@
 - Pause/disconnect/hidden/close cancel playback; reconnect never speaks history.
 - Per-instance renderer disposal, late model loads, reduced motion, resizing and visible fallback on WebGL loss.
 - Full-body Panel canvas with overlay controls, desk/room/portrait cameras, seated keyboard contact and bounded stand/walk/return choreography. The scene is widened by resizing the native Panel split; there is no expanded dialog.
+- Scene controls load a local `.vrm` file for the session (`data-vrm-model=file|sample`; `data-vrm-spec` is `0` for VRM 0.x such as VRoid, `1` otherwise) and switch back to the sample.
 - Reversible MToon/lilToon shading comparison; camera, room time and shading survive a remount of the same Bot's view.
 - Spatial exterior, local-time sky/sun/lamp lighting, explicit sunset/night previews, and reduced-motion-aware ambient movement.
 
