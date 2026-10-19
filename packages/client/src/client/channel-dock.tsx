@@ -1,3 +1,4 @@
+import { AppearancePanelHeader } from './appearance-panel-header.js';
 import { AppearanceContext } from './appearance-context.js';
 import { PanelAppearanceSettings } from './appearance-panel-settings.js';
 import { panelTargetId } from './appearance-panels.js';
@@ -243,7 +244,7 @@ function ChannelBodyPanel(): ReactElement {
     if (state?.state.open && panel && available && dock.channel)
       panels[id] = {
         label: panel.title,
-        header: <DockPanelHeader entryId={id} panelId={id} nested />,
+        header: <DockPanelHeader entryId={id} panelId={id} />,
         content: <ChannelEntryContent entryId={id} />,
       };
   }
@@ -314,28 +315,41 @@ function ChannelMessageContent(): ReactElement {
             aria-label={detailLabel}
             style={{ width: `${members.ratio * 100}%` }}
           >
-            <PanelHeader
+            <AppearancePanelHeader
+              id={filesOpen ? 'generated-files' : detailEntryId}
               label={detailLabel}
-              onHide={closeDetail}
-              hideLabel={dock.t('dock.close', { label: detailLabel })}
-              badge={
-                !filesOpen && DetailBadge && detailProps ? (
-                  <DetailBadge {...detailProps} />
-                ) : undefined
-              }
-              action={
-                <>
-                  {!filesOpen && DetailActions && detailProps && <DetailActions {...detailProps} />}
-                  <IconButton
-                    aria-label={dock.t('dock.close', { label: detailLabel })}
-                    onClick={closeDetail}
-                  >
-                    <ChannelSidebarIcon name="x" />
-                  </IconButton>
-                </>
-              }
-            />
-            {filesOpen ? dock.files?.content : <ChannelEntryContent entryId={detailEntryId} />}
+              t={dock.t}
+            >
+              <PanelHeader
+                label={detailLabel}
+                onHide={closeDetail}
+                hideLabel={dock.t('dock.close', { label: detailLabel })}
+                badge={
+                  !filesOpen && DetailBadge && detailProps ? (
+                    <DetailBadge {...detailProps} />
+                  ) : undefined
+                }
+                action={
+                  <>
+                    {!filesOpen && DetailActions && detailProps && (
+                      <DetailActions {...detailProps} />
+                    )}
+                    <IconButton
+                      aria-label={dock.t('dock.close', { label: detailLabel })}
+                      onClick={closeDetail}
+                    >
+                      <ChannelSidebarIcon name="x" />
+                    </IconButton>
+                  </>
+                }
+              />
+            </AppearancePanelHeader>
+            <div
+              className="bh-channel-subpanel-body"
+              data-appearance-body={filesOpen ? 'generated-files' : detailEntryId}
+            >
+              {filesOpen ? dock.files?.content : <ChannelEntryContent entryId={detailEntryId} />}
+            </div>
           </aside>
         </>
       )}
@@ -399,15 +413,7 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
   return <DockPanelHeader entryId={params.entryId} panelId={api.id} />;
 }
 
-function DockPanelHeader({
-  entryId,
-  panelId,
-  nested = false,
-}: {
-  entryId: string | undefined;
-  panelId: string;
-  nested?: boolean;
-}) {
+function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; panelId: string }) {
   const appearance = useContext(AppearanceContext);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const dock = useDock();
@@ -417,7 +423,7 @@ function DockPanelHeader({
   const contextMenu = usePanelMenu({
     items: panel
       ? [
-          ...(!nested && appearance
+          ...(appearance
             ? [
                 { id: 'appearance', label: dock.t('appearance.panelMenu') },
                 { type: 'separator' as const, id: 'appearance-separator' },

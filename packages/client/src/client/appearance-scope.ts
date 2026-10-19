@@ -1,3 +1,4 @@
+import { space } from './ds/tokens.stylex.js';
 import { panelMaterials, validTargetId } from './appearance-panels.js';
 import { appearanceMaterials } from './appearance-materials.js';
 import {
@@ -69,7 +70,13 @@ function materialCss(): string {
 ${scope} .bh-dock-theme { --dv-group-view-background-color:transparent; --dv-tabs-and-actions-container-background-color:transparent; --dv-activegroup-visiblepanel-tab-background-color:transparent; --dv-inactivegroup-visiblepanel-tab-background-color:transparent; --dv-activegroup-hiddenpanel-tab-background-color:transparent; --dv-inactivegroup-hiddenpanel-tab-background-color:transparent; }
 ${scope} .bh-root, ${scope} .bh-workspace-rail { background:transparent; }
 ${scope} .dv-tabs-and-actions-container, ${scope} .bh-channel-session-header { background:var(--bh-global-header-fill); backdrop-filter:blur(var(--bh-global-header-blur)); }
-${scope} .dv-content-container { background:var(--bh-global-body-fill); backdrop-filter:blur(var(--bh-global-body-blur)); }
+${scope} [data-appearance-header] { background:var(--bh-global-header-fill); backdrop-filter:blur(var(--bh-global-header-blur)); }
+${scope} .bh-channel-subpanel-body { display:flex; flex-direction:column; flex:1; min-height:0; min-width:0; overflow:auto; }
+${scope} .bh-channel-subpanel-body > section { flex:1; min-height:0; }
+${scope} .bh-memory-commit-view { display:flex; flex-direction:column; padding:0; }
+${scope} .bh-memory-commit-header { margin:0; flex-shrink:0; }
+${scope} .bh-memory-detail-body { flex:1; padding:${space.x3} ${space.x4}; }
+${scope} [data-appearance-body], ${scope} .dv-content-container { background:var(--bh-global-body-fill); backdrop-filter:blur(var(--bh-global-body-blur)); }
 `;
 }
 
@@ -82,7 +89,7 @@ function panelCss({ config, mode }: AppearanceSnapshot): string {
       return (['header', 'body'] as const)
         .map(
           (part) =>
-            `${scope} > ${part === 'header' ? '.dv-tabs-and-actions-container' : '.dv-content-container'} { background:color-mix(in srgb, ${material[part].color} ${material[part].opacity}%, transparent); backdrop-filter:blur(${material[part].blur}px); }`,
+            `${scope} > ${part === 'header' ? '.dv-tabs-and-actions-container' : '.dv-content-container'}, :root .bh-workspace-mount[data-workspace-enabled] [data-appearance-${part}="${id.slice(5)}"] { background:color-mix(in srgb, ${material[part].color} ${material[part].opacity}%, transparent); backdrop-filter:blur(${material[part].blur}px); }`,
         )
         .join('');
     })
