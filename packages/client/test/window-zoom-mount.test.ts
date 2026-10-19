@@ -52,6 +52,7 @@ describe('desktop zoom shortcut ownership', () => {
   }
   it('validates every default through the actual DSH protocol and restores font scope after revoking commands', async () => {
     document.documentElement.style.zoom = '';
+    document.documentElement.style.setProperty('--bh-window-zoom', '0.9');
     const f = fixture();
     await vi.waitFor(() => expect(f.mounted.surface.getSnapshot()).not.toBeNull());
     expect(f.commands.size).toBe(4);
@@ -62,8 +63,11 @@ describe('desktop zoom shortcut ownership', () => {
     expect(action.status).toBe('handled');
     if (action.status === 'handled') action.run();
     expect(document.documentElement.style.zoom).toBe('1.2');
+    expect(document.documentElement.style.getPropertyValue('--bh-window-zoom')).toBe('1.2');
     await f.mounted.dispose();
     expect(document.documentElement.style.zoom).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--bh-window-zoom')).toBe('0.9');
+    document.documentElement.style.removeProperty('--bh-window-zoom');
     expect(f.commands.size).toBe(0);
     expect(f.order.at(-1)).toBe('font-restored');
     expect(f.release).toHaveBeenCalledTimes(1);

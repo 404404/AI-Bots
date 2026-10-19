@@ -61,3 +61,20 @@ as well: the browser fixture does not render the operating system traffic lights
   fixture rulers, retained input, guest identity, navigation count and zoom action count.
   Reload, guest replacement or forced fullscreen are not fixes. Failure blocks qualification.
 - Browser tabs retain browser-native zoom; Windows/Linux are not enabled by S1.
+
+## S2 settings recovery
+
+Reuse the existing isolated Profile with the S1 composition. Open Bot Settings at level 0,
+then raise to +8 while it stays open. Navigation must switch to the compact section picker
+using local layout width (body CSS pixels), not the unchanged viewport media query. Open the
+picker, select Interface, scroll the content, then return to General. The settings card and
+close button stay within the native safe area; its body scrolls independently. File inputs
+must not introduce a horizontal scrollbar. Scroll General until Reset is fully visible and
+click it: UI and fresh targeted CLI must both report the saved default. Repeat at -8.
+Check that the underlying composer and persisted panel/theme customization remain intact.
+
+The compact picker reuses the application viewport menu owner because the pinned native
+portaled menu multiplies viewport anchor coordinates under root CSS zoom. Test keyboard
+Escape/focus return and section selection; do not infer all other anchored dropdowns are
+qualified from this picker. Real IME/recording/custom-binding and wider embedded-page,
+compatibility and platform matrices remain separate S2/S3 gates.
