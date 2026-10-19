@@ -11,9 +11,9 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { prepareDesktopZoomCompatibility } from './desktop-zoom-compat.mjs';
 import { prepareDesktopZoomQa } from './desktop-zoom-qa.mjs';
 import { developmentProfileManifest } from './dev-profile.mjs';
+import { configureDesktopZoom } from '../packages/deepseekbot/src/desktop-zoom-setup.mjs';
 const source = process.cwd();
 const { devSecretEnvironment } = await import(
   pathToFileURL(join(source, 'scripts/dev-secret.mjs'))
@@ -188,19 +188,26 @@ try {
       mkdirSync(dirname(link), { recursive: true });
       symlinkSync(spec.slice(5), link);
     }
-    const target = join(root, 'theme-compat');
-    const theme = join(source, 'packages/client/node_modules/@deepseek-ai/dsh-client-ui-theme');
-    prepareDesktopZoomCompatibility({ source: theme, target });
-    data.dependencies['@deepseek-ai/dsh-client-ui-theme'] = 'link:' + target;
-    const themeLink = join(profile, 'node_modules/@deepseek-ai/dsh-client-ui-theme');
-    mkdirSync(dirname(themeLink), { recursive: true });
-    symlinkSync(target, themeLink);
     writeFileSync(manifest, JSON.stringify(data, null, 2));
   }
   prepareDesktopZoomQa(root);
+  configureDesktopZoom({
+    action: 'enable',
+    home: join(root, 'home'),
+    profile: 'desktop',
+    dsh: join(source, 'node_modules/.bin/dsh'),
+    desktopApp: app,
+  });
   await launch();
   await ready(true);
   const cliAccessFile = join(root, 'cli-access.json');
+  const metadataDeadline = Date.now() + 20000;
+  while (Date.now() < metadataDeadline) {
+    try {
+      if (JSON.parse(readFileSync(cliAccessFile, 'utf8')).desktopPid === ownedPid()) break;
+    } catch {}
+    await pause(100);
+  }
   const cliAccess = JSON.parse(readFileSync(cliAccessFile, 'utf8'));
   if (cliAccess.desktopPid !== ownedPid()) throw Error('Stale desktop CLI access metadata');
   writeFileSync(

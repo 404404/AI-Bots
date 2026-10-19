@@ -328,6 +328,39 @@ The native Menu's portaled anchor can be multiplied again (observed y=1247 in an
 viewport). The compact application section picker reuses the existing viewport menu owner,
 which clamps and converts coordinates. This does not qualify other native dropdowns.
 
+## Additional verified pitfall — #2268 desktop theme packaging
+
+A Bundle Patch's `name` guards an existing row; it does not replace its implementation.
+Renaming a replacement row to `qualified-theme` breaks the native Client's hardcoded
+`configForms.get('ui-theme')`; a successful boot and one Client module id do not prove font
+settings preservation. Startup Node hooks also failed to redirect the native Client metadata
+resolver in the actual Host, despite standalone Node resolver tests passing. Do not use those
+approaches as qualified delivery. Retain the original row and use an explicit Profile-local
+package override through `deepseekbot-zoom-setup enable`, then restart. The command refuses
+unsupported platforms/releases or other owners and exposes `runtimeVerified:false`.
+Disable before product removal. pnpm can leave an unlisted `link:` symlink after remove;
+the owner removes only its exact link and verifies it is absent. Native `ui-theme` reads,
+writes, restart and disable must retain the same font preference. Keep the copied identity,
+license and relative ESM schema import; no installed ASAR or upstream files are changed.
+
+The copied Client exposes its zoom lease only when the actual `__DSH_BOOT__.release.version`
+is 0.2.1-rc.2. Unknown/missing releases retain the font-key scope and expose no zoom capability.
+This runtime guard does not remove an already installed Profile package override or qualify
+that copied theme on another Host. Disable the override before switching outside the verified
+Desktop/Host/Client tuple; re-enable only after qualifying the new combination.
 ## Windows vfile browser imports (#2289)
 
 Rolldown can pass a Windows importer path with backslashes. The vfile browser-variant override must normalize separators before matching `node_modules/vfile/lib`; otherwise a successful build can retain `require("node:process")`, and the real Client refuses @botharness/ui before its Services exist. The existing Client bundle contract reproduces this: two assertions fail before normalization and all seven pass after it. Rebuild the Client and restart the task-owned Host, then inspect its actual browser console; API health alone does not qualify plugin boot.
+
+
+### Desktop plain-library overrides require an explicit offline installer (#2268)
+
+The 0.2.1-rc.2 CLI refuses `desktop` because Electron owns its lifecycle. The native Plugin
+Manager's `installBundle` validates installation-first metadata; adding `dsh.bundle` only to a
+Profile-local copy of the shipped theme still returns `not-bundle`. Headless Profile setup
+success did not qualify Desktop. DeepSeekBot's opt-in setup uses the explicitly selected app's
+bundled pnpm only after the target Desktop Host exits, takes the native Profile manifest writer
+lock, disables scripts and preserves the native `ui-theme` row and preference Patch. Keep the
+app closed until setup returns. Refuse other owners, a busy Profile, an unsupported app version
+or a running target; do not edit ASARs, silently replay uncertain writes or relabel failed
+native-manager attempts as installation proof. Reopen the same Profile/user-data for acceptance.

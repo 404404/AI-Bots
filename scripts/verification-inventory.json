@@ -1959,9 +1959,9 @@
     },
     {
       "path": "scripts/e2e-desktop-zoom-launch.mjs",
-      "sha256": "dff52b6c29319953f17933b2d7f2bd8c2b1bed88932e33348abd9011c7f8174e",
+      "sha256": "7aa97d564aa93d76372e952e2d0a747a4cd9d310f54a49fb655e56642c319a9a",
       "category": "mapped",
-      "reason": "Audited isolated native launcher and readiness probe; feature guide explicitly distinguishes launch from acceptance.",
+      "reason": "Audited isolated native launcher with explicit closed-Desktop package setup and a bounded wait for fresh process-bound CLI metadata; package install, readiness and native acceptance remain separate.",
       "task": 2268,
       "behaviors": ["desktop.window-zoom"]
     },

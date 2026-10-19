@@ -1160,15 +1160,22 @@ Video wallpaper extends the same local media record with an original video and g
 
 Appearance recovery composes the existing local preference and media owners without a third store. Current-mode clear affects only its functional Panel map. Explicit full reset preflights both revisions, saves defaults, then deletes the atomic media record; partial media failure is reported and retryable rather than presented as a cross-store transaction. A transient resource generation invalidates previews on accepted media changes, including removal from an already-empty store (ADR-0236, #2264).
 
-### Desktop whole-window zoom (controlled S1)
+### Desktop whole-window zoom (macOS)
 
 [ADR-0237](../adr/0237-desktop-window-zoom-is-client-owned.md) defines an application-owned Client
 zoom Service on the stable desktop origin. Settings, native Shortcut Registry commands and an
 explicitly addressed CLI share its versioned local default/current-primary-window document;
 the authenticated Host route is an ephemeral delivery relay with no preference copy. A pinned,
 MIT-preserving downstream theme composition leases only the original font-shortcut Fiber,
-then returns it on disposal. It does not edit the installed desktop shell. Ordinary Web zoom
-is unchanged. The controlled macOS slice is gated on native guest foreground restoration and
-Human QA; numberpad, broader reliability and other desktop platforms remain #2269/#2270.
+then returns it on disposal. The product build carries that licensed theme and a portable ESM
+schema module. Bundle patches retain the original `ui-theme` row and canonical Settings
+namespace. An explicit `deepseekbot-zoom-setup enable` command installs one Profile-local
+package link through the native package manager and requires a restart. It accepts only macOS
+and CLI 0.2.1-rc.2, refusing other overrides. `disable` removes only this dependency and its
+exact owned symlink, preserving font preferences; run it before product removal. Installing
+the Bundle alone does not activate compatibility. Windows/Linux remain unchanged.
+It does not edit the installed desktop shell. Ordinary Web zoom is unchanged. Native-input,
+packaged-install and Human QA evidence remain separate from source coverage; numberpad,
+broader reliability and other desktop platforms are tracked in #2269/#2270.
 
 Bot-mode Dockview content overlays and splitter movement convert viewport coordinates to local CSS units through the repository-pinned Dockview compatibility patch. The patch is bundled in the Client; it changes no DSH executable and preserves persistent panel instances and the existing layout store. The macOS workspace corner separately retains the native 88×40 viewport-pixel traffic-light footprint and converts measured group intersections into local header padding; zoom, layout and fullscreen updates do not change that physical footprint.
