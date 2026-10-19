@@ -389,6 +389,18 @@ describe('push registration with a real Host gateway', () => {
     });
     await session.sync([h.saved]);
     expect(session.getSnapshot()).toEqual({ status: 'unavailable', reason: 'missing-project-id' });
+
+    const silent = fakeNotifications('granted');
+    silent.port.token = () => new Promise<string>(() => {});
+    const waiting = createPushSession({
+      notifications: silent.port,
+      hostPush,
+      platform: 'ios',
+      locale: 'en',
+      tokenTimeoutMs: 10,
+    });
+    await waiting.sync([h.saved]);
+    expect(waiting.getSnapshot()).toEqual({ status: 'unavailable', reason: 'push-token-timeout' });
     h.owner.close();
   });
 
