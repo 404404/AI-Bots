@@ -1,9 +1,8 @@
 import type { Appearance, AppearanceSnapshot, AppearancePatch } from './appearance.js';
 import { appearanceMaterials } from './appearance-materials.js';
 import type { BotHarnessTranslate } from './locale.js';
-import { SettingsRows, SettingsRow, SettingsSection } from './ds/settings-row.js';
+import { SettingsRow, SettingsSection } from './ds/settings-row.js';
 import { NumberStepper } from './ds/number-stepper.js';
-import { Note } from './ds/note.js';
 export function AppearanceMaterialSettings({
   appearance,
   snapshot,
@@ -21,12 +20,12 @@ export function AppearanceMaterialSettings({
     } catch {}
   };
   return (
-    <SettingsRows>
-      <Note>
-        {t('appearance.materialMode', {
-          mode: t(mode === 'light' ? 'settings.theme.light' : 'settings.theme.dark'),
-        })}
-      </Note>
+    <SettingsSection
+      title={t('appearance.panels')}
+      description={t('appearance.materialMode', {
+        mode: t(mode === 'light' ? 'settings.theme.light' : 'settings.theme.dark'),
+      })}
+    >
       {(['header', 'body'] as const).map((part) => (
         <SettingsSection
           key={part}
@@ -79,6 +78,6 @@ export function AppearanceMaterialSettings({
           />
         </SettingsSection>
       ))}
-    </SettingsRows>
+    </SettingsSection>
   );
 }

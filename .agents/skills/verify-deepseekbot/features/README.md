@@ -2,7 +2,8 @@
 
 | Feature | Needs a model | Scripted journey | File |
 | --- | --- | --- | --- |
-| Desktop whole-window zoom (controlled S1) | no | `scripts/e2e-desktop-zoom-launch.mjs`, `scripts/e2e-dock-zoom.mjs`, `scripts/e2e-workspace-chrome.mjs` | [desktop-window-zoom.md](desktop-window-zoom.md) |
+| Desktop whole-window zoom (controlled S1 / Windows candidate) | no | `scripts/e2e-desktop-zoom-launch.mjs`, `scripts/e2e-desktop-zoom-windows.mjs`, `scripts/e2e-dock-zoom.mjs`, `scripts/e2e-workspace-chrome.mjs` | [desktop-window-zoom.md](desktop-window-zoom.md) |
+| Global search: Alt/Option+K, settings results and pinyin matching | no | `verify-app` Bot mode path | [global-search.md](global-search.md) |
 | DeepSeekBot device-local appearance | no | `scripts/e2e-local-appearance.mjs` | [local-appearance.md](local-appearance.md) |
 | Functional Panel appearance | no | `scripts/e2e-panel-appearance.mjs`, `scripts/e2e-nested-appearance.mjs` | [panel-appearance.md](panel-appearance.md) |
 | Global panel materials | no | `scripts/e2e-global-materials.mjs` | [global-materials.md](global-materials.md) |
@@ -86,3 +87,6 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 | Video wallpaper | no | `scripts/e2e-video-wallpaper.mjs` | [video-wallpaper.md](video-wallpaper.md) |
 
 | Appearance recovery | no | `scripts/e2e-appearance-recovery.mjs`, `scripts/e2e-message-history-mask.mjs` | [appearance-recovery.md](appearance-recovery.md) |
+
+| Three-action tool approval and coherent Full Access | yes | `scripts/e2e-tool-approval-simple.mjs` | [tool-approval-simple.md](tool-approval-simple.md) |
+| Workspace request read/write approval and original-task continuation | yes | `scripts/e2e-workspace-request-write.mjs` | [workspace-request-write.md](workspace-request-write.md) |

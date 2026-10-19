@@ -5,9 +5,9 @@ import { mountWallpaper } from '../src/client/wallpaper-layer.js';
 import {
   DEFAULT_CROP,
   wallpaperPlacement,
-  type WallpaperRecord,
   type WallpaperCrop,
 } from '../src/client/wallpaper-store.js';
+import { memoryWallpaperStore } from './wallpaper-memory.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -56,26 +56,16 @@ describe('wallpaper layout coordinate ownership', () => {
       vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
       vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
       const release = vi.fn();
-      let saved: WallpaperRecord | undefined;
-      const owner = new Wallpaper(
-        {
-          read: async () => saved,
-          replace: async (value) => {
-            saved = value;
-          },
-          close: vi.fn(),
-        },
-        async (blob) => ({
-          kind: kind === 'image' ? 'image' : 'video',
-          blob,
-          url: 'blob:accepted',
-          width: 2800,
-          height: 1200,
-          release,
-          ...(kind !== 'image' ? { poster: blob, posterUrl: 'blob:poster' } : {}),
-          ...(kind === 'poster' ? { fallbackReason: 'wallpaper-decode-failed' } : {}),
-        }),
-      );
+      const owner = new Wallpaper(memoryWallpaperStore().store, async (blob) => ({
+        kind: kind === 'image' ? 'image' : 'video',
+        blob,
+        url: 'blob:accepted',
+        width: 2800,
+        height: 1200,
+        release,
+        ...(kind !== 'image' ? { poster: blob, posterUrl: 'blob:poster' } : {}),
+        ...(kind === 'poster' ? { fallbackReason: 'wallpaper-decode-failed' } : {}),
+      }));
       await owner.save(new Blob(['accepted']), DEFAULT_CROP, 'empty');
       const off = mountWallpaper(owner);
       const image = frame.querySelector('img')!;
@@ -112,7 +102,7 @@ describe('wallpaper layout coordinate ownership', () => {
       expect(disconnect).toHaveBeenCalled();
       expect(frame.hasAttribute('data-wallpaper-active')).toBe(false);
       expect(frame.querySelector('[data-bh-wallpaper]')).toBeNull();
-      expect(release).toHaveBeenCalledTimes(3);
+      expect(release).toHaveBeenCalledTimes(1);
     },
   );
 });

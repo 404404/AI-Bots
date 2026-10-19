@@ -2,14 +2,14 @@
 
 ## Sub-features
 
-- Independent light/dark/system preference; Classic Blue or Mist Purple and a Primary override saved separately for each mode.
+- Theme cards (Follow system / Light / Dark) with mini previews; palette cards apply one preset to both modes; a Primary override is still saved separately for each mode.
 - DeepSeekBot roots, workspace, owned modal and menu palettes are scoped; native DSH mode and preferences are unchanged.
 - Web browser/site persistence; Desktop application persistence without Host keys. Same-site tabs share storage; other browser profiles and Desktop are independent.
 - Explicit Client-targeted `appearance-clients`, `appearance-get`, `appearance-set`; same owner, revision conflicts and coded storage/delivery failures.
 
 ## How to get to it (user POV)
 
-Enter Bot mode, choose the visible control rail's **Bot settings**, then **Appearance**. Select **Theme**, each **palette**, and each **primary color**. Exit Bot mode and compare native DSH. Return and reopen the settings.
+Enter Bot mode, choose the visible control rail's **Bot settings**, then **Appearance**. Pick a **Theme** card, a **Colors** card, and each **Primary color** swatch. Exit Bot mode and compare native DSH. Return and reopen the settings.
 
 ## Driving it with verify-app
 

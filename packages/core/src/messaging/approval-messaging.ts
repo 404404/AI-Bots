@@ -885,7 +885,8 @@ export function createApprovalMessaging(options: {
                 actor,
                 onRuleSaved: (rule) => {
                   const latest = read(value.id);
-                  if (latest) write({ ...latest, savedRuleId: rule.id, savedRuleKind: rule.kind });
+                  if (latest && rule.kind !== 'tool')
+                    write({ ...latest, savedRuleId: rule.id, savedRuleKind: rule.kind });
                 },
                 ...(event.kind === 'approval-rule'
                   ? {

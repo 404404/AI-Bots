@@ -202,6 +202,22 @@ describe('live CLI over the authenticated DSH carrier', () => {
       method: 'toolApprovalDecide',
       args: { channelId: 'dm-ada', messageId: 'approval', outcome: 'allowed-always-kind' },
     });
+    await invoke(
+      [
+        'tool-approval-decide',
+        'dm-ada',
+        '--message-id',
+        'approval',
+        '--outcome',
+        'allowed-always-tool',
+      ],
+      live.url,
+    );
+    expect(live.calls.at(-1)).toMatchObject({
+      method: 'toolApprovalDecide',
+      args: { channelId: 'dm-ada', messageId: 'approval', outcome: 'allowed-always-tool' },
+    });
+
     expect(
       (
         await invoke(

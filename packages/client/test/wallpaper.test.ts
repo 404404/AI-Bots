@@ -3,24 +3,13 @@ import { Wallpaper } from '../src/client/wallpaper.js';
 import {
   DEFAULT_CROP,
   WallpaperError,
+  rotationStep,
   wallpaperPlacement,
-  type WallpaperRecord,
-  type WallpaperStore,
 } from '../src/client/wallpaper-store.js';
+import { memoryWallpaperStore } from './wallpaper-memory.js';
 import { createWallpaperControl } from '../src/client/wallpaper-control.js';
-function fixture() {
-  let saved: WallpaperRecord | undefined;
-  let refuse = false;
-  const store: WallpaperStore = {
-    read: async () => saved,
-    replace: async (value, expected) => {
-      if (refuse) throw new WallpaperError('wallpaper-storage-unavailable');
-      if ((saved?.revision ?? 'empty') !== expected)
-        throw new WallpaperError('wallpaper-revision-conflict');
-      saved = value;
-    },
-    close: vi.fn(),
-  };
+function fixture(now = () => Date.now()) {
+  const memory = memoryWallpaperStore();
   const releases: string[] = [];
   let n = 0;
   const decode = vi.fn(async (blob: Blob) => {
@@ -36,16 +25,15 @@ function fixture() {
       },
     };
   });
-  const owner = new Wallpaper(store, decode);
+  const owner = new Wallpaper(memory.store, decode, now);
   return {
     owner,
-    store,
+    store: memory.store,
     decode,
     releases,
-    fail: () => {
-      refuse = true;
-    },
-    saved: () => saved,
+    fail: () => memory.fail(),
+    saved: () => memory.active(),
+    library: memory.library,
   };
 }
 describe('local wallpaper owner', () => {
@@ -65,6 +53,7 @@ describe('local wallpaper owner', () => {
     expect(f.saved()!.crop.zoom).toBe(2);
     await restored.remove(restored.getSnapshot().revision);
     expect(f.saved()).toBeUndefined();
+    expect(f.library().items).toEqual([]);
     expect(restored.getSnapshot().current).toBeUndefined();
     f.owner.dispose();
     restored.dispose();
@@ -73,24 +62,25 @@ describe('local wallpaper owner', () => {
     const f = fixture();
     await f.owner.save(new Blob(['first']), DEFAULT_CROP, 'empty');
     const saved = f.saved();
+    const revision = f.library().revision;
     const current = f.owner.getSnapshot().current;
-    await expect(
-      f.owner.save(new Blob(['invalid']), DEFAULT_CROP, saved!.revision),
-    ).rejects.toMatchObject({ code: 'wallpaper-decode-failed' });
+    await expect(f.owner.save(new Blob(['invalid']), DEFAULT_CROP, revision)).rejects.toMatchObject(
+      { code: 'wallpaper-decode-failed' },
+    );
     await expect(f.owner.save(new Blob(['second']), DEFAULT_CROP, 'stale')).rejects.toMatchObject({
       code: 'wallpaper-revision-conflict',
     });
     f.fail();
-    await expect(
-      f.owner.save(new Blob(['third']), DEFAULT_CROP, saved!.revision),
-    ).rejects.toMatchObject({ code: 'wallpaper-storage-unavailable' });
-    await expect(f.owner.crop({ x: 0, y: 0, zoom: 2 }, saved!.revision)).rejects.toMatchObject({
+    await expect(f.owner.save(new Blob(['third']), DEFAULT_CROP, revision)).rejects.toMatchObject({
+      code: 'wallpaper-storage-unavailable',
+    });
+    await expect(f.owner.crop({ x: 0, y: 0, zoom: 2 }, revision)).rejects.toMatchObject({
       code: 'wallpaper-storage-unavailable',
     });
     expect(f.saved()).toBe(saved);
     expect(f.owner.getSnapshot().current).toEqual(current);
     expect(f.releases).not.toContain(current!.url);
-    expect(f.releases).toHaveLength(3);
+    expect(f.releases).toHaveLength(2);
     f.owner.dispose();
     expect(f.releases).toContain(current!.url);
   });
@@ -145,5 +135,59 @@ describe('local wallpaper owner', () => {
       expect(p.left + p.width).toBeGreaterThanOrEqual(w);
       expect(p.top + p.height).toBeGreaterThanOrEqual(h);
     }
+  });
+  it('keeps several items, shows the chosen one and deletes without losing the rest', async () => {
+    const f = fixture();
+    await f.owner.refresh();
+    await f.owner.add(new Blob(['one']), DEFAULT_CROP, 'empty');
+    await f.owner.add(new Blob(['two']), DEFAULT_CROP, f.library().revision);
+    const [one, two] = f.library().items;
+    expect(f.owner.getSnapshot().current?.id).toBe(two!.id);
+    expect(f.owner.getSnapshot().library.items.map((item) => item.id)).toEqual([one!.id, two!.id]);
+    await f.owner.select(one!.id, f.library().revision);
+    expect(f.owner.getSnapshot().current?.id).toBe(one!.id);
+    await f.owner.crop({ x: 0.1, y: 0.9, zoom: 2 }, f.library().revision, Infinity, two!.id);
+    expect(f.library().items[1]!.crop).toEqual({ x: 0.1, y: 0.9, zoom: 2 });
+    expect(f.owner.getSnapshot().current?.id).toBe(one!.id);
+    await f.owner.select(undefined, f.library().revision);
+    expect(f.owner.getSnapshot().current).toBeUndefined();
+    expect(f.library().items).toHaveLength(2);
+    await f.owner.select(one!.id, f.library().revision);
+    await f.owner.remove(f.library().revision);
+    expect(f.library().items.map((item) => item.id)).toEqual([two!.id]);
+    expect(f.owner.getSnapshot().current?.id).toBe(two!.id);
+    await f.owner.clear(f.library().revision);
+    expect(f.library().items).toEqual([]);
+    expect(f.owner.getSnapshot().current).toBeUndefined();
+    f.owner.dispose();
+  });
+  it('rotates on the clock in order or shuffled, and refuses unknown intervals', async () => {
+    let now = 1_000_000;
+    const f = fixture(() => now);
+    await f.owner.refresh();
+    for (const text of ['a', 'b', 'c'])
+      await f.owner.add(new Blob([text]), DEFAULT_CROP, f.library().revision);
+    const ids = f.library().items.map((item) => item.id);
+    await f.owner.select(ids[0], f.library().revision);
+    await f.owner.setRotation({ interval: 60_000 }, f.library().revision);
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      seen.push(f.owner.getSnapshot().current?.id);
+      now += 60_000;
+      await f.owner.refresh();
+    }
+    expect(seen).toEqual([ids[0], ids[1], ids[2], ids[0]]);
+    await expect(f.owner.setRotation({ interval: 7 }, f.library().revision)).rejects.toMatchObject({
+      code: 'wallpaper-rotation-invalid',
+    });
+    const library = { ...f.library(), shuffle: true, since: 0, interval: 60_000 };
+    let previous = rotationStep(library, 0).id;
+    for (let minute = 1; minute < 40; minute++) {
+      const { id } = rotationStep(library, minute * 60_000);
+      expect(ids).toContain(id);
+      expect(id).not.toBe(previous);
+      previous = id;
+    }
+    f.owner.dispose();
   });
 });

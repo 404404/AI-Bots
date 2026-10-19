@@ -67,7 +67,7 @@ export function apply(ctx) {
   mkdirSync(join(profile, 'node_modules/@botharness'), { recursive: true });
   if (existsSync(link)) {
     if (resolve(readlinkSync(link)) !== target) throw Error('zoom-qa-profile-link-conflict');
-  } else symlinkSync(target, link);
+  } else symlinkSync(target, link, process.platform === 'win32' ? 'junction' : 'dir');
   manifest.dependencies ??= {};
   manifest.dependencies[name] = `link:${target}`;
   if (!bundles.includes(name)) bundles.push(name);

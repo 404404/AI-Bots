@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Appearance, APPEARANCE_KEY, parseAppearance } from '../src/client/appearance.js';
 import { Wallpaper } from '../src/client/wallpaper.js';
-import { WallpaperError, type WallpaperRecord } from '../src/client/wallpaper-store.js';
+import { memoryWallpaperStore } from './wallpaper-memory.js';
 import { resetAppearance } from '../src/client/appearance-recovery.js';
 function fixture() {
   const original = {
@@ -42,7 +42,7 @@ function fixture() {
     () => 'light',
     () => `prefs-${++n}`,
   );
-  let record: WallpaperRecord | undefined = {
+  const media = memoryWallpaperStore({
     version: 1,
     revision: 'media-0',
     kind: 'image',
@@ -50,30 +50,27 @@ function fixture() {
     width: 1200,
     height: 800,
     crop: { x: 0.6, y: 0.4, zoom: 1.2 },
-  };
-  const replace = vi.fn(async (next: WallpaperRecord | undefined, expected: string) => {
-    if (failMedia) throw new WallpaperError('wallpaper-storage-unavailable');
-    if ((record?.revision ?? 'empty') !== expected)
-      throw new WallpaperError('wallpaper-revision-conflict');
-    record = next;
   });
-  const wallpaper = new Wallpaper(
-    { read: async () => record, replace, close: () => {} },
-    async (blob) => ({ blob, url: 'blob:accepted', width: 1200, height: 800, release: () => {} }),
-  );
+  const replace = media.write;
+  const wallpaper = new Wallpaper(media.store, async (blob) => ({
+    blob,
+    url: 'blob:accepted',
+    width: 1200,
+    height: 800,
+    release: () => {},
+  }));
   return {
     appearance,
     wallpaper,
     replace,
     original,
     read: () => JSON.parse(raw),
-    record: () => record,
+    record: () => media.active(),
+    revision: () => media.library().revision,
     failPrefs: (v: boolean) => {
       failPrefs = v;
     },
-    failMedia: (v: boolean) => {
-      failMedia = v;
-    },
+    failMedia: (v: boolean) => media.fail(v),
   };
 }
 const command = (revision = 'media-0') => ({
@@ -119,7 +116,7 @@ describe('scoped appearance recovery', () => {
       resetAppearance(f.appearance, f.wallpaper, command(), 'prefs-0'),
     ).rejects.toMatchObject({ code: 'appearance-storage-unavailable' });
     expect(f.read()).toEqual(f.original);
-    expect(f.record()?.revision).toBe('media-0');
+    expect(f.revision()).toBe('media-0');
     expect(f.replace).not.toHaveBeenCalled();
     f.wallpaper.dispose();
   });
@@ -131,7 +128,7 @@ describe('scoped appearance recovery', () => {
     ).rejects.toMatchObject({ code: 'appearance-reset-wallpaper-failed' });
     expect(f.read().modes).toEqual(parseAppearance(null).modes);
     expect(f.read().preference).toBe('system');
-    expect(f.record()?.revision).toBe('media-0');
+    expect(f.revision()).toBe('media-0');
     f.failMedia(false);
     const result = await resetAppearance(f.appearance, f.wallpaper, command(), f.read().revision);
     expect(result.complete).toBe(true);
@@ -144,7 +141,7 @@ describe('scoped appearance recovery', () => {
     await f.wallpaper.refresh();
     await f.wallpaper.remove('media-0');
     const before = f.wallpaper.getSnapshot().resourceVersion;
-    await resetAppearance(f.appearance, f.wallpaper, command('empty'), 'prefs-0');
+    await resetAppearance(f.appearance, f.wallpaper, command(f.revision()), 'prefs-0');
     expect(f.wallpaper.getSnapshot().resourceVersion).toBeGreaterThan(before);
     f.wallpaper.dispose();
   });
