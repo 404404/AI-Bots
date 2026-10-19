@@ -10,6 +10,7 @@ export type ShortcutActionId =
   | 'conversation-next'
   | 'unread-prev'
   | 'unread-next'
+  | 'settings'
   | 'help';
 
 export interface ShortcutBinding {
@@ -28,6 +29,7 @@ export const SHORTCUT_ACTION_IDS: readonly ShortcutActionId[] = [
   'conversation-next',
   'unread-prev',
   'unread-next',
+  'settings',
   'help',
 ];
 
@@ -38,6 +40,7 @@ export const DEFAULT_SHORTCUT_BINDINGS: ShortcutBindingMap = {
   'conversation-next': { code: 'ArrowDown', mod: false, alt: true, shift: false },
   'unread-prev': { code: 'ArrowUp', mod: false, alt: true, shift: true },
   'unread-next': { code: 'ArrowDown', mod: false, alt: true, shift: true },
+  settings: { code: 'Comma', mod: true, alt: false, shift: false },
   help: { code: 'Slash', mod: true, alt: false, shift: false },
 };
 

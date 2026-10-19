@@ -943,6 +943,7 @@ export const zh = {
   'shortcuts.unreadStep.note': '跳过已静音的会话',
   'shortcuts.search': '搜索当前会话',
   'shortcuts.help': '显示快捷键',
+  'shortcuts.settings': '打开 Bot 设置',
   'shortcuts.change': '修改',
   'shortcuts.locked': '不能修改',
   'shortcuts.locked.sendKey': '不能在这里修改，请在 Bot 设置 › 消息 › 发送消息里切换',
@@ -4821,6 +4822,7 @@ export const en = {
   'shortcuts.unreadStep.note': 'Skips muted conversations',
   'shortcuts.search': 'Search this conversation',
   'shortcuts.help': 'Show keyboard shortcuts',
+  'shortcuts.settings': 'Open Bot settings',
   'shortcuts.change': 'Change',
   'shortcuts.locked': "Can't be changed",
   'shortcuts.locked.sendKey':
