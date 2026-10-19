@@ -324,3 +324,7 @@ normalize only the application Settings overlay's safe-area padding; keep the ca
 The native Menu's portaled anchor can be multiplied again (observed y=1247 in an 820px
 viewport). The compact application section picker reuses the existing viewport menu owner,
 which clamps and converts coordinates. This does not qualify other native dropdowns.
+
+## Windows vfile browser imports (#2289)
+
+Rolldown can pass a Windows importer path with backslashes. The vfile browser-variant override must normalize separators before matching `node_modules/vfile/lib`; otherwise a successful build can retain `require("node:process")`, and the real Client refuses @botharness/ui before its Services exist. The existing Client bundle contract reproduces this: two assertions fail before normalization and all seven pass after it. Rebuild the Client and restart the task-owned Host, then inspect its actual browser console; API health alone does not qualify plugin boot.
