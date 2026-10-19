@@ -2,7 +2,14 @@ import { useSourceDraft } from '../../host/native-source-drafts';
 import { hostDraftKey } from '../../host/source-drafts';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View, type ViewInstance } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  Pressable,
+  View,
+  type ViewInstance,
+} from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -528,7 +535,7 @@ function ChatConversation({
             roster={roster}
             count={item.activityCount ?? 1}
             dmSlug={slug}
-            lifted={item.message.id === actionsFor?.message.id}
+            lifted={Platform.OS === 'web' && item.message.id === actionsFor?.message.id}
             onLongPress={(anchor, label, target) =>
               setActionsFor({
                 message: { ...item.message, body: label },
@@ -582,7 +589,7 @@ function ChatConversation({
           onOpenImage={setViewing}
           onShare={share}
           onLongPress={openActions}
-          lifted={item.message.id === actionsFor?.message.id}
+          lifted={Platform.OS === 'web' && item.message.id === actionsFor?.message.id}
           {...(botDm ? {} : { onReact: react })}
           botName={botName}
           speaker={
