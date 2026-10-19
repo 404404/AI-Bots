@@ -58,17 +58,20 @@ function RoundButton({
   label,
   filled,
   onPress,
+  testID,
   children,
 }: {
   label: string;
   filled: boolean;
   onPress(): void;
+  testID?: string;
   children: ReactNode;
 }) {
   const theme = useDesignTheme();
   const size = theme.touch - space.x4;
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
@@ -438,6 +441,7 @@ export function Composer({
       key="lead"
       label={menu ? t.closeAttach : t.attach}
       size={theme.touch}
+      testID="composer-attach"
       onPress={toggleMenu}
     >
       {menu ? (
@@ -450,6 +454,7 @@ export function Composer({
   const field = (
     <TextInput
       key="field"
+      testID="composer-input"
       value={value}
       onChangeText={onChange}
       {...(selection === undefined ? {} : { selection })}
@@ -495,6 +500,7 @@ export function Composer({
       <RoundButton
         key={action}
         label={t.send}
+        testID="composer-send"
         filled
         onPress={() => {
           haptic('send');

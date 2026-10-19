@@ -8,11 +8,13 @@ export const rippleFeedback = true;
 
 export function ComposerCircleButton({
   label,
+  testID,
   size,
   onPress,
   children,
 }: {
   label: string;
+  testID?: string;
   size: number;
   onPress(): void;
   children: ReactNode;
@@ -22,6 +24,7 @@ export function ComposerCircleButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      testID={testID}
       onPress={onPress}
       android_ripple={{ color: pressTint(theme.color.fg), borderless: true, radius: size / 2 }}
       style={{

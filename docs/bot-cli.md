@@ -1015,6 +1015,16 @@ Restarting the Client changes its delivery ID; list again. The desktop's primary
 survives independently. See [S1](https://github.com/BotHarness/DeepSeekBot/issues/2268) for native
 qualification limits. No model or Host-side preference copy is involved.
 
+The Windows candidate uses the installed product's `deepseekbot-zoom-setup` command with
+`--home <isolated-home> --profile desktop --desktop-app "<app-directory>/DeepSeek Harness.exe"`.
+Keep the selected Desktop closed throughout `enable` or `disable`; setup refuses any running
+process of that executable. Only FileVersion `0.2.1-rc.2` and a Windows-capable, hash-checked
+theme payload are accepted. The native `ui-theme` row and font settings remain in place.
+Run `disable` before removing the product. After every cold boot, enumerate Client IDs again.
+Ctrl+0 restores the saved default, including 120%; numberpad codes are unsupported by the
+pinned protocol. See [Windows qualification #2270](https://github.com/BotHarness/DeepSeekBot/issues/2270)
+for the separate native input, guest foreground, DPI and Human-QA gates.
+
 ## Device-local DeepSeekBot appearance
 
 `appearance-clients` lists the online Client ids and platform on the authenticated Host. Select one explicitly; a new mount/reload gets a new id. This controls DeepSeekBot, not the DSH-native Host theme.

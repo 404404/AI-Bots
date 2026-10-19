@@ -49,6 +49,7 @@ export function ConversationRow({
     .join(', ');
   return (
     <ConversationRowFrame
+      testID={`conversation-row-${row.key}`}
       title={title}
       source="computer"
       label={label}
@@ -94,6 +95,7 @@ export function ConversationRowFrame({
   avatar,
   onPress,
   disabled = false,
+  testID,
 }: {
   title: string;
   source: 'computer' | 'cloud';
@@ -105,10 +107,12 @@ export function ConversationRowFrame({
   avatar: ReactNode;
   onPress?: (() => void) | undefined;
   disabled?: boolean;
+  testID?: string;
 }) {
   const theme = useDesignTheme();
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || onPress === undefined}
       accessibilityRole={onPress === undefined ? undefined : 'button'}

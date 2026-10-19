@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
+import { pnpmCommand } from './dev-package-manager.mjs';
 import {
   mkdtempSync,
   readdirSync,
@@ -34,23 +35,20 @@ if (process.argv.includes('--baseline')) {
   for (const name of ['wallpaper-playback.ts', 'wallpaper-store.ts'])
     copyFileSync(resolve('packages/client/src/client', name), resolve(bundle, name));
 }
-execFileSync(
-  'pnpm',
-  [
-    'exec',
-    'tsdown',
-    entry,
-    '--no-config',
-    '--format',
-    'esm',
-    '--platform',
-    'browser',
-    '--no-clean',
-    '--out-dir',
-    bundle,
-  ],
-  { stdio: 'pipe' },
-);
+const [packageManager, packageArguments] = pnpmCommand([
+  'exec',
+  'tsdown',
+  entry,
+  '--no-config',
+  '--format',
+  'esm',
+  '--platform',
+  'browser',
+  '--no-clean',
+  '--out-dir',
+  bundle,
+]);
+execFileSync(packageManager, packageArguments, { stdio: 'pipe' });
 const code = readFileSync(resolve(bundle, 'wallpaper-layer.js'), 'utf8');
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
 const results = [];

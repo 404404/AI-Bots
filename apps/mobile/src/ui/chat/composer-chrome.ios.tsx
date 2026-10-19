@@ -46,11 +46,13 @@ function Glass({ cornerRadius }: { cornerRadius?: number }) {
 
 export function ComposerCircleButton({
   label,
+  testID,
   size,
   onPress,
   children,
 }: {
   label: string;
+  testID?: string;
   size: number;
   onPress(): void;
   children: ReactNode;
@@ -61,6 +63,7 @@ export function ComposerCircleButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      testID={testID}
       onPress={onPress}
       style={({ pressed }) => ({
         width: size,

@@ -9,6 +9,7 @@ export function SettingsButton({ onPress }: { onPress(): void }) {
   const theme = useDesignTheme();
   return (
     <Pressable
+      testID="settings-button"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={t.settings}
