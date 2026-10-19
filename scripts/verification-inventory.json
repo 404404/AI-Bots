@@ -1900,6 +1900,14 @@
       "reason": "Audited isolated native launcher and readiness probe; feature guide explicitly distinguishes launch from acceptance.",
       "task": 2268,
       "behaviors": ["desktop.window-zoom"]
+    },
+    {
+      "path": "scripts/e2e-dock-zoom.mjs",
+      "sha256": "959a96ba4108d84ac3e7af98221de235079125f81413b56f870b669951d79b86",
+      "category": "mapped",
+      "reason": "Real pinned Dockview dependency fixture for zoomed persistent overlay allocation and horizontal/vertical splitter movement; not a DSH/native acceptance journey.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
     }
   ],
   "native": [

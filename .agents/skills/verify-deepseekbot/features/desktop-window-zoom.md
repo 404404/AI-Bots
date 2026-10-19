@@ -31,6 +31,15 @@ Acceptance requires real native screenshots at 83/100/120/144%, main/iframe/webv
 one ordinary Cmd+= action with unchanged font tokens and guest-native zoom, a true process
 restart, storage refusals, and Human feedback. Record each run against its exact source SHA.
 
+## Dock layout regression
+
+Run `node scripts/e2e-dock-zoom.mjs` for the real pinned Dockview browser fixture. It asserts
+content allocation at normal, smaller, larger and extreme zoom levels, retained inputs and
+screen-space splitter movement. This is dependency regression coverage, not a DSH acceptance
+pass. In the preserved desktop window, compare each visible panel's content rectangle against
+its group allocation at the same levels and capture matched whole-window before/after pixels.
+Do not accept clipping, a layout reset or replacing live panels as an overlap fix.
+
 ## Gotchas
 
 - The native 0.2.1-rc.2 shortcut protocol rejects NumpadAdd/NumpadSubtract/Numpad0.

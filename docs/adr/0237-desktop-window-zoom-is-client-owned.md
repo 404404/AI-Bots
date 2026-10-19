@@ -24,6 +24,14 @@ BrowserWindow zoom, guest-native page zoom or the user's manual font settings. T
 shortcut Registry remains the single input router, including native forwarding from frames and
 webviews. Do not add a competing global DOM listener or synthesize input from an observer.
 
+Bot-mode Dockview overlays and splitters must convert viewport measurements back to local
+CSS layout units using the effective CSS zoom. The repository pins a local pnpm patch for
+Dockview 8.4.1's ESM and CommonJS package entry points; the Client bundles that patched code.
+It adjusts overlay geometry and splitter deltas without changing panel ownership, persistence,
+minimum constraints or DOM parentage. No DSH source or installed shell is changed. The patch
+must be requalified when Dockview is upgraded; restoring the unpatched package reintroduces
+panel overlap whenever root CSS zoom differs from one.
+
 The pinned DSH theme owns fixed Cmd+=/Cmd+- font commands. The downstream compatibility
 generator copies the exact MIT-licensed npm theme artifact, preserves its license, validates
 its version and hashes, and changes only its font-shortcut Fiber ownership and canonical ESM
