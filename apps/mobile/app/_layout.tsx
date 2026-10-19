@@ -58,6 +58,8 @@ export default function RootLayout() {
                 options={{
                   title: t.settings,
                   ...sheetScreenOptions(design, true),
+                  // iOS draws a formSheet that holds a nested Stack blank (#2107).
+                  ...(Platform.OS === 'ios' ? { presentation: 'modal' as const } : {}),
                 }}
               />
               <Stack.Screen
