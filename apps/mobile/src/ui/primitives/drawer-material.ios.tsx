@@ -76,10 +76,16 @@ export function EdgeMaterial({ edge: side }: { edge: 'top' | 'bottom' }) {
       pointerEvents="none"
     >
       <Mask modifiers={[accessibilityHidden(), ignoreSafeArea({ edges: 'all' })]}>
-        <Rectangle modifiers={[foregroundStyle({ type: 'material', material: 'ultraThin' })]} />
+        <Rectangle
+          modifiers={[
+            ignoreSafeArea({ edges: 'all' }),
+            foregroundStyle({ type: 'material', material: 'ultraThin' }),
+          ]}
+        />
         <Mask.Content>
           <Rectangle
             modifiers={[
+              ignoreSafeArea({ edges: 'all' }),
               foregroundStyle({
                 type: 'linearGradient',
                 colors: edgeFade.blur.map((alpha) => `${pointer.rim}${alpha}`),
