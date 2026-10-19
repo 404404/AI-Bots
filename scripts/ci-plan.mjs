@@ -76,8 +76,9 @@ export const RULES = [
   related('apps/mobile/locales/**', 'Translated iOS permission prompts'),
   related('apps/mobile/assets/**', 'Mobile app icons and bundled images'),
   none('apps/mobile/.maestro/**', 'Maestro flows, run on a Mac simulator'),
+  none('apps/mobile/store/**', 'Store listing answers, entered in the store consoles'),
   none(
-    'apps/mobile/{README.md,AGENTS.md,CLAUDE.md,DESIGN.md,.gitignore}',
+    'apps/mobile/{README.md,AGENTS.md,CLAUDE.md,DESIGN.md,OVERLAYS.md,OVERLAYS.zh.md,.gitignore}',
     'Mobile app prose, agent rules and ignores',
   ),
   related('scripts/test/**', 'Script tests'),

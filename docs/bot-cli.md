@@ -951,6 +951,30 @@ Use the exact metadata from the selected file/diff side. The authenticated Host 
 
 ## Desktop window zoom (controlled S1)
 
+The product includes a separate opt-in configuration command. Install the product normally,
+quit the target macOS Desktop, then point setup at that application's bundle and explicit
+Profile. Setup uses the selected application's bundled pnpm with scripts disabled, under the
+same Profile writer lock as the native plugin manager. It refuses a running Desktop Host,
+other theme overrides, stale product composition and an app version other than 0.2.1-rc.2.
+It changes one Profile dependency and never edits the installed application:
+
+```sh
+deepseekbot-zoom-setup enable --home <absolute-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+deepseekbot-zoom-setup disable --home <absolute-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+```
+
+Keep Desktop closed until setup returns, then reopen it. A busy Profile or uncertain package
+outcome requires inspection rather than automatic retry. For a non-Desktop isolated Profile,
+use `--profile <profile> --dsh <qualified-dsh-cli>` instead. The DSH CLI intentionally refuses
+the managed `desktop` Profile; the native plugin manager also refuses this plain-library
+replacement, because it resolves the installation-owned theme before Profile Bundle metadata.
+Those two paths do not establish Desktop activation.
+
+Run `disable` before uninstalling the product and restart to restore native package resolution.
+Manual font preferences remain in the same native `ui-theme` Patch. JSON stdout reports
+`restartRequired:true` and `runtimeVerified:false`; a successful package change does not prove
+the native window has loaded it. An uncertain package operation is not retried automatically.
+
 `window-zoom-clients` lists active targets. Select one `--client-id`; commands never choose a
 window implicitly. `window-zoom-get` reads the Client-owned snapshot. A write requires the
 returned `document.revision` as `--expected-revision`:

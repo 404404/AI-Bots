@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'tsdown';
 
+import { preparePackagedDesktopZoomTheme } from './scripts/desktop-zoom-compat.mjs';
 import { dockviewCssPlugin } from './scripts/dockview-css-plugin.mjs';
 import { stylexPlugin } from './scripts/stylex-plugin.mjs';
 
@@ -213,7 +214,19 @@ export default defineConfig([
   },
   clientBundleOptions,
   {
-    entry: ['packages/deepseekbot/src/profile-cli.mjs', 'packages/deepseekbot/src/deepseekbot.mjs'],
+    entry: {
+      'profile-cli': 'packages/deepseekbot/src/profile-cli.mjs',
+      'desktop-zoom-setup': 'packages/deepseekbot/src/desktop-zoom-setup.mjs',
+      deepseekbot: 'packages/deepseekbot/src/deepseekbot.mjs',
+      'theme-schema': 'packages/client/src/theme-schema.ts',
+    },
+    deps: { alwaysBundle: ['@deepseek-ai/schemastery'] },
+    onSuccess: () => {
+      preparePackagedDesktopZoomTheme({
+        source: join(ROOT_DIR, 'packages/client/node_modules/@deepseek-ai/dsh-client-ui-theme'),
+        target: join(ROOT_DIR, 'packages/deepseekbot/desktop-theme'),
+      });
+    },
     outDir: 'packages/deepseekbot/dist',
     format: ['esm'],
     platform: 'node',

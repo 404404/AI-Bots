@@ -3297,6 +3297,9 @@ export const zh = {
   'failure.transport': '连接模型服务失败',
   'failure.timeout': '模型服务响应超时',
   'failure.server': '模型服务暂时不可用',
+  'failure.contextWindow': '对话上下文已满',
+  'failure.contextWindowHint':
+    '自动压缩未能恢复。请缩小请求后重试，例如只读取大文件或命令输出的一部分。',
   'failure.generic': '请查看错误详情',
   'failure.openModels': '打开模型设置',
   'failure.details': '错误详情',
@@ -7281,6 +7284,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'failure.transport': 'Could not connect to the model provider',
   'failure.timeout': 'Model provider timed out',
   'failure.server': 'Model provider is temporarily unavailable',
+  'failure.contextWindow': 'Conversation context is full',
+  'failure.contextWindowHint':
+    'Automatic compaction could not recover it. Retry with a smaller request, for example one part of a large file or command output.',
   'failure.generic': 'View error details',
   'failure.openModels': 'Open model settings',
   'failure.details': 'Error details',

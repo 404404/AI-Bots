@@ -292,6 +292,7 @@ describe('release composition', () => {
     expect(release.bin).toEqual({
       'botharness-profile': './dist/profile-cli.mjs',
       deepseekbot: './dist/deepseekbot.mjs',
+      'deepseekbot-zoom-setup': './dist/desktop-zoom-setup.mjs',
     });
     expect(release.files).toContain('dist');
     expect(source.private).toBe(true);

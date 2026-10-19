@@ -5,6 +5,7 @@ import type {
 } from '@deepseek-ai/dsh-client-shortcuts/client';
 import type { BotHarnessTranslate } from './locale.js';
 import { WindowZoom, type ZoomStorage, WINDOW_ZOOM_KEY } from './window-zoom.js';
+import { mountZoomTooltips } from './window-zoom-tooltips.js';
 
 export interface ZoomCompatibility {
   version: 1;
@@ -74,6 +75,7 @@ export function mountWindowZoom(options: {
         root.style.zoom = String(1.2 ** level);
         root.style.setProperty('--bh-window-zoom', String(1.2 ** level));
       });
+      disposers.push(mountZoomTooltips(doc));
       disposers.push(() => {
         root.style.zoom = oldZoom ?? '';
         if (oldLayoutZoom)

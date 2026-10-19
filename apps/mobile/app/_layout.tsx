@@ -58,6 +58,7 @@ export default function RootLayout() {
                 options={{
                   title: t.settings,
                   ...sheetScreenOptions(design, true),
+                  ...(Platform.OS === 'ios' ? { presentation: 'modal' as const } : {}),
                 }}
               />
               <Stack.Screen

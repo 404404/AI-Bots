@@ -11,6 +11,7 @@ import { HOST_NAME_MAX, hostLookName, withHostName } from '../src/ui/design/host
 import { ConnectionNameField } from '../src/ui/primitives/connection-name-field';
 import { nativeCarrier } from '../src/host/native-carrier';
 import { pairHost, type PairingFailure } from '../src/host/pairing';
+import { clearsPastedLink, pairingFailureText } from '../src/ui/pairing-failure';
 import { mobileTelemetry } from '../src/telemetry/native';
 import type { PairingMethod } from '../src/telemetry/schema';
 import { Button } from '../src/ui/primitives/button';
@@ -65,7 +66,13 @@ export default function PairScreen() {
     pending.current = undefined;
     setBusy(false);
     if (operation.signal.aborted) return;
-    if (!result.ok) return setError(result.code);
+    if (!result.ok) {
+      if (clearsPastedLink(result.code, method)) {
+        setLink('');
+        handled.current = undefined;
+      }
+      return setError(result.code);
+    }
     router.replace('/');
   };
 
@@ -139,7 +146,7 @@ export default function PairScreen() {
           accessibilityLiveRegion="polite"
           style={{ color: theme.danger }}
         >
-          {t.pairRefused[error]}
+          {pairingFailureText(error, lastMethod.current)}
         </Text>
       ) : null}
       {error !== undefined && handled.current !== undefined ? (
