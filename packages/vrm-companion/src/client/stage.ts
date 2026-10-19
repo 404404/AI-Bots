@@ -209,6 +209,9 @@ export function mountStage(
     const daylight = room?.update(reduced.matches ? 0 : delta);
     if (daylight) {
       ambient.intensity = 0.14 + daylight.daylight * 0.46 + daylight.twilight * 0.2;
+      ambient.color
+        .setHex(0x5c6fb0)
+        .lerp(new Color(0xffe7cf), Math.min(1, daylight.daylight + daylight.twilight));
       fill.intensity = 0.18 + daylight.daylight * 0.67 + daylight.twilight * 0.35;
       key.intensity = 0.28 + daylight.daylight * 0.82 + daylight.twilight * 0.25;
       key.color
@@ -384,7 +387,11 @@ export function mountStage(
           const a = upper.getWorldPosition(new Vector3());
           const b = lower.getWorldPosition(new Vector3());
           const c = hand.getWorldPosition(new Vector3());
-          const keys = new Vector3(side === 'left' ? 0.72 : 0.42, room.tableY + 0.1 + typing, 0.16);
+          const keys = new Vector3(
+            side === 'left' ? 0.66 : 0.48,
+            room.tableY + 0.09 + typing,
+            0.13,
+          );
           const free = side === 'right' && rightGoal ? rightWeight : 0;
           if (free > 0 && rightGoal) keys.lerp(rightGoal, free);
           const goal = c.clone().lerp(keys, reach);

@@ -1,8 +1,11 @@
-import { Box3, Group, Mesh, MeshStandardMaterial, Texture } from 'three';
+import { Box3, Group, Mesh, MeshStandardMaterial, MeshToonMaterial, Texture } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMUtils } from '@pixiv/three-vrm';
 
-export function createDecor(tableY: number) {
+export function createDecor(
+  tableY: number,
+  toon: (color: number, extra: { map: Texture | null }) => MeshToonMaterial,
+) {
   const root = new Group();
   let disposed = false;
   let loaded = 0;
@@ -26,7 +29,7 @@ export function createDecor(tableY: number) {
     for (const image of images) image.close();
   };
   const placements = [
-    { name: 'book_set', scale: 0.62, x: -0.65, y: tableY + 0.05, z: 0.24, yaw: Math.PI },
+    { name: 'book_set', scale: 0.36, x: -0.62, y: tableY + 0.045, z: 0.3, yaw: Math.PI },
     { name: 'shelf_B_small_decorated', scale: 0.65, x: 1.69, y: 0, z: -0.72, yaw: 0 },
   ];
   for (const placement of placements) {
@@ -49,11 +52,15 @@ export function createDecor(tableY: number) {
         model.traverse((object) => {
           if (!(object instanceof Mesh)) return;
           object.castShadow = object.receiveShadow = true;
-          for (const material of Array.isArray(object.material)
-            ? object.material
-            : [object.material]) {
-            if (material instanceof MeshStandardMaterial) material.roughness = 0.82;
-          }
+          const convert = (material: import('three').Material) => {
+            if (!(material instanceof MeshStandardMaterial)) return material;
+            const converted = toon(material.color.getHex(), { map: material.map });
+            material.dispose();
+            return converted;
+          };
+          object.material = Array.isArray(object.material)
+            ? object.material.map(convert)
+            : convert(object.material);
         });
         root.add(model);
         loaded++;

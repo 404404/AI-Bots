@@ -29,9 +29,9 @@ export function createChair(seatHeight: number, materials: ReturnType<typeof cre
     bevelEnabled: true,
     bevelThickness: 0.025,
     bevelSize: 0.024,
-    bevelSegments: 3,
+    bevelSegments: 1,
     steps: 1,
-    curveSegments: 10,
+    curveSegments: 5,
   });
   const vertices = geometry.getAttribute('position');
   for (let i = 0; i < vertices.count; i++) {
@@ -56,7 +56,7 @@ export function createChair(seatHeight: number, materials: ReturnType<typeof cre
     );
   root.add(
     new Mesh(
-      new TubeGeometry(new CatmullRomCurve3(seamPoints, true), 96, 0.004, 5, true),
+      new TubeGeometry(new CatmullRomCurve3(seamPoints, true), 40, 0.004, 4, true),
       materials.red,
     ),
   );
@@ -69,7 +69,7 @@ export function createChair(seatHeight: number, materials: ReturnType<typeof cre
     d: number,
     material = materials.fabric,
   ) => {
-    const mesh = new Mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(0.04, h / 3)), material);
+    const mesh = new Mesh(new RoundedBoxGeometry(w, h, d, 1, Math.min(0.04, h / 3)), material);
     mesh.position.set(x, y, z);
     root.add(mesh);
     return mesh;
