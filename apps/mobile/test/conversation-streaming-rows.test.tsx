@@ -146,8 +146,18 @@ vi.mock('../src/ui/chat/header-chrome', () => ({
   ),
 }));
 vi.mock('../src/ui/primitives/keyboard-frame', () => ({
-  KeyboardChatFrame: ({ children, composer }: { children: ReactNode; composer: ReactNode }) => (
+  useListBottomSafeArea: () => 0,
+  KeyboardChatFrame: ({
+    children,
+    composer,
+    background,
+  }: {
+    children: ReactNode;
+    composer: ReactNode;
+    background?: ReactNode;
+  }) => (
     <div>
+      <div data-testid="chat-background">{background === undefined ? 'none' : 'view'}</div>
       <div data-testid="chat-content">{children}</div>
       <div data-testid="chat-controls">{composer}</div>
     </div>

@@ -100,8 +100,18 @@ vi.mock('../src/ui/chat/header-chrome', () => ({
   ),
 }));
 vi.mock('../src/ui/primitives/keyboard-frame', () => ({
-  KeyboardChatFrame: ({ children, composer }: { children: ReactNode; composer: ReactNode }) => (
+  useListBottomSafeArea: () => 34,
+  KeyboardChatFrame: ({
+    children,
+    composer,
+    background,
+  }: {
+    children: ReactNode;
+    composer: ReactNode;
+    background?: ReactNode;
+  }) => (
     <div>
+      <div data-testid="chat-background">{background === undefined ? 'none' : 'view'}</div>
       <div data-testid="chat-content">{children}</div>
       <div data-testid="chat-controls">{composer}</div>
     </div>
@@ -328,5 +338,29 @@ describe('missing conversation navigation', () => {
     const view = await render({ kind: 'dm', slug: 'gone' });
     expect(view.textContent).toContain(t.pairAgain);
     expect(view.textContent).not.toContain(t.backToChats);
+  });
+});
+
+describe('chat list chrome', () => {
+  it('keeps the list first under the header and cancels the automatic bottom safe area', async () => {
+    state.history = ['/dm/gone'];
+    const view = await render({ kind: 'dm', slug: 'gone' });
+    expect(view.querySelector('[data-testid="chat-background"]')!.textContent).toBe('none');
+    const list = view.querySelector<HTMLElement>('[data-testid="chat-list"]')!;
+    expect(list.dataset['insetBottom']).toBe('-34');
+    expect(list.dataset['dismiss']).toBe('on-drag');
+  });
+
+  it('dismisses the keyboard interactively on iOS', async () => {
+    const os = Platform.OS;
+    Object.assign(Platform, { OS: 'ios' });
+    try {
+      state.history = ['/dm/gone'];
+      const view = await render({ kind: 'dm', slug: 'gone' });
+      const list = view.querySelector<HTMLElement>('[data-testid="chat-list"]')!;
+      expect(list.dataset['dismiss']).toBe('interactive');
+    } finally {
+      Object.assign(Platform, { OS: os });
+    }
   });
 });

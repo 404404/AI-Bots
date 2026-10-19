@@ -93,7 +93,7 @@ import { OpenFullClientButton } from '../open-full-client';
 import { leaveScreen } from '../shell/leave-screen';
 import { Text } from '../primitives/text';
 import { MarkdownViewportContext } from '../markdown-viewport';
-import { KeyboardChatFrame } from '../primitives/keyboard-frame';
+import { KeyboardChatFrame, useListBottomSafeArea } from '../primitives/keyboard-frame';
 import { t } from '../strings';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
@@ -236,6 +236,7 @@ function ChatConversation({
   const router = useRouter();
   const headerOverlap = useHeaderOverlap();
   const { width: windowWidth } = useWindowDimensions();
+  const listSafeArea = useListBottomSafeArea();
   const { client, inbox, saved } = useHostSession();
   const host = useHostSnapshot(client, focused);
   const dm = place.kind === 'dm';
@@ -735,8 +736,12 @@ function ChatConversation({
       />
       <KeyboardChatFrame
         onMount={screenRef}
-        backgroundColor={theme.color.base}
-        background={<ChatBackground choice={background} imageUri={backgroundImageUri} />}
+        backgroundColor={background.kind === 'color' ? background.color : theme.color.base}
+        background={
+          background.kind === 'image' ? (
+            <ChatBackground choice={background} imageUri={backgroundImageUri} />
+          ) : undefined
+        }
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
           <View>
@@ -843,6 +848,7 @@ function ChatConversation({
                 removeClippedSubviews={false}
                 style={{ flex: 1, opacity: latest.ready || rows.length === 0 ? 1 : 0 }}
                 contentInsetAdjustmentBehavior="automatic"
+                contentInset={{ bottom: -listSafeArea }}
                 automaticallyAdjustsScrollIndicatorInsets
                 scrollToOverflowEnabled
                 contentContainerStyle={{
@@ -880,7 +886,7 @@ function ChatConversation({
                   jump();
                 }}
                 scrollEventThrottle={32}
-                keyboardDismissMode="interactive"
+                keyboardDismissMode={ios ? 'interactive' : 'on-drag'}
                 keyboardShouldPersistTaps="handled"
                 ListHeaderComponent={
                   snapshot.loadingOlder ? (

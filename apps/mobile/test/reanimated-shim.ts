@@ -11,10 +11,16 @@ const FlatList = (props: {
   ListHeaderComponent?: ReactNode;
   ListFooterComponent?: ReactNode;
   ListEmptyComponent?: ReactNode;
+  contentInset?: { bottom?: number };
+  keyboardDismissMode?: string;
 }) =>
   createElement(
     'div',
-    null,
+    {
+      'data-testid': 'chat-list',
+      'data-inset-bottom': props.contentInset?.bottom,
+      'data-dismiss': props.keyboardDismissMode,
+    },
     props.ListHeaderComponent ?? null,
     props.data.length === 0 ? (props.ListEmptyComponent ?? null) : null,
     ...props.data.map((row) =>
