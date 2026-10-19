@@ -1,15 +1,7 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
-vi.mock('react-native', async () => ({
-  ...(await import('./react-native-shim')),
-  Platform: {
-    OS: 'android',
-    select: (o: { android?: unknown; default?: unknown }) => o.android ?? o.default,
-  },
-}));
-vi.mock('../src/ui/shell/icons', () => ({ ChevronRightIcon: () => null }));
 import { androidSettings } from '../src/ui/design/tokens';
-import { segmentCorners } from '../src/ui/primitives/settings-row';
+import { segmentCorners } from '../src/ui/design/segment-corners';
 
 it('rounds the outer corners of a segmented list and keeps inner corners soft', () => {
   expect(androidSettings.listRadius).toBe(16);

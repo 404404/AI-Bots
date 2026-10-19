@@ -11,7 +11,7 @@ import type { LayerName } from '../design/layers';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { androidSettings, space } from '../design/tokens';
 import { RadioMark } from './radio-mark';
-import { segmentCorners } from './settings-row';
+import { segmentCorners } from '../design/segment-corners';
 import { Text } from './text';
 
 const LABEL_SIZE = 14;

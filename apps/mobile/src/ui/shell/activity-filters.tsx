@@ -8,7 +8,7 @@ import { useDesignTheme } from '../design/theme';
 import { androidSettings, edge, radius, space } from '../design/tokens';
 import { DrawerHeader } from '../primitives/drawer-header';
 import { RadioMark } from '../primitives/radio-mark';
-import { segmentCorners } from '../primitives/settings-row';
+import { segmentCorners } from '../design/segment-corners';
 import { Text } from '../primitives/text';
 import { Toggle } from '../primitives/toggle';
 import { CheckIcon } from './icons';

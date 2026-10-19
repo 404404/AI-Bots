@@ -8,17 +8,7 @@ import { androidSettings, edge, radius, space } from '../design/tokens';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { ChevronRightIcon } from '../shell/icons';
 import { Text } from './text';
-
-export function segmentCorners(first: boolean, last: boolean) {
-  const top = first ? androidSettings.listRadius : androidSettings.innerRadius;
-  const bottom = last ? androidSettings.listRadius : androidSettings.innerRadius;
-  return {
-    borderTopLeftRadius: top,
-    borderTopRightRadius: top,
-    borderBottomLeftRadius: bottom,
-    borderBottomRightRadius: bottom,
-  };
-}
+import { segmentCorners } from '../design/segment-corners';
 
 function SettingsFrame({
   onPress,
