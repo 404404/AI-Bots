@@ -10,6 +10,8 @@ import { Text } from '../primitives/text';
 import { t } from '../strings';
 import { GroupMark } from './group-mark';
 import { countBadge, shortTime, titleOf, type Conversation } from './conversations';
+import type { ConversationAction, ConversationActionKey } from './conversation-actions';
+import { ConversationSwipe } from './conversation-swipe';
 
 const AVATAR = 48;
 const RING = 6;
@@ -20,10 +22,14 @@ export function ConversationRow({
   row,
   now,
   onPress,
+  actions = [],
+  onAction,
 }: {
   row: Conversation;
   now: Date;
   onPress?: () => void;
+  actions?: readonly ConversationAction[];
+  onAction?: (key: ConversationActionKey) => void;
 }) {
   const title = titleOf(row);
   const busy = row.kind === 'bot' && (row.bot.state === 'thinking' || row.bot.state === 'working');
@@ -47,24 +53,29 @@ export function ConversationRow({
   ]
     .filter((part) => part !== undefined)
     .join(', ');
+  const act = onAction ?? (() => undefined);
   return (
-    <ConversationRowFrame
-      title={title}
-      source="computer"
-      label={label}
-      preview={preview}
-      time={time}
-      busy={busy}
-      badge={badge}
-      onPress={onPress}
-      avatar={
-        row.kind === 'bot' ? (
-          <BotAvatar bot={row.bot} size={AVATAR} />
-        ) : (
-          <ConversationGroupAvatar avatar={row.channel.avatar} />
-        )
-      }
-    />
+    <ConversationSwipe actions={onAction ? actions : []} onAction={act}>
+      <ConversationRowFrame
+        actions={onAction ? actions : []}
+        onAction={act}
+        title={title}
+        source="computer"
+        label={label}
+        preview={preview}
+        time={time}
+        busy={busy}
+        badge={badge}
+        onPress={onPress}
+        avatar={
+          row.kind === 'bot' ? (
+            <BotAvatar bot={row.bot} size={AVATAR} />
+          ) : (
+            <ConversationGroupAvatar avatar={row.channel.avatar} />
+          )
+        }
+      />
+    </ConversationSwipe>
   );
 }
 
@@ -94,7 +105,11 @@ export function ConversationRowFrame({
   avatar,
   onPress,
   disabled = false,
+  actions = [],
+  onAction,
 }: {
+  actions?: readonly ConversationAction[];
+  onAction?: (key: ConversationActionKey) => void;
   title: string;
   source: 'computer' | 'cloud';
   label: string;
@@ -113,6 +128,10 @@ export function ConversationRowFrame({
       disabled={disabled || onPress === undefined}
       accessibilityRole={onPress === undefined ? undefined : 'button'}
       accessibilityLabel={label}
+      accessibilityActions={actions.map((action) => ({ name: action.key, label: action.label }))}
+      onAccessibilityAction={(event) =>
+        onAction?.(event.nativeEvent.actionName as ConversationActionKey)
+      }
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',

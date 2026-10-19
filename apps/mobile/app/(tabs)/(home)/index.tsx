@@ -19,6 +19,12 @@ import { cloudViewScope } from '../../../src/cloud/workspace-directory';
 import { cloudError } from '../../../src/cloud/client';
 import type { CloudConversation } from '../../../src/cloud/conversations';
 import { ConversationRow } from '../../../src/ui/chat/conversation-row';
+import {
+  conversationActions,
+  conversationChannelId,
+  runConversationAction,
+} from '../../../src/ui/chat/conversation-actions';
+import { showAppDialog } from '../../../src/ui/primitives/app-dialog';
 import { conversations, searchKey, type Conversation } from '../../../src/ui/chat/conversations';
 import { CloudConversationRow } from '../../../src/ui/chat/cloud-conversation-row';
 import { useConversationFilter } from '../../../src/host/native-conversation-filter';
@@ -331,6 +337,19 @@ const HomeContent = memo(function HomeContent({
                       row={item.conversation}
                       now={new Date()}
                       onPress={() => openConversation(router, item.conversation, saved?.hostId)}
+                      actions={conversationActions(item.conversation, {
+                        pinned: item.pinned,
+                        hostMuted:
+                          snapshot.roster?.arrangement?.muted?.includes(
+                            conversationChannelId(item.conversation) ?? '',
+                          ) === true,
+                      })}
+                      onAction={(key) => {
+                        if (client === undefined) return;
+                        runConversationAction(client, inbox, item.conversation, key).catch(() =>
+                          showAppDialog(t.rowActions.failed, undefined, [{ text: t.done }]),
+                        );
+                      }}
                     />
                   ) : (
                     <CloudConversationRow

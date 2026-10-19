@@ -46,6 +46,7 @@ export interface RosterBot {
   dmChannelId?: string;
   preview?: string;
   previewAt?: string;
+  latestMessageId?: string;
 }
 
 export interface RosterChannel {
@@ -59,6 +60,7 @@ export interface RosterChannel {
   pendingJoins?: Array<{ id: string; botSlug: string }>;
   preview?: string;
   previewAt?: string;
+  latestMessageId?: string;
 }
 
 export interface RosterSection {
@@ -201,12 +203,17 @@ function record(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
 
-function previewOf(channel: ChannelListItem | undefined): { preview?: string; previewAt?: string } {
+function previewOf(channel: ChannelListItem | undefined): {
+  preview?: string;
+  previewAt?: string;
+  latestMessageId?: string;
+} {
   const message = channel?.latestMessage;
   if (message === undefined) return {};
   return {
     preview: message.body.replace(/\s+/gu, ' ').trim().slice(0, 140),
     previewAt: message.at,
+    latestMessageId: message.id,
   };
 }
 

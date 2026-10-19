@@ -620,6 +620,14 @@ const en = {
   searchPlaceholder: 'Search Bots and Channels',
   searchNoMatch: (query: string) => `No Bot or Channel matches “${query}”.`,
   pinnedSection: 'Pinned',
+  rowActions: {
+    pin: 'Pin',
+    unpin: 'Unpin',
+    read: 'Mark as read',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    failed: 'Could not update this conversation.',
+  },
   sectionLabel: (name: string, count: number, needsYou: number, unread = 0) =>
     [name, count === 1 ? '1 conversation' : `${count} conversations`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? 'needs you' : `${needsYou} need you`])
@@ -1601,6 +1609,14 @@ const zh: typeof en = {
   searchPlaceholder: '搜索 Bot 和频道',
   searchNoMatch: (query: string) => `没有名称包含“${query}”的 Bot 或频道。`,
   pinnedSection: '已置顶',
+  rowActions: {
+    pin: '置顶',
+    unpin: '取消置顶',
+    read: '标为已读',
+    mute: '静音',
+    unmute: '取消静音',
+    failed: '无法更新这个会话。',
+  },
   sectionLabel: (name: string, count: number, needsYou: number, unread = 0) =>
     [name, `${count} 个对话`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? '等你处理' : `${needsYou} 项等你处理`])
