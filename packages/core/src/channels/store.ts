@@ -386,6 +386,7 @@ export interface ChannelStore {
   }): ChannelMessage | undefined;
   rename(id: string, name: string): ChannelRecord | undefined;
   previewAllBotMention(id: string): AllBotPreview;
+  grantRequestResolution?(channelId: string, requestMessageId: string): ChannelMessage | undefined;
   appendMessageOnce(
     id: string,
     message: ChannelMessage,
@@ -915,6 +916,11 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
         channel,
         options.isBotActive ?? (() => false),
         options.botDisplayName ?? (() => undefined),
+      );
+    },
+    grantRequestResolution(channelId, requestMessageId) {
+      return this.readMessages(channelId).find(
+        (message) => message.grantRequestResolution?.requestMessageId === requestMessageId,
       );
     },
     appendMessageOnce(id, message, preview, origin, canCommit) {

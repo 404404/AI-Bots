@@ -39,52 +39,58 @@ describe('locked downstream theme composition', () => {
     const adapted = adaptZoomTheme(source);
     expect(adapted).toContain('await fontKeys.dispose()');
     expect(adapted).toContain('if (alive) fontKeys = installFontKeys()');
-    expect(adapted).toContain("dataset.platform === 'darwin'");
+    expect(adapted).toContain(
+      "['darwin', 'win32'].includes(document.documentElement.dataset.platform)",
+    );
     expect(adapted).toContain('this.adjustFontSizes(delta)');
     expect(source).not.toContain('__botharnessWindowZoomCompatibility');
     expect(() => new Function(adapted)).not.toThrow();
   });
 });
 
-it('leases native font keys only for the actual qualified boot release', async () => {
-  const adapted = adaptZoomTheme(readFileSync(path, 'utf8'));
-  const start = adapted.indexOf('const installFontKeys =');
-  const marker = "}, 'botharness: desktop zoom compatibility ownership');";
-  const end = adapted.indexOf('}', adapted.indexOf(marker, start) + marker.length) + 1;
-  const mount = new Function(
-    'ctx',
-    'location',
-    'document',
-    'window',
-    'installFontSizeShortcuts',
-    adapted.slice(start, end),
-  );
-  for (const version of ['0.2.1-rc.2', '0.2.0-rc.2', '0.2.1-rc.3', undefined]) {
-    const window = { __DSH_BOOT__: { release: { version } } };
-    const cleanups = [];
-    const dispose = vi.fn(async () => {});
-    const install = vi.fn(() => ({ dispose }));
-    mount(
-      { effect: (effect) => cleanups.push(effect()) },
-      { protocol: 'dsh-app:', hostname: 'app' },
-      { documentElement: { dataset: { platform: 'darwin' } } },
-      window,
-      install,
+it.each(['darwin', 'win32', 'linux'])(
+  'leases native font keys only for the actual qualified boot release on %s',
+  async (platform) => {
+    const adapted = adaptZoomTheme(readFileSync(path, 'utf8'));
+    const start = adapted.indexOf('const installFontKeys =');
+    const marker = "}, 'botharness: desktop zoom compatibility ownership');";
+    const end = adapted.indexOf('}', adapted.indexOf(marker, start) + marker.length) + 1;
+    const mount = new Function(
+      'ctx',
+      'location',
+      'document',
+      'window',
+      'installFontSizeShortcuts',
+      adapted.slice(start, end),
     );
-    expect(install).toHaveBeenCalledOnce();
-    if (version !== '0.2.1-rc.2') {
+    for (const version of ['0.2.1-rc.2', '0.2.0-rc.2', '0.2.1-rc.3', undefined]) {
+      const window = { __DSH_BOOT__: { release: { version } } };
+      const cleanups = [];
+      const dispose = vi.fn(async () => {});
+      const install = vi.fn(() => ({ dispose }));
+      mount(
+        { effect: (effect) => cleanups.push(effect()) },
+        { protocol: 'dsh-app:', hostname: 'app' },
+        { documentElement: { dataset: { platform } } },
+        window,
+        install,
+      );
+      expect(install).toHaveBeenCalledOnce();
+      if (version !== '0.2.1-rc.2' || platform === 'linux') {
+        expect(window.__botharnessWindowZoomCompatibility).toBeUndefined();
+        expect(dispose).not.toHaveBeenCalled();
+        continue;
+      }
+      const lease = window.__botharnessWindowZoomCompatibility;
+      expect(lease.platform).toBe(platform === 'win32' ? 'windows' : 'macos');
+      const release = await lease.acquire();
+      expect(dispose).toHaveBeenCalledOnce();
+      release();
+      release();
+      expect(install).toHaveBeenCalledTimes(2);
+      cleanups.forEach((cleanup) => cleanup());
       expect(window.__botharnessWindowZoomCompatibility).toBeUndefined();
-      expect(dispose).not.toHaveBeenCalled();
-      continue;
+      await expect(lease.acquire()).rejects.toThrow('unavailable');
     }
-    const lease = window.__botharnessWindowZoomCompatibility;
-    const release = await lease.acquire();
-    expect(dispose).toHaveBeenCalledOnce();
-    release();
-    release();
-    expect(install).toHaveBeenCalledTimes(2);
-    cleanups.forEach((cleanup) => cleanup());
-    expect(window.__botharnessWindowZoomCompatibility).toBeUndefined();
-    await expect(lease.acquire()).rejects.toThrow('unavailable');
-  }
-});
+  },
+);

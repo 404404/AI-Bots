@@ -1,3 +1,7 @@
+import {
+  approveGrantRequest,
+  type GrantRequestApprovalResult,
+} from '../workspaces/grant-requests.js';
 import { MemoryImageError } from '../memory/image.js';
 import {
   MIN_IDLE_MS,
@@ -658,6 +662,7 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<{ grant: WorkspaceGrant; created?: boolean }>>;
   grantRevoke(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
+  grantRequestApprove(payload: unknown): Promise<BridgeResult<GrantRequestApprovalResult>>;
   grantWriteSet(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
   assignmentAccessGet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
   assignmentAccessSet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
@@ -5384,6 +5389,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         throw error;
       }
     },
+    async grantRequestApprove(payload) {
+      const parsed = z
+        .object({
+          slug: z.string().min(1),
+          channelId: z.string().min(1),
+          requestMessageId: z.string().min(1),
+          workspaceId: z.string().min(1),
+          acknowledgeReadWrite: z.literal(true),
+        })
+        .safeParse(asObject(payload));
+      if (!parsed.success)
+        return invalidInput(
+          'Bot, Channel, request, Workspace and explicit read/write confirmation are required',
+        );
+      if (!deps.grants) return unavailable();
+      try {
+        return {
+          ok: true,
+          value: await approveGrantRequest({ ...deps, grants: deps.grants }, parsed.data),
+        };
+      } catch (error) {
+        if (error instanceof WorkspaceGrantError)
+          return { ok: false, error: { code: error.code, message: error.message } };
+        throw error;
+      }
+    },
     grantWriteSet(payload) {
       const source = asObject(payload);
       const slug = asNonBlank(source, 'slug');
@@ -5508,6 +5539,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         channelId === undefined ||
         messageId === undefined ||
         (outcome !== 'allowed-once' &&
+          outcome !== 'allowed-always-tool' &&
           outcome !== 'allowed-always-exact' &&
           outcome !== 'allowed-always-all' &&
           outcome !== 'allowed-always-kind' &&
@@ -5524,6 +5556,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (request === undefined) {
         return invalidInput('Unknown tool approval request');
       }
+      if (outcome === 'allowed-always-tool' && request.allowAlways !== true)
+        return invalidInput('Always allow is unavailable for this request');
       if (outcome === 'allowed-always-kind' && request.toolName !== 'secret_cli')
         return invalidInput('allowed-always-kind applies only to a secret_cli approval');
       const accepted = await deps.toolApproval?.decide(

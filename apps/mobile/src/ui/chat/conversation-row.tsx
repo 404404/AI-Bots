@@ -57,6 +57,7 @@ export function ConversationRow({
   return (
     <ConversationSwipe actions={onAction ? actions : []} onAction={act}>
       <ConversationRowFrame
+        testID={`conversation-row-${row.key}`}
         actions={onAction ? actions : []}
         onAction={act}
         title={title}
@@ -107,6 +108,7 @@ export function ConversationRowFrame({
   disabled = false,
   actions = [],
   onAction,
+  testID,
 }: {
   actions?: readonly ConversationAction[];
   onAction?: (key: ConversationActionKey) => void;
@@ -120,10 +122,12 @@ export function ConversationRowFrame({
   avatar: ReactNode;
   onPress?: (() => void) | undefined;
   disabled?: boolean;
+  testID?: string;
 }) {
   const theme = useDesignTheme();
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || onPress === undefined}
       accessibilityRole={onPress === undefined ? undefined : 'button'}

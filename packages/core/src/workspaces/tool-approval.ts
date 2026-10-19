@@ -41,6 +41,7 @@ export interface ToolApprovalRequestCard {
   input: string;
   externalDecision?: 'operation' | 'web-only' | 'each-use';
   botCreatePreview?: BotCreatePreview;
+  allowAlways?: boolean;
 }
 
 export interface ToolApprovalNotice extends ToolApprovalRequestCard {
@@ -54,7 +55,12 @@ export interface ToolApprovalNotice extends ToolApprovalRequestCard {
 export interface ToolApprovalDecision {
   requestMessageId: string;
   actor?: ToolApprovalActor;
-  outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected';
+  outcome:
+    | 'allowed-once'
+    | 'allowed-always-tool'
+    | 'allowed-always-exact'
+    | 'allowed-always-all'
+    | 'rejected';
 }
 
 export interface ToolAutoApproval {
@@ -178,6 +184,7 @@ export class ChannelToolApproval {
     | { changed(slug: string, count: number): void; warn(message: string): void }
     | undefined;
   readonly #autoApproval: ToolAutoApproval | undefined;
+  readonly #fullAccess: ((sessionId: string) => boolean) | undefined;
   readonly #reviewRejections = new Map<string, string>();
   readonly #breakers = new Map<string, Breaker>();
   readonly #overrides = new Set<string>();
@@ -196,7 +203,9 @@ export class ChannelToolApproval {
     ) => AssignmentApprovalWaitLease | undefined,
     askChannel?: (sessionId: string) => string | undefined,
     autoApproval?: ToolAutoApproval,
+    fullAccess?: (sessionId: string) => boolean,
   ) {
+    this.#fullAccess = fullAccess;
     this.#autoApproval = autoApproval;
     this.#askChannel = askChannel;
     this.#channels = channels;
@@ -284,6 +293,15 @@ export class ChannelToolApproval {
       !policyChange &&
       !tracked.requireHumanReview &&
       tracked.externalDecision !== 'each-use' &&
+      this.#fullAccess?.(tracked.sessionId) === true
+    ) {
+      tracked.authorized = () => this.#fullAccess?.(tracked.sessionId) === true;
+      return 'allowed-once';
+    }
+    if (
+      !policyChange &&
+      !tracked.requireHumanReview &&
+      tracked.externalDecision !== 'each-use' &&
       this.#rules?.match(tracked) !== undefined
     ) {
       tracked.automatic = true;
@@ -327,6 +345,11 @@ export class ChannelToolApproval {
         cwd: tracked.cwd,
         input: tracked.input,
         externalDecision: tracked.externalDecision ?? 'operation',
+        allowAlways:
+          !policyChange &&
+          !tracked.requireHumanReview &&
+          tracked.device === undefined &&
+          (tracked.externalDecision !== 'each-use' || tracked.rememberable === true),
         ...(tracked.botCreatePreview === undefined
           ? {}
           : { botCreatePreview: tracked.botCreatePreview }),
@@ -528,11 +551,16 @@ export class ChannelToolApproval {
     const eachUse = pending.notice.externalDecision === 'each-use';
     const remember =
       eachUse &&
-      outcome === 'allowed-always-exact' &&
+      (outcome === 'allowed-always-exact' || outcome === 'allowed-always-tool') &&
       this.#tracked.get(callKey(pending.sessionId, pending.callId))?.rememberable === true;
     if (
       eachUse &&
       (external !== undefined || (!remember && !['allowed-once', 'rejected'].includes(outcome)))
+    )
+      return false;
+    if (
+      outcome === 'allowed-always-tool' &&
+      (external !== undefined || pending.notice.allowAlways !== true)
     )
       return false;
     const secretCli = pending.notice.toolName === 'secret_cli';
@@ -574,15 +602,25 @@ export class ChannelToolApproval {
         this.#settle(messageId, 'unavailable');
         return false;
       }
+      if (
+        (this.#changesPolicy(tracked) || tracked.requireHumanReview) &&
+        outcome !== 'allowed-once' &&
+        outcome !== 'rejected'
+      )
+        return false;
       const kind: ToolApprovalRule['kind'] | undefined = eachUse
         ? undefined
-        : outcome === 'allowed-always-exact'
+        : outcome === 'allowed-always-tool'
           ? secretCli
             ? 'secret-cli'
-            : 'exact'
-          : outcome === 'allowed-always-all'
-            ? 'all-opaque'
-            : undefined;
+            : 'tool'
+          : outcome === 'allowed-always-exact'
+            ? secretCli
+              ? 'secret-cli'
+              : 'exact'
+            : outcome === 'allowed-always-all'
+              ? 'all-opaque'
+              : undefined;
       const externalKind = kind === 'secret-cli' ? 'exact' : kind;
       const ruleInput =
         kind === 'secret-cli'
@@ -624,9 +662,11 @@ export class ChannelToolApproval {
               ? '已批准并记住这个服务'
               : kind === undefined
                 ? '已批准这一次工具调用'
-                : kind === 'secret-cli'
-                  ? '已总是允许此类命令并批准这一次调用'
-                  : '已保存自动批准规则并批准这一次调用',
+                : kind === 'tool'
+                  ? '已始终允许此工具并批准这一次调用'
+                  : kind === 'secret-cli'
+                    ? '已总是允许此类命令并批准这一次调用'
+                    : '已保存自动批准规则并批准这一次调用',
         replyTo: messageId,
         toolApprovalDecision: {
           requestMessageId: messageId,

@@ -40,6 +40,8 @@ the credential reference, preserves other Provider configuration, and selects th
 model without copying any Profile credential store. It retains DSH's native request attribution
 and real Session handling. Existing Profiles and independently launched Hosts are untouched.
 
+A per-run `BOTHARNESS_AX_MODEL=<installed-model-id>` selects a different model for that launch only; the launcher still verifies the selected id against its pinned native catalog. This does not edit the shared selection or another Host. Use it when an older saved model id is no longer in the pinned catalog.
+
 A per-run `OPENCODE_GO_API_KEY` environment override takes precedence after setup. The previous
 DeepSeek setup remains the fallback when no AX selection exists. To rotate the shared selection,
 inspect and remove the private file yourself, then rerun setup; active Hosts keep their inherited

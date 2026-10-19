@@ -93,7 +93,7 @@ describe('Workspace Grant execution boundary', () => {
         workspaceId: 'workspace-1',
         primaryCwd: cwd,
         mode: 'danger-full-access',
-        approval: 'never',
+        approval: 'ask',
         presetRevision: 1,
       },
     });
@@ -293,7 +293,7 @@ describe('Workspace Grant execution boundary', () => {
       get: () => ({ mode: 'danger-full-access', scope: 'chat' }),
     };
     state.resolvePolicy.mockReturnValue({ mode: 'danger-full-access' });
-    state.overrideOf.mockReturnValue('never');
+    state.overrideOf.mockReturnValue('ask');
     expect(gate()).toBeUndefined();
   });
 
@@ -376,12 +376,12 @@ describe('Workspace Grant execution boundary', () => {
         workspaceId: 'workspace-1',
         primaryCwd: cwd,
         mode: 'danger-full-access',
-        approval: 'never',
+        approval: 'ask',
         presetRevision: 1,
       },
     });
     state.resolvePolicy.mockReturnValue({ mode: 'danger-full-access' });
-    state.overrideOf.mockReturnValue('never');
+    state.overrideOf.mockReturnValue('ask');
     expect(
       grantExecutionDenial(state.core, state.assignment, state.policy, state.approval),
     ).toBeUndefined();
@@ -540,13 +540,13 @@ describe('Workspace Grant execution boundary', () => {
     scope = 'chat';
     expect(orchestratorPermission(core, botSlug)).toEqual({
       mode: 'danger-full-access',
-      approval: 'never',
+      approval: 'ask',
     });
     expect(grantExecutionDenial(core, orchestrator, state.policy, state.approval)).toMatch(
       /differs from this PersonaBot's access setting/,
     );
     state.resolvePolicy.mockReturnValue({ mode: 'danger-full-access' });
-    state.overrideOf.mockReturnValue('never');
+    state.overrideOf.mockReturnValue('ask');
     expect(grantExecutionDenial(core, orchestrator, state.policy, state.approval)).toBeUndefined();
     expect(
       grantToolExecutionDenial(core, orchestrator, state.policy, state.approval, 'bash', {

@@ -166,7 +166,7 @@ async function type(view: HTMLElement, text: string): Promise<void> {
 
 const rows = (view: HTMLElement) =>
   [...view.querySelectorAll('button')]
-    .filter((node) => !node.closest('[hidden]') && !node.dataset.testid)
+    .filter((node) => !node.closest('[hidden]') && !node.dataset.testid?.startsWith('pager-'))
     .filter(
       (node) =>
         ![t.cloudJoin.newOrJoin, t.allEnvironments, 'studio', t.closeSearch].includes(

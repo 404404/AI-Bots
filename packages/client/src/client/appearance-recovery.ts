@@ -27,7 +27,7 @@ export async function resetAppearance(
   if (Date.now() > expiresAt) throw new AppearanceError('appearance-request-stale');
   const snapshot = appearance.reset(expectedRevision);
   try {
-    await wallpaper.remove(command.wallpaperRevision, expiresAt);
+    await wallpaper.clear(command.wallpaperRevision, expiresAt);
   } catch {
     await wallpaper.refresh().catch(() => {});
     throw new AppearanceError('appearance-reset-wallpaper-failed');
