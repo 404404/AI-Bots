@@ -302,3 +302,14 @@ Bundle consumes the public `webServer.getOrigin()` and `connection.authenticated
 and writes fresh 0600 machine-local CLI metadata. It adds no listener or product route. Never
 publish its token or private metadata, weaken authentication, or attribute this refusal to the
 feature's Host relay before refreshing the launch credentials.
+
+### Stop the owned desktop before a full linked build
+
+`pnpm build` cleans the Client output directories before writing the new bundles. A running
+linked native Profile can hot-load during that missing-file interval. In the pinned RC, the
+first failed script load can poison the current module-loader generation and leave later
+bundle requests marked as skipped even after files return. Preserve the first crash report,
+finish the build, then restart only that task-owned desktop with the same Profile and user-data
+directory. Stop the owned process before future full builds; never disable third-party Plugins
+or erase the Profile to recover this development sequencing failure. A Client-only iteration
+and an installed immutable product build are separate paths.
