@@ -61,7 +61,7 @@ import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
 import { Composer } from './composer';
 import { EdgeFade, HeaderBackButton } from './header-chrome';
-import { glassHeader, useHeaderOverlap } from './native-header';
+import { barLabelStyle, glassHeader, useHeaderOverlap } from './native-header';
 import { useFollowLatest } from './follow-latest';
 import { useMarkRead } from './mark-read';
 import { useBotNames } from './use-bot-names';
@@ -90,6 +90,7 @@ import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
 import { edgeFade, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
+import { fullClientParams, type FullClientTarget } from '../../host/full-client';
 import { leaveScreen } from '../shell/leave-screen';
 import { Text } from '../primitives/text';
 import { MarkdownViewportContext } from '../markdown-viewport';
@@ -645,7 +646,7 @@ function ChatConversation({
         paddingHorizontal: theme.touch / 2,
       }}
     >
-      <Text strong numberOfLines={1}>
+      <Text strong numberOfLines={1} style={barLabelStyle}>
         {channelDetails.members
           .map(
             (member) =>
@@ -664,12 +665,14 @@ function ChatConversation({
       }
     />
   );
+  const fullClient: FullClientTarget | undefined =
+    slug !== undefined
+      ? { kind: 'dm', slug }
+      : channelId !== undefined
+        ? { kind: 'channel', channelId }
+        : undefined;
   const trailing =
-    slug !== undefined ? (
-      <OpenFullClientButton target={{ kind: 'dm', slug }} bar />
-    ) : channelId !== undefined ? (
-      <OpenFullClientButton target={{ kind: 'channel', channelId }} bar />
-    ) : null;
+    fullClient === undefined ? null : <OpenFullClientButton target={fullClient} bar />;
   const ios = Platform.OS === 'ios';
   const back = <HeaderBackButton plain onPress={leave} />;
   const titleItem = (
@@ -719,12 +722,34 @@ function ChatConversation({
                 headerTitle: '',
                 headerBackVisible: canGoBack,
                 unstable_headerLeftItems: () => [
-                  ...(canGoBack ? [] : [{ type: 'custom' as const, element: back }]),
+                  ...(canGoBack
+                    ? []
+                    : [
+                        {
+                          type: 'button' as const,
+                          label: t.back,
+                          icon: { type: 'sfSymbol' as const, name: 'chevron.left' as const },
+                          onPress: leave,
+                        },
+                      ]),
                   { type: 'spacing' as const, spacing: 0 },
                   { type: 'custom' as const, element: titleItem },
                 ],
                 unstable_headerRightItems: () =>
-                  trailing === null ? [] : [{ type: 'custom' as const, element: trailing }],
+                  fullClient === undefined
+                    ? []
+                    : [
+                        {
+                          type: 'button' as const,
+                          label: t.openFullClient,
+                          icon: { type: 'sfSymbol' as const, name: 'macwindow' as const },
+                          onPress: () =>
+                            router.push({
+                              pathname: '/full-client',
+                              params: fullClientParams(fullClient),
+                            }),
+                        },
+                      ],
               }
             : {
                 headerTitleAlign: 'left' as const,

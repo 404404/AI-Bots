@@ -6,6 +6,7 @@ import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
+import { barLabelStyle } from './native-header';
 
 const AVATAR = 28;
 
@@ -41,7 +42,7 @@ export function ChatTitle({
       })}
     >
       {bot === undefined ? null : <BotAvatar bot={bot} size={AVATAR} ring={false} />}
-      <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
+      <Text strong numberOfLines={1} style={[{ flexShrink: 1 }, barLabelStyle]}>
         {name}
       </Text>
     </Pressable>

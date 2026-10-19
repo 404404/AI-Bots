@@ -5,6 +5,7 @@ import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
+import { barLabelStyle } from './native-header';
 import { GroupMark } from './group-mark';
 
 const MARK = 28;
@@ -41,7 +42,7 @@ export function ChannelTitle({
       })}
     >
       <GroupMark avatar={channel?.avatar} size={MARK} corner={radius.round} />
-      <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
+      <Text strong numberOfLines={1} style={[{ flexShrink: 1 }, barLabelStyle]}>
         {name}
       </Text>
     </Pressable>

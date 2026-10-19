@@ -31,13 +31,24 @@ vi.mock('expo-router', () => ({
       options: {
         headerLeft?: () => ReactNode;
         headerBackVisible?: boolean;
-        unstable_headerLeftItems?: () => Array<{ type: string; element?: ReactNode }>;
+        unstable_headerLeftItems?: () => Array<{
+          type: string;
+          element?: ReactNode;
+          label?: string;
+          onPress?: () => void;
+        }>;
       };
     }) => (
       <header data-back-visible={String(options.headerBackVisible)}>
         {options.unstable_headerLeftItems?.().map((item, index) => (
           <span key={index} data-item={item.type}>
-            {item.element}
+            {item.type === 'button' ? (
+              <button type="button" onClick={item.onPress}>
+                {item.label}
+              </button>
+            ) : (
+              item.element
+            )}
           </span>
         )) ??
           options.headerLeft?.() ??
@@ -87,6 +98,7 @@ vi.mock('../src/host/speech', () => ({
 }));
 vi.mock('../src/ui/chat/native-header', () => ({
   glassHeader: true,
+  barLabelStyle: {},
   useHeaderOverlap: () => 80,
 }));
 vi.mock('../src/ui/chat/header-chrome', () => ({
@@ -312,11 +324,11 @@ describe('missing conversation navigation', () => {
         const header = alone.querySelector('header')!;
         expect(header.dataset['backVisible']).toBe('false');
         expect([...header.children].map((item) => (item as HTMLElement).dataset['item'])).toEqual([
-          'custom',
+          'button',
           'spacing',
           'custom',
         ]);
-        await press(alone, 'Header back');
+        await press(alone, t.back);
         expect(state.history).toEqual(['/']);
         act(() => root?.unmount());
         state.history = ['/activity', route];
