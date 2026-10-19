@@ -177,7 +177,7 @@ export function verifyPackagedProfile(profileDirectory, directory) {
   const digest = providerRuntimeDigest(provider);
   if (
     provenance.source !== productImProvider.upstream.source ||
-    provenance.dsh !== expected.dsh ||
+    provenance.dsh !== productImProvider.upstream.dsh ||
     digest.runtimeFiles !== provenance.compiledOutput.runtimeFiles ||
     digest.runtimeSha256 !== provenance.compiledOutput.runtimeSha256 ||
     digest.runtimeFiles !== expected.providerRuntime.runtimeFiles ||
