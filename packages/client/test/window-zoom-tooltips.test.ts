@@ -56,4 +56,34 @@ describe('qualified desktop tooltip lease', () => {
     release();
     expect(tooltip.style.translate).toBe('2px 3px');
   });
+
+  it('returns a flipped tooltip to its native side on disposal', async () => {
+    const anchor = document.createElement('button');
+    document.body.append(anchor);
+    vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(80, window.innerHeight - 40, 40, 32),
+    );
+    const release = mountZoomTooltips(document);
+    anchor.focus();
+    const tooltip = document.createElement('span');
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.dataset.side = 'bottom';
+    tooltip.dataset.align = 'center';
+    tooltip.style.cssText = `position:fixed;left:100px;top:${window.innerHeight}px;max-width:320px`;
+    vi.spyOn(tooltip, 'getBoundingClientRect').mockImplementation(() => {
+      const [x = 0, y = 0] = tooltip.style.translate
+        .split(' ')
+        .map((value) => Number.parseFloat(value) || 0);
+      return new DOMRect(50 + x, window.innerHeight + y, 100, 40);
+    });
+    document.body.append(tooltip);
+    await vi.waitFor(() => expect(tooltip.dataset.side).toBe('top'));
+    release();
+    expect(tooltip.dataset.side).toBe('bottom');
+    expect(tooltip.style.translate).toBe('');
+    expect(tooltip.style.maxWidth).toBe('320px');
+    expect(tooltip.style.top).toBe(`${window.innerHeight}px`);
+    await new Promise((done) => setTimeout(done, 0));
+    expect(tooltip.dataset.side).toBe('bottom');
+  });
 });

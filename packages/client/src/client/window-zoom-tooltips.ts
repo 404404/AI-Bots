@@ -177,6 +177,8 @@ export function mountZoomTooltips(doc: Document): () => void {
     for (const [node, previous] of owned) {
       node.style.translate = previous.translate;
       node.style.maxWidth = previous.maxWidth;
+      if (previous.side === undefined) delete node.dataset.side;
+      else node.dataset.side = previous.side;
     }
     owned.clear();
   };
