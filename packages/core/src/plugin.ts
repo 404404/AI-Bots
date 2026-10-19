@@ -1537,7 +1537,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         : undefined;
     },
     botBusy: (botSlug) =>
-      core.runtime.hasPendingInbox?.(botSlug) ?? core.runtime.turnRunning?.(botSlug) ?? true,
+      (core.runtime.hasPendingInbox?.(botSlug) ?? true) ||
+      (core.runtime.turnRunning?.(botSlug) ?? true),
     agent: liveAgent,
     measure: (agent) =>
       (
