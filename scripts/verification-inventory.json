@@ -1724,6 +1724,14 @@
       "sha256": "4d06c35370b6a936c644e5f662d33644f30201a3203a92f6fbefebb0cefc0cf4"
     },
     {
+      "path": "scripts/e2e-bot-mode-exit.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.bot-mode.entry"],
+      "reason": "Real isolated Web Client: permanent bottom return, original logo, pointer and keyboard activation, last-mode restoration, moved-rail layout and unsent draft preservation, short window and narrow/wide transitions. Localized light/dark screenshots; no model or native Desktop claim.",
+      "task": 2289,
+      "sha256": "666c5a940eed71f111bbaf5d619fc86ddb072804026efac129a8f3a1f6bd2d62"
+    },
+    {
       "path": "scripts/e2e-panel-workspace.mjs",
       "category": "mapped",
       "behaviors": ["desktop.bot-mode.entry", "desktop.bot-mode.dock"],
