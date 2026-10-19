@@ -5,6 +5,15 @@ import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Text } from './text';
 
+export type SegmentedProps<T extends string> = {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  on?: LayerName;
+  onChange(value: T): void;
+  compact?: boolean;
+};
+
 export function Segmented<T extends string>({
   label,
   options,
@@ -12,14 +21,7 @@ export function Segmented<T extends string>({
   on = 'canvas',
   onChange,
   compact = false,
-}: {
-  label: string;
-  options: readonly { value: T; label: string }[];
-  value: T;
-  on?: LayerName;
-  onChange(value: T): void;
-  compact?: boolean;
-}) {
+}: SegmentedProps<T>) {
   const theme = useDesignTheme();
   const layer = theme.layer[on];
   return (

@@ -56,7 +56,7 @@ Today: `DESIGN.md` requires native pull-down menus on iOS. The Host drawer's ⋯
 
 Build: SwiftUI `ContextMenu` around the item, or Expo Router `Link.Menu` / `Link.Preview` on a link. Android: long-press opens a Material dropdown or bottom sheet.
 
-Today: chat bubbles use the app-drawn Telegram-style message menu (reaction island + action card, `DESIGN.md` → Chat), a deliberate decision. Conversation rows: "long-press opens a native menu".
+Today: a chat bubble long-press opens a native SwiftUI `BottomSheet` (reaction row + grouped actions with leading SF Symbols, `DESIGN.md` → Chat). Conversation rows: "long-press opens a native menu".
 
 ## Sheets
 
