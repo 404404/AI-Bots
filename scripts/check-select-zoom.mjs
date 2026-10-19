@@ -47,7 +47,13 @@ function visit(name) {
     },
   });
 }
-const exports = ['Menu', 'Modal', 'IconChevronDownOutlineRegular', 'IconCloseOutlineRegular'];
+const exports = [
+  'Menu',
+  'Modal',
+  'Tooltip',
+  'IconChevronDownOutlineRegular',
+  'IconCloseOutlineRegular',
+];
 exports.forEach(visit);
 const slices = [...selected.values()]
   .sort((a, b) => a.start - b.start)
@@ -75,13 +81,16 @@ writeFileSync(
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Select } from ${JSON.stringify(selectFile)};
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
+import { mountZoomTooltips } from ${JSON.stringify(join(root, 'packages/client/src/client/window-zoom-tooltips.ts'))};
+window.releaseTooltipAdapter=${args.get('--tooltip-baseline') ? '()=>{}' : 'mountZoomTooltips(document)'};
 import { SettingsDialog } from ${JSON.stringify(join(root, 'packages/client/src/client/ds/settings-dialog.tsx'))};
 const style=document.createElement('style');style.textContent='@bh-stylex-css';document.head.append(style);
 function App(){
- const [config,setConfig]=useState({align:'end',dialog:false});
+ const [config,setConfig]=useState({align:'end',dialog:false,tooltip:false,side:'bottom'});
  const [value,setValue]=useState('a');
  window.fixture={configure:setConfig};
- const content=<><input aria-label="Retained draft" defaultValue="keep this draft"/><div className={config.dialog?'dialog-anchor':'page-anchor'}><Select label="Fixture selector" value={value} options={[{value:'a',label:'First'},{value:'b',label:'Second'},{value:'c',label:'Third'}]} onChange={setValue} align={config.align}/></div></>;
+ const content=config.tooltip?<div style={{position:'fixed',left:'40%',top:'30%'}}><Tooltip label="Fixture tooltip" portal openOnClick side={config.side} align={config.align}><button aria-label="Tooltip anchor">Anchor</button></Tooltip></div>:<><input aria-label="Retained draft" defaultValue="keep this draft"/><div className={config.dialog?'dialog-anchor':'page-anchor'}><Select label="Fixture selector" value={value} options={[{value:'a',label:'First'},{value:'b',label:'Second'},{value:'c',label:'Third'}]} onChange={setValue} align={config.align}/></div></>;
  return config.dialog?<SettingsDialog title="Fixture settings" sections={[{id:'general',label:'General'}]} activeId="general" onSelect={()=>{}} onClose={()=>{window.fixtureOwnerCloseCount=(window.fixtureOwnerCloseCount??0)+1}} labels={{nav:'Sections',close:'Close settings',picker:s=>'Choose '+s}}>{content}</SettingsDialog>:content;
 }
 createRoot(document.getElementById('app')).render(<App/>);
@@ -294,12 +303,105 @@ body{margin:0;font-family:sans-serif}.page-anchor{position:fixed;right:24px;top:
     closed: !document.querySelector('[role="menu"]'),
     focus: document.activeElement?.getAttribute('aria-label'),
   }));
+  const tooltipRows = [];
+  if (!baseline) {
+    for (const viewport of [
+      { width: 1261, height: 820 },
+      { width: 800, height: 600 },
+    ]) {
+      await page.setViewport(viewport);
+      for (const side of ['right', 'bottom', 'top'])
+        for (const align of ['center', 'end'])
+          for (let level = -8; level <= 8; level++) {
+            await page.evaluate(
+              ({ side, align, level }) => {
+                document.documentElement.style.zoom = String(1.2 ** level);
+                window.fixture.configure({ dialog: false, tooltip: true, side, align });
+              },
+              { side, align, level },
+            );
+            await frame();
+            await page.hover('[aria-label="Tooltip anchor"]');
+            await page.waitForSelector('[role="tooltip"]');
+            await frame();
+            const geometry = await page.evaluate(() => {
+              const anchor = document
+                .querySelector('[aria-label="Tooltip anchor"]')
+                .getBoundingClientRect();
+              const bubble = document.querySelector('[role="tooltip"]');
+              const box = bubble.getBoundingClientRect();
+              const side = bubble.dataset.side;
+              const align = bubble.dataset.align;
+              const desired =
+                side === 'right'
+                  ? anchor.right + 10
+                  : align === 'end'
+                    ? anchor.right - box.width
+                    : (anchor.left + anchor.right - box.width) / 2;
+              const expected = Math.max(12, Math.min(desired, innerWidth - box.width - 12));
+              return {
+                within:
+                  box.left >= 11 &&
+                  box.right <= innerWidth - 11 &&
+                  box.top >= 39 &&
+                  box.bottom <= innerHeight - 11,
+                aligned: Math.abs(box.left - expected) < 1,
+                anchor: anchor.toJSON(),
+                bubble: box.toJSON(),
+              };
+            });
+            tooltipRows.push({ viewport, side, align, level, ...geometry });
+            if (level === 0) {
+              await page.click('[aria-label="Tooltip anchor"]');
+              await frame();
+              await page.evaluate(() => {
+                window.retainedTooltip = document.querySelector('[role="tooltip"]');
+              });
+              for (const next of [8, -8, 0]) {
+                await page.evaluate((level) => {
+                  document.documentElement.style.zoom = String(1.2 ** level);
+                }, next);
+                await frame();
+                const stable = await page.evaluate(() => {
+                  const bubble = document.querySelector('[role="tooltip"]');
+                  const box = bubble.getBoundingClientRect();
+                  const anchor = document
+                    .querySelector('[aria-label="Tooltip anchor"]')
+                    .getBoundingClientRect();
+                  const desired =
+                    bubble.dataset.side === 'right'
+                      ? anchor.right + 10
+                      : bubble.dataset.align === 'end'
+                        ? anchor.right - box.width
+                        : (anchor.left + anchor.right - box.width) / 2;
+                  const expected = Math.max(12, Math.min(desired, innerWidth - box.width - 12));
+                  return (
+                    bubble === window.retainedTooltip &&
+                    Math.abs(box.left - expected) < 1 &&
+                    box.left >= 11 &&
+                    box.right <= innerWidth - 11 &&
+                    box.top >= 39 &&
+                    box.bottom <= innerHeight - 11
+                  );
+                });
+                if (!args.get('--tooltip-baseline'))
+                  assert.ok(stable, 'An open tooltip must keep its anchor after zoom');
+              }
+            }
+            await page.keyboard.press('Escape');
+            await page.evaluate(() => document.activeElement?.blur());
+            await page.mouse.move(0, 0);
+            await page.waitForFunction(() => !document.querySelector('[role="tooltip"]'));
+          }
+    }
+  }
   const report = {
     scope:
       'Isolated Chromium source-component regression using the production Select/SettingsDialog/PointerMenu and unmodified reachable native Menu/Modal code and CSS. No production Host, native OS chrome or embedded guest is exercised.',
     baseline: baseline ?? null,
     nativeSha256: createHash('sha256').update(nativeSource).digest('hex'),
     rows,
+    tooltipRows,
     interactions: { keyboard, toggleClosed, outside },
     errors,
   };
@@ -309,7 +411,21 @@ body{margin:0;font-family:sans-serif}.page-anchor{position:fixed;right:24px;top:
     (row) =>
       !row.within || !row.aligned || !row.inDialog || !row.focusReturned || row.ownerClosed > 0,
   );
-  console.log(JSON.stringify({ cases: rows.length, failures: failures.length, errors }));
+  const tooltipFailures = tooltipRows.filter((row) => !row.within || !row.aligned);
+  console.log(
+    JSON.stringify({
+      cases: rows.length,
+      failures: failures.length,
+      tooltipCases: tooltipRows.length,
+      tooltipFailures: tooltipFailures.length,
+      errors,
+    }),
+  );
+  assert.equal(
+    tooltipFailures.length,
+    0,
+    'Native tooltips must follow their viewport anchors under zoom',
+  );
   assert.equal(errors.length, 0);
   if (!baseline) {
     assert.deepEqual(keyboard, {

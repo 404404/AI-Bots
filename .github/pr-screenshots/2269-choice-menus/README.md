@@ -28,12 +28,11 @@ header/corner, panels and zoom Settings in native windowed/fullscreen modes. Rea
 explicitly accepted earlier in this task. Current full Client regression passes 2035 tests
 with one existing skip; Browser 407/8skip and Computer/selected workspace 234/3skip passed.
 
-Fresh embedded automation did not establish guest focus: a nested AX click left the real
+The first .14 embedded automation attempt did not establish guest focus: a nested AX click left the real
 parent focus on Bot Settings, so its root zoom event is excluded from webview proof. The
 fixture was disposed, and prior Human guest foreground/once-only records retain their own
-scope. Remaining final native focus/popup qualification keeps #2269 open and PR Draft.
+scope. The later foreground follow-up below supersedes that guest-focus gap. #2269 remains open for its other required gates.
 No new PR has been merged or released.
-
 
 ## Final-package focused embedded and popup follow-up
 
@@ -55,8 +54,22 @@ correct viewport placement and native Escape/focus return. No target, permission
 ![Final Computer settings menu](final-computer-menu-144.png)
 ![Final Panel context menu](final-panel-menu-144.png)
 
-Remaining: broader native tooltip/fixed-geometry occlude/minimize/restoration on the final artifact.
+Further .14 follow-up established native Cmd+H hide/restore at unchanged geometry, guest identity, URL, input and internal zoom. The complete-window capture is linked below. Native Minimize actions still did not establish hidden state.
 Tool Minimize actions did not establish hidden state, so they are not counted as a pass. The
-late console cohort also has three native `/plugins/events` network failures; no whole-cohort
+late console cohort has native `/plugins/events` network failures; no whole-cohort
 error-free claim is made. #2269 remains open, and prior Human webview-restoration proof keeps
 its original scope. Windows/Linux remain deferred.
+
+![Final .14 fixed-geometry hide/restore](final-hide-restore-144.png)
+
+A passive native Network observer captured `/plugins/events` HTTP200 + graph, failure after
+301.1s, and automatic HTTP200 + full-graph recovery three seconds later. This attributes the
+route and observes recovery; the underlying timeout source is not confirmed. No guest reload
+or renderer restart was used.
+
+The native Tooltip check found a distinct geometry regression: at144%, the Home-name tooltip
+was nearx907 while its trigger was atx659–705. The downstream pinned zoom lease now fits native
+bubble geometry without replacing its visibility, delay, keycap or dismissal owner. The
+expanded source fixture passes136 Select cases and204 Tooltip cases;36 additional zoom
+changes preserve an already-pinned bubble. Final updated-package Tooltip pixels remain a
+separate acceptance gate. Earlier .14 native proof remains versioned as .14.

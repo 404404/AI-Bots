@@ -111,3 +111,18 @@ two viewport sizes, keyboard selection, menu-only Escape, focus return, outside 
 zoom changes while open. `--baseline <ref>` runs the old Select and must fail on the reported
 coordinate bug. It does not qualify a running DSH Host, native window controls or guest painting;
 macOS acceptance remains a separate #2269 check.
+
+### Native Tooltip under qualified desktop zoom
+
+The 0.2.1-rc.2 native Tooltip also writes viewport anchor coordinates into a zoomed fixed
+position element. At 144%, the Home name tooltip was measured around x907 while its button
+was at x659–705. The downstream zoom lease owns the conversion for the pinned
+`role=tooltip` / `data-side` / `data-align` contract. It records the focus/hover trigger,
+measures the actual bubble, fits its screen rectangle and converts only the corrective
+translation through `currentCSSZoom`; native visibility, delays, keycaps, dismissal and
+composition remain native. It restores its translation/width lease on disposal and does not
+run in ordinary browsers or unsupported desktop compositions. An existing independent
+translation is not taken over. Source checks include all 17 levels, three sides, two alignments,
+two viewport sizes and retained pinned bubbles while zoom changes. Native window
+pixels remain a separate acceptance check; programmatic/unmapped third-party tooltip
+triggers are not qualified by these representative button paths.
