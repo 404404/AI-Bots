@@ -584,6 +584,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/global-materials.md",
       "task": 2259,
       "gap": "Native restart uses the task-owned Desktop procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.panel-appearance",
+      "label": "Edit one functional Panel from its Header context menu with local persistence and per-property inheritance",
+      "source": "packages/client/src/client/appearance-panel-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/panel-appearance.md",
+      "task": 2260,
+      "gap": "Task-owned macOS restart follows the feature procedure; Human QA is separate."
     }
   ],
   "scripts": [
@@ -1916,6 +1924,14 @@
       "reason": "Real mode/material UI and CLI, reload, native isolation and controlled background pixel proof of blur.",
       "task": 2259,
       "sha256": "2cbb7edf42ead539c8e23aa029b78353d5e514ac3a78210c4b715d7fb4f97be9"
+    },
+    {
+      "path": "scripts/e2e-panel-appearance.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.panel-appearance"],
+      "reason": "Real Header menus, UI/CLI overrides, follow global, modes, close/reopen, content switch, reload and scoped reset.",
+      "task": 2260,
+      "sha256": "504a472d36343156026b2f89fce57fb9e147ccf0af5c98dfcab8228049e60e32"
     }
   ],
   "native": [

@@ -2,6 +2,10 @@ import { CliLiveError } from './cli-live-error.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 export const APPEARANCE_COMMANDS = [
   {
+    command: 'appearance-targets',
+    description: 'list functional Panel appearance targets on an explicit --client-id',
+  },
+  {
     command: 'appearance-clients',
     description: 'list online Client targets for device-local DeepSeekBot appearance',
   },

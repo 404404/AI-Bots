@@ -38,6 +38,7 @@ export function mountAppearanceControl(owner: Appearance): () => void {
             if (command.patch !== undefined && typeof command.expectedRevision !== 'string')
               throw new AppearanceError('appearance-revision-required');
             result = {
+              targets: owner.targets(),
               snapshot:
                 command.patch === undefined
                   ? owner.getSnapshot()
