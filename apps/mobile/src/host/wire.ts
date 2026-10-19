@@ -50,6 +50,8 @@ export interface ChannelWireMessage extends WireMessage {
   privateInputRequest?: unknown;
   sessionFailure?: unknown;
   grantRequest?: true;
+  grantRequestResolved?: boolean;
+  grantRequestResolution?: unknown;
   toolApprovalDecision?: unknown;
   userQuestionResolution?: unknown;
   onboardingWelcome?: unknown;
@@ -382,6 +384,7 @@ export interface ToolApprovalRequestCard {
   role: 'orchestrator' | 'assignment';
   cwd: string;
   input: string;
+  allowAlways?: boolean;
 }
 
 export type ToolApprovalOutcome =
@@ -422,6 +425,10 @@ export interface TimelineMessage {
   toolApprovalDecision?: { requestMessageId: string; outcome: ToolApprovalOutcome };
   userQuestionRequest?: { questions: QuestionItem[] };
   userQuestionResolution?: { requestMessageId: string; state: 'answered' | 'cancelled' };
+  author?: WireAuthor;
+  grantRequest?: true;
+  grantRequestResolved?: boolean;
+  grantRequestResolution?: { requestMessageId: string; grantId: string };
 }
 
 export interface TimelinePage {

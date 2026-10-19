@@ -23,11 +23,13 @@ export interface MessageCard {
   kind: CardKind;
   channelId: string;
   subject?: string;
+  resolved?: true;
 }
 
 export type CardResolution =
   | { kind: 'tool-approval'; outcome: ToolApprovalOutcome }
-  | { kind: 'user-question'; state: 'answered' | 'cancelled' };
+  | { kind: 'user-question'; state: 'answered' | 'cancelled' }
+  | { kind: 'grant' };
 
 export interface MessageAttachment {
   key: string;
@@ -99,6 +101,7 @@ export function shownInChat(message: ConversationMessage): boolean {
   const resolution = message.resolves?.resolution;
   if (
     resolution?.kind === 'tool-approval' ||
+    resolution?.kind === 'grant' ||
     (resolution?.kind === 'user-question' && resolution.state === 'cancelled')
   )
     return false;
@@ -285,7 +288,12 @@ function cardOf(channelId: string, message: ChannelWireMessage): MessageCard | u
     return { kind: 'user-question', channelId, ...(subject === undefined ? {} : { subject }) };
   }
   if (message.privateInputRequest !== undefined) return { kind: 'private-input', channelId };
-  if (message.grantRequest === true) return { kind: 'grant', channelId };
+  if (message.grantRequest === true)
+    return {
+      kind: 'grant',
+      channelId,
+      ...(message.grantRequestResolved === true ? { resolved: true as const } : {}),
+    };
   return undefined;
 }
 
@@ -311,6 +319,8 @@ function resolvesOf(message: ChannelWireMessage): ConversationMessage['resolves'
   const state = field(resolution, 'state');
   if (answered !== undefined && (state === 'answered' || state === 'cancelled'))
     return { requestId: answered, resolution: { kind: 'user-question', state } };
+  const granted = text(field(message.grantRequestResolution, 'requestMessageId'));
+  if (granted !== undefined) return { requestId: granted, resolution: { kind: 'grant' } };
   return undefined;
 }
 

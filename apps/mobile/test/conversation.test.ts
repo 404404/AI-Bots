@@ -199,6 +199,40 @@ describe('DM conversation', () => {
     },
   );
 
+  it('marks folder requests as cards and hides the read/write answer behind them', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    const bot = { kind: 'bot' as const, slug: SLUG };
+    channel.append({
+      id: 'ask-folder',
+      author: bot,
+      body: 'I need your project folder.',
+      grantRequest: true,
+    } as never);
+    channel.append({
+      id: 'grant-resolution-ask-folder',
+      body: 'I authorized workspace “Project” for read/write. Continue the original task.',
+      replyTo: 'ask-folder',
+      grantRequestResolution: { requestMessageId: 'ask-folder', grantId: 'g1' },
+    } as never);
+    channel.append({
+      id: 'ask-old-folder',
+      author: bot,
+      body: 'Another folder.',
+      grantRequest: true,
+      grantRequestResolved: true,
+    } as never);
+    const live = await until(open(host), (snapshot) => snapshot.status === 'live');
+    const [ask, answered, old] = live.messages;
+    expect(ask?.card).toEqual({ kind: 'grant', channelId: DM });
+    expect(answered?.resolves).toEqual({ requestId: 'ask-folder', resolution: { kind: 'grant' } });
+    expect(old?.card).toEqual({ kind: 'grant', channelId: DM, resolved: true });
+    expect(live.messages.filter(shownInChat).map((message) => message.id)).toEqual([
+      'ask-folder',
+      'ask-old-folder',
+    ]);
+  });
+
   it('shows recognized activity while hiding the welcome and malformed empty notices', async () => {
     const host = new FakeHost();
     const channel = host.channel(DM);

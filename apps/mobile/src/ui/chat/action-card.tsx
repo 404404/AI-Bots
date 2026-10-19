@@ -203,6 +203,14 @@ export function CardLine({
   );
 }
 
+export function CardNote({ children }: { children: string }) {
+  return (
+    <Text variant="meta" tone="muted">
+      {children}
+    </Text>
+  );
+}
+
 export function CardButtons({ children, stack = false }: { children: ReactNode; stack?: boolean }) {
   return (
     <View

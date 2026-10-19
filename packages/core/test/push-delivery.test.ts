@@ -527,8 +527,12 @@ describe('Human Inbox push source', () => {
       () => 'Ada',
       (_, messageId) =>
         messageId === 'm'
-          ? { toolName: 'bash', input: JSON.stringify({ description: 'x', command: 'date > now' }) }
-          : { toolName: 'secret_cli', input: '{}' },
+          ? {
+              toolName: 'bash',
+              input: JSON.stringify({ description: 'x', command: 'date > now' }),
+              allowAlways: true,
+            }
+          : { toolName: 'secret_cli', input: '{}', allowAlways: true },
     );
     const pending = source.pending();
     expect(pending.badge).toBe(3);
@@ -549,6 +553,35 @@ describe('Human Inbox push source', () => {
       ['dm-reply:1', 'reply', undefined, 'Done', undefined],
     ]);
     expect(JSON.stringify(pending)).not.toContain(SECRET_TEXT);
+  });
+
+  it('offers Always allow from the notification only when the Host offers it', () => {
+    const source = humanInboxPushSource(
+      {
+        list: ({ category }) => ({
+          items:
+            category === 'action'
+              ? [
+                  {
+                    id: 'approval:human-only',
+                    category: 'action',
+                    kind: 'tool-approval',
+                    createdAt: '2026-10-14T08:00:00.000Z',
+                    botSlug: 'ada',
+                    summary: '请求批准执行 bash',
+                    channelId: 'dm-ada',
+                    messageId: 'm',
+                  },
+                ]
+              : [],
+        }),
+        actionCount: () => 1,
+        dmReplies: () => [],
+      },
+      () => 'Ada',
+      () => ({ toolName: 'bash', input: '{"command":"deepseekbot grant-write-set"}' }),
+    );
+    expect(source.pending().items.map((entry) => entry.categoryId)).toEqual(['tool-approval-once']);
   });
 });
 

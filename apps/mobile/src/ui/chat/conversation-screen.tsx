@@ -46,6 +46,7 @@ import {
   answerInChat,
   answerQuestion,
   decideApproval,
+  grantRequestPort,
   loadApproval,
   loadQuestion,
   type RequestRef,
@@ -53,6 +54,7 @@ import {
 import { useDictation } from '../../host/speech';
 import { botColor } from '../bot-color';
 import { ApprovalCard } from './approval-card';
+import { GrantRequestCard } from './grant-request-card';
 import { ActivityRow } from './activity-row';
 import type { BubbleGroup } from './bubble-shape';
 import { botBusy } from './bot-tone';
@@ -193,7 +195,21 @@ const RequestCard = memo(function RequestCard({
     }),
     [client, inbox, ref],
   );
+  const grant = useMemo(
+    () => grantRequestPort(client, ref, () => void inbox?.refresh()),
+    [client, inbox, ref],
+  );
   const subject = card.subject === undefined ? {} : { subject: card.subject };
+  if (card.kind === 'grant')
+    return (
+      <GrantRequestCard
+        port={grant}
+        botName={botName}
+        resolved={card.resolved === true || resolution?.kind === 'grant'}
+        focused={focused}
+        group={group}
+      />
+    );
   if (card.kind === 'tool-approval')
     return (
       <ApprovalCard
@@ -561,7 +577,9 @@ function ChatConversation({
       if (
         client !== undefined &&
         author !== undefined &&
-        (item.message.card?.kind === 'tool-approval' || item.message.card?.kind === 'user-question')
+        (item.message.card?.kind === 'tool-approval' ||
+          item.message.card?.kind === 'user-question' ||
+          item.message.card?.kind === 'grant')
       )
         return (
           <RequestCard

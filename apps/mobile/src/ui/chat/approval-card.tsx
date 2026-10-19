@@ -3,7 +3,6 @@ import { View, type ViewInstance } from 'react-native';
 
 import type { CardResolution } from '../../host/conversation';
 import {
-  offersAlwaysAllow,
   previewInput,
   readableInput,
   type ApprovalChoice,
@@ -11,6 +10,7 @@ import {
   type DecisionResult,
 } from '../../host/requests';
 import type { ToolApprovalOutcome } from '../../host/wire';
+import { alwaysNote } from '../approval-note';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
@@ -19,7 +19,14 @@ import { Text } from '../primitives/text';
 import { errorText } from '../request-parts';
 import { haptic } from '../haptics';
 import { t } from '../strings';
-import { ActionCard, CardButtons, CardLine, DetailRow, type CardLineTone } from './action-card';
+import {
+  ActionCard,
+  CardButtons,
+  CardLine,
+  CardNote,
+  DetailRow,
+  type CardLineTone,
+} from './action-card';
 import type { BubbleGroup } from './bubble-shape';
 
 export interface ApprovalCardPort {
@@ -226,6 +233,7 @@ export function ApprovalCard({
           </>
         }
       >
+        <CardNote>{alwaysNote(request)}</CardNote>
         <CardButtons stack>
           <Button
             label={t.allowOnce}
@@ -235,17 +243,15 @@ export function ApprovalCard({
             busy={phase.busy === 'allowed-once'}
             onPress={() => void decide('allowed-once')}
           />
-          {offersAlwaysAllow(request.toolName) ? (
-            <Button
-              label={t.alwaysAllow}
-              testID="approval-always-allow"
-              disabled={phase.busy !== undefined}
-              busy={phase.busy === 'allowed-always-exact'}
-              onPress={() => void decide('allowed-always-exact')}
-            />
-          ) : null}
           <Button
-            label={t.deny}
+            label={t.alwaysAllow}
+            testID="approval-always-allow"
+            disabled={phase.busy !== undefined || !request.allowAlways}
+            busy={phase.busy === 'allowed-always-tool'}
+            onPress={() => void decide('allowed-always-tool')}
+          />
+          <Button
+            label={t.reject}
             testID="approval-deny"
             tone="danger"
             disabled={phase.busy !== undefined}
