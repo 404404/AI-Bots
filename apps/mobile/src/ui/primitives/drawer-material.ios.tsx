@@ -65,7 +65,7 @@ export function SidebarMaterial({ cornerRadius }: { cornerRadius: number }) {
   );
 }
 
-export function EdgeMaterial({ edge: side, solid }: { edge: 'top' | 'bottom'; solid: number }) {
+export function EdgeMaterial({ edge: side }: { edge: 'top' | 'bottom' }) {
   const theme = useDesignTheme();
   const top = side === 'top';
   return (
@@ -83,7 +83,7 @@ export function EdgeMaterial({ edge: side, solid }: { edge: 'top' | 'bottom'; so
               foregroundStyle({
                 type: 'linearGradient',
                 colors: edgeFade.blur.map((alpha) => `${pointer.rim}${alpha}`),
-                startPoint: { x: 0.5, y: top ? solid : 1 - solid },
+                startPoint: { x: 0.5, y: top ? 0 : 1 },
                 endPoint: { x: 0.5, y: top ? 1 : 0 },
               }),
             ]}

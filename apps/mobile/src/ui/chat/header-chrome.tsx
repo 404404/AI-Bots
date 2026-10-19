@@ -115,7 +115,6 @@ export function HeaderBackButton({ onPress }: { onPress(): void }) {
 export function EdgeFade({ edge: side, height }: { edge: 'top' | 'bottom'; height: number }) {
   const theme = useDesignTheme();
   const glass = useLiquidGlass();
-  const insets = useSafeAreaInsets();
   const id = `fade-${useId().replace(/[^a-z0-9]/giu, '')}`;
   const top = side === 'top';
   return (
@@ -130,10 +129,7 @@ export function EdgeFade({ edge: side, height }: { edge: 'top' | 'bottom'; heigh
       }}
     >
       {glass ? (
-        <EdgeMaterial
-          edge={side}
-          solid={top && height > 0 ? Math.min(insets.top / height, 1) : 0}
-        />
+        <EdgeMaterial edge={side} />
       ) : (
         <Svg width="100%" height="100%" preserveAspectRatio="none">
           <Defs>
