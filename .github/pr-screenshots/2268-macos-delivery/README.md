@@ -1,6 +1,6 @@
 # macOS product zoom delivery evidence
 
-Current implementation: ordinary product installation carries the licensed theme but leaves the native `ui-theme` row untouched. The explicit `deepseekbot-zoom-setup enable --home <home> --profile <profile> --dsh <cli>` command adds a Profile-local package link through the native package manager. Restart the same Host/Desktop. Disable before product removal; native settings remain in the original Profile Patch. Setup success reports configuration only (`runtimeVerified:false`).
+Current implementation: ordinary product installation carries the licensed theme but leaves the native `ui-theme` row untouched. The explicit `deepseekbot-zoom-setup enable --home <home> --profile desktop --desktop-app <app>` command requires the target Desktop to be closed and adds a Profile-local package link through that app’s bundled pnpm, under the native Profile writer lock and with scripts disabled. Reopen the same Desktop. Disable before product removal; native settings remain in the original Profile Patch. Setup success reports configuration only (`runtimeVerified:false`).
 
 The earlier grouped replacement booted but renamed the Settings namespace to `qualified-theme`. That was not a valid manual-font preservation proof. Both sync and async Node-hook experiments also failed actual DSH metadata discovery despite standalone resolver tests. Those experiments are not part of the delivered source. The historical validation record must not be used to accept the discarded composition.
 
@@ -21,3 +21,10 @@ No new rendered UI is introduced by this packaging/CLI correction. A fresh nativ
 #2268 and #2269 remain unaccepted. Windows/Linux are deferred to Human testing under #2270. No merge or release.
 
 The final generated Client checks actual `__DSH_BOOT__.release.version` before exposing its font-key lease. Generated-adapter execution tests cover qualified, mismatched and missing versions. The preserved native window's boot version was read without changing its state, but the new guard is not yet loaded there. The final candidate repeated the five native Host/settings lifecycle checks; its setup and Host bytes match the earlier .7/.8 reinstall/upgrade/rollback artifacts. Existing Profile overrides still need explicit disable before switching outside the qualified tuple; absence of the zoom capability does not qualify a copied theme on unknown versions.
+
+The actual managed Desktop rejected the old offline DSH CLI path (`managed exclusively by the
+Electron application`). Native `installBundle` also rejected the copied theme (`not-bundle`),
+even with a staging-only empty Bundle, because installation metadata wins. Those failures
+invalidate the prior headless result as Desktop installation proof. The explicit closed-app
+installer is a downstream package transaction and changes no installed app files. Fresh native
+acceptance of the final installer is recorded separately below when completed.

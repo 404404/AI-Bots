@@ -1,6 +1,16 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { lstatSync, readFileSync, readlinkSync, realpathSync, unlinkSync } from 'node:fs';
+import {
+  closeSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,13 +20,37 @@ const supported = '0.2.1-rc.2';
 function refuse(code) {
   throw Object.assign(Error(code), { code });
 }
-export function configureDesktopZoom({
+export function configureDesktopZoom(options) {
+  if (options.profile?.toLowerCase() !== 'desktop' || !options.home)
+    return configureProfileZoom(options);
+  const lock = join(realpathSync(options.home), 'profiles', options.profile, 'package.json.lock');
+  let file;
+  try {
+    file = openSync(lock, 'wx', 0o600);
+  } catch (error) {
+    if (error.code === 'EEXIST') refuse('desktop-zoom-setup-profile-busy');
+    throw error;
+  }
+  try {
+    writeFileSync(file, `${process.pid}\n`);
+    return configureProfileZoom(options);
+  } finally {
+    try {
+      if (lstatSync(lock).ino === fstatSync(file).ino) unlinkSync(lock);
+    } finally {
+      closeSync(file);
+    }
+  }
+}
+function configureProfileZoom({
   action,
   home,
   profile,
   dsh = 'dsh',
+  desktopApp,
   platform = process.platform,
   run = (executable, args, options) => execFileSync(executable, args, options),
+  processes = () => execFileSync('/bin/ps', ['-axo', 'command='], { encoding: 'utf8' }),
 }) {
   if (!['enable', 'disable'].includes(action)) refuse('desktop-zoom-setup-action-required');
   if (!home || !profile || !/^[A-Za-z0-9_-]+$/.test(profile))
@@ -50,9 +84,41 @@ export function configureDesktopZoom({
     maxBuffer: 8 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   };
+  let packageCommand;
+  let desktopVersion;
+  const checkStopped = () => {
+    const paths = new Set([directory, join(resolve(home), 'profiles', profile)]);
+    if (directory.startsWith('/private/var/')) paths.add(directory.slice('/private'.length));
+    const running = processes()
+      .split('\n')
+      .some(
+        (line) =>
+          line.includes('dsh-desktop-host/') && [...paths].some((path) => line.includes(path)),
+      );
+    if (running) refuse('desktop-zoom-setup-desktop-running');
+  };
+  if (profile.toLowerCase() === 'desktop') {
+    if (platform !== 'darwin') refuse('desktop-zoom-setup-platform-unsupported');
+    if (!desktopApp) refuse('desktop-zoom-setup-desktop-app-required');
+    const app = realpathSync(desktopApp);
+    const pnpm = join(
+      app,
+      'Contents/Resources/runtime/primary-runtime/dependencies/pnpm/bin/pnpm.mjs',
+    );
+    if (!lstatSync(pnpm).isFile()) refuse('desktop-zoom-setup-package-manager-unavailable');
+    desktopVersion = String(
+      run(
+        '/usr/libexec/PlistBuddy',
+        ['-c', 'Print :CFBundleShortVersionString', join(app, 'Contents/Info.plist')],
+        options,
+      ),
+    ).trim();
+    checkStopped();
+    packageCommand = { executable: process.execPath, args: [pnpm] };
+  }
   if (action === 'enable') {
     if (platform !== 'darwin') refuse('desktop-zoom-setup-platform-unsupported');
-    const version = String(run(dsh, ['--version'], options)).trim();
+    const version = desktopVersion ?? String(run(dsh, ['--version'], options)).trim();
     if (version !== supported) refuse('desktop-zoom-setup-version-unsupported');
     const product = join(directory, 'node_modules/deepseekbot');
     const manifest = JSON.parse(readFileSync(join(product, 'package.json'), 'utf8'));
@@ -73,15 +139,15 @@ export function configureDesktopZoom({
   const packageChanged = action === 'enable' ? current !== ownedLink : current === ownedLink;
   const changed = packageChanged || (action === 'disable' && linkState() === 'owned');
   if (packageChanged) {
+    if (packageCommand) checkStopped();
     try {
       run(
-        dsh,
+        packageCommand?.executable ?? dsh,
         [
-          'plugin',
-          '--profile',
-          profile,
+          ...(packageCommand?.args ?? ['plugin', '--profile', profile]),
           action === 'enable' ? 'add' : 'remove',
           action === 'enable' ? `${theme}@${ownedLink}` : theme,
+          ...(packageCommand ? ['--ignore-scripts'] : []),
         ],
         options,
       );
@@ -89,6 +155,7 @@ export function configureDesktopZoom({
       refuse('desktop-zoom-setup-package-outcome-unconfirmed');
     }
   }
+  if (packageCommand) checkStopped();
   if (action === 'disable' && linkState() === 'owned') unlinkSync(alias);
   const after = JSON.parse(readFileSync(manifestPath, 'utf8'));
   if (
@@ -106,7 +173,7 @@ export function runDesktopZoomSetup(args) {
   const values = new Map();
   for (let i = 0; i < flags.length; i += 2) {
     if (
-      !['--home', '--profile', '--dsh'].includes(flags[i]) ||
+      !['--home', '--profile', '--dsh', '--desktop-app'].includes(flags[i]) ||
       !flags[i + 1] ||
       values.has(flags[i])
     )
@@ -118,6 +185,7 @@ export function runDesktopZoomSetup(args) {
     home: values.get('--home'),
     profile: values.get('--profile'),
     dsh: values.get('--dsh'),
+    desktopApp: values.get('--desktop-app'),
   });
 }
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {

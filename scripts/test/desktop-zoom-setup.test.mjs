@@ -19,10 +19,9 @@ const roots = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-function fixture() {
+function fixture(profile = 'qa') {
   const home = realpathSync(mkdtempSync(join(tmpdir(), 'zoom-setup-')));
   roots.push(home);
-  const profile = 'qa';
   const directory = join(home, 'profiles', profile);
   const root = join(directory, 'node_modules/deepseekbot');
   mkdirSync(join(root, 'desktop-theme/lib'), { recursive: true });
@@ -49,12 +48,14 @@ function fixture() {
   );
   const run = vi.fn((command, args) => {
     if (args[0] === '--version') return '0.2.1-rc.2\n';
+    if (command === '/usr/libexec/PlistBuddy') return '0.2.1-rc.2\n';
+    const adding = args.includes('add');
     const doc = JSON.parse(readFileSync(path));
-    if (args[3] === 'add')
+    if (adding)
       doc.dependencies['@deepseek-ai/dsh-client-ui-theme'] =
         'link:node_modules/deepseekbot/desktop-theme';
     else delete doc.dependencies['@deepseek-ai/dsh-client-ui-theme'];
-    if (args[3] === 'add') {
+    if (adding) {
       mkdirSync(join(directory, 'node_modules/@deepseek-ai'), { recursive: true });
       symlinkSync(
         root + '/desktop-theme',
@@ -92,6 +93,72 @@ it('uses the native package manager to enable and remove only its own Profile al
   expect(readFileSync(join(f.directory, 'cordis.patch.yml'), 'utf8')).toBe(
     'native preference unchanged',
   );
+});
+function desktopFixture() {
+  const f = fixture('desktop');
+  const desktopApp = join(f.home, 'Harness.app');
+  const pnpm = join(
+    desktopApp,
+    'Contents/Resources/runtime/primary-runtime/dependencies/pnpm/bin/pnpm.mjs',
+  );
+  mkdirSync(join(pnpm, '..'), { recursive: true });
+  writeFileSync(pnpm, '');
+  return { ...f, desktopApp, pnpm, processes: vi.fn(() => '') };
+}
+it('installs the Desktop override offline using the selected app package manager without scripts', () => {
+  const f = desktopFixture();
+  expect(configureDesktopZoom({ ...f, action: 'enable' })).toMatchObject({
+    changed: true,
+    runtimeVerified: false,
+  });
+  expect(f.run.mock.calls[1][0]).toBe(process.execPath);
+  expect(f.run.mock.calls[1][1]).toEqual([
+    f.pnpm,
+    'add',
+    '@deepseek-ai/dsh-client-ui-theme@link:node_modules/deepseekbot/desktop-theme',
+    '--ignore-scripts',
+  ]);
+  expect(configureDesktopZoom({ ...f, action: 'disable' }).changed).toBe(true);
+  expect(f.run.mock.calls.at(-1)[1]).toEqual([
+    f.pnpm,
+    'remove',
+    '@deepseek-ai/dsh-client-ui-theme',
+    '--ignore-scripts',
+  ]);
+  expect(readFileSync(join(f.directory, 'cordis.patch.yml'), 'utf8')).toBe(
+    'native preference unchanged',
+  );
+});
+it('refuses a running Desktop before any package operation and requires an explicit application', () => {
+  const f = desktopFixture();
+  f.processes.mockReturnValue(
+    `/Applications/Harness/Contents/MacOS/Harness --expose-internals /app/dsh-desktop-host/lib/index.js /app ${f.directory}`,
+  );
+  expect(() => configureDesktopZoom({ ...f, action: 'enable' })).toThrow('desktop-running');
+  expect(f.run).toHaveBeenCalledTimes(1);
+  expect(() => configureDesktopZoom({ ...f, desktopApp: undefined, action: 'enable' })).toThrow(
+    'desktop-app-required',
+  );
+  expect(f.run).toHaveBeenCalledTimes(1);
+});
+it('checks Desktop ownership again immediately before changing packages', () => {
+  const f = desktopFixture();
+  f.processes
+    .mockReturnValueOnce('')
+    .mockReturnValue(`node /dsh-desktop-host/lib/index.js ${f.directory}`);
+  expect(() => configureDesktopZoom({ ...f, action: 'enable' })).toThrow('desktop-running');
+  expect(f.run).toHaveBeenCalledTimes(1);
+});
+it('shares the native profile writer lock and releases it after refusals', () => {
+  const f = desktopFixture();
+  const lock = join(f.directory, 'package.json.lock');
+  writeFileSync(lock, 'other writer');
+  expect(() => configureDesktopZoom({ ...f, action: 'enable' })).toThrow('profile-busy');
+  expect(readFileSync(lock, 'utf8')).toBe('other writer');
+  rmSync(lock);
+  f.run.mockImplementationOnce(() => '0.2.2');
+  expect(() => configureDesktopZoom({ ...f, action: 'enable' })).toThrow('version-unsupported');
+  expect(() => readFileSync(lock)).toThrow();
 });
 it.each(['win32', 'linux'])('refuses enabling on %s before any package operation', (platform) => {
   const f = fixture();

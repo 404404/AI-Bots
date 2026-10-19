@@ -348,3 +348,16 @@ Desktop/Host/Client tuple; re-enable only after qualifying the new combination.
 ## Windows vfile browser imports (#2289)
 
 Rolldown can pass a Windows importer path with backslashes. The vfile browser-variant override must normalize separators before matching `node_modules/vfile/lib`; otherwise a successful build can retain `require("node:process")`, and the real Client refuses @botharness/ui before its Services exist. The existing Client bundle contract reproduces this: two assertions fail before normalization and all seven pass after it. Rebuild the Client and restart the task-owned Host, then inspect its actual browser console; API health alone does not qualify plugin boot.
+
+
+### Desktop plain-library overrides require an explicit offline installer (#2268)
+
+The 0.2.1-rc.2 CLI refuses `desktop` because Electron owns its lifecycle. The native Plugin
+Manager's `installBundle` validates installation-first metadata; adding `dsh.bundle` only to a
+Profile-local copy of the shipped theme still returns `not-bundle`. Headless Profile setup
+success did not qualify Desktop. DeepSeekBot's opt-in setup uses the explicitly selected app's
+bundled pnpm only after the target Desktop Host exits, takes the native Profile manifest writer
+lock, disables scripts and preserves the native `ui-theme` row and preference Patch. Keep the
+app closed until setup returns. Refuse other owners, a busy Profile, an unsupported app version
+or a running target; do not edit ASARs, silently replay uncertain writes or relabel failed
+native-manager attempts as installation proof. Reopen the same Profile/user-data for acceptance.

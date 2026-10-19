@@ -196,10 +196,18 @@ try {
     home: join(root, 'home'),
     profile: 'desktop',
     dsh: join(source, 'node_modules/.bin/dsh'),
+    desktopApp: app,
   });
   await launch();
   await ready(true);
   const cliAccessFile = join(root, 'cli-access.json');
+  const metadataDeadline = Date.now() + 20000;
+  while (Date.now() < metadataDeadline) {
+    try {
+      if (JSON.parse(readFileSync(cliAccessFile, 'utf8')).desktopPid === ownedPid()) break;
+    } catch {}
+    await pause(100);
+  }
   const cliAccess = JSON.parse(readFileSync(cliAccessFile, 'utf8'));
   if (cliAccess.desktopPid !== ownedPid()) throw Error('Stale desktop CLI access metadata');
   writeFileSync(
