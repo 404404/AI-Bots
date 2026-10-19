@@ -18,18 +18,45 @@ the default picker stays inside the viewport and can select the minimum level. T
 captures are actual Desktop output from the .12 artifact, with its version stated explicitly.
 They are additional evidence, not a relabeling of the source fixture before/after pair.
 
-![Native Settings at144%](native-settings-144.png)
-![Native recovery reachable at430%](native-settings-430-recovery.png)
-![Native default menu at430%](native-settings-430-menu.png)
+![Native Settings at 144%](native-settings-144.png)
+![Native recovery reachable at 430%](native-settings-430-recovery.png)
+![Native default menu at 430%](native-settings-430-menu.png)
 
 The final .14 artifact passed closed-app enable/restart, original font preservation, A→B→A
 local Host switch and exact-target CLI read/set/reset. The Human accepted final wallpaper,
 header/corner, panels and zoom Settings in native windowed/fullscreen modes. Real IME was
-explicitly accepted earlier in this task. Current full Client regression passes2035 tests
-with one existing skip; Browser407/8skip and Computer/selected workspace234/3skip passed.
+explicitly accepted earlier in this task. Current full Client regression passes 2035 tests
+with one existing skip; Browser 407/8skip and Computer/selected workspace 234/3skip passed.
 
 Fresh embedded automation did not establish guest focus: a nested AX click left the real
 parent focus on Bot Settings, so its root zoom event is excluded from webview proof. The
 fixture was disposed, and prior Human guest foreground/once-only records retain their own
 scope. Remaining final native focus/popup qualification keeps #2269 open and PR Draft.
 No new PR has been merged or released.
+
+
+## Final-package focused embedded and popup follow-up
+
+The Human foregrounded the same existing Desktop. The [final native embedding record](final-native-embedding.json)
+now establishes real guest input focus, same guest identity/navigation/input, one minus and
+one plus whole-window action, and unchanged guest-native zoom. Focused same-origin and
+cross-origin iframes plus the main input were also driven through CUA native keys, with
+per-document readback. Equal delivery may include Shift; it is not relabeled physical plain Equal.
+
+The earlier failed nested-AX attempt is retained above. The new accepted guest rows explicitly
+have parent WEBVIEW focus and guest `hasFocus=true`. The task fixture was removed through its
+owned release, leaving the same formal window at144%. No production guest recovery hack exists.
+
+Final .14 Browser/Computer target menus and Home context-menu screenshots additionally show
+correct viewport placement and native Escape/focus return. No target, permission or message was changed.
+
+![Final installed Desktop embedded rulers](final-embedded-focus.png)
+![Final Browser settings menu](final-browser-menu-144.png)
+![Final Computer settings menu](final-computer-menu-144.png)
+![Final Panel context menu](final-panel-menu-144.png)
+
+Remaining: broader native tooltip/fixed-geometry occlude/minimize/restoration on the final artifact.
+Tool Minimize actions did not establish hidden state, so they are not counted as a pass. The
+late console cohort also has three native `/plugins/events` network failures; no whole-cohort
+error-free claim is made. #2269 remains open, and prior Human webview-restoration proof keeps
+its original scope. Windows/Linux remain deferred.
