@@ -2,7 +2,7 @@ import { requireNativeView, requireOptionalNativeModule } from 'expo';
 import type { ReactNode } from 'react';
 import { Platform, View, type ViewProps } from 'react-native';
 
-type EdgeProps = ViewProps & { edge: 'top' | 'bottom' };
+type EdgeProps = ViewProps & { edge: 'top' | 'bottom'; marker: 'none' | 'fill' | 'label' };
 
 export const nativeScrollEdge =
   Number.parseInt(String(Platform.Version), 10) >= 26 &&
@@ -17,5 +17,9 @@ export function ScrollEdgeElement({
   children: ReactNode;
 }) {
   if (NativeEdge === undefined) return <View>{children}</View>;
-  return <NativeEdge edge={edge}>{children}</NativeEdge>;
+  return (
+    <NativeEdge edge={edge} marker="fill">
+      {children}
+    </NativeEdge>
+  );
 }

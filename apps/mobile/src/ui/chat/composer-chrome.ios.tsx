@@ -3,7 +3,7 @@ import { accessibilityHidden, foregroundStyle, glassEffect } from '@expo/ui/swif
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { frosted, pressTint, useDesignTheme, type DesignTheme } from '../design/theme';
+import { pressTint, useDesignTheme, type DesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useLiquidGlass } from '../primitives/drawer-material';
 
@@ -33,7 +33,7 @@ function Glass({ cornerRadius }: { cornerRadius?: number }) {
           modifiers={[
             foregroundStyle('transparent'),
             glassEffect({
-              glass: { variant: 'regular', tint: frosted(theme.color.surface) },
+              glass: { variant: 'regular', tint: theme.color.surface },
               shape: 'circle',
             }),
             accessibilityHidden(),
@@ -45,7 +45,7 @@ function Glass({ cornerRadius }: { cornerRadius?: number }) {
           modifiers={[
             foregroundStyle('transparent'),
             glassEffect({
-              glass: { variant: 'regular', tint: frosted(theme.color.surface) },
+              glass: { variant: 'regular', tint: theme.color.surface },
               shape: 'roundedRectangle',
               cornerRadius,
             }),

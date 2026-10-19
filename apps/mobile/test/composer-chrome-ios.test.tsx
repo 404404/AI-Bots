@@ -48,7 +48,7 @@ function Bar() {
   );
 }
 
-const frostedSurface = expect.stringMatching(/^#[0-9a-f]{8}$/iu);
+const surfaceTint = expect.stringMatching(/^#[0-9a-f]{6}$/iu);
 
 it('floats + and the field on separate Liquid Glass shapes on iOS 26', async () => {
   await act(async () => root.render(<Bar />));
@@ -56,9 +56,9 @@ it('floats + and the field on separate Liquid Glass shapes on iOS 26', async () 
   expect(button.querySelector('[data-material="circle"]')).not.toBeNull();
   expect(container.querySelector('[data-material="rounded-22"]')).not.toBeNull();
   expect(native.effects).toEqual([
-    { glass: { variant: 'regular', tint: frostedSurface }, shape: 'circle' },
+    { glass: { variant: 'regular', tint: surfaceTint }, shape: 'circle' },
     {
-      glass: { variant: 'regular', tint: frostedSurface },
+      glass: { variant: 'regular', tint: surfaceTint },
       shape: 'roundedRectangle',
       cornerRadius: 22,
     },
