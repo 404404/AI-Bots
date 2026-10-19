@@ -3031,7 +3031,7 @@ button.bh-profile-heat-cell:focus-visible {
   overflow: auto;
   display: flex;
   flex-direction: column;
-  padding: 74px ${space.x5} calc(${space.x3} + var(--bh-activity-overlay-inset, 0px));
+  padding: 74px ${space.x5} calc(${space.x3} + var(--bh-activity-overlay-inset, 0px) + var(--bh-companion-read-inset, 0px));
   overscroll-behavior: contain;
   transition: padding-bottom 160ms ease;
 }
@@ -3039,7 +3039,7 @@ button.bh-profile-heat-cell:focus-visible {
    fade, so the working rows slide down instead of jumping onto its text. */
 .bh-chat-pane[data-activity-concealed='true'] .bh-chat-body {
   --bh-chat-mask-bottom: 0px;
-  padding-bottom: ${space.x3};
+  padding-bottom: calc(${space.x3} + var(--bh-companion-read-inset, 0px));
   transition-delay: 160ms;
 }
 html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }

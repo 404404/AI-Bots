@@ -19,6 +19,7 @@ import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { useDmComposerContext } from './dm-composer-context.js';
 import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
+import { COMPANION_READ_INSET } from './companion-surface.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 import { ComposerSendKeyContext } from './composer-send-key.js';
@@ -1207,6 +1208,29 @@ function ConversationView({
     return true;
   };
   const followingLatest = useScopedRef(scopeKey, true);
+  const companionReadMount = useMountedResource<HTMLElement>(
+    (pane) => {
+      let visible: boolean | undefined;
+      const sync = () => {
+        const next = (companion?.getSnapshot().companions.length ?? 0) > 0;
+        if (visible === next) return;
+        visible = next;
+        if (next) pane.style.setProperty('--bh-companion-read-inset', COMPANION_READ_INSET + 'px');
+        else pane.style.removeProperty('--bh-companion-read-inset');
+        const timeline = pane.querySelector<HTMLElement>('.bh-chat-body');
+        if (
+          timeline &&
+          followingLatest.current &&
+          !store.getSnapshot().conversation.timeline.hasNewer
+        ) {
+          timeline.scrollTop = timeline.scrollHeight;
+        }
+      };
+      sync();
+      return companion?.subscribe(sync);
+    },
+    [companion, scopeKey],
+  );
   const activityOverlayPane = useScopedRef<HTMLElement | null>(scopeKey, null);
   const resizeActivityOverlay = useCallback(
     (height: number): void => {
@@ -2315,6 +2339,7 @@ function ConversationView({
     dockBotSlug !== undefined && dockEntryProps !== undefined && inboxEntry !== undefined;
   const conversationPane = (
     <section
+      ref={companionReadMount}
       className="bh-chat-pane"
       data-activity-concealed={composerActivityConcealed ? 'true' : undefined}
       {...fileDrop.handlers}

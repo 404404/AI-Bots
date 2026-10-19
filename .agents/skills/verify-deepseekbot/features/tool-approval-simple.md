@@ -44,3 +44,7 @@ The ordinary card explains same Bot, same tool and current authorization scope b
 All three card surfaces show Submitting on the selected action and disable decisions while the request is in flight. A failed status read remains unavailable, not expired. Recheck request reads current Host state without replaying a decision; an actual Host expiry stays expired. The component regression suite covers failed initial reads, failed submission followed by failed status reads, and same-tick duplicate clicks. Browser recovery still needs a real interrupted connection; component coverage is not browser proof.
 
 For first-time setup, the homepage instruction names the actual Allow once button. Full Access copy states that turning it off restores workspace permissions for chat and new Assignments, while existing Assignments retain their creation-time permission.
+
+## Companion reading space
+
+With a visible floating companion, scroll to the latest approval and reply and verify their bottom edge is above the passive avatar and toolbar. Repeat at 375px width, with reduced motion, and after activity fades; removing every companion returns the space, while toggling companions during history reading must not jump to the latest message. This checks the latest content at the bottom, not arbitrary history positions or intentionally opened companion bubbles/menus.
