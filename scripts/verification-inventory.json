@@ -1987,7 +1987,7 @@
       "behaviors": ["desktop.local-appearance"],
       "reason": "Runs actual scoped theme controls, local persistence and explicit Client-targeted CLI against an isolated Host; no model call.",
       "task": 2258,
-      "sha256": "d96263dc55463e905e5220c773f9c17fbc988be3d065fa9b83221880c3a58bb5"
+      "sha256": "3c537cae092c4ffbfc2f4138e92a541ed9f6249ae0032abf55c45e6e27c33d39"
     },
     {
       "path": "scripts/e2e-global-materials.mjs",
@@ -1995,7 +1995,7 @@
       "behaviors": ["desktop.global-materials"],
       "reason": "Real mode/material UI and CLI, reload, native isolation and controlled background pixel proof of blur.",
       "task": 2259,
-      "sha256": "2cbb7edf42ead539c8e23aa029b78353d5e514ac3a78210c4b715d7fb4f97be9"
+      "sha256": "3ce22699ec4b3373fca5e15be2c2062b8e49a4c98466eaf86349a7dfcc9741b1"
     },
     {
       "path": "scripts/e2e-panel-appearance.mjs",
@@ -2003,7 +2003,7 @@
       "behaviors": ["desktop.panel-appearance"],
       "reason": "Real Header menus, UI/CLI overrides, follow global, modes, close/reopen, content switch, reload and scoped reset.",
       "task": 2260,
-      "sha256": "504a472d36343156026b2f89fce57fb9e147ccf0af5c98dfcab8228049e60e32"
+      "sha256": "0f3a4d906880314ceacab68e14e2e2f2fb653f49a198ef5506865ad8874e06f9"
     },
     {
       "path": "scripts/e2e-nested-appearance.mjs",
@@ -2011,7 +2011,7 @@
       "behaviors": ["desktop.panel-appearance"],
       "reason": "Real nested Header menus, shared Memory detail identity, independent contribution lifetime and live Browser viewer without content recoloring.",
       "task": 2261,
-      "sha256": "3d3663e2b12634f34f456b3378c14adefa5a8db2b0cd89328b5f7e79d1f900c2"
+      "sha256": "68862553fe530c0ca95c0515726a2c6e2fa907b0c173895694e140434593d93d"
     },
     {
       "path": "scripts/e2e-image-wallpaper.mjs",
@@ -2019,7 +2019,7 @@
       "behaviors": ["desktop.image-wallpaper"],
       "reason": "Real upload/crop, original-byte persistence, resize, failure preservation, DSH isolation and directed CLI.",
       "task": 2262,
-      "sha256": "d28f8ca4636d1ed745ea3a3cb519309957ee87c179736f663c1e2a7c65135a75"
+      "sha256": "bcb665331b74fcd5b8a70401373f155039c76ae45cb56300eb98dad76b10fe45"
     },
     {
       "path": "scripts/e2e-video-wallpaper.mjs",
@@ -2027,7 +2027,7 @@
       "behaviors": ["desktop.video-wallpaper"],
       "reason": "Actual loop frames, background pause/resume, decode error and saved poster restoration, explicit Client CLI and exit cleanup.",
       "task": 2263,
-      "sha256": "797e435677bf35161bd314b80c57e229220d845d2c24910ba89b593ab299e6db"
+      "sha256": "fe7db6af55ee97f67c27aa7f123329f745251af8b333d0df31e1bc10a058601e"
     },
     {
       "path": "scripts/e2e-appearance-recovery.mjs",
@@ -2035,7 +2035,7 @@
       "behaviors": ["desktop.appearance-recovery"],
       "reason": "Real current-mode clear, confirmed image/video reset, failure preservation/partial retry, preview cleanup, CLI and independent Client isolation.",
       "task": 2264,
-      "sha256": "30f6f9fe940150bfd9f5eeb3804a6b59cf7ed420e2392e093ccc63e8cfb103f3"
+      "sha256": "cf63aed0226320827a79779565d51888a5a618f9f6dcf9734ba002423d9132b4"
     },
     {
       "path": "scripts/e2e-message-history-mask.mjs",

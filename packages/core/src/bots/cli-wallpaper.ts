@@ -18,9 +18,23 @@ export const WALLPAPER_COMMANDS = [
   },
   {
     command: 'wallpaper-remove',
-    description: 'remove the explicit Client wallpaper with --expected-revision',
+    description:
+      'delete the shown wallpaper, or --wallpaper-item, from the library with --expected-revision',
+  },
+  {
+    command: 'wallpaper-select',
+    description:
+      'show library --wallpaper-item <id>, or none, on --client-id with --expected-revision',
+  },
+  {
+    command: 'wallpaper-rotation',
+    description:
+      'set {interval,shuffle} from --patch-stdin; interval is 0 or 60000/300000/900000/1800000/3600000 ms',
   },
 ] as const;
+export const WALLPAPER_OPTIONS = {
+  'wallpaper-item': { type: 'string' },
+} as const;
 export async function runWallpaperCommand(
   command: string,
   rest: string[],
@@ -29,6 +43,7 @@ export async function runWallpaperCommand(
     'expected-revision'?: string;
     'patch-stdin'?: boolean;
     file?: string;
+    'wallpaper-item'?: string;
   },
   io: BotCreateCliIo,
   connect: () => Promise<{
@@ -46,8 +61,28 @@ export async function runWallpaperCommand(
     throw new CliLiveError('usage', 'wallpaper-get takes no write options.');
   if (values.file && command !== 'wallpaper-import')
     throw new CliLiveError('usage', '--file requires wallpaper-import.');
-  if (values['patch-stdin'] && !['wallpaper-import', 'wallpaper-crop'].includes(command))
-    throw new CliLiveError('usage', 'Crop input requires wallpaper-import or wallpaper-crop.');
+  if (
+    values['patch-stdin'] &&
+    !['wallpaper-import', 'wallpaper-crop', 'wallpaper-rotation'].includes(command)
+  )
+    throw new CliLiveError(
+      'usage',
+      '--patch-stdin requires wallpaper-import, wallpaper-crop or wallpaper-rotation.',
+    );
+  const item = values['wallpaper-item'];
+  if (
+    item !== undefined &&
+    !['wallpaper-crop', 'wallpaper-remove', 'wallpaper-select'].includes(command)
+  )
+    throw new CliLiveError(
+      'usage',
+      '--wallpaper-item requires wallpaper-crop, wallpaper-remove or wallpaper-select.',
+    );
+  if (command === 'wallpaper-select' && !item)
+    throw new CliLiveError(
+      'usage',
+      'wallpaper-select requires --wallpaper-item <id> from wallpaper-get, or none.',
+    );
   let crop: unknown;
   if (values['patch-stdin']) {
     try {
@@ -55,6 +90,20 @@ export async function runWallpaperCommand(
     } catch {
       throw new CliLiveError('usage', 'Invalid crop JSON.');
     }
+  }
+  if (command === 'wallpaper-rotation') {
+    const rotation = crop as Record<string, unknown> | undefined;
+    if (
+      !rotation ||
+      typeof rotation !== 'object' ||
+      Array.isArray(rotation) ||
+      !Object.keys(rotation).length ||
+      Object.keys(rotation).some((key) => !['interval', 'shuffle'].includes(key))
+    )
+      throw new CliLiveError(
+        'usage',
+        'wallpaper-rotation requires --patch-stdin with interval and/or shuffle.',
+      );
   }
   if (command === 'wallpaper-crop' && crop === undefined)
     throw new CliLiveError('usage', 'wallpaper-crop requires --patch-stdin.');
@@ -107,8 +156,13 @@ export async function runWallpaperCommand(
     }
   };
   if (command === 'wallpaper-get') return request({ action: 'read' });
-  if (command === 'wallpaper-remove') return request({ action: 'remove' });
-  if (command === 'wallpaper-crop') return request({ action: 'crop', crop });
+  const target = item === undefined ? {} : { item };
+  if (command === 'wallpaper-remove') return request({ action: 'remove', ...target });
+  if (command === 'wallpaper-crop') return request({ action: 'crop', crop, ...target });
+  if (command === 'wallpaper-select')
+    return request({ action: 'select', ...(item === 'none' ? {} : target) });
+  if (command === 'wallpaper-rotation')
+    return request({ action: 'rotation', ...(crop as Record<string, unknown>) });
   const begin = await request({ action: 'begin', size: bytes!.length });
   if (typeof begin.uploadId !== 'string')
     throw new CliLiveError('host-protocol-error', 'Client returned no upload receipt.');
