@@ -254,6 +254,10 @@ try {
     await finished(revoked, 'APPROVAL_SIMPLE_REVOKED');
     report.revocationAndCliOnce = true;
     report.stage = 'full-access';
+    await waitFor(async () => {
+      const trace = cli(['bot-trace', report.botId, '--turns', '1']);
+      return trace.turns.at(-1)?.endReason !== undefined;
+    }, 'settled turn before changing Full Access');
     cli([
       'access-set',
       report.botId,
