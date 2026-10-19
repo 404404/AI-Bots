@@ -17,6 +17,7 @@ describe('plainMarkdown', () => {
       'snake_case_name and 2 * 3 * 4 and a*b',
     );
     expect(plainMarkdown('- item\n1. step')).toBe('- item\n1. step');
+    expect(plainMarkdown('call foo__bar__baz and a__b')).toBe('call foo__bar__baz and a__b');
   });
 });
 

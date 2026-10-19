@@ -19,7 +19,8 @@ export function plainMarkdown(body: string): string {
   return body
     .replace(/!\[([^\]\n]*)\]\([^)\n]*\)/gu, '$1')
     .replace(/\[([^\]\n]+)\]\([^)\n]*\)/gu, '$1')
-    .replace(/(\*\*|__|~~)(?=\S)([^\n]*?\S)\1/gu, '$2')
+    .replace(/(\*\*|~~)(?=\S)([^\n]*?\S)\1/gu, '$2')
+    .replace(/(^|[^\p{L}\p{N}_\\])__(?=\S)([^\n]*?\S)__(?![\p{L}\p{N}_])/gu, '$1$2')
     .replace(/(^|[^\p{L}\p{N}*_\\])([*_])(?=\S)([^\n*_]*?\S)\2(?![\p{L}\p{N}])/gu, '$1$3')
     .replace(/(`+)([^`\n]+)\1/gu, '$2')
     .replace(/^ {0,3}(?:#{1,6}[ \t]+|>[ \t]?)/gmu, '');
