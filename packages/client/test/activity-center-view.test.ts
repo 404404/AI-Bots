@@ -127,7 +127,7 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
   const selection = store.getSnapshot().selection;
   try {
     await act(async () => root.render(createElement(ActivityCenterView, { actions, placement })));
-    expect(button('仅批准这一次')).toBeDefined();
+    expect(button('允许这次')).toBeDefined();
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(container.querySelector('.bh-human-inbox-detail')).toBeNull();
     expect(container.querySelector('.bh-overview')).toBeNull();
@@ -181,7 +181,7 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
     });
     expect(calls.filter((entry) => entry.endpoint === 'toolApprovalDecide')).toHaveLength(0);
     if (mode === 'expired') pending = false;
-    await act(async () => button(placement === 'panel' ? '拒绝' : '仅批准这一次')!.click());
+    await act(async () => button(placement === 'panel' ? '拒绝' : '允许这次')!.click());
     if (mode === 'expired') {
       expect(calls.filter((entry) => entry.endpoint === 'toolApprovalDecide')).toHaveLength(0);
       expect(container.textContent).toContain('已过期');

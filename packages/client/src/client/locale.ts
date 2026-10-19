@@ -3353,8 +3353,14 @@ export const zh = {
   'approval.botCreateRisk':
     '批准后会创建一个新 Bot 和它的记忆文件夹。新 Bot 不会继承这个 Bot 的授权、访问权限、密钥或模型方案。',
   'approval.channelChanged': '已切换频道，请回到此 Bot 的私聊后重试。',
-  'approval.allowOnce': '仅批准这一次',
+  'approval.allowOnce': '允许这次',
   'approval.fullAccessEntry': '不想每次都批准？可以为这个 Bot 开启完全访问…',
+  'approval.allowAlways': '始终允许',
+  'approval.alwaysToolScope':
+    '以后允许此 Bot 在当前授权范围使用 {tool}，参数可以不同。Shell 等工具可能访问目录之外。',
+  'approval.alwaysServiceScope': '允许并记住这个服务，仍保留其独立访问限制。',
+  'approval.alwaysUnavailable': '此操作需要单独确认，不能设为始终允许。',
+  'approval.toolRule': '始终允许 {tool}',
   'approval.allowExact': '始终允许相同调用',
   'approval.allowKind': '总是允许此类',
   'approval.allowKindRisk':
@@ -3431,22 +3437,23 @@ export const zh = {
   'access.section': '权限',
   'grant.section': '文件夹',
   'access.title': '完全访问',
-  'access.description': '所有文件，不再询问。关闭时只能写入工作区，执行命令前逐次询问。',
+  'access.description':
+    '普通操作可访问所有文件，无需逐次确认；权限变更仍需确认。关闭后按工作区权限执行。',
   'access.confirmTitle': '开启危险文件权限？',
   'access.confirmRisk':
-    '此 Bot 的聊天会话和之后新建的事项可访问工作区外的任何文件，命令不再逐次提问。别人在群聊或 IM 里发来的内容也可能诱导它执行操作。带密钥运行命令行工具仍然每次询问。开启后可以把范围改成“仅新事项”。关闭开关会让聊天会话恢复受限，但不会降低已有危险事项的权限。',
+    '此 Bot 的聊天会话和之后新建的事项可访问工作区外的任何文件，命令不再逐次提问。别人在群聊或 IM 里发来的内容也可能诱导它执行操作。修改持续权限或审批策略仍需单独确认。开启后可以把范围改成“仅新事项”。关闭开关会让聊天会话恢复受限，但不会降低已有危险事项的权限。',
   'access.confirmEnable': '我了解风险，开启',
   'access.scopeTitle': '完全访问的范围',
   'access.scopeChat': '聊天会话和新事项',
   'access.scopeAssignments': '仅新事项',
   'access.activeWarningAssignments':
-    '完全访问已开启（仅新事项）：之后新建的事项可访问任何文件且不再逐次提问；聊天会话仍然受限。',
+    '完全访问已开启（仅新事项）：之后新建的事项可访问任何文件，普通操作不再逐次提问；权限变更仍需确认。聊天会话仍然受限。',
   'access.activeWarning':
-    '完全访问已开启：此 Bot 的聊天会话和之后新建的事项可访问任何文件，且不再逐次提问。',
+    '完全访问已开启：此 Bot 的聊天会话和之后新建的事项可访问任何文件，普通操作不再逐次提问；权限变更仍需确认。',
   'access.sessionWarning': '此事项以危险文件权限创建；关闭 Bot 开关不会改变它。',
   'approval.revokeRule': '撤销规则',
   'approval.exactRule': '相同调用：{tool}',
-  'approval.allRule': '此范围全部不透明工具',
+  'approval.allRule': '历史授权：此范围的所有工具',
   'approval.secretCliRule': '密钥命令：{program}（账号 {account}）',
   'approval.reject': '拒绝',
   'approval.approved': '已批准这一次调用',
@@ -7340,6 +7347,14 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.channelChanged': 'Return to this Bot DM and try again.',
   'approval.allowOnce': 'Allow once',
   'approval.fullAccessEntry': 'Tired of approving each time? Turn on full access for this Bot…',
+  'approval.allowAlways': 'Always allow',
+  'approval.alwaysToolScope':
+    'Allow this Bot to use {tool} in the current authorization scope, with different inputs. Shell and other tools may reach beyond the folder.',
+  'approval.alwaysServiceScope':
+    'Allow and remember this service, keeping its independent access restrictions.',
+  'approval.alwaysUnavailable':
+    'This operation needs individual confirmation and cannot be always allowed.',
+  'approval.toolRule': 'Always allow {tool}',
   'approval.allowExact': 'Always allow this exact call',
   'approval.allowKind': 'Always allow this kind',
   'approval.allowKindRisk':
@@ -7421,23 +7436,23 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'grant.section': 'Folders',
   'access.title': 'Full access',
   'access.description':
-    'All files, no asking. When off, it writes only within its workspace and asks before each command.',
+    'Ordinary work can access all files without repeated prompts. Permission changes still need confirmation. When off, workspace permissions apply.',
   'access.confirmTitle': 'Enable dangerous file access?',
   'access.confirmRisk':
-    "This Bot's chat Session and its new Assignments may access any file outside their workspace and will not ask for each command. Content other people send in a Group or IM could steer it into acting. Running a command-line tool with a secret still asks every time. Turning this off confines the chat Session again but does not downgrade existing dangerous Assignments.",
+    "This Bot's chat Session and its new Assignments may access any file outside their workspace and will not ask for each command. Content other people send in a Group or IM could steer it into acting. Persistent permission and approval-policy changes still need individual confirmation. Turning this off confines the chat Session again but does not downgrade existing dangerous Assignments.",
   'access.confirmEnable': 'I understand, enable',
   'access.scopeTitle': 'Scope of full access',
   'access.scopeChat': 'Chat and new Assignments',
   'access.scopeAssignments': 'New Assignments only',
   'access.activeWarningAssignments':
-    'Full access is on for new Assignments only: they may access any file without asking; the chat Session stays confined.',
+    'Full access is on for new Assignments only: ordinary work may access any file without repeated prompts; permission changes still need confirmation. The chat Session stays confined.',
   'access.activeWarning':
-    "Full access is on: this Bot's chat Session and its new Assignments may access any file without asking.",
+    "Full access is on: this Bot's chat Session and its new Assignments may access any file for ordinary work without repeated prompts. Permission changes still need confirmation.",
   'access.sessionWarning':
     'This Assignment was created with dangerous file access; turning off the Bot setting will not change it.',
   'approval.revokeRule': 'Revoke rule',
   'approval.exactRule': 'Exact call: {tool}',
-  'approval.allRule': 'All opaque tools in this scope',
+  'approval.allRule': 'Legacy allowance: all tools in this scope',
   'approval.secretCliRule': 'Secret command: {program} (account {account})',
   'approval.reject': 'Reject',
   'approval.approved': 'This call was approved',

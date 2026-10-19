@@ -4,6 +4,14 @@
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
+      "id": "desktop.approval.three-actions",
+      "label": "Remember only the current tool through three actions and keep Full Access permission management Human-only",
+      "source": "packages/core/src/workspaces/tool-approval.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/tool-approval-simple.md",
+      "task": 2080,
+      "gap": "Web/online CLI first slice; native mobile, IM new-rule authority and all Provider/recovery variants remain later qualification."
+    },
+    {
       "id": "desktop.grants.request-write-continue",
       "label": "Approve persistent workspace write authority and continue the original native-file task",
       "source": "packages/core/src/workspaces/grant-requests.ts",
@@ -643,6 +651,14 @@
     }
   ],
   "scripts": [
+    {
+      "path": "scripts/e2e-tool-approval-simple.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.approval.three-actions"],
+      "reason": "Task-owned isolated Windows Host; real native pwsh requests, Web Always allow, changed inputs, other-tool/CLI/revoke checks and Full Access Human-only management.",
+      "task": 2080,
+      "sha256": "8d458c04a5f5aba572b2f8455675bb2760507b4c88819c1bd89e430a6f297c9c"
+    },
     {
       "path": "scripts/e2e-workspace-request-write.mjs",
       "category": "mapped",

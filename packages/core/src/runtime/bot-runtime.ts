@@ -978,7 +978,7 @@ function permissionFromRow(row: AssignmentRow): AssignmentPermissionSnapshot | u
     row.workspace_id === null ||
     row.primary_cwd === null ||
     (row.permission_mode !== 'workspace-write' && row.permission_mode !== 'danger-full-access') ||
-    row.approval_policy !== (row.permission_mode === 'workspace-write' ? 'ask' : 'never') ||
+    row.approval_policy !== 'ask' ||
     row.preset_revision === null
   )
     return undefined;
@@ -6887,7 +6887,7 @@ class BotRuntimeImplementation implements BotRuntime {
       workspaceId: grant.workspaceId,
       primaryCwd: grant.workspacePath,
       mode: access.mode,
-      approval: access.mode === 'danger-full-access' ? 'never' : 'ask',
+      approval: 'ask',
       presetRevision: access.revision,
     };
     const key = input.key === undefined ? undefined : requireNonBlank(input.key, 'Continuity Key');

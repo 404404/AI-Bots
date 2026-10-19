@@ -1436,7 +1436,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
   toolApprovalDecide(
     channelId: string,
     messageId: string,
-    outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected',
+    outcome:
+      | 'allowed-once'
+      | 'allowed-always-tool'
+      | 'allowed-always-exact'
+      | 'allowed-always-all'
+      | 'rejected',
   ): Promise<{ accepted: boolean }> {
     return unwrapAsync(this.methods.toolApprovalDecide({ channelId, messageId, outcome }));
   }

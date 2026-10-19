@@ -541,7 +541,11 @@ function MessageGroupView({
   resolvedGrantRequests: ReadonlySet<string>;
   toolApprovalDecisions: ReadonlyMap<
     string,
-    'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected'
+    | 'allowed-once'
+    | 'allowed-always-tool'
+    | 'allowed-always-exact'
+    | 'allowed-always-all'
+    | 'rejected'
   >;
   userQuestionResolutions: ReadonlyMap<string, 'answered' | 'cancelled'>;
   t: BotHarnessTranslate;

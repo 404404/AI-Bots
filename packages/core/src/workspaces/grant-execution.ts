@@ -14,7 +14,7 @@ export function orchestratorPermission(
 ): { mode: 'workspace-write' | 'danger-full-access'; approval: 'ask' | 'never' } {
   const preset = core.assignmentAccess?.get(botSlug);
   return preset?.mode === 'danger-full-access' && preset.scope === 'chat'
-    ? { mode: 'danger-full-access', approval: 'never' }
+    ? { mode: 'danger-full-access', approval: 'ask' }
     : { mode: 'workspace-write', approval: 'ask' };
 }
 

@@ -751,7 +751,12 @@ export interface BridgeActions {
   decideToolApproval(
     channelId: string,
     messageId: string,
-    outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected',
+    outcome:
+      | 'allowed-once'
+      | 'allowed-always-tool'
+      | 'allowed-always-exact'
+      | 'allowed-always-all'
+      | 'rejected',
   ): Promise<void>;
   userQuestionStatus(
     channelId: string,

@@ -26,7 +26,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
 it.each([
   ['allowed-once', 2, false, false],
   ['rejected', 2, false, false],
-  ['allowed-always-all', 2, false, false],
+  ['allowed-always-tool', 2, false, false],
   ['rejected', 1, true, false],
   ['rejected', 2, true, true],
 ] as const)(
@@ -93,6 +93,7 @@ it.each([
                   sessionId: 'owned-session',
                   callId: `call-${messageId}`,
                   toolName: 'bash',
+                  allowAlways: true,
                   role: 'assignment',
                   cwd: '/qa/release',
                   input: '{"command":"echo QA"}',
@@ -174,14 +175,16 @@ it.each([
         [...node.querySelectorAll<HTMLButtonElement>('.bh-tool-approval-card button')].find(
           (b) => b.textContent === label,
         )!;
-      button(outcome === 'rejected' ? '拒绝' : '仅批准这一次').focus();
-      if (outcome === 'allowed-always-all') {
-        await act(() => button('始终允许此范围全部不透明工具').click());
-        expect(decisions).toEqual([]);
-        button('确认始终允许').focus();
-        await act(async () => button('确认始终允许').click());
-      } else
-        await act(async () => button(outcome === 'rejected' ? '拒绝' : '仅批准这一次').click());
+      button(outcome === 'rejected' ? '拒绝' : '允许这次').focus();
+      await act(async () =>
+        button(
+          outcome === 'rejected'
+            ? '拒绝'
+            : outcome === 'allowed-always-tool'
+              ? '始终允许'
+              : '允许这次',
+        ).click(),
+      );
       if (decisionBeforeProjection) {
         expect(button('拒绝').disabled).toBe(true);
         button('拒绝').blur();
@@ -273,7 +276,7 @@ it.each(['native', 'wrong-target', 'unmounted'] as const)(
         ),
       );
       const button = [...node.querySelectorAll<HTMLButtonElement>('button')].find(
-        (button) => button.textContent === '仅批准这一次',
+        (button) => button.textContent === '允许这次',
       )!;
       await act(async () => button.click());
       if (context === 'unmounted') {
@@ -293,7 +296,7 @@ it.each(['native', 'wrong-target', 'unmounted'] as const)(
 );
 
 it.each([
-  ['bash', 'orchestrator', undefined, true],
+  ['bash', 'orchestrator', undefined, false],
   ['secret_cli', 'orchestrator', undefined, false],
   ['secret_mcp_connect', 'orchestrator', undefined, false],
   ['bash', 'assignment', undefined, false],
@@ -350,7 +353,7 @@ it.each([
   },
 );
 
-it('a secret_cli card offers always allow this kind with its one-line warning and saves it', async () => {
+it('a secret_cli card uses the three actions with its constrained-kind warning', async () => {
   const calls: { method: string; args: unknown }[] = [];
   const call: BridgeCall = async (method, args) => {
     calls.push({ method, args });
@@ -367,6 +370,7 @@ it('a secret_cli card offers always allow this kind with its one-line warning an
       sessionId: 'owned',
       callId: 'call',
       toolName: 'secret_cli',
+      allowAlways: true,
       role: 'orchestrator',
       cwd: '/qa',
       input: '{"program":"gh","account":"github-work","args":[],"env":[]}',
@@ -390,15 +394,15 @@ it('a secret_cli card offers always allow this kind with its one-line warning an
     const labels = [...node.querySelectorAll<HTMLButtonElement>('button')].map(
       (button) => button.textContent,
     );
-    expect(labels).toContain(zhTranslate('approval.allowKind'));
+    expect(labels).toContain(zhTranslate('approval.allowAlways'));
     expect(labels).not.toContain(zhTranslate('approval.allowAll'));
     expect(node.textContent).toContain(zhTranslate('approval.allowKindRisk'));
     const kind = [...node.querySelectorAll<HTMLButtonElement>('button')].find(
-      (button) => button.textContent === zhTranslate('approval.allowKind'),
+      (button) => button.textContent === zhTranslate('approval.allowAlways'),
     )!;
     await act(async () => kind.click());
     expect(calls.find((c) => c.method === 'toolApprovalDecide')?.args).toMatchObject({
-      outcome: 'allowed-always-exact',
+      outcome: 'allowed-always-tool',
     });
   } finally {
     await act(() => root.unmount());

@@ -1614,6 +1614,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       core.runtime.beginAssignmentApprovalWait?.(sessionId, callId, signal),
     (sessionId) => core.runtime.askChannel?.(sessionId),
     autoApproval,
+    (sessionId) => sessionHasFullAccess(core, sessionId),
   );
   ctx.effect(
     () => core.externalMessaging.approvals.attach(toolApproval, core.channels),

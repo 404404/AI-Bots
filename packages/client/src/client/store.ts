@@ -118,6 +118,7 @@ export interface BotCreatePreview {
 }
 
 export interface ToolApprovalRequestCard {
+  allowAlways?: boolean;
   sessionId: string;
   callId: string;
   toolName: string;
@@ -129,7 +130,12 @@ export interface ToolApprovalRequestCard {
 
 export interface ToolApprovalDecision {
   requestMessageId: string;
-  outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected';
+  outcome:
+    | 'allowed-once'
+    | 'allowed-always-tool'
+    | 'allowed-always-exact'
+    | 'allowed-always-all'
+    | 'rejected';
 }
 
 export interface UserQuestionOption {

@@ -29,6 +29,7 @@ const message = (toolName = 'bash', input = '{"command":"echo QA"}'): ChannelMes
       sessionId: 'session',
       callId: 'call',
       toolName,
+      allowAlways: true,
       role: 'orchestrator',
       cwd: '/qa',
       input,
@@ -103,7 +104,7 @@ describe('Tool approval card layout', () => {
       [...card.querySelectorAll('.bh-tool-approval-card > .bh-tool-approval-actions button')].map(
         (button) => button.textContent,
       ),
-    ).toEqual(['仅批准这一次', '始终允许相同调用', '始终允许此范围全部不透明工具', '拒绝']);
+    ).toEqual(['允许这次', '始终允许', '拒绝']);
     expect(card.querySelector('kbd')).toBeNull();
   });
   it('previews the new Bot on a bot_create card', async () => {
@@ -183,14 +184,30 @@ describe('Tool approval card keyboard', () => {
     expect(decisions).toEqual(['rejected']);
   });
 
-  it('keeps the risk confirmation behind A and backs out with Escape', async () => {
+  it('shows exactly three decisions and remembers only the current tool with A', async () => {
     const card = await render();
+    expect(
+      [...card.querySelectorAll('.bh-tool-approval-actions button')].map(
+        (button) => button.textContent,
+      ),
+    ).toEqual(['允许这次', '始终允许', '拒绝']);
+    await press(card, 'a');
+    expect(decisions).toEqual(['allowed-always-tool']);
+    expect(card.querySelector('[role="group"]')).toBeNull();
+  });
+
+  it('keeps three actions but disables Always allow for an individually confirmed operation', async () => {
+    const value = message();
+    value.toolApprovalRequest!.allowAlways = false;
+    const card = await render(value);
+    const buttons = [
+      ...card.querySelectorAll<HTMLButtonElement>('.bh-tool-approval-actions button'),
+    ];
+    expect(buttons.map((button) => button.textContent)).toEqual(['允许这次', '始终允许', '拒绝']);
+    expect(buttons[1]?.disabled).toBe(true);
     await press(card, 'a');
     expect(decisions).toEqual([]);
-    expect(card.querySelector('[role="group"]')?.textContent).toContain('确认始终允许');
-    await press(card, 'Escape');
-    expect(card.querySelector('[role="group"]')).toBeNull();
-    expect(decisions).toEqual([]);
+    expect(card.textContent).toContain('需要单独确认');
   });
 
   it('ignores keys with modifiers and keys typed into fields', async () => {

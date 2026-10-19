@@ -1053,7 +1053,7 @@ describe('Bot runtime tracer bullet', () => {
     await runtime.whenIdle();
     expect(runtime.getAssignment('ada', 'assignment-danger')?.permission).toMatchObject({
       mode: 'danger-full-access',
-      approval: 'never',
+      approval: 'ask',
       presetRevision: 1,
     });
     access.set('ada', 'workspace-write');

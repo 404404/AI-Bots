@@ -5438,6 +5438,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         channelId === undefined ||
         messageId === undefined ||
         (outcome !== 'allowed-once' &&
+          outcome !== 'allowed-always-tool' &&
           outcome !== 'allowed-always-exact' &&
           outcome !== 'allowed-always-all' &&
           outcome !== 'allowed-always-kind' &&
@@ -5454,6 +5455,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (request === undefined) {
         return invalidInput('Unknown tool approval request');
       }
+      if (outcome === 'allowed-always-tool' && request.allowAlways !== true)
+        return invalidInput('Always allow is unavailable for this request');
       if (outcome === 'allowed-always-kind' && request.toolName !== 'secret_cli')
         return invalidInput('allowed-always-kind applies only to a secret_cli approval');
       const accepted = await deps.toolApproval?.decide(

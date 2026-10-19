@@ -881,10 +881,11 @@ export async function runLiveCli(
   if (
     command === 'tool-approval-decide' &&
     values.outcome !== 'allowed-once' &&
+    values.outcome !== 'allowed-always-tool' &&
     values.outcome !== 'allowed-always-kind' &&
     values.outcome !== 'rejected'
   )
-    usage('--outcome must be allowed-once, allowed-always-kind or rejected.');
+    usage('--outcome must be allowed-once, allowed-always-tool, allowed-always-kind or rejected.');
   if (command === 'user-question-answer') {
     if (!values['answer-stdin']) usage('user-question-answer requires --answer-stdin.');
     try {

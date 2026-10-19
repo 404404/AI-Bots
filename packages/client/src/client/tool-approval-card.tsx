@@ -14,7 +14,6 @@ import { store, type ChannelMessage } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
 import { WORKSPACE_GRANTS_CHANGED } from './workspace-grant-events.js';
 import type { CompanionRequestTarget } from './companion-requests.js';
-import { channelSettings } from './channel-settings-state.js';
 import { approvalCountdown } from './approval-countdown.js';
 import { ApprovalInput } from './approval-input.js';
 import { approvalSummary } from './approval-diff.js';
@@ -35,6 +34,7 @@ export function ToolApprovalCard({
   channelId?: string | undefined;
   decision?:
     | 'allowed-once'
+    | 'allowed-always-tool'
     | 'allowed-always-exact'
     | 'allowed-always-all'
     | 'rejected'
@@ -44,7 +44,7 @@ export function ToolApprovalCard({
 }): ReactElement {
   const request = message.toolApprovalRequest!;
   const secretCli = request.toolName === 'secret_cli';
-  const eachUse = secretCli || request.toolName === 'secret_mcp_connect';
+  const canAlwaysAllow = request.allowAlways ?? false;
   const [acceptedDecision, setAcceptedDecision] = useState<typeof decision>();
   const effectiveDecision = decision ?? acceptedDecision;
   const botSlug = message.author.kind === 'bot' ? message.author.slug : undefined;
@@ -54,7 +54,6 @@ export function ToolApprovalCard({
   >(decision === undefined ? 'loading' : 'decided');
   const [busy, setBusy] = useState(false);
   const [busyChoice, setBusyChoice] = useState<typeof decision>();
-  const [confirmAll, setConfirmAll] = useState(false);
   const [open, setOpen] = useState(false);
   const detailsId = useId();
   const [error, setError] = useState<string | undefined>();
@@ -180,7 +179,12 @@ export function ToolApprovalCard({
     [companionTarget, surface],
   );
   const decide = (
-    outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected',
+    outcome:
+      | 'allowed-once'
+      | 'allowed-always-tool'
+      | 'allowed-always-exact'
+      | 'allowed-always-all'
+      | 'rejected',
   ): void => {
     if (botSlug === undefined || submitting.current || status !== 'pending') return;
     if (companionTarget && !qualified()) return;
@@ -245,19 +249,11 @@ export function ToolApprovalCard({
     if (target.closest('input, textarea, select, [contenteditable="true"]') !== null) return;
     if (!actionable) return;
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-    if (confirmAll) {
-      if (key !== 'Escape') return;
-      event.preventDefault();
-      event.stopPropagation();
-      setConfirmAll(false);
-      event.currentTarget.focus({ preventScroll: true });
-      return;
-    }
     if (disabled) return;
     const onCard = target === event.currentTarget;
     if (key === 'y' || (key === 'Enter' && onCard)) decide('allowed-once');
     else if (key === 'n' || key === 'Escape') decide('rejected');
-    else if (key === 'a' && !eachUse) setConfirmAll(true);
+    else if (key === 'a' && canAlwaysAllow) decide('allowed-always-tool');
     else return;
     event.preventDefault();
     event.stopPropagation();
@@ -370,9 +366,9 @@ export function ToolApprovalCard({
       aria-label={actionable ? t('approval.requestTitle') : undefined}
       aria-keyshortcuts={
         actionable && surface !== 'activity'
-          ? eachUse
-            ? 'Y Enter N Escape'
-            : 'Y Enter N Escape A'
+          ? canAlwaysAllow
+            ? 'Y Enter N Escape A'
+            : 'Y Enter N Escape'
           : undefined
       }
       data-open={(settled === undefined && open) || undefined}
@@ -455,10 +451,21 @@ export function ToolApprovalCard({
           )}
         </div>
       ) : null}
-      {settled === undefined && status === 'pending' && !confirmAll && secretCli ? (
-        <div className="bh-note">{t('approval.allowKindRisk')}</div>
+      {settled === undefined && status === 'pending' ? (
+        <div className="bh-note">
+          {canAlwaysAllow
+            ? t(
+                secretCli
+                  ? 'approval.allowKindRisk'
+                  : request.toolName === 'secret_mcp_connect'
+                    ? 'approval.alwaysServiceScope'
+                    : 'approval.alwaysToolScope',
+                { tool: request.toolName },
+              )
+            : t('approval.alwaysUnavailable')}
+        </div>
       ) : null}
-      {settled !== undefined ? null : status === 'pending' && !confirmAll ? (
+      {settled !== undefined ? null : status === 'pending' ? (
         <div
           ref={focusMount}
           className="bh-tool-approval-actions bh-message-card-actions"
@@ -482,31 +489,16 @@ export function ToolApprovalCard({
             variant="outline"
             size={size}
             className="bh-request-secondary"
-            disabled={disabled}
-            aria-busy={busy && busyChoice === 'allowed-always-exact'}
-            onClick={() => decide('allowed-always-exact')}
+            disabled={disabled || !canAlwaysAllow}
+            aria-busy={busy && busyChoice === 'allowed-always-tool'}
+            onClick={() => decide('allowed-always-tool')}
           >
             {t(
-              busy && surface === 'activity' && busyChoice === 'allowed-always-exact'
+              busy && surface === 'activity' && busyChoice === 'allowed-always-tool'
                 ? 'activityInbox.submitting'
-                : request.toolName === 'secret_mcp_connect'
-                  ? 'approval.allowAndRemember'
-                  : secretCli
-                    ? 'approval.allowKind'
-                    : 'approval.allowExact',
+                : 'approval.allowAlways',
             )}
           </Button>
-          {eachUse || surface === 'activity' ? null : (
-            <Button
-              variant="outline"
-              size={size}
-              className="bh-request-secondary"
-              disabled={disabled}
-              onClick={() => setConfirmAll(true)}
-            >
-              {t('approval.allowAll')}
-            </Button>
-          )}
           <Button
             variant="outline"
             size={size}
@@ -527,22 +519,6 @@ export function ToolApprovalCard({
           {t(status === 'loading' ? 'approval.loading' : 'companion.requestUnavailable')}
         </div>
       ) : null}
-      {status === 'pending' &&
-      effectiveDecision === undefined &&
-      !confirmAll &&
-      !eachUse &&
-      companionTarget === undefined &&
-      surface !== 'activity' &&
-      request.role === 'orchestrator' &&
-      cardChannelId === 'dm-' + botSlug ? (
-        <button
-          type="button"
-          className="bh-request-link"
-          onClick={() => channelSettings.open('workspace-grants')}
-        >
-          {t('approval.fullAccessEntry')}
-        </button>
-      ) : null}
       {(companionTarget || surface === 'activity') && status === 'unavailable' ? (
         <div className="bh-message-card-actions">
           <Button
@@ -552,37 +528,6 @@ export function ToolApprovalCard({
           >
             {t('companion.retryRequest')}
           </Button>
-        </div>
-      ) : null}
-      {confirmAll && status === 'pending' ? (
-        <div className="bh-message-card-actions">
-          <div
-            className="bh-tool-approval-confirm"
-            role="group"
-            aria-label={t('approval.allowAll')}
-          >
-            <div className="bh-note">{t('approval.allowAllRisk')}</div>
-            <div className="bh-tool-approval-actions bh-message-card-actions">
-              <Button
-                variant="primary"
-                size={size}
-                className="bh-request-primary"
-                disabled={disabled}
-                onClick={() => decide('allowed-always-all')}
-              >
-                {t('approval.confirmAll')}
-              </Button>
-              <Button
-                variant="outline"
-                size={size}
-                className="bh-request-secondary"
-                disabled={busy}
-                onClick={() => setConfirmAll(false)}
-              >
-                {t('approval.cancel')}
-              </Button>
-            </div>
-          </div>
         </div>
       ) : null}
       {error === undefined ? null : (
