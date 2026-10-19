@@ -72,6 +72,8 @@ export function sectionMenuItems(
 export const UNGROUPED_MOVE_TARGET = 'ungrouped';
 
 export const NEW_SECTION_MOVE_TARGET = 'new-section';
+
+const CHANNEL_NAME_MAX = 200;
 function checkedTargetLabel(text: string): ReactElement {
   return (
     <span className="bh-move-checked">
@@ -292,6 +294,7 @@ export function CreateChannelModal({
         placeholder={t('channel.name.placeholder')}
         value={draft}
         onChange={setDraft}
+        maxLength={CHANNEL_NAME_MAX}
         initialFocus
       />
     </FormDialog>

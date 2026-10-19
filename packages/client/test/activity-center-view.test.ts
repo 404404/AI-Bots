@@ -131,7 +131,7 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(container.querySelector('.bh-human-inbox-detail')).toBeNull();
     expect(container.querySelector('.bh-overview')).toBeNull();
-    expect(button('始终允许此范围全部不透明工具')).toBeUndefined();
+    expect(button('始终允许这里所有无法预览的工具')).toBeUndefined();
     expect(container.textContent).toContain('echo APPROVAL_2026');
     expect(container.textContent).not.toContain('Check release files.');
     expect(calls.some((entry) => entry.endpoint === 'activityOverview')).toBe(false);

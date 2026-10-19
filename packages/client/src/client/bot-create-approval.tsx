@@ -28,6 +28,19 @@ export function botCreateArgs(input: string): BotCreateArgs | undefined {
   }
   if (typeof parsed !== 'object' || parsed === null) return undefined;
   const args = parsed as Record<string, unknown>;
+  const patch = args['patch'];
+  if (args['command'] === 'create' && typeof patch === 'object' && patch !== null) {
+    const fields = patch as Record<string, unknown>;
+    return botCreateArgs(
+      JSON.stringify({
+        display_name: fields['displayName'],
+        description: fields['description'],
+        tags: fields['roles'],
+        soul: fields['persona'],
+        core_memory: fields['coreMemory'],
+      }),
+    );
+  }
   const displayName = optional(args['display_name']);
   if (displayName === undefined) return undefined;
   const description = optional(args['description']);

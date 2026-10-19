@@ -103,7 +103,7 @@ describe('Tool approval card layout', () => {
       [...card.querySelectorAll('.bh-tool-approval-card > .bh-tool-approval-actions button')].map(
         (button) => button.textContent,
       ),
-    ).toEqual(['仅批准这一次', '始终允许相同调用', '始终允许此范围全部不透明工具', '拒绝']);
+    ).toEqual(['仅批准这一次', '始终允许相同调用', '始终允许这里所有无法预览的工具', '拒绝']);
     expect(card.querySelector('kbd')).toBeNull();
   });
   it('previews the new Bot on a bot_create card', async () => {
