@@ -1,4 +1,4 @@
-# Functional Panel appearance (T3)
+# Functional Panel appearance (T3–T4)
 
 ## Sub-features
 
@@ -9,7 +9,7 @@
 
 ## How to get to it (user POV)
 
-In desktop Bot mode, right-click the Messages or Home Header → Appearance settings. The modal names the Panel and current light/dark mode. Adjust color, opacity and blur; use each Follow global button to remove just that override. Reset this panel removes only the current target and mode. Ordinary Header close/drag and content context menus retain their own actions. Nested Header appearance comes in T4.
+In desktop Bot mode, right-click the Messages or Home Header → Appearance settings. The modal names the Panel and current light/dark mode. Adjust color, opacity and blur; use each Follow global button to remove just that override. Reset this panel removes only the current target and mode. Ordinary Header close/drag and content context menus retain their own actions. Nested Memory, Sessions, Browser and Computer Headers use the same menu. Memory file preview, commit detail and working changes share the Memory details target; child fields inherit global settings directly.
 
 ## Driving it with verify-app
 
@@ -25,3 +25,11 @@ For task-owned macOS, follow [local appearance](local-appearance.md), open both 
 - The Dock content paint container is distinct from the React content mount. Styles target the active Dock tab's group, without inheritable per-panel material variables.
 - Unknown/unregistered targets refuse writes; they are never substituted with another Panel. Saved data is retained for a returning registration.
 - Native DSH, content menus and modal opacity remain separate. Human QA and unrun native branches are separate from source tests.
+
+## Nested journey and independent Plugin
+
+For T4, add the test-only Bundle `scripts/fixtures/appearance-panel` to the isolated Profile using a local dependency and its `dsh.profile.bundles` entry, then relaunch that Profile. Never add this fixture to the product Bundle. Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-nested-appearance.mjs`; `--baseline` captures the prior T3 nested entry point. The journey creates synthetic Memory content in its task-owned Bot repository and uses real Git commits, not simulated detail data.
+
+Verify green Messages with a globally colored child, child Header-only menu/modal, three Memory detail views, parent reset preserving children, Bot switch/reload, independent contribution content and unregister/re-register. Browser uses a real local fixture page through its Provider and embedded viewer. Computer Header/body and its current runtime status must be recorded separately from a live desktop pixel check. Native Desktop follows the task-owned launch/restart contract in local appearance; never operate another task's app.
+
+Browser/Computer poll while open: reload waits for the actual restored panel rather than network idleness. A perpetual poll is not a persistence failure. Keep failed attempts and their observation/doctor output.

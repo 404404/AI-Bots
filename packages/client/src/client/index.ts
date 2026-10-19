@@ -441,9 +441,11 @@ export function apply(ctx: ClientContext): void {
   const dockPanels = createDockPanelRegistry();
   ctx.provide('dockPanels', dockPanels);
   ctx.effect(() =>
-    appearance.setTargetSource(() =>
-      dockPanels.panels().map((panel) => ({ id: panelTargetId(panel.id), label: panel.title })),
-    ),
+    appearance.setTargetSource(() => [
+      ...dockPanels.panels().map((panel) => ({ id: panelTargetId(panel.id), label: panel.title })),
+      { id: panelTargetId('memory-details'), label: t('appearance.memoryDetails') },
+      { id: panelTargetId('generated-files'), label: t('generatedFiles.title') },
+    ]),
   );
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
   const workspace = {
