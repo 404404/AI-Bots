@@ -5,7 +5,8 @@
   "description": "DeepSeekBot bundle: BotHarness core + web client, installed as one profile layer",
   "bin": {
     "botharness-profile": "./dist/profile-cli.mjs",
-    "deepseekbot": "./dist/deepseekbot.mjs"
+    "deepseekbot": "./dist/deepseekbot.mjs",
+    "deepseekbot-zoom-setup": "./dist/desktop-zoom-setup.mjs"
   },
   "files": [
     "dist",

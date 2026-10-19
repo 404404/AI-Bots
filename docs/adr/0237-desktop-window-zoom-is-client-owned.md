@@ -49,11 +49,18 @@ before restoring the original font scope. Other theme behavior and manual font c
 The product build includes the generated theme under `deepseekbot/desktop-theme`, retaining
 its native package identity, styles, locales, types and MIT license. Its only Host import is
 rewritten to the product's bundled ESM schema module through a relative path. No local machine
-path, postinstall script or task Profile override is required. Both Bundle patches disable
-the original `ui-theme` row on macOS and insert one application-defined group waiting for the
-native `clientModules` Provider. The group selects the copied theme only when the composed
-release is exactly 0.2.1-rc.2; otherwise it selects the native theme. Windows/Linux retain the
-original row and do not activate the group. Removing the Bundle restores native composition.
+path or postinstall script is required. Both Bundle patches leave the original `ui-theme`
+Loader row, settings namespace and Profile Patch ownership unchanged. The explicit product
+command `deepseekbot-zoom-setup enable --home <home> --profile <profile> --dsh <dsh-cli>`
+uses the native package manager to add one Profile-local link to the product-carried theme.
+It refuses non-macOS platforms, a CLI release other than 0.2.1-rc.2, other theme overrides,
+unqualified artifacts and the obsolete grouped composition. Restart the Host/Desktop after
+setup; configuration success is not a runtime qualification claim. This opt-in is additional
+to ordinary product installation. Disable it before uninstalling the product; disable removes
+only its declared dependency and any exact owned symlink left by pnpm, retaining native font
+preferences and the original theme row. A relative Profile link follows product upgrades,
+which still require requalification. Removing the Bundle alone does not remove the installed
+Profile override; the explicit disable command restores native package resolution.
 Build generation refuses unknown source versions or hashes before writing output.
 
 The marker is an application-defined capability, not a public DSH API or an automatic probe of

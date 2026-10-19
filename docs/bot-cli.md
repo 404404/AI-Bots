@@ -951,6 +951,21 @@ Use the exact metadata from the selected file/diff side. The authenticated Host 
 
 ## Desktop window zoom (controlled S1)
 
+The product includes a separate configuration command. After ordinary product installation,
+explicitly enable its qualified theme in the intended macOS Profile, then restart the same
+Host/Desktop. A CLI release other than 0.2.1-rc.2, an existing other theme override or a stale
+product composition is refused. This changes one Profile dependency, not the installed app:
+
+```sh
+deepseekbot-zoom-setup enable --home <absolute-DSH_HOME> --profile <profile> --dsh <qualified-dsh-cli>
+deepseekbot-zoom-setup disable --home <absolute-DSH_HOME> --profile <profile> --dsh <dsh-cli>
+```
+
+Run `disable` before uninstalling the product and restart to restore native package resolution.
+Manual font preferences remain in the same native `ui-theme` Patch. JSON stdout reports
+`restartRequired:true` and `runtimeVerified:false`; a successful package change does not prove
+the native window has loaded it. An uncertain package operation is not retried automatically.
+
 `window-zoom-clients` lists active targets. Select one `--client-id`; commands never choose a
 window implicitly. `window-zoom-get` reads the Client-owned snapshot. A write requires the
 returned `document.revision` as `--expected-revision`:

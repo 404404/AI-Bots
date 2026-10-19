@@ -1,8 +1,69 @@
 {
-  "sourceCommit": "a4ceea164c30208e68787286a38331d8442e2478",
   "date": "2026-10-19",
+  "productVersion": "0.0.0-zoom.2268.7",
+  "activation": "Explicit native package-manager Profile override; original ui-theme row and native settings authority retained",
+  "scope": "Actual prepared product and native Host APIs; original theme namespace and user Patch authority, no native-window qualification",
+  "settingsLifecycle": [
+    {
+      "label": "pre-existing-native-preferences",
+      "qualified": false,
+      "namespace": "ui-theme",
+      "fontSize": 16,
+      "preference": "dark"
+    },
+    {
+      "label": "product-retains-native-preferences",
+      "qualified": true,
+      "namespace": "ui-theme",
+      "fontSize": 16,
+      "preference": "dark"
+    },
+    {
+      "label": "product-native-font-write",
+      "qualified": true,
+      "namespace": "ui-theme",
+      "fontSize": 17,
+      "preference": "dark"
+    },
+    {
+      "label": "product-restart",
+      "qualified": true,
+      "namespace": "ui-theme",
+      "fontSize": 17,
+      "preference": "dark"
+    },
+    {
+      "label": "setup-disable-restores-native-and-retains-write",
+      "qualified": false,
+      "namespace": "ui-theme",
+      "fontSize": 17,
+      "preference": "dark"
+    }
+  ],
+  "focusedTests": {
+    "files": 5,
+    "passed": 47
+  },
+  "sourceChecks": {
+    "lint": "passed",
+    "format": "passed",
+    "types": "passed",
+    "targetedProductBuild": "passed; output separate from held native instance"
+  },
+  "limits": [
+    "Corrected packed native Desktop activation pending",
+    "Same-device Host switch pending",
+    "Physical IME response pending",
+    "Broader S2 native menu/focus matrix pending",
+    "Windows/Linux deferred to #2270"
+  ],
+  "discarded": [
+    "Grouped replacement renamed native settings namespace",
+    "Sync/async startup Node hooks did not redirect actual DSH metadata discovery"
+  ],
+  "historicalRecord": "historical-validation.json is superseded and does not qualify the corrected composition",
   "freshProfile": {
-    "productVersion": "0.0.0-zoom.2268.1",
+    "productVersion": "0.0.0-zoom.2268.7",
     "node": "v24.21.0",
     "platform": "darwin",
     "scope": "Fresh Profile, no pre-approved builds: one install step, Host boot, Bot and DM creation, restart persistence. Browser, model and IM delivery are separate gates.",
@@ -17,118 +78,60 @@
       }
     ]
   },
-  "portablePayload": {
-    "scope": "Actual product tarball, extracted outside the workspace; direct Host import without node_modules",
-    "apply": "function",
-    "config": "function",
-    "themeIdentity": "@deepseek-ai/dsh-client-ui-theme",
-    "version": "0.2.1-rc.2",
-    "license": "MIT",
-    "types": 4,
-    "schemaRelative": true,
-    "machinePathPresent": false,
-    "clientCompatibility": true
-  },
-  "lifecycle": {
+  "packageLifecycle": {
     "scope": "Actual tarballs, one task Profile, reinstall after remove, local-version upgrade and rollback; Host graph and canonical Bot identity, no Browser/native input qualification",
     "rows": [
       {
         "label": "reinstall",
-        "version": "0.0.0-zoom.2268.1",
+        "version": "0.0.0-zoom.2268.7",
         "themeCount": 1,
         "compatibilityMarker": true,
         "botCount": 1,
-        "sameBotIdentity": true
+        "identities": "29628c7373c29355873451ba3bf524c0d1a3a4e9b5e9791bf60e070b5751481d"
       },
       {
         "label": "upgrade",
-        "version": "0.0.0-zoom.2268.2",
+        "version": "0.0.0-zoom.2268.8",
         "themeCount": 1,
         "compatibilityMarker": true,
         "botCount": 1,
-        "identities": "29628c7373c29355873451ba3bf524c0d1a3a4e9b5e9791bf60e070b5751481d",
-        "sameBotIdentity": true
+        "identities": "29628c7373c29355873451ba3bf524c0d1a3a4e9b5e9791bf60e070b5751481d"
       },
       {
         "label": "rollback",
-        "version": "0.0.0-zoom.2268.1",
+        "version": "0.0.0-zoom.2268.7",
         "themeCount": 1,
         "compatibilityMarker": true,
         "botCount": 1,
-        "identities": "29628c7373c29355873451ba3bf524c0d1a3a4e9b5e9791bf60e070b5751481d",
-        "sameBotIdentity": true
+        "identities": "29628c7373c29355873451ba3bf524c0d1a3a4e9b5e9791bf60e070b5751481d"
       }
     ]
   },
-  "nativeComposition": {
-    "scope": "Existing isolated Desktop using ordinary product Bundle patches and linked worktree members; no task-specific theme dependency/override; packed native install is a separate pending gate",
-    "release": {
-      "version": "0.2.1-rc.2",
-      "commit": "332895e"
-    },
-    "themeIds": ["@deepseek-ai/dsh-client-ui-theme"],
-    "compatibilityVersion": 1
-  },
-  "nativeInput": {
-    "method": "CUA native keyboard delivery to the existing macOS 0.2.1-rc.2 window",
-    "steps": {
-      "before": {
-        "level": 0,
-        "defaultLevel": 0,
-        "revision": "25abd294-8b89-44d8-b008-7836e1157794",
-        "rootZoom": "1"
-      },
-      "conflictRecording": {
-        "level": 0,
-        "defaultLevel": 0,
-        "revision": "25abd294-8b89-44d8-b008-7836e1157794",
-        "rootZoom": "1"
-      },
-      "customBindingSaved": {
-        "level": 0,
-        "defaultLevel": 0,
-        "revision": "25abd294-8b89-44d8-b008-7836e1157794",
-        "rootZoom": "1"
-      },
-      "customBindingExecuted": {
-        "level": 1,
-        "defaultLevel": 0,
-        "revision": "c22f2878-bbe3-4ea2-b790-b0b05f7fd363",
-        "rootZoom": "1.2"
-      }
-    },
-    "observed": "Recording Cmd+- refused as an occupied binding without a zoom revision; a temporary custom chord then increased exactly one level in a real composer while retaining its synthetic draft. Default binding restored through Settings.",
-    "limits": "This record does not prove ordinary Cmd+=, real IME composition or manual font-token preservation; earlier ordinary-key evidence remains in #2245."
-  },
   "uninstall": {
-    "packageDependencyPresent": false,
-    "bundleEnabled": false,
-    "packageLinkPresent": false,
-    "nativeGraphThemeCount": 1,
-    "compatibilityMarker": false,
-    "scope": "Task-owned packaged Profile, explicit Bundle disable followed by native dsh plugin remove; normal Host boot afterward"
+    "scope": "Actual prepared product and native Host APIs; original theme namespace and user Patch authority, no native-window qualification",
+    "rows": [
+      {
+        "label": "product-removal-native-fallback",
+        "qualified": false,
+        "namespace": "ui-theme",
+        "fontSize": 17,
+        "preference": "dark"
+      },
+      {
+        "label": "post-removal-cleanup-retains-native-settings",
+        "qualified": false,
+        "namespace": "ui-theme",
+        "fontSize": 17,
+        "preference": "dark"
+      }
+    ]
   },
-  "gates": {
-    "passed": [
-      "55 focused tests",
-      "lint",
-      "format check",
-      "root and mobile types",
-      "actual tarball portability",
-      "fresh install/Bot/DM/restart on both supported Host releases",
-      "packed reinstall/upgrade/rollback with retained Bot identity",
-      "native recording/custom-binding behavior"
-    ],
-    "pending": [
-      "native packed installation in preserved user-data",
-      "same-device Host switch",
-      "real macOS IME feedback",
-      "wider S2 popups and embedded-page matrix",
-      "Human QA for new wallpaper/chrome fixes"
-    ],
-    "blocked": [
-      "Fresh-product Web UI: in-app browser denied the local origin; not retried through another browser or CDP"
-    ],
-    "fullSourceSuite": "7441 passed, 24 skipped; source-policy and group-self-leave exceeded the 15-second limit under full-suite load. Focused rechecks recorded separately. Both focused rechecks passed: source-policy 10 tests (4.47s), group-self-leave 10 tests (7.56s)."
-  }
+  "unsupportedFloor": {
+    "dsh": "0.2.0-rc.2",
+    "exit": 1,
+    "code": "desktop-zoom-setup-version-unsupported",
+    "profileUnchanged": true
+  },
+  "setupSourceSha256": "d204535fe50d9da50260c63fdcbb851d22ec75fa1abf1b1abf41afe02db08a30",
+  "artifactIntegrity": "sha512-9BAunjGSIVdjBsFxwCJAbVD/Kmh6lylxYfSRZGHRDfiTOHEZMWuWmcGbkmbMmgkWXM/0zshYoLkUzg6T/5gGjA=="
 }

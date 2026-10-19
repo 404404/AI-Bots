@@ -107,40 +107,13 @@ describe('product-owned desktop theme payload', () => {
 });
 
 for (const patch of ['cordis.patch.yml', 'cordis.im.patch.yml']) {
-  describe(`${patch} theme selection`, () => {
-    const rows = parseProductComposition(
-      readFileSync(new URL(`../../packages/deepseekbot/${patch}`, import.meta.url), 'utf8'),
+  it(`${patch} retains the original native theme row and its settings namespace`, () => {
+    const text = readFileSync(
+      new URL(`../../packages/deepseekbot/${patch}`, import.meta.url),
+      'utf8',
     );
-    const native = rows.find((row) => row.id === 'ui-theme');
-    const group = rows
-      .flatMap((row) => row.insert ?? [])
-      .find((row) => row.id === 'botharness-desktop-theme');
-    const disabled = (row, platform, version) =>
-      Boolean(
-        new Function('process', 'ctx', `return (${row.disabled.__jsExpr});`)(
-          { platform },
-          { get: () => ({ graph: () => ({ release: version ? { version } : undefined }) }) },
-        ),
-      );
-    it.each(['darwin', 'win32', 'linux'])(
-      'keeps exactly one theme owner on %s across version changes and rollback',
-      (platform) => {
-        for (const version of ['0.2.1-rc.2', '0.2.0-rc.2', '0.2.1-rc.3', undefined, '0.2.1-rc.2']) {
-          const active = [
-            ...(!disabled(native, platform, version) ? [native.name] : []),
-            ...(!disabled(group, platform, version)
-              ? group.config
-                  .filter((row) => !disabled(row, platform, version))
-                  .map((row) => row.name)
-              : []),
-          ];
-          expect(active).toEqual([
-            platform === 'darwin' && version === '0.2.1-rc.2'
-              ? './desktop-theme/lib/index.js'
-              : '@deepseek-ai/dsh-client-ui-theme',
-          ]);
-        }
-      },
-    );
+    const rows = parseProductComposition(text);
+    expect(rows.some((row) => row.id === 'ui-theme')).toBe(false);
+    expect(text).not.toContain('botharness-desktop-theme');
   });
 }

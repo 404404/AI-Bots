@@ -328,11 +328,14 @@ which clamps and converts coordinates. This does not qualify other native dropdo
 ## Additional verified pitfall — #2268 desktop theme packaging
 
 A Bundle Patch's `name` guards an existing row; it does not replace its implementation.
-For the qualified macOS 0.2.1-rc.2 composition, disable the original row and insert a group
-that waits for `clientModules`, then selects exactly one native or product-carried theme.
-A relative Plugin path is anchored beside the Patch and the nearest package manifest owns
-the Client module id; a package subpath specifier is not equivalent to that file path.
-Keep the copied native package identity and license, and use a product-relative bundled ESM
-schema import rather than a machine-local dependency path. The composed release guard is
-not an independent attestation of the Desktop executable version. Verify the real graph,
-ordinary package install and native input, and requalify the copied artifact on an upgrade.
+Renaming a replacement row to `qualified-theme` breaks the native Client's hardcoded
+`configForms.get('ui-theme')`; a successful boot and one Client module id do not prove font
+settings preservation. Startup Node hooks also failed to redirect the native Client metadata
+resolver in the actual Host, despite standalone Node resolver tests passing. Do not use those
+approaches as qualified delivery. Retain the original row and use an explicit Profile-local
+package override through `deepseekbot-zoom-setup enable`, then restart. The command refuses
+unsupported platforms/releases or other owners and exposes `runtimeVerified:false`.
+Disable before product removal. pnpm can leave an unlisted `link:` symlink after remove;
+the owner removes only its exact link and verifies it is absent. Native `ui-theme` reads,
+writes, restart and disable must retain the same font preference. Keep the copied identity,
+license and relative ESM schema import; no installed ASAR or upstream files are changed.

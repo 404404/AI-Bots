@@ -935,6 +935,19 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 
 ## 桌面整页缩放（S1 受控切片）
 
+产品附带独立配置命令。普通安装产品后，须明确在目标 macOS Profile 启用经验证的主题，
+再重启同一个 Host／桌面窗口。CLI 版本不是 0.2.1-rc.2、存在其他主题覆盖或产品仍采用旧组合时均拒绝。
+此操作只改变一个 Profile 依赖，不修改已安装应用：
+
+```sh
+deepseekbot-zoom-setup enable --home <绝对路径-DSH_HOME> --profile <profile> --dsh <已验证的-dsh-cli>
+deepseekbot-zoom-setup disable --home <绝对路径-DSH_HOME> --profile <profile> --dsh <dsh-cli>
+```
+
+卸载产品前先 `disable`，并重启以恢复原生包解析。手动字体偏好仍由原生 `ui-theme` Patch 保存。
+JSON 标准输出包含 `restartRequired:true`、`runtimeVerified:false`；包配置成功不表示原生窗口已加载。
+包操作结果不确定时不会自动重试。
+
 `window-zoom-clients` 列出在线目标，必须明确传入 `--client-id`，不会隐式选择窗口。
 `window-zoom-get` 读取 Client 持有的状态；写入必须携带其 `document.revision`：
 
