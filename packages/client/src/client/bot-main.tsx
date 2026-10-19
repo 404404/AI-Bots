@@ -2492,13 +2492,6 @@ function ConversationView({
           </>
         )}
       </div>
-      <div
-        className="bh-chat-top-fade"
-        aria-hidden="true"
-        style={{
-          display: profileViewOpen || activeMemoryView !== undefined ? 'none' : undefined,
-        }}
-      />
       {profileViewOpen && channel?.type === 'group' ? (
         <GroupProfileView
           members={channelFacepile}

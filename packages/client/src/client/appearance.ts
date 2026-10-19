@@ -99,14 +99,22 @@ export interface AppearancePatch {
   primary?: string;
   materials?: AppearanceMaterialOverrides;
   panel?: AppearancePanelPatch;
+  clearPanels?: true;
 }
 export function parseAppearancePatch(value: unknown): AppearancePatch {
   const v = object(value);
   if (
     !Object.keys(v).length ||
     Object.keys(v).some(
-      (k) => !['preference', 'mode', 'preset', 'primary', 'materials', 'panel'].includes(k),
+      (k) =>
+        !['preference', 'mode', 'preset', 'primary', 'materials', 'panel', 'clearPanels'].includes(
+          k,
+        ),
     ) ||
+    (v.clearPanels !== undefined &&
+      (v.clearPanels !== true ||
+        v.mode === undefined ||
+        Object.keys(v).some((k) => k !== 'mode' && k !== 'clearPanels'))) ||
     (v.preference !== undefined && !preference(v.preference)) ||
     (v.mode !== undefined && v.mode !== 'light' && v.mode !== 'dark') ||
     (v.preset !== undefined && !preset(v.preset)) ||
@@ -126,7 +134,8 @@ export function parseAppearancePatch(value: unknown): AppearancePatch {
       v.preset === undefined &&
       v.primary === undefined &&
       v.materials === undefined &&
-      v.panel === undefined)
+      v.panel === undefined &&
+      v.clearPanels === undefined)
   )
     throw new AppearanceError('appearance-invalid-input');
   return v as AppearancePatch;
@@ -189,6 +198,28 @@ export class Appearance {
       this.#publish(this.#snapshot.config, (error as AppearanceError).code);
     }
   };
+  #commit(next: AppearanceConfig): AppearanceSnapshot {
+    try {
+      this.storage!.setItem(APPEARANCE_KEY, JSON.stringify(next));
+    } catch {
+      throw new AppearanceError('appearance-storage-unavailable');
+    }
+    this.#publish(next);
+    return this.#snapshot;
+  }
+  reset(expectedRevision: string): AppearanceSnapshot {
+    try {
+      const current = this.#read();
+      if (current.revision !== expectedRevision)
+        throw new AppearanceError('appearance-revision-conflict');
+      const next = parseAppearance(null);
+      next.revision = this.revision();
+      return this.#commit(next);
+    } catch (error) {
+      this.#publish(this.#snapshot.config, (error as AppearanceError).code);
+      throw error;
+    }
+  }
   update = (value: unknown, expectedRevision?: string): AppearanceSnapshot => {
     try {
       const patch = parseAppearancePatch(value);
@@ -202,6 +233,7 @@ export class Appearance {
       if (patch.preference !== undefined) next.preference = patch.preference;
       if (patch.mode !== undefined) {
         const mode = next.modes[patch.mode];
+        if (patch.clearPanels) delete mode.panels;
         if (patch.panel) applyPanelPatch(mode, patch.panel);
         if (patch.preset !== undefined) {
           mode.preset = patch.preset;
@@ -217,13 +249,7 @@ export class Appearance {
           }
         }
       }
-      try {
-        this.storage!.setItem(APPEARANCE_KEY, JSON.stringify(next));
-      } catch {
-        throw new AppearanceError('appearance-storage-unavailable');
-      }
-      this.#publish(next);
-      return this.#snapshot;
+      return this.#commit(next);
     } catch (error) {
       this.#publish(this.#snapshot.config, (error as AppearanceError).code);
       throw error;

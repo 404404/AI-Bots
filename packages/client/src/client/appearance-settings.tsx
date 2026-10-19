@@ -1,3 +1,4 @@
+import { AppearanceRecoverySettings } from './appearance-recovery-settings.js';
 import { WallpaperSettings } from './wallpaper-settings.js';
 import type { Wallpaper } from './wallpaper.js';
 import { AppearanceMaterialSettings } from './appearance-material-settings.js';
@@ -23,6 +24,7 @@ export function AppearanceSection(
     PropsRenderSlots<'botharness.settings.layout'>,
 ): ReactElement {
   const { t, appearance, wallpaper, localeSource, renderSlot } = props;
+  const media = useSyncExternalStore(wallpaper.subscribe, wallpaper.getSnapshot);
   const theme = useSyncExternalStore(appearance.subscribe, appearance.getSnapshot);
   const locale = useSyncExternalStore(localeSource.subscribe, localeSource.getSnapshot);
   const change = (patch: AppearancePatch) => {
@@ -33,6 +35,7 @@ export function AppearanceSection(
   return (
     <SettingsRows>
       <Note>{t('appearance.local')}</Note>
+      <AppearanceRecoverySettings appearance={appearance} wallpaper={wallpaper} t={t} />
       {theme.error && <Note tone="danger">{t('appearance.saveFailed')}</Note>}
       <SettingsRow
         title={t('settings.theme')}
@@ -86,7 +89,7 @@ export function AppearanceSection(
           />
         </div>
       ))}
-      <WallpaperSettings owner={wallpaper} t={t} />
+      <WallpaperSettings key={media.resourceVersion} owner={wallpaper} t={t} />
       <AppearanceMaterialSettings appearance={appearance} snapshot={theme} t={t} />
       <MotionSetting {...props} />
       <BotIconSetting {...props} />

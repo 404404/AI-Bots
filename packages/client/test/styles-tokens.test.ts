@@ -71,15 +71,21 @@ describe('client styles', () => {
     expect(source).toMatch(/\.bh-section \+ \.bh-section \{\s*margin-top: 12px/);
     expect(source).toMatch(/\.bh-section-head:hover \.bh-row-actions,[^}]*display: inline-flex/);
   });
-  it('floats the channel island over a non-interactive fade without header dividers', () => {
+  it('fades only timeline alpha while keeping the channel island and composer outside the mask', () => {
     expect(source).toMatch(/\.bh-topbar \{[^}]*position: absolute/);
     expect(source).toMatch(
       /\.bh-channel-island:hover \{[^}]*background: color-mix\([^;]*var\(--dsw-alias-bg-module-platform\)/,
     );
     expect(source).toMatch(/\.bh-channel-island-wrap \{[^}]*align-items: center/);
     expect(source).toContain(".bh-topbar[data-channel-detail='true'] { display: none; }");
-    expect(source).toMatch(/\.bh-chat-top-fade \{[^}]*mask-image: linear-gradient\(/);
-    expect(source).toMatch(/\.bh-chat-top-fade \{[^}]*pointer-events: none/);
+    expect(source).not.toContain('.bh-chat-top-fade');
+    expect(source).not.toContain('.bh-composer-activity-status::before');
+    expect(source).toMatch(
+      /\.bh-chat-body \{[^}]*mask-image: linear-gradient\(to bottom, transparent, black/,
+    );
+    expect(source).toMatch(/\.bh-chat-body \{[^}]*mask-mode: alpha/);
+    expect(source).not.toMatch(/\.bh-chat-pane \{[^}]*mask-image:/);
+    expect(source).not.toMatch(/\.bh-composer-shell \{[^}]*mask-image:/);
     expect(source).not.toMatch(/\.bh-topbar \{[^}]*border-bottom:/);
     expect(source).not.toMatch(/\.bh-channel-sidebar-head \{[^}]*border-bottom:/);
   });

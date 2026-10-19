@@ -701,7 +701,9 @@
         "wallpaper-get",
         "wallpaper-import",
         "wallpaper-crop",
-        "wallpaper-remove"
+        "wallpaper-remove",
+        "appearance-clear-panels",
+        "appearance-reset"
       ]
     }
   ]

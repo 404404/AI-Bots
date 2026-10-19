@@ -1,3 +1,4 @@
+import { resetAppearance } from './appearance-recovery.js';
 import { WallpaperError } from './wallpaper-store.js';
 import type { Wallpaper } from './wallpaper.js';
 import { createWallpaperControl } from './wallpaper-control.js';
@@ -37,7 +38,16 @@ export function mountAppearanceControl(owner: Appearance, wallpaper?: Wallpaper)
           try {
             if (typeof command.expiresAt !== 'number' || Date.now() > command.expiresAt)
               throw new AppearanceError('appearance-request-stale');
-            if (command.wallpaper !== undefined) {
+            if (command.recovery !== undefined) {
+              if (!wallpaper) throw new WallpaperError('wallpaper-unavailable');
+              result = await resetAppearance(
+                owner,
+                wallpaper,
+                command.recovery,
+                command.expectedRevision,
+                command.expiresAt,
+              );
+            } else if (command.wallpaper !== undefined) {
               if (!media) throw new WallpaperError('wallpaper-unavailable');
               result = await media.execute(
                 command.wallpaper,
