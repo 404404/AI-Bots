@@ -13,7 +13,6 @@ import { UsageCard } from './shell/usage-card';
 import { t } from './strings';
 
 export interface SettingsActions {
-  onClose(): void;
   onUsage(): void;
   onOpenFullClient(): void;
   onComputers(): void;
@@ -65,40 +64,6 @@ export function SettingsView({
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
-        <View
-          style={{
-            flexDirection: theme.largeText ? 'column' : 'row',
-            alignItems: theme.largeText ? 'stretch' : 'center',
-            gap: space.x3,
-            marginRight: -space.x3,
-          }}
-        >
-          <Text
-            variant="title"
-            accessibilityRole="header"
-            style={theme.largeText ? undefined : { flex: 1 }}
-          >
-            {t.settings}
-          </Text>
-          <Pressable
-            onPress={actions.onClose}
-            accessibilityRole="button"
-            accessibilityLabel={t.done}
-            style={({ pressed }) => ({
-              alignSelf: theme.largeText ? 'flex-end' : 'auto',
-              minWidth: theme.touch,
-              minHeight: theme.touch,
-              paddingHorizontal: space.x3,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Text tone="accent" strong>
-              {t.done}
-            </Text>
-          </Pressable>
-        </View>
         <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
         <SettingsSection title={t.modelSettings.title} on={SHEET_GROUP}>
           <SettingsRow
