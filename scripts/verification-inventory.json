@@ -1908,6 +1908,14 @@
       "reason": "Real pinned Dockview dependency fixture for zoomed persistent overlay allocation and horizontal/vertical splitter movement; not a DSH/native acceptance journey.",
       "task": 2268,
       "behaviors": ["desktop.window-zoom"]
+    },
+    {
+      "path": "scripts/e2e-workspace-chrome.mjs",
+      "sha256": "12ff9ff097069a576e34de1c7aa0ad99f55fafa00ab3ee64ace1f76d2b136122",
+      "category": "mapped",
+      "reason": "Production workspace corner CSS and coordinate owner across zoom, panel gaps, rail positions and platform/fullscreen exclusion; does not render native traffic lights.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
     }
   ],
   "native": [

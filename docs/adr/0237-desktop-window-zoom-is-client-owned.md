@@ -32,6 +32,12 @@ minimum constraints or DOM parentage. No DSH source or installed shell is change
 must be requalified when Dockview is upgraded; restoring the unpatched package reintroduces
 panel overlap whenever root CSS zoom differs from one.
 
+The macOS native traffic-light footprint remains 88×40 viewport pixels independently of
+Client zoom. The workspace chrome owner converts its measured intersection with each group
+back to local header padding, updates on zoom/layout/fullscreen changes, and places a rail
+under that native footprint. Fullscreen and non-macOS shells reserve no corner. This is
+presentation geometry, not a new layout preference or a native-shell modification.
+
 The pinned DSH theme owns fixed Cmd+=/Cmd+- font commands. The downstream compatibility
 generator copies the exact MIT-licensed npm theme artifact, preserves its license, validates
 its version and hashes, and changes only its font-shortcut Fiber ownership and canonical ESM

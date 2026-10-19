@@ -1,3 +1,4 @@
+import { mountWorkspaceChrome, updateWorkspaceChrome } from './workspace-chrome.js';
 import {
   legacyChannelSplit,
   MESSAGE_LEAF,
@@ -858,17 +859,10 @@ export function ChannelDock({
 
   const save = (target: DockviewApi): void => {
     hideBodyHeader(target);
-    if (workspace)
-      for (const group of target.groups) {
-        const box = group.api.boundingBox;
-        const inset = box && box.top < 2 ? Math.max(0, 88 - gapRef.current - box.left) : 0;
-        group.element.toggleAttribute('data-bh-mac-corner', inset > 0);
-        group.element.toggleAttribute(
-          'data-bh-rail-corner',
-          inset > 0 && group.panels.some((panel) => panel.id === WORKSPACE_RAIL),
-        );
-        group.element.style.setProperty('--bh-mac-leading', `${inset}px`);
-      }
+    if (workspace) {
+      const root = target.groups[0]?.element.closest<HTMLElement>('[data-workspace-enabled]');
+      if (root) updateWorkspaceChrome(root, target.groups);
+    }
     const ids = target.panels.map((panel) => panel.id);
     setOpenIds(ids);
     reportOpen(target);
@@ -1090,6 +1084,12 @@ export function ChannelDock({
     (node) => {
       if (!api || !node.parentElement) return;
       const root = node.parentElement;
+      const workspaceRoot = workspace
+        ? root.closest<HTMLElement>('[data-workspace-enabled]')
+        : null;
+      const releaseChrome = workspaceRoot
+        ? mountWorkspaceChrome(workspaceRoot, () => api.groups)
+        : undefined;
       let resizing = false;
       const start = (event: PointerEvent) => {
         resizing = event.target instanceof Element && !!event.target.closest('.dv-sash');
@@ -1105,12 +1105,13 @@ export function ChannelDock({
       window.addEventListener('pointerup', finish);
       window.addEventListener('pointercancel', finish);
       return () => {
+        releaseChrome?.();
         root.removeEventListener('pointerdown', start, true);
         window.removeEventListener('pointerup', finish);
         window.removeEventListener('pointercancel', finish);
       };
     },
-    [api],
+    [api, workspaceMode],
   );
 
   const scrollbarsMount = useMountedResource<HTMLSpanElement>((node) => {

@@ -1161,4 +1161,4 @@ then returns it on disposal. It does not edit the installed desktop shell. Ordin
 is unchanged. The controlled macOS slice is gated on native guest foreground restoration and
 Human QA; numberpad, broader reliability and other desktop platforms remain #2269/#2270.
 
-Bot-mode Dockview content overlays and splitter movement convert viewport coordinates to local CSS units through the repository-pinned Dockview compatibility patch. The patch is bundled in the Client; it changes no DSH executable and preserves persistent panel instances and the existing layout store.
+Bot-mode Dockview content overlays and splitter movement convert viewport coordinates to local CSS units through the repository-pinned Dockview compatibility patch. The patch is bundled in the Client; it changes no DSH executable and preserves persistent panel instances and the existing layout store. The macOS workspace corner separately retains the native 88×40 viewport-pixel traffic-light footprint and converts measured group intersections into local header padding; zoom, layout and fullscreen updates do not change that physical footprint.

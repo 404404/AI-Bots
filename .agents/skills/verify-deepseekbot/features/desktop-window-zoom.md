@@ -45,6 +45,12 @@ pass. In the preserved desktop window, compare each visible panel's content rect
 its group allocation at the same levels and capture matched whole-window before/after pixels.
 Do not accept clipping, a layout reset or replacing live panels as an overlap fix.
 
+Run `node scripts/e2e-workspace-chrome.mjs` for the production macOS corner CSS and
+coordinate owner across all 17 levels, 0/4/16px panel gaps, rail on either side, fullscreen
+and non-macOS exclusion (204 cases). The native 88×40 viewport-pixel footprint must remain
+fixed while only intersecting headers reserve converted local CSS space. Check native pixels
+as well: the browser fixture does not render the operating system traffic lights.
+
 ## Gotchas
 
 - The native 0.2.1-rc.2 shortcut protocol rejects NumpadAdd/NumpadSubtract/Numpad0.
