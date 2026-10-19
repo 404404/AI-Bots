@@ -86,3 +86,5 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 | Video wallpaper | no | `scripts/e2e-video-wallpaper.mjs` | [video-wallpaper.md](video-wallpaper.md) |
 
 | Appearance recovery | no | `scripts/e2e-appearance-recovery.mjs`, `scripts/e2e-message-history-mask.mjs` | [appearance-recovery.md](appearance-recovery.md) |
+
+| Workspace request read/write approval and original-task continuation | yes | `scripts/e2e-workspace-request-write.mjs` | [workspace-request-write.md](workspace-request-write.md) |

@@ -1,3 +1,4 @@
+import { approveWorkspaceGrantRequest } from './bridge.js';
 import type { PixelBannerRecipe } from '@botharness/pixel-banner';
 import { onboardingFor } from './onboarding.js';
 import { loadAveragePerf, type AveragePerfView } from './message-perf.js';
@@ -2118,7 +2119,7 @@ export function createActions(
       if (folderAccess === undefined) throw new Error('DSH folder picker is unavailable');
       return folderAccess.pickDirectory();
     },
-    async resolveWorkspaceGrantRequest(slug, messageId, path, body, sourceChannelId) {
+    async resolveWorkspaceGrantRequest(slug, messageId, path, _body, sourceChannelId) {
       const channelId = sourceChannelId ?? 'dm-' + slug;
       const readRequest = async () => {
         const messages = await actions.humanInboxContext(channelId, messageId);
@@ -2137,32 +2138,17 @@ export function createActions(
             request.author.slug !== slug
           )
             throw new Error('Workspace request is no longer pending for this Bot');
-          const grant = await actions.authorizeWorkspacePath(slug, path);
-          publishWorkspaceGrantChange(slug);
-          const resolution = { requestMessageId: messageId, grantId: grant.id };
-          const clientMessageId = 'human-' + crypto.randomUUID();
-          const text = body(grant.workspaceTitle);
-          const reply = await sendChannelMessage(
+          if (folderAccess === undefined)
+            throw new Error('DSH Workspace controller is unavailable');
+          const workspace = await folderAccess.createWorkspace({ path });
+          await approveWorkspaceGrantRequest(
             call,
+            slug,
             channelId,
-            text,
             messageId,
-            undefined,
-            clientMessageId,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            resolution,
+            workspace.workspaceId,
           );
-          if (
-            reply.id !== clientMessageId ||
-            reply.author.kind !== 'human' ||
-            reply.replyTo !== messageId ||
-            reply.grantRequestResolution?.grantId !== grant.id ||
-            reply.grantRequestResolution.requestMessageId !== messageId
-          )
-            throw new Error('Workspace reply could not be confirmed');
+          publishWorkspaceGrantChange(slug);
         },
         async () => ((await readRequest())?.grantRequestResolved === true ? 'expired' : 'pending'),
       );

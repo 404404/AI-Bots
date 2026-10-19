@@ -65,7 +65,6 @@ export const TURN_ONLY_BOT_TOOLS: ReadonlySet<string> = new Set([
   'create_assignment',
   'send_assignment_request',
   'wait_for_assignment',
-  'request_workspace_grant',
   'channel_read_image',
   'channel_attachment_open',
   'memory_switch_branch',
@@ -1036,8 +1035,13 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'request_workspace_grant',
         description:
-          'Ask the Human to authorize a folder so the current task can continue. The request card appears in the current inbound Channel, a Group or your Human DM. Use only when no active Workspace Grant fits; this does not create an Assignment.',
+          'Ask the Human to authorize a folder so the current task can continue. The request card appears in the current inbound Channel, a Group or your Human DM. Use when no active writable Workspace Grant fits, including a read-only directory that needs write access; this does not create an Assignment.',
         parameters: {
+          channel_id: {
+            type: 'string',
+            description:
+              'Explicit joined Channel; required when called by the direct CLI outside a turn.',
+          },
           reason: {
             type: 'string',
             required: true,
@@ -1053,7 +1057,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           if (active?.role !== 'orchestrator') {
             throw new Error('request_workspace_grant: Orchestrator run is unavailable');
           }
-          const message = await active.run.channels.requestGrant(args.reason);
+          const message = await active.run.channels.requestGrant(args.reason, args.channel_id);
           return `Sent Workspace Grant request card ${message.id}; wait for Human authorization.`;
         },
       }),

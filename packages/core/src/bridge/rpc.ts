@@ -405,13 +405,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
     );
   }
 
-  private requirePrivateOwner(): void {
+  private requirePrivateOwner(message = 'Private input requires the authenticated Owner'): void {
     if (!isAuthenticatedOwner(this.ctx.invocation?.peer, this.ctx.get('connection')))
-      throw new RemoteError(
-        'forbidden' as RemoteError['code'],
-        'Private input requires the authenticated Owner',
-        {},
-      );
+      throw new RemoteError('forbidden' as RemoteError['code'], message, {});
   }
 
   messagingChannelTarget(
@@ -1383,6 +1379,25 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.grantRevoke({ slug, grantId }));
   }
 
+  grantRequestApprove(
+    slug: string,
+    channelId: string,
+    requestMessageId: string,
+    workspaceId: string,
+    acknowledgeReadWrite: boolean,
+  ) {
+    this.requirePrivateOwner('Workspace authorization requires the authenticated Owner');
+    return unwrapAsync(
+      this.methods.grantRequestApprove({
+        slug,
+        channelId,
+        requestMessageId,
+        workspaceId,
+        acknowledgeReadWrite,
+      }),
+    );
+  }
+
   grantWriteSet(slug: string, grantId: string, enabled: boolean): { grant: WorkspaceGrant } {
     return unwrap(this.methods.grantWriteSet({ slug, grantId, enabled }));
   }
@@ -1912,6 +1927,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'grantCreate',
   'grantRevoke',
   'grantWriteSet',
+  'grantRequestApprove',
   'assignmentAccessGet',
   'assignmentAccessSet',
   'toolApprovalRules',

@@ -316,6 +316,7 @@ export interface ChannelMessage {
   botCausation?: BotMessageCausation;
 
   grantRequest?: true;
+  grantRequestOwner?: string;
   grantRequestResolved?: boolean;
   assignmentReply?: { sessionId: string; sourceEventId: string };
 
@@ -545,6 +546,13 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     (message['grantRequest'] !== true ||
       !isChannelMessageAuthor(message['author']) ||
       (message['author'] as ChannelMessageAuthor).kind !== 'bot')
+  )
+    return false;
+  if (
+    message['grantRequestOwner'] !== undefined &&
+    (message['grantRequest'] !== true ||
+      typeof message['grantRequestOwner'] !== 'string' ||
+      !message['grantRequestOwner'])
   )
     return false;
   const grantResolution = message['grantRequestResolution'];

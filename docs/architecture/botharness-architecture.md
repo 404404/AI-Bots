@@ -1,5 +1,7 @@
 # BotHarness 架构与数据流
 
+#2080 第一条切片让 Web 请求卡与在线 CLI 共用 application-defined Workspace 请求批准命令。Grant owner 在 Channel owner 的现有提交事务内写入读写权限，规范决议与 Inbox Admission 同时提交；成功读回后再沿原运行时处理原任务。新目录与旧只读升级均需 Human 明确确认，不由 Client 串联多个独立成功动作。Orchestrator 与 Assignment 的原生文件写入都检查当前 Grant 写权限；Assignment 仍只使用其原 Grant 和单 cwd。普通目录设置、移动端交互和完整重启恢复矩阵仍按后续切片交付，不能从本次 Web/CLI 路径推定已完成。见 [ADR-0238](../adr/0238-workspace-request-approval-commits-write-authority-with-the-channel-decision.md)。
+
 #2053 的本地 Group 发送复核试点由 Channel owner 在正式 Source Event / placement 追加的同一事务内比较实际观察依据。
 #2054 复用该 owner：held 标出实际返回的同伴正式消息；Bot 可引用这些消息显式让话，或提交独立补充。Host 只核对引用是否真实观察且仍有效，不判断语义重复，也不自动结清 Inbox；让话依据随现有草稿 JSON 保存。
 待复核草稿保存在现有 Operational Database，仅正式提交进入 Channel/Inbox；仅 drop 不解决 Inbox；显式 `resolve_inbox_ids` 可在 drop 成功后结清所选事项，过期或重启不自动恢复。

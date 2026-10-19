@@ -3503,7 +3503,7 @@ export const zh = {
   'question.required': '请为每个问题选择选项或输入回答',
   'question.channelChanged': '请回到这个 Bot 的私聊后再回答',
   'grant.requestTitle': '需要工作区授权',
-  'grant.requestChoose': '选择文件夹并授权',
+  'grant.requestChoose': '允许文件夹读写',
   'grant.requestResolved': '已回复授权请求',
   'grant.requestApprovedMessage': '已授权工作区「{name}」，请继续处理之前的事项。',
   'grant.requestContinueFailed': '授权已保存，但尚未通知 Bot。请重试。',
@@ -7502,7 +7502,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'question.required': 'Choose an option or type an answer for every question',
   'question.channelChanged': 'Return to this Bot DM before answering',
   'grant.requestTitle': 'Workspace access needed',
-  'grant.requestChoose': 'Choose folder and authorize',
+  'grant.requestChoose': 'Allow folder read/write',
   'grant.requestResolved': 'Authorization request answered',
   'grant.requestApprovedMessage':
     'I authorized workspace “{name}”. Please continue the previous task.',

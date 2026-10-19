@@ -404,20 +404,26 @@ describe('Approval Reviewer in the tool approval gate', () => {
     expect(await answer).toBe('allowed-once');
   });
 
-  it('never lets the reviewer or a saved rule answer a change to the Bot policy', async () => {
-    const rules = { match: vi.fn(() => ({ id: 'rule' })) } as unknown as ToolApprovalRuleStore;
-    const state = fixture({ rules });
-    state.broker.track(
-      state.execution({ command: 'deepseekbot approval-template-set ada off' }, 'bash'),
-    );
-    expect(state.broker.willPrompt(state.execution().agent!, 'call-1')).toBe(true);
-    const answer = state.ask('bash');
-    await vi.waitFor(() => expect(state.messages).toHaveLength(1));
-    expect(state.review).not.toHaveBeenCalled();
-    expect(state.messages[0]!.toolApprovalRequest?.toolName).toBe('bash');
-    await state.broker.decide(botSlug, state.messages[0]!.id, 'rejected');
-    expect(await answer).toBe('rejected');
-  });
+  it.each([
+    'deepseekbot approval-template-set ada off',
+    'deepseekbot grant-request-approve ada --channel dm-ada --request req --workspace project --confirm',
+    'deepseekbot grant-write-set ada grant --enabled true',
+    '{"method":"grantRequestApprove"}',
+  ])(
+    'never lets the reviewer or a saved rule answer a policy or Grant change: %s',
+    async (command) => {
+      const rules = { match: vi.fn(() => ({ id: 'rule' })) } as unknown as ToolApprovalRuleStore;
+      const state = fixture({ rules });
+      state.broker.track(state.execution({ command }, 'bash'));
+      expect(state.broker.willPrompt(state.execution().agent!, 'call-1')).toBe(true);
+      const answer = state.ask('bash');
+      await vi.waitFor(() => expect(state.messages).toHaveLength(1));
+      expect(state.review).not.toHaveBeenCalled();
+      expect(state.messages[0]!.toolApprovalRequest?.toolName).toBe('bash');
+      await state.broker.decide(botSlug, state.messages[0]!.id, 'rejected');
+      expect(await answer).toBe('rejected');
+    },
+  );
 
   const secretArgs = {
     account: 'github',

@@ -1859,7 +1859,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                           JSON.stringify(execution.arguments) ?? '',
                           templateInUse,
                         )
-                      ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
+                      ? 'This PersonaBot wants to change persistent permissions or its approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
                       : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
             });

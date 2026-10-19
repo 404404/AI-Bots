@@ -523,7 +523,7 @@ export interface OrchestratorChannelAccess {
     maxBytes: number;
     signal?: AbortSignal;
   }): Promise<{ ref: ChannelAttachmentRef; data: Uint8Array }>;
-  requestGrant(reason: string): Promise<ChannelMessage>;
+  requestGrant(reason: string, channelId?: string): Promise<ChannelMessage>;
   contacts(input?: BotContactQuery): BotContactPage;
   createGroup(name: string): ChannelRecord;
   inviteGroup(input: { channelId: string; targetBotSlug: string }): GroupInvitation;
@@ -6041,8 +6041,8 @@ class BotRuntimeImplementation implements BotRuntime {
         }
         return { ref: downloaded.ref, data };
       },
-      requestGrant: async (reason) => {
-        const channel = resolve();
+      requestGrant: async (reason, channelId) => {
+        const channel = resolve(channelId);
         if (
           channel.type === 'group'
             ? !channel.members.includes(botSlug)
@@ -6060,6 +6060,7 @@ class BotRuntimeImplementation implements BotRuntime {
           author: { kind: 'bot', slug: botSlug },
           body,
           grantRequest: true,
+          grantRequestOwner: this.#registry.get(botSlug)!.createdAt,
         };
         const appended = await this.#channels.appendMessage(channel.id, message, {
           sessionId,

@@ -3325,6 +3325,28 @@ export async function readGroupWorkspaceGrant(
   return grants[0];
 }
 
+export async function approveWorkspaceGrantRequest(
+  call: BridgeCall,
+  slug: string,
+  channelId: string,
+  requestMessageId: string,
+  workspaceId: string,
+): Promise<WorkspaceGrantView> {
+  const value = asRecord(
+    await unwrap(call, 'grantRequestApprove', {
+      slug,
+      channelId,
+      requestMessageId,
+      workspaceId,
+      acknowledgeReadWrite: true,
+    }),
+  );
+  const grant = parseWorkspaceGrant(value?.['grant']);
+  if (!grant || grant.orchestratorWrite !== true)
+    throw new Error('Workspace write authorization could not be confirmed');
+  return grant;
+}
+
 export async function setWorkspaceGrantWrite(
   call: BridgeCall,
   slug: string,

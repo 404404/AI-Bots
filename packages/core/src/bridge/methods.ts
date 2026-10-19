@@ -1,3 +1,7 @@
+import {
+  approveGrantRequest,
+  type GrantRequestApprovalResult,
+} from '../workspaces/grant-requests.js';
 import { MemoryImageError } from '../memory/image.js';
 import { isDeepStrictEqual } from 'node:util';
 import { DEEPSEEKBOT_RECIPE } from '../onboarding/service.js';
@@ -644,6 +648,7 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<{ grant: WorkspaceGrant; created?: boolean }>>;
   grantRevoke(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
+  grantRequestApprove(payload: unknown): Promise<BridgeResult<GrantRequestApprovalResult>>;
   grantWriteSet(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
   assignmentAccessGet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
   assignmentAccessSet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
@@ -5280,6 +5285,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         if (error instanceof WorkspaceGrantError) {
           return { ok: false, error: { code: error.code, message: error.message } };
         }
+        throw error;
+      }
+    },
+    async grantRequestApprove(payload) {
+      const parsed = z
+        .object({
+          slug: z.string().min(1),
+          channelId: z.string().min(1),
+          requestMessageId: z.string().min(1),
+          workspaceId: z.string().min(1),
+          acknowledgeReadWrite: z.literal(true),
+        })
+        .safeParse(asObject(payload));
+      if (!parsed.success)
+        return invalidInput(
+          'Bot, Channel, request, Workspace and explicit read/write confirmation are required',
+        );
+      if (!deps.grants) return unavailable();
+      try {
+        return {
+          ok: true,
+          value: await approveGrantRequest({ ...deps, grants: deps.grants }, parsed.data),
+        };
+      } catch (error) {
+        if (error instanceof WorkspaceGrantError)
+          return { ok: false, error: { code: error.code, message: error.message } };
         throw error;
       }
     },
