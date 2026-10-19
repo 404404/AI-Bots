@@ -3,8 +3,6 @@ import { View } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
 
-// Material 3 radio button. The row owns the press and the radio semantics,
-// so the Compose control is hidden from TalkBack and takes no touches.
 export function RadioMark({ selected }: { selected: boolean }) {
   const theme = useDesignTheme();
   return (

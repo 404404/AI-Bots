@@ -3,8 +3,6 @@ import { View } from 'react-native';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 
-// Leading single-choice indicator. The row owns the press and the radio
-// semantics; this mark is decorative.
 export function RadioMark({ selected }: { selected: boolean }) {
   const theme = useDesignTheme();
   return (

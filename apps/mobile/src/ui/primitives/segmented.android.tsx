@@ -10,8 +10,6 @@ import { View } from 'react-native';
 import type { LayerName } from '../design/layers';
 import { useDesignTheme } from '../design/theme';
 
-// Material 3 segmented buttons: Compose supplies the outline, check mark,
-// ripple, 48dp target and radio semantics for each option.
 export function Segmented<T extends string>({
   label,
   options,

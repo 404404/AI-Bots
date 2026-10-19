@@ -3,8 +3,6 @@ import { View } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
 
-// Material 3 slider. One RN node owns the accessible value so TalkBack
-// reads the label and adjusts in the same 5% steps as iOS.
 export function PercentageSlider({
   label,
   value,

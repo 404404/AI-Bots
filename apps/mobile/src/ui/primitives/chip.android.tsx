@@ -3,7 +3,6 @@ import { View } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
 
-// Material 3 filter chip: native container, outline, ripple and selected state.
 export function Chip({
   label,
   count,
