@@ -15,6 +15,7 @@ import { mobileTelemetry } from '../src/telemetry/native';
 import type { PairingMethod } from '../src/telemetry/schema';
 import { Button } from '../src/ui/primitives/button';
 import { KeyboardFormScroll } from '../src/ui/primitives/keyboard-form';
+import { cloudAvailable } from '../src/cloud/available';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
 
@@ -84,7 +85,9 @@ export default function PairScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
-      <Button label={t.cloud.title} onPress={() => router.dismissTo('/cloud-services')} />
+      {cloudAvailable && (
+        <Button label={t.cloud.title} onPress={() => router.dismissTo('/cloud-services')} />
+      )}
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <ConnectionNameField
         value={connectionName}

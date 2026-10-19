@@ -7,6 +7,7 @@ import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/hos
 import { prefetchInbox } from '../../../src/host/inbox';
 import { useHostLook } from '../../../src/host/native-host-look';
 import { cloudClient, useCloudSnapshot } from '../../../src/cloud/native';
+import { cloudAvailable } from '../../../src/cloud/available';
 import { cloudConversations, useCloudConversations } from '../../../src/cloud/native-conversations';
 import { cloudViewScope } from '../../../src/cloud/workspace-directory';
 import { cloudError } from '../../../src/cloud/client';
@@ -199,7 +200,8 @@ const HomeContent = memo(function HomeContent({
         <ActivityIndicator />
       </View>
     );
-  if (saved === null && cloud.rows.length === 0) return <Redirect href="/cloud-join" />;
+  if (saved === null && cloud.rows.length === 0)
+    return <Redirect href={cloudAvailable ? '/cloud-join' : '/pair'} />;
   const refresh = async () => {
     setRefreshing(true);
     await Promise.all([client?.refresh(), inbox?.refresh(), cloudConversations.refresh()]).catch(
