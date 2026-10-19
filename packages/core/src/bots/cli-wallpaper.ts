@@ -10,7 +10,7 @@ export const WALLPAPER_COMMANDS = [
   {
     command: 'wallpaper-import',
     description:
-      'read --file on this CLI machine and import an image to --client-id with --expected-revision',
+      'read --file on this CLI machine and import image/video media to --client-id with --expected-revision',
   },
   {
     command: 'wallpaper-crop',
@@ -65,10 +65,10 @@ export async function runWallpaperCommand(
     try {
       const path = resolve(values.file);
       const stat = statSync(path);
-      if (!stat.isFile() || stat.size < 1 || stat.size > 20 * 1024 * 1024)
+      if (!stat.isFile() || stat.size < 1 || stat.size > 100 * 1024 * 1024)
         throw new CliLiveError(
           'wallpaper-size-invalid',
-          'Images must be nonempty and at most 20 MB.',
+          'Media must be nonempty: images up to 20 MB and videos up to 100 MB; the Client verifies decoding.',
         );
       bytes = readFileSync(path);
       if (bytes.length !== stat.size)
@@ -80,7 +80,7 @@ export async function runWallpaperCommand(
       if (error instanceof CliLiveError) throw error;
       throw new CliLiveError(
         'wallpaper-file-unavailable',
-        'Cannot read the input image on this CLI machine.',
+        'Cannot read the input media on this CLI machine.',
       );
     }
   }

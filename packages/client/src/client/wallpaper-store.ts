@@ -1,5 +1,6 @@
 export const WALLPAPER_DB = 'botharness-wallpaper-v1';
 export const IMAGE_LIMIT = 20 * 1024 * 1024;
+export const VIDEO_LIMIT = 100 * 1024 * 1024;
 export interface WallpaperCrop {
   x: number;
   y: number;
@@ -8,7 +9,8 @@ export interface WallpaperCrop {
 export interface WallpaperRecord {
   version: 1;
   revision: string;
-  kind: 'image';
+  kind: 'image' | 'video';
+  poster?: Blob;
   blob: Blob;
   width: number;
   height: number;
@@ -42,10 +44,12 @@ export function validWallpaper(value: unknown): value is WallpaperRecord {
   return (
     v.version === 1 &&
     typeof v.revision === 'string' &&
-    v.kind === 'image' &&
+    (v.kind === 'image' || v.kind === 'video') &&
     v.blob instanceof Blob &&
     v.blob.size > 0 &&
-    v.blob.size <= IMAGE_LIMIT &&
+    v.blob.size <= (v.kind === 'video' ? VIDEO_LIMIT : IMAGE_LIMIT) &&
+    (v.kind !== 'video' ||
+      (v.poster instanceof Blob && v.poster.size > 0 && v.poster.size <= IMAGE_LIMIT)) &&
     Number.isFinite(v.width) &&
     v.width > 0 &&
     Number.isFinite(v.height) &&

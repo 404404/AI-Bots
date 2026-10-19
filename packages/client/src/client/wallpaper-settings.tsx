@@ -10,6 +10,7 @@ import {
   type Wallpaper,
   type WallpaperPreview,
 } from './wallpaper.js';
+import { mountWallpaperPlayback } from './wallpaper-playback.js';
 import { wallpaperPlacement, type WallpaperCrop } from './wallpaper-store.js';
 
 export function WallpaperSettings({ owner, t }: { owner: Wallpaper; t: BotHarnessTranslate }) {
@@ -65,7 +66,7 @@ export function WallpaperSettings({ owner, t }: { owner: Wallpaper; t: BotHarnes
   const previewMount = useMountedResource<HTMLDivElement>(
     (node) => {
       frame.current = node;
-      const image = node.querySelector('img')!;
+      const image = node.querySelector<HTMLElement>('img,video')!;
       const paint = () => {
         if (!preview) return;
         const box = node.getBoundingClientRect();
@@ -89,16 +90,36 @@ export function WallpaperSettings({ owner, t }: { owner: Wallpaper; t: BotHarnes
     },
     [preview, crop],
   );
+  const videoMount = useMountedResource<HTMLVideoElement>(
+    (node) => {
+      if (!preview) return;
+      node.src = preview.url;
+      return mountWallpaperPlayback(
+        node,
+        () => {},
+        () => true,
+      );
+    },
+    [preview],
+  );
   return (
     <div ref={mount}>
       <SettingsSection title={t('wallpaper.title')}>
         <Note>{t('wallpaper.local')}</Note>
         {(error || snapshot.error) && <Note tone="danger">{t('wallpaper.failed')}</Note>}
+        {snapshot.playback && (
+          <Note>
+            {t('wallpaper.status')}: {t(`wallpaper.state.${snapshot.playback.state}`)}
+            {snapshot.playback.reason
+              ? ` · ${t(['wallpaper-autoplay-blocked', 'wallpaper-video-playback-blocked'].includes(snapshot.playback.reason) ? 'wallpaper.reason.blocked' : snapshot.playback.reason === 'wallpaper-playback-stalled' ? 'wallpaper.reason.stalled' : snapshot.playback.reason === 'wallpaper-playback-interrupted' ? 'wallpaper.reason.interrupted' : 'wallpaper.reason.decode')}`
+              : ''}
+          </Note>
+        )}
         <label>
           {t('wallpaper.upload')}{' '}
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             aria-label={t('wallpaper.upload')}
             disabled={busy || !snapshot.ready}
             onChange={(event) => {
@@ -194,17 +215,36 @@ export function WallpaperSettings({ owner, t }: { owner: Wallpaper; t: BotHarnes
                 drag.current = undefined;
               }}
             >
-              <img
-                src={preview.url}
-                alt=""
-                draggable={false}
-                style={{
-                  position: 'absolute',
-                  maxWidth: 'none',
-                  maxHeight: 'none',
-                  pointerEvents: 'none',
-                }}
-              />
+              {preview.kind === 'video' ? (
+                <video
+                  ref={videoMount}
+                  poster={preview.posterUrl}
+                  muted
+                  loop
+                  playsInline
+                  controls={false}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  style={{
+                    position: 'absolute',
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    pointerEvents: 'none',
+                  }}
+                />
+              ) : (
+                <img
+                  src={preview.url}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    position: 'absolute',
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    pointerEvents: 'none',
+                  }}
+                />
+              )}
             </div>
             <label>
               {t('wallpaper.zoom')}{' '}

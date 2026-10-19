@@ -1,3 +1,4 @@
+import { mountWallpaperPlayback } from './wallpaper-playback.js';
 import type { Wallpaper } from './wallpaper.js';
 import { wallpaperPlacement } from './wallpaper-store.js';
 export function mountWallpaper(owner: Wallpaper): () => void {
@@ -8,6 +9,16 @@ export function mountWallpaper(owner: Wallpaper): () => void {
   image.alt = '';
   image.draggable = false;
   layer.append(image);
+  let video: HTMLVideoElement | undefined;
+  let offVideo: (() => void) | undefined;
+  let mediaUrl: string | undefined;
+  const stopVideo = () => {
+    offVideo?.();
+    offVideo = undefined;
+    video?.remove();
+    video = undefined;
+    mediaUrl = undefined;
+  };
   let frame: HTMLElement | undefined;
   const style = document.createElement('style');
   style.dataset.plugin = '@botharness/ui';
@@ -15,7 +26,7 @@ export function mountWallpaper(owner: Wallpaper): () => void {
   style.textContent = `
 :root .bh-workspace-mount[data-workspace-enabled][data-wallpaper-active] { position:relative; isolation:isolate; }
 :root [data-bh-wallpaper] { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:-1; }
-:root [data-bh-wallpaper] img { position:absolute; max-width:none; max-height:none; }
+:root [data-bh-wallpaper] img, :root [data-bh-wallpaper] video { position:absolute; max-width:none; max-height:none; }
 :root .bh-workspace-mount[data-wallpaper-active] .bh-dock[data-workspace-dock],
 :root .bh-workspace-mount[data-wallpaper-active] .bh-dock[data-workspace-dock] .dv-dockview,
 :root .bh-workspace-mount[data-wallpaper-active] .bh-channel-session-divider,
@@ -42,8 +53,33 @@ export function mountWallpaper(owner: Wallpaper): () => void {
         resize.observe(frame);
       }
     }
-    if (!frame || !current) return;
-    if (image.src !== current.url) image.src = current.url;
+    if (!frame || !current) {
+      stopVideo();
+      owner.setPlayback({ state: 'inactive' });
+      return;
+    }
+    const backdrop = current.kind === 'video' ? current.posterUrl : current.url;
+    if (backdrop && image.src !== backdrop) image.src = backdrop;
+    if (mediaUrl !== current.url) {
+      stopVideo();
+      mediaUrl = current.url;
+      if (current.kind === 'video') {
+        if (current.fallbackReason)
+          owner.setPlayback({ state: 'poster', reason: current.fallbackReason });
+        else {
+          video = document.createElement('video');
+          video.setAttribute('aria-hidden', 'true');
+          video.src = current.url;
+          video.poster = current.posterUrl ?? '';
+          layer.append(video);
+          offVideo = mountWallpaperPlayback(
+            video,
+            (status) => owner.setPlayback(status),
+            () => Boolean(frame),
+          );
+        }
+      }
+    }
     const box = frame.getBoundingClientRect();
     const placement = wallpaperPlacement(
       current.width,
@@ -53,7 +89,7 @@ export function mountWallpaper(owner: Wallpaper): () => void {
       current.crop,
     );
     for (const [key, value] of Object.entries(placement))
-      image.style.setProperty(key, `${value}px`);
+      for (const surface of [image, video]) surface?.style.setProperty(key, `${value}px`);
   };
   const observer = new MutationObserver(paint);
   observer.observe(document.body, {
@@ -84,6 +120,7 @@ export function mountWallpaper(owner: Wallpaper): () => void {
   paint();
   return () => {
     off();
+    stopVideo();
     broadcast();
     observer.disconnect();
     resize.disconnect();

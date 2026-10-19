@@ -1,13 +1,23 @@
 import {
   DEFAULT_CROP,
   IMAGE_LIMIT,
+  VIDEO_LIMIT,
   WallpaperError,
   validCrop,
   type WallpaperCrop,
   type WallpaperRecord,
   type WallpaperStore,
 } from './wallpaper-store.js';
+import { decodeVideoWallpaper } from './wallpaper-video.js';
+export interface WallpaperPlayback {
+  state: 'playing' | 'paused' | 'poster' | 'inactive';
+  reason?: string;
+}
 export interface WallpaperPreview {
+  kind?: 'image' | 'video';
+  poster?: Blob;
+  posterUrl?: string;
+  fallbackReason?: string;
   blob: Blob;
   url: string;
   width: number;
@@ -18,7 +28,9 @@ export interface WallpaperSnapshot {
   ready: boolean;
   revision: string;
   current?: {
-    kind: 'image';
+    kind: 'image' | 'video';
+    posterUrl?: string;
+    fallbackReason?: string;
     size: number;
     width: number;
     height: number;
@@ -26,8 +38,9 @@ export interface WallpaperSnapshot {
     url: string;
   };
   error?: string;
+  playback?: WallpaperPlayback;
 }
-export async function decodeWallpaper(blob: Blob): Promise<WallpaperPreview> {
+export async function decodeImageWallpaper(blob: Blob): Promise<WallpaperPreview> {
   if (!blob.size || blob.size > IMAGE_LIMIT) throw new WallpaperError('wallpaper-size-invalid');
   const url = URL.createObjectURL(blob);
   const image = new Image();
@@ -43,6 +56,7 @@ export async function decodeWallpaper(blob: Blob): Promise<WallpaperPreview> {
     if (!image.naturalWidth || !image.naturalHeight)
       throw new WallpaperError('wallpaper-decode-failed');
     return {
+      kind: 'image',
       blob,
       url,
       width: image.naturalWidth,
@@ -56,6 +70,20 @@ export async function decodeWallpaper(blob: Blob): Promise<WallpaperPreview> {
     clearTimeout(timer);
     image.src = '';
   }
+}
+export async function decodeWallpaper(blob: Blob): Promise<WallpaperPreview> {
+  if (
+    !blob.size ||
+    blob.size > VIDEO_LIMIT ||
+    (blob.type.startsWith('image/') && blob.size > IMAGE_LIMIT)
+  )
+    throw new WallpaperError('wallpaper-size-invalid');
+  if (blob.size <= IMAGE_LIMIT && !blob.type.startsWith('video/')) {
+    try {
+      return await decodeImageWallpaper(blob);
+    } catch {}
+  }
+  return decodeVideoWallpaper(blob);
 }
 export class Wallpaper {
   #snapshot: WallpaperSnapshot = { ready: false, revision: 'empty' };
@@ -104,6 +132,14 @@ export class Wallpaper {
     this.#emit({
       ready: true,
       revision: record?.revision ?? 'empty',
+      ...(record?.kind === 'video'
+        ? {
+            playback: {
+              state: resource?.fallbackReason ? ('poster' as const) : ('inactive' as const),
+              ...(resource?.fallbackReason ? { reason: resource.fallbackReason } : {}),
+            },
+          }
+        : {}),
       ...(record && resource
         ? {
             current: {
@@ -113,6 +149,8 @@ export class Wallpaper {
               height: record.height,
               crop: record.crop,
               url: resource.url,
+              ...(resource.posterUrl ? { posterUrl: resource.posterUrl } : {}),
+              ...(resource.fallbackReason ? { fallbackReason: resource.fallbackReason } : {}),
             },
           }
         : {}),
@@ -127,7 +165,32 @@ export class Wallpaper {
         !this.#snapshot.error
       )
         return this.#snapshot;
-      const resource = record ? await this.decode(record.blob) : undefined;
+      let resource: WallpaperPreview | undefined;
+      if (record) {
+        try {
+          resource = await this.decode(record.blob);
+        } catch (error) {
+          if (record.kind !== 'video' || !record.poster) throw error;
+          const poster = await decodeImageWallpaper(record.poster);
+          const url = URL.createObjectURL(record.blob);
+          resource = {
+            ...poster,
+            kind: 'video',
+            blob: record.blob,
+            url,
+            poster: record.poster,
+            posterUrl: poster.url,
+            width: record.width,
+            height: record.height,
+            fallbackReason:
+              error instanceof WallpaperError ? error.code : 'wallpaper-video-decode-failed',
+            release: () => {
+              poster.release();
+              URL.revokeObjectURL(url);
+            },
+          };
+        }
+      }
       if (this.#disposed) {
         resource?.release();
         return this.#snapshot;
@@ -145,7 +208,8 @@ export class Wallpaper {
         const record: WallpaperRecord = {
           version: 1,
           revision: crypto.randomUUID(),
-          kind: 'image',
+          kind: resource.kind ?? 'image',
+          ...(resource.poster ? { poster: resource.poster } : {}),
           blob,
           width: resource.width,
           height: resource.height,
@@ -187,6 +251,15 @@ export class Wallpaper {
       this.#accept(undefined);
       return this.describe();
     });
+  }
+  setPlayback(playback: WallpaperPlayback) {
+    if (this.#disposed || this.#record?.kind !== 'video') return;
+    if (
+      this.#snapshot.playback?.state === playback.state &&
+      this.#snapshot.playback?.reason === playback.reason
+    )
+      return;
+    this.#emit({ ...this.#snapshot, playback });
   }
   describe() {
     const { current, ...snapshot } = this.#snapshot;
