@@ -42,6 +42,9 @@ export const modalRail = { maxWidth: 360 } as const;
 
 export const androidSettings = {
   radius: radius.xl,
+  listRadius: radius.lg,
+  innerRadius: radius.xs,
+  segmentGap: 2,
   rowHeight: 56,
   supportingRowHeight: 72,
   inset: space.x5,

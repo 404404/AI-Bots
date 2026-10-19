@@ -5,8 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { INBOX_SECTIONS, type InboxSection } from '../../host/inbox';
 import { Sheet } from '../chat/sheet';
 import { useDesignTheme } from '../design/theme';
-import { edge, radius, space } from '../design/tokens';
+import { androidSettings, edge, radius, space } from '../design/tokens';
 import { RadioMark } from '../primitives/radio-mark';
+import { segmentCorners } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
 import { Toggle } from '../primitives/toggle';
 import { CheckIcon } from './icons';
@@ -201,7 +202,7 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
                   marginHorizontal: space.x5,
                   paddingHorizontal: space.x5,
                   paddingVertical: space.x3,
-                  borderRadius: ios ? radius.md : 0,
+                  borderRadius: ios ? radius.md : androidSettings.listRadius,
                   backgroundColor: theme.layer.raised.fill,
                 }}
               >
@@ -231,12 +232,20 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
                 marginHorizontal: space.x5,
                 paddingHorizontal: space.x5,
                 paddingVertical: space.x3,
-                borderTopLeftRadius: ios && first ? radius.md : 0,
-                borderTopRightRadius: ios && first ? radius.md : 0,
-                borderBottomLeftRadius: ios && last ? radius.md : 0,
-                borderBottomRightRadius: ios && last ? radius.md : 0,
-                borderBottomWidth: last ? 0 : edge.hairline,
-                borderBottomColor: theme.layer.raised.divider,
+                ...(ios
+                  ? {
+                      borderTopLeftRadius: first ? radius.md : 0,
+                      borderTopRightRadius: first ? radius.md : 0,
+                      borderBottomLeftRadius: last ? radius.md : 0,
+                      borderBottomRightRadius: last ? radius.md : 0,
+                      borderBottomWidth: last ? 0 : edge.hairline,
+                      borderBottomColor: theme.layer.raised.divider,
+                    }
+                  : {
+                      ...segmentCorners(first, last),
+                      marginTop: first ? 0 : androidSettings.segmentGap,
+                      overflow: 'hidden',
+                    }),
                 backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
               })}
             >
