@@ -73,3 +73,27 @@ bubble geometry without replacing its visibility, delay, keycap or dismissal own
 expanded source fixture passes136 Select cases and204 Tooltip cases;36 additional zoom
 changes preserve an already-pinned bubble. Final updated-package Tooltip pixels remain a
 separate acceptance gate. Earlier .14 native proof remains versioned as .14.
+
+## Final updated package — .16
+
+The [versioned final record](final-native-16.json) adds actual corrected Tooltip pixels at144%
+and120%, plus Human/native hidden-created, hidden-resized webview recovery after ordinary
+minimize/restore. The recorded hidden and restored viewport is1261×820 at144%. Both initial
+navigation-ready events occurred while hidden; the full-window native image after restore
+shows the guest ruler and input. The fixture was released afterward. The .14 id-preserving
+hide/restore and focus rows above remain separate evidence, not relabeled .16 results.
+
+![Actual native Tooltip after the fix](native-tooltip-after-144.png)
+![Final .16 hidden-created webview restored](final-hidden-created-restored-16.png)
+
+Current source:2037 Client tests pass,1 existing skip. The earlier avatar-editor timeout is
+retained and the full rerun passed. Select136/136, Tooltip204/204 and36 retained pinned-bubble
+zoom changes pass; unadapted native Tooltip fails192/204 cases. The complete
+[source Tooltip matrix](tooltip-source-matrix.json) is separate from native pixels.
+
+The original broad native/input, installer and Host-switch records retain their version and
+scope. macOS Human/native behavior qualification is complete for these representative
+supported paths. #2299 is prepared to close only #2269 after review and merge; it stays Draft
+and unmerged. Current full CI has a separate mobile Expo-doctor dependency-version failure;
+no bypass or successful-CI claim is made. Unknown app versions, arbitrary third-party pages
+and Windows/Linux remain outside this qualification.

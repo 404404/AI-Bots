@@ -110,3 +110,16 @@ The opt-in installer therefore uses the explicitly selected app's bundled pnpm w
 is closed, under the native Profile writer lock. Verify refusal while running, then closed-app
 enable, native cold boot, closed-app disable and unchanged `ui-theme` values. Do not replace
 this qualification with a headless Profile or the failed native installation attempt.
+
+
+## Native Tooltip placement
+
+At144%, focus the Home name button through Tab/Shift+Tab: its tooltip must be adjacent to
+the button and remain within the viewport. Repeat after a zoom action and retain the original
+composer draft. `node scripts/check-select-zoom.mjs --output <report.json>` covers the shipped
+Tooltip code and CSS through all17 levels, three sides, two alignments and two viewport sizes,
+plus pinned bubbles during live zoom changes. `--tooltip-baseline 1` excludes the downstream
+adapter and must fail the coordinate regression. Source fixtures are separate from actual
+native pixels and never qualify guest painting. The adapter is owned by the qualified zoom
+lease and restores its styles/listeners on disposal; ordinary browsers and unknown Desktop
+versions do not acquire it.
