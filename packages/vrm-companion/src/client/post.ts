@@ -56,6 +56,15 @@ uniform vec3 shadow;
 uniform vec3 haze;
 uniform float hazeAmount;
 varying vec2 vUv;
+float grainHash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float grainNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(grainHash(i), grainHash(i + vec2(1, 0)), f.x), mix(grainHash(i + vec2(0, 1)), grainHash(i + vec2(1, 1)), f.x), f.y);
+}
 float depthAt(vec2 uv) {
   return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, near, far);
 }
@@ -64,7 +73,7 @@ void main() {
   float z = depthAt(vUv);
   float edge = 0.0;
   for (int i = 0; i < 4; i++) {
-    vec2 offset = texel * vec2(i == 0 ? 1.0 : i == 1 ? -1.0 : 0.0, i == 2 ? 1.0 : i == 3 ? -1.0 : 0.0);
+    vec2 offset = (1.0 + grainNoise(gl_FragCoord.xy / 14.0) * 0.8) * texel * vec2(i == 0 ? 1.0 : i == 1 ? -1.0 : 0.0, i == 2 ? 1.0 : i == 3 ? -1.0 : 0.0);
     float other = depthAt(vUv + offset);
     edge = max(edge, (other - z) / z);
   }
@@ -78,6 +87,8 @@ void main() {
   color *= 1.0 - dots * halftone;
   color = color * gain + shadow * (1.0 - smoothstep(0.0, 0.5, light));
   color = mix(color, haze, hazeAmount * (1.0 - vUv.y * 0.5) * 0.5);
+  float paper = grainNoise(gl_FragCoord.xy / 90.0) * 0.5 + grainNoise(gl_FragCoord.xy / 9.0) * 0.3 + grainNoise(gl_FragCoord.xy / 2.5) * 0.2;
+  color *= 0.95 + paper * 0.09;
   vec2 centered = vUv - 0.5;
   color *= 1.0 - vignette * pow(length(centered * vec2(1.1, 1.3)), 2.4);
   gl_FragColor = vec4(color, 1.0);

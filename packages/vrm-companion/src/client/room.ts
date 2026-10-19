@@ -1,5 +1,7 @@
 import {
   BackSide,
+  CanvasTexture,
+  SRGBColorSpace,
   BoxGeometry,
   Color,
   CylinderGeometry,
@@ -28,6 +30,7 @@ import { createRoomMaterials } from './materials.js';
 import { createChair } from './chair.js';
 import { createDecor } from './decor.js';
 import { createProps } from './props.js';
+import { createDetail } from './detail.js';
 import { createScreen } from './screen.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
@@ -230,10 +233,38 @@ export function createRoom(seatHeight: number) {
   const mugHome = new Vector3(0.18, tableY + 0.004, 0.3);
   mug.position.copy(mugHome);
   root.add(mug);
-  const cup = new Mesh(new CylinderGeometry(0.041, 0.038, 0.095, 12, 1, true), cream);
+  const cup = new Mesh(new CylinderGeometry(0.041, 0.038, 0.095, 20, 1, true), cream);
   cup.position.set(0, 0.0925, 0);
   cup.castShadow = true;
   mug.add(cup);
+  const logo = document.createElement('canvas');
+  logo.width = 256;
+  logo.height = 64;
+  const stamp = logo.getContext('2d')!;
+  for (const x of [64, 192]) {
+    stamp.fillStyle = '#2f5d8f';
+    stamp.beginPath();
+    stamp.arc(x, 32, 22, 0, Math.PI * 2);
+    stamp.fill();
+    stamp.strokeStyle = '#d9483b';
+    stamp.lineWidth = 5;
+    stamp.beginPath();
+    stamp.arc(x - 4, 38, 20, -2.6, -0.6);
+    stamp.stroke();
+    stamp.fillStyle = '#f6efe0';
+    stamp.beginPath();
+    stamp.arc(x + 7, 26, 4, 0, Math.PI * 2);
+    stamp.fill();
+  }
+  const logoTexture = new CanvasTexture(logo);
+  logoTexture.colorSpace = SRGBColorSpace;
+  textures.push(logoTexture);
+  const print = new Mesh(
+    new CylinderGeometry(0.0414, 0.0384, 0.05, 24, 1, true),
+    materials.toon(0xffffff, { map: logoTexture, transparent: true, depthWrite: false }),
+  );
+  print.position.set(0, 0.095, 0);
+  mug.add(print);
   mug.add(cylinder(0, 0.047, 0, 0.038, 0.038, 0.004, cream));
   const coffee = materials.toon(0x2a160d);
   mug.add(cylinder(0, 0.125, 0, 0.038, 0.038, 0.003, coffee));
@@ -263,6 +294,9 @@ export function createRoom(seatHeight: number) {
   const props = createProps(surface, sill, materials);
   root.add(props.root);
   textures.push(...props.textures);
+  const detail = createDetail(surface, materials);
+  root.add(detail.root);
+  textures.push(...detail.textures);
   box(-0.5, sill + 0.1, -0.9, 0.38, 0.2, 0.11, cream).rotation.y = 0.5;
   for (const x of [-0.11, 0.11]) {
     const speaker = new Mesh(new CylinderGeometry(0.06, 0.06, 0.01, 10), dark);
@@ -390,6 +424,7 @@ export function createRoom(seatHeight: number) {
     glass.uniforms.amount!.value = time.wet;
     const night = Math.max(0, 1 - time.daylight - time.twilight * 0.4);
     props.update(elapsed, night);
+    detail.update(elapsed, time);
     display.update(seconds, elapsed, night);
     sun.color
       .setHex(0x91a7e8)

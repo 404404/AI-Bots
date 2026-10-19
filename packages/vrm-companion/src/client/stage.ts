@@ -65,6 +65,11 @@ export interface Stage {
 }
 const GRIP = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
 const SIDEWAYS = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2);
+const TAP_FINGERS = ['Index', 'Index', 'Middle', 'Middle', 'Ring', 'Little'] as const;
+const noise = (seed: number) => {
+  const value = Math.sin(seed * 91.7 + 13.1) * 43758.5453;
+  return value - Math.floor(value);
+};
 const TURNED = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI);
 export function mountStage(
   host: HTMLElement,
@@ -342,18 +347,23 @@ export function mountStage(
         (talking ? Math.sin(phase * 5) * 0.025 : 0) - chin * 0.14,
         blend,
       );
-      const typing = working && moving ? Math.sin(phase * 8) * 0.025 : 0;
+      const typing = working && moving ? 1 : 0;
+      const keystroke = phase * 9;
+      const key = Math.floor(keystroke);
+      const hit = Math.sin((keystroke - key) * Math.PI);
+      const tapSide = noise(key) < 0.5 ? 'left' : 'right';
+      const tapFinger = TAP_FINGERS[Math.floor(noise(key + 0.5) * TAP_FINGERS.length)]!;
       const mix = (from: number, to: number, amount: number) => from + (to - from) * amount;
       pose(
         'leftUpperArm',
-        mix(-sit * 1.05 + walk + typing, -0.2, stretch),
+        mix(-sit * 1.05 + walk, -0.2, stretch),
         0,
         mix(-1.4, 1.15, stretch),
         blend,
       );
       pose(
         'rightUpperArm',
-        mix(-sit * 1.05 - walk - typing, -0.2, stretch),
+        mix(-sit * 1.05 - walk, -0.2, stretch),
         0,
         mix(1.4, -1.15, stretch),
         blend,
@@ -423,9 +433,10 @@ export function mountStage(
           const b = lower.getWorldPosition(new Vector3());
           const c = hand.getWorldPosition(new Vector3());
           const keys = new Vector3(
-            side === 'left' ? 0.66 : 0.48,
-            room.tableY + 0.09 + typing,
-            0.13,
+            (side === 'left' ? 0.66 : 0.48) +
+              typing * Math.sin(phase * 0.7 + (side === 'left' ? 0 : 2.1)) * 0.012,
+            room.tableY + 0.09 + (side === tapSide ? typing * hit * 0.003 : 0),
+            0.13 + typing * Math.sin(phase * 0.5 + (side === 'left' ? 1 : 0)) * 0.006,
           );
           const free = side === 'right' && rightGoal ? rightWeight : 0;
           if (free > 0 && rightGoal) keys.lerp(rightGoal, free);
@@ -467,15 +478,19 @@ export function mountStage(
         }
       }
       const grasp = rightGrip ? rightWeight : 0;
+      const quick = reduced.matches ? 1 : 1 - Math.exp(-delta * 35);
       for (const side of ['left', 'right'] as const) {
-        const curl = side === 'right' ? 0.15 + grasp * 0.95 : 0.15;
         const sign = side === 'right' ? 1 : -1;
         for (const finger of ['Index', 'Middle', 'Ring', 'Little'] as const) {
-          pose(`${side}${finger}Proximal`, 0, 0, sign * curl, blend);
-          pose(`${side}${finger}Intermediate`, 0, 0, sign * curl * 1.1, blend);
-          pose(`${side}${finger}Distal`, 0, 0, sign * curl * 0.7, blend);
+          const tap = typing && side === tapSide && finger === tapFinger ? hit : 0;
+          const curl =
+            (side === 'right' ? 0.15 + grasp * 0.95 : 0.15) +
+            typing * (0.32 + (finger === 'Little' ? 0.1 : 0) + tap * 0.5);
+          pose(`${side}${finger}Proximal`, 0, 0, sign * curl, quick);
+          pose(`${side}${finger}Intermediate`, 0, 0, sign * curl * (1.1 - tap * 0.4), quick);
+          pose(`${side}${finger}Distal`, 0, 0, sign * curl * 0.7, quick);
         }
-        const thumb = side === 'right' ? grasp : 0;
+        const thumb = Math.max(side === 'right' ? grasp : 0, typing * 0.4);
         pose(`${side}ThumbProximal`, 0, sign * -0.35 * thumb, sign * 0.2 * thumb, blend);
         pose(`${side}ThumbDistal`, 0, sign * -0.3 * thumb, 0, blend);
       }

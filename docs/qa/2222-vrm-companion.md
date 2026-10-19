@@ -142,6 +142,18 @@ Date: 2026-10-19.
 - **Change.** The glow pass now only picks up values above 3.2 (was 2.4) and is added at 0.28–0.42 strength (was 0.5–0.8), so lit paper, cups and hands no longer halo; the lamp bulb and sun core still glow. The monitor's back glow is at about a third of its former strength, and the character's time-of-day rim light is roughly halved.
 - **Video.** A 37-second tour (sunset typing, sip and window gestures, rainy night thinking, portrait, room view) was rendered frame by frame at 24 fps in the scratch harness with a stepped clock, because SwiftShader cannot render in real time; it is shared with Vain, not committed.
 
+## Finger typing, zoned lights, painted look and detail (Human feedback)
+
+Date: 2026-10-19.
+
+- **Feedback.** Typing looks like the palms bob up and down instead of fingers striking keys; lighting is good but should have more ambient and zoned lights, not just one lamp; surfaces should feel more hand-painted and less low-poly; the room and desk need more detail and layering.
+- **Typing.** The upper-arm bob is gone. Each keystroke picks a hand and a finger (index, middle, ring or little); that finger dips while the others rest in a light curl, and only the striking hand moves slightly on the keys.
+- **Look.** Room materials use a smooth four-step toon ramp (flat shading removed) with a world-space brush-noise texture, and the screen pass adds a faint paper grain and slightly wobbly outlines.
+- **Lights.** A wall sconce, a glow inside the book hutch and an LED strip under the wall shelf light up at night; at sunset a warm bounce light and soft sunbeams come in from the window.
+- **Detail.** Cables run behind the desk to a wall outlet; an air conditioner with a swinging louver and blinking LED, a basket of blankets, slippers, a floor cushion and a printed mug were added.
+- **Frames.** Sunset desk typing and the night room with zoned lights: `painted-zoned-lights.jpg`.
+- **Video.** A new tour is shared with Vain as `vrm-room-tour-r5.mp4`, not committed.
+
 ## Acceptance limits and next action
 
 The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.
