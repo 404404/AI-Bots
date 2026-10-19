@@ -53,7 +53,7 @@ export function Segmented<T extends string>({
     )
   )
     return (
-      <View accessibilityRole="radiogroup" accessibilityLabel={label} style={{ gap: 2 }}>
+      <View accessibilityRole="radiogroup" accessibilityLabel={label} style={{ gap: space.x1 }}>
         {options.map((option, index) => {
           const selected = option.value === value;
           const top = index === 0 ? radius.lg : radius.xs;
