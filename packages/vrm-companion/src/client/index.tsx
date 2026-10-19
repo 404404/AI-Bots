@@ -26,15 +26,13 @@ const CSS = `
 [data-vrm-controls]{position:absolute;bottom:12px;left:12px;max-width:calc(100% - 24px);padding:8px 12px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent);backdrop-filter:blur(12px)}
 [data-vrm-controls] summary{cursor:pointer;color:var(--dsw-alias-label-secondary);padding:4px 0}
 [data-vrm-controls] [data-vrm-actions]{margin-top:8px}
-[data-vrm-dialog]:not([data-expanded]){display:contents}
-[data-vrm-dialog][data-expanded]{position:fixed;inset:12px;width:calc(100vw - 24px);height:calc(100vh - 24px);max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:var(--dsw-radius-md);overflow:hidden;box-sizing:border-box;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
+[data-vrm-instance-actions]{padding:4px 8px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 `;
 function Character({ view }: { view: BotPresentationView }) {
   const snapshot = useSyncExternalStore(view.subscribe, view.getSnapshot, view.getSnapshot);
   const cleanup = useRef<(() => void) | undefined>();
   const stageRef = useRef<Stage>();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [shading, setShading] = useState<'mtoon' | 'liltoon'>('mtoon');
   const [scene, setScene] = useState<SceneState>({
     phase: 'seated',
     wandering: false,
@@ -52,6 +50,7 @@ function Character({ view }: { view: BotPresentationView }) {
       if (!node) return;
       try {
         setCamera('desk');
+        setShading('mtoon');
         setMood('auto');
         setScene({ phase: 'seated', wandering: false, ready: false });
         const stage = mountStage(node, __VRM_MODEL__, setError, setScene);
@@ -70,132 +69,121 @@ function Character({ view }: { view: BotPresentationView }) {
     [view, revision],
   );
   return (
-    <dialog
-      data-vrm-dialog=""
-      data-expanded={expanded || undefined}
-      open
-      ref={dialogRef}
-      aria-label={snapshot.name + ' room'}
-      onClose={(event) => {
-        event.currentTarget.open = true;
-        setExpanded(false);
-      }}
+    <section
+      data-vrm-panel=""
+      aria-label={snapshot.name + ' character'}
+      data-vrm-bot={snapshot.botId}
+      data-vrm-activity={snapshot.activity}
+      data-vrm-speaking={snapshot.speaking}
     >
-      <section
-        data-vrm-panel=""
-        aria-label={snapshot.name + ' character'}
-        data-vrm-bot={snapshot.botId}
-        data-vrm-activity={snapshot.activity}
-        data-vrm-speaking={snapshot.speaking}
-      >
-        <div data-vrm-stage="" ref={mount} />
-        <div data-vrm-header="">
-          <div data-vrm-status="" role="status">
-            {snapshot.available
-              ? snapshot.name +
-                ' · ' +
-                (snapshot.paused
-                  ? 'Paused'
-                  : snapshot.sync === 'live'
-                    ? snapshot.activity
-                    : snapshot.sync)
-              : 'Bot unavailable'}
-          </div>
-          {snapshot.attention && <div role="status">{snapshot.attention}</div>}
-          <div data-vrm-actions="">
+      <div data-vrm-stage="" ref={mount} />
+      <div data-vrm-header="">
+        <div data-vrm-status="" role="status">
+          {snapshot.available
+            ? snapshot.name +
+              ' · ' +
+              (snapshot.paused
+                ? 'Paused'
+                : snapshot.sync === 'live'
+                  ? snapshot.activity
+                  : snapshot.sync)
+            : 'Bot unavailable'}
+        </div>
+        {snapshot.attention && <div role="status">{snapshot.attention}</div>}
+      </div>
+      {error && (
+        <div role="status" data-vrm-error="">
+          {error}
+          <Button onClick={() => retry((n) => n + 1)}>Retry character</Button>
+        </div>
+      )}
+      <details data-vrm-controls="">
+        <summary>Scene controls · {scene.phase}</summary>
+        <div data-vrm-actions="" role="group" aria-label="Character shading">
+          {(['mtoon', 'liltoon'] as const).map((value) => (
             <Button
+              key={value}
+              disabled={!scene.ready}
+              aria-pressed={shading === value}
               onClick={() => {
-                if (expanded) dialogRef.current?.close();
-                else {
-                  if (dialogRef.current) dialogRef.current.open = false;
-                  dialogRef.current?.showModal();
-                  setExpanded(true);
-                }
+                stageRef.current?.shading(value);
+                setShading(value);
               }}
             >
-              {expanded ? 'Return to panel' : 'Expand scene'}
+              {value === 'mtoon' ? 'MToon' : 'lilToon'}
             </Button>
-          </div>
+          ))}
         </div>
-        {error && (
-          <div role="status" data-vrm-error="">
-            {error}
-            <Button onClick={() => retry((n) => n + 1)}>Retry character</Button>
-          </div>
-        )}
-        <details data-vrm-controls="">
-          <summary>Scene controls · {scene.phase}</summary>
-          <div data-vrm-actions="" role="group" aria-label="Camera view">
-            {(['desk', 'room', 'portrait'] as const).map((value) => (
-              <Button
-                key={value}
-                disabled={!scene.ready}
-                aria-pressed={camera === value}
-                onClick={() => {
-                  stageRef.current?.camera(value);
-                  setCamera(value);
-                }}
-              >
-                {value === 'desk' ? 'Desk view' : value === 'room' ? 'Room view' : 'Portrait view'}
-              </Button>
-            ))}
-            <Button disabled={!scene.ready} onClick={() => stageRef.current?.camera(camera)}>
-              Reset view
-            </Button>
-          </div>
-          <div data-vrm-actions="" role="group" aria-label="Character movement">
+        <div data-vrm-actions="" role="group" aria-label="Camera view">
+          {(['desk', 'room', 'portrait'] as const).map((value) => (
             <Button
-              disabled={
-                !scene.ready || snapshot.sync !== 'live' || snapshot.paused || !snapshot.available
-              }
-              onClick={() => stageRef.current?.command('sit')}
+              key={value}
+              disabled={!scene.ready}
+              aria-pressed={camera === value}
+              onClick={() => {
+                stageRef.current?.camera(value);
+                setCamera(value);
+              }}
             >
-              Sit down
+              {value === 'desk' ? 'Desk view' : value === 'room' ? 'Room view' : 'Portrait view'}
             </Button>
+          ))}
+          <Button disabled={!scene.ready} onClick={() => stageRef.current?.camera(camera)}>
+            Reset view
+          </Button>
+        </div>
+        <div data-vrm-actions="" role="group" aria-label="Character movement">
+          <Button
+            disabled={
+              !scene.ready || snapshot.sync !== 'live' || snapshot.paused || !snapshot.available
+            }
+            onClick={() => stageRef.current?.command('sit')}
+          >
+            Sit down
+          </Button>
+          <Button
+            disabled={
+              !scene.ready || snapshot.sync !== 'live' || snapshot.paused || !snapshot.available
+            }
+            onClick={() => stageRef.current?.command('stand')}
+          >
+            Stand up
+          </Button>
+          <Button
+            aria-pressed={scene.wandering}
+            disabled={
+              !scene.ready || snapshot.sync !== 'live' || snapshot.paused || !snapshot.available
+            }
+            onClick={() => stageRef.current?.command('wander')}
+          >
+            {scene.wandering ? 'Stop walking' : 'Walk around'}
+          </Button>
+        </div>
+        <div data-vrm-actions="" role="group" aria-label="Room time">
+          {(['auto', 'sunset', 'night'] as const).map((value) => (
             <Button
-              disabled={
-                !scene.ready || snapshot.sync !== 'live' || snapshot.paused || !snapshot.available
-              }
-              onClick={() => stageRef.current?.command('stand')}
+              key={value}
+              disabled={!scene.ready}
+              aria-pressed={mood === value}
+              onClick={() => {
+                stageRef.current?.mood(value);
+                setMood(value);
+              }}
             >
-              Stand up
+              {value === 'auto' ? 'Local time' : value === 'sunset' ? 'Sunset' : 'Night'}
             </Button>
-            <Button
-              aria-pressed={scene.wandering}
-              disabled={
-                !scene.ready || snapshot.sync !== 'live' || snapshot.paused || !snapshot.available
-              }
-              onClick={() => stageRef.current?.command('wander')}
-            >
-              {scene.wandering ? 'Stop walking' : 'Walk around'}
-            </Button>
-          </div>
-          <div data-vrm-actions="" role="group" aria-label="Room time">
-            {(['auto', 'sunset', 'night'] as const).map((value) => (
-              <Button
-                key={value}
-                disabled={!scene.ready}
-                aria-pressed={mood === value}
-                onClick={() => {
-                  stageRef.current?.mood(value);
-                  setMood(value);
-                }}
-              >
-                {value === 'auto' ? 'Local time' : value === 'sunset' ? 'Sunset' : 'Night'}
-              </Button>
-            ))}
-          </div>
-          <div data-vrm-status="">
-            Drag to orbit · Scroll to zoom. Walking pauses during work and replies.
-          </div>
-        </details>
-        {snapshot.text && (
-          <div data-vrm-speech="" aria-label="Bot speech">
-            {snapshot.text}
-          </div>
-        )}
-      </section>
-    </dialog>
+          ))}
+        </div>
+        <div data-vrm-status="">
+          Drag to orbit · Scroll to zoom. Walking pauses during work and replies.
+        </div>
+      </details>
+      {snapshot.text && (
+        <div data-vrm-speech="" aria-label="Bot speech">
+          {snapshot.text}
+        </div>
+      )}
+    </section>
   );
 }
 function BoundCharacter({ botId, presentation }: { botId: string; presentation: BotPresentation }) {

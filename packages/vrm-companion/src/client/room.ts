@@ -17,17 +17,17 @@ import {
 } from 'three';
 import { createOutdoors, type SkyTime } from './outdoors.js';
 import { CHAIR } from './motion.js';
+import { createRoomMaterials } from './materials.js';
+import { createChair } from './chair.js';
+import { createDecor } from './decor.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 export type Mood = SkyTime;
 export function createRoom(seatHeight: number) {
   const root = new Group();
-  const textures: CanvasTexture[] = [];
-  const wood = new MeshStandardMaterial({ color: 0x956247, roughness: 0.9 });
-  const dark = new MeshStandardMaterial({ color: 0x243a40, roughness: 0.8 });
-  const cream = new MeshStandardMaterial({ color: 0xe5cead, roughness: 0.85 });
-  const red = new MeshStandardMaterial({ color: 0x9a5555, roughness: 0.9 });
-  const brass = new MeshStandardMaterial({ color: 0xc09355, roughness: 0.45, metalness: 0.35 });
+  const materials = createRoomMaterials();
+  const textures: CanvasTexture[] = [...materials.textures];
+  const { wood, dark, cream, brass } = materials;
   const box = (
     x: number,
     y: number,
@@ -35,7 +35,7 @@ export function createRoom(seatHeight: number) {
     w: number,
     h: number,
     d: number,
-    material = wood,
+    material: MeshStandardMaterial = wood,
   ) => {
     const mesh = new Mesh(
       new RoundedBoxGeometry(w, h, d, 2, Math.min(0.035, w / 5, h / 5, d / 5)),
@@ -64,8 +64,8 @@ export function createRoom(seatHeight: number) {
   const tableY = seatHeight + 0.3;
   box(0, -0.06, 0, 4.4, 0.12, 3.6, wood);
   box(0, 2.88, -1.25, 4.4, 0.2, 0.12, dark);
-  box(-2.15, 1.45, -0.25, 0.12, 2.9, 2.1, wood);
-  box(2.15, 1.45, 0.25, 0.12, 2.9, 3.1, wood);
+  box(-2.15, 1.45, -0.25, 0.12, 2.9, 2.1, materials.plaster);
+  box(2.15, 1.45, 0.25, 0.12, 2.9, 3.1, materials.plaster);
   for (const x of [-2.08, 2.08]) box(x, 1.45, -1.25, 0.2, 2.9, 0.12, dark);
   box(0, 2.94, 0.25, 4.4, 0.12, 3.1, cream);
   box(2.07, 0.08, 0.25, 0.05, 0.16, 3, dark);
@@ -78,10 +78,7 @@ export function createRoom(seatHeight: number) {
   box(-0.2, tableY, 0.52, 3.2, 0.09, 0.8);
   for (const x of [-1.55, 1.15])
     for (const z of [0.21, 0.83]) box(x, tableY / 2, z, 0.07, tableY, 0.07, dark);
-  box(CHAIR.x, seatHeight - 0.055, CHAIR.z + 0.08, 0.48, 0.11, 0.48, red);
-  const back = box(CHAIR.x, seatHeight + 0.32, CHAIR.z - 0.18, 0.51, 0.66, 0.12, dark);
-  back.rotation.x = -0.06;
-  box(CHAIR.x, seatHeight + 0.64, CHAIR.z - 0.2, 0.32, 0.16, 0.14, red);
+  root.add(createChair(seatHeight, materials));
   cylinder(CHAIR.x, seatHeight / 2, CHAIR.z, 0.035, 0.045, seatHeight, dark);
   for (let i = 0; i < 5; i++) {
     const angle = (i * Math.PI * 2) / 5;
@@ -133,23 +130,24 @@ export function createRoom(seatHeight: number) {
   monitor.rotation.y = -1.05;
   monitor.position.z = 0.3;
   box(0.48, tableY + 0.06, 0.23, 0.57, 0.025, 0.2, dark);
+  box(0.52, tableY + 0.049, 0.29, 0.94, 0.006, 0.42, materials.fabric);
+  const mouse = new Mesh(new SphereGeometry(0.045, 20, 14), cream);
+  mouse.scale.set(0.75, 0.45, 1.3);
+  mouse.position.set(0.9, tableY + 0.071, 0.25);
+  mouse.castShadow = true;
+  root.add(mouse);
   for (let row = 0; row < 4; row++)
     for (let col = 0; col < 12; col++)
       box(0.23 + col * 0.045, tableY + 0.08, 0.16 + row * 0.04, 0.035, 0.012, 0.028, cream);
-  const bookColors = [0xc1a76b, 0x537c78, 0xbf7964, 0xe0cba4, 0x7591a1];
-  for (let i = 0; i < 7; i++) {
-    const mat = new MeshStandardMaterial({ color: bookColors[i % bookColors.length]! });
-    const x = -0.82 + i * 0.075,
-      h = 0.28 + (i % 3) * 0.04;
-    box(x, tableY + h / 2 + 0.05, 0.23, 0.065, h, 0.19, mat);
-    box(x, tableY + h * 0.7, 0.129, 0.045, 0.015, 0.006, cream);
-  }
+  const decor = createDecor(tableY);
+  root.add(decor.root);
   box(-0.85, tableY + 0.055, 0.4, 0.22, 0.007, 0.16, cream).rotation.y = 0.2;
   const cup = new Mesh(new CylinderGeometry(0.085, 0.075, 0.18, 32, 1, true), cream);
   cup.position.set(-0.12, tableY + 0.14, 0.3);
   cup.castShadow = true;
   root.add(cup);
-  cylinder(-0.12, tableY + 0.215, 0.3, 0.078, 0.078, 0.005, wood);
+  const coffee = new MeshStandardMaterial({ color: 0x21120c, roughness: 0.22 });
+  cylinder(-0.12, tableY + 0.215, 0.3, 0.078, 0.078, 0.005, coffee);
   const rim = new Mesh(new TorusGeometry(0.082, 0.006, 8, 32), cream);
   rim.rotation.x = Math.PI / 2;
   rim.position.set(-0.12, tableY + 0.23, 0.3);
@@ -196,13 +194,19 @@ export function createRoom(seatHeight: number) {
   stem.rotation.z = -0.18;
   const shade = cylinder(-0.12, tableY + 0.58, 0.5, 0.08, 0.2, 0.22, dark);
   shade.rotation.z = -0.3;
+  const bulb = new Mesh(
+    new SphereGeometry(0.035, 12, 8),
+    new MeshStandardMaterial({ color: 0xffd492, emissive: 0xffb45e, emissiveIntensity: 2 }),
+  );
+  bulb.position.set(-0.1, tableY + 0.47, 0.48);
+  root.add(bulb);
   const lamp = new PointLight(0xffc27a, 1.7, 3, 2);
   lamp.position.set(-0.1, tableY + 0.45, 0.46);
   root.add(lamp);
   const sun = new DirectionalLight(0xffb57d, 2.1);
   sun.position.set(-2, 3, -2);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.1, far: 12 });
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.015;
@@ -231,7 +235,7 @@ export function createRoom(seatHeight: number) {
       .lerp(new Color(0xffe2b6), time.daylight)
       .lerp(new Color(0xffac69), time.twilight);
     sun.intensity = 0.35 + time.daylight * 1.7 + time.twilight * 1.2;
-    lamp.intensity = 2.5 - time.daylight * 1.5;
+    lamp.intensity = 0.42 - time.daylight * 0.2;
     sun.position.copy(time.sunDirection).multiplyScalar(5);
     return time;
   };
@@ -245,7 +249,11 @@ export function createRoom(seatHeight: number) {
     tableY,
     setMood,
     update,
+    get assets() {
+      return decor.state();
+    },
     dispose() {
+      decor.dispose();
       const geometries = new Set<import('three').BufferGeometry>();
       const materials = new Set<import('three').Material>();
       root.traverse((object) => {

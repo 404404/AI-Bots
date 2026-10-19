@@ -1,5 +1,9 @@
 import {
   AmbientLight,
+  HemisphereLight,
+  PMREMGenerator,
+  ACESFilmicToneMapping,
+  SRGBColorSpace,
   Box3,
   Clock,
   DirectionalLight,
@@ -20,10 +24,13 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { VRMLoaderPlugin, VRMUtils, type VRM, type VRMHumanBoneName } from '@pixiv/three-vrm';
 import type { BotPresentationSnapshot } from '@botharness/ui/panels';
 import { RoomMotion, type MotionCommand } from './motion.js';
 import { createRoom, type Mood } from './room.js';
+import { enableLilToon } from '@mochiya/three-liltoon';
+import { createCharacterShading, type CharacterShading } from './shading.js';
 
 export type CameraView = 'desk' | 'room' | 'portrait';
 export interface SceneState {
@@ -36,6 +43,7 @@ export interface Stage {
   command(command: MotionCommand): void;
   camera(view: CameraView): void;
   mood(value: Mood): void;
+  shading(value: CharacterShading): void;
   dispose(): void;
 }
 export function mountStage(
@@ -54,6 +62,7 @@ export function mountStage(
   let latest: BotPresentationSnapshot | undefined;
   const motion = new RoomMotion();
   let room: ReturnType<typeof createRoom> | undefined;
+  let shading: ReturnType<typeof createCharacterShading> | undefined;
   let hipDrop = 0;
   let floorOffset = 0;
   let modelScale = 1;
@@ -75,7 +84,18 @@ export function mountStage(
   scene.add(gaze);
   const camera = new PerspectiveCamera(36, 1, 0.05, 100);
   const renderer = new WebGLRenderer({ alpha: true, antialias: true });
+  const releaseLilToon = enableLilToon(renderer);
   renderer.shadowMap.enabled = true;
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.outputColorSpace = SRGBColorSpace;
+  const environment = new RoomEnvironment();
+  const generator = new PMREMGenerator(renderer);
+  const environmentMap = generator.fromScene(environment, 0.04);
+  scene.environment = environmentMap.texture;
+  scene.environmentIntensity = 0.3;
+  environment.dispose();
+  generator.dispose();
   renderer.shadowMap.type = PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%';
@@ -93,6 +113,8 @@ export function mountStage(
   controls.maxPolarAngle = Math.PI * 0.48;
   const ambient = new AmbientLight(0xffe7cf, 0.55);
   scene.add(ambient);
+  const fill = new HemisphereLight(0xd5e3ed, 0xb48261, 0.7);
+  scene.add(fill);
   const key = new DirectionalLight(0xffd8b8, 0.9);
   key.position.set(-1, 2, 3);
   scene.add(key);
@@ -103,13 +125,13 @@ export function mountStage(
     const portrait = view === 'portrait';
     const target = portrait
       ? new Vector3(motion.x, 1.16 - motion.seated * 0.1, motion.z)
-      : new Vector3(camera.aspect < 0.8 ? motion.x : 0.45, 1.03, -0.05);
+      : new Vector3(camera.aspect < 0.8 ? 0.4 : 0.1, 1.02, -0.05);
     const offset =
       view === 'room'
         ? new Vector3(-2.5, 1.5, 4.4)
         : portrait
           ? new Vector3(-0.45, 0.12, 1.55)
-          : new Vector3(0.88, 0.12, 1.13);
+          : new Vector3(1.12, 0.22, 1.65);
     const aspectScale = Math.max(1, Math.min(1.25, 0.75 / camera.aspect));
     offset.multiplyScalar(aspectScale);
     controls.target.copy(target);
@@ -170,9 +192,12 @@ export function mountStage(
     last = time;
     const daylight = room?.update(reduced.matches ? 0 : delta);
     if (daylight) {
-      ambient.intensity = 0.25 + daylight.daylight * 0.3 + daylight.twilight * 0.15;
-      key.intensity = 0.35 + daylight.daylight * 0.6;
+      ambient.intensity = 0.35 + daylight.daylight * 0.25 + daylight.twilight * 0.1;
+      fill.intensity = 0.45 + daylight.daylight * 0.4 + daylight.twilight * 0.2;
+      key.intensity = 0.6 + daylight.daylight * 0.5;
+      scene.environmentIntensity = 0.15 + daylight.daylight * 0.3 + daylight.twilight * 0.15;
       host.dataset.vrmHour = daylight.hour.toFixed(3);
+      host.dataset.vrmAssets = room?.assets;
     }
     if (vrm) {
       const moving =
@@ -294,6 +319,7 @@ export function mountStage(
       host.dataset.vrmMouth = String(expressions?.getValue('aa') ?? 0);
     }
     controls.update();
+    shading?.update();
     renderer.render(scene, camera);
     frames++;
     elapsed += delta;
@@ -352,6 +378,8 @@ export function mountStage(
         return;
       }
       vrm = loaded;
+      shading = createCharacterShading(loaded.scene);
+      host.dataset.vrmShading = 'mtoon';
       VRMUtils.rotateVRM0(loaded);
       actor.add(loaded.scene);
       loaded.scene.traverse((object) => {
@@ -376,7 +404,9 @@ export function mountStage(
       );
       hipDrop = (hips?.y ?? 0.9) + floorOffset - seatHeight - 0.07;
       room = createRoom(seatHeight);
+      scene.remove(key);
       scene.add(room.root);
+      scene.add(key);
       actor.position.set(motion.x, floorOffset - hipDrop, motion.z);
       const rawHead = loaded.humanoid.getRawBoneNode('head');
       if (rawHead) {
@@ -432,6 +462,10 @@ export function mountStage(
       room?.setMood(value);
       host.dataset.vrmMood = value;
     },
+    shading(value) {
+      shading?.select(value);
+      host.dataset.vrmShading = value;
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -444,6 +478,9 @@ export function mountStage(
       controls.dispose();
       key.shadow.dispose();
       room?.dispose();
+      shading?.dispose();
+      releaseLilToon();
+      environmentMap.dispose();
       if (vrm) {
         actor.remove(vrm.scene);
         release(vrm);

@@ -1,5 +1,7 @@
 # VRM companion Panel
 
+Current WIP override: the expanded dialog was removed in the material iteration. Do not drive Expand/Return below; resize the native Panel split instead. Scene controls now includes MToon/lilToon. Re-run both shaders, real Activity/speaking and narrow/wide Panel coverage after the pending visual work; see [handoff](../../../../docs/qa/2222-vrm-materials-handoff.md).
+
 ## Sub-features
 
 - Independent native Bundle installation, activation, removal and reinstall.

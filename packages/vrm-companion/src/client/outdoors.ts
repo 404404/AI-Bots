@@ -16,6 +16,7 @@ import {
   SphereGeometry,
   TorusGeometry,
 } from 'three';
+import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
 
 export type SkyTime = 'auto' | 'sunset' | 'night';
 export function createOutdoors() {
@@ -43,31 +44,62 @@ export function createOutdoors() {
     new MeshBasicMaterial({ color: 0xdbe7ff }),
   );
   root.add(moon);
-  const cloudMaterial = new MeshStandardMaterial({
-    color: 0xffd699,
-    emissive: 0xffd699,
-    emissiveIntensity: 0.65,
-    roughness: 1,
-    flatShading: false,
+  const cloudMaterial = new ShaderMaterial({
+    uniforms: { light: { value: new Color() }, shade: { value: new Color() } },
+    vertexShader: `varying vec3 cloudNormal; varying float cloudHeight;
+      void main() {
+        cloudNormal = normal;
+        cloudHeight = position.y;
+        vec4 p = vec4(position, 1.0);
+        #ifdef USE_INSTANCING
+          p = instanceMatrix * p;
+        #endif
+        gl_Position = projectionMatrix * modelViewMatrix * p;
+      }`,
+    fragmentShader: `uniform vec3 light; uniform vec3 shade;
+      varying vec3 cloudNormal; varying float cloudHeight;
+      void main() {
+        vec3 n = normalize(cloudNormal);
+        float diffuse = smoothstep(-0.65, 0.85, dot(n, normalize(vec3(-0.5, 0.8, 0.4))));
+        float height = smoothstep(-0.35, 0.25, cloudHeight);
+        gl_FragColor = vec4(mix(shade, light, diffuse * 0.6 + height * 0.4), 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
   });
-  const cloudGeometry = new SphereGeometry(1, 16, 10);
+  const cloudShapes = Array.from({ length: 3 }, (_, variant) => {
+    const field = new MarchingCubes(28, cloudMaterial, false, false, 8000);
+    for (let i = 0; i < 7; i++) {
+      field.addBall(
+        0.2 + i * 0.1,
+        0.43 + Math.sin(i * 1.7 + variant) * 0.065,
+        0.48 + Math.cos(i * 2) * 0.04,
+        0.22 + (i % 3) * 0.07,
+        12,
+      );
+      if (i > 1 && i < 5)
+        field.addBall(0.2 + i * 0.1, 0.56 + Math.sin(i + variant) * 0.065, 0.5, 0.32, 12);
+    }
+    field.update();
+    const geometry = new BufferGeometry();
+    const count = field.geometry.drawRange.count;
+    for (const name of ['position', 'normal'])
+      geometry.setAttribute(
+        name,
+        new Float32BufferAttribute(field.geometry.getAttribute(name).array.slice(0, count * 3), 3),
+      );
+    field.geometry.dispose();
+    return geometry;
+  });
   const clouds: { group: Group; x: number; speed: number }[] = [];
   for (let layer = 0; layer < 3; layer++) {
     for (let i = 0; i < 7; i++) {
       const group = new Group();
       const x = (i - 3) * 6 + layer * 1.7;
-      group.position.set(x, -0.8 + layer * 0.3, -9 - layer * 7);
-      const puffs = new InstancedMesh(cloudGeometry, cloudMaterial, 7);
+      group.position.set(x, 0.1 + layer * 0.6 + Math.sin(i * 2) * 0.3, -9 - layer * 7);
+      const puffs = new InstancedMesh(cloudShapes[(i + layer) % 3]!, cloudMaterial, 1);
       group.add(puffs);
-      for (let puff = 0; puff < 7; puff++) {
-        const matrix = new Matrix4().makeScale(1.1, 0.25 + ((puff * 7 + i) % 5) * 0.05, 0.9);
-        matrix.setPosition(
-          (puff - 3) * 0.65,
-          Math.sin(puff * 1.8 + i) * 0.08,
-          Math.cos(puff * 2) * 0.4,
-        );
-        puffs.setMatrixAt(puff, matrix);
-      }
+      puffs.setMatrixAt(0, new Matrix4().makeScale(3.8 + (i % 2) * 0.5, 2.1 + (i % 3) * 0.2, 2.4));
       root.add(group);
       clouds.push({ group, x, speed: 0.018 + layer * 0.008 });
     }
@@ -143,11 +175,14 @@ export function createOutdoors() {
     sun.visible = hour >= 5 && hour <= 19.5;
     moon.position.set(-8, 13, -28);
     moon.visible = daylight < 0.12;
-    cloudMaterial.color
-      .set(0x60749a)
-      .lerp(new Color(0xfff0d6), daylight)
-      .lerp(new Color(0xffcb76), twilight);
-    cloudMaterial.emissive.copy(cloudMaterial.color);
+    cloudMaterial.uniforms
+      .light!.value.set(0x728bb8)
+      .lerp(new Color(0xfff9ef), daylight)
+      .lerp(new Color(0xffe6a9), twilight);
+    cloudMaterial.uniforms
+      .shade!.value.set(0x344463)
+      .lerp(new Color(0xb3c1d1), daylight)
+      .lerp(new Color(0xcc867d), twilight);
     starMaterial.opacity = Math.max(0, 1 - daylight * 8 - twilight);
     for (const cloud of clouds)
       cloud.group.position.x = ((cloud.x + seconds * cloud.speed + 24) % 48) - 24;

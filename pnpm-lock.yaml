@@ -972,6 +972,9 @@ importers:
 
   packages/vrm-companion:
     dependencies:
+      '@mochiya/three-liltoon':
+        specifier: 0.1.9
+        version: 0.1.9(@pixiv/three-vrm@3.5.5(three@0.180.0))(three@0.180.0)
       '@pixiv/three-vrm':
         specifier: 3.5.5
         version: 3.5.5(three@0.180.0)
@@ -5646,6 +5649,16 @@ packages:
 
   '@mixmark-io/domino@2.2.0':
     resolution: {integrity: sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw==}
+
+  '@mochiya/three-liltoon@0.1.9':
+    resolution: {integrity: sha512-SxJZkJYkSzLLEzYFQuDjPjPYsNpWcIL8LNwhnhTGwY36ClVKTk7FdYyVYH36siEkzLC+RFjJqES1mr8zjHMjkA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@pixiv/three-vrm': '>=3.4.0 <4'
+      three: '>=0.180.0 <0.190.0'
+    peerDependenciesMeta:
+      '@pixiv/three-vrm':
+        optional: true
 
   '@modelcontextprotocol/client@2.0.0':
     resolution: {integrity: sha512-8f1OghQ2rjzIOfqgUCP+8GiUWqRs89njoWLNqAe8kWmDePv3s1fZXseej+QXemssEuuOvLLmLO/kqM3IQHtISw==}
@@ -18865,6 +18878,12 @@ snapshots:
       '@chevrotain/types': 11.1.2
 
   '@mixmark-io/domino@2.2.0': {}
+
+  '@mochiya/three-liltoon@0.1.9(@pixiv/three-vrm@3.5.5(three@0.180.0))(three@0.180.0)':
+    dependencies:
+      three: 0.180.0
+    optionalDependencies:
+      '@pixiv/three-vrm': 3.5.5(three@0.180.0)
 
   '@modelcontextprotocol/client@2.0.0':
     dependencies:

@@ -19,6 +19,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
+    "@mochiya/three-liltoon": "0.1.9",
     "@pixiv/three-vrm": "3.5.5",
     "three": "0.180.0"
   },

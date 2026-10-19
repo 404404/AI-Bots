@@ -1,5 +1,7 @@
 # VRM Panel: first runnable slice
 
+Work-in-progress material iteration: see [the 2026-10-19 handoff](qa/2222-vrm-materials-handoff.md) for the current validation boundary. The expanded dialog described in the historical rendering section below has been removed; the current scene stays inside the Panel body. MToon/lilToon controls and imported KayKit furniture are being evaluated. Final visual acceptance is pending.
+
 This is the implementation guide for [T1 #2222](https://github.com/BotHarness/DeepSeekBot/issues/2222), under [ADR-0234](adr/0234-panels-are-native-plugins-with-independent-binding.md). It does not implement the T2 Task Kanban or the later migration tickets. Human acceptance remains the gate before expanding those slices.
 
 ## Install and open
