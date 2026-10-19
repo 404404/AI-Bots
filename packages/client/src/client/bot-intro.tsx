@@ -22,10 +22,10 @@ import { COMMUNITY, cachedGithubStars, fetchGithubStars, formatStars } from './c
 import { requestHomeMessage } from './home-requests.js';
 import type { BotHarnessKey, BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
-import { onboardingFor } from './onboarding.js';
+import { INTRO_STEPS, onboardingFor, type IntroStarter } from './onboarding.js';
 import { invalidateInheritedModelPlans } from './model-plan-store.js';
 
-export const INTRO_STEPS = ['welcome', 'theme', 'model', 'community', 'start'] as const;
+export { INTRO_STEPS };
 export type IntroStep = (typeof INTRO_STEPS)[number];
 
 const REVIEWS: readonly BotHarnessKey[] = [
@@ -34,10 +34,10 @@ const REVIEWS: readonly BotHarnessKey[] = [
   'intro.reviews.details',
 ];
 
-const STARTERS: readonly BotHarnessKey[] = [
-  'onboarding.short.botPrompt',
-  'onboarding.firstRequest',
-  'onboarding.exampleRequest',
+const STARTERS: readonly { key: BotHarnessKey; id: IntroStarter }[] = [
+  { key: 'onboarding.short.botPrompt', id: 'botPrompt' },
+  { key: 'onboarding.firstRequest', id: 'firstRequest' },
+  { key: 'onboarding.exampleRequest', id: 'exampleRequest' },
 ];
 
 const styles = stylex.create({
@@ -317,7 +317,7 @@ export function BotIntro({
       open={!intro.hidden}
       headless
       title={t('intro.title')}
-      onClose={() => void controller.closeIntro()}
+      onClose={() => void controller.closeIntro({ via: 'close' })}
       backdropBlur={!clear}
       className={
         (stylex.props(styles.dialog).className ?? '') + (clear ? ' bh-intro-see-through' : '')
@@ -350,7 +350,7 @@ export function BotIntro({
         <IconButton
           aria-label={t('common.close')}
           size="icon"
-          onClick={() => void controller.closeIntro()}
+          onClick={() => void controller.closeIntro({ via: 'close' })}
         >
           <ChannelSidebarIcon name="x" size={16} />
         </IconButton>
@@ -364,7 +364,12 @@ export function BotIntro({
       >
         {step === 'welcome' ? <WelcomeStep t={t} /> : null}
         {step === 'theme' && appearance ? (
-          <ThemeStep appearance={appearance} wallpaper={wallpaper} t={t} />
+          <ThemeStep
+            appearance={appearance}
+            wallpaper={wallpaper}
+            t={t}
+            track={(setting) => controller.introEvent('intro_theme_changed', { setting })}
+          />
         ) : null}
         {step === 'model' ? (
           <ModelStep
@@ -374,12 +379,17 @@ export function BotIntro({
             hide={(hidden) => controller.hideIntro(hidden)}
           />
         ) : null}
-        {step === 'community' ? <CommunityStep t={t} /> : null}
+        {step === 'community' ? (
+          <CommunityStep
+            t={t}
+            track={(target) => controller.introEvent('intro_community_clicked', { target })}
+          />
+        ) : null}
         {step === 'start' ? (
           <StartStep
             t={t}
-            pick={(body) =>
-              void controller.closeIntro().then(() => {
+            pick={(starter, body) =>
+              void controller.closeIntro({ starter }).then(() => {
                 if (body !== undefined) requestHomeMessage(body);
               })
             }
@@ -394,7 +404,11 @@ export function BotIntro({
           })}
         </span>
         {last ? null : (
-          <Button variant="ghost" disabled={busy} onClick={() => void controller.closeIntro()}>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void controller.closeIntro({ via: 'skip' })}
+          >
             {t('intro.skip')}
           </Button>
         )}
@@ -431,6 +445,23 @@ function WelcomeStep({ t }: { t: BotHarnessTranslate }): ReactElement {
           <p {...stylex.props(styles.copy)}>{t('intro.welcome.next')}</p>
         </div>
       </div>
+    </>
+  );
+}
+
+function Voices({ t }: { t: BotHarnessTranslate }): ReactElement {
+  return (
+    <>
+      <section {...stylex.props(styles.section)} aria-label={t('intro.reviews.title')}>
+        <h3 {...stylex.props(styles.sectionTitle)}>{t('intro.reviews.title')}</h3>
+        <div {...stylex.props(styles.reviews)} data-user-reviews>
+          {REVIEWS.map((key) => (
+            <blockquote key={key} {...stylex.props(styles.review)}>
+              {t(key)}
+            </blockquote>
+          ))}
+        </div>
+      </section>
       <section {...stylex.props(styles.letter)} aria-label={t('intro.founder.title')}>
         <h3 {...stylex.props(styles.sectionTitle)}>{t('intro.founder.title')}</h3>
         <div {...stylex.props(styles.note)} data-founder-note>
@@ -443,16 +474,6 @@ function WelcomeStep({ t }: { t: BotHarnessTranslate }): ReactElement {
             ))}
         </div>
         <p {...stylex.props(styles.signature)}>{t('intro.founder.signature')}</p>
-      </section>
-      <section {...stylex.props(styles.section)} aria-label={t('intro.reviews.title')}>
-        <h3 {...stylex.props(styles.sectionTitle)}>{t('intro.reviews.title')}</h3>
-        <div {...stylex.props(styles.reviews)} data-user-reviews>
-          {REVIEWS.map((key) => (
-            <blockquote key={key} {...stylex.props(styles.review)}>
-              {t(key)}
-            </blockquote>
-          ))}
-        </div>
       </section>
     </>
   );
@@ -471,10 +492,12 @@ function ThemeStep({
   appearance,
   wallpaper,
   t,
+  track,
 }: {
   appearance: Appearance;
   wallpaper?: Wallpaper | undefined;
   t: BotHarnessTranslate;
+  track(setting: 'scheme' | 'preset' | 'wallpaper'): void;
 }): ReactElement {
   const theme = useSyncExternalStore(appearance.subscribe, appearance.getSnapshot);
   const media = useSyncExternalStore(wallpaper?.subscribe ?? noSubscribe, () =>
@@ -493,20 +516,32 @@ function ThemeStep({
         <ColorSchemePicker
           value={theme.config.preference}
           config={theme.config}
-          onChange={(preference) => change({ preference })}
+          onChange={(preference) => {
+            change({ preference });
+            track('scheme');
+          }}
           t={t}
         />
       </Section>
       <Section title={t('intro.theme.color')}>
         <ThemePresetPicker
           config={theme.config}
-          onSelect={(preset) => applyPreset(appearance, preset)}
+          onSelect={(preset) => {
+            applyPreset(appearance, preset);
+            track('preset');
+          }}
           t={t}
         />
       </Section>
       {wallpaper ? (
         <Section title={t('intro.theme.wallpaper')}>
-          <WallpaperLibrary owner={wallpaper} t={t} appearance={appearance} size="large" />
+          <WallpaperLibrary
+            owner={wallpaper}
+            t={t}
+            appearance={appearance}
+            size="large"
+            onChange={() => track('wallpaper')}
+          />
         </Section>
       ) : null}
       {media?.current ? (
@@ -569,6 +604,10 @@ function ModelStep({
   const save = async (): Promise<boolean> => {
     if (!route || !selected || selected.credential !== undefined) return true;
     const plan = split && assignment ? JSON.stringify([route, assignment]) : undefined;
+    const changed =
+      initial !== routeKey(route) ||
+      route.reasoningEffort !== undefined ||
+      (tob !== undefined && plan !== planned);
     try {
       if (initial !== routeKey(route) || route.reasoningEffort !== undefined) {
         await actions.onboardingModel(undefined, 0, route, true);
@@ -591,6 +630,7 @@ function ModelStep({
         } else await actions.inheritModel(tob, revision);
         setPlanned(plan);
       }
+      if (changed) onboardingFor(actions).introEvent('intro_model_saved', { advanced: split });
       return true;
     } catch (cause) {
       setError(errorMessage(cause));
@@ -687,7 +727,13 @@ function routeKey(route: { provider: string; model: string }): string {
   return JSON.stringify([route.provider, route.model]);
 }
 
-function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
+function CommunityStep({
+  t,
+  track,
+}: {
+  t: BotHarnessTranslate;
+  track(target: 'github' | 'discord' | 'qq'): void;
+}): ReactElement {
   const [stars, setStars] = useState(cachedGithubStars);
   const [copied, setCopied] = useState(false);
   const mount = useMountedResource<HTMLDivElement>(() => {
@@ -710,6 +756,7 @@ function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
         rel="noopener noreferrer"
         {...stylex.props(styles.link)}
         data-community="github"
+        onClick={() => track('github')}
       >
         <span {...stylex.props(styles.linkIcon)}>
           <CommunityIcon name="github" />
@@ -731,6 +778,7 @@ function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
         rel="noopener noreferrer"
         {...stylex.props(styles.link)}
         data-community="discord"
+        onClick={() => track('discord')}
       >
         <span {...stylex.props(styles.linkIcon)}>
           <CommunityIcon name="discord" />
@@ -755,6 +803,7 @@ function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
           variant="outline"
           size="sm"
           onClick={() => {
+            track('qq');
             void navigator.clipboard
               .writeText(COMMUNITY.qqGroup)
               .then(() => setCopied(true))
@@ -764,6 +813,7 @@ function CommunityStep({ t }: { t: BotHarnessTranslate }): ReactElement {
           {t(copied ? 'intro.community.copied' : 'intro.community.copy')}
         </Button>
       </div>
+      <Voices t={t} />
     </div>
   );
 }
@@ -773,7 +823,7 @@ function StartStep({
   pick,
 }: {
   t: BotHarnessTranslate;
-  pick(body: string | undefined): void;
+  pick(starter: IntroStarter, body?: string): void;
 }): ReactElement {
   return (
     <div {...stylex.props(styles.hero)}>
@@ -783,12 +833,12 @@ function StartStep({
         <p {...stylex.props(styles.copy)}>{t('intro.start.hint')}</p>
       </div>
       <div {...stylex.props(styles.starters)} role="list" aria-label={t('home.starters')}>
-        {STARTERS.map((key) => (
+        {STARTERS.map(({ key, id }) => (
           <button
             key={key}
             type="button"
             role="listitem"
-            onClick={() => pick(t(key))}
+            onClick={() => pick(id, t(key))}
             {...stylex.props(styles.link, styles.starter)}
           >
             <span {...stylex.props(styles.linkIcon)}>
@@ -798,7 +848,7 @@ function StartStep({
           </button>
         ))}
       </div>
-      <Button variant="ghost" onClick={() => pick(undefined)}>
+      <Button variant="ghost" onClick={() => pick('own')}>
         {t('intro.start.own')}
       </Button>
     </div>

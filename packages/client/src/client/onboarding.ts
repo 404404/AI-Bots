@@ -148,17 +148,30 @@ export class OnboardingController {
   }
   openIntro(): void {
     this.update({ intro: { step: 0, hidden: false } });
+    this.introEvent('intro_shown');
+    this.introEvent('intro_step_viewed', { step: INTRO_STEPS[0] });
   }
   setIntroStep(step: number): void {
-    if (this.state.intro) this.update({ intro: { ...this.state.intro, step } });
+    if (!this.state.intro || this.state.intro.step === step) return;
+    this.update({ intro: { ...this.state.intro, step } });
+    this.introEvent('intro_step_viewed', { step: INTRO_STEPS[step] ?? INTRO_STEPS[0] });
+  }
+  introEvent(event: string, properties?: Record<string, string | boolean>): void {
+    try {
+      this.actions.introEvent?.(event, properties);
+    } catch {}
   }
   hideIntro(hidden: boolean): void {
     if (this.state.intro) this.update({ intro: { ...this.state.intro, hidden } });
   }
-  async closeIntro(): Promise<void> {
+  async closeIntro(outcome?: IntroOutcome): Promise<void> {
     const receipt = this.state.receipt;
-    if (!this.state.intro) return;
+    const intro = this.state.intro;
+    if (!intro) return;
     this.update({ intro: undefined });
+    const step = INTRO_STEPS[intro.step] ?? INTRO_STEPS[0];
+    if (outcome && 'starter' in outcome) this.introEvent('intro_completed', outcome);
+    else this.introEvent('intro_dismissed', { step, via: outcome?.via ?? 'close' });
     if (!receipt) return;
     try {
       localStorage.setItem(introKey(receipt.profileId), '1');
@@ -488,6 +501,10 @@ function introKey(profileId: string): string {
   return `botharness/onboarding/intro-v1/${profileId}`;
 }
 const controllers = new WeakMap<BridgeActions, OnboardingController>();
+export const INTRO_STEPS = ['welcome', 'theme', 'model', 'community', 'start'] as const;
+export type IntroStarter = 'botPrompt' | 'firstRequest' | 'exampleRequest' | 'own';
+export type IntroOutcome = { via: 'skip' | 'close' } | { starter: IntroStarter };
+
 export function onboardingFor(actions: BridgeActions): OnboardingController {
   let controller = controllers.get(actions);
   if (!controller) {

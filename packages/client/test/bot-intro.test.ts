@@ -68,6 +68,7 @@ function actionsFor(receipts: OnboardingSnapshot[] = [fresh]) {
     openChannel: vi.fn(async () => {}),
     modelCatalog: vi.fn(async () => ({ models: [] })),
     onboardingModel: vi.fn(async () => {}),
+    introEvent: vi.fn(),
   };
 }
 
@@ -188,9 +189,7 @@ describe('intro modal', () => {
     };
     expect(step()).toBe('welcome');
     expect(dialog().textContent).toContain('你好，我是托布');
-    expect(dialog().querySelectorAll('[data-founder-note] p')).toHaveLength(5);
-    expect(dialog().textContent).toContain('everything is plugin');
-    expect(dialog().querySelectorAll('[data-user-reviews] blockquote')).toHaveLength(3);
+    expect(dialog().querySelector('[data-founder-note]')).toBeNull();
     await click('下一步');
     expect(step()).toBe('theme');
     await act(async () =>
@@ -213,6 +212,15 @@ describe('intro modal', () => {
       'https://github.com/BotHarness/DeepSeekBot',
     );
     expect(dialog().textContent).toContain('1125565676');
+    expect(dialog().querySelectorAll('[data-founder-note] p')).toHaveLength(5);
+    expect(dialog().textContent).toContain('everything is plugin');
+    expect(
+      dialog()
+        .querySelector('[data-user-reviews]')!
+        .compareDocumentPosition(dialog().querySelector('[data-founder-note]')!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(dialog().querySelectorAll('[data-user-reviews] blockquote')).toHaveLength(3);
     await click('下一步');
     expect(step()).toBe('start');
     const sent: string[] = [];
@@ -220,6 +228,11 @@ describe('intro modal', () => {
     await click(zhTranslate('onboarding.firstRequest'));
     stop();
     expect(sent).toEqual([zhTranslate('onboarding.firstRequest')]);
+    const events = (actions.introEvent as ReturnType<typeof vi.fn>).mock.calls;
+    expect(events[0]).toEqual(['intro_shown', undefined]);
+    expect(events).toContainEqual(['intro_step_viewed', { step: 'community' }]);
+    expect(events).toContainEqual(['intro_theme_changed', { setting: 'preset' }]);
+    expect(events.at(-1)).toEqual(['intro_completed', { starter: 'firstRequest' }]);
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
 
