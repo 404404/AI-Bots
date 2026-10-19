@@ -6,6 +6,8 @@ import type { OverviewUsage } from '../host/usage';
 import { SHEET_GROUP } from './chat/sheet';
 import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
+import { confirmDestructive } from './primitives/app-dialog';
+import { RowIcon } from './primitives/row-icon';
 import { DrawerHeader } from './primitives/drawer-header';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { errorText, Notice } from './request-parts';
@@ -72,6 +74,7 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.modelSettings.title}
+            leading={<RowIcon name="model" />}
             detail={t.modelSettings.global}
             disclosure
             onPress={actions.onModels}
@@ -82,6 +85,7 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.computers}
+            leading={<RowIcon name="computer" />}
             detail={t.computersHint}
             disclosure
             onPress={actions.onComputers}
@@ -89,23 +93,33 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.notifications}
+            leading={<RowIcon name="notifications" />}
             disclosure
             onPress={actions.onNotifications}
           />
           <SettingsRow
             on={SHEET_GROUP}
             title={t.openFullClient}
+            leading={<RowIcon name="browser" color={theme.color.accent} />}
             tone="accent"
             onPress={actions.onOpenFullClient}
           />
           <SettingsRow
             on={SHEET_GROUP}
             title={t.unpair}
+            leading={<RowIcon name="unpair" color={theme.color.danger} />}
             tone="danger"
-            onPress={() => {
-              setUnpairError(undefined);
-              actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
-            }}
+            onPress={() =>
+              confirmDestructive(
+                t.unpairHost(hostName ?? '—'),
+                t.unpairHostDetail,
+                t.unpair,
+                () => {
+                  setUnpairError(undefined);
+                  actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
+                },
+              )
+            }
           />
         </SettingsSection>
         {unpairError === undefined ? null : (
@@ -115,6 +129,7 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.appIcon}
+            leading={<RowIcon name="appIcon" />}
             detail={t.appIconHint}
             disclosure
             onPress={actions.onAppIcon}
@@ -127,6 +142,7 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.appVersion}
+            leading={<RowIcon name="version" />}
             detail={
               version === ''
                 ? t.appVersionUnknown

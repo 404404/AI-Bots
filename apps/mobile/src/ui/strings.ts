@@ -54,6 +54,7 @@ const en = {
     verify: 'Check session',
     refresh: 'Refresh session',
     logout: 'Sign out',
+    logoutDetail: 'This phone stops receiving this service. You can sign in again later.',
     signedIn: 'Signed in · Instance administrator',
     signedInUser: 'Signed in',
     onboardingIncomplete:
@@ -106,6 +107,7 @@ const en = {
     reload: 'Reload agents',
     empty: 'No agents in this channel.',
     revoke: 'Revoke agent',
+    revokeDetail: 'The agent loses access to this organization at once.',
     states: { active: 'Active', revoked: 'Revoked', expired: 'Expired' },
   },
   cloudJoin: {
@@ -142,6 +144,7 @@ const en = {
     inbox: 'Channel invitations',
     role: 'Channel guest',
     revoke: 'Revoke channel access',
+    revokeDetail: 'The guest loses access to this channel at once.',
     hint: 'This channel only, not its workspace. You see new messages after you accept.',
     manage: 'Invite channel guest',
     empty: 'No guest channels. Accept a channel invitation first.',
@@ -159,6 +162,7 @@ const en = {
     empty: 'No invitations.',
     accept: 'Accept invitation',
     revoke: 'Revoke invitation',
+    revokeDetail: 'The invitation stops working and can no longer be accepted.',
     expires: 'Expires:',
     required:
       'Verify your session. Managing invitations also requires the selected workspace owner.',
@@ -364,9 +368,11 @@ const en = {
     'Could not save this choice. Statistics are paused on this launch. Please try again.',
   pairTitle: 'Pair with your computer',
   pairHint:
-    'On your computer, open DeepSeekBot settings → Devices → Pair a phone, then scan the code.',
+    'On your computer, open DeepSeekBot Settings → Devices → Pair a phone, then scan the code it shows.',
   allowCamera: 'Allow the camera to scan',
   pasteLink: 'Or paste the pairing link',
+  pasteLinkHint:
+    'When the camera can’t see the screen, choose Copy pairing link in the same window and paste it here. The code and the link work once and expire after 10 minutes.',
   pair: 'Pair',
   pairRefused: {
     'link-invalid': 'This is not a DeepSeekBot pairing code.',
@@ -533,6 +539,8 @@ const en = {
   reactions: 'Reactions',
   copied: 'Copied',
   cancel: 'Cancel',
+  remove: 'Remove',
+  confirmAction: (action: string) => `${action}?`,
   copyHint: 'Long-press for Copy.',
   messageActionsHint: 'Long-press to react, copy or share.',
   messageActions: 'Message actions',
@@ -608,6 +616,7 @@ const en = {
   unreadCount: (count: number) => (count === 1 ? '1 unread message' : `${count} unread messages`),
   mutedUnread: (count: number) =>
     count === 1 ? 'muted, 1 unread message' : `muted, ${count} unread messages`,
+  closeSearch: 'Close search',
   searchPlaceholder: 'Search Bots and Channels',
   searchNoMatch: (query: string) => `No Bot or Channel matches “${query}”.`,
   pinnedSection: 'Pinned',
@@ -1046,6 +1055,7 @@ const zh: typeof en = {
     verify: '核验会话',
     refresh: '刷新会话',
     logout: '退出登录',
+    logoutDetail: '这台手机将不再接收此服务的消息，之后可以重新登录。',
     signedIn: '已登录 · 实例管理员',
     signedInUser: '已登录',
     onboardingIncomplete: '登录会话已保存，工作区尚未准备完成。请检查会话以重试。',
@@ -1092,6 +1102,7 @@ const zh: typeof en = {
     reload: '刷新 Agent',
     empty: '这个频道还没有 Agent。',
     revoke: '撤销 Agent',
+    revokeDetail: '该 Agent 会立即失去对这个组织的访问权限。',
     states: { active: '有效', revoked: '已撤销', expired: '已过期' },
   },
   cloudJoin: {
@@ -1126,6 +1137,7 @@ const zh: typeof en = {
     inbox: '频道邀请',
     role: '频道访客',
     revoke: '撤销频道访问',
+    revokeDetail: '该访客会立即失去对这个频道的访问权限。',
     hint: '只加入此频道，不加入工作区。接受后可看到新消息。',
     manage: '邀请频道访客',
     empty: '尚无访客频道，请先接受频道邀请。',
@@ -1143,6 +1155,7 @@ const zh: typeof en = {
     empty: '暂无邀请。',
     accept: '接受邀请',
     revoke: '撤销邀请',
+    revokeDetail: '邀请会立即失效，无法再被接受。',
     expires: '到期时间：',
     required: '请核验登录状态，管理邀请还需要当前工作区所有者权限。',
     states: { pending: '待接受', accepted: '已接受', revoked: '已撤销', expired: '已过期' },
@@ -1346,6 +1359,8 @@ const zh: typeof en = {
   pairHint: '在电脑上打开 DeepSeekBot 设置 → 设备 → 配对手机，然后扫描二维码。',
   allowCamera: '允许使用相机扫码',
   pasteLink: '或粘贴配对链接',
+  pasteLinkHint:
+    '摄像头扫不到时，在同一窗口点「复制配对链接」，再粘贴到这里。二维码和链接都只能用一次，10 分钟后失效。',
   pair: '配对',
   pairRefused: {
     'link-invalid': '这不是 DeepSeekBot 的配对二维码。',
@@ -1506,6 +1521,8 @@ const zh: typeof en = {
   reactions: '回应',
   copied: '已复制',
   cancel: '取消',
+  remove: '移除',
+  confirmAction: (action: string) => `${action}？`,
   copyHint: '长按可复制。',
   messageActionsHint: '长按可回应、复制或分享。',
   messageActions: '消息操作',
@@ -1580,6 +1597,7 @@ const zh: typeof en = {
   needsYouCount: (count: number) => (count === 1 ? '等你处理' : `${count} 项等你处理`),
   unreadCount: (count: number) => `${count} 条未读消息`,
   mutedUnread: (count: number) => `已静音，${count} 条未读消息`,
+  closeSearch: '关闭搜索',
   searchPlaceholder: '搜索 Bot 和频道',
   searchNoMatch: (query: string) => `没有名称包含“${query}”的 Bot 或频道。`,
   pinnedSection: '已置顶',
