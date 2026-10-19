@@ -302,14 +302,15 @@ export const zh = {
     '我想在 10 分钟后收到一次“测试定时任务”的提醒，发送到当前私聊。但浏览器无法识别我的时区，请先问我使用哪个时区，再创建真实的一次性任务。',
   'onboarding.freeform': '也可以直接在下方输入你的问题。',
   'onboarding.short.title': '从这里开始',
-  'onboarding.short.progress': '第 {step} 步，共 5 步',
+  'onboarding.short.progress': '已完成 {done}/5',
   'onboarding.short.model': '配置模型',
   'onboarding.short.modelHint': '选择模型，然后告诉总管你想做什么。',
   'onboarding.short.bot': '请总管创建一个 Bot',
-  'onboarding.short.botHint': '描述你需要的助手；创建成功后会自动进入下一步。',
+  'onboarding.short.botHint':
+    '描述你需要的助手。总管随后会请你批准创建，选择「仅批准这一次」即可。',
   'onboarding.short.botPrompt': '帮我创建一个叫「学习助手」的 Bot，帮助我制定学习计划。',
   'onboarding.short.group': '创建一个群聊',
-  'onboarding.short.groupHint': '请总管把刚创建的 Bot 加入新群聊。',
+  'onboarding.short.groupHint': '{name} 已就绪。先和它打个招呼，再请总管把它加入新群聊。',
   'onboarding.short.groupPrompt': '帮我创建一个叫「学习小组」的群聊，把刚刚创建的 {name} 加进去。',
   'onboarding.short.chat': '进入对话',
   'onboarding.short.chatHint':
@@ -333,7 +334,7 @@ export const zh = {
   'onboarding.short.restore': '重新打开',
   'onboarding.short.restoreHint':
     '从左侧控制栏重新打开全局面板；频道子面板从消息面板标题栏打开。原有布局和大小会保留。',
-  'onboarding.short.openBot': '打开新 Bot',
+  'onboarding.short.openBot': '和 {name} 打个招呼',
   'onboarding.short.openGroup': '打开群聊',
   'onboarding.start': '开始教程',
   'onboarding.skip': '跳过',
@@ -3367,9 +3368,9 @@ export const zh = {
   'approval.allowKind': '总是允许此类',
   'approval.allowKindRisk':
     '“总是允许此类”之后，这个程序用同一账号、同一组环境变量名运行时不再询问，参数不限。',
-  'approval.allowAll': '始终允许此范围全部不透明工具',
+  'approval.allowAll': '始终允许这里除密钥命令外的所有工具',
   'approval.allowAllRisk':
-    '此 Bot 的当前角色和工作区以后运行任何不透明工具时都不再询问；这些工具可能访问授权目录之外。工作区授权变化会使此规则失效。',
+    '此 Bot 的当前角色和工作区以后运行除密钥命令外的任何工具时都不再询问；这些工具可能访问授权目录之外。工作区授权变化会使此规则失效。',
   'approval.confirmAll': '确认始终允许',
   'approval.cancel': '取消',
   'approval.ruleSaved': '已保存自动批准规则并批准本次调用',
@@ -3454,7 +3455,7 @@ export const zh = {
   'access.sessionWarning': '此事项以危险文件权限创建；关闭 Bot 开关不会改变它。',
   'approval.revokeRule': '撤销规则',
   'approval.exactRule': '相同调用：{tool}',
-  'approval.allRule': '此范围全部不透明工具',
+  'approval.allRule': '这里除密钥命令外的所有工具',
   'approval.secretCliRule': '密钥命令：{program}（账号 {account}）',
   'approval.reject': '拒绝',
   'approval.approved': '已批准这一次调用',
@@ -4138,15 +4139,16 @@ export const en = {
     'I want a one-time reminder in 10 minutes to “test scheduled tasks” in this DM. My browser could not identify my time zone. Ask which time zone to use before creating a real one-time schedule.',
   'onboarding.freeform': 'You can also type your own question below.',
   'onboarding.short.title': 'Get started',
-  'onboarding.short.progress': 'Step {step} of 5',
+  'onboarding.short.progress': '{done} of 5 done',
   'onboarding.short.model': 'Configure a model',
   'onboarding.short.modelHint': 'Choose a model, then tell your steward what you want to do.',
   'onboarding.short.bot': 'Ask your steward to create a Bot',
   'onboarding.short.botHint':
-    'Describe the assistant you need. This step advances after it is actually created.',
+    'Describe the assistant you need. Your steward then asks you to approve creating it; choose Allow once.',
   'onboarding.short.botPrompt': 'Create a Bot called “Study helper” to help me plan my learning.',
   'onboarding.short.group': 'Create a group',
-  'onboarding.short.groupHint': 'Ask your steward to include the new Bot in a group.',
+  'onboarding.short.groupHint':
+    '{name} is ready. Say hi to it first, then ask your steward to add it to a group.',
   'onboarding.short.groupPrompt':
     'Create a group called “Study group” with the {name} Bot you just created.',
   'onboarding.short.chat': 'Start chatting',
@@ -4171,7 +4173,7 @@ export const en = {
   'onboarding.short.restore': 'Reopen panels',
   'onboarding.short.restoreHint':
     'Reopen global panels from the control rail and Channel subpanels from the Messages header. Their saved layout and sizes are retained.',
-  'onboarding.short.openBot': 'Open the new Bot',
+  'onboarding.short.openBot': 'Say hi to {name}',
   'onboarding.short.openGroup': 'Open the group',
   'onboarding.start': 'Start tutorial',
   'onboarding.skip': 'Skip',
@@ -7360,9 +7362,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.allowKind': 'Always allow this kind',
   'approval.allowKindRisk':
     'Always allow lets this program run with any arguments, without asking, for the same account and environment variable names.',
-  'approval.allowAll': 'Always allow all opaque tools in this scope',
+  'approval.allowAll': 'Always allow every tool here except secret commands',
   'approval.allowAllRisk':
-    'This Bot role and workspace will no longer ask for opaque tools. They may access files outside authorized folders. Changing workspace grants invalidates this rule.',
+    'This Bot role and workspace will no longer ask before any tool except secret commands. Tools may access files outside authorized folders. Changing workspace grants invalidates this rule.',
   'approval.confirmAll': 'Confirm always allow',
   'approval.cancel': 'Cancel',
   'approval.ruleSaved': 'Automatic approval rule saved; this call was approved',
@@ -7453,7 +7455,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'This Assignment was created with dangerous file access; turning off the Bot setting will not change it.',
   'approval.revokeRule': 'Revoke rule',
   'approval.exactRule': 'Exact call: {tool}',
-  'approval.allRule': 'All opaque tools in this scope',
+  'approval.allRule': 'Every tool here except secret commands',
   'approval.secretCliRule': 'Secret command: {program} (account {account})',
   'approval.reject': 'Reject',
   'approval.approved': 'This call was approved',

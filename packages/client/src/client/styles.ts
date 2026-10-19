@@ -3629,7 +3629,7 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
 }
 .bh-composer-rich-input:empty::before {
   content: attr(data-placeholder);
-  color: var(--dsw-alias-label-dimmed);
+  color: var(--dsw-alias-label-secondary);
   pointer-events: none;
 }
 .bh-composer-rich-input[contenteditable='false'] {

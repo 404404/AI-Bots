@@ -1,4 +1,5 @@
 import { Menu } from './appearance-primitives.js';
+import { plainMarkdown } from '../../../core/src/channels/message-preview.js';
 import { PointerMenu } from './ds/pointer-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { ChannelHistory } from './channel-history.js';
@@ -392,6 +393,7 @@ interface SidebarProps {
   headerEnd?: ReactNode;
   headerTarget?: HTMLElement | null;
   onViewProfile?: ((slug: string) => void) | undefined;
+  onOpenConversation?: (() => void) | undefined;
   companion?: WindowCompanions | undefined;
   wide: boolean;
   actions: BridgeActions;
@@ -515,7 +517,7 @@ function channelPreview(
     );
   const body =
     toolApprovalText(message, t) ??
-    (attachmentReferenceLabels(message.body, message.attachments ?? [])
+    (plainMarkdown(attachmentReferenceLabels(message.body, message.attachments ?? []))
       .replace(/\s+/gu, ' ')
       .trim() ||
       message.attachments?.[0]?.name ||
@@ -938,6 +940,7 @@ export function BotSidebar({
   headerEnd,
   headerTarget,
   onViewProfile,
+  onOpenConversation,
   companion,
   wide,
   actions,
@@ -1252,7 +1255,9 @@ export function BotSidebar({
     ? visibleChannelIds
     : [...railPinnedChannels, ...railChannels].map((channel) => channel.id);
   const shortcutIdsRef = useRef<readonly string[]>(shortcutIds);
+  const openConversationRef = useRef(onOpenConversation);
   shortcutIdsRef.current = shortcutIds;
+  openConversationRef.current = onOpenConversation;
   const navigationIdsRef = useRef<readonly string[]>([]);
   navigationIdsRef.current = [...railPinnedChannels, ...railChannels].map((channel) => channel.id);
   const dragActiveRef = useRef(false);
@@ -1301,6 +1306,7 @@ export function BotSidebar({
       const channel = store.getSnapshot().channels.find((candidate) => candidate.id === id);
       if (channel === undefined) return;
       event.preventDefault();
+      openConversationRef.current?.();
       void (channel.botSlug === undefined
         ? actions.openChannel(id)
         : actions.openBot(channel.botSlug));
@@ -1346,6 +1352,7 @@ export function BotSidebar({
       const channel = snapshot.channels.find((candidate) => candidate.id === id);
       if (channel === undefined) return;
       event.preventDefault();
+      openConversationRef.current?.();
       void (channel.botSlug === undefined
         ? actions.openChannel(channel.id)
         : actions.openBot(channel.botSlug));
@@ -1754,6 +1761,7 @@ export function BotSidebar({
       ),
     );
     if (gesture !== 'plain') return;
+    onOpenConversation?.();
     void (channel.botSlug === undefined
       ? actions.openChannel(channel.id)
       : actions.openBot(channel.botSlug));
@@ -1761,6 +1769,7 @@ export function BotSidebar({
 
   const openQuickSwitcherEntry = ({ channel }: QuickSwitcherEntry): void => {
     setQuickSwitcherOpen(false);
+    onOpenConversation?.();
     setChannelSelection((current) =>
       selectChannels(
         reconcileChannelSelection(current, visibleChannelIds),

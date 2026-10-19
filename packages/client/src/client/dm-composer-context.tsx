@@ -157,7 +157,7 @@ export function useDmComposerContext({
   const planState = data?.state;
   const modelStatus: 'loading' | 'ready' | 'unavailable' =
     data === undefined
-      ? plan === undefined
+      ? plan?.orchestrator === undefined
         ? 'loading'
         : 'ready'
       : data.unavailable === true || data.state.repair !== undefined
