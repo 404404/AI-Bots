@@ -24,7 +24,14 @@ const CSS = `
 [data-vrm-panel] > [data-vrm-panel]{flex:1;height:auto}
 [data-vrm-stage]{position:absolute;inset:0;overflow:hidden}
 [data-vrm-status]{color:var(--dsw-alias-label-secondary)}
-[data-vrm-speech]{position:absolute;bottom:12px;right:12px;max-width:55%;max-height:22%;padding:8px 12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent);backdrop-filter:blur(12px)}
+[data-vrm-speech]{--vrm-bubble-width:min(300px,calc(var(--vrm-panel-width,100vw) - 24px));--vrm-bubble-left:clamp(12px,calc(var(--vrm-head-x,70vw) - 150px),calc(var(--vrm-panel-width,100vw) - var(--vrm-bubble-width) - 12px));position:absolute;z-index:1;left:var(--vrm-bubble-left);bottom:clamp(12px,calc(100% - var(--vrm-head-y,35%) + 22px),calc(100% - 72px));width:var(--vrm-bubble-width);display:flex;flex-direction:column;gap:4px;padding:10px 14px;border:1px solid var(--dsw-alias-label-primary);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 8px 22px color-mix(in srgb,var(--dsw-alias-label-primary) 16%,transparent);transform-origin:calc(var(--vrm-head-x,70vw) - var(--vrm-bubble-left)) calc(100% + 10px);animation:vrm-speech-in .22s cubic-bezier(.2,.9,.3,1.2)}
+[data-vrm-speech]::before,[data-vrm-speech]::after{content:'';position:absolute;left:clamp(14px,calc(var(--vrm-head-x,70vw) - var(--vrm-bubble-left) - 11px),calc(var(--vrm-bubble-width) - 36px));bottom:-11px;width:22px;height:11.5px;pointer-events:none}
+[data-vrm-speech]::before{background:var(--dsw-alias-label-primary);clip-path:path('M0 0.5 L8.9 9.4 Q11 11.5 13.1 9.4 L22 0.5 Z')}
+[data-vrm-speech]::after{background:var(--dsw-alias-bg-base);clip-path:path('M2.6 0 L10.5 7.9 Q11 8.4 11.5 7.9 L19.4 0 Z')}
+[data-vrm-speech] > small{font-family:var(--dsw-font-markdown-code-block-font-family);color:var(--dsw-alias-label-secondary)}
+[data-vrm-speech] > p{margin:0;max-height:7.5em;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+@keyframes vrm-speech-in{from{opacity:0;transform:scale(.92) translateY(6px)}}
+@media (prefers-reduced-motion:reduce){[data-vrm-speech]{animation:none}}
 [data-vrm-header]{position:absolute;top:12px;left:12px;z-index:1;display:flex;flex-direction:column;align-items:flex-start;gap:8px;max-width:calc(100% - 24px)}
 [data-vrm-header] > [data-vrm-status]{padding:4px 8px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 [data-vrm-instance-actions]{position:absolute;right:12px;top:12px;z-index:2}
@@ -283,7 +290,8 @@ function Character({ view }: { view: BotPresentationView }) {
       </details>
       {snapshot.text && (
         <div data-vrm-speech="" aria-label="Bot speech">
-          {snapshot.text}
+          <small>{snapshot.name}</small>
+          <p>{snapshot.text}</p>
         </div>
       )}
     </section>

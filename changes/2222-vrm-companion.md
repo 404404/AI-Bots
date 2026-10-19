@@ -4,6 +4,7 @@ section: Added
 
 ## en
 
+- When the Bot speaks, its words now appear in a speech bubble above the character's head, styled like the Bot avatar's bubble, with the tail following the head as the camera moves. Typing hands now rest on the keys instead of sinking into the keyboard, typing comes in natural bursts, head turns and idle gestures ease in and out, and the clouds are soft and misty instead of blocky ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - While typing, the character now strikes keys with individual fingers instead of bobbing its palms. The room surfaces have a soft painted brush texture with smoother toon shading, and the room is lit by several zoned lights: a wall sconce, a glow inside the book hutch, an LED strip under the wall shelf, warm bounce light and sunbeams from the window at sunset. New details include cables to the wall outlet, an air conditioner with a swinging louver, a basket of blankets, slippers, a floor cushion and a printed mug ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - The default character is now VRoid's AvatarSample_A, and the room is rebuilt around an L-shaped desk with a turntable, laptop, wall shelf and corkboard on the side wing. A hanging plant, a firefly jar, wall prints, a desk calendar showing today's date and labelled book spines make the room denser, the character gets a warm or cool rim light from the time of day, and the desk lamp no longer washes out the hands ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - A new **Lo-fi look**, on by default, gives the room the hand-drawn feel of Chill with You: outlines, a soft glow around lights, halftone shadows, a warm sunset and cool night grade, and a vignette; **Plain** turns it off. The sun now has a ringed halo and birds occasionally fly past the window ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
@@ -20,6 +21,7 @@ section: Added
 
 ## zh
 
+- Bot 说话时，文字会以对话气泡显示在角色头顶，样式与 Bot 头像的气泡一致，气泡尾巴随镜头跟住头部。打字时手放在按键上，不再陷进键盘，敲击带有自然的快慢节奏；转头和闲置动作的起止更平滑；云改成柔和的云雾，不再是明显的块状（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 打字时角色改为逐根手指敲击按键，不再是手掌上下起伏。房间表面加入柔和的手绘笔触质感，toon 明暗更平滑；房间改由多处分区灯光照亮：墙上壁灯、书架内的暖光、置物架下的 LED 灯带，日落时还有窗边的暖色反光和光束。新增细节包括连到墙上插座的线缆、扫风叶片会摆动的空调、装着毯子的编织篮、拖鞋、地上坐垫和印花马克杯（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 默认角色换成 VRoid 的 AvatarSample_A；房间改为 L 型书桌，侧桌上有唱片机、笔记本电脑、墙上置物架和软木留言板。吊篮绿植、萤火虫玻璃罐、墙上小画、显示当天日期的台历和带书标的书脊让画面更丰富；角色会随时间带上暖色或冷色的轮廓光，台灯也不再把手照得过曝（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 新增默认开启的 **Lo-fi look**，让房间更接近 Chill with You 的手绘感：物体描边、灯光柔光、暗部网点、日落暖红与夜晚冷蓝的调色以及暗角；选择 **Plain** 可以关闭。太阳带上了光环，窗外偶尔有鸟飞过（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。

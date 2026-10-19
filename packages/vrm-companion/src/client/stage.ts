@@ -65,6 +65,7 @@ export interface Stage {
 }
 const GRIP = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
 const SIDEWAYS = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2);
+const FINGERS = ['Index', 'Middle', 'Ring', 'Little'] as const;
 const TAP_FINGERS = ['Index', 'Index', 'Middle', 'Middle', 'Ring', 'Little'] as const;
 const noise = (seed: number) => {
   const value = Math.sin(seed * 91.7 + 13.1) * 43758.5453;
@@ -102,6 +103,8 @@ export function mountStage(
   let legacy = false;
   let phase = 0;
   let gait = 0;
+  let strokes = 0;
+  const gazeVelocity = new Vector3();
   let cameraView: CameraView = initial.camera;
   let previousState = '';
   let width = 0,
@@ -300,8 +303,10 @@ export function mountStage(
       const sip = doing('sip');
       const glance = doing('glance');
       const drinkPath = (progress: number) => {
-        const span = (from: number, to: number) =>
-          Math.max(0, Math.min(1, (progress - from) / (to - from)));
+        const span = (from: number, to: number) => {
+          const t = Math.max(0, Math.min(1, (progress - from) / (to - from)));
+          return t * t * (3 - 2 * t);
+        };
         return {
           reach: span(0, 0.22) - span(0.86, 1),
           lift: span(0.24, 0.42) - span(0.68, 0.84),
@@ -328,7 +333,15 @@ export function mountStage(
             ? room.mug.getWorldPosition(new Vector3())
             : new Vector3(-0.36, desk + 0.48, 0.78);
       if (outside > 0) desiredGaze.lerp(new Vector3(-2.4, desk + 1.1, -0.9), outside);
-      gaze.position.lerp(desiredGaze, reduced.matches ? 1 : blend);
+      if (reduced.matches) gaze.position.copy(desiredGaze);
+      else {
+        const spring = Math.min(delta, 0.05);
+        gazeVelocity
+          .addScaledVector(desiredGaze.sub(gaze.position), 28 * spring)
+          .multiplyScalar(Math.exp(-spring * 10.5));
+        gaze.position.addScaledVector(gazeVelocity, spring);
+      }
+      const ease = reduced.matches ? 1 : 1 - Math.exp(-delta * 6);
       const head = vrm.humanoid.getNormalizedBoneNode('head');
       const headPosition =
         head?.getWorldPosition(new Vector3()) ?? new Vector3(motion.x, 1.2, motion.z);
@@ -345,12 +358,17 @@ export function mountStage(
           sip * drink.lift * 0.22,
         Math.max(-0.35, Math.min(0.35, yaw * 0.4)) + (waiting ? -0.1 : 0) - outside * 0.25,
         (talking ? Math.sin(phase * 5) * 0.025 : 0) - chin * 0.14,
-        blend,
+        ease,
       );
       const typing = working && moving ? 1 : 0;
-      const keystroke = phase * 9;
-      const key = Math.floor(keystroke);
-      const hit = Math.sin((keystroke - key) * Math.PI);
+      const burst = Math.max(0, Math.min(1, (noise(Math.floor(phase / 2.6)) - 0.18) * 3));
+      strokes += delta * 7 * (0.35 + burst * 0.65) * typing;
+      const key = Math.floor(strokes);
+      const stroke = strokes - key;
+      const hit =
+        stroke < 0.3
+          ? Math.sin((stroke / 0.3) * (Math.PI / 2))
+          : Math.cos(((stroke - 0.3) / 0.7) * (Math.PI / 2)) ** 2;
       const tapSide = noise(key) < 0.5 ? 'left' : 'right';
       const tapFinger = TAP_FINGERS[Math.floor(noise(key + 0.5) * TAP_FINGERS.length)]!;
       const mix = (from: number, to: number, amount: number) => from + (to - from) * amount;
@@ -435,7 +453,7 @@ export function mountStage(
           const keys = new Vector3(
             (side === 'left' ? 0.66 : 0.48) +
               typing * Math.sin(phase * 0.7 + (side === 'left' ? 0 : 2.1)) * 0.012,
-            room.tableY + 0.09 + (side === tapSide ? typing * hit * 0.003 : 0),
+            room.tableY + 0.115 - (side === tapSide ? typing * hit * 0.004 : 0),
             0.13 + typing * Math.sin(phase * 0.5 + (side === 'left' ? 1 : 0)) * 0.006,
           );
           const free = side === 'right' && rightGoal ? rightWeight : 0;
@@ -478,11 +496,13 @@ export function mountStage(
         }
       }
       const grasp = rightGrip ? rightWeight : 0;
-      const quick = reduced.matches ? 1 : 1 - Math.exp(-delta * 35);
+      const quick = reduced.matches ? 1 : 1 - Math.exp(-delta * 24);
       for (const side of ['left', 'right'] as const) {
         const sign = side === 'right' ? 1 : -1;
-        for (const finger of ['Index', 'Middle', 'Ring', 'Little'] as const) {
-          const tap = typing && side === tapSide && finger === tapFinger ? hit : 0;
+        for (const finger of FINGERS) {
+          const neighbor =
+            Math.abs(FINGERS.indexOf(finger) - FINGERS.indexOf(tapFinger)) === 1 ? 0.2 : 0;
+          const tap = typing && side === tapSide ? hit * (finger === tapFinger ? 1 : neighbor) : 0;
           const curl =
             (side === 'right' ? 0.15 + grasp * 0.95 : 0.15) +
             typing * (0.32 + (finger === 'Little' ? 0.1 : 0) + tap * 0.5);
@@ -522,6 +542,23 @@ export function mountStage(
     else {
       renderer.render(scene, camera);
       calls = renderer.info.render.calls;
+    }
+    const anchor = vrm?.humanoid.getNormalizedBoneNode('head');
+    const panel = host.parentElement;
+    if (anchor && panel) {
+      const point = anchor
+        .getWorldPosition(new Vector3())
+        .add(new Vector3(0, 0.2 * modelScale, 0))
+        .project(camera);
+      const x = `${Math.round(((point.x + 1) / 2) * host.clientWidth)}px`;
+      const y = `${Math.round(((1 - point.y) / 2) * host.clientHeight)}px`;
+      if (panel.style.getPropertyValue('--vrm-head-x') !== x)
+        panel.style.setProperty('--vrm-head-x', x);
+      if (panel.style.getPropertyValue('--vrm-head-y') !== y)
+        panel.style.setProperty('--vrm-head-y', y);
+      const width = `${host.clientWidth}px`;
+      if (panel.style.getPropertyValue('--vrm-panel-width') !== width)
+        panel.style.setProperty('--vrm-panel-width', width);
     }
     frames++;
     elapsed += delta;
@@ -696,6 +733,8 @@ export function mountStage(
     dispose() {
       if (disposed) return;
       disposed = true;
+      for (const name of ['--vrm-head-x', '--vrm-head-y', '--vrm-panel-width'])
+        host.parentElement?.style.removeProperty(name);
       cancelAnimationFrame(frame);
       resize.disconnect();
       intersection.disconnect();

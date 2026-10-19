@@ -154,6 +154,18 @@ Date: 2026-10-19.
 - **Frames.** Sunset desk typing and the night room with zoned lights: `painted-zoned-lights.jpg`.
 - **Video.** A new tour is shared with Vain as `vrm-room-tour-r5.mp4`, not committed.
 
+## Hands on keys, misty clouds, smoother motion and speech bubble (Human feedback)
+
+Date: 2026-10-19.
+
+- **Feedback.** Another step up. Hands poke into the keyboard and should sit higher so fingers press the keys; clouds are still too low-poly and should be misty rather than blocky; head turns and typing should move more smoothly and naturally; record a video that triggers expressions and speech, and show speech in a text bubble like the Bot avatar's.
+- **Hands.** The wrist targets sit 2.5 cm higher, so the fingertips rest on the keycaps; a keystroke dips the hand 4 mm. Keystrokes come in bursts at a varying rate with a quick press and slower release, and the neighbouring finger moves slightly with the striking one.
+- **Motion.** The gaze follows a damped spring instead of jumping to a new target, the head eases more slowly than the limbs, idle gestures ramp in and out over one second along an S-curve, and the cup reach, lift and tilt are eased the same way.
+- **Clouds.** Each cloud is a soft sum of rounded lobes distorted by noise, with shading from density toward the sun and a lit rim, so the edges fade into mist.
+- **Speech bubble.** Speech text sits in a bubble above the head with the Bot name, the same border, radius, shadow and tail as the Bot avatar's bubble, and a short pop-in that is skipped for reduced motion. The stage writes the projected head position to the panel, so the bubble and tail follow it; the bubble stays inside the panel.
+- **Video.** `vrm-speech-expressions.mp4` (45 s, shared with Vain, not committed) shows typing, a spoken line, a window gaze and a sip, rainy-night thinking, blocked and waiting lines with their faces, and a glance and stretch at sunset.
+- **Frames.** Speaking at the desk and in the portrait view: `speech-bubble.jpg`.
+
 ## Acceptance limits and next action
 
 The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

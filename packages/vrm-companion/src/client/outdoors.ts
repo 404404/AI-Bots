@@ -94,37 +94,43 @@ export function createOutdoors() {
         for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
         return v;
       }
-      void main() {
-        vec2 p = vUv * 2.0 - 1.0;
+      float lobes(vec2 p) {
         float body = 0.0;
-        vec2 nrm = vec2(0.0, 1.0);
         for (int i = 0; i < 9; i++) {
           float k = float(i);
           float row = k < 5.0 ? 0.0 : 1.0;
           float slot = k < 5.0 ? k : k - 5.0;
           vec2 center = row == 0.0
-            ? vec2(-0.56 + 0.28 * slot, -0.28 + 0.08 * sin(vSeed * 7.0 + k * 1.9))
-            : vec2(-0.36 + 0.24 * slot, 0.02 + 0.14 * fract(sin(vSeed * 5.0 + k) * 41.3));
-          float r = (row == 0.0 ? 0.26 : 0.22) + 0.1 * fract(sin(vSeed * 13.0 + k) * 91.7);
+            ? vec2(-0.56 + 0.28 * slot, -0.22 + 0.08 * sin(vSeed * 7.0 + k * 1.9))
+            : vec2(-0.36 + 0.24 * slot, 0.06 + 0.14 * fract(sin(vSeed * 5.0 + k) * 41.3));
+          float r = (row == 0.0 ? 0.28 : 0.24) + 0.1 * fract(sin(vSeed * 13.0 + k) * 91.7);
           r *= 1.0 - row * step(0.6, fract(sin(vSeed * 3.0 + k) * 17.1)) * 0.6;
-          vec2 d = (p - center) / vec2(r * 1.1, r);
-          float lobe = 1.0 - length(d);
-          if (lobe > body) { body = lobe; nrm = normalize(d + vec2(0.0, 0.0001)); }
+          vec2 d = (p - center) / vec2(r * 1.25, r);
+          body += exp(-dot(d, d) * 1.6);
         }
-        body = max(body, cover * 0.12 * smoothstep(0.9, 0.3, length(p)));
-        body *= smoothstep(-0.5, -0.38, p.y);
-        float n = fbm(p * 3.1 + vSeed * 17.0);
-        vec2 edge = smoothstep(vec2(1.0), vec2(0.8), abs(p));
-        float density = (body + (n - 0.5) * 0.18) * edge.x * edge.y;
-        float alpha = smoothstep(0.0, 0.05, density);
-        if (alpha < 0.01) discard;
-        float facing = dot(nrm, normalize(sunDir)) * 0.6 + 0.4 + (n - 0.5) * 0.25;
-        float tone = facing > 0.55 ? 1.0 : facing > 0.15 ? 0.55 : 0.0;
-        vec3 color = mix(shade, light, tone);
-        float lip = smoothstep(0.1, 0.0, density) * step(0.35, dot(nrm, normalize(sunDir)));
-        color = mix(color, rim, lip * 0.85);
-        color = mix(color, shade * 0.85, smoothstep(-0.25, -0.42, p.y) * 0.6);
-        gl_FragColor = vec4(color, alpha);
+        return body;
+      }
+      float density(vec2 p) {
+        vec2 warp = vec2(fbm(p * 2.2 + vSeed * 3.0), fbm(p * 2.2 - vSeed * 5.0)) - 0.5;
+        vec2 q = p + warp * 0.22;
+        float body = lobes(q) * 0.9;
+        body = max(body, cover * 0.35 * smoothstep(1.0, 0.2, length(p)));
+        float n = fbm(q * 4.3 + vSeed * 17.0);
+        vec2 edge = smoothstep(vec2(1.0), vec2(0.6), abs(p));
+        return (body * (0.75 + n * 0.5) - 0.18) * edge.x * edge.y * smoothstep(-0.62, -0.25, p.y);
+      }
+      void main() {
+        vec2 p = vUv * 2.0 - 1.0;
+        float d = density(p);
+        float alpha = smoothstep(0.0, 0.32, d);
+        if (alpha < 0.004) discard;
+        vec2 toward = normalize(sunDir);
+        float lit = clamp((d - density(p + toward * 0.1)) * 3.0 + 0.5, 0.0, 1.0);
+        float thick = smoothstep(0.1, 0.9, d);
+        vec3 color = mix(light, shade, smoothstep(0.3, 1.0, 1.0 - lit) * (0.25 + thick * 0.35));
+        color = mix(color, rim, (1.0 - smoothstep(0.0, 0.22, d)) * smoothstep(0.5, 0.8, lit) * 0.7);
+        color = mix(color, shade * 0.9, smoothstep(-0.1, -0.5, p.y) * 0.45);
+        gl_FragColor = vec4(color, alpha * 0.96);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,

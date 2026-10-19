@@ -15,7 +15,7 @@ export interface IdleFrame {
   progress: number;
 }
 
-const EASE = 0.7;
+const EASE = 1;
 const RETREAT = 2.5;
 
 export class IdleScheduler {
@@ -55,7 +55,8 @@ export class IdleScheduler {
       this.#wait -= delta;
       if (this.#wait <= 0) this.#start();
     }
-    return { action: this.action, weight: this.weight, progress: this.progress };
+    const weight = this.weight * this.weight * (3 - 2 * this.weight);
+    return { action: this.action, weight, progress: this.progress };
   }
 
   #start() {
