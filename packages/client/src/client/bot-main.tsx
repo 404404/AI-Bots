@@ -44,6 +44,7 @@ import {
   IconNewChatOutlineRegular,
   IconPanelLeftOutlineRegular,
   IconUserOutlineRegular,
+  Toast,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -1138,7 +1139,14 @@ function ConversationView({
   >(scopeKey, undefined);
   const [recallNotice, setRecallNotice] = useScopedState<string>(scopeKey);
   const [submissionNotice, setSubmissionNotice] = useScopedState<string>(scopeKey);
-  const [compactNotice, setCompactNotice] = useScopedState<string>(scopeKey);
+  const [compactNotice, setCompactNotice] = useScopedState<{
+    seq: number;
+    text: string;
+    tone?: 'success';
+    holdMs: number;
+  }>(scopeKey);
+  const [compacting, setCompacting] = useScopedState(scopeKey, false);
+  const compactSeq = useRef(0);
   const submissionChannelId = draftScope === undefined ? undefined : state.conversation.channel?.id;
   const readSubmissions = () =>
     submissionChannelId === undefined
@@ -1761,24 +1769,39 @@ function ConversationView({
   };
   const compactProfileBot = async (): Promise<void> => {
     if (profileBot === undefined) return;
-    setCompactNotice(t('composerCompact.running'));
+    const show = (text: string, holdMs: number, tone?: 'success') => {
+      compactSeq.current += 1;
+      setCompactNotice({ seq: compactSeq.current, text, holdMs, ...(tone ? { tone } : {}) });
+    };
+    setCompacting(true);
+    show(t('composerCompact.running'), 120000);
     try {
       const result = await actions.compactBot(profileBot.slug);
       const tokens = (value: number | null) => (value === null ? '?' : value.toLocaleString());
-      setCompactNotice(
-        result.outcome === 'compacted'
-          ? t('composerCompact.done', {
-              before: tokens(result.tokensBefore),
-              after: tokens(result.tokensAfter),
-            })
-          : result.outcome === 'busy'
-            ? t('composerCompact.busy')
-            : result.outcome === 'not-loaded'
-              ? t('composerCompact.notLoaded')
-              : t('composerCompact.nothing'),
-      );
+      if (result.outcome === 'compacted')
+        show(
+          t('composerCompact.done', {
+            before: tokens(result.tokensBefore),
+            after: tokens(result.tokensAfter),
+          }),
+          4000,
+          'success',
+        );
+      else
+        show(
+          t(
+            result.outcome === 'busy'
+              ? 'composerCompact.busy'
+              : result.outcome === 'not-loaded'
+                ? 'composerCompact.notLoaded'
+                : 'composerCompact.nothing',
+          ),
+          result.outcome === 'nothing' ? 3000 : 6000,
+        );
     } catch {
-      setCompactNotice(t('composerCompact.failed'));
+      show(t('composerCompact.failed'), 6000);
+    } finally {
+      setCompacting(false);
     }
   };
   const conversationShortcuts: ComposerShortcut[] = [
@@ -1801,7 +1824,7 @@ function ConversationView({
             id: 'compact' as const,
             label: t('composerCommand.compact'),
             icon: <ChannelSidebarIcon name="archive" />,
-            disabled: compactNotice === t('composerCompact.running'),
+            disabled: compacting,
             run: () => void compactProfileBot(),
           },
         ]),
@@ -2209,7 +2232,6 @@ function ConversationView({
     setSubmissionNotice(
       attempt?.persisted === false ? t('composer.submissionStorageError') : undefined,
     );
-    setCompactNotice(undefined);
     recall.current = undefined;
     setRecallNotice(undefined);
     recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });
@@ -2981,6 +3003,19 @@ function ConversationView({
                   activeMemoryView === undefined && selectedIds === undefined ? 'contents' : 'none',
               }}
             >
+              {compactNotice === undefined ? null : (
+                <Toast
+                  key={compactNotice.seq}
+                  text={compactNotice.text}
+                  holdMs={compactNotice.holdMs}
+                  {...(compactNotice.tone ? { tone: compactNotice.tone } : {})}
+                  onDone={() =>
+                    setCompactNotice((current) =>
+                      current?.seq === compactNotice.seq ? undefined : current,
+                    )
+                  }
+                />
+              )}
               <div
                 className="bh-composer-recovery"
                 ref={recovery.mount}
@@ -3020,11 +3055,6 @@ function ConversationView({
                   <p role="status">{submissionNotice}</p>
                 )}
                 {recallNotice === undefined ? null : <p role="status">{recallNotice}</p>}
-                {compactNotice === undefined ? null : (
-                  <p role="status" data-compact-notice="">
-                    {compactNotice}
-                  </p>
-                )}
                 {recovery.versions.length > 1 ? (
                   <section aria-label={t('composer.draftConflict')}>
                     <p role="alert">{t('composer.draftConflict')}</p>
