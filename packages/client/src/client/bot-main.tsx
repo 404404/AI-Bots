@@ -2209,6 +2209,7 @@ function ConversationView({
     setSubmissionNotice(
       attempt?.persisted === false ? t('composer.submissionStorageError') : undefined,
     );
+    setCompactNotice(undefined);
     recall.current = undefined;
     setRecallNotice(undefined);
     recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });

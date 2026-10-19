@@ -334,6 +334,8 @@ describe('idle compaction scheduler', () => {
     h.compactNow.mockRejectedValueOnce(Object.assign(new Error('busy'), { code: 'busy' }));
     await expect(h.idle.compactNow('orchestrator')).resolves.toMatchObject({ outcome: 'busy' });
     h.compactNow.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'summary' }));
+    await expect(h.idle.compactNow('orchestrator')).resolves.toMatchObject({ outcome: 'nothing' });
+    h.compactNow.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'persistence' }));
     await expect(h.idle.compactNow('orchestrator')).rejects.toThrow('x');
   });
 

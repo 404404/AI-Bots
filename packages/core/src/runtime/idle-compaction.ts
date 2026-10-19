@@ -524,6 +524,8 @@ export function createIdleCompaction<Agent extends IdleCompactionAgent>(
       } catch (error) {
         if (errorCode(error) === 'busy')
           return { outcome: 'busy', tokensBefore: null, tokensAfter: null };
+        if (errorCode(error) === 'summary')
+          return { outcome: 'nothing', tokensBefore, tokensAfter: tokensBefore };
         throw error;
       } finally {
         running.delete(sessionId);

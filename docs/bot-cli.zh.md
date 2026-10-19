@@ -81,7 +81,7 @@ deepseekbot bot-compact <bot-id>
 
 `bot-new-session <bot-id>` 通过与 IM `/new` 相同的 Host 运行时退役空闲 Bot 的编排会话，下一条消息开启新会话。成功返回 `{"started":true}`；Bot 正在工作时以 `bot-busy` 拒绝，需先停止当前轮次。
 
-`bot-compact <bot-id>` 通过 DSH `/compact` 立即压缩空闲 Bot 的编排会话，与 IM `/compact`、Bot 私信输入框的 `/compact` 和空闲压缩走同一路径。成功返回 `{"outcome":"compacted","tokensBefore":…,"tokensAfter":…}`；DSH 没有可压缩内容时返回 `nothing`；会话尚未在 Host 中加载（例如 Host 重启后、下一条消息之前）时返回 `not-loaded`。Bot 有进行中的轮次或待处理的 Inbox Admission 时以 `bot-busy` 拒绝。
+`bot-compact <bot-id>` 通过 DSH `/compact` 立即压缩空闲 Bot 的编排会话，与 IM `/compact`、Bot 私信输入框的 `/compact` 和空闲压缩走同一路径。成功返回 `{"outcome":"compacted","tokensBefore":…,"tokensAfter":…}`；DSH 没有可压缩内容、或摘要不会更小时返回 `nothing`；会话尚未在 Host 中加载（例如 Host 重启后、下一条消息之前）时返回 `not-loaded`。Bot 有进行中的轮次或待处理的 Inbox Admission 时以 `bot-busy` 拒绝。
 
 显式清理先用 `bot-delete-preview <bot-id>` 查看 owner 的当前范围与 `preview.token`，审核后将 `{"token":"<preview.token>"}` 从 stdin 交给 `bot-delete-confirm <bot-id> --confirmation-stdin --confirm`。默认保留 Memory，仅显式 `--erase-memory` 才选择擦除 owner 审核的目录，并在停止阶段删除这个 Bot 通过私密输入保存的密钥。检查 `deletion.phase`；未完成的清理可用 `bot-delete-retry <bot-id> --confirm` 继续。范围变化由 owner 拒绝；删除身份不是内容清除或全部数据擦除。
 
