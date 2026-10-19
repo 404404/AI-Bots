@@ -957,7 +957,7 @@ function ChatConversation({
               pointerEvents="box-none"
               style={{
                 position: 'absolute',
-                bottom: composerHeight + space.x4,
+                bottom: composerHeight + space.x2,
                 left: 0,
                 right: space.x4,
                 alignItems: 'flex-end',

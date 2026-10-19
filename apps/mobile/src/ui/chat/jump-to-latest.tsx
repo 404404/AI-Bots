@@ -6,7 +6,7 @@ import { badgeCount } from '../primitives/badge-count';
 import { Text } from '../primitives/text';
 import { ChevronDownIcon } from '../shell/icons';
 import { useLiquidGlass } from '../primitives/drawer-material';
-import { ComposerCircleButton } from './composer-chrome';
+import { ComposerCircleButton, composerBar } from './composer-chrome';
 import { t } from '../strings';
 
 export function JumpToLatest({ unseen, onPress }: { unseen: number; onPress(): void }) {
@@ -38,7 +38,7 @@ export function JumpToLatest({ unseen, onPress }: { unseen: number; onPress(): v
     ) : null;
   if (glass)
     return (
-      <ComposerCircleButton label={label} size={theme.touch} onPress={onPress}>
+      <ComposerCircleButton label={label} size={composerBar(theme) - space.x2} onPress={onPress}>
         <ChevronDownIcon color={theme.color.fg} size={theme.type.body.line} />
         {count}
       </ComposerCircleButton>

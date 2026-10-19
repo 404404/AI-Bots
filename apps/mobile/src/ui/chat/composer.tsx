@@ -37,6 +37,7 @@ import {
 import {
   ComposerCircleButton,
   ComposerFieldMaterial,
+  composerBar,
   composerPrimary,
   micAlwaysFilled,
   rippleFeedback,
@@ -258,7 +259,7 @@ function VoiceButton({
 
 function HoldDot() {
   const theme = useDesignTheme();
-  const size = theme.touch;
+  const size = composerBar(theme);
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View
@@ -400,12 +401,13 @@ export function Composer({
     measuredLine.scale === theme.fontScale
       ? measuredLine.height
       : theme.type.body.line * theme.fontScale;
+  const bar = composerBar(theme);
   const lineHeight = Math.max(theme.touch - space.x4, textLine);
   const fieldPadding = Math.max(space.x2, (lineHeight - textLine) / 2);
   const fieldLimit = Math.max(textLine + 2 * fieldPadding, viewportHeight / 5);
   const button = theme.touch - space.x4;
-  const inset = (theme.touch - button) / 2;
-  const corner = theme.touch / 2;
+  const inset = (bar - button) / 2;
+  const corner = bar / 2;
   const pillHeight = useSharedValue(lineHeight + 2 * inset);
   const pillStyle = useAnimatedStyle(() => ({ height: pillHeight.value }));
   const settlePill = (next: number) => {
@@ -437,7 +439,7 @@ export function Composer({
     <ComposerCircleButton
       key="lead"
       label={t.cancelDictation}
-      size={theme.touch}
+      size={bar}
       onPress={onCancelDictation}
     >
       <CloseIcon color={theme.color.fg} size={icon} />
@@ -446,7 +448,7 @@ export function Composer({
     <ComposerCircleButton
       key="lead"
       label={menu ? t.closeAttach : t.attach}
-      size={theme.touch}
+      size={bar}
       testID="composer-attach"
       onPress={toggleMenu}
     >

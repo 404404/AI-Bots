@@ -4,11 +4,15 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { frosted, pressTint, useDesignTheme, type DesignTheme } from '../design/theme';
-import { edge, radius } from '../design/tokens';
+import { edge, radius, space } from '../design/tokens';
 import { useLiquidGlass } from '../primitives/drawer-material';
 
 export function composerPrimary(theme: DesignTheme): { fill: string; ink: string } {
   return { fill: theme.color.fg, ink: theme.color.base };
+}
+
+export function composerBar(theme: DesignTheme): number {
+  return theme.touch - space.x2;
 }
 
 export const micAlwaysFilled = true;
@@ -74,6 +78,7 @@ export function ComposerCircleButton({
       accessibilityLabel={label}
       testID={testID}
       onPress={onPress}
+      hitSlop={Math.max(0, (theme.touch - size) / 2)}
       style={({ pressed }) => ({
         width: size,
         height: size,
