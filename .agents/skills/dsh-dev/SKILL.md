@@ -345,3 +345,6 @@ is 0.2.1-rc.2. Unknown/missing releases retain the font-key scope and expose no 
 This runtime guard does not remove an already installed Profile package override or qualify
 that copied theme on another Host. Disable the override before switching outside the verified
 Desktop/Host/Client tuple; re-enable only after qualifying the new combination.
+## Windows vfile browser imports (#2289)
+
+Rolldown can pass a Windows importer path with backslashes. The vfile browser-variant override must normalize separators before matching `node_modules/vfile/lib`; otherwise a successful build can retain `require("node:process")`, and the real Client refuses @botharness/ui before its Services exist. The existing Client bundle contract reproduces this: two assertions fail before normalization and all seven pass after it. Rebuild the Client and restart the task-owned Host, then inspect its actual browser console; API health alone does not qualify plugin boot.

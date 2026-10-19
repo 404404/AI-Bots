@@ -11,13 +11,16 @@
 In the isolated desktop, enter Bot mode → Bot Settings → General → Window zoom.
 Set a default, press ordinary Cmd+= once, and reset to the saved default. The sidebar,
 settings modal and content must change together while manual font sizes remain unchanged.
-The product Bundle includes the pinned downstream theme adapter on macOS for the matching
-0.2.1-rc.2 Host/Client release. The qualified Desktop executable is also 0.2.1-rc.2; the composed
-Host version alone does not attest the executable version. Unknown Host releases keep the
-native theme and do not expose WindowZoom. Ordinary browsers retain browser-native zoom.
-For packaged-install qualification, use the prepared tarballs in a fresh Profile without a
-local theme dependency or symlink, and verify exactly one native theme id in `__DSH_BOOT__`.
-The compatibility package has relative imports, preserved license and no install hook.
+Ordinary product install carries the pinned adapter but does not enable it. Use the explicit
+`deepseekbot-zoom-setup enable --home <home> --profile <profile> --dsh <qualified-cli>`
+command in the isolated Profile, then restart the same Desktop. It accepts only macOS and
+CLI 0.2.1-rc.2, retaining the root `ui-theme` settings namespace and exactly one native theme
+module id. A Profile-local package link points to the portable licensed product payload;
+there is no task-only theme dependency or installed-app modification. The actual Client boot
+release also gates the font-key lease. Disable before uninstall or switching outside the
+qualified Desktop/Host/Client tuple. Unknown versions are not qualified by this runtime guard.
+Ordinary browsers retain browser-native zoom. Package tests and native activation are
+separate checks; verify the actual theme id and source in `__DSH_BOOT__` after restart.
 
 ## Driving it with verify-app
 
