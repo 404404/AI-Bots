@@ -8,7 +8,7 @@ import {
   type ApprovalRequest,
   type DecisionResult,
 } from '../host/requests';
-import { alwaysNote } from './approval-note';
+import { alwaysNote, executionNote, expiryLabel, riskNote } from './approval-note';
 import {
   ActionButton,
   errorText,
@@ -172,7 +172,18 @@ export function ApprovalView({
         )}
         {request.status === 'pending' ? (
           <View style={{ gap: 12 }}>
-            <Text style={{ color: theme.inkSoft, fontSize: 13 }}>{alwaysNote(request)}</Text>
+            {[
+              expiryLabel(request.expiresAt, Date.now()),
+              executionNote(request),
+              riskNote(request.toolName),
+              alwaysNote(request),
+            ].map((note) =>
+              note === undefined ? null : (
+                <Text key={note} style={{ color: theme.inkSoft, fontSize: 13 }}>
+                  {note}
+                </Text>
+              ),
+            )}
             <ActionButton
               label={t.allowOnce}
               disabled={phase.busy !== undefined}

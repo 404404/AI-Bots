@@ -253,6 +253,54 @@ describe('Tool approval card in the DM', () => {
   });
 });
 
+describe('Tool approval detail in the DM', () => {
+  const card = (target: HostClient) =>
+    createElement(ApprovalCard, { port: approvalPort(target), subject: 'edit' });
+
+  function edited(toolName: string, input: Record<string, unknown>): unknown {
+    const timeline = approvalTimeline(true) as {
+      value: { page: { entries: Array<{ toolApprovalRequest: Record<string, unknown> }> } };
+    };
+    const request = timeline.value.page.entries[0]!.toolApprovalRequest;
+    request['toolName'] = toolName;
+    request['input'] = JSON.stringify(input);
+    return timeline;
+  }
+
+  it('shows a file edit as a diff with its counts, the expiry and a waiting Assignment', async () => {
+    const fake = host();
+    fake.answers.set('channelTimeline', () =>
+      edited('edit', { file_path: 'notes.md', old_string: 'draft', new_string: 'final\nshipped' }),
+    );
+    fake.answers.set('toolApprovalStatus', () => ({
+      ok: true,
+      value: {
+        status: 'pending',
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000 + 30 * 1000).toISOString(),
+        execution: 'waiting-human',
+      },
+    }));
+    const view = await render(card(connect(fake)));
+    expect(view.textContent).toContain('notes.md  +2 −1');
+    expect(view.textContent).toContain(t.expiresInMinutes(5));
+    expect(view.textContent).toContain(t.waitingHumanCapacity);
+    await press(button(view, t.details));
+    const diff = view.querySelector('[data-testid="approval-diff"]')!;
+    expect(diff.textContent).toBe('- draft+ final+ shipped');
+    expect(view.textContent).toContain(t.riskTool);
+  });
+
+  it('puts the secret warning next to the buttons for secret_cli', async () => {
+    const fake = host();
+    fake.answers.set('channelTimeline', () =>
+      edited('secret_cli', { account: 'github', program: 'gh', args: ['repo', 'list'] }),
+    );
+    const view = await render(card(connect(fake)));
+    expect(view.textContent).toContain(t.riskSecretCli);
+    expect(view.textContent).toContain(t.alwaysKindScope);
+  });
+});
+
 describe('Question card in the DM', () => {
   const card = (target: HostClient, extra: Record<string, unknown> = {}) =>
     createElement(QuestionCard, {

@@ -578,6 +578,24 @@ const en = {
   grantConfirm: (name: string) => `Let ${name} read and write`,
   grantAllow: 'Allow read/write',
   grantAllowed: 'Read/write allowed',
+  riskTool:
+    'This tool may access files outside authorized folders. Review the full input and approval scope.',
+  riskSecretCli:
+    'The Bot wants to run a command-line program with a secret you entered. The program receives the secret and could reveal it. Check the program name and every argument.',
+  riskSecretMcp:
+    'The Bot wants to start an MCP server with a secret you entered. The program receives the secret and keeps running until it is disconnected, the account is revoked or the Host restarts; it could reveal the secret. Its instructions, tool descriptions and results enter the context of the Bot. Connect only a server you trust.',
+  riskOriginal:
+    'This edits the selected original attachment. All messages sharing this file show its current contents; independent copies stay unchanged.',
+  riskBotCreate:
+    "Allowing creates a new Bot and its Memory folder. The new Bot gets none of this Bot's grants, accesses, secrets or Model Plan.",
+  waitingHumanCapacity: 'Waiting for approval; no Assignment running slot is held.',
+  waitingCapacity: 'Decision received; waiting for a running slot to continue the original call.',
+  needsRepair:
+    'Assignment interrupted; inspect it before continuing. The original call will not be replayed automatically.',
+  expiresSoon: 'Expires soon',
+  expiresInMinutes: (count: number) => `Expires in ${count} min`,
+  diffLabel: (path: string) => `Changes to ${path}`,
+  diffMore: (count: number) => `${count} more lines`,
   privateInputTitle: (bot: string) => `${bot} needs private information`,
   privateInputFill: 'Fill in securely',
   privateInputNote:
@@ -1606,6 +1624,21 @@ const zh: typeof en = {
   grantConfirm: (name: string) => `允许 ${name} 读写`,
   grantAllow: '允许读写',
   grantAllowed: '已允许读写',
+  riskTool: '此工具可能访问已授权文件夹以外的内容。请检查完整输入和批准范围。',
+  riskSecretCli:
+    'Bot 想带着你填写的密钥运行一个命令行程序。这个程序会拿到密钥，也可能把它泄露出去。请核对程序名和每一个参数。',
+  riskSecretMcp:
+    'Bot 想带着你填写的密钥启动一个 MCP 服务。这个程序会拿到密钥并持续运行，直到断开、撤销账号或重启；它也可能把密钥泄露出去。它的说明、工具描述和返回结果会进入 Bot 的上下文。请只连接你信任的服务。',
+  riskOriginal: '这会修改指定附件原件。所有共享此文件的消息都将展示当前内容，独立副本不受影响。',
+  riskBotCreate:
+    '批准后会创建一个新 Bot 和它的记忆文件夹。新 Bot 不会继承这个 Bot 的授权、访问权限、密钥或模型方案。',
+  waitingHumanCapacity: '等待审批，暂不占用事项运行名额。',
+  waitingCapacity: '审批决定已收到；等待运行名额后继续原调用。',
+  needsRepair: '事项已中断，需要检查；不会自动重放原调用。',
+  expiresSoon: '即将过期',
+  expiresInMinutes: (count: number) => `${count} 分钟后过期`,
+  diffLabel: (path: string) => `${path} 的改动`,
+  diffMore: (count: number) => `还有 ${count} 行`,
   privateInputTitle: (bot: string) => `${bot} 需要私密信息`,
   privateInputFill: '安全填写',
   privateInputNote: '会在这台手机上打开完整客户端，填写内容直接发到你的电脑，不在手机上保存。',

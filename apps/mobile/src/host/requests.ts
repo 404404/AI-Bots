@@ -33,7 +33,16 @@ export interface ApprovalRequest extends RequestRef {
   allowAlways: boolean;
   status: RequestStatus;
   outcome?: ToolApprovalOutcome;
+  expiresAt?: string;
+  execution?: ApprovalExecution;
 }
+
+export type ApprovalExecution =
+  | 'waiting-human'
+  | 'waiting-capacity'
+  | 'running'
+  | 'settled'
+  | 'needs-repair';
 
 export interface QuestionRequest extends RequestRef {
   questions: QuestionItem[];
@@ -75,9 +84,13 @@ async function readRequest(
 }
 
 export async function loadApproval(client: HostClient, ref: RequestRef): Promise<ApprovalRequest> {
-  const [{ request, later }, { status }] = await Promise.all([
+  const [{ request, later }, { status, expiresAt, execution }] = await Promise.all([
     readRequest(client, ref),
-    client.call<{ status: ToolApprovalStatus }>('toolApprovalStatus', {
+    client.call<{
+      status: ToolApprovalStatus;
+      expiresAt?: string;
+      execution?: ApprovalExecution;
+    }>('toolApprovalStatus', {
       channelId: ref.channelId,
       messageId: ref.messageId,
     }),
@@ -96,6 +109,8 @@ export async function loadApproval(client: HostClient, ref: RequestRef): Promise
     allowAlways: card.allowAlways === true,
     status: decision !== undefined ? 'decided' : status === 'pending' ? 'pending' : 'expired',
     ...(decision === undefined ? {} : { outcome: decision.outcome }),
+    ...(decision === undefined && typeof expiresAt === 'string' ? { expiresAt } : {}),
+    ...(execution === undefined ? {} : { execution }),
   };
 }
 
