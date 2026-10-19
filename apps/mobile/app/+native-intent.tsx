@@ -1,8 +1,10 @@
 import * as SecureStore from 'expo-secure-store';
+import { cloudAvailable } from '../src/cloud/available';
 import { cloudNativeIntent } from '../src/cloud/native-intent';
 import { parseInvitationLink } from '../src/cloud/invitation-link';
 export async function redirectSystemPath({ path }: { path: string; initial: boolean }) {
   const destination = cloudNativeIntent(path);
+  if (!cloudAvailable && destination.startsWith('/cloud-')) return '/';
   if (destination.startsWith('/cloud-join?link=')) {
     try {
       const link = new URL(destination, 'https://native.invalid').searchParams.get('link')!;
