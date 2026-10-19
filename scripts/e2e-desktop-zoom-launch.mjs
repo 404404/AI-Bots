@@ -11,7 +11,6 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { prepareDesktopZoomCompatibility } from './desktop-zoom-compat.mjs';
 import { prepareDesktopZoomQa } from './desktop-zoom-qa.mjs';
 import { developmentProfileManifest } from './dev-profile.mjs';
 const source = process.cwd();
@@ -188,13 +187,6 @@ try {
       mkdirSync(dirname(link), { recursive: true });
       symlinkSync(spec.slice(5), link);
     }
-    const target = join(root, 'theme-compat');
-    const theme = join(source, 'packages/client/node_modules/@deepseek-ai/dsh-client-ui-theme');
-    prepareDesktopZoomCompatibility({ source: theme, target });
-    data.dependencies['@deepseek-ai/dsh-client-ui-theme'] = 'link:' + target;
-    const themeLink = join(profile, 'node_modules/@deepseek-ai/dsh-client-ui-theme');
-    mkdirSync(dirname(themeLink), { recursive: true });
-    symlinkSync(target, themeLink);
     writeFileSync(manifest, JSON.stringify(data, null, 2));
   }
   prepareDesktopZoomQa(root);

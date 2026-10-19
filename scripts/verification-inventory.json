@@ -1943,9 +1943,9 @@
     },
     {
       "path": "scripts/e2e-desktop-zoom-launch.mjs",
-      "sha256": "dff52b6c29319953f17933b2d7f2bd8c2b1bed88932e33348abd9011c7f8174e",
+      "sha256": "007c0be429340cd6c87e6d54e3eb3f31e0a102eed9103009d087327df7666590",
       "category": "mapped",
-      "reason": "Audited isolated native launcher and readiness probe; feature guide explicitly distinguishes launch from acceptance.",
+      "reason": "Audited isolated native launcher and readiness probe using the ordinary product Bundle, without a task-only theme override; feature guide distinguishes launch from acceptance.",
       "task": 2268,
       "behaviors": ["desktop.window-zoom"]
     },
