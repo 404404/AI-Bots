@@ -266,7 +266,11 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
         <BotPanel {...props} onMobileBack={showList} />
       </div>
       {page === 'conversation' ? null : (
-        <nav {...hooked('bh-mobile-nav', styles.nav)} aria-label={t('mobile.navigation')}>
+        <nav
+          {...hooked('bh-mobile-nav', styles.nav)}
+          aria-label={t('mobile.navigation')}
+          data-companion-avoid
+        >
           <button
             type="button"
             {...stylex.props(

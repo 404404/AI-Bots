@@ -176,7 +176,7 @@ it.each([
         )!;
       button(outcome === 'rejected' ? '拒绝' : '仅批准这一次').focus();
       if (outcome === 'allowed-always-all') {
-        await act(() => button('始终允许此范围全部不透明工具').click());
+        await act(() => button('始终允许这里除密钥命令外的所有工具').click());
         expect(decisions).toEqual([]);
         button('确认始终允许').focus();
         await act(async () => button('确认始终允许').click());

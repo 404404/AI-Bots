@@ -94,6 +94,7 @@ export function Workspace({
                   registry.open(CHANNEL_BODY_PANEL);
                   void options.actions.openBot(slug, 'profile');
                 }}
+                onOpenConversation={() => registry.open(CHANNEL_BODY_PANEL)}
                 wide
                 useBotModePrefs={usePrefs}
                 setSortMode={(mode) => options.prefs.setSortMode(mode)}
