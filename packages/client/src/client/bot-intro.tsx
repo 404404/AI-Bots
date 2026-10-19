@@ -12,18 +12,10 @@ import { Modal } from './modal.js';
 import { ModelPicker } from './model-picker.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { openModelsSettingsAndReturn } from './bot-settings-open.js';
-import {
-  APPEARANCE_PRIMARY,
-  type Appearance,
-  type AppearanceMode,
-  type AppearancePatch,
-  type AppearancePreference,
-  type AppearancePreset,
-  type AppearanceSnapshot,
-} from './appearance.js';
-import { appearanceMaterials } from './appearance-materials.js';
+import type { Appearance, AppearancePatch } from './appearance.js';
 import { AppearanceMaterialSettings } from './appearance-material-settings.js';
-import { WallpaperSettings } from './wallpaper-settings.js';
+import { ColorSchemePicker, ThemePresetPicker, applyPreset } from './appearance-pickers.js';
+import { WallpaperLibrary } from './wallpaper-library.js';
 import type { Wallpaper } from './wallpaper.js';
 import { CommunityIcon } from './community-icons.js';
 import { COMMUNITY, cachedGithubStars, fetchGithubStars, formatStars } from './community-links.js';
@@ -36,23 +28,12 @@ import { invalidateInheritedModelPlans } from './model-plan-store.js';
 export const INTRO_STEPS = ['welcome', 'theme', 'model', 'community', 'start'] as const;
 export type IntroStep = (typeof INTRO_STEPS)[number];
 
-const PRESETS: readonly { id: AppearancePreset; label: BotHarnessKey }[] = [
-  { id: 'classic-blue', label: 'appearance.classicBlue' },
-  { id: 'mist-purple', label: 'appearance.mistPurple' },
-  { id: 'forest-green', label: 'appearance.forestGreen' },
-  { id: 'warm-amber', label: 'appearance.warmAmber' },
-];
 const REVIEWS: readonly BotHarnessKey[] = [
   'intro.reviews.clean',
   'intro.reviews.era',
   'intro.reviews.details',
 ];
 
-const SCHEMES: readonly { id: AppearancePreference; label: BotHarnessKey }[] = [
-  { id: 'system', label: 'settings.theme.system' },
-  { id: 'light', label: 'settings.theme.light' },
-  { id: 'dark', label: 'settings.theme.dark' },
-];
 const STARTERS: readonly BotHarnessKey[] = [
   'onboarding.short.botPrompt',
   'onboarding.firstRequest',
@@ -243,95 +224,6 @@ const styles = stylex.create({
     fontSize: text.metaSize,
     lineHeight: text.metaLine,
     fontWeight: text.strong,
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: {
-      default: 'repeat(3, minmax(0, 1fr))',
-      '@media (max-width: 640px)': '1fr',
-    },
-    gap: space.x4,
-  },
-  grid4: {
-    gridTemplateColumns: {
-      default: 'repeat(4, minmax(0, 1fr))',
-      '@media (max-width: 640px)': 'repeat(2, minmax(0, 1fr))',
-    },
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: space.x3,
-    minWidth: 0,
-    padding: space.x4,
-    borderWidth: border.hairline,
-    borderStyle: 'solid',
-    borderColor: { default: color.border, ':hover': color.borderStrong },
-    borderRadius: radius.lg,
-    backgroundColor: 'transparent',
-    color: color.fg,
-    fontFamily: 'inherit',
-    fontSize: text.bodySize,
-    lineHeight: text.bodyLine,
-    cursor: 'pointer',
-    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
-    outlineOffset: '2px',
-  },
-  cardSelected: {
-    borderColor: { default: color.accent, ':hover': color.accent },
-    backgroundColor: color.accentTint,
-  },
-  cardLabel: { textAlign: 'center', fontWeight: text.strong },
-  preview: {
-    position: 'relative',
-    overflow: 'hidden',
-    aspectRatio: '5 / 2',
-    borderRadius: radius.md,
-  },
-  previewLayer: {
-    position: 'absolute',
-    inset: 0,
-    display: 'flex',
-    gap: space.x3,
-    padding: space.x3,
-  },
-  previewSide: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: space.x2,
-    width: '24%',
-    padding: space.x2,
-    borderRadius: radius.sm,
-  },
-  previewMain: {
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: space.x2,
-    flexGrow: 1,
-    padding: space.x3,
-    borderRadius: radius.sm,
-  },
-  previewLine: { height: space.x3, borderRadius: radius.xs },
-  previewComposer: {
-    position: 'absolute',
-    insetInline: space.x3,
-    bottom: space.x3,
-    display: 'flex',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    height: space.x5,
-    paddingInline: space.x2,
-    borderRadius: radius.sm,
-  },
-  previewDot: { width: space.x4, height: space.x4, borderRadius: radius.round },
-  orbs: { display: 'flex', justifyContent: 'center', gap: space.x5, paddingBlock: space.x3 },
-  orb: {
-    width: '52px',
-    height: '52px',
-    borderRadius: radius.round,
-    cornerShape: 'round',
   },
   link: {
     display: 'flex',
@@ -593,65 +485,29 @@ function ThemeStep({
       appearance.update(patch);
     } catch {}
   };
-  const preset = theme.config.modes[theme.mode].preset;
   return (
     <>
       <h2 {...stylex.props(styles.title)}>{t('intro.theme.title')}</h2>
       {theme.error ? <Note tone="danger">{t('appearance.saveFailed')}</Note> : null}
       <Section title={t('intro.theme.scheme')}>
-        <div {...stylex.props(styles.grid)} role="radiogroup" aria-label={t('intro.theme.scheme')}>
-          {SCHEMES.map((scheme) => (
-            <button
-              key={scheme.id}
-              type="button"
-              role="radio"
-              aria-checked={theme.config.preference === scheme.id}
-              onClick={() => change({ preference: scheme.id })}
-              {...stylex.props(
-                styles.card,
-                theme.config.preference === scheme.id && styles.cardSelected,
-              )}
-            >
-              <SchemePreview theme={theme} scheme={scheme.id} />
-              <span {...stylex.props(styles.cardLabel)}>{t(scheme.label)}</span>
-            </button>
-          ))}
-        </div>
+        <ColorSchemePicker
+          value={theme.config.preference}
+          config={theme.config}
+          onChange={(preference) => change({ preference })}
+          t={t}
+        />
       </Section>
       <Section title={t('intro.theme.color')}>
-        <div
-          {...stylex.props(styles.grid, styles.grid4)}
-          role="radiogroup"
-          aria-label={t('intro.theme.color')}
-        >
-          {PRESETS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              role="radio"
-              aria-checked={preset === entry.id}
-              onClick={() => {
-                change({ mode: 'light', preset: entry.id });
-                change({ mode: 'dark', preset: entry.id });
-              }}
-              {...stylex.props(styles.card, preset === entry.id && styles.cardSelected)}
-            >
-              <span {...stylex.props(styles.orbs)} aria-hidden="true">
-                {(['light', 'dark'] as const).map((mode) => (
-                  <span
-                    key={mode}
-                    {...stylex.props(styles.orb)}
-                    style={{ background: orb(APPEARANCE_PRIMARY[entry.id][mode], mode) }}
-                  />
-                ))}
-              </span>
-              <span {...stylex.props(styles.cardLabel)}>{t(entry.label)}</span>
-            </button>
-          ))}
-        </div>
+        <ThemePresetPicker
+          config={theme.config}
+          onSelect={(preset) => applyPreset(appearance, preset)}
+          t={t}
+        />
       </Section>
       {wallpaper ? (
-        <WallpaperSettings key={media?.resourceVersion} owner={wallpaper} t={t} />
+        <Section title={t('intro.theme.wallpaper')}>
+          <WallpaperLibrary owner={wallpaper} t={t} appearance={appearance} size="large" />
+        </Section>
       ) : null}
       {media?.current ? (
         <Section title={t('intro.theme.panels')}>
@@ -660,70 +516,6 @@ function ThemeStep({
         </Section>
       ) : null}
     </>
-  );
-}
-
-function orb(primary: string, mode: AppearanceMode): string {
-  const shade = mode === 'light' ? 'white' : 'black';
-  return `radial-gradient(circle at 32% 28%, color-mix(in srgb, ${primary} 30%, white) 0%, ${primary} 55%, color-mix(in srgb, ${primary} 55%, ${shade}) 100%)`;
-}
-
-function SchemePreview({
-  theme,
-  scheme,
-}: {
-  theme: AppearanceSnapshot;
-  scheme: AppearancePreference;
-}): ReactElement {
-  const layer = (mode: AppearanceMode, clip?: string) => {
-    const config = theme.config.modes[mode];
-    const materials = appearanceMaterials(config, mode);
-    const primary = config.primary ?? APPEARANCE_PRIMARY[config.preset][mode];
-    const base = materials.body.color;
-    const ink = `color-mix(in srgb, ${base} 82%, ${mode === 'light' ? 'black' : 'white'})`;
-    const panel = `color-mix(in srgb, ${base} 92%, ${mode === 'light' ? 'black' : 'white'})`;
-    return (
-      <span
-        {...stylex.props(styles.previewLayer)}
-        style={{ backgroundColor: panel, ...(clip ? { clipPath: clip } : {}) }}
-      >
-        <span
-          {...stylex.props(styles.previewSide)}
-          style={{ backgroundColor: materials.header.color }}
-        >
-          {[60, 80, 70].map((width) => (
-            <span
-              key={width}
-              {...stylex.props(styles.previewLine)}
-              style={{ width: `${width}%`, backgroundColor: ink }}
-            />
-          ))}
-        </span>
-        <span {...stylex.props(styles.previewMain)} style={{ backgroundColor: base }}>
-          <span
-            {...stylex.props(styles.previewLine)}
-            style={{ width: '30%', alignSelf: 'flex-end', backgroundColor: primary, opacity: 0.6 }}
-          />
-          <span
-            {...stylex.props(styles.previewLine)}
-            style={{ width: '62%', backgroundColor: ink }}
-          />
-          <span
-            {...stylex.props(styles.previewLine)}
-            style={{ width: '44%', backgroundColor: ink }}
-          />
-          <span {...stylex.props(styles.previewComposer)} style={{ backgroundColor: panel }}>
-            <span {...stylex.props(styles.previewDot)} style={{ backgroundColor: primary }} />
-          </span>
-        </span>
-      </span>
-    );
-  };
-  return (
-    <span {...stylex.props(styles.preview)} aria-hidden="true">
-      {scheme === 'dark' ? layer('dark') : layer('light')}
-      {scheme === 'system' ? layer('dark', 'inset(0 0 0 50%)') : null}
-    </span>
   );
 }
 

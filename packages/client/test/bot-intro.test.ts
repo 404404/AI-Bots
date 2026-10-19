@@ -35,8 +35,8 @@ vi.mock('../src/client/model-picker.js', () => ({
       onClick: () => onChange({ key: JSON.stringify(['p', 'task']), effort: '' }),
     }),
 }));
-vi.mock('../src/client/wallpaper-settings.js', () => ({
-  WallpaperSettings: () => createElement('div', { 'data-wallpaper-settings': '' }),
+vi.mock('../src/client/wallpaper-library.js', () => ({
+  WallpaperLibrary: () => createElement('div', { 'data-wallpaper-settings': '' }),
 }));
 vi.mock('../src/client/appearance-material-settings.js', () => ({
   AppearanceMaterialSettings: () => createElement('div', { 'data-material-settings': '' }),
