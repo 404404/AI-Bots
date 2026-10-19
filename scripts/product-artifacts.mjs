@@ -75,7 +75,7 @@ export function productManifest(manifest, version) {
       [productImProvider.name]: productImProvider.version,
     },
     dsh: { ...manifest.dsh, bundle: { patch: './cordis.im.patch.yml' } },
-    files: ['dist', 'cordis.im.patch.yml', 'README.md', 'LICENSE'],
+    files: ['dist', 'desktop-theme', 'cordis.im.patch.yml', 'README.md', 'LICENSE'],
   };
 }
 
@@ -294,7 +294,7 @@ export function packProduct({ repoRoot, outputDirectory, providerSource, version
   mkdirSync(product);
   const source = join(repoRoot, 'packages/deepseekbot');
   writeJson(join(product, 'package.json'), productRelease);
-  copyAvailable(source, product, ['dist', 'cordis.im.patch.yml', 'README.md']);
+  copyAvailable(source, product, ['dist', 'desktop-theme', 'cordis.im.patch.yml', 'README.md']);
   cpSync(join(repoRoot, 'LICENSE'), join(product, 'LICENSE'));
   packageDirectories.push(product);
   for (const directory of packageDirectories) {

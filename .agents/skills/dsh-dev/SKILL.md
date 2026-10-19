@@ -324,3 +324,15 @@ normalize only the application Settings overlay's safe-area padding; keep the ca
 The native Menu's portaled anchor can be multiplied again (observed y=1247 in an 820px
 viewport). The compact application section picker reuses the existing viewport menu owner,
 which clamps and converts coordinates. This does not qualify other native dropdowns.
+
+## Additional verified pitfall — #2268 desktop theme packaging
+
+A Bundle Patch's `name` guards an existing row; it does not replace its implementation.
+For the qualified macOS 0.2.1-rc.2 composition, disable the original row and insert a group
+that waits for `clientModules`, then selects exactly one native or product-carried theme.
+A relative Plugin path is anchored beside the Patch and the nearest package manifest owns
+the Client module id; a package subpath specifier is not equivalent to that file path.
+Keep the copied native package identity and license, and use a product-relative bundled ESM
+schema import rather than a machine-local dependency path. The composed release guard is
+not an independent attestation of the Desktop executable version. Verify the real graph,
+ordinary package install and native input, and requalify the copied artifact on an upgrade.

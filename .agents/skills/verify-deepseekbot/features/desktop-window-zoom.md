@@ -11,8 +11,13 @@
 In the isolated desktop, enter Bot mode → Bot Settings → General → Window zoom.
 Set a default, press ordinary Cmd+= once, and reset to the saved default. The sidebar,
 settings modal and content must change together while manual font sizes remain unchanged.
-The controlled S1 composition requires the pinned downstream theme adapter; an ordinary
-installation without that adapter does not enable these controls.
+The product Bundle includes the pinned downstream theme adapter on macOS for the matching
+0.2.1-rc.2 Host/Client release. The qualified Desktop executable is also 0.2.1-rc.2; the composed
+Host version alone does not attest the executable version. Unknown Host releases keep the
+native theme and do not expose WindowZoom. Ordinary browsers retain browser-native zoom.
+For packaged-install qualification, use the prepared tarballs in a fresh Profile without a
+local theme dependency or symlink, and verify exactly one native theme id in `__DSH_BOOT__`.
+The compatibility package has relative imports, preserved license and no install hook.
 
 ## Driving it with verify-app
 

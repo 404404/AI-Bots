@@ -40,16 +40,27 @@ presentation geometry, not a new layout preference or a native-shell modificatio
 
 The pinned DSH theme owns fixed Cmd+=/Cmd+- font commands. The downstream compatibility
 generator copies the exact MIT-licensed npm theme artifact, preserves its license, validates
-its version and hashes, and changes only its font-shortcut Fiber ownership and canonical ESM
+its version and hashes, and changes only its font-shortcut Fiber ownership and portable ESM
 schema import. The generated package replaces the theme through native Profile composition;
 it is not an additional theme Provider and does not modify an installed ASAR. A lease removes
 only that owned font Fiber while WindowZoom is mounted. Disposal removes application commands
 before restoring the original font scope. Other theme behavior and manual font controls remain.
 
+The product build includes the generated theme under `deepseekbot/desktop-theme`, retaining
+its native package identity, styles, locales, types and MIT license. Its only Host import is
+rewritten to the product's bundled ESM schema module through a relative path. No local machine
+path, postinstall script or task Profile override is required. Both Bundle patches disable
+the original `ui-theme` row on macOS and insert one application-defined group waiting for the
+native `clientModules` Provider. The group selects the copied theme only when the composed
+release is exactly 0.2.1-rc.2; otherwise it selects the native theme. Windows/Linux retain the
+original row and do not activate the group. Removing the Bundle restores native composition.
+Build generation refuses unknown source versions or hashes before writing output.
+
 The marker is an application-defined capability, not a public DSH API or an automatic probe of
-the running executable's version. S1 activation is limited to the explicitly qualified macOS
-0.2.1-rc.2 test composition. Packaging must verify the actual shell combination before wider
-activation; an SDK version alone is insufficient. Unknown source artifacts fail generation.
+the running executable's version. macOS 0.2.1-rc.2 Desktop with the matching Host/Client release
+is the qualified combination. The composed Host release is a selection guard, not an
+independent executable-version attestation; remote Hosts and other shell versions need their
+own qualification. An SDK version alone is insufficient.
 The current native protocol rejects numberpad codes, so S1 reset is available in Settings/CLI
 and as a custom-bindable command; default numberpad behavior remains an S2 dependency.
 

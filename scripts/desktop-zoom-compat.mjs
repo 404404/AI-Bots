@@ -1,7 +1,15 @@
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join, resolve, relative } from 'node:path';
+import { dirname, isAbsolute, join, resolve, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 export const ZOOM_THEME_VERSION = '0.2.1-rc.2';
 export const ZOOM_THEME_HASHES = {
@@ -98,6 +106,63 @@ export function prepareDesktopZoomCompatibility({ source, target, schemaModule }
   writeFileSync(join(target, 'botharness-zoom-compat.json'), JSON.stringify(provenance, null, 2));
   return provenance;
 }
+export function preparePackagedDesktopZoomTheme({ source, target }) {
+  source = realpathSync(source);
+  target = resolve(target);
+  let ancestor = target;
+  while (!existsSync(ancestor)) ancestor = dirname(ancestor);
+  target = resolve(realpathSync(ancestor), relative(ancestor, target));
+  const outside = (path) => path === '..' || path.startsWith(`..${sep}`) || isAbsolute(path);
+  if (!outside(relative(source, target)) || !outside(relative(target, source)))
+    throw Error('zoom-target-inside-source');
+  const manifest = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8'));
+  const client = readFileSync(join(source, 'lib/client.js'), 'utf8');
+  const host = readFileSync(join(source, 'lib/index.js'), 'utf8');
+  if (
+    manifest.name !== '@deepseek-ai/dsh-client-ui-theme' ||
+    manifest.version !== ZOOM_THEME_VERSION ||
+    manifest.license !== 'MIT' ||
+    hash(host) !== ZOOM_THEME_HASHES.host
+  )
+    throw Error('zoom-theme-version-unsupported');
+  const adapted = adaptZoomTheme(client);
+  const specifier = '"@deepseek-ai/schemastery"';
+  if (host.split(specifier).length !== 2) throw Error('zoom-theme-host-shape-unsupported');
+  mkdirSync(join(target, 'lib'), { recursive: true });
+  const save = (path, value) => {
+    if (existsSync(path) && readFileSync(path, 'utf8') === value) return;
+    writeFileSync(path, value);
+  };
+  for (const directory of ['lib/styles', 'lib/types', 'locale'])
+    cpSync(join(source, directory), join(target, directory), {
+      recursive: true,
+      filter: (path) => {
+        const destination = join(target, relative(source, path));
+        return (
+          !statSync(path).isFile() ||
+          !existsSync(destination) ||
+          !readFileSync(path).equals(readFileSync(destination))
+        );
+      },
+    });
+  save(join(target, 'LICENSE'), readFileSync(join(source, 'LICENSE'), 'utf8'));
+  save(join(target, 'package.json'), JSON.stringify(manifest, null, 2) + '\n');
+  save(join(target, 'lib/client.js'), adapted);
+  save(join(target, 'lib/index.js'), host.replace(specifier, '"../../dist/theme-schema.mjs"'));
+  const provenance = {
+    adapterVersion: 1,
+    sourceVersion: manifest.version,
+    clientBefore: hash(client),
+    clientAfter: hash(adapted),
+    hostBefore: hash(host),
+    sourceModified: false,
+    platforms: ['macos'],
+    changes: ['lease-owned font shortcut handoff', 'portable product-owned schema module'],
+  };
+  save(join(target, 'botharness-zoom-compat.json'), JSON.stringify(provenance, null, 2) + '\n');
+  return provenance;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [source, target] = process.argv.slice(2);
   if (!source || !target || process.argv.length !== 4)
