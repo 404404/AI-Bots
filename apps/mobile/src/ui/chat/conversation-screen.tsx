@@ -72,7 +72,7 @@ import { MentionSuggestions } from './mention-suggestions';
 import { PlaybackBubble, type Speaker } from './message-bubble';
 import { MessageIdentities } from './message-identities';
 import { copyMessage, shareText } from './message-menu';
-import type { Rect } from './menu-placement';
+import type { Rect } from './message-sheet';
 import { chatRows, messageGroups, type ChatRow } from './message-groups';
 import { createSpeakerRegistry, SpeakerStageContext } from './speaker-row';
 import { QuestionCard } from './question-card';

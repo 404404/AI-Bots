@@ -20,7 +20,7 @@ import {
 import { t } from '../strings';
 import { activityPeer, activityText, type ActivityTarget } from './activity-text';
 import { bubbleRow } from './bubble-shape';
-import type { Rect } from './menu-placement';
+import type { Rect } from './message-sheet';
 import { SPEAKER_AVATAR } from './speaker-row';
 
 export function ActivityRow({

@@ -13,9 +13,16 @@ const ROW_ICONS = {
   activityCount: { ios: 'number.circle', android: 'tag' },
   background: { ios: 'photo', android: 'wallpaper' },
   version: { ios: 'info.circle', android: 'info' },
+  open: { ios: 'arrow.up.forward.app', android: 'open_in_new' },
+  copy: { ios: 'doc.on.doc', android: 'content_copy' },
+  share: { ios: 'square.and.arrow.up', android: 'share' },
 } as const;
 
 export type RowIconName = keyof typeof ROW_ICONS;
+
+export function rowSymbol(name: RowIconName) {
+  return ROW_ICONS[name];
+}
 
 export function RowIcon({ name, color }: { name: RowIconName; color?: ColorValue }) {
   const theme = useDesignTheme();

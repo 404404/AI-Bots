@@ -10,8 +10,6 @@ const native = vi.hoisted(() => ({
   toasts: [] as string[],
   shared: [] as string[],
   pick: 0,
-  presses: new Map<string, () => void>(),
-  dismiss: () => {},
 }));
 
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
@@ -20,8 +18,6 @@ vi.mock('react-native', async () => {
   const { useWindowDimensions, StyleSheet } = await import('./react-native-shim');
   const host = (name: string) => {
     const Component = ({ children, ...props }: Record<string, unknown>) => {
-      if (typeof props['onPress'] === 'function' && typeof props['accessibilityLabel'] === 'string')
-        native.presses.set(props['accessibilityLabel'], props['onPress'] as () => void);
       const attributes: Record<string, string> = {};
       for (const key of [
         'accessibilityLabel',
@@ -50,18 +46,6 @@ vi.mock('react-native', async () => {
     Text: host('Text'),
     Pressable: host('Pressable'),
     ScrollView: host('ScrollView'),
-    Modal: ({
-      visible,
-      children,
-      onDismiss,
-    }: {
-      visible: boolean;
-      children: unknown;
-      onDismiss: () => void;
-    }) => {
-      native.dismiss = onDismiss;
-      return visible ? <div data-native="Modal">{children as never}</div> : null;
-    },
     Image: host('Image'),
     Share: { share: async ({ message }: { message: string }) => native.shared.push(message) },
     ActivityIndicator: host('ActivityIndicator'),
@@ -127,9 +111,8 @@ const { MessageBubble, DraftBubble, deliveryLabel } = await import('../src/ui/ch
 const { createSpeakerRegistry } = await import('../src/ui/chat/speaker-row');
 const { t } = await import('../src/ui/strings');
 const { openMessageMenu, shareText } = await import('../src/ui/chat/message-menu');
-const { MessageActions, dismissQueue, menuTime, messageMenuActions } =
+const { dismissQueue, menuTime, messageMenuActions } =
   await import('../src/ui/chat/message-actions');
-const { MENU_REACTIONS, QUICK_REACTIONS } = await import('../src/host/conversation');
 
 beforeEach(() => {
   native.os = 'ios';
@@ -138,7 +121,6 @@ beforeEach(() => {
   native.toasts.length = 0;
   native.shared.length = 0;
   native.pick = 0;
-  native.presses.clear();
 });
 
 const human = (overrides: Partial<ConversationMessage>): ConversationMessage => ({
@@ -381,8 +363,6 @@ describe('copying a message', () => {
 });
 
 describe('the long-press menu', () => {
-  const anchor = { x: 16, y: 400, width: 200, height: 60 };
-  const group = { first: true, last: true };
   const bot: ConversationMessage = {
     id: 'bot-1',
     revision: 3,
@@ -391,57 +371,10 @@ describe('the long-press menu', () => {
     body: 'Which one first?',
     attachments: [],
     delivery: 'committed',
-    reactions: [{ emoji: '🔥', actors: [{ kind: 'human', id: 'local-human' }] }],
   };
-  const menu = (message: ConversationMessage, readOnly = false) =>
-    renderToStaticMarkup(
-      <MessageActions
-        target={{ message, anchor, group }}
-        readOnly={readOnly}
-        onClose={() => {}}
-        onReact={() => {}}
-        onCopy={() => {}}
-        onShareText={() => {}}
-      />,
-    );
 
-  it('offers the Web Client reactions first, then more in a scrolling island', () => {
-    expect(MENU_REACTIONS.slice(0, QUICK_REACTIONS.length)).toEqual([...QUICK_REACTIONS]);
-    const html = menu(bot);
-    expect(html).toContain(`data-accessibilitylabel="${t.reactions}"`);
-    for (const emoji of MENU_REACTIONS)
-      expect(html).toContain(
-        `data-accessibilitylabel="${emoji === '🔥' ? t.unreact(emoji) : t.react(emoji)}"`,
-      );
-  });
-
-  it('lifts the pressed bubble between the island and the actions', () => {
-    const html = menu(bot);
-    const island = html.indexOf(t.reactions);
-    const bubble = html.indexOf('Which one first?');
-    const copy = html.indexOf(`data-accessibilitylabel="${t.copy}"`);
-    expect(island).toBeGreaterThan(-1);
-    expect(bubble).toBeGreaterThan(island);
-    expect(copy).toBeGreaterThan(bubble);
-    expect(html).toContain(`data-accessibilitylabel="${t.shareText}"`);
-  });
-
-  it('keeps copy and share but removes the reaction island in a read-only Bot DM', () => {
-    const html = menu(bot, true);
-    expect(html).not.toContain(`data-accessibilitylabel="${t.reactions}"`);
-    for (const emoji of MENU_REACTIONS) {
-      expect(html).not.toContain(`data-accessibilitylabel="${t.react(emoji)}"`);
-      expect(html).not.toContain(`data-accessibilitylabel="${t.unreact(emoji)}"`);
-    }
-    expect(html).toContain(`data-accessibilitylabel="${t.copy}"`);
-    expect(html).toContain(`data-accessibilitylabel="${t.shareText}"`);
-  });
-
-  it('shows no island for a message that cannot take reactions, and no actions without text', () => {
-    const { revision: _, ...unsent } = bot;
-    const pending = menu({ ...unsent, delivery: 'pending' });
-    expect(pending).not.toContain(t.reactions);
-    expect(pending).toContain(`data-accessibilitylabel="${t.copy}"`);
+  it('offers copy and share only for a message with text', () => {
+    expect(messageMenuActions(bot).map((action) => action.key)).toEqual(['copy', 'share']);
     expect(messageMenuActions({ ...bot, body: '  ' })).toEqual([]);
   });
 
@@ -451,35 +384,6 @@ describe('the long-press menu', () => {
       label: 'Open memory',
     });
     expect(messageMenuActions(bot, {})).toEqual(messageMenuActions(bot));
-  });
-
-  it('shows complete scrollable activity text without reactions and waits for dismissal to navigate', () => {
-    const onOpen = vi.fn();
-    const onClose = vi.fn();
-    const full = 'Ada updated memory: ' + 'A long memory description. '.repeat(100);
-    const html = renderToStaticMarkup(
-      <MessageActions
-        target={{
-          message: { ...bot, body: full },
-          anchor,
-          group,
-          activity: { label: t.activityRow.openMemory, onOpen },
-        }}
-        onClose={onClose}
-        onReact={() => {}}
-        onCopy={() => {}}
-        onShareText={() => {}}
-      />,
-    );
-    expect(html).toContain(full);
-    expect(html).toContain('data-native="ScrollView"');
-    expect(html).not.toContain(`data-accessibilitylabel="${t.reactions}"`);
-    expect(onOpen).not.toHaveBeenCalled();
-    native.presses.get(t.activityRow.openMemory)!();
-    expect(onClose).toHaveBeenCalledOnce();
-    expect(onOpen).not.toHaveBeenCalled();
-    native.dismiss();
-    expect(onOpen).toHaveBeenCalledOnce();
   });
 
   it('heads the actions with the message time, marking today', () => {
