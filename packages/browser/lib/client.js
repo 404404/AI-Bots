@@ -2411,7 +2411,7 @@ window.__ModuleLoader__.load({
 				"aria-labelledby": titleId,
 				"aria-describedby": description === void 0 ? void 0 : descriptionId,
 				...data,
-				className: "bhx78zum5 bhx6s0dn4 bhx15bqsqq bhx1q0g3np bhx1uptv2i bhx1mckxr8 bhxv0lzym bhxeuugli bhxe74ayl bhxrvphhj bhx1q0q8m5 bhxnoyelg bhx1bta2m4",
+				className: "bhx78zum5 bhx6s0dn4 bhx4bgz6 bhx15bqsqq bhx1q0g3np bhxcxmu7o bhx1uptv2i bhx1mckxr8 bhx1kwkzks bhxv0lzym bhxeuugli bhxe74ayl bhxrvphhj bhx1q0q8m5 bhxnoyelg bhx1bta2m4",
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "bhx78zum5 bhxdt5ytf bhx5v8n67 bhx1iyjqo2 bhxs83m0k bhx1r8uery bhxeuugli",
 					children: [
@@ -2428,7 +2428,7 @@ window.__ModuleLoader__.load({
 						children
 					]
 				}), control === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "bhx78zum5 bhx1a02dak bhx6s0dn4 bhx13a6bvl bhx3xz8fp bhx2zm2ee bhx2lah0s bhxeuugli bhxh9uqaf bhx1cnm762",
+					className: "bhx78zum5 bhx1a02dak bhx6s0dn4 bhx13a6bvl bhx403fy9 bhx3xz8fp bhx2zm2ee bhx2lah0s bhxeuugli bhxh9uqaf bhx1r6q2vj bhx1cnm762",
 					children: control
 				})]
 			});
@@ -2926,6 +2926,7 @@ window.__ModuleLoader__.load({
 .bhx1w8vjyx:not(#\\#):not(#\\#){padding-inline:4px}
 .bhx1m95a6t:focus-visible:not(#\\#):not(#\\#){outline:var(--dsw-focus-ring-width, 2px) solid var(--dsw-alias-state-business-primary)}
 @media (max-width: 648px){.bhxv0lzym.bhxv0lzym:not(#\\#):not(#\\#){gap:8px}}
+@container bh-settings (max-width: 480px){.bhx1kwkzks.bhx1kwkzks:not(#\\#):not(#\\#){gap:8px}}
 .bhx-level-3:not(#\\#):not(#\\#):not(#\\#){}
 .bhx1g31g6d:not(#\\#):not(#\\#):not(#\\#){accent-color:var(--dsw-alias-state-business-primary)}
 .bhx6s0dn4:not(#\\#):not(#\\#):not(#\\#){align-items:center}
@@ -2975,6 +2976,9 @@ window.__ModuleLoader__.load({
 @media (max-width: 648px){.bhx15bqsqq.bhx15bqsqq:not(#\\#):not(#\\#):not(#\\#){align-items:stretch}}
 @media (max-width: 648px){.bhx1uptv2i.bhx1uptv2i:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}}
 @media (max-width: 648px){.bhx3xz8fp.bhx3xz8fp:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-start}}
+@container bh-settings (max-width: 480px){.bhx4bgz6.bhx4bgz6:not(#\\#):not(#\\#):not(#\\#){align-items:stretch}}
+@container bh-settings (max-width: 480px){.bhxcxmu7o.bhxcxmu7o:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}}
+@container bh-settings (max-width: 480px){.bhx403fy9.bhx403fy9:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-start}}
 .bhx-level-4:not(#\\#):not(#\\#):not(#\\#):not(#\\#){}
 .bhxnoyelg:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:var(--dsw-alias-border-l1)}
 .bhx1q0q8m5:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-style:solid}
@@ -2993,6 +2997,7 @@ window.__ModuleLoader__.load({
 .bhx10zg81t:first-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:0}
 .bhx1bta2m4:last-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:transparent}
 @media (max-width: 648px){.bhx1cnm762.bhx1cnm762:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}}
+@container bh-settings (max-width: 480px){.bhx1r6q2vj.bhx1r6q2vj:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}}
 `;
 		//#endregion
 		//#region packages/browser/src/client/access-power-icon.tsx
