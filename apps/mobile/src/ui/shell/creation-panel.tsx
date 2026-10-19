@@ -22,6 +22,7 @@ import { NavigationMaterial } from './navigation-material';
 import { Text } from '../primitives/text';
 import { ComputerIcon, CloudIcon, PersonIcon, ChatsIcon, ShareIcon } from './icons';
 import { t } from '../strings';
+import { cloudAvailable } from '../../cloud/available';
 
 export const creationLabel = (action: CreationAction) =>
   ({
@@ -54,7 +55,7 @@ export function CreationPanel({
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [choosing, setChoosing] = useState<CreationAction>();
-  const actions = creationActions(scope, targets);
+  const actions = creationActions(scope, targets).filter((a) => cloudAvailable || a !== 'join');
   const choices = choosing ? targetsFor(choosing, scope, targets) : [];
   const pick = (action: CreationAction) => {
     if (action === 'join') return onPick(action);

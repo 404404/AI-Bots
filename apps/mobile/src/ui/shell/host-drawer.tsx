@@ -25,6 +25,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cloudClient, useCloudSnapshot } from '../../cloud/native';
+import { cloudAvailable } from '../../cloud/available';
 import { cloudError } from '../../cloud/client';
 import {
   createWorkspaceDirectory,
@@ -650,7 +651,9 @@ export function HostDrawer() {
               paddingBottom: space.x4,
             }}
           >
-            <WorkspaceTabs value={tab} onChange={setTab} selectedRef={tabFocus} />
+            {cloudAvailable && (
+              <WorkspaceTabs value={tab} onChange={setTab} selectedRef={tabFocus} />
+            )}
           </View>
           <WorkspaceAddButton
             label={tab === 'computers' ? t.pairAnother : t.workspaceAdd.join}
