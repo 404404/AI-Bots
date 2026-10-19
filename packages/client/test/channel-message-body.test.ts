@@ -855,7 +855,7 @@ describe('Tool approval text follows the UI locale (#1293)', () => {
     expect(toolApprovalText(decision('rejected'), enTranslate)).toBe('This call was rejected');
     expect(toolApprovalText(decision('allowed-once'), enTranslate)).toBe('This call was approved');
     expect(toolApprovalText(decision('allowed-always-all'), enTranslate)).toBe(
-      'Automatic approval rule saved; this call was approved',
+      'Allowed this time and saved your choice',
     );
     expect(toolApprovalText(decision('rejected'), zhTranslate)).toBe('已拒绝这一次调用');
     expect(toolApprovalText({}, enTranslate)).toBeUndefined();
