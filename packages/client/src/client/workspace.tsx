@@ -399,6 +399,11 @@ function WorkspaceRail({
           <ChannelSidebarIcon name="settings" />
         </button>
       </Tooltip>
+      <Tooltip label={t('panel.backToHarness')} side="right">
+        <button type="button" aria-label={t('panel.backToHarness')} onClick={options.exitBotMode}>
+          <ExitIcon size={20} />
+        </button>
+      </Tooltip>
     </nav>
   );
 }
