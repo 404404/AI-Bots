@@ -25,8 +25,8 @@ Desktop qualification requires a task-owned official application and user-data d
 
 ## Gotchas
 
-- Use the rendered button name **Use**, not a longer invented name. The file input is **Upload image**.
+- Use the rendered button name **Use**, not a longer invented name. The file input is **Upload image or video**.
 - A UI upload is not committed until Use. Failed writes must keep the old record and URL; do not mistake a preview for accepted storage.
 - The media revision is independent of the appearance preference revision. Reload changes the transient Client id; rediscover and select the right Client before CLI writes.
 - Pixel content is under translucent panels only when their materials allow it. The wallpaper layer itself never applies opacity to messages or controls.
-- Video, aggregate reset/recovery, Windows native and Human QA are separate gates.
+- Video is covered by [video-wallpaper.md](video-wallpaper.md); aggregate reset/recovery, Windows native and Human QA are separate gates.

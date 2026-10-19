@@ -600,6 +600,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/image-wallpaper.md",
       "task": 2262,
       "gap": "Native restart and different-Host restore require the task-owned Desktop procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.video-wallpaper",
+      "label": "Save and play local video wallpaper with background pause and poster recovery",
+      "source": "packages/client/src/client/wallpaper-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/video-wallpaper.md",
+      "task": 2263,
+      "gap": "Actual codecs and native minimize/restart require the task-owned runtime; Human QA remains separate."
     }
   ],
   "scripts": [
@@ -1955,7 +1963,15 @@
       "behaviors": ["desktop.image-wallpaper"],
       "reason": "Real upload/crop, original-byte persistence, resize, failure preservation, DSH isolation and directed CLI.",
       "task": 2262,
-      "sha256": "6519b389b315e32d12ff92258e2f275e0b8bd9b7930c7c2fa11fea1351b02038"
+      "sha256": "d28f8ca4636d1ed745ea3a3cb519309957ee87c179736f663c1e2a7c65135a75"
+    },
+    {
+      "path": "scripts/e2e-video-wallpaper.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.video-wallpaper"],
+      "reason": "Actual loop frames, background pause/resume, decode error and saved poster restoration, explicit Client CLI and exit cleanup.",
+      "task": 2263,
+      "sha256": "797e435677bf35161bd314b80c57e229220d845d2c24910ba89b593ab299e6db"
     }
   ],
   "native": [

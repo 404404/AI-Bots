@@ -80,3 +80,5 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 - `scripts/e2e-harvest.mjs` needed a model reply and timed out without one.
 
 | Image wallpaper | no | `scripts/e2e-image-wallpaper.mjs` | [image-wallpaper.md](image-wallpaper.md) |
+
+| Video wallpaper | no | `scripts/e2e-video-wallpaper.mjs` | [video-wallpaper.md](video-wallpaper.md) |

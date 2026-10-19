@@ -1,4 +1,4 @@
-import { WallpaperError, IMAGE_LIMIT, DEFAULT_CROP, validCrop } from './wallpaper-store.js';
+import { WallpaperError, VIDEO_LIMIT, DEFAULT_CROP, validCrop } from './wallpaper-store.js';
 import type { Wallpaper } from './wallpaper.js';
 import { object } from './appearance.js';
 export function createWallpaperControl(owner: Wallpaper) {
@@ -43,7 +43,7 @@ export function createWallpaperControl(owner: Wallpaper) {
           typeof command.size !== 'number' ||
           !Number.isInteger(command.size) ||
           command.size < 1 ||
-          command.size > IMAGE_LIMIT
+          command.size > VIDEO_LIMIT
         )
           throw new WallpaperError('wallpaper-size-invalid');
         if (upload) throw new WallpaperError('wallpaper-upload-busy');

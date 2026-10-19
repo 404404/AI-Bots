@@ -193,16 +193,16 @@ try {
     await page.keyboard.press('Escape');
     await screenshot('before-workspace');
   } else {
-    await page.waitForSelector('input[aria-label="Upload image"]');
+    await page.waitForSelector('input[aria-label="Upload image or video"]');
     await screenshot('after-settings-empty');
     const bytes = Buffer.concat([await imageBytes(), Buffer.alloc(450000)]);
     writeFileSync(asset, bytes);
-    await (await page.$('input[aria-label="Upload image"]')).uploadFile(asset);
+    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(asset);
     await page.waitForSelector('[data-wallpaper-preview]');
     await screenshot('crop-preview');
     await click('Cancel');
     assert.equal(await dbRead(), null);
-    await (await page.$('input[aria-label="Upload image"]')).uploadFile(asset);
+    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(asset);
     await page.waitForSelector('[data-wallpaper-preview]');
     await page.$eval('input[aria-label="Zoom"]', (n) => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(n, '1.8');
@@ -274,12 +274,12 @@ try {
     assert.deepEqual(await dbRead(), saved);
     const invalid = resolve(out, 'invalid.png');
     writeFileSync(invalid, 'not an image');
-    await (await page.$('input[aria-label="Upload image"]')).uploadFile(invalid);
-    await page.locator('::-p-text(The image could not be decoded or saved)').wait();
+    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(invalid);
+    await page.locator('::-p-text(The media could not be decoded or saved)').wait();
     assert.deepEqual(await dbRead(), saved);
     await screenshot('decode-failure');
     writeFileSync(asset, bytes);
-    await (await page.$('input[aria-label="Upload image"]')).uploadFile(asset);
+    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(asset);
     await page.waitForSelector('[data-wallpaper-preview]');
     await page.evaluate(() => {
       window.restoreWallpaperPut = IDBObjectStore.prototype.put;
