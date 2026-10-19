@@ -440,7 +440,12 @@ export function ToolApprovalCard({
             {preview}
           </button>
           {botCreate === undefined ? null : (
-            <BotCreateApprovalPreview args={botCreate} preview={request.botCreatePreview} t={t} />
+            <BotCreateApprovalPreview
+              args={botCreate}
+              preview={request.botCreatePreview}
+              compact={compact && !open}
+              t={t}
+            />
           )}
           {details}
         </>

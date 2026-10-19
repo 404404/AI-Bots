@@ -103,10 +103,12 @@ function FilePreview({
 export function BotCreateApprovalPreview({
   args,
   preview,
+  compact = false,
   t,
 }: {
   args: BotCreateArgs;
   preview: BotCreatePreview | undefined;
+  compact?: boolean;
   t: BotHarnessTranslate;
 }): ReactElement {
   const memoryFolder =
@@ -135,38 +137,46 @@ export function BotCreateApprovalPreview({
         </div>
       </div>
       <ProfileTags tags={args.tags} />
-      {args.avatarPath === undefined ? null : (
-        <div className="bh-bot-create-file">
-          <span className="bh-bot-create-label">{t('approval.botCreate.avatar')}</span>
-          <code className="bh-bot-create-path">{args.avatarPath}</code>
-          {preview?.avatarError === undefined ? null : (
-            <span className="bh-bot-create-warning">{preview.avatarError}</span>
+      {compact ? null : (
+        <>
+          {args.avatarPath === undefined ? null : (
+            <div className="bh-bot-create-file">
+              <span className="bh-bot-create-label">{t('approval.botCreate.avatar')}</span>
+              <code className="bh-bot-create-path">{args.avatarPath}</code>
+              {preview?.avatarError === undefined ? null : (
+                <span className="bh-bot-create-warning">{preview.avatarError}</span>
+              )}
+            </div>
           )}
-        </div>
+          <FilePreview
+            label="SOUL.md"
+            text={args.soul}
+            fallback={t('approval.botCreate.noSoul')}
+            t={t}
+          />
+          <FilePreview
+            label="MEMORY.md"
+            text={args.coreMemory}
+            fallback={t('approval.botCreate.coreMemoryTemplate')}
+            t={t}
+          />
+          <div className="bh-bot-create-file">
+            <span className="bh-bot-create-label">{t('approval.botCreate.memoryFolder')}</span>
+            {memoryFolder === undefined ? (
+              <span className="bh-bot-create-fallback">
+                {t('approval.botCreate.defaultLocation')}
+              </span>
+            ) : (
+              <code className="bh-bot-create-path">{memoryFolder}</code>
+            )}
+            {preview?.defaultLocation === true ? (
+              <span className="bh-bot-create-fallback">
+                {t('approval.botCreate.defaultLocation')}
+              </span>
+            ) : null}
+          </div>
+        </>
       )}
-      <FilePreview
-        label="SOUL.md"
-        text={args.soul}
-        fallback={t('approval.botCreate.noSoul')}
-        t={t}
-      />
-      <FilePreview
-        label="MEMORY.md"
-        text={args.coreMemory}
-        fallback={t('approval.botCreate.coreMemoryTemplate')}
-        t={t}
-      />
-      <div className="bh-bot-create-file">
-        <span className="bh-bot-create-label">{t('approval.botCreate.memoryFolder')}</span>
-        {memoryFolder === undefined ? (
-          <span className="bh-bot-create-fallback">{t('approval.botCreate.defaultLocation')}</span>
-        ) : (
-          <code className="bh-bot-create-path">{memoryFolder}</code>
-        )}
-        {preview?.defaultLocation === true ? (
-          <span className="bh-bot-create-fallback">{t('approval.botCreate.defaultLocation')}</span>
-        ) : null}
-      </div>
     </div>
   );
 }
