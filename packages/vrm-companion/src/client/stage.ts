@@ -28,6 +28,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { VRMLoaderPlugin, VRMUtils, type VRM, type VRMHumanBoneName } from '@pixiv/three-vrm';
 import type { BotPresentationSnapshot } from '@botharness/ui/panels';
 import { RoomMotion, type MotionCommand } from './motion.js';
+import { FACE_EXPRESSIONS, FaceBlend, dominantFace, faceTarget } from './face.js';
 import { createRoom, type Mood } from './room.js';
 import { enableLilToon } from '@mochiya/three-liltoon';
 import { createCharacterShading, type CharacterShading } from './shading.js';
@@ -67,6 +68,7 @@ export function mountStage(
   const started = performance.now();
   let disposed = false;
   let vrm: VRM | undefined;
+  let face: FaceBlend | undefined;
   let frame = 0;
   let visible = true;
   let latest: BotPresentationSnapshot | undefined;
@@ -238,9 +240,12 @@ export function mountStage(
       const walk = Math.sin(gait) * 0.28 * motion.stride;
       pose('spine', sway + (working ? 0.04 : 0), 0, 0, blend);
       const looking = talking || waiting || blocked;
+      const desk = room?.tableY ?? 0.75;
       const desiredGaze = looking
         ? camera.position
-        : new Vector3(-0.36, room?.tableY ? room.tableY + 0.48 : 1.2, 0.78);
+        : thinking && live
+          ? new Vector3(motion.x - 0.9, desk + 1.6, motion.z + 1.2)
+          : new Vector3(-0.36, desk + 0.48, 0.78);
       gaze.position.lerp(desiredGaze, reduced.matches ? 1 : blend);
       const head = vrm.humanoid.getNormalizedBoneNode('head');
       const headPosition =
@@ -328,6 +333,16 @@ export function mountStage(
         expressions.setValue('aa', moving ? (latest?.mouth ?? 0) : 0);
       const blink = moving && phase % 4 < 0.16 ? Math.sin(((phase % 4) / 0.16) * Math.PI) : 0;
       if (expressions?.getExpression('blink')) expressions.setValue('blink', blink);
+      if (expressions && face) {
+        const weights = face.step(
+          faceTarget(latest, phase, reduced.matches),
+          delta,
+          reduced.matches,
+        );
+        for (const name of FACE_EXPRESSIONS)
+          if (face.available.has(name)) expressions.setValue(name, weights[name]);
+        host.dataset.vrmFace = dominantFace(weights);
+      }
       vrm.update(delta);
       host.dataset.vrmMouth = String(expressions?.getValue('aa') ?? 0);
     }
@@ -392,6 +407,10 @@ export function mountStage(
         return;
       }
       vrm = loaded;
+      face = new FaceBlend(
+        new Set(FACE_EXPRESSIONS.filter((name) => loaded.expressionManager?.getExpression(name))),
+      );
+      host.dataset.vrmFaces = [...face.available].join(' ');
       shading = createCharacterShading(loaded.scene);
       host.dataset.vrmShading = 'mtoon';
       if (initial.shading !== 'mtoon') {

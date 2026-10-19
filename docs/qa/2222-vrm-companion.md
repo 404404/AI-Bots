@@ -54,6 +54,15 @@ Date: 2026-10-19. Branch head before this iteration: `4699c324` (T1 merged with 
 
 Selected captures: `room-iteration2-sunset.jpg` (before), `room-iteration3-light.jpg`, `room-iteration3-dark.jpg`, `room-iteration3-narrow-night.jpg`, `room-iteration3-room-view.jpg`, `shader-ab-iteration3.jpg` and `room-iteration3-working-speaking.jpg` in `.github/pr-screenshots/2222-vrm-companion/`.
 
+## Activity facial expressions (#2304)
+
+Date: 2026-10-19. Sub-issue [#2304](https://github.com/BotHarness/DeepSeekBot/issues/2304) of T1. Same isolated Host setup and SwiftShader caveat as iteration 3.
+
+- **Mapping.** The sample model exposes `happy relaxed sad angry surprised` (`data-vrm-faces`). Each Activity drives a blend of these: idle relaxed with an occasional smile, thinking a slight frown with raised gaze, working focused brows, waiting an expectant smile, blocked a troubled frown. Speaking clears the relaxed eyes and adds a smile except when blocked. Weights ease at a 4/s rate; reduced motion snaps them and drops the idle smile. A view that is not live (reconnecting, unavailable, paused) returns to neutral.
+- **First pass was too subtle.** At 0.1–0.4 weights the five faces were barely distinguishable in a portrait close-up; weights were roughly doubled. At `angry` above 0.3 this model nearly closes its eyes, so working uses `angry` 0.2 with a little `surprised`.
+- **Close-ups.** A scratch harness mounted the same `mountStage` with each Activity snapshot and captured a portrait close-up per state; dominant face: idle → relaxed, thinking → sad, working → angry, waiting → happy, blocked → sad, working + speaking → happy, reconnecting → neutral (`face-activities.jpg`).
+- **Real DM.** `QA-FACE-1019b` to VRM QA Ada (DeepSeek V4.1 Flash via opencode-go) moved the Panel idle → thinking → working → speaking (mouth 0.2) → idle; `bot-trace` recorded `bash` `sleep 12` then `channel_send`. The stage reported the thinking face while thinking and the relaxed idle face after the reply. Software rendering runs at a few frames per second, so the blend visibly lags the label by a few seconds there.
+
 ## Acceptance limits and next action
 
 The model is a licensed technical sample; its provenance and license accompany the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

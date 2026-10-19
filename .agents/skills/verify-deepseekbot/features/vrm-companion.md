@@ -5,6 +5,7 @@
 - Independent native Bundle installation, activation, removal and reinstall.
 - DM-bound current Bot Panel, absent in Groups; fixed global A/B instances retain identity after switching and refresh.
 - Current/live Activity plus committed own-DM output drive independent body and speaking channels.
+- Each Activity drives a distinct facial expression blend (`data-vrm-face` on the stage names the dominant one; `data-vrm-faces` lists what the model supports); a non-live view returns to `neutral`.
 - Pause/disconnect/hidden/close cancel playback; reconnect never speaks history.
 - Per-instance renderer disposal, late model loads, reduced motion, resizing and visible fallback on WebGL loss.
 - Full-body Panel canvas with overlay controls, desk/room/portrait cameras, seated keyboard contact and bounded stand/walk/return choreography. The scene is widened by resizing the native Panel split; there is no expanded dialog.
