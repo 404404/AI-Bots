@@ -7,7 +7,6 @@
       "scope": "Client",
       "surfaces": [
         "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.language')}",
-        "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.theme')}",
         "setting:packages/client/src/client/notification-settings.tsx:{t('desktopNotify.row.title')}",
         "storage:packages/client/src/client/composer-footer-preferences.ts:setItem(FOOTER_STORAGE_KEY)",
         "storage:packages/client/src/client/desktop-notifications.ts:setItem(DESKTOP_NOTIFICATIONS_KEY)",
@@ -678,6 +677,19 @@
         "setting:packages/computer/src/client/settings-rows.tsx:{t('rows.exportSection.title')}",
         "setting:packages/computer/src/client/settings-rows.tsx:{t('rows.importSection.title')}"
       ]
+    },
+    {
+      "id": "deepseekbot-local-appearance",
+      "description": "Explicit Client-targeted device-local DeepSeekBot themes; authenticated Host forwards requests without a preference mirror.",
+      "scope": "Client",
+      "surfaces": [
+        "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.theme')}",
+        "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPreset' : 'appearance.darkPreset')}",
+        "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPrimary' : 'appearance.darkPrimary')}",
+        "storage:packages/client/src/client/appearance.ts:setItem(APPEARANCE_KEY)",
+        "route:packages/core/src/plugin.ts:APPEARANCE_CONTROL_PATH"
+      ],
+      "commands": ["appearance-clients", "appearance-get", "appearance-set"]
     }
   ]
 }

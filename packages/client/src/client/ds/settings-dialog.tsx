@@ -1,9 +1,9 @@
+import { Menu } from '../appearance-primitives.js';
 import { useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import {
   IconChevronDownOutlineRegular,
   IconCloseOutlineRegular,
-  Menu,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import { Modal } from '../modal.js';

@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import { ChannelNicknameEntry, ChannelTraceEntry } from './channel-personal-settings.js';
 import type { ExternalSource } from '../../../core/src/messaging/inbound.js';
 import { useCallback, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
@@ -6,7 +7,6 @@ import * as stylex from '@stylexjs/stylex';
 import {
   Button,
   IconEllipsisOutlineRegular,
-  Menu,
   Tag,
   Tooltip,
   type MenuEntry,

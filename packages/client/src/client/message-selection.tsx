@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import { createContext, useContext, useRef, useState, type ReactElement } from 'react';
 import {
   Button,
@@ -5,7 +6,6 @@ import {
   IconDownloadOutlineRegular,
   IconInspectOutlineRegular,
   IconShareOutlineRegular,
-  Menu,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type { MessageSelection } from './message-selection-state.js';

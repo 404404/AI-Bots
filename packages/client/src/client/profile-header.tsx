@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import { useRef, useState, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { BANNER_SCENES, seededBannerRecipe } from '@botharness/pixel-banner';
@@ -5,7 +6,6 @@ import {
   Button,
   IconEllipsisOutlineRegular,
   IconTrashOutlineRegular,
-  Menu,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 

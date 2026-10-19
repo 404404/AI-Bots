@@ -1,6 +1,7 @@
+import { Menu } from '../appearance-primitives.js';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { IconChevronDownOutlineRegular, Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+import { IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import { pillStyles } from './pill-button.js';
 import { color } from './tokens.stylex.js';
@@ -32,6 +33,7 @@ export interface SelectProps<Value extends string> {
   readonly disabled?: boolean;
   readonly align?: 'start' | 'end';
   readonly autoFocus?: boolean;
+  readonly reselect?: boolean;
 }
 
 export function Select<Value extends string>({
@@ -42,6 +44,7 @@ export function Select<Value extends string>({
   disabled = false,
   align = 'end',
   autoFocus = false,
+  reselect = false,
 }: SelectProps<Value>): ReactElement {
   const [open, setOpen] = useState(false);
   const current = options.find((option) => option.value === value);
@@ -55,7 +58,7 @@ export function Select<Value extends string>({
       onSelect={(id) => {
         setOpen(false);
         const next = options.find((option) => option.value === id);
-        if (next !== undefined && next.value !== value) onChange(next.value);
+        if (next !== undefined && (reselect || next.value !== value)) onChange(next.value);
       }}
       onClose={() => {
         setOpen(false);

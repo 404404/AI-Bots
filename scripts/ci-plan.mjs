@@ -56,6 +56,10 @@ export const RULES = [
   related('packages/*/profile-extension/**', 'Browser profile extension sources'),
   related('packages/*/assets/**', 'Package assets'),
   related('packages/*/migrations/**', 'D1 migrations read by worker test harnesses'),
+  none(
+    'packages/client/appearance-palette.LICENSE',
+    'License notice for the scoped upstream palette',
+  ),
   related('packages/*/scripts/**', 'Package scripts'),
   related('packages/*/*.yml', 'Product patches'),
   related('packages/*/wrangler.jsonc', 'Worker configs'),
