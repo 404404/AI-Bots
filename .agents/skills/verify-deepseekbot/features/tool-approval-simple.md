@@ -47,4 +47,4 @@ For first-time setup, the homepage instruction names the actual Allow once butto
 
 ## Companion reading space
 
-With a visible floating companion, scroll to the latest approval and reply and verify their bottom edge is above the passive avatar and toolbar. Repeat at 375px width, with reduced motion, and after activity fades; removing every companion returns the space, while toggling companions during history reading must not jump to the latest message. This checks the latest content at the bottom, not arbitrary history positions or intentionally opened companion bubbles/menus.
+With a visible floating companion, scroll to the latest approval and reply and verify their bottom edge is above the passive avatar and toolbar. The running status above the composer must also remain clear of the avatar. Repeat at 375px width, with reduced motion, and after activity fades; removing every companion returns the space, while toggling companions during history reading must not jump to the latest message. This checks the latest content at the bottom, not arbitrary history positions or intentionally opened companion bubbles/menus.

@@ -8,7 +8,7 @@ section: Changed
 
 - Approval cards show submission progress and let you recheck temporarily unavailable status instead of incorrectly marking requests expired; onboarding uses the current button label, and Full Access explains that existing Assignments retain their permissions ([#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)).
 
-- Chat leaves reading space for visible floating companions so the latest approval buttons and replies can scroll clear of their avatar and toolbar, without pulling readers out of history ([#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)).
+- Chat leaves reading space for visible floating companions so the latest approval buttons and replies can scroll clear of their avatar and toolbar, also avoiding the composer status, without pulling readers out of history ([#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)).
 
 - The create-Bot form scrolls inside its dialog on narrow screens, keeping its title and actions within the screen ([#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)).
 
@@ -18,6 +18,6 @@ section: Changed
 
 - 审批卡显示提交进度，暂时无法读取状态时可重新确认，不再误报过期；新手引导使用当前按钮名称，完全访问说明已有事项保留原权限（[#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)）。
 
-- 显示浮动伙伴时，聊天底部预留阅读空间，让最新审批按钮和回复能滚动到头像及工具条上方，同时保留正在阅读历史的位置（[#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)）。
+- 显示浮动伙伴时，聊天底部预留阅读空间，让最新审批按钮和回复能滚动到头像及工具条上方，伙伴也避开执行状态条，同时保留正在阅读历史的位置（[#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)）。
 
 - 窄屏创建 Bot 时，表单在弹窗内部滚动，标题和操作按钮保留在屏幕内（[#2080](https://github.com/BotHarness/DeepSeekBot/issues/2080)）。

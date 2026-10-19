@@ -3851,7 +3851,9 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
   color: var(--dsw-alias-label-tertiary);
   font-size: ${text.metaSize};
 }
+.bh-chat-pane[data-activity-concealed='true'] .bh-composer-shell { --bh-companion-avoid-inset: 0px; }
 .bh-composer-shell {
+  --bh-companion-avoid-inset: var(--bh-activity-overlay-inset, 0px);
   position: relative;
   z-index: 1;
   display: flex;
