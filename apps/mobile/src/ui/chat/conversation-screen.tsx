@@ -333,6 +333,14 @@ function ChatConversation({
   }, [speakers, groups, shownDrafts]);
   const scroll = useScrollOffset(list);
   const viewport = useAnimatedRef<ViewInstance>();
+  const invertedContent = useAnimatedRef<ViewInstance>();
+  const attachList = useCallback(
+    (node: FlatList<Row> | null) => {
+      list(node);
+      invertedContent(node?.getNativeScrollRef()?.getInnerViewRef() ?? null);
+    },
+    [list, invertedContent],
+  );
   const viewportLayout = useSharedValue(0);
   const stage = useMemo(
     () => ({
@@ -346,8 +354,8 @@ function ChatConversation({
   );
   const latest = useFollowLatest(list, visible, playback?.setFollowing);
   const markdownViewport = useMemo(
-    () => ({ scroll, viewport, layout: viewportLayout, active: focused }),
-    [scroll, viewport, viewportLayout, focused],
+    () => ({ scroll, viewport, invertedContent, layout: viewportLayout, active: focused }),
+    [scroll, viewport, invertedContent, viewportLayout, focused],
   );
   const readMount = useMarkRead(client, inbox, conversation, activeChannel, !latest.away);
   const mountRef = dictation.mountRef;
@@ -751,7 +759,7 @@ function ChatConversation({
           <MarkdownViewportContext.Provider value={markdownViewport}>
             <SpeakerStageContext.Provider value={dm ? undefined : stage}>
               <Animated.FlatList
-                ref={list}
+                ref={attachList}
                 inverted
                 removeClippedSubviews={false}
                 style={{ flex: 1 }}
