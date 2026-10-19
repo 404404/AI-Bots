@@ -198,18 +198,24 @@ export function ChatBackgroundEditor({
             {t.chatBackground.failed}
           </Text>
         ) : null}
-        <Button
-          label={t.done}
-          tone="primary"
-          busy={busy}
-          onPress={() => {
-            void edit
-              .save()
-              .then(onDone)
-              .catch(() => {});
-          }}
-        />
-        <Button label={t.cancel} disabled={busy} onPress={onCancel} />
+        <View style={{ flexDirection: 'row', gap: space.x3 }}>
+          <View style={{ flex: 1 }}>
+            <Button label={t.cancel} disabled={busy} onPress={onCancel} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              label={t.done}
+              tone="primary"
+              busy={busy}
+              onPress={() => {
+                void edit
+                  .save()
+                  .then(onDone)
+                  .catch(() => {});
+              }}
+            />
+          </View>
+        </View>
       </View>
     </View>
   );

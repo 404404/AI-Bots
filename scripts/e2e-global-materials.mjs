@@ -46,6 +46,11 @@ const cli = async (command, args = [], patch) => {
 };
 const click = (name) => page.locator(`::-p-aria(${name}[role="button"])`).click();
 const select = async (name, value) => {
+  if (await page.$(`[role="radiogroup"][aria-label="${name}"]`)) {
+    await page.locator(`::-p-aria(${value}[role="radio"])`).click();
+    await pause();
+    return;
+  }
   await click(name);
   await page.locator(`::-p-aria(${value}[role="menuitem"])`).click();
   await pause();
@@ -115,12 +120,12 @@ try {
   await select('Theme', 'Light');
   target = await findTarget();
   if (process.argv.includes('--baseline')) {
-    await select('Light palette', 'Classic Blue');
+    await select('Colors', 'Classic Blue');
     await screenshot('before-settings');
     await page.keyboard.press('Escape');
     await screenshot('before-panels');
   } else {
-    await select('Light palette', 'Forest Green');
+    await select('Colors', 'Forest Green');
     const cardBefore = await page.$eval('[data-home-overview] > section', (n) => ({
       background: getComputedStyle(n).backgroundColor,
       opacity: getComputedStyle(n).opacity,
@@ -177,7 +182,7 @@ try {
     await click('Bot settings');
     await click('Appearance');
     await select('Theme', 'Dark');
-    await select('Dark palette', 'Warm Amber');
+    await patch({ mode: 'dark', preset: 'warm-amber' });
     await screenshot('after-dark-settings');
     await page.keyboard.press('Escape');
     await screenshot('after-dark-panels');

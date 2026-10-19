@@ -235,6 +235,19 @@ describe('Composer dictation', () => {
   });
 });
 
+describe('Composer test IDs', () => {
+  const byId = (id: string) => host.querySelector(`[data-testid="${id}"]`);
+
+  it('keeps stable test IDs on the field, attach and send controls', async () => {
+    expect(byId('composer-input')).toBe(field());
+    expect(byId('composer-attach')?.getAttribute('aria-label')).toBe(t.attach);
+    expect(byId('composer-send')).toBeNull();
+
+    await press('Pick Mika');
+    expect(byId('composer-send')?.getAttribute('aria-label')).toBe(t.send);
+  });
+});
+
 describe('Holding the mic', () => {
   const grab = async (heldMs: number, move?: { dx: number; dy: number }) => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);

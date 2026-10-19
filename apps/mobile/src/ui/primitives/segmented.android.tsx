@@ -7,10 +7,10 @@ import {
 import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 
-import type { LayerName } from '../design/layers';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { RadioMark } from './radio-mark';
+import type { SegmentedProps } from './segmented';
 import { Text } from './text';
 
 const LABEL_SIZE = 14;
@@ -34,14 +34,7 @@ export function Segmented<T extends string>({
   value,
   on = 'canvas',
   onChange,
-}: {
-  label: string;
-  options: readonly { value: T; label: string }[];
-  value: T;
-  on?: LayerName;
-  onChange(value: T): void;
-  compact?: boolean;
-}) {
+}: SegmentedProps<T>) {
   const theme = useDesignTheme();
   const layer = theme.layer[on];
   const { width, fontScale } = useWindowDimensions();
