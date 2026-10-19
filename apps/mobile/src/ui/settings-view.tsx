@@ -59,12 +59,14 @@ export function SettingsView({
   const status = [STATUS[connection.status], connection.route].filter((part) => part !== '');
   return (
     <View style={{ flex: 1, backgroundColor: theme.overlay.fill }}>
+      <View style={{ paddingHorizontal: space.x5, paddingTop: space.x5 }}>
+        <DrawerHeader title={t.settings} />
+      </View>
       <ScrollView
         nestedScrollEnabled
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
-        <DrawerHeader title={t.settings} />
         <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
         <SettingsSection title={t.modelSettings.title} on={SHEET_GROUP}>
           <SettingsRow
