@@ -123,19 +123,17 @@ export function BotSettingsView({
       let found = false;
       const find = () => {
         if (found) return;
-        const node = [...root.querySelectorAll<HTMLElement>('[role="group"], section, h3')].find(
-          (item) => {
-            const label = item.getAttribute('aria-labelledby');
-            return (
-              (label
-                ? document.getElementById(label)?.textContent
-                : item.tagName === 'H3'
-                  ? item.textContent
-                  : ''
-              )?.trim() === target.title
-            );
-          },
-        );
+        const titleOf = (item: HTMLElement): string | undefined => {
+          if (item.dataset.settingsTitle !== undefined) return item.dataset.settingsTitle;
+          const label = item.getAttribute('aria-labelledby');
+          if (label) return document.getElementById(label)?.textContent ?? undefined;
+          return item.tagName === 'H3' ? (item.textContent ?? undefined) : undefined;
+        };
+        const node = [
+          ...root.querySelectorAll<HTMLElement>(
+            '[role="group"], section, h3, [data-settings-title]',
+          ),
+        ].find((item) => titleOf(item)?.trim() === target.title);
         if (!node) return;
         found = true;
         node.scrollIntoView?.({ block: 'center' });
@@ -213,7 +211,11 @@ export function BotSettingsView({
 interface SectionLedger {
   slots: {
     entries(key: string): readonly {
-      options: { id?: string; order?: number; label?: string | (() => string) };
+      options: {
+        id?: string;
+        order?: number;
+        label?: string | (() => string);
+      };
     }[];
     getVersion(key: string): number;
     subscribe(key: string, listener: () => void): () => void;

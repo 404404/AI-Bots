@@ -3,14 +3,31 @@ import { Input } from '@deepseek-ai/dsh-client-ui-primitives';
 import { en, zh, type BotHarnessKey, type BotHarnessTranslate } from './locale.js';
 import type { BotSettingsSectionRow } from './bot-settings.js';
 import { searchTextMatches, searchTextScore } from './search-match.js';
+import { SHORTCUT_HELP_GROUPS } from './shortcut-help.js';
 
-const SETTINGS_INDEX: Readonly<Record<string, readonly BotHarnessKey[]>> = {
+const SHORTCUT_INDEX: readonly BotHarnessKey[] = SHORTCUT_HELP_GROUPS.flatMap((group) => [
+  group.title,
+  ...group.entries.map((entry) => entry.label),
+]);
+
+export const SETTINGS_INDEX: Readonly<Record<string, readonly BotHarnessKey[]>> = {
   general: ['onboarding.settings.title'],
   appearance: [
+    'recovery.title',
     'settings.theme',
     'settings.theme.system',
     'settings.theme.light',
     'settings.theme.dark',
+    'appearance.lightPreset',
+    'appearance.lightPrimary',
+    'appearance.darkPreset',
+    'appearance.darkPrimary',
+    'wallpaper.title',
+    'appearance.header',
+    'appearance.materialColor',
+    'appearance.materialOpacity',
+    'appearance.materialBlur',
+    'appearance.body',
     'motion.row.title',
     'icon.row.title',
     'settings.language',
@@ -19,8 +36,9 @@ const SETTINGS_INDEX: Readonly<Record<string, readonly BotHarnessKey[]>> = {
     'dock.reset',
   ],
   models: [
-    'assignmentLimit.title',
     'onboarding.defaultTitle',
+    'idleCompaction.row.title',
+    'assignmentLimit.title',
     'botSessions.row.title',
     'approvalReviewSessions.row.title',
   ],
@@ -29,22 +47,24 @@ const SETTINGS_INDEX: Readonly<Record<string, readonly BotHarnessKey[]>> = {
     'sendKey.row.title',
     'groupAutoAccept.row.title',
     'defaults.title',
-    'defaults.identityRow',
-    'identity.typing.label',
-    'identity.newConversations',
     'bridge.condition',
     'im.ordinaryWake',
     'defaults.threshold',
+    'defaults.identityRow',
+    'identity.typing.label',
+    'identity.newConversations',
   ],
   notifications: ['desktopNotify.row.title'],
-  shortcuts: [
-    'shortcuts.title',
-    'shortcuts.group.navigation',
-    'shortcuts.group.composer',
-    'workspace.shortcutSearch',
-  ],
+  shortcuts: ['workspace.shortcutSearch', ...SHORTCUT_INDEX],
+  'im-apps': ['imApps.allApps'],
   advanced: ['developer.row.title', 'git.settings.title'],
-  'auto-approval': ['autoApproval.reviewerModel.title', 'autoApproval.library.title'],
+  'auto-approval': [
+    'autoApproval.reviewerModel.title',
+    'autoApproval.library.title',
+    'autoApproval.library.new',
+    'autoApproval.template.cautious',
+    'autoApproval.template.getWorkDone',
+  ],
   companions: ['companion.speechSound', 'companion.retention'],
   devices: ['devices.pair.title', 'devices.list.title'],
   about: ['release.row.title', 'build.row.title'],
@@ -77,11 +97,26 @@ const SECTION_ALIASES: Readonly<Record<string, string>> = {
   'data-privacy': '备份 隐私 backup privacy',
 };
 
+export const PLUGIN_INDEX: Readonly<Record<string, readonly { zh: string; en: string }[]>> = {
+  browser: [
+    { zh: '操作目标', en: 'Browser Target' },
+    { zh: '本机驱动', en: 'Local driver' },
+    { zh: '容器驱动', en: 'Container driver' },
+  ],
+  computer: [
+    { zh: '操作目标', en: 'Computer Target' },
+    { zh: '自动允许 Computer 操作', en: 'Auto-allow Computer actions' },
+  ],
+};
+
 const SEARCH_ALIASES: Partial<Record<BotHarnessKey, string>> = {
   'sendKey.row.title': 'Enter Shift+Enter Ctrl+Enter 回车 发送',
   'settings.language': '中文 English language 语言',
   'motion.row.title': 'animation motion 动画 动效',
   'icon.row.title': 'avatar 图标 头像',
+  'idleCompaction.row.title': 'compaction context 上下文',
+  'telemetry.row.title': 'telemetry analytics 遥测',
+  'companion.speechSound': 'sound audio 声音',
 };
 
 export interface SettingsSearchResult {
@@ -110,13 +145,21 @@ export function searchSettings(
       row.label,
       ...(sectionKey === undefined ? [] : [en[sectionKey], zh[sectionKey]]),
     ];
-    const page = [...names, ...(SECTION_ALIASES[row.id] ?? '').split(' ')];
+    const aliases = (SECTION_ALIASES[row.id] ?? '').split(' ');
+    const page = [...names, ...aliases];
     const results: (SettingsSearchResult & { score: number })[] = matches([
       ...page,
       'settings',
       '设置',
     ])
-      ? [{ section: row.id, title: row.label, page: row.label, score: rank(names) }]
+      ? [
+          {
+            section: row.id,
+            title: row.label,
+            page: row.label,
+            score: Math.min(rank(names), rank(aliases) + 0.5),
+          },
+        ]
       : [];
     for (const key of SETTINGS_INDEX[row.id] ?? []) {
       if (
@@ -136,6 +179,13 @@ export function searchSettings(
         page: row.label,
         score: rank(own),
       });
+    }
+    for (const item of PLUGIN_INDEX[row.id] ?? []) {
+      const own = [item.zh, item.en];
+      if (!touches(own) || !matches([...page, ...own])) continue;
+      const title = t('settings.nav') === zh['settings.nav'] ? item.zh : item.en;
+      if (results.some((result) => result.title === title)) continue;
+      results.push({ section: row.id, title, target: title, page: row.label, score: rank(own) });
     }
     return results;
   });
