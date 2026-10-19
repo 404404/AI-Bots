@@ -10,6 +10,7 @@ import {
   InstancedMesh,
   Mesh,
   MeshBasicMaterial,
+  MeshLambertMaterial,
   Object3D,
   PlaneGeometry,
   PointLight,
@@ -165,11 +166,15 @@ export function createRoom(seatHeight: number) {
   root.add(monitor);
   root.updateMatrixWorld(true);
   for (const part of root.children.slice(monitorStart, -1)) monitor.attach(part);
-  monitor.rotation.y = -1.05;
-  monitor.position.z = 0.36;
+  monitor.position.set(0.4, tableY, 0.8);
+  monitor.rotation.y = -0.6;
   box(0.6, surface + 0.002, 0.25, 0.8, 0.004, 0.32, materials.fabric);
   box(0.57, surface + 0.013, 0.21, 0.35, 0.018, 0.125, dark).rotation.x = -0.05;
-  const keys = new InstancedMesh(new BoxGeometry(0.016, 0.008, 0.016), cream, 16 * 5);
+  const keys = new InstancedMesh(
+    new BoxGeometry(0.016, 0.008, 0.016),
+    materials.toon(0x3c4148),
+    16 * 5,
+  );
   const place = new Object3D();
   for (let row = 0; row < 5; row++)
     for (let col = 0; col < 16; col++) {
@@ -230,29 +235,31 @@ export function createRoom(seatHeight: number) {
   const props = createProps(surface, sill, materials);
   root.add(props.root);
   textures.push(...props.textures);
-  box(1.5, sill + 0.1, -0.9, 0.38, 0.2, 0.11, cream);
-  for (const x of [1.39, 1.61]) {
+  box(-0.5, sill + 0.1, -0.9, 0.38, 0.2, 0.11, cream).rotation.y = 0.5;
+  for (const x of [-0.11, 0.11]) {
     const speaker = new Mesh(new CylinderGeometry(0.06, 0.06, 0.01, 10), dark);
-    speaker.rotation.x = Math.PI / 2;
-    speaker.position.set(x, sill + 0.09, -0.843);
+    speaker.rotation.set(Math.PI / 2, 0.5, 0, 'YXZ');
+    speaker.position.set(
+      -0.5 + Math.cos(0.5) * x + Math.sin(0.5) * 0.057,
+      sill + 0.09,
+      -0.9 - Math.sin(0.5) * x + Math.cos(0.5) * 0.057,
+    );
     root.add(speaker);
   }
-  box(1.5, sill + 0.17, -0.85, 0.08, 0.025, 0.01, dark);
-  box(1.5, sill + 0.235, -0.9, 0.3, 0.014, 0.014, dark);
-  for (const x of [1.36, 1.64]) box(x, sill + 0.215, -0.9, 0.014, 0.05, 0.014, dark);
+  box(-0.5, sill + 0.235, -0.9, 0.3, 0.014, 0.014, dark).rotation.y = 0.5;
   const plush = materials.toon(0x30343f);
   const belly = materials.toon(0xf2ead8);
-  const penguin = new Mesh(new SphereGeometry(0.13, 8, 6), plush);
-  penguin.scale.set(1, 1.25, 0.9);
-  penguin.position.set(-0.05, sill + 0.15, -0.95);
+  const penguin = new Mesh(new SphereGeometry(0.19, 8, 6), plush);
+  penguin.scale.set(1, 1.4, 0.9);
+  penguin.position.set(-1.0, sill + 0.24, -0.95);
   root.add(penguin);
-  const front = new Mesh(new SphereGeometry(0.1, 8, 6), belly);
+  const front = new Mesh(new SphereGeometry(0.13, 8, 6), belly);
   front.scale.set(0.95, 1.2, 0.6);
-  front.position.set(-0.05, sill + 0.13, -0.88);
+  front.position.set(-0.96, sill + 0.2, -0.84);
   root.add(front);
   const beak = new Mesh(new CylinderGeometry(0, 0.025, 0.05, 5), materials.toon(0xe0a040));
   beak.rotation.x = Math.PI / 2;
-  beak.position.set(-0.05, sill + 0.25, -0.83);
+  beak.position.set(-0.95, sill + 0.41, -0.79);
   root.add(beak);
   cylinder(-1.62, sill + 0.08, -0.9, 0.1, 0.075, 0.16, cream);
   const leafMaterial = materials.toon(0x5e9a6c);
@@ -270,8 +277,8 @@ export function createRoom(seatHeight: number) {
     leaves.push(leaf);
   }
   const lampRoot = new Group();
-  lampRoot.position.set(-0.2, surface, 0.74);
-  lampRoot.rotation.y = -1;
+  lampRoot.position.set(-0.08, surface, 0.6);
+  lampRoot.rotation.y = -1.01;
   root.add(lampRoot);
   const lampRod = (from: Vector3, to: Vector3, radius: number) => {
     const length = from.distanceTo(to);
@@ -284,12 +291,15 @@ export function createRoom(seatHeight: number) {
   const lampBase = new Mesh(new CylinderGeometry(0.06, 0.07, 0.02, 10), dark);
   lampBase.position.y = 0.01;
   lampRoot.add(lampBase);
-  const elbow = new Vector3(0, 0.3, 0.08);
-  const head = new Vector3(0, 0.4, -0.16);
+  const elbow = new Vector3(0, 0.36, 0.1);
+  const head = new Vector3(0, 0.52, -0.14);
   lampRod(new Vector3(0, 0.02, 0), elbow, 0.007);
   lampRod(elbow, head, 0.006);
-  const shadeGeometry = new CylinderGeometry(0.022, 0.065, 0.1, 10, 1, true);
-  const shade = new Mesh(shadeGeometry, dark);
+  const shadeGeometry = new CylinderGeometry(0.03, 0.085, 0.13, 10, 1, true);
+  const shade = new Mesh(
+    shadeGeometry,
+    new MeshLambertMaterial({ color: 0x2c3a40, flatShading: true }),
+  );
   shade.position.copy(head).add(new Vector3(0, -0.03, -0.03));
   shade.rotation.x = -0.5;
   shade.castShadow = true;
@@ -354,7 +364,7 @@ export function createRoom(seatHeight: number) {
       .setHex(0x4a5a9a)
       .lerp(new Color(0xcfdcef), time.daylight)
       .lerp(new Color(0xff9a6a), time.twilight);
-    sky.intensity = 0.35 + time.daylight * 0.35 + time.twilight * 0.25;
+    sky.intensity = 0.35 + time.daylight * 0.35 + time.twilight * 0.05;
     sun.position.copy(time.sunDirection).multiplyScalar(5);
     return time;
   };

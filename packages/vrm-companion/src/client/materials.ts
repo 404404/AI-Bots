@@ -10,7 +10,7 @@ import {
 } from 'three';
 
 export function createRoomMaterials() {
-  const gradient = new DataTexture(new Uint8Array([96, 178, 255]), 3, 1, RedFormat);
+  const gradient = new DataTexture(new Uint8Array([64, 160, 255]), 3, 1, RedFormat);
   gradient.minFilter = gradient.magFilter = NearestFilter;
   gradient.generateMipmaps = false;
   gradient.needsUpdate = true;

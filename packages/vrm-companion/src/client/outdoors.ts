@@ -207,11 +207,11 @@ export function createOutdoors() {
     sky.uniforms
       .zenith!.value.set(0x111c38)
       .lerp(new Color(0x6d9fc3), daylight)
-      .lerp(new Color(0xbb695f), twilight);
+      .lerp(new Color(0xc8473a), twilight);
     sky.uniforms
       .horizon!.value.set(0x58678e)
       .lerp(new Color(0xdbe5d3), daylight)
-      .lerp(new Color(0xffad68), twilight);
+      .lerp(new Color(0xff8d4e), twilight);
     const angle = ((hour - 6) / 12) * Math.PI;
     sun.position.set(12 * Math.cos(angle), 6 + 14 * Math.sin(angle), -24);
     sun.visible = hour >= 5 && hour <= 19.5;
@@ -227,11 +227,11 @@ export function createOutdoors() {
     cloudMaterial.uniforms
       .light!.value.set(0x5d6f99)
       .lerp(new Color(0xffffff), daylight)
-      .lerp(new Color(0xffd6a6), twilight);
+      .lerp(new Color(0xffd77a), twilight);
     cloudMaterial.uniforms
       .shade!.value.set(0x252f4d)
       .lerp(new Color(0xb8c6da), daylight)
-      .lerp(new Color(0xc0708a), twilight);
+      .lerp(new Color(0xd8704e), twilight);
     cloudMaterial.uniforms
       .rim!.value.set(0x8f9fc8)
       .lerp(new Color(0xffffff), daylight)

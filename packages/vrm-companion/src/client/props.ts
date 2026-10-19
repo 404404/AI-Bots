@@ -112,7 +112,7 @@ export function createProps(surface: number, sill: number, materials: Materials)
   add(
     new CylinderGeometry(0.035, 0.032, 0.1, 8, 1, true),
     toon(0x3f5d7d, { side: DoubleSide }),
-    -0.02,
+    -0.28,
     surface + 0.05,
     0.62,
   );
@@ -121,7 +121,7 @@ export function createProps(surface: number, sill: number, materials: Materials)
     const pen = add(
       new CylinderGeometry(0.004, 0.004, 0.14, 5),
       toon(penColors[i]!),
-      -0.02,
+      -0.28,
       surface + 0.09,
       0.62,
     );
@@ -147,6 +147,11 @@ export function createProps(surface: number, sill: number, materials: Materials)
     leaf.position.z += Math.cos(i) * 0.015;
   }
 
+  const row = new Group();
+  row.position.set(0, surface, 0.24);
+  root.add(row);
+  books(row, -0.5, 0, 0, 9, 3, 0.3);
+  block(-0.515, 0.06, 0, 0.01, 0.12, 0.1, dark, row);
   const drawers = new Group();
   drawers.position.set(-1.15, 0, 0.55);
   root.add(drawers);
@@ -207,6 +212,48 @@ export function createProps(surface: number, sill: number, materials: Materials)
   block(0, 0, 0, 0.5, 0.62, 0.025, dark, poster);
   block(0, 0, 0.014, 0.44, 0.56, 0.002, toon(0xffffff, { map: chartTexture }), poster);
 
+  const sketch = document.createElement('canvas');
+  sketch.width = 320;
+  sketch.height = 240;
+  const pen = sketch.getContext('2d')!;
+  pen.fillStyle = '#e9dcc0';
+  pen.fillRect(0, 0, 320, 240);
+  pen.strokeStyle = '#3a3530';
+  pen.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {
+    const x = 30 + i * 32;
+    const top = 70 + ((i * 37) % 60);
+    pen.strokeRect(x, top, 22, 200 - top);
+    pen.beginPath();
+    pen.moveTo(x + 11, top);
+    pen.lineTo(x + 11, top - 25 - (i % 3) * 10);
+    pen.stroke();
+  }
+  pen.beginPath();
+  pen.moveTo(0, 200);
+  pen.lineTo(320, 196);
+  pen.stroke();
+  const sketchTexture = new CanvasTexture(sketch);
+  sketchTexture.colorSpace = SRGBColorSpace;
+  textures.push(sketchTexture);
+  const board = new Group();
+  board.position.set(-1.72, 1.72, -1.13);
+  root.add(board);
+  block(0, 0, 0, 0.56, 0.44, 0.02, toon(0x5a4334), board);
+  block(0, 0, 0.012, 0.5, 0.38, 0.002, toon(0xffffff, { map: sketchTexture }), board);
+  for (const [i, color] of [0xf1d27a, 0x9fd0c0, 0xf0a0a0, 0xf1d27a].entries()) {
+    const note = block(
+      -0.2 + i * 0.13,
+      -0.36 - (i % 2) * 0.05,
+      0.012,
+      0.08,
+      0.08,
+      0.002,
+      toon(color),
+      board,
+    );
+    note.rotation.z = (i - 1.5) * 0.08;
+  }
   const clock = new Group();
   clock.position.set(1.65, 2.05, -1.13);
   clock.rotation.x = Math.PI / 2;
@@ -269,15 +316,15 @@ export function createProps(surface: number, sill: number, materials: Materials)
     );
     book.rotation.y = (i - 1) * 0.15;
   }
-  add(new CylinderGeometry(0.035, 0.035, 0.07, 8), toon(0xe9dcc0), -0.62, sill + 0.08, -0.92);
+  add(new CylinderGeometry(0.035, 0.035, 0.07, 8), toon(0xe9dcc0), 1.0, sill + 0.08, -0.92);
   const flame = new Mesh(
     new SphereGeometry(0.008, 4, 3),
     new MeshBasicMaterial({ color: 0xffc070 }),
   );
   flame.scale.set(1, 1.8, 1);
-  flame.position.set(-0.62, sill + 0.13, -0.92);
+  flame.position.set(1.0, sill + 0.13, -0.92);
   root.add(flame);
-  const cushion = add(new BoxGeometry(0.42, 0.12, 0.3), toon(0xd98c6a), -1.0, sill + 0.1, -0.95);
+  const cushion = add(new BoxGeometry(0.42, 0.12, 0.3), toon(0xd98c6a), -0.2, sill + 0.1, -0.95);
   cushion.rotation.set(0.15, 0.25, 0.05);
 
   return {

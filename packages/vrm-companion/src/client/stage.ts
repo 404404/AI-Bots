@@ -143,14 +143,17 @@ export function mountStage(
     const portrait = view === 'portrait';
     const target = portrait
       ? new Vector3(motion.x, 1.16 - motion.seated * 0.1, motion.z)
-      : new Vector3(camera.aspect < 0.8 ? 0.15 : 0.05, 1.2, -0.1);
+      : new Vector3(0.42, 1.04, 0.08);
     const offset =
       view === 'room'
-        ? new Vector3(-2.5, 1.5, 4.4)
+        ? new Vector3(1.9, 1.5, 4.0)
         : portrait
-          ? new Vector3(-0.45, 0.12, 1.55)
-          : new Vector3(0.35, 0.3, 2.7);
-    const aspectScale = Math.max(1, Math.min(1.25, 0.75 / camera.aspect));
+          ? new Vector3(0.8, 0.12, 1.15)
+          : new Vector3(0.98, 0.2, 0.78);
+    const aspectScale =
+      view === 'desk'
+        ? Math.max(1, Math.min(1.8, 1.7 / camera.aspect))
+        : Math.max(1, Math.min(1.25, 0.75 / camera.aspect));
     offset.multiplyScalar(aspectScale);
     controls.target.copy(target);
     camera.position.copy(target).add(offset);
@@ -212,12 +215,13 @@ export function mountStage(
     last = time;
     const daylight = room?.update(reduced.matches ? 0 : delta);
     if (daylight) {
-      ambient.intensity = 0.14 + daylight.daylight * 0.46 + daylight.twilight * 0.2;
+      ambient.intensity = 0.26 + daylight.daylight * 0.34 + daylight.twilight * 0.02;
       ambient.color
-        .setHex(0x5c6fb0)
-        .lerp(new Color(0xffe7cf), Math.min(1, daylight.daylight + daylight.twilight));
-      fill.intensity = 0.18 + daylight.daylight * 0.67 + daylight.twilight * 0.35;
-      key.intensity = 0.28 + daylight.daylight * 0.82 + daylight.twilight * 0.25;
+        .setHex(0x5a78b8)
+        .lerp(new Color(0xffe7cf), Math.min(1, daylight.daylight + daylight.twilight))
+        .lerp(new Color(0xff8a5a), daylight.twilight * 0.7);
+      fill.intensity = 0.18 + daylight.daylight * 0.67 + daylight.twilight * 0.12;
+      key.intensity = 0.28 + daylight.daylight * 0.82 + daylight.twilight * 0.05;
       key.color
         .setHex(0x9fb2ff)
         .lerp(new Color(0xffd8b8), Math.min(1, daylight.daylight + daylight.twilight));

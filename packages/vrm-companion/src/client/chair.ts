@@ -41,7 +41,7 @@ export function createChair(seatHeight: number, materials: ReturnType<typeof cre
     vertices.setY(i, y * 0.82);
   }
   geometry.computeVertexNormals();
-  const back = new Mesh(geometry, materials.red);
+  const back = new Mesh(geometry, materials.dark);
   back.position.z = -0.2;
   root.add(back);
   const pad = new Mesh(geometry, materials.fabric);
@@ -56,7 +56,7 @@ export function createChair(seatHeight: number, materials: ReturnType<typeof cre
     );
   root.add(
     new Mesh(
-      new TubeGeometry(new CatmullRomCurve3(seamPoints, true), 40, 0.004, 4, true),
+      new TubeGeometry(new CatmullRomCurve3(seamPoints, true), 40, 0.012, 4, true),
       materials.red,
     ),
   );
