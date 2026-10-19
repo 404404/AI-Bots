@@ -1495,9 +1495,9 @@
       "path": "scripts/e2e-mobile-pairing-web.mjs",
       "category": "mapped",
       "behaviors": ["phone.pairing"],
-      "reason": "Own task Host and Expo Web export; pair/reload/revoke UI in browser, native/physical pairing separate.",
+      "reason": "Own task Host and Expo Web export (English locale); broken-link refusal, pair/reload/revoke UI in browser, native/physical pairing separate.",
       "task": 1967,
-      "sha256": "079e8bc29a8ca9186bc1b5d6580e4472c4dcddf345f92c0c474efe60dd3d4143"
+      "sha256": "c617612575367537186f0d75d03bbfdced91264cc22f4ce0dd59d052fde9c7b6"
     },
     {
       "path": "scripts/e2e-mobile-reactions-web.mjs",

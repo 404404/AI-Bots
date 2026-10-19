@@ -225,8 +225,6 @@ async function main() {
     steps.push('asked the Host for a pairing offer, pointed at the phone origin');
 
     page = await browser.newPage();
-    // The app picks its language from the browser locale; pin English so the journey's text
-    // checks hold on a machine set to Chinese.
     await (await page.createCDPSession()).send('Emulation.setLocaleOverride', { locale: 'en-US' });
     await page.emulate({
       viewport: { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
@@ -254,8 +252,7 @@ async function main() {
 
     const linkField =
       'input[placeholder^="deepseekbot://pair"], textarea[placeholder^="deepseekbot://pair"]';
-    const linkValue = () =>
-      page.$eval(linkField, (field) => /** @type {HTMLInputElement} */ (field).value);
+    const linkValue = () => page.$eval(linkField, (field) => field.value);
     await page.type(linkField, 'deepseekbot://pair?p=not-a-pairing-link');
     await page.locator('::-p-aria(Pair)').click();
     await text('This is not a DeepSeekBot pairing link');
