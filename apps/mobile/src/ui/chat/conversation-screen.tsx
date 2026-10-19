@@ -827,11 +827,7 @@ function ChatConversation({
               />
             </SpeakerStageContext.Provider>
           </MarkdownViewportContext.Provider>
-          <EdgeFade
-            edge="bottom"
-            height={composerHeight + edgeFade.bottom}
-            fade={edgeFade.bottom}
-          />
+          <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
           {latest.away ? (
             <View
               pointerEvents="box-none"
@@ -848,7 +844,7 @@ function ChatConversation({
           ) : null}
         </Animated.View>
       </KeyboardChatFrame>
-      <EdgeFade edge="top" height={headerHeight + edgeFade.top} fade={edgeFade.top} />
+      <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
       <ChatHeader
         left={<HeaderBackButton onPress={leave} />}
         center={
