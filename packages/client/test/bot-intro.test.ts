@@ -88,7 +88,7 @@ describe('intro controller', () => {
     for (const receipt of [
       { ...fresh, tutorial: 'active' as const },
       { ...fresh, journey: { version: 2 as const, done: true } },
-      { ...fresh, journey: undefined },
+      (({ journey: _journey, ...legacy }) => legacy)(fresh),
     ]) {
       const controller = new OnboardingController(
         actionsFor([receipt]) as unknown as BridgeActions,

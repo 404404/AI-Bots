@@ -56,6 +56,7 @@ const styles = stylex.create({
   dialog: {
     width: dialog.wide,
     maxWidth: '100%',
+    height: '720px',
     maxHeight: '100%',
     display: 'flex',
     flexDirection: 'column',
@@ -115,6 +116,7 @@ const styles = stylex.create({
     width: size.inlineIcon,
     height: size.inlineIcon,
     borderRadius: radius.round,
+    cornerShape: 'round',
     backgroundColor: color.surface,
     color: color.muted,
     fontSize: text.metaSize,
@@ -133,10 +135,12 @@ const styles = stylex.create({
     display: 'flex',
     flexDirection: 'column',
     gap: space.x6,
+    flexGrow: 1,
     minHeight: 0,
     overflowY: 'auto',
     padding: space.x6,
   },
+  bodyCentered: { justifyContent: 'safe center' },
   footer: {
     display: 'flex',
     alignItems: 'center',
@@ -198,8 +202,17 @@ const styles = stylex.create({
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+    gridTemplateColumns: {
+      default: 'repeat(3, minmax(0, 1fr))',
+      '@media (max-width: 640px)': '1fr',
+    },
     gap: space.x4,
+  },
+  grid4: {
+    gridTemplateColumns: {
+      default: 'repeat(4, minmax(0, 1fr))',
+      '@media (max-width: 640px)': 'repeat(2, minmax(0, 1fr))',
+    },
   },
   card: {
     display: 'flex',
@@ -229,7 +242,7 @@ const styles = stylex.create({
   preview: {
     position: 'relative',
     overflow: 'hidden',
-    aspectRatio: '16 / 9',
+    aspectRatio: '5 / 2',
     borderRadius: radius.md,
   },
   previewLayer: {
@@ -274,6 +287,7 @@ const styles = stylex.create({
     width: '52px',
     height: '52px',
     borderRadius: radius.round,
+    cornerShape: 'round',
   },
   link: {
     display: 'flex',
@@ -314,7 +328,21 @@ const styles = stylex.create({
     fontWeight: text.strong,
     whiteSpace: 'nowrap',
   },
-  starters: { width: '100%', maxWidth: '560px', textAlign: 'start' },
+  starters: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: space.x3,
+    width: '100%',
+    maxWidth: '560px',
+  },
+  starter: {
+    backgroundColor: { default: 'transparent', ':hover': color.hover },
+    fontFamily: 'inherit',
+    fontSize: text.bodySize,
+    lineHeight: text.bodyLine,
+    textAlign: 'start',
+    cursor: 'pointer',
+  },
 });
 
 export function BotIntro({
@@ -391,7 +419,13 @@ export function BotIntro({
           <ChannelSidebarIcon name="x" size={16} />
         </IconButton>
       </div>
-      <div {...stylex.props(styles.body)} data-intro-step={step}>
+      <div
+        {...stylex.props(
+          styles.body,
+          (step === 'welcome' || step === 'start') && styles.bodyCentered,
+        )}
+        data-intro-step={step}
+      >
         {step === 'welcome' ? <WelcomeStep t={t} /> : null}
         {step === 'theme' && appearance ? (
           <ThemeStep appearance={appearance} wallpaper={wallpaper} t={t} />
@@ -434,7 +468,12 @@ export function BotIntro({
           </Button>
         ) : null}
         {last ? null : (
-          <Button variant="primary" disabled={busy} onClick={() => void go(intro.step + 1)}>
+          <Button
+            variant="primary"
+            data-modal-autofocus
+            disabled={busy}
+            onClick={() => void go(intro.step + 1)}
+          >
             {t('intro.next')}
           </Button>
         )}
@@ -520,7 +559,11 @@ function ThemeStep({
         </div>
       </Section>
       <Section title={t('intro.theme.color')}>
-        <div {...stylex.props(styles.grid)} role="radiogroup" aria-label={t('intro.theme.color')}>
+        <div
+          {...stylex.props(styles.grid, styles.grid4)}
+          role="radiogroup"
+          aria-label={t('intro.theme.color')}
+        >
           {PRESETS.map((entry) => (
             <button
               key={entry.id}
@@ -830,17 +873,21 @@ function StartStep({
         <h2 {...stylex.props(styles.title)}>{t('intro.start.title')}</h2>
         <p {...stylex.props(styles.copy)}>{t('intro.start.hint')}</p>
       </div>
-      <div {...stylex.props(styles.starters)}>
-        <SidebarCardList className="bh-message-card-list" label={t('home.starters')}>
-          {STARTERS.map((key) => (
-            <SidebarCardRow
-              key={key}
-              icon="messages-circle"
-              title={t(key)}
-              onClick={() => pick(t(key))}
-            />
-          ))}
-        </SidebarCardList>
+      <div {...stylex.props(styles.starters)} role="list" aria-label={t('home.starters')}>
+        {STARTERS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            role="listitem"
+            onClick={() => pick(t(key))}
+            {...stylex.props(styles.link, styles.starter)}
+          >
+            <span {...stylex.props(styles.linkIcon)}>
+              <ChannelSidebarIcon name="messages-circle" size={18} />
+            </span>
+            <span {...stylex.props(styles.linkText)}>{t(key)}</span>
+          </button>
+        ))}
       </div>
       <Button variant="ghost" onClick={() => pick(undefined)}>
         {t('intro.start.own')}
