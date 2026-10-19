@@ -22,7 +22,19 @@ vi.mock('../src/client/modal.js', () => ({
       ? createElement('div', { role: 'dialog', 'aria-label': title, className }, children)
       : null,
 }));
-vi.mock('../src/client/model-picker.js', () => ({ ModelPicker: () => null }));
+vi.mock('../src/client/model-picker.js', () => ({
+  ModelPicker: ({
+    title,
+    onChange,
+  }: {
+    title: string;
+    onChange(choice: { key: string; effort: string }): void;
+  }) =>
+    createElement('span', {
+      'data-picker': title,
+      onClick: () => onChange({ key: JSON.stringify(['p', 'task']), effort: '' }),
+    }),
+}));
 vi.mock('../src/client/wallpaper-settings.js', () => ({
   WallpaperSettings: () => createElement('div', { 'data-wallpaper-settings': '' }),
 }));
@@ -178,6 +190,7 @@ describe('intro modal', () => {
     expect(dialog().textContent).toContain('你好，我是托布');
     expect(dialog().querySelectorAll('[data-founder-note] p')).toHaveLength(5);
     expect(dialog().textContent).toContain('everything is plugin');
+    expect(dialog().querySelectorAll('[data-user-reviews] blockquote')).toHaveLength(3);
     await click('下一步');
     expect(step()).toBe('theme');
     await act(async () =>
@@ -208,5 +221,62 @@ describe('intro modal', () => {
     stop();
     expect(sent).toEqual([zhTranslate('onboarding.firstRequest')]);
     expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('keeps one model by default and splits Tob task model under Advanced', async () => {
+    const model = (id: string) => ({
+      provider: 'p',
+      providerName: 'P',
+      model: id,
+      modelName: id,
+      efforts: [],
+    });
+    const base = actionsFor([{ ...fresh, defaultBotSlug: 'tob' }]);
+    const actions = {
+      ...base,
+      modelCatalog: vi.fn(async () => ({
+        models: [model('main'), model('task')],
+        default: { provider: 'p', model: 'main' },
+      })),
+      modelPlanState: vi.fn(async () => ({ revision: 0 })),
+      setModelPlan: vi.fn(async () => ({})),
+      inheritModel: vi.fn(async () => ({ revision: 1 })),
+    } as unknown as BridgeActions;
+    const controller = onboardingFor(actions);
+    await controller.enter();
+    controller.openIntro();
+    controller.setIntroStep(2);
+    await act(async () => {
+      root.render(createElement(BotIntro, { actions, t: zhTranslate }));
+    });
+    const dialog = () => document.querySelector('[role="dialog"]')!;
+    const next = async () =>
+      act(async () =>
+        [...dialog().querySelectorAll('button')]
+          .find((button) => button.textContent === '下一步')!
+          .click(),
+      );
+    const advanced = dialog().querySelector<HTMLDetailsElement>('[data-intro-model-advanced]')!;
+    expect(advanced.open).toBe(false);
+    expect(advanced.textContent).toContain('主模型和执行模型相同');
+    await act(async () => {
+      advanced.open = true;
+      advanced.dispatchEvent(new Event('toggle'));
+    });
+    await act(async () =>
+      advanced
+        .querySelector<HTMLElement>(`[data-picker="${zhTranslate('modelPreset.assignment')}"]`)!
+        .click(),
+    );
+    expect(advanced.textContent).toContain('托布的执行模型单独设置');
+    await next();
+    expect(actions.onboardingModel).not.toHaveBeenCalled();
+    expect(actions.setModelPlan).toHaveBeenCalledWith(
+      'tob',
+      0,
+      { provider: 'p', model: 'main' },
+      { provider: 'p', model: 'task' },
+      [{ provider: 'p', model: 'task', allowedEfforts: [''], defaultEffort: '' }],
+    );
   });
 });

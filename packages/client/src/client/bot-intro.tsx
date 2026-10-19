@@ -42,6 +42,12 @@ const PRESETS: readonly { id: AppearancePreset; label: BotHarnessKey }[] = [
   { id: 'forest-green', label: 'appearance.forestGreen' },
   { id: 'warm-amber', label: 'appearance.warmAmber' },
 ];
+const REVIEWS: readonly BotHarnessKey[] = [
+  'intro.reviews.clean',
+  'intro.reviews.era',
+  'intro.reviews.details',
+];
+
 const SCHEMES: readonly { id: AppearancePreference; label: BotHarnessKey }[] = [
   { id: 'system', label: 'settings.theme.system' },
   { id: 'light', label: 'settings.theme.light' },
@@ -191,6 +197,42 @@ const styles = stylex.create({
     padding: space.x5,
     borderRadius: radius.lg,
     backgroundColor: color.surface,
+  },
+  reviews: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: space.x3,
+  },
+  review: {
+    margin: 0,
+    padding: space.x4,
+    borderRadius: radius.lg,
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.divider,
+    color: color.fg,
+    fontSize: text.bodySize,
+    lineHeight: text.bodyLine,
+  },
+  advanced: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: space.x3,
+    padding: space.x4,
+    borderRadius: radius.lg,
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.divider,
+  },
+  advancedSummary: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: space.x1,
+    cursor: 'pointer',
+    color: color.fg,
+    fontSize: text.bodySize,
+    lineHeight: text.bodyLine,
+    fontWeight: text.strong,
   },
   note: { display: 'flex', flexDirection: 'column', gap: space.x2 },
   signature: { margin: 0, alignSelf: 'flex-end', color: color.muted, fontSize: text.bodySize },
@@ -510,6 +552,16 @@ function WelcomeStep({ t }: { t: BotHarnessTranslate }): ReactElement {
         </div>
         <p {...stylex.props(styles.signature)}>{t('intro.founder.signature')}</p>
       </section>
+      <section {...stylex.props(styles.section)} aria-label={t('intro.reviews.title')}>
+        <h3 {...stylex.props(styles.sectionTitle)}>{t('intro.reviews.title')}</h3>
+        <div {...stylex.props(styles.reviews)} data-user-reviews>
+          {REVIEWS.map((key) => (
+            <blockquote key={key} {...stylex.props(styles.review)}>
+              {t(key)}
+            </blockquote>
+          ))}
+        </div>
+      </section>
     </>
   );
 }
@@ -688,6 +740,9 @@ function ModelStep({
 }): ReactElement {
   const [models, setModels] = useState<ModelCatalogEntryView[]>([]);
   const [route, setRoute] = useState<ModelRouteView>();
+  const [assignment, setAssignment] = useState<ModelRouteView>();
+  const [advanced, setAdvanced] = useState(false);
+  const [planned, setPlanned] = useState<string>();
   const [initial, setInitial] = useState<string>();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string>();
@@ -713,13 +768,37 @@ function ModelStep({
   const selected = models.find(
     (model) => model.provider === route?.provider && model.model === route.model,
   );
+  const tob = onboardingFor(actions).getSnapshot().receipt?.defaultBotSlug;
+  const split =
+    advanced && assignment !== undefined && route !== undefined
+      ? routeKey(assignment) !== routeKey(route) ||
+        (assignment.reasoningEffort ?? '') !== (route.reasoningEffort ?? '')
+      : false;
   const save = async (): Promise<boolean> => {
     if (!route || !selected || selected.credential !== undefined) return true;
-    if (initial === routeKey(route) && route.reasoningEffort === undefined) return true;
+    const plan = split && assignment ? JSON.stringify([route, assignment]) : undefined;
     try {
-      await actions.onboardingModel(undefined, 0, route, true);
-      invalidateInheritedModelPlans();
-      setInitial(routeKey(route));
+      if (initial !== routeKey(route) || route.reasoningEffort !== undefined) {
+        await actions.onboardingModel(undefined, 0, route, true);
+        invalidateInheritedModelPlans();
+        setInitial(routeKey(route));
+        setPlanned(undefined);
+      }
+      if (tob !== undefined && plan !== planned) {
+        const revision = (await actions.modelPlanState(tob)).revision ?? 0;
+        if (split && assignment) {
+          const effort = assignment.reasoningEffort ?? '';
+          await actions.setModelPlan(tob, revision, route, assignment, [
+            {
+              provider: assignment.provider,
+              model: assignment.model,
+              allowedEfforts: [effort],
+              defaultEffort: effort,
+            },
+          ]);
+        } else await actions.inheritModel(tob, revision);
+        setPlanned(plan);
+      }
       return true;
     } catch (cause) {
       setError(errorMessage(cause));
@@ -729,7 +808,16 @@ function ModelStep({
   const bound = useMountedResource<HTMLSpanElement>(() => {
     bind({ save });
     return () => bind(undefined);
-  }, [route, selected, initial]);
+  }, [route, selected, initial, assignment, advanced, planned]);
+  const options = models.map((model) => ({
+    value: routeKey(model),
+    label: model.modelName,
+    hint: model.providerName + (model.credential ? ' · ' + t('onboarding.needsKey') : ''),
+  }));
+  const parse = ({ key, effort }: { key: string; effort: string }): ModelRouteView => {
+    const [provider, model] = JSON.parse(key) as [string, string];
+    return { provider, model, ...(effort ? { reasoningEffort: effort } : {}) };
+  };
   return (
     <div ref={mount} className="bh-onboarding-model-form">
       <span ref={bound} hidden />
@@ -742,18 +830,39 @@ function ModelStep({
           effort: route?.reasoningEffort ?? '',
         }}
         catalog={models}
-        options={models.map((model) => ({
-          value: routeKey(model),
-          label: model.modelName,
-          hint: model.providerName + (model.credential ? ' · ' + t('onboarding.needsKey') : ''),
-        }))}
-        onChange={({ key, effort }) => {
-          const [provider, model] = JSON.parse(key) as [string, string];
-          setRoute({ provider, model, ...(effort ? { reasoningEffort: effort } : {}) });
-        }}
+        options={options}
+        onChange={(choice) => setRoute(parse(choice))}
         disabled={false}
         t={t}
       />
+      {tob !== undefined ? (
+        <details
+          {...stylex.props(styles.advanced)}
+          open={advanced}
+          onToggle={(event) => setAdvanced(event.currentTarget.open)}
+          data-intro-model-advanced
+        >
+          <summary {...stylex.props(styles.advancedSummary)}>
+            <span>{t('intro.model.advanced')}</span>
+            <span {...stylex.props(styles.copy)}>
+              {t(split ? 'intro.model.advancedSplit' : 'intro.model.advancedSame')}
+            </span>
+          </summary>
+          <ModelPicker
+            title={t('modelPreset.assignment')}
+            hint={t('intro.model.assignmentHint')}
+            choice={{
+              key: routeKey(assignment ?? route ?? { provider: '', model: '' }),
+              effort: (assignment ?? route)?.reasoningEffort ?? '',
+            }}
+            catalog={models}
+            options={options}
+            onChange={(choice) => setAssignment(parse(choice))}
+            disabled={false}
+            t={t}
+          />
+        </details>
+      ) : null}
       {!loaded ? <p role="status">{t('modelPreset.loading')}</p> : null}
       <SidebarCardList label={t('failure.openModels')}>
         <SidebarCardRow
