@@ -1975,10 +1975,10 @@
     },
     {
       "path": "scripts/e2e-workspace-chrome.mjs",
-      "sha256": "12ff9ff097069a576e34de1c7aa0ad99f55fafa00ab3ee64ace1f76d2b136122",
+      "sha256": "cb3a9da48097f1640eb4f231aa2e49bfc890209fed08e1cc66398c209723f0b8",
       "category": "mapped",
-      "reason": "Production workspace corner CSS and coordinate owner across zoom, panel gaps, rail positions and platform/fullscreen exclusion; does not render native traffic lights.",
-      "task": 2268,
+      "reason": "Audited production corner CSS across 204 zoom/gap/rail/platform/fullscreen cases on Windows after using a portable file URL for Vite; excludes native caption pixel qualification.",
+      "task": 2270,
       "behaviors": ["desktop.window-zoom"]
     },
     {
@@ -2052,6 +2052,14 @@
       "reason": "Isolated Host, visible DM composer, synthetic private input, native approval and actual Tool result with two live accepted IM sources; no production receiver or credential.",
       "task": 2290,
       "sha256": "a523ea1964d31850aa65b4e96ee2c37318d2c3c90b2b7feb86e8dfacfd4adce8"
+    },
+    {
+      "path": "scripts/e2e-desktop-zoom-windows.mjs",
+      "sha256": "cf08b5af77f660a47d033a5a7812acaf3d825c8512c073b6cb5b942ca126f1f8",
+      "category": "mapped",
+      "reason": "Audited explicit same-root Windows native lifecycle: exact executable/user-data/PID and loopback listener checks, immutable package checks, closed-app setup and fresh per-boot metadata. Readiness does not qualify keyboard, guests, DPI or Human QA.",
+      "task": 2270,
+      "behaviors": ["desktop.window-zoom"]
     }
   ],
   "native": [
