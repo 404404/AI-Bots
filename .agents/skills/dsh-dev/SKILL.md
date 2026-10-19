@@ -339,3 +339,9 @@ Disable before product removal. pnpm can leave an unlisted `link:` symlink after
 the owner removes only its exact link and verifies it is absent. Native `ui-theme` reads,
 writes, restart and disable must retain the same font preference. Keep the copied identity,
 license and relative ESM schema import; no installed ASAR or upstream files are changed.
+
+The copied Client exposes its zoom lease only when the actual `__DSH_BOOT__.release.version`
+is 0.2.1-rc.2. Unknown/missing releases retain the font-key scope and expose no zoom capability.
+This runtime guard does not remove an already installed Profile package override or qualify
+that copied theme on another Host. Disable the override before switching outside the verified
+Desktop/Host/Client tuple; re-enable only after qualifying the new combination.

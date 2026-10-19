@@ -1,6 +1,6 @@
 {
   "date": "2026-10-19",
-  "productVersion": "0.0.0-zoom.2268.7",
+  "productVersion": "0.0.0-zoom.2268.9",
   "activation": "Explicit native package-manager Profile override; original ui-theme row and native settings authority retained",
   "scope": "Actual prepared product and native Host APIs; original theme namespace and user Patch authority, no native-window qualification",
   "settingsLifecycle": [
@@ -42,7 +42,7 @@
   ],
   "focusedTests": {
     "files": 5,
-    "passed": 47
+    "passed": 48
   },
   "sourceChecks": {
     "lint": "passed",
@@ -133,5 +133,19 @@
     "profileUnchanged": true
   },
   "setupSourceSha256": "d204535fe50d9da50260c63fdcbb851d22ec75fa1abf1b1abf41afe02db08a30",
-  "artifactIntegrity": "sha512-9BAunjGSIVdjBsFxwCJAbVD/Kmh6lylxYfSRZGHRDfiTOHEZMWuWmcGbkmbMmgkWXM/0zshYoLkUzg6T/5gGjA=="
+  "artifactIntegrity": "sha512-nXWUEgMhcJkqVSsoa8Ab5GQYY8KI/9Tm2Kh17TWXDQPO9de2PGZwTDcW+qdwz3cEu0Qhq9hh3FQGv7aIkZnoAw==",
+  "runtimeReleaseGuard": {
+    "sourceAdapterSha256": "7219bb4f74653e501f84c75ae93c10630ec0ccb30ab95446e625efcd1c08746a",
+    "unit": "Executes generated adapter: qualified boot leases/restores font keys; missing/mismatched release exposes no lease and leaves font-key scope active",
+    "nativeReadOnlyObservation": {
+      "version": "0.2.1-rc.2",
+      "commit": "332895e",
+      "candidateGuardLoaded": false
+    },
+    "newCandidateHostAndSetupBytesMatchPriorLifecycleArtifact": {
+      "dist/desktop-zoom-setup.mjs": true,
+      "desktop-theme/lib/index.js": true
+    },
+    "limit": "An installed Profile override must be disabled before switching outside the qualified tuple; no automatic theme compatibility on other versions is claimed."
+  }
 }
