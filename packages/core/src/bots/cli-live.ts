@@ -1,3 +1,10 @@
+import {
+  WINDOW_ZOOM_COMMANDS,
+  WINDOW_ZOOM_OPTIONS,
+  runWindowZoomCommand,
+} from './cli-window-zoom.js';
+import { APPEARANCE_COMMANDS, APPEARANCE_OPTIONS, runAppearanceCommand } from './cli-appearance.js';
+import { prepareCloud, prepareCloudWork } from './cli-cloud.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +102,8 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...WINDOW_ZOOM_OPTIONS,
+  ...APPEARANCE_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -109,6 +118,9 @@ export const LIVE_OPTIONS = {
   ...APPROVAL_REVIEWER_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
+  'image-source': { type: 'string' },
+  'image-revision': { type: 'string' },
+  'image-reference': { type: 'string' },
   timeout: { type: 'string' },
   'message-id': { type: 'string' },
   outcome: { type: 'string' },
@@ -183,11 +195,21 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...WINDOW_ZOOM_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
+  {
+    command: 'cloud',
+    description: 'manage an explicit cloud Agent connection (private JSON through stdin)',
+  },
+  {
+    command: 'cloud-work',
+    description: 'run the cloud_work Tool directly for a Bot using JSON from stdin',
+  },
   ...MODELS_USAGE_COMMANDS,
   ...CHANNEL_COMMANDS,
   ...HOST_ADMIN_COMMANDS,
+  ...APPEARANCE_COMMANDS,
   ...INBOX_COMMANDS,
   ...BROWSER_COMPUTER_COMMANDS,
   ...PROFILE_COMMANDS,
@@ -310,6 +332,11 @@ export const LIVE_COMMANDS = [
     description:
       'run one Browser tool directly for a Bot, without the model (args JSON from stdin)',
   },
+  {
+    command: 'memory-image',
+    description:
+      'export version-bound Memory image bytes (--path --image-source --image-revision [--image-reference] --out)',
+  },
   { command: 'memory-file-target', description: 'resolve a memory file path for a Bot' },
   { command: 'memory-graph', description: "read a Bot's memory commit graph" },
   { command: 'memory-commit-diff', description: 'read the full diff of one memory commit' },
@@ -354,8 +381,12 @@ interface LiveValues
     TodoValues,
     ApprovalTemplateValues,
     ApprovalReviewerValues {
+  'client-id'?: string;
   host?: string;
   'token-file'?: string;
+  'image-source'?: string;
+  'image-revision'?: string;
+  'image-reference'?: string;
   timeout?: string;
   'message-id'?: string;
   body?: string;
@@ -688,6 +719,20 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (WINDOW_ZOOM_COMMANDS.some((entry) => entry.command === command))
+    return runWindowZoomCommand(command, rest, values, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
+  if (command === 'cloud-work') {
+    const input = await prepareCloudWork(rest, values, io);
+    const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));
+    return host.rpc('cloudWork', input);
+  }
+  if (command === 'cloud') {
+    const input = await prepareCloud(rest, values, io);
+    const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));
+    return host.rpc('cloudConnections', { input });
+  }
   if (MESSAGING_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareMessaging(command as MessagingCommand, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
@@ -704,6 +749,10 @@ export async function runLiveCli(
   }
   if (isBrowserComputerCommand(command))
     return runBrowserComputerCommand(command, rest, values, io, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
+  if (APPEARANCE_COMMANDS.some((entry) => entry.command === command))
+    return runAppearanceCommand(command, rest, values, io, () =>
       connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
     );
   if (isProfileCommand(command))
@@ -1445,6 +1494,7 @@ async function runDeviceCommand(
 const MEMORY_COMMANDS = new Set([
   'memory-snapshot',
   'memory-file',
+  'memory-image',
   'memory-history',
   'memory-diff',
   'memory-save',
@@ -1495,6 +1545,46 @@ async function runMemoryCommand(
     case 'memory-snapshot':
       [method, args] = ['memorySnapshot', { channelId }];
       break;
+    case 'memory-image': {
+      const path = required('path', 'path <file>');
+      const source = required('image-source', 'image-source worktree|index|<commit>');
+      const revision = required('image-revision', 'image-revision <sha256>');
+      const out = required('out', 'out <absolute file>');
+      if (!isAbsolute(out)) usage('--out must be an absolute path.');
+      const host = await connectLiveHost(
+        values,
+        io,
+        AbortSignal.timeout(timeoutMs(values.timeout)),
+      );
+      const reference = values['image-reference'];
+      const { bytes, response } = await host.http(
+        '/api/botharness/memory/image?' +
+          new URLSearchParams({
+            slug,
+            path,
+            source,
+            revision,
+            ...(reference === undefined ? {} : { reference }),
+          }),
+      );
+      const mime = response.headers.get('content-type');
+      if (
+        !['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'].includes(
+          mime ?? '',
+        )
+      )
+        throw new CliLiveError('host-protocol-error', 'Expected a supported Memory image');
+      writeFileSync(out, bytes, { flag: 'wx' });
+      return {
+        path,
+        source,
+        revision,
+        ...(reference === undefined ? {} : { reference }),
+        mime,
+        bytes: bytes.length,
+        out,
+      };
+    }
     case 'memory-file':
       [method, args] = ['memoryFile', { channelId, path: required('path', 'path <file>') }];
       break;

@@ -9,6 +9,7 @@ import {
   type Conversation,
   type ConversationSnapshot,
 } from '../src/host/conversation';
+import { createConversationPlayback } from '../src/host/conversation-playback';
 import { FakeHost, type FakeChannel } from './fake-host';
 import wire from './fixtures/host-wire.json';
 import type { ChannelMessage } from '../../../packages/core/src/channels/channel';
@@ -88,6 +89,30 @@ function contiguous(snapshot: ConversationSnapshot): boolean {
 }
 
 describe('DM conversation', () => {
+  it('shows paged committed history immediately while playback is held away from latest', async () => {
+    const host = new FakeHost();
+    seed(host.channel(DM), 25);
+    const target = open(host);
+    await until(target, (snapshot) => snapshot.status === 'live');
+    const playback = createConversationPlayback(target);
+    const stop = playback.subscribe(() => {});
+    playback.setFollowing(false);
+    try {
+      await target.loadOlder();
+      const messages = target.getSnapshot().messages;
+      expect(messages[0]).toMatchObject({ revision: 8, body: 'answer 8' });
+      const presented = messages.map(
+        (message) => (playback.getBubble(playback.rowKey(message.id))?.message ?? message).body,
+      );
+      expect(presented).toEqual(messages.map((message) => message.body));
+      expect(playback.diagnostics()).toEqual([]);
+      playback.setFollowing(true);
+      expect(playback.diagnostics()).toEqual([]);
+    } finally {
+      stop();
+    }
+  });
+
   it('presents recorded activity through the live journal and keeps every revision for read tracking', async () => {
     const host = new FakeHost();
     const channel = host.channel(DM);
@@ -898,6 +923,45 @@ describe('group Channel conversation', () => {
 });
 
 describe('group Channel mentions on send', () => {
+  it('keeps identity and ranges in cached history, live entries and optimistic messages', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    const mentions = [{ botSlug: 'stable-ada-id', label: 'Ada', start: 0, end: 4 }];
+    channel.append({ id: 'history', body: '@Ada **plan**', mentions }, false);
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const target = open(host, {
+      cache: {
+        read: async () => ({ entries: channel.page(1, undefined, 10)!.entries, hasOlder: false }),
+        write: () => {},
+      },
+      host: {
+        call: (method, args) => client!.call(method, args),
+        upload: (name, data) => client!.upload(name, data),
+        resource: (path) => client!.resource(path),
+        follow: (endpoint, args, handlers) => {
+          let cancel: (() => void) | undefined;
+          void gate.then(() => {
+            cancel = client!.follow(endpoint, args, handlers);
+          });
+          return () => cancel?.();
+        },
+      },
+    });
+    const cached = await until(target, (s) => s.fromCache);
+    expect(cached.messages[0]).toMatchObject({ mentions });
+    release();
+    await until(target, (s) => s.status === 'live' && !s.fromCache);
+    expect(target.getSnapshot().messages[0]).toMatchObject({ mentions });
+    channel.append({ id: 'live', body: '@Ada **plan**', mentions });
+    const live = await until(target, (s) => s.messages.some((message) => message.id === 'live'));
+    expect(live.messages.at(-1)).toMatchObject({ mentions });
+    target.send('@Ada plan it', [], { mentions });
+    expect(target.getSnapshot().messages.at(-1)).toMatchObject({ mentions, delivery: 'pending' });
+  });
+
   it('passes selected mention tokens to channelSend', async () => {
     const host = new FakeHost();
     host.channel('launch-team');

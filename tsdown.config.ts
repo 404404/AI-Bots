@@ -1,7 +1,9 @@
 import { execFileSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'tsdown';
 
+import { preparePackagedDesktopZoomTheme } from './scripts/desktop-zoom-compat.mjs';
 import { dockviewCssPlugin } from './scripts/dockview-css-plugin.mjs';
 import { stylexPlugin } from './scripts/stylex-plugin.mjs';
 
@@ -29,12 +31,27 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
     outDir,
     format: ['cjs'],
     platform: 'browser',
+    inputOptions: { resolve: { conditionNames: ['browser', 'import', 'default'] } },
     define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     dts: false,
     clean: true,
     sourcemap: true,
     external: PLATFORM_MODULES,
-    plugins: [stylexPlugin({ rootDir: ROOT_DIR }), dockviewCssPlugin({ rootDir: ROOT_DIR })],
+    plugins: [
+      {
+        name: 'botharness:vfile-browser-imports',
+        resolveId(id, importer) {
+          if (
+            /^#min(?:path|proc|url)$/u.test(id) &&
+            importer?.replaceAll('\\', '/').includes('/node_modules/vfile/lib/')
+          )
+            return join(dirname(importer), `${id.slice(1)}.browser.js`);
+          return null;
+        },
+      },
+      stylexPlugin({ rootDir: ROOT_DIR }),
+      dockviewCssPlugin({ rootDir: ROOT_DIR }),
+    ],
     outputOptions: {
       entryFileNames: 'client.js',
       banner: `window.__ModuleLoader__.load({
@@ -101,7 +118,7 @@ export const coreCliBundleOptions: UserConfig = {
   platform: 'node',
   dts: false,
   clean: true,
-  external: ['@resvg/resvg-js', 'silk-wasm'],
+  external: ['@resvg/resvg-js', 'silk-wasm', 'css-tree'],
   deps: { alwaysBundle: [/^@deepseek-ai\//] },
 };
 
@@ -136,11 +153,15 @@ export default defineConfig([
     external: [
       '@resvg/resvg-js',
       'silk-wasm',
+      'css-tree',
       '@deepseek-ai/dsh-agent',
       '@deepseek-ai/dsh-llm',
       '@deepseek-ai/dsh-session',
       '@deepseek-ai/dsh-tools',
       '@deepseek-ai/dsh-scope',
+      '@deepseek-ai/dsh-subagent',
+      '@deepseek-ai/dsh-tool-bash',
+      '@deepseek-ai/dsh-tool-pwsh',
     ],
   },
   coreCliBundleOptions,
@@ -193,7 +214,19 @@ export default defineConfig([
   },
   clientBundleOptions,
   {
-    entry: ['packages/deepseekbot/src/profile-cli.mjs', 'packages/deepseekbot/src/deepseekbot.mjs'],
+    entry: {
+      'profile-cli': 'packages/deepseekbot/src/profile-cli.mjs',
+      'desktop-zoom-setup': 'packages/deepseekbot/src/desktop-zoom-setup.mjs',
+      deepseekbot: 'packages/deepseekbot/src/deepseekbot.mjs',
+      'theme-schema': 'packages/client/src/theme-schema.ts',
+    },
+    deps: { alwaysBundle: ['@deepseek-ai/schemastery'] },
+    onSuccess: () => {
+      preparePackagedDesktopZoomTheme({
+        source: join(ROOT_DIR, 'packages/client/node_modules/@deepseek-ai/dsh-client-ui-theme'),
+        target: join(ROOT_DIR, 'packages/deepseekbot/desktop-theme'),
+      });
+    },
     outDir: 'packages/deepseekbot/dist',
     format: ['esm'],
     platform: 'node',

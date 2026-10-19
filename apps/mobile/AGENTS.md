@@ -19,6 +19,8 @@ Read docs for SDK 58 (`https://docs.expo.dev/versions/v58.0.0/...`), not `latest
 
 Screens follow [DESIGN.md](./DESIGN.md): the Host-as-workspace structure, the screen anatomy, and the code rules. No literal colours, type, spacing, radii or edge widths outside `src/ui/design/` (`test/style-guard.test.ts`); text through `src/ui/primitives/text`; new visual elements land in `src/ui/primitives`, `chat` or `shell` before a screen uses them.
 
+**Immediate interaction feedback is required.** For navigation, drawers/sheets, search and async actions, follow [Responsive interactions](./DESIGN.md#responsive-interactions): commit the shell/selection before uncached data or heavy content, retain scoped cached content during refresh, and measure tap-to-feedback separately from data-ready time. Include long-list and streaming regressions when those paths are affected; 120 FPS requires native Release evidence, not a display refresh-rate setting.
+
 **System text and large-text usability are required for every new or changed UI.** Read the [implementation and acceptance contract](./DESIGN.md#system-text-and-large-text-acceptance). Preserve iOS semantic Dynamic Type and Android native scaling; fix layout with wrapping, stacking, scrolling and reachable actions instead of disabling scaling or capping all text. Text/input adapter changes must preserve live drafts and editable-field identity. The PR records default/intermediate/maximum × light/dark native checks for both platforms, matched screenshots, actual interactions and explicit blockers. Do not infer Android or Human acceptance from iOS screenshots or source tests.
 
 ## Hard rules
@@ -44,6 +46,8 @@ Screens follow [DESIGN.md](./DESIGN.md): the Host-as-workspace structure, the sc
 - Cloud sessions have no simulator. They use the web screenshots ("Screenshots without a phone") and reach a Mac through Remote Control for native checks.
 
 ## Profiling
+
+**The bar.** In a Release build on a ProMotion iPhone, a DM holds 120 FPS (8.3 ms frames) while a reply streams, while the user scrolls long history, and while both happen at once ([#1845](https://github.com/BotHarness/DeepSeekBot/issues/1845)). No frame may hitch over 16.7 ms. Numbers from a development build or the Simulator are evidence for a change, not proof that the bar is met.
 
 Performance work is measured, not guessed. Before you change code for speed (jank, re-renders, a slow list, a long stream), profile the scenario, then profile it again after the change. The PR records both sets of numbers. `scripts/rn-profile.mjs` lets an agent read the profile itself, the way the Chrome DevTools MCP does for the web: no one clicks in DevTools.
 
@@ -78,7 +82,12 @@ Performance work is measured, not guessed. Before you change code for speed (jan
   - Expo's inspector proxy drops any debugger socket whose `Origin` is not exactly `http://127.0.0.1:<port>`. Node's built-in `WebSocket` cannot set it, so the script uses `ws`.
   - Hermes rejects `Profiler.enable`, `Tracing.*` and `HeapProfiler.*`, but `Profiler.start` and `Profiler.stop` work.
   - `Page.reload` replays the URL the app was launched with. To restart cleanly, relaunch with `simctl terminate` and the dev-client URL.
-- **Not covered yet.** UI-thread FPS and native dropped frames, from the Performance Monitor or `xctrace`. Say so in the PR when they matter.
+- **Release builds and the UI thread.** `rn-profile.mjs` needs Metro, so it can't attach to a Release build and only sees the JS thread. For the bar above:
+  - Measure JS cost with production JS (`expo start --no-dev --minify`) on the dev build, and say it ran on a Debug native binary.
+  - Measure the UI thread and render server on a Release build on a real ProMotion iPhone with `xcrun xctrace record --template "Animation Hitches"`. Report the hitch time ratio (ms of hitches per second), hitches over 8.3 ms and 16.7 ms, and the frame rate reached.
+  - The iOS Simulator doesn't emulate ProMotion and runs on the Mac's CPU and GPU. Use it only for before/after comparisons, never for a 120 FPS claim.
+  - The `requestAnimationFrame` FPS in `summary.json` is capped by the display link, so it can't show more than 60 FPS unless the app opts in to higher frame rates.
+- **Scenarios.** Cover streaming a long reply, fling-scrolling a DM with several hundred history messages that include tables and code blocks, and scrolling while a reply streams.
 
 ## Checks
 

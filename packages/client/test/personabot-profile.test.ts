@@ -275,7 +275,7 @@ describe('PersonaBot Profile surface', () => {
       expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail']).toBe(
         'true',
       );
-      expect(container.querySelector<HTMLElement>('.bh-chat-top-fade')?.style.display).toBe('none');
+      expect(container.querySelector('.bh-chat-top-fade')).toBeNull();
       const sections = container.querySelectorAll('.bh-profile-view > .bh-profile-section');
       expect([...sections].map((section) => section.getAttribute('aria-label'))).toEqual([
         '活动概览',

@@ -1,7 +1,7 @@
+import { Menu } from './appearance-primitives.js';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import {
   Button,
-  Menu,
   IconTrashOutlineRegular,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';

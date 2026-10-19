@@ -1,4 +1,10 @@
+import { createWindowZoomControl, WINDOW_ZOOM_CONTROL_PATH } from './window-zoom/control.js';
+import { APPEARANCE_CONTROL_PATH, createAppearanceControl } from './appearance/control.js';
+import { CloudConnections } from './cloud/connections.js';
+import { createCloudProvider } from './cloud/provider.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
+import { CloudWork } from './cloud/work.js';
+import { createCloudWorkTool } from './cloud/work-tool.js';
 import {
   createTobChannelOperations,
   TOB_CHANNEL_CAPABILITIES,
@@ -74,6 +80,7 @@ import { installOrchestratorFileTools } from './workspaces/orchestrator-file-too
 import { ProtectedExecution } from './credentials/protected-execution.js';
 import { nativeExecutionRoot } from './workspaces/grant-native-tools.js';
 import { createAttachmentStore, type AttachmentStore } from './attachments/store.js';
+import { createMemoryImageHttp, MEMORY_IMAGE_PATH } from './memory/image-http.js';
 import { createMemoryFileHttp, MEMORY_FILE_DOWNLOAD_PATH } from './memory/file-http.js';
 import {
   BOT_ZIP_EXPORT_PATH,
@@ -126,6 +133,7 @@ import { createProviderCredentialHealth } from './models/credential-health.js';
 import { createModelRouteReadiness } from './models/readiness.js';
 import { createBotAvatarHttp, botAvatarUrl, BOT_AVATAR_PATH } from './bots/avatar-http.js';
 import { BOT_BANNER_PATH, createBotBannerHttp } from './bots/banner-http.js';
+import { watchHumanAttention } from './runtime/human-attention-live.js';
 import { createChannelLiveHub, CHANNEL_STREAM_PATH, type ChannelLiveHub } from './channels/live.js';
 import type { ChannelDraftEvent } from './channels/draft.js';
 import { DeveloperModeSkillGate } from './logs/skill.js';
@@ -177,7 +185,11 @@ import {
   approvalTemplateInUse,
   sessionHasFullAccess,
 } from './workspaces/grant-execution.js';
-import { ChannelToolApproval, type ToolAutoApproval } from './workspaces/tool-approval.js';
+import {
+  ChannelToolApproval,
+  registerChannelToolApproval,
+  type ToolAutoApproval,
+} from './workspaces/tool-approval.js';
 import {
   changesApprovalPolicy,
   createApprovalTemplateLibrary,
@@ -247,7 +259,15 @@ const runningRelease = {
   ledgers: installedPackage.ledgers(),
 };
 
-export const inject = ['tools', 'systemPrompt', 'sessions', 'agents', 'agentDefaultModel', 'llm'];
+export const inject = [
+  'tools',
+  'systemPrompt',
+  'sessions',
+  'agents',
+  'agentDefaultModel',
+  'llm',
+  'credentials',
+];
 
 export const PERSONA_SECTION_ORDER = 10400;
 
@@ -369,6 +389,8 @@ export interface BotHarnessCore {
   humanAttentionDecisions: HumanAttentionDecisions;
   grants: WorkspaceGrantStore;
   externalMessaging: OutboundMessaging;
+  cloudConnections?: CloudConnections;
+  cloudWork?: CloudWork;
   toolRules: ToolApprovalRuleStore;
   assignmentAccess: AssignmentAccessStore;
 }
@@ -422,6 +444,7 @@ export function createCore(
     sessionArchive?: () => NativeSessionArchive | undefined;
     autoAcceptGroupInvitations?: () => boolean;
     triageContinuation?: boolean;
+    imCommands?: () => import('./messaging/im-commands.js').ImCommandServices | undefined;
     onOutputCommitted?: (event: PersonaBotOutputCommitted) => void;
     activeQuestionMessageIds?: () => readonly string[];
     activeToolApprovalMessageIds?: () => readonly string[];
@@ -572,6 +595,7 @@ export function createCore(
       for (const slug of slugs) runtime?.resumePendingDigests?.(slug);
     },
     onIngested: (channelId, messageId) => runtime?.admitGroupMessage(channelId, messageId),
+    ...(options.imCommands === undefined ? {} : { imCommands: options.imCommands }),
     recover: operationalDatabase.mode === 'ready',
     isBotActive: (slug) => {
       const bot = registry.get(slug);
@@ -674,7 +698,7 @@ export function createCore(
       if (topics.includes('content-purge')) live?.publishContentPurged();
       if (
         topics.some((topic) =>
-          ['bindings', 'grants', 'bot-schedules', 'content-purge'].includes(topic),
+          ['bindings', 'grants', 'bot-schedules', 'content-purge', 'assignments'].includes(topic),
         )
       )
         live?.publishRosterCommitted();
@@ -704,6 +728,15 @@ export function createCore(
       onChange: (changed) => states.onActivity(() => changed()),
     },
     () => contentPurge.redactions(),
+    (changed) =>
+      watchHumanAttention(
+        operationalDatabase,
+        (notify) =>
+          states.onActivity((event) => {
+            if (event.cause === 'attention-changed') notify();
+          }),
+        changed,
+      ),
   );
   if (operationalDatabase.mode === 'ready')
     for (const bot of registry.list())
@@ -1149,12 +1182,28 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               return {
                 signal: execution.signal,
                 authorize,
-                prepareOperation: async (command, args) =>
-                  (await tobModelOperations(command, args)) ??
-                  (await tobMaintenanceOperations(command, args)) ??
-                  (await tobBotCreationOperations(command, args)) ??
-                  (await tobBotProfileOperations(command, args)) ??
-                  (await tobChannelOperations(command, args)),
+                prepareOperation: async (command, args) => {
+                  const prepared =
+                    (await tobModelOperations(command, args)) ??
+                    (await tobMaintenanceOperations(command, args)) ??
+                    (await tobBotCreationOperations(command, args)) ??
+                    (await tobBotProfileOperations(command, args)) ??
+                    (await tobChannelOperations(command, args));
+                  if (!prepared || !['create', 'group-create'].includes(command)) return prepared;
+                  return {
+                    ...prepared,
+                    run: async (guard, beforeEffect) => {
+                      guard();
+                      core.onboarding.trackCreation(
+                        command,
+                        String(args.operationKey),
+                        actor.session.id,
+                        started,
+                      );
+                      return prepared.run(guard, beforeEffect);
+                    },
+                  };
+                },
                 capabilities: [
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
@@ -1209,6 +1258,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   let userQuestions: ChannelUserQuestions | undefined;
   let toolApproval: ChannelToolApproval | undefined;
   let privateInputs: PrivateInputs | undefined;
+  let imCommandServices: import('./messaging/im-commands.js').ImCommandServices | undefined;
   const core = createCore({
     dshHome,
     triageContinuation: true,
@@ -1265,6 +1315,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     workspaces: () => ctx.get('workspaceRegistry') as unknown as DshWorkspaceLookup | undefined,
     sessionArchive: () =>
       ctx.get('workspaceRegistry') as unknown as NativeSessionArchive | undefined,
+    imCommands: () => imCommandServices,
   });
   publishDraft = (event) => core.live.publishDraft(event);
   ctx.effect(() => () => core.operationalDatabase.close(), 'botharness: operational database');
@@ -1337,6 +1388,58 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     secretMcpStore,
   );
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
+  const cloudConnections = new CloudConnections(
+    attachOperationalModule(core.operationalDatabase, 'messaging'),
+    () => ctx.get('credentials'),
+    undefined,
+    (phase, id) => ctx.logger.info('cloud-connection %j', { phase, id }),
+  );
+  core.cloudConnections = cloudConnections;
+  const cloudWork = new CloudWork(
+    attachOperationalModule(core.operationalDatabase, 'messaging'),
+    cloudConnections,
+    core.externalMessaging.inbound,
+    (slug) => {
+      const bot = core.registry.get(slug);
+      return bot !== undefined && bot.paused !== true;
+    },
+    (phase, requestId) => ctx.logger.info('cloud-work %j', { phase, requestId }),
+  );
+  core.cloudWork = cloudWork;
+  ctx.effect(() => () => cloudWork.close(), 'botharness: cloud work');
+  core.hostTools.add('cloud_work');
+  ctx.effect(
+    () => () => {
+      core.hostTools.delete('cloud_work');
+    },
+    'botharness: cloud work tool name',
+  );
+  ctx.effect(
+    () =>
+      core.contributeBotAgentSetup((agentCtx, agent, info) => {
+        if (info.rootRole === 'orchestrator')
+          agentCtx.tools.register(
+            createCloudWorkTool(
+              cloudWork,
+              info.botSlug,
+              (call) =>
+                call.agent === agent &&
+                ctx.agents.get(agent.id) === agent &&
+                core.ownership.resolve(agent.session.id)?.botSlug === info.botSlug,
+            ),
+          );
+      }),
+    'botharness: cloud work tool',
+  );
+  ctx.effect(() => () => cloudConnections.close(), 'botharness: cloud connections');
+  if (core.operationalDatabase.mode === 'ready')
+    ctx.effect(() =>
+      core.externalMessaging.register(
+        createCloudProvider(cloudConnections, (phase, id, code) =>
+          ctx.logger.info('cloud-messaging %j', { phase, id, code }),
+        ),
+      ),
+    );
   ctx.inject(['dshIm'], (child) => {
     for (const platform of ['feishu', 'slack', 'discord', 'weixin', 'qq'] as const) {
       const provider = createDshImProvider(child.get('dshIm'), platform);
@@ -1551,9 +1654,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const approvedCalls = new Map<symbol, (name: string, args: unknown) => boolean>();
   ctx.effect(() => () => approvedCalls.clear(), 'botharness: one-call approval execution fences');
   ctx.effect(() => () => toolApproval.close(), 'botharness: Channel tool approvals');
-  ctx.on('approval/request', async (request, next) => (await toolApproval.ask(request)) ?? next(), {
-    global: true,
-  });
+  registerChannelToolApproval(ctx, toolApproval);
   ctx.on(
     'tools/pre-execute',
     async (execution, next) => {
@@ -1939,11 +2040,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   });
   const releaseService = createLoadingReleaseService({
     version: () => runningRelease.version,
+    ...(profile === undefined
+      ? {}
+      : { profileId: createHash('sha256').update(profile.dir).digest('hex').slice(0, 24) }),
     identity: () =>
       installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
     ledgers: () => runningRelease.ledgers,
     installer: () => releaseInstaller.current,
     restarter: () => releaseRestarter.current,
+    warn: (message) => ctx.logger.warn(message),
   });
   const tobModelOperations = createTobModelOperations({
     registry: core.registry,
@@ -1962,6 +2067,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     release: releaseService,
   });
   const bridgeMethods = createBridgeMethods({
+    cloudConnections,
+    cloudWork,
     approvalReviewer,
     composerIdentity: () =>
       composerRecoveryIdentity(
@@ -2075,6 +2182,45 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
+  imCommandServices = {
+    botDisplayName: (slug) =>
+      core.registry.get(slug)?.displayName ?? core.registry.getHistorical(slug)?.displayName,
+    plan: async (slug) => {
+      const state = await bridgeMethods.modelPlan({ slug });
+      if (!state.ok) throw new Error(state.error.message);
+      return state.value.plan;
+    },
+    catalog: () => modelCatalog.list(),
+    defaultRoute: () => modelCatalog.defaultRoute?.(),
+    applyModel: async (slug, route, assertCurrent) => {
+      const state = await bridgeMethods.modelPlan({ slug });
+      if (!state.ok) throw new Error(state.error.message);
+      assertCurrent?.();
+      const result = await bridgeMethods.modelPlanCustomize(
+        {
+          slug,
+          expectedRevision: state.value.revision ?? 0,
+          orchestrator: route,
+        },
+        assertCurrent,
+      );
+      if (!result.ok) throw new Error(result.error.message);
+    },
+    stopTurn: async (slug) => {
+      const channel = core.channels.getOrCreateDm(slug);
+      if (channel === undefined) throw new Error('Bot DM is unavailable');
+      const stopped = await bridgeMethods.channelBotStop({
+        channelId: channel.id,
+        botSlug: slug,
+      });
+      if (stopped.ok) return { sessionId: stopped.value.stopped.sessionId };
+      if (stopped.error.code === 'not-working') return undefined;
+      throw new Error(stopped.error.message);
+    },
+    startFreshOrchestrator: (slug, assertCurrent) =>
+      core.runtime.startFreshOrchestrator!(slug, assertCurrent),
+    turnRunning: (slug) => core.runtime.turnRunning!(slug),
+  };
   const tobBotCreationOperations = createTobBotCreationOperations({
     registry: core.registry,
     creations: core.creations,
@@ -2156,6 +2302,34 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       }
     ).connection;
     connectionCtx.effect(() => {
+      const control = createWindowZoomControl(Date.now, (phase, detail) =>
+        ctx.logger.info('window-zoom-control %j', { phase, ...detail }),
+      );
+      const off = connection.fetch.register({
+        path: WINDOW_ZOOM_CONTROL_PATH,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: control.fetch,
+      });
+      return async () => {
+        control.dispose();
+        await off();
+      };
+    }, 'botharness: targeted window zoom delivery');
+    connectionCtx.effect(() => {
+      const control = createAppearanceControl();
+      const off = connection.fetch.register({
+        path: APPEARANCE_CONTROL_PATH,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: control.fetch,
+      });
+      return async () => {
+        control.dispose();
+        await off();
+      };
+    }, 'botharness: explicit Client-local appearance control');
+    connectionCtx.effect(() => {
       return connection.fetch.register({
         path: CHANNEL_STREAM_PATH,
         methods: ['GET'],
@@ -2187,6 +2361,16 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           fetch: createMemoryFileHttp(core.memory),
         }),
       'botharness: current Memory file download',
+    );
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: MEMORY_IMAGE_PATH,
+          methods: ['GET'],
+          requestBody: 'buffered',
+          fetch: createMemoryImageHttp(core.memory),
+        }),
+      'botharness: version-bound Memory PNG preview',
     );
     const attachmentHttp = createAttachmentHttp(
       core.attachments,

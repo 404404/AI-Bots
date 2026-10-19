@@ -1,3 +1,5 @@
+import { isAuthenticatedOwner } from './owner-compat.js';
+import type { CloudManagementInput, CloudManagementResult } from '../cloud/management.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
@@ -11,6 +13,7 @@ import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import { LiveRefused } from '../channels/live-frames.js';
 import type { ChannelJournalPage, ChannelJournalRequest } from '../channels/timeline.js';
 import type { CompanionLiveFrame } from '../companions/live.js';
+import type { CloudWork, CloudWorkInput } from '../cloud/work.js';
 import {
   ChannelLiveRefused,
   LiveUnavailable,
@@ -112,7 +115,11 @@ import type {
   BotScheduleTrigger,
 } from '../schedules/bot-schedules.js';
 import type { BotSourcePolicy } from '../runtime/source-policy.js';
-import type { HumanAttentionCategory, HumanAttentionPage } from '../runtime/human-attention.js';
+import type {
+  HumanAttentionCategory,
+  HumanAttentionPage,
+  HumanAttentionStatus,
+} from '../runtime/human-attention.js';
 import type {
   MemoryAcceptedCommit,
   MemoryAcceptedSnapshot,
@@ -399,8 +406,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
 
   private requirePrivateOwner(): void {
-    const operator = (this.ctx.get('connection') as { operator?: unknown } | undefined)?.operator;
-    if (operator === undefined || this.ctx.invocation?.peer !== operator)
+    if (!isAuthenticatedOwner(this.ctx.invocation?.peer, this.ctx.get('connection')))
       throw new RemoteError(
         'forbidden' as RemoteError['code'],
         'Private input requires the authenticated Owner',
@@ -500,6 +506,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     input: MessagingIdentityInput,
   ): Promise<{ identity: MessagingIdentity }> {
     return unwrapAsync(this.methods.messagingIdentity({ slug, input }));
+  }
+  cloudConnections(input: CloudManagementInput): Promise<CloudManagementResult> {
+    return unwrapAsync(this.methods.cloudConnections(input));
+  }
+  cloudWork(slug: string, input: CloudWorkInput): Promise<Awaited<ReturnType<CloudWork['run']>>> {
+    return unwrapAsync(this.methods.cloudWork({ slug, input }));
   }
   messagingApps(): Promise<MessagingAppsView> {
     return unwrapAsync(this.methods.messagingApps());
@@ -619,6 +631,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
   channelRetry(channelId: string, messageId: string): Promise<{ accepted: true }> {
     return unwrapAsync(this.methods.channelRetry({ channelId, messageId }));
+  }
+  botNewSession(slug: string): Promise<{ started: true }> {
+    return unwrapAsync(this.methods.botNewSession({ slug }));
   }
   channelBotStop(
     channelId: string,
@@ -1284,8 +1299,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
       }),
     );
   }
-  humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
-    return unwrap(this.methods.humanAttentionStatus({}));
+  humanAttentionStatus(messageCounts?: boolean): HumanAttentionStatus {
+    return unwrap(this.methods.humanAttentionStatus({ messageCounts }));
   }
   channelUnreadCounts(): { channels: Array<{ channelId: string; unreadCount: number }> } {
     return unwrap(this.methods.channelUnreadCounts({}));
@@ -1501,7 +1516,16 @@ export class BotharnessBridgeService extends TypertRemoteService {
   memoryFile(
     channelId: string,
     path: string,
-  ): { file?: { path: string; body: string; head: string } } {
+  ): {
+    file?: {
+      path: string;
+      body: string;
+      head: string;
+      binary?: boolean;
+      image?: import('../memory/image.js').MemoryImage;
+      markdown?: import('../memory/markdown.js').MemoryMarkdown;
+    };
+  } {
     return unwrap(this.methods.memoryFile({ channelId, path }));
   }
 
@@ -1703,8 +1727,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.releaseInfo(since === undefined ? {} : { since }));
   }
 
-  async releaseUpdate(): Promise<ReleaseUpdate> {
-    return unwrapAsync(this.methods.releaseUpdate());
+  async releaseUpdate(force?: boolean): Promise<ReleaseUpdate> {
+    return unwrapAsync(this.methods.releaseUpdate({ force }));
   }
 
   async releaseInstall(version: string): Promise<ReleaseInstall> {
@@ -1790,6 +1814,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'failureAlertsRetry',
   'pairingReview',
   'senderAccess',
+  'cloudConnections',
+  'cloudWork',
   'messagingApps',
   'messagingSnapshot',
   'messagingTargets',
@@ -1806,6 +1832,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'onboardingModel',
   'modelPlanInherit',
   'channelRetry',
+  'botNewSession',
   'channelBotStop',
   'modelCatalog',
   'modelPresets',

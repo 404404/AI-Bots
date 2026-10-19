@@ -1,3 +1,4 @@
+import { isChannelNotice } from './channel-notice.js';
 import type { DatabaseSync } from 'node:sqlite';
 import { allBotPreview, assertAllBotPreview, type AllBotPreview } from './all-bot-mention.js';
 import type { AttachmentMigrationResult } from '../attachments/legacy-migration.js';
@@ -21,6 +22,7 @@ import {
   botDmChannelId,
   dmChannelId,
   groupChannelIdBase,
+  isBotDmChannel,
   isChannelMessage,
   isChannelRecord,
   isGroupAvatar,
@@ -424,6 +426,7 @@ export interface ChannelStore {
   messagesAfter(id: string, revision: number): ChannelMessageCommit[] | undefined;
   admissionChanged?(channelId: string, messageId: string): void;
 
+  latestBotActivity?(): ReadonlyMap<string, number>;
   humanMessageCounts?(
     from: string,
     to: string,
@@ -985,6 +988,19 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
         .slice(Math.max(0, end - limit), end)
         .reverse()
         .map((message) => projectReply(message, byId));
+    },
+    latestBotActivity() {
+      const result = new Map<string, number>();
+      for (const channel of this.list()) {
+        if (isBotDmChannel(channel) || channel.deletedAt) continue;
+        for (const message of readValidMessages(channel.id)) {
+          if (message.author.kind !== 'bot' || isChannelNotice(message)) continue;
+          const at = Date.parse(message.at);
+          if (Number.isFinite(at))
+            result.set(message.author.slug, Math.max(result.get(message.author.slug) ?? 0, at));
+        }
+      }
+      return result;
     },
     queryMessages(id, queryOptions) {
       const messages = readValidMessages(id);

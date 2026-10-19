@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import {
   useCallback,
   useId,
@@ -9,7 +10,6 @@ import {
 } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import {
-  Menu,
   IconEllipsisOutlineRegular,
   IconCloseFillRegular,
   IconNewChatOutlineRegular,

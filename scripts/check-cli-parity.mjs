@@ -30,6 +30,7 @@ export function botToolNamesFrom(grantExecutionSource) {
 }
 
 function runner(surface) {
+  if (surface === 'cloud_work') return 'cloud-work';
   if (surface.startsWith('browser_')) return 'browser-tool';
   if (surface.startsWith('computer_')) return 'computer-tool';
   return 'bot-tool';

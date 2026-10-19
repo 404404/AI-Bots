@@ -7,6 +7,7 @@ import type { ConversationSnapshot } from '../src/host/conversation';
 
 const state = vi.hoisted(() => ({
   history: [] as string[],
+  hostId: 'computer_a',
   host: { connection: { status: 'connected' }, roster: { bots: [] as RosterBot[], channels: [] } },
   conversation: {
     status: 'live',
@@ -20,6 +21,7 @@ const state = vi.hoisted(() => ({
   display: { mode: 'streaming', loaded: true },
 }));
 
+vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', () => {}] }));
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
   Stack: { Screen: () => null },
@@ -39,8 +41,9 @@ vi.mock('react-native', async () => {
   return { ...shim, KeyboardAvoidingView: shim.View };
 });
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
 vi.mock('../src/host/host-session', () => ({
-  useHostSession: () => ({ client: undefined, inbox: undefined }),
+  useHostSession: () => ({ client: undefined, inbox: undefined, saved: { hostId: state.hostId } }),
   useHostSnapshot: () => state.host,
   useConversation: () => (state.active ? {} : undefined),
   useChannelConversation: () => undefined,
@@ -125,6 +128,7 @@ let root: Root | undefined;
 let container: HTMLElement | undefined;
 
 beforeEach(() => {
+  state.hostId = 'computer_a';
   state.host.connection.status = 'connected';
   state.conversation.status = 'live';
   state.conversation.messages = [];
@@ -132,6 +136,19 @@ beforeEach(() => {
   state.host.roster.bots = [];
   state.active = false;
   state.display = { mode: 'streaming', loaded: true };
+});
+
+it('refuses a retained route after switching Computers even when its Bot slug collides', async () => {
+  const place: ChatPlace = { kind: 'dm', slug: 'ada' };
+  const view = await render(place);
+  state.hostId = 'computer_b';
+  await act(async () =>
+    root!.render(
+      <ConversationScreen place={place} focus={undefined} expectedHostId="computer_a" />,
+    ),
+  );
+  expect(view.textContent).toContain(t.sourceChanged);
+  expect(view.querySelector('[data-testid="chat-controls"]')).toBeNull();
 });
 
 it('keeps the bottom fade at the message viewport edge beneath the composer controls', async () => {

@@ -614,6 +614,13 @@ export function parseBotSummary(value: unknown): BotSummary | undefined {
   return {
     slug,
     displayName,
+    ...(typeof asRecord(record['tob'])?.['defaultName'] === 'boolean' &&
+    typeof asRecord(record['tob'])?.['defaultAvatar'] === 'boolean'
+      ? { tob: record['tob'] as { defaultName: boolean; defaultAvatar: boolean } }
+      : {}),
+    ...(typeof record['lastActivityAt'] === 'number' && Number.isFinite(record['lastActivityAt'])
+      ? { lastActivityAt: record['lastActivityAt'] }
+      : {}),
     aggregateState: typeof aggregateState === 'string' ? aggregateState : 'idle',
     workspaces: stringArray(record['workspaces']),
     createdAt: typeof createdAt === 'string' ? createdAt : '',
@@ -3583,10 +3590,12 @@ export async function loadHumanAttention(
     throw new Error('Update the Host to search Activity.');
   return parseHumanAttentionPage(value);
 }
-export async function loadHumanAttentionStatus(
-  call: BridgeCall,
-): Promise<{ unreadCount: number; hasAction: boolean }> {
-  const row = asRecord(await unwrap(call, 'humanAttentionStatus', {}));
+export async function loadHumanAttentionStatus(call: BridgeCall): Promise<{
+  unreadCount: number;
+  hasAction: boolean;
+  messageCounts: { replies: number; other: number } | undefined;
+}> {
+  const row = asRecord(await unwrap(call, 'humanAttentionStatus', { messageCounts: true }));
   if (
     row === undefined ||
     !Number.isSafeInteger(row['unreadCount']) ||
@@ -3594,7 +3603,24 @@ export async function loadHumanAttentionStatus(
     typeof row['hasAction'] !== 'boolean'
   )
     throw new Error('invalid Human attention status');
-  return { unreadCount: row['unreadCount'] as number, hasAction: row['hasAction'] };
+  const counts = asRecord(row['messageCounts']);
+  if (
+    row['messageCounts'] !== undefined &&
+    (counts === undefined ||
+      !Number.isSafeInteger(counts['replies']) ||
+      !Number.isSafeInteger(counts['other']) ||
+      (counts['replies'] as number) < 0 ||
+      (counts['other'] as number) < 0 ||
+      (counts['replies'] as number) + (counts['other'] as number) !== row['unreadCount'])
+  )
+    throw new Error('invalid Human attention message counts');
+  return {
+    unreadCount: row['unreadCount'] as number,
+    hasAction: row['hasAction'],
+    messageCounts: counts
+      ? { replies: counts['replies'] as number, other: counts['other'] as number }
+      : undefined,
+  };
 }
 export async function loadChannelUnreadCounts(call: BridgeCall): Promise<Record<string, number>> {
   const channels = asRecord(await unwrap(call, 'channelUnreadCounts', {}))?.['channels'];
@@ -3900,10 +3926,39 @@ export interface MemoryGitGraph {
   hasMore: boolean;
 }
 
+export interface MemoryImage {
+  mime?: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | 'image/svg+xml';
+  source: string;
+  status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
+  revision?: string;
+  size?: number;
+  width?: number;
+  height?: number;
+}
+export interface MemoryImageComparison {
+  before?: MemoryImage;
+  after?: MemoryImage;
+}
+
+export interface MemoryMarkdown {
+  source: string;
+  status: 'ready' | 'missing' | 'unsupported' | 'too-large' | 'stale';
+  revision?: string;
+  body: string;
+}
+export interface MemoryMarkdownComparison {
+  before?: MemoryMarkdown;
+  after?: MemoryMarkdown;
+}
 export interface MemoryGitCommitDiff {
   sha: string;
   subject?: string;
-  files: { path: string; status: string }[];
+  files: {
+    path: string;
+    status: string;
+    images?: MemoryImageComparison;
+    markdown?: MemoryMarkdownComparison;
+  }[];
   diff: string;
 }
 
@@ -3914,6 +3969,8 @@ export interface MemoryWorkingChange {
   status: string;
 }
 export interface MemoryWorkingDiff extends MemoryWorkingChange {
+  images?: MemoryImageComparison;
+  markdown?: MemoryMarkdownComparison;
   diff: string;
   binary: boolean;
 }
@@ -4112,7 +4169,17 @@ export async function loadMemoryFile(
   call: BridgeCall,
   channelId: string,
   path: string,
-): Promise<{ path: string; body: string; head: string; binary?: boolean } | undefined> {
+): Promise<
+  | {
+      path: string;
+      body: string;
+      head: string;
+      binary?: boolean;
+      image?: MemoryImage;
+      markdown?: MemoryMarkdown;
+    }
+  | undefined
+> {
   const response = asRecord(await unwrap(call, 'memoryFile', { channelId, path }));
   if (response?.['file'] === undefined) return undefined;
   const file = asRecord(response?.['file']);
@@ -4124,7 +4191,14 @@ export async function loadMemoryFile(
     throw new Error('invalid Memory file');
   if (file['binary'] !== undefined && typeof file['binary'] !== 'boolean')
     throw new Error('invalid Memory file');
-  return file as { path: string; body: string; head: string; binary?: boolean };
+  return file as {
+    path: string;
+    body: string;
+    head: string;
+    binary?: boolean;
+    image?: MemoryImage;
+    markdown?: MemoryMarkdown;
+  };
 }
 
 export async function loadMemoryHistory(

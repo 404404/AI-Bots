@@ -223,12 +223,16 @@ Handing responsibility to a PersonaBot from a Chat or the Roster. Its Orchestrat
 _Avoid_: direct Session creation, task entity, job entity
 
 **Binding**:
-A PersonaBot's connection to a surface it takes part in — a Channel, a Chat, the sidebar, or a renderer.
+A PersonaBot's connection to a surface it takes part in — a Channel, a Chat, a Panel, or a renderer.
 _Avoid_: integration, connector, channel binding
 
 **Orchestrator Session**:
 The PersonaBot's long-lived dispatch root Session: at most one is active, consuming the Bot Inbox and deciding replies, dispatch, and new Assignment Sessions. Its working directory is always the PersonaBot's Memory Repository; it is the PersonaBot's social voice, not a Human-managed Conversation or an Assignment row. Ordinary Session output remains execution history; only an explicit Channel messaging command authorized from trusted Session ownership and Channel membership speaks to a Human-facing Channel.
 _Avoid_: main agent, brain, supervisor
+
+**Idle Compaction**:
+Host-initiated DSH compaction of an Orchestrator Session after it has been idle (no running turn, no pending Bot Inbox Admission) for part of its model route's estimated prompt-cache lifetime, so the long history is condensed while it can still be read at the cache-hit price. It never starts a Bot turn and never speaks in a Channel.
+_Avoid_: auto-compact, background summary, cache warming
 
 **Developer Mode**:
 A Human-owned Bot-mode preference that reveals diagnostics surfaces (operational log views, verbose states) otherwise hidden by default. It gates Human visibility only — never agent capability: an agent with shell access can always reach the same underlying data, so Developer Mode must never be described or relied upon as a read boundary.
@@ -489,15 +493,15 @@ The Human-confirmed end of a Channel’s active membership and routing while ret
 _Avoid_: Hidden Channel, Content Purge, provider conversation deletion
 
 **Channel section**:
-A user-created, collapsible grouping of Channels in the bot-mode sidebar. Local display arrangement, not part of a Soul.
+A user-created, collapsible grouping of Channels in the Channel list panel. Local display arrangement, not part of a Soul.
 _Avoid_: folder, category, group
 
 **Section order (区块顺序)**:
-The relative order of Channel sections in the bot-mode sidebar: creation order by default, user-arranged afterwards. Ungrouped Channels may occupy top-level positions between sections without becoming sections.
+The relative order of Channel sections in the Channel list panel: creation order by default, user-arranged afterwards. Ungrouped Channels may occupy top-level positions between sections without becoming sections.
 _Avoid_: priority, layout order
 
 **Sort mode (排序模式)**:
-How a sidebar scope orders its rows: `auto` (newest message first), `manual` (the user's frozen order), or `inherit` (follow the global default).
+How the Roster or one Channel section orders its rows: `auto` (newest message first), `manual` (the user's frozen order), or `inherit` (follow the global default).
 _Avoid_: ordering, sort preference, sorter
 
 **未分组 (Ungrouped)**:
@@ -656,8 +660,10 @@ _Avoid_: per-event queue, wake storm, batch (bare)
 The Human's Bot-mode entry for cross-PersonaBot and cross-Channel attention, opening directly into the personal Human Inbox. The page and Dock share inline Tool approval cards; operational statistics are outside this entry (#2026). It summarizes existing facts without becoming another authority for messages, usage, or Session activity.
 _Avoid_: Human Inbox (for the whole entry), dashboard list
 
+The Activity control-rail indicator has an independent browser/Host-local display scope. Hiding or narrowing it does not change the Human Inbox query, actual unread state, or pending Human requests.
+
 **Human Inbox**:
-The personal attention view inside Activity Center: unresolved Human actions, mentions and replies, unread Channel activity, informational updates, and handled history. It references the owning facts without copying Channel content or flattening every Bot Inbox event into Human work.
+The personal attention view inside Activity Center: unresolved Human actions, mentions and replies, unread Channel activity, informational updates, and handled history. It references the owning facts without copying Channel content or flattening every Bot Inbox event into Human work. Human-muted Channels contribute neither message attention (including mentions and replies) nor global unread reminders; their read positions and explicit Human action requests remain intact.
 _Avoid_: notifications, Bot Inbox, dashboard list
 
 **Channel Attention**:
@@ -807,28 +813,8 @@ Managed Restore performed without proving the old profile is deactivated; restor
 _Avoid_: Profile Transfer, clone, ordinary restore
 
 **Roster**:
-The bot-mode sidebar list of PersonaBots and Channels, with their state.
-_Avoid_: dashboard, bot list
-
-**App Sidebar**:
-The left column of the client. Outside Bot mode it is DSH-native; in desktop Bot mode fallback BotHarness replaces it with its own Bot mode sidebar (a DeepSeekBot header whose logo turns into Exit Bot mode on hover, Activity Center, Roster, Bot settings) while DSH still sizes, resizes and collapses the column, and other plugins' left-column contributions are hidden until Bot mode ends (ADR-0203). It is named to distinguish it from the Channel sidebar on the right.
-_Avoid_: left sidebar, main sidebar, navigation
-
-**Channel sidebar**:
-The right-side region of the Bot mode panel, scoped to the currently selected Channel: a group Channel shows its membership entries, and a PersonaBot DM shows that PersonaBot's own entries such as Sessions, Memory and its Bot Inbox. On desktop it shows Channel sidebar tabs; on narrow layouts it is a stack of collapsible entries. Operational configuration is not shown here; it lives in Channel settings. It is not the DSH session-scoped native right column.
-_Avoid_: PersonaBot navigation, right panel, session panel, inspector, workbench
-
-**Channel body**:
-The center region of the Bot mode panel: the selected Channel's header, primary content, and composer. A DM renders its Chat here.
-_Avoid_: main pane, conversation view, chat panel
-
-**Channel sidebar entry**:
-One registered item of a Channel sidebar: a stable id, label, order, scope, and a renderer that may display information, offer controls, or both. On desktop it renders inside a Channel sidebar tab; on narrow layouts it collapses on its own. An entry registered as a settings surface is a Channel settings section instead. An unavailable entry is absent rather than a placeholder.
-_Avoid_: widget, card, tab, destination, Channel section
-
-**Channel sidebar tab**:
-One icon tab of the desktop Channel sidebar, grouping one or more Channel sidebar entries (Sessions holds Sessions and Bot Inbox; Memory holds Memory files and Memory evolution). An entry that names no registered tab is its own tab. A tab with two visible entries splits into top and bottom panes. The Human orders and hides tabs from the + Views menu; those are browser-local presentation preferences.
-_Avoid_: view, page, rail item
+The list of PersonaBots and Channels with their state, presented in the Channel list panel; it is content, not a fixed navigation region.
+_Avoid_: sidebar roster, dashboard, bot list
 
 **Bot mode layout**:
 The desktop Bot mode arrangement of a Global workspace and the active Channel's workspace inside its unique Messages panel. Closing a Global panel or Channel subpanel preserves its saved size proportions; reopening and refreshing restore them against the current workspace dimensions. The Human can move and resize panels within their owning workspace; panels do not form tabs or float outside it. Qualified Web/macOS shells release the native sidebar allocation; narrow layouts and unqualified shells retain their responsive fallback.
@@ -837,19 +823,57 @@ _Avoid_: workbench, panel layout, dock
 The following layout terms describe the agreed target in [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) and ADR-0221. Sessions is delivered in [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049), with Memory files, Memory evolution and Schedules added in [#2067](https://github.com/BotHarness/DeepSeekBot/issues/2067). Browser control and Computer control join the same Bot-only workspace in [#2069](https://github.com/BotHarness/DeepSeekBot/issues/2069). Transient files, Inbox and Members are not yet unified with persisted subpanel layout.
 
 **Global workspace**:
-The outer presentation space of Bot mode, containing the Workspace Control Rail, global Dock panels such as Channel list and Activity Center, and the unique Messages panel. Global panels remain meaningful independently of the active Channel. This is a UI arrangement, not a DSH Workspace, execution environment or permission boundary.
+The outer presentation space of Bot mode, containing the Workspace Control Rail, global Panels such as Channel list and Activity Center, and the unique Messages panel. Global panels remain meaningful independently of the active Channel. This is a UI arrangement, not a DSH Workspace, execution environment or permission boundary.
 _Avoid_: App Sidebar, global Channel, root Channel
 
 **Workspace Control Rail**:
-The unique, nonclosable, full-height control column of the Global workspace. Its top control exits DSB mode, its reorderable switches control global panels and Messages, and Bot Settings sits at the bottom. The grip above Settings appears on hover or keyboard focus and moves the entire rail among outer columns. The rail uses the same rounded surface as other panels. Channel subpanel switches belong in the Messages header; layout preferences belong in Bot Settings.
+The unique, nonclosable, full-height control Panel of the Global workspace. Its top control exits DSB mode, its reorderable switches control global panels and Messages, and Bot Settings sits at the bottom. The grip above Settings appears on hover or keyboard focus and moves the entire rail among outer columns. The rail uses the same rounded surface as other panels. Channel subpanel switches belong in the Messages header; layout preferences belong in Bot Settings.
 _Avoid_: panel control, panel control sidebar, App Sidebar, Channel list
 
-**Dock panel**:
-A movable content unit whose declared presentation scope determines its owning workspace. Its header names the content and exposes its actions; its body presents that content. A panel is a UI Consumer, not the authority for the data it shows. The Workspace Control Rail is a layout control, not a closable Dock panel.
-_Avoid_: widget, view, pane, DSH main panel
+**Panel**:
+An independently identifiable unit of the Bot workspace with a named purpose and scope, whose placement and size belong to its owning workspace. Content Panels present data without owning its authority; the Workspace Control Rail is the special full-height control Panel.
+_Avoid_: Dock panel, widget, view, pane, sidebar, DSH main panel
+
+The following Panel categories name the agreed authoring target from the [Panel plugin design discussion](docs/research/2026-10-19-panel-plugin-design-discussion.md); they do not assert that external authoring or fixed-Bot binding is already implemented.
+
+**Global Panel**:
+A Panel with a purpose independent of the active Channel and without a required binding to one PersonaBot or Channel, such as the Profile-wide Task Kanban.
+_Avoid_: global Channel, all-Bot permission
+
+**Bot-bound Panel**:
+A Panel whose subject is one PersonaBot, such as a Bot's 3D companion. Within Messages it follows the PersonaBot DM and is absent from Group Channels; an explicitly bound Global-workspace instance retains its selected Bot independently of Channel selection.
+_Avoid_: fixed Panel, fixed-position Panel, Bot-only Channel subpanel
+
+**Channel-bound Panel**:
+A Panel whose subject is one Channel and whose use can apply to both PersonaBot DM Channels and Group Channels, such as Channel files. It normally follows the current Channel in the Channel workspace; an explicitly bound instance identifies its selected Channel independently of placement.
+_Avoid_: Bot-bound Panel, DM-only Panel
+
+**Group-channel-bound Panel**:
+A Channel-bound Panel whose use requires a Group Channel, such as group membership. Group-only applicability restricts the eligible Channel, rather than introducing a different binding mechanism.
+_Avoid_: group-member Bot Panel, Group-only permission
+
+**Task**:
+In the Panel Plugin authoring target (ADR-0234, T2 #2223; implementation pending), a Task is a persistent work item shared within one Profile, with stable identity, title, description, status and latest progress managed by Humans and Bots. It is distinct from a Session-local plan or Assignment Session; changing a Task does not itself start execution.
+_Avoid_: Session plan, Assignment Session, automatic execution job
+
+**Panel header**:
+The title and action area of a content Panel, containing its icon, name and Panel-specific actions. It belongs to that Panel wherever the Panel is placed. The content-sized icon-and-name title handle closes the Panel on click and moves it on drag; Channel identity, tabs and action controls are outside that handle. In macOS Desktop, unused header space moves the native window.
+_Avoid_: sidebar tab, Channel header (when referring to the Panel's own title bar)
+
+**Panel content**:
+The area of a content Panel that presents its information and interactions beneath the Panel header, including any empty, loading or error state. An internal split or detail view is a Channel subpanel only when it has its own identity in the owning workspace.
+_Avoid_: Channel body, sidebar entry, main pane
+
+**Panel scope**:
+In the existing layout, the context that determines a Panel's owning workspace and displayed information. The agreed authoring target separates workspace placement from Bot or Channel binding; neither placement, binding nor visibility grants access or changes ownership of the underlying domain data.
+_Avoid_: left/right scope, sidebar scope
+
+**Channel list panel**:
+The global content Panel containing the Roster and its search, list options and creation actions; selecting an item chooses the active Channel. Viewing a PersonaBot's profile from this Panel opens the corresponding Profile view in the Messages panel and opens that Panel if it was closed.
+_Avoid_: App Sidebar, Bot sidebar, left sidebar, Roster panel
 
 **Messages panel**:
-The unique outer Dock panel that hosts the active Channel workspace. Its header identifies the Channel and controls available Channel subpanels. Right-clicking the header manages which subpanel switches appear, using an icon, label and trailing checkbox; hiding a switch also closes its subpanel. There is no separate management button. Hiding Messages hides the entire Channel workspace while preserving its child visibility and geometry preferences; it does not stop execution or revoke access.
+The unique outer Panel that hosts the active Channel workspace. Its header identifies the Channel and controls available Channel subpanels. Right-clicking the header manages which subpanel switches appear, using an icon, label and trailing checkbox; hiding a switch also closes its subpanel. There is no separate management button. Hiding Messages hides the entire Channel workspace while preserving its child visibility and geometry preferences; it does not stop execution or revoke access.
 _Avoid_: Channel body, chat sidebar, message list (when referring to the whole panel)
 
 **Channel workspace**:
@@ -857,23 +881,27 @@ The inner presentation space owned by Messages for the active Channel, containin
 _Avoid_: Channel sidebar, nested global workspace, DSH Workspace
 
 **Channel subpanel**:
-A Dock panel within a Channel workspace, opened from the Messages header and visible only while its parent is visible. Availability follows the active Channel and existing access checks. Sessions applies to both PersonaBot DMs and Groups; members applies to Groups. Memory files, Memory evolution, Schedules, Browser control, Computer control and PersonaBot Profile are Bot-only surfaces and have no entry in Group Channels, even when Sessions is explicitly inspecting a member Bot. Group Profile remains available. Showing or hiding a subpanel changes presentation, not execution or permission.
+A Panel within a Channel workspace, opened from the Messages header and visible only while its parent is visible. Availability follows the active Channel and existing access checks. Sessions applies to both PersonaBot DMs and Groups; members applies to Groups. Memory files, Memory evolution, Schedules, Browser control, Computer control and PersonaBot Profile are Bot-only surfaces and have no entry in Group Channels, even when Sessions is explicitly inspecting a member Bot. Group Profile remains available. Showing or hiding a subpanel changes presentation, not execution or permission.
 _Avoid_: Channel sidebar entry, global panel (for Channel-bound content), tab
 
+**Legacy layout terms**:
+App Sidebar, Channel body, Channel sidebar, Channel sidebar entry and Channel sidebar tab are retired names for the former fixed-region layout. Use Workspace Control Rail and Channel list panel for the former App Sidebar roles, Messages panel for Channel body, and each named Channel subpanel or internal view for former Channel sidebar content; settings content is a Channel settings section.
+_Avoid_: treating historical sidebar names as current Panel categories
+
 **Channel settings**:
-The per-Channel modal for operational configuration of the current Channel: in a PersonaBot DM its Wake Policy, external identities and External connectors; in a group its Wake Policy, External connectors and Group management. It opens from the Channel sidebar gear menu and the Channel header's "···" menu, and is organised into Channel settings sections.
+The per-Channel modal for operational configuration such as Wake Policy, external identities, External connectors and Group management, organised into Channel settings sections. It is available through the Channel menu in the Messages panel on desktop; narrow layouts use the Channel list menu.
 _Avoid_: Bot Settings, Profile settings, sidebar settings
 
 **Channel settings section**:
-One section of Channel settings: a Channel sidebar entry registered with the settings surface, so it never renders in the Channel sidebar itself.
+One coherent group of per-Channel configuration inside Channel settings; it is part of that modal, not a workspace Panel.
 _Avoid_: settings tab, settings entry
 
 **PersonaBot Profile**:
-The per-PersonaBot surface for its shareable identity and its read-only activity: the identity travels with the PersonaBot when it is shared (Display name, Avatar, Profile Banner, Bot Tags, Bot Bio), and the activity is token usage derived from its owned Sessions, event activity from its Bot Inbox Admissions, and Memory commit activity. Operational configuration such as its Model Plan, Wake Policy, external identities, Bridges and approvals is never part of it; that lives in the Channel sidebar and Channel settings. View profile in the DM header or Channel list opens the Profile view directly in the Messages panel; the Channel-list entry opens Messages if it is closed.
+The per-PersonaBot surface for its shareable identity and its read-only activity: the identity travels with the PersonaBot when it is shared (Display name, Avatar, Profile Banner, Bot Tags, Bot Bio), and the activity is token usage derived from its owned Sessions, event activity from its Bot Inbox Admissions, and Memory commit activity. Operational configuration such as its Model Plan, Wake Policy, external identities, Bridges and approvals is never part of it; that belongs in Channel settings or the relevant operational Panel. View profile in the DM header or Channel list opens the Profile view directly in the Messages panel; the Channel-list entry opens Messages if it is closed.
 _Avoid_: account, dashboard, bot page, profile (bare), settings page
 
 **Group Profile**:
-The per-Group Channel surface for the Group's name and avatar and its activity from committed Channel messages. It shows message counts by day and by author, distinguishing Human and PersonaBot authors; Group configuration such as member Wake Policy and Bridges lives in Channel settings. The Group header opens its Channel-body Profile view directly; DM Channels have only their PersonaBot Profile.
+The per-Group Channel surface for the Group's name and avatar and its activity from committed Channel messages. It shows message counts by day and by author, distinguishing Human and PersonaBot authors; Group configuration such as member Wake Policy and Bridges lives in Channel settings. The Group header opens its Profile view in the Messages panel directly; DM Channels have only their PersonaBot Profile.
 _Avoid_: PersonaBot token usage, Group management sidebar, DM Channel Profile
 
 **Approver**:
@@ -889,24 +917,24 @@ Retired presentation from ADR-0085: the compact avatar-anchored preview and its 
 _Avoid_: menu, dropdown, tooltip, card stack
 
 **Profile view**:
-The expanded form of a PersonaBot or Group Profile. It occupies the Channel body and temporarily replaces the Chat's history and composer; leaving it returns the Channel body to the Chat, and it changes nothing in the Channel sidebar.
-_Avoid_: panel, page, tab, inspector, settings
+The detail view of a PersonaBot or Group Profile inside the Messages panel, temporarily replacing the conversation's history and composer. Returning to Chat restores those contents without changing other Panels.
+_Avoid_: standalone Panel, workspace tab, inspector, settings
 
 **Profile Card**:
 One registered component of a PersonaBot or Group Profile: a stable id, label, order, scope, visibility rule, and compact and full renderers that may display information, offer controls, or both. Available cards appear in the Profile view; they are not pinned to a separate preview.
-_Avoid_: widget, tile, gadget, Channel sidebar entry
+_Avoid_: widget, tile, gadget, Panel
 
 **Client bridge**:
 The RPC surface through which the Web Client reads PersonaBots and invokes separate mutation commands without sharing Host services.
 _Avoid_: remote, IPC, gateway
 
 **Bot Settings**:
-The BotHarness-owned modal (Bot 设置) for profile-wide BotHarness configuration, organised into Bot Settings sections in its own sidebar. Configuration of one PersonaBot or one Channel never lives here; that is Channel settings or a Channel sidebar entry. DSH's own settings modal is called DSH settings; its Bot 设置 item only points into Bot Settings, while App credentials remain in DSH settings.
+The BotHarness-owned modal (Bot 设置) for profile-wide BotHarness configuration, organised into Bot Settings sections in its own sidebar. Configuration of one PersonaBot or one Channel never lives here; that belongs in Channel settings or the relevant operational Panel. DSH's own settings modal is called DSH settings; its Bot 设置 item only points into Bot Settings, while App credentials remain in DSH settings.
 _Avoid_: Settings UI, settings page, preferences, admin panel, dashboard, web console
 
 **Bot Settings section**:
 One sidebar destination of Bot Settings: a stable id, label, order, and a renderer for one coherent group of profile-wide settings.
-_Avoid_: tab, page, settings item, Channel sidebar entry
+_Avoid_: tab, page, settings item, Panel
 
 **Access policy**:
 The per-PersonaBot list of users and chats allowed to reach it.

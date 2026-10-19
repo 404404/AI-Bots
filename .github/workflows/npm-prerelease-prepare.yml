@@ -6,6 +6,7 @@ on:
       - .github/workflows/npm-prerelease-*.yml
       - .github/workflows/npm-release.yml
       - scripts/npm-prerelease.mjs
+      - scripts/published-product-provider.json
       - scripts/product-artifacts.mjs
       - scripts/dev-im-provider.mjs
       - scripts/product-provider/**

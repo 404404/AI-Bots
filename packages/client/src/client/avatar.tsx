@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { buildCss, presetForState, resolveOptions } from '@botharness/botui-core';
 import { attentionCount } from './activity-attention.js';
+import { BotIcon } from './bot-icon.js';
+import { useTobBot, useTobDefaultIcon } from './tob-presentation.js';
 
 import type {
   PersonaBotAttention,
@@ -42,6 +44,7 @@ export type PersonaBotActivityEffect =
 
 export interface PersonaBotAvatarProps {
   personaBotId: string;
+  preview?: boolean | undefined;
   name: string;
   size: number;
   src?: string | undefined;
@@ -340,11 +343,12 @@ const EFFECT_ACTIVITY: Record<string, Pick<PersonaBotToolActivity, 'toolKind'>> 
 
 export function PersonaBotAvatar({
   personaBotId,
-  name,
+  preview = false,
+  name: inputName,
   size,
-  src,
-  appearance,
-  avatarSeed,
+  src: inputSrc,
+  appearance: inputAppearance,
+  avatarSeed: inputAvatarSeed,
   state = 'idle',
   effect,
   activity,
@@ -359,6 +363,14 @@ export function PersonaBotAvatar({
   nativeTitle = true,
   t = zhTranslate,
 }: PersonaBotAvatarProps): ReactElement {
+  const systemIcon = useTobDefaultIcon(personaBotId);
+  const currentTob = useTobBot(personaBotId);
+  const tobIcon = preview ? undefined : systemIcon;
+  const tob = preview ? undefined : currentTob;
+  const name = tob?.displayName ?? inputName;
+  const src = tob ? tob.avatar : inputSrc;
+  const appearance = tob ? tob.appearance : inputAppearance;
+  const avatarSeed = tob ? tob.avatarSeed : inputAvatarSeed;
   const resolvedEffect =
     effect ?? (state === 'working' ? activity?.effect : undefined) ?? defaultActivityEffect(state);
   const summary = personaBotPresentationSummary(state, activity, attention, t);
@@ -371,7 +383,7 @@ export function PersonaBotAvatar({
         : undefined,
     [seeded, name, personaBotId, avatarSeed],
   );
-  const mediaKind = composed ? 'composed' : seeded ? 'seeded' : 'image';
+  const mediaKind = tobIcon ? 'system' : composed ? 'composed' : seeded ? 'seeded' : 'image';
   const active = !still && (state === 'thinking' || state === 'working');
   const classes = ['bh-persona-avatar', className].filter(Boolean).join(' ');
   const anchorMount = useMountedResource<HTMLSpanElement>(
@@ -397,7 +409,9 @@ export function PersonaBotAvatar({
       role="img"
       aria-label={t('avatar.label', { name, activity: summary })}
     >
-      {composed || seededRecipe ? (
+      {tobIcon ? (
+        <BotIcon icon={tobIcon} size={size} />
+      ) : composed || seededRecipe ? (
         <IllustratedAvatar
           personaBotId={personaBotId}
           recipe={composed ? appearance.recipe : seededRecipe!}

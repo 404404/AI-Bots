@@ -126,6 +126,7 @@ const NO_INSTALL = { installable: false, install: { phase: 'idle' as const } };
 
 function stubActions(): BridgeActions {
   return {
+    humanIdentity: vi.fn(),
     tobHome: vi.fn(),
     sendHome: vi.fn(),
     channelHistory: vi.fn(),

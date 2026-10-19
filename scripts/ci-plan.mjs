@@ -37,6 +37,8 @@ export const RULES = [
   full('tsdown*.config.ts', 'Bundle configs'),
   full('scripts/stylex-plugin.mjs', 'StyleX transform used by every test'),
   full(WORKFLOW, 'The verify workflow itself'),
+  full('.github/workflows/npm-release.yml', 'Release verification and package gates'),
+  full('scripts/published-product-provider.json', 'Published Provider reuse qualification'),
   full('scripts/ci-plan.mjs', 'This test plan'),
   related(
     'packages/core/src/**',
@@ -44,12 +46,20 @@ export const RULES = [
     true,
   ),
   related('packages/*/src/**', 'Package source'),
+  full(
+    'packages/core/test/fixtures/memory-images/**',
+    'Binary image fixtures are loaded dynamically by Host, CLI and mobile tests',
+  ),
   related('packages/*/test/**', 'Package tests and helpers'),
   related('packages/*/lib/**', 'Committed client bundles read by stylesheet tests'),
   related('packages/*/extension/**', 'Browser extension sources'),
   related('packages/*/profile-extension/**', 'Browser profile extension sources'),
   related('packages/*/assets/**', 'Package assets'),
   related('packages/*/migrations/**', 'D1 migrations read by worker test harnesses'),
+  none(
+    'packages/client/appearance-palette.LICENSE',
+    'License notice for the scoped upstream palette',
+  ),
   related('packages/*/scripts/**', 'Package scripts'),
   related('packages/*/*.yml', 'Product patches'),
   related('packages/*/wrangler.jsonc', 'Worker configs'),
@@ -61,10 +71,12 @@ export const RULES = [
   related('apps/docs/**', 'Docs site', true),
   none('apps/presentations/**', 'Slides embedded in the docs site', true),
   related('apps/mobile/{app,src,test,scripts}/**', 'Mobile app source, tests and scripts'),
-  related('apps/mobile/{app.json,eas.json,metro.config.js}', 'Mobile app config'),
+  none('apps/mobile/modules/**', 'Local Expo modules, checked by Android native unit tests'),
+  related('apps/mobile/{app.json,app.config.js,eas.json,metro.config.js}', 'Mobile app config'),
   related('apps/mobile/locales/**', 'Translated iOS permission prompts'),
   related('apps/mobile/assets/**', 'Mobile app icons and bundled images'),
   none('apps/mobile/.maestro/**', 'Maestro flows, run on a Mac simulator'),
+  none('apps/mobile/store/**', 'Store listing answers, entered in the store consoles'),
   none(
     'apps/mobile/{README.md,AGENTS.md,CLAUDE.md,DESIGN.md,OVERLAYS.md,OVERLAYS.zh.md,.gitignore}',
     'Mobile app prose, agent rules and ignores',
@@ -453,6 +465,15 @@ export async function check(root = ROOT) {
   return problems;
 }
 
+export function androidNativeTests(tests, changes) {
+  return (
+    tests === 'full' ||
+    changes.some((change) =>
+      [change.path, change.previous].some((path) => path?.startsWith('apps/mobile/modules/')),
+    )
+  );
+}
+
 function githubPlan(changesFile) {
   const event = process.env.GITHUB_EVENT_NAME;
   const payload = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
@@ -465,7 +486,7 @@ function githubPlan(changesFile) {
   const result = plan({ event, labels, changes, truncated: changedCount > changes.length, index });
   appendFileSync(
     process.env.GITHUB_OUTPUT,
-    `tests=${result.tests}\ndocs-site=${result.docsSite}\nrelated=${JSON.stringify(result.related)}\n`,
+    `tests=${result.tests}\ndocs-site=${result.docsSite}\nandroid-native=${androidNativeTests(result.tests, changes)}\nrelated=${JSON.stringify(result.related)}\n`,
   );
   const listed = result.related.map((file) => `- \`${file}\``).join('\n');
   appendFileSync(

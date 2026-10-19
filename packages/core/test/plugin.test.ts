@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { Context } from '@deepseek-ai/cordis';
+import { credentialRef } from '@deepseek-ai/dsh-credentials';
+import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local';
 import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -64,6 +66,34 @@ function createStubContext(): { ctx: Context; stubs: Stubs } {
 }
 
 describe('plugin entry', () => {
+  it('waits for the native credential Provider before starting a restored runtime Consumer', async () => {
+    const { ctx } = createStubContext();
+    ctx.provide('agentDefaultModel', {} as never);
+    ctx.provide('llm', {} as never);
+    vi.stubEnv('BH_SYNTHETIC_RESTART_KEY', 'synthetic-test-only');
+    const checks: boolean[] = [];
+    const consumer = ctx.plugin({
+      name: 'restored-runtime-readiness-probe',
+      inject,
+      async apply(c: Context) {
+        const credentials = c.get('credentials');
+        checks.push(
+          credentials !== undefined &&
+            (await credentials.describe(credentialRef('BH_SYNTHETIC_RESTART_KEY'))).configured,
+        );
+      },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(checks).toEqual([]);
+    const provider = ctx.plugin(LocalCredentialProvider, {
+      path: join(process.env['DSH_HOME']!, '.credentials.yaml'),
+      watch: false,
+    });
+    await provider.await();
+    await consumer.await();
+    expect(checks).toEqual([true]);
+  });
+
   it('declares its identity', () => {
     expect(name).toBe('botharness-core');
     expect(inject).toEqual([
@@ -73,6 +103,7 @@ describe('plugin entry', () => {
       'agents',
       'agentDefaultModel',
       'llm',
+      'credentials',
     ]);
   });
 
@@ -357,6 +388,8 @@ describe('plugin entry', () => {
       expect(core?.registry).toBeDefined();
       expect(core?.memory).toBeDefined();
       expect(core?.channels).toBeDefined();
+      expect(core?.cloudConnections).toBeDefined();
+      expect(() => core?.cloudConnections?.list()).toThrow(/recovery mode/);
       expect(() =>
         core?.ownership.claim({
           sessionId: 'session-1',
@@ -430,6 +463,8 @@ describe('plugin entry', () => {
       'failureAlertsRetry',
       'pairingReview',
       'senderAccess',
+      'cloudConnections',
+      'cloudWork',
       'messagingApps',
       'messagingSnapshot',
       'messagingTargets',
@@ -446,6 +481,7 @@ describe('plugin entry', () => {
       'onboardingModel',
       'modelPlanInherit',
       'channelRetry',
+      'botNewSession',
       'channelBotStop',
       'modelCatalog',
       'modelPresets',

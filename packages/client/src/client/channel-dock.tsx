@@ -1,3 +1,9 @@
+import { mountWorkspaceChrome, updateWorkspaceChrome } from './workspace-chrome.js';
+import { AppearancePanelHeader } from './appearance-panel-header.js';
+import { AppearanceContext } from './appearance-context.js';
+import { PanelAppearanceSettings } from './appearance-panel-settings.js';
+import { panelTargetId } from './appearance-panels.js';
+import { Menu } from './appearance-primitives.js';
 import {
   legacyChannelSplit,
   MESSAGE_LEAF,
@@ -30,7 +36,7 @@ import {
 } from 'react';
 
 import * as stylex from '@stylexjs/stylex';
-import { Menu, Tooltip, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Tooltip, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
 import {
   DockviewReact,
   type DockviewApi,
@@ -54,6 +60,7 @@ import {
   pruneChannelDock,
   dockPanelGap,
   readChannelDock,
+  restoreDockVisibility,
   resolveDefaultPosition,
   resolveDockPosition,
   writeChannelDock,
@@ -101,7 +108,6 @@ const styles = stylex.create({
   panel: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
   breadcrumb: { display: 'flex', alignItems: 'center', gap: space.x2, minWidth: 0 },
   channelName: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
-  messageLabel: { flexShrink: 0 },
   breadcrumbIcon: { display: 'inline-flex', alignItems: 'center', flexShrink: 0 },
   actions: { display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: space.x1 },
 });
@@ -310,26 +316,41 @@ function ChannelMessageContent(): ReactElement {
             aria-label={detailLabel}
             style={{ width: `${members.ratio * 100}%` }}
           >
-            <PanelHeader
+            <AppearancePanelHeader
+              id={filesOpen ? 'generated-files' : detailEntryId}
               label={detailLabel}
-              badge={
-                !filesOpen && DetailBadge && detailProps ? (
-                  <DetailBadge {...detailProps} />
-                ) : undefined
-              }
-              action={
-                <>
-                  {!filesOpen && DetailActions && detailProps && <DetailActions {...detailProps} />}
-                  <IconButton
-                    aria-label={dock.t('dock.close', { label: detailLabel })}
-                    onClick={closeDetail}
-                  >
-                    <ChannelSidebarIcon name="x" />
-                  </IconButton>
-                </>
-              }
-            />
-            {filesOpen ? dock.files?.content : <ChannelEntryContent entryId={detailEntryId} />}
+              t={dock.t}
+            >
+              <PanelHeader
+                label={detailLabel}
+                onHide={closeDetail}
+                hideLabel={dock.t('dock.close', { label: detailLabel })}
+                badge={
+                  !filesOpen && DetailBadge && detailProps ? (
+                    <DetailBadge {...detailProps} />
+                  ) : undefined
+                }
+                action={
+                  <>
+                    {!filesOpen && DetailActions && detailProps && (
+                      <DetailActions {...detailProps} />
+                    )}
+                    <IconButton
+                      aria-label={dock.t('dock.close', { label: detailLabel })}
+                      onClick={closeDetail}
+                    >
+                      <ChannelSidebarIcon name="x" />
+                    </IconButton>
+                  </>
+                }
+              />
+            </AppearancePanelHeader>
+            <div
+              className="bh-channel-subpanel-body"
+              data-appearance-body={filesOpen ? 'generated-files' : detailEntryId}
+            >
+              {filesOpen ? dock.files?.content : <ChannelEntryContent entryId={detailEntryId} />}
+            </div>
           </aside>
         </>
       )}
@@ -394,6 +415,8 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
 }
 
 function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; panelId: string }) {
+  const appearance = useContext(AppearanceContext);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const dock = useDock();
   const panel = entryId === undefined ? undefined : dock.panels.get(entryId);
   const entry = panel?.entry;
@@ -401,6 +424,12 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
   const contextMenu = usePanelMenu({
     items: panel
       ? [
+          ...(appearance
+            ? [
+                { id: 'appearance', label: dock.t('appearance.panelMenu') },
+                { type: 'separator' as const, id: 'appearance-separator' },
+              ]
+            : []),
           {
             id: 'close',
             label: dock.t('dock.close', { label: panel.title }),
@@ -448,7 +477,8 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
         ]
       : [],
     onSelect: (id) => {
-      if (id === 'close') dock.close(panelId);
+      if (id === 'appearance') setAppearanceOpen(true);
+      else if (id === 'close') dock.close(panelId);
       else if (id.startsWith('control:')) {
         const child = workspaceState(dock, id.slice('control:'.length));
         if (child)
@@ -480,119 +510,143 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
     panel.scope === 'global' || dock.channel !== undefined ? panel.headerAction : undefined;
   const closeLabel = dock.t('dock.close', { label: panel.title });
   return (
-    <div className="bh-dock-header" data-dock-header={entryId} {...contextMenu.triggerProps}>
-      {contextMenu.menu}
-      <PanelHeader
-        icon={<ChannelSidebarIcon name={panel.icon} />}
-        label={
-          entryId === CHANNEL_BODY_PANEL && dock.header ? (
-            <span {...stylex.props(styles.breadcrumb)}>
-              <span {...stylex.props(styles.messageLabel)}>{panel.title}</span>
-              <span aria-hidden="true" {...stylex.props(styles.breadcrumbIcon)}>
-                <ChannelSidebarIcon name="chevron-right" />
-              </span>
-              {dock.header.icon !== undefined && (
-                <span
-                  aria-hidden="true"
-                  data-channel-header-icon=""
-                  {...stylex.props(styles.breadcrumbIcon)}
-                >
-                  {dock.header.icon}
+    <>
+      {appearanceOpen && appearance && (
+        <PanelAppearanceSettings
+          owner={appearance}
+          id={panelTargetId(entryId)}
+          label={panel.title}
+          t={dock.t}
+          onClose={() => setAppearanceOpen(false)}
+        />
+      )}
+      <div
+        className="bh-dock-header"
+        data-dock-header={entryId}
+        data-window-drag
+        onMouseDown={(event) => {
+          if (!(event.target as Element).closest('[data-panel-hide]')) event.stopPropagation();
+        }}
+        {...contextMenu.triggerProps}
+      >
+        {contextMenu.menu}
+        <PanelHeader
+          onHide={() => {
+            dock.close(panelId);
+            panel.onTitleHide?.();
+          }}
+          hideLabel={closeLabel}
+          icon={<ChannelSidebarIcon name={panel.icon} />}
+          label={HeaderTabs === undefined ? panel.title : (entry?.headerLabel ?? panel.title)}
+          context={
+            entryId === CHANNEL_BODY_PANEL && dock.header ? (
+              <span {...stylex.props(styles.breadcrumb)}>
+                <span aria-hidden="true" {...stylex.props(styles.breadcrumbIcon)}>
+                  <ChannelSidebarIcon name="chevron-right" />
                 </span>
-              )}
-              <span title={dock.header.title} {...stylex.props(styles.channelName)}>
-                {dock.header.title}
+                {dock.header.icon !== undefined && (
+                  <span
+                    aria-hidden="true"
+                    data-channel-header-icon=""
+                    {...stylex.props(styles.breadcrumbIcon)}
+                  >
+                    {dock.header.icon}
+                  </span>
+                )}
+                <span title={dock.header.title} {...stylex.props(styles.channelName)}>
+                  {dock.header.title}
+                </span>
               </span>
-            </span>
-          ) : HeaderTabs === undefined ? (
-            panel.title
-          ) : (
-            (entry?.headerLabel ?? panel.title)
-          )
-        }
-        badge={Badge === undefined || props === undefined ? undefined : <Badge {...props} />}
-        tabs={
-          HeaderTabs === undefined || props === undefined ? undefined : <HeaderTabs {...props} />
-        }
-        action={
-          <span
-            data-dock-actions=""
-            {...stylex.props(styles.actions)}
-            onPointerDown={(event) => event.stopPropagation()}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            {entryId === CHANNEL_BODY_PANEL &&
-              CHANNEL_WORKSPACE_PANELS.map((id) =>
-                workspaceState(dock, id) &&
-                dock.panels.has(id) &&
-                (id === 'sessions' || (dock.channel?.type === 'dm' && !!dock.channel.botSlug)) ? (
-                  <SubpanelControl key={id} id={id} />
-                ) : null,
+            ) : undefined
+          }
+          badge={Badge === undefined || props === undefined ? undefined : <Badge {...props} />}
+          tabs={
+            HeaderTabs === undefined || props === undefined ? undefined : <HeaderTabs {...props} />
+          }
+          action={
+            <span
+              data-dock-actions=""
+              {...stylex.props(styles.actions)}
+              onPointerDown={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              {entryId === CHANNEL_BODY_PANEL &&
+                CHANNEL_WORKSPACE_PANELS.map((id) =>
+                  workspaceState(dock, id) &&
+                  dock.panels.has(id) &&
+                  (id === 'sessions' || (dock.channel?.type === 'dm' && !!dock.channel.botSlug)) ? (
+                    <SubpanelControl key={id} id={id} />
+                  ) : null,
+                )}
+              {entryId === CHANNEL_BODY_PANEL && dock.channel && dock.files && (
+                <Tooltip label={dock.t('generatedFiles.title')} side="bottom" portal delayMs={500}>
+                  <IconButton
+                    aria-label={dock.t('generatedFiles.title')}
+                    aria-expanded={dock.files.open}
+                    onClick={() => {
+                      if (!dock.files?.open) {
+                        dock.members?.setOpen(false);
+                        dock.inbox?.setOpen(false);
+                      }
+                      dock.files?.setOpen(!dock.files.open);
+                    }}
+                  >
+                    <ChannelSidebarIcon name="file" />
+                  </IconButton>
+                </Tooltip>
               )}
-            {entryId === CHANNEL_BODY_PANEL && dock.channel && dock.files && (
-              <Tooltip label={dock.t('generatedFiles.title')} side="bottom" delayMs={500}>
-                <IconButton
-                  aria-label={dock.t('generatedFiles.title')}
-                  aria-expanded={dock.files.open}
-                  onClick={() => {
-                    if (!dock.files?.open) {
-                      dock.members?.setOpen(false);
-                      dock.inbox?.setOpen(false);
-                    }
-                    dock.files?.setOpen(!dock.files.open);
-                  }}
-                >
-                  <ChannelSidebarIcon name="file" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {entryId === CHANNEL_BODY_PANEL && dock.channel?.type === 'dm' && dock.inbox && (
-              <Tooltip label={dock.t('entry.botInbox')} side="bottom" delayMs={500}>
-                <IconButton
-                  aria-label={dock.t('entry.botInbox')}
-                  aria-expanded={dock.inbox.open}
-                  onClick={() => {
-                    if (!dock.inbox?.open) dock.files?.setOpen(false);
-                    dock.inbox?.setOpen(!dock.inbox.open);
-                  }}
-                >
-                  <ChannelSidebarIcon name="inbox" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {entryId === CHANNEL_BODY_PANEL && dock.channel?.type === 'group' && dock.members && (
-              <IconButton
-                aria-label={dock.t('entry.members')}
-                aria-pressed={dock.members.open}
-                onClick={() => dock.members?.setOpen(!dock.members.open)}
-              >
-                <ChannelSidebarIcon name="users" />
-              </IconButton>
-            )}
-            {entryId === CHANNEL_BODY_PANEL && dock.header?.actions}
-            {HeaderAction === undefined || props === undefined ? null : <HeaderAction {...props} />}
-            {PanelAction && (
-              <PanelAction channel={panel.scope === 'channel' ? dock.channel : undefined} />
-            )}
-            {entryId === WORKSPACE_CHANNELS && (
-              <span className="bh-workspace-channel-actions" ref={dock.setChannelsHeader} />
-            )}
-            {!dock.rail && (
-              <Tooltip label={closeLabel} side="bottom" delayMs={500}>
-                <IconButton
-                  tone="subtle"
-                  aria-label={closeLabel}
-                  data-dock-close={entryId}
-                  onClick={() => dock.close(panelId)}
-                >
-                  <ChannelSidebarIcon name="x" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </span>
-        }
-      />
-    </div>
+              {entryId === CHANNEL_BODY_PANEL && dock.channel?.type === 'dm' && dock.inbox && (
+                <Tooltip label={dock.t('entry.botInbox')} side="bottom" portal delayMs={500}>
+                  <IconButton
+                    aria-label={dock.t('entry.botInbox')}
+                    aria-expanded={dock.inbox.open}
+                    onClick={() => {
+                      if (!dock.inbox?.open) dock.files?.setOpen(false);
+                      dock.inbox?.setOpen(!dock.inbox.open);
+                    }}
+                  >
+                    <ChannelSidebarIcon name="inbox" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {entryId === CHANNEL_BODY_PANEL && dock.channel?.type === 'group' && dock.members && (
+                <Tooltip label={dock.t('entry.members')} side="bottom" portal delayMs={500}>
+                  <IconButton
+                    aria-label={dock.t('entry.members')}
+                    aria-pressed={dock.members.open}
+                    onClick={() => dock.members?.setOpen(!dock.members.open)}
+                  >
+                    <ChannelSidebarIcon name="users" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {entryId === CHANNEL_BODY_PANEL && dock.header?.actions}
+              {HeaderAction === undefined || props === undefined ? null : (
+                <HeaderAction {...props} />
+              )}
+              {PanelAction && (
+                <PanelAction channel={panel.scope === 'channel' ? dock.channel : undefined} />
+              )}
+              {entryId === WORKSPACE_CHANNELS && (
+                <span className="bh-workspace-channel-actions" ref={dock.setChannelsHeader} />
+              )}
+              {!dock.rail && (
+                <Tooltip label={closeLabel} side="bottom" portal delayMs={500}>
+                  <IconButton
+                    tone="subtle"
+                    aria-label={closeLabel}
+                    data-dock-close={entryId}
+                    onClick={() => dock.close(panelId)}
+                  >
+                    <ChannelSidebarIcon name="x" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </span>
+          }
+        />
+      </div>
+    </>
   );
 }
 
@@ -670,8 +724,9 @@ function restoreEntryPanel(
     title: panel.title,
     ...(remembered?.size
       ? {
-          initialWidth: Math.round(remembered.size.width * api.width),
-          initialHeight: Math.round(remembered.size.height * api.height),
+          ...(remembered.direction === 'left' || remembered.direction === 'right'
+            ? { initialWidth: Math.round(remembered.size.width * api.width) }
+            : { initialHeight: Math.round(remembered.size.height * api.height) }),
         }
       : {}),
     params: { entryId: panel.id },
@@ -683,8 +738,9 @@ function restoreEntryPanel(
   if (remembered?.size) {
     const offset = dockPanelGap(api.toJSON(), panel.id, gap);
     added.group.api.setSize({
-      width: remembered.size.width * api.width + offset.width,
-      height: remembered.size.height * api.height + offset.height,
+      ...(remembered.direction === 'left' || remembered.direction === 'right'
+        ? { width: remembered.size.width * api.width + offset.width }
+        : { height: remembered.size.height * api.height + offset.height }),
     });
   }
 }
@@ -750,7 +806,7 @@ export function ChannelDock({
   storage,
 }: ChannelDockProps): ReactElement {
   const workspace = useContext(WorkspaceContext);
-  const [initial] = useState(() => readChannelDock(storage));
+  const [initial] = useState(() => readChannelDock(storage, workspace !== undefined));
   const [storageFailed, setStorageFailed] = useState(false);
   const seed = useRef(initial?.sessionSeed ?? DEFAULT_CHANNEL_WORKSPACE);
   const [channelWorkspaces, updateChannelWorkspaces] = useState(initial?.channelWorkspaces ?? {});
@@ -804,6 +860,8 @@ export function ChannelDock({
   const [runtimes, setRuntimes] = useState<ReadonlyMap<string, EntryRuntime>>(new Map());
   const unregistered = useRef<import('dockview-react').SerializedDockview['panels']>({});
   const parked = useRef<Record<string, DockPosition & { missing?: boolean }>>({});
+  const visibilityLayout = useRef<import('dockview-react').SerializedDockview>();
+  const restoringVisibility = useRef(false);
   const byId = useMemo(() => new Map(panels.map((panel) => [panel.id, panel])), [panels]);
   const known = useRef(byId);
   known.current = byId;
@@ -841,17 +899,10 @@ export function ChannelDock({
 
   const save = (target: DockviewApi): void => {
     hideBodyHeader(target);
-    if (workspace)
-      for (const group of target.groups) {
-        const box = group.api.boundingBox;
-        const inset = box && box.top < 2 ? Math.max(0, 88 - gapRef.current - box.left) : 0;
-        group.element.toggleAttribute('data-bh-mac-corner', inset > 0);
-        group.element.toggleAttribute(
-          'data-bh-rail-corner',
-          inset > 0 && group.panels.some((panel) => panel.id === WORKSPACE_RAIL),
-        );
-        group.element.style.setProperty('--bh-mac-leading', `${inset}px`);
-      }
+    if (workspace) {
+      const root = target.groups[0]?.element.closest<HTMLElement>('[data-workspace-enabled]');
+      if (root) updateWorkspaceChrome(root, target.groups);
+    }
     const ids = target.panels.map((panel) => panel.id);
     setOpenIds(ids);
     reportOpen(target);
@@ -863,6 +914,7 @@ export function ChannelDock({
             panels: { ...unregistered.current, ...target.toJSON().panels },
           },
           parked: parked.current,
+          visibilityLayout: visibilityLayout.current,
           gap: gapRef.current,
           order: orderRef.current,
           hiddenControls: hiddenControlsRef.current,
@@ -894,11 +946,60 @@ export function ChannelDock({
     target: DockviewApi,
     panel: DockPanelRegistration,
     remembered: DockPosition | undefined,
-  ) => restoreEntryPanel(target, panel, remembered, workspace ? gapRef.current : 0);
+  ) => {
+    const before = target.toJSON();
+    try {
+      const restored = restoreDockVisibility(visibilityLayout.current, before, panel.id);
+      if (restored && !target.getPanel(panel.id)) {
+        restoringVisibility.current = true;
+        try {
+          target.fromJSON(restored, { reuseExistingPanels: true });
+          hideBodyHeader(target);
+          for (const [id, position] of Object.entries(parked.current)) {
+            const group = target.getPanel(id)?.group;
+            if (!group || !position.size) continue;
+            const offset = dockPanelGap(target.toJSON(), id, workspace ? gapRef.current : 0);
+            group.api.setSize({
+              width: position.size.width * target.width + offset.width,
+              height: position.size.height * target.height + offset.height,
+            });
+          }
+          target.getPanel(panel.id)?.api.setActive();
+        } finally {
+          restoringVisibility.current = false;
+        }
+        if (Object.keys(visibilityLayout.current!.panels).every((id) => target.getPanel(id))) {
+          visibilityLayout.current = undefined;
+          for (const visible of target.panels) delete parked.current[visible.id];
+        }
+        save(target);
+        return;
+      }
+    } catch {
+      visibilityLayout.current = undefined;
+      restoringVisibility.current = true;
+      try {
+        target.fromJSON(before, { reuseExistingPanels: true });
+        hideBodyHeader(target);
+      } finally {
+        restoringVisibility.current = false;
+      }
+    }
+    visibilityLayout.current = undefined;
+    for (const visible of target.panels) delete parked.current[visible.id];
+    restoreEntryPanel(target, panel, remembered, workspace ? gapRef.current : 0);
+  };
 
   const onReady = ({ api: ready }: DockviewReadyEvent): void => {
-    const stored = readChannelDock(storage);
+    const stored = readChannelDock(storage, workspace !== undefined);
+    seed.current = stored?.sessionSeed ?? DEFAULT_CHANNEL_WORKSPACE;
+    botSeeds.current = stored?.botPanelSeeds ?? {};
+    orderRef.current = stored?.order ?? [WORKSPACE_HOME];
+    updateOrder(orderRef.current);
+    hiddenControlsRef.current = stored?.hiddenControls ?? [];
+    updateHiddenControls(hiddenControlsRef.current);
     parked.current = { ...stored?.parked };
+    visibilityLayout.current = stored?.visibilityLayout;
     unregistered.current = Object.fromEntries(
       Object.entries(stored?.layout.panels ?? {}).filter(
         ([id]) =>
@@ -1009,6 +1110,8 @@ export function ChannelDock({
         event.preventDefault();
     });
     ready.onDidMovePanel(() => {
+      if (restoringVisibility.current) return;
+      visibilityLayout.current = undefined;
       for (const panel of ready.panels) delete parked.current[panel.id];
       save(ready);
     });
@@ -1021,6 +1124,12 @@ export function ChannelDock({
     (node) => {
       if (!api || !node.parentElement) return;
       const root = node.parentElement;
+      const workspaceRoot = workspace
+        ? root.closest<HTMLElement>('[data-workspace-enabled]')
+        : null;
+      const releaseChrome = workspaceRoot
+        ? mountWorkspaceChrome(workspaceRoot, () => api.groups)
+        : undefined;
       let resizing = false;
       const start = (event: PointerEvent) => {
         resizing = event.target instanceof Element && !!event.target.closest('.dv-sash');
@@ -1028,6 +1137,7 @@ export function ChannelDock({
       const finish = () => {
         if (!resizing) return;
         resizing = false;
+        visibilityLayout.current = undefined;
         for (const panel of api.panels) delete parked.current[panel.id];
         save(api);
       };
@@ -1035,12 +1145,13 @@ export function ChannelDock({
       window.addEventListener('pointerup', finish);
       window.addEventListener('pointercancel', finish);
       return () => {
+        releaseChrome?.();
         root.removeEventListener('pointerdown', start, true);
         window.removeEventListener('pointerup', finish);
         window.removeEventListener('pointercancel', finish);
       };
     },
-    [api],
+    [api, workspaceMode],
   );
 
   const scrollbarsMount = useMountedResource<HTMLSpanElement>((node) => {
@@ -1132,6 +1243,7 @@ export function ChannelDock({
       (!workspace && panelId === CHANNEL_BODY_PANEL)
     )
       return;
+    visibilityLayout.current ??= api.toJSON();
     for (const visible of api.panels) {
       if (visible.id === WORKSPACE_RAIL || parked.current[visible.id]) continue;
       const position = positionOf(api, visible.id);
@@ -1188,8 +1300,8 @@ export function ChannelDock({
       return;
     }
     const remembered = parked.current[panelId];
-    delete parked.current[panelId];
     addEntryPanel(api, panel, remembered);
+    if (!visibilityLayout.current?.panels[panelId]) delete parked.current[panelId];
   };
 
   const layout = useRef({ open, close, canOpen });
@@ -1213,6 +1325,7 @@ export function ChannelDock({
         if (api === undefined) return;
         clearChannelDock(storage);
         parked.current = {};
+        visibilityLayout.current = undefined;
         buildDefaultLayout(
           api,
           new Map([...byId].filter(([id]) => !workspace || !CHANNEL_WORKSPACE_PANELS.includes(id))),
@@ -1225,6 +1338,7 @@ export function ChannelDock({
   const reset = () => {
     if (!api) return;
     parked.current = {};
+    visibilityLayout.current = undefined;
     unregistered.current = {};
     botSeeds.current = {};
     botWorkspacesRef.current = {};
@@ -1382,6 +1496,16 @@ export function ChannelDock({
               } as React.CSSProperties)
             : undefined
         }
+        onDragStartCapture={(event) => {
+          const target = event.target as Element;
+          if (
+            target.closest('.dv-tabs-and-actions-container, .bh-channel-session-header') &&
+            !target.closest('[data-panel-hide]')
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
         onDragOverCapture={(event) => {
           if (!workspace || !api || !event.dataTransfer.types.includes('application/x-bh-rail'))
             return;
@@ -1494,7 +1618,7 @@ function ChannelDockPanelsMenu({
         dense
         align="end"
         anchor={
-          <Tooltip label={label} side="bottom" delayMs={500}>
+          <Tooltip label={label} side="bottom" portal delayMs={500}>
             <IconButton
               tone="subtle"
               aria-label={label}

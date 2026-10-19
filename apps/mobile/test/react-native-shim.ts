@@ -19,7 +19,15 @@ export const View = (props: Props) =>
   createElement('div', { ...a11y(props), ref: props['ref'] }, props.children);
 export const Text = (props: Props) => createElement('span', a11y(props), props.children);
 export const ScrollView = View;
-export const Animated = { View };
+export const Animated = {
+  View,
+  Value: class {
+    constructor(readonly value: number) {}
+    interpolate({ outputRange }: { outputRange: unknown[] }) {
+      return outputRange[0];
+    }
+  },
+};
 export const I18nManager = { isRTL: false };
 export const KeyboardAvoidingView = View;
 export const Modal = (props: Props) =>
@@ -112,7 +120,7 @@ export const Switch = (props: Props) =>
 
 export const FlatList = (props: {
   data: unknown[];
-  keyExtractor(item: unknown): string;
+  keyExtractor(item: unknown, index: number): string;
   renderItem(info: { item: unknown; index: number }): ReactNode;
   ListHeaderComponent?: ReactNode;
   ListFooterComponent?: ReactNode;
@@ -128,7 +136,7 @@ export const FlatList = (props: {
       : props.data.map((item, index) =>
           createElement(
             Fragment,
-            { key: props.keyExtractor(item) },
+            { key: props.keyExtractor(item, index) },
             props.renderItem({ item, index }),
           ),
         )),

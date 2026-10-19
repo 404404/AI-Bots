@@ -2,8 +2,10 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
 import { loadMemoryFile, loadMemoryFiles } from '../../../src/host/bot-profile';
+import { nativeMemoryPreview } from '../../../src/host/native-memory-preview';
 import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
-import { MemoryFileView, MemoryFolderView } from '../../../src/ui/chat/memory-browser';
+import { MemoryFolderView } from '../../../src/ui/chat/memory-browser';
+import { MemoryFileView } from '../../../src/ui/chat/memory-file-view';
 import { t } from '../../../src/ui/strings';
 
 export default function MemoryScreen() {
@@ -38,7 +40,11 @@ export default function MemoryScreen() {
       <Stack.Screen options={{ title }} />
       {kind === 'file' ? (
         loadFile === undefined ? null : (
-          <MemoryFileView load={loadFile} />
+          <MemoryFileView
+            key={`${slug}:${path}`}
+            load={loadFile}
+            preview={{ client: client!, io: nativeMemoryPreview, slug, path }}
+          />
         )
       ) : loadFiles === undefined ? null : (
         <MemoryFolderView

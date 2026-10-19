@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import { PointerMenu } from './ds/pointer-menu.js';
 import { PanelEmptyState } from './ds/empty-state.js';
 import { ChannelHistory } from './channel-history.js';
@@ -33,7 +34,6 @@ import {
   IconShareOutlineRegular,
   IconTrashOutlineRegular,
   HoverCard,
-  Menu,
   MenuItemButton,
   Tag,
   Toast,

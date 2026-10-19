@@ -32,7 +32,7 @@ import {
 import type { ConversationPlayback } from '../../host/conversation-playback';
 import { lift, motion, radius, space } from '../design/tokens';
 import { pressTint, useDesignTheme } from '../design/theme';
-import { MarkdownView } from '../markdown-view';
+import { MessageBody } from './message-body';
 import { Text } from '../primitives/text';
 import { haptic } from '../haptics';
 import { t } from '../strings';
@@ -81,20 +81,7 @@ export function BubbleBody({
         opacity: human && message.delivery === 'pending' ? 0.7 : 1,
       }}
     >
-      {message.body.trim() === '' ? (
-        streaming ? (
-          <Text tone="muted">…</Text>
-        ) : null
-      ) : human ? (
-        <Text tone={ink}>{message.body}</Text>
-      ) : (
-        <MarkdownView
-          source={message.body}
-          color={theme.color[ink]}
-          selectable={false}
-          streaming={streaming}
-        />
-      )}
+      <MessageBody message={message} streaming={streaming} />
       {message.attachments.length > 0 ? (
         <MessageAttachments
           attachments={message.attachments}

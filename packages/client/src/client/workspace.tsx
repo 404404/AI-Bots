@@ -1,3 +1,7 @@
+import { Menu } from './appearance-primitives.js';
+import { activityIndicator } from './activity-indicator.js';
+import { useActivityIndicatorMenu } from './activity-indicator-menu.js';
+import { onboardingFor } from './onboarding.js';
 import { HomePanel } from './home-panel.js';
 import { WORKSPACE_HOME } from './workspace-context.js';
 import { BOT_ONLY_CHANNEL_PANELS } from './dock-panels.js';
@@ -10,7 +14,7 @@ import { SettingsRow, SettingsSection } from './ds/settings-row.js';
 
 import { workspaceColumns, moveWorkspaceRail } from './workspace-layout.js';
 import { useState, useSyncExternalStore, type ReactNode, type ReactElement } from 'react';
-import { Button, Menu, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { DockviewApi } from 'dockview-react';
 import type { BotModeSidebarProps } from './bot-mode-sidebar.js';
 import type { BotModePrefs } from './bot-mode-prefs.js';
@@ -115,18 +119,32 @@ export function Workspace({
         scope: 'global',
         order: 1000,
         defaultPosition: { zone: 'center' },
+        onTitleHide: () =>
+          void onboardingFor(options.actions).finishFromHomeTitle(() =>
+            registry.open(CHANNEL_BODY_PANEL),
+          ),
         component: function HomeEntry() {
           const sendKey = useSyncExternalStore(
             options.prefs.source.subscribe,
             () => options.prefs.source.getSnapshot().sendKey,
           );
           return (
-            <HomePanel actions={options.actions} registry={registry} t={t} sendKey={sendKey} />
+            <HomePanel
+              actions={options.actions}
+              registry={registry}
+              t={t}
+              sendKey={sendKey}
+              onEditHumanName={() => options.openBotSettings('messaging')}
+            />
           );
         },
       });
+      const detachGuide = onboardingFor(options.actions).attachHome(() =>
+        registry.open(WORKSPACE_HOME),
+      );
       setEnabled(true);
       return () => {
+        detachGuide();
         unregisterHome();
         unregisterMessages();
         unregister();
@@ -204,6 +222,15 @@ function WorkspaceRail({
     () => options.prefs.source.getSnapshot().botIcon,
   );
   const state = useClientState();
+  const indicatorMenu = useActivityIndicatorMenu(t);
+  const indicator = activityIndicator(indicatorMenu.scope, state.humanInbox);
+  const attentionLabel = [
+    ...(state.humanInbox.unreadCount > 0
+      ? [t('humanInbox.unreadCount', { count: String(state.humanInbox.unreadCount) })]
+      : []),
+    ...(state.humanInbox.hasAction ? [t('humanInbox.action')] : []),
+    ...(indicator === 'unknown' ? [t('activityIndicator.unavailable')] : []),
+  ].join(' · ');
   const botOnlyHidden = resolveChannelSidebarContext(state)?.botSlug ? [] : BOT_ONLY_CHANNEL_PANELS;
   const shortcuts = useSyncExternalStore(
     options.shortcuts.catalog.subscribe,
@@ -266,30 +293,41 @@ function WorkspaceRail({
           </span>
         </button>
       </Tooltip>
-      <div className="bh-workspace-controls">
-        {options.dockPanels && (
-          <PinnedPanelCards
-            registry={options.dockPanels}
-            order={order}
-            onOrderChange={setOrder}
-            hiddenIds={[
-              'members',
-              'bot-inbox',
-              ...CHANNEL_WORKSPACE_PANELS,
-              ...botOnlyHidden,
-              ...hiddenControls,
-            ]}
-            shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
-            collapsed
-            t={t}
-            badge={(id) =>
-              id === 'activity-center'
-                ? { count: state.humanInbox.unreadCount, dot: state.humanInbox.hasAction }
-                : undefined
-            }
-          />
-        )}
+      <div className="bh-workspace-controls" data-window-drag>
+        <div data-window-drag-recall>
+          {options.dockPanels && (
+            <PinnedPanelCards
+              registry={options.dockPanels}
+              order={order}
+              onOrderChange={setOrder}
+              hiddenIds={[
+                'members',
+                'bot-inbox',
+                ...CHANNEL_WORKSPACE_PANELS,
+                ...botOnlyHidden,
+                ...hiddenControls,
+              ]}
+              shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
+              collapsed
+              t={t}
+              menuTrigger={(id) =>
+                id === 'activity-center' ? indicatorMenu.triggerProps : undefined
+              }
+              badge={(id) =>
+                id === 'activity-center'
+                  ? {
+                      count: state.humanInbox.unreadCount,
+                      dot: state.humanInbox.hasAction,
+                      indicator,
+                      label: attentionLabel || undefined,
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </div>
       </div>
+      {indicatorMenu.menu}
       <span className="bh-workspace-grip">
         <Menu
           open={menu}
@@ -357,8 +395,13 @@ function WorkspaceRail({
         )}
 
       <Tooltip label={t('panel.settings')} side="right">
-        <button aria-label={t('panel.settings')} onClick={options.openBotSettings}>
+        <button aria-label={t('panel.settings')} onClick={() => options.openBotSettings()}>
           <ChannelSidebarIcon name="settings" />
+        </button>
+      </Tooltip>
+      <Tooltip label={t('panel.backToHarness')} side="right">
+        <button type="button" aria-label={t('panel.backToHarness')} onClick={options.exitBotMode}>
+          <ExitIcon size={20} />
         </button>
       </Tooltip>
     </nav>

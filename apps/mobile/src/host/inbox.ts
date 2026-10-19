@@ -44,9 +44,13 @@ export interface Inbox {
   stop(): void;
 }
 
-export function createInbox(client: HostClient, options: InboxQuery = {}): Inbox {
+export function createInbox(
+  client: HostClient,
+  options: InboxQuery = {},
+  retained?: InboxSnapshot,
+): Inbox {
   const listeners = new Set<() => void>();
-  let snapshot: InboxSnapshot = { status: 'idle' };
+  let snapshot: InboxSnapshot = retained?.status === 'ready' ? retained : { status: 'idle' };
   let reading: Promise<void> | undefined;
   let readAgain = false;
   let stopped = false;
@@ -80,6 +84,23 @@ export function createInbox(client: HostClient, options: InboxQuery = {}): Inbox
   const readOnce = async (): Promise<void> => {
     revision += 1;
     loading.clear();
+    const retained =
+      snapshot.status === 'ready' && options.activity ? snapshot.sections : undefined;
+    const readWindow = async (category: InboxSection): Promise<HumanAttentionPage> => {
+      let page = await readPage(category);
+      const count = retained?.[category].length ?? 0;
+      if (count <= page.items.length || !page.nextCursor || stopped) return page;
+      const items = new Map(page.items.map((item) => [item.id, item]));
+      const cursors = new Set<string>();
+      while (!stopped && items.size < count && page.nextCursor && !cursors.has(page.nextCursor)) {
+        cursors.add(page.nextCursor);
+        const before = items.size;
+        page = await readPage(category, page.nextCursor);
+        for (const item of page.items) items.set(item.id, item);
+        if (items.size === before) break;
+      }
+      return { ...page, items: [...items.values()] };
+    };
     const [pages, counts] = await Promise.all([
       Promise.all(
         INBOX_SECTIONS.map((category) =>
@@ -88,7 +109,7 @@ export function createInbox(client: HostClient, options: InboxQuery = {}): Inbox
             ? category !== options.section
             : category === 'handled')
             ? Promise.resolve({ items: [] } as HumanAttentionPage)
-            : readPage(category),
+            : readWindow(category),
         ),
       ),
       client.call<UnreadCounts>('channelUnreadCounts').catch(() => ({ channels: [] })),
@@ -214,24 +235,81 @@ export function actionCount(snapshot: InboxSnapshot): number {
   return snapshot.status === 'ready' ? snapshot.sections.action.length : 0;
 }
 
-export function observeInbox(client: HostClient, query: InboxQuery) {
+type InboxObservation = {
+  getSnapshot(): InboxSnapshot;
+  getInbox(): Inbox | undefined;
+  subscribe(listener: () => void): () => void;
+  watching(): boolean;
+};
+const observations = new WeakMap<HostClient, Map<string, InboxObservation>>();
+const INACTIVE_QUERY_LIMIT = 24;
+
+export function observeInbox(client: HostClient, query: InboxQuery): InboxObservation {
+  let cache = observations.get(client);
+  if (cache === undefined) {
+    cache = new Map();
+    observations.set(client, cache);
+  }
+  const key = JSON.stringify([
+    query.activity ?? false,
+    query.section ?? 'all',
+    query.botSlug ?? '',
+    query.channelId ?? '',
+    query.search ?? '',
+    query.unreadOnly ?? false,
+    query.sort ?? 'default',
+  ]);
+  const existing = cache.get(key);
+  if (existing !== undefined) {
+    cache.delete(key);
+    cache.set(key, existing);
+    return existing;
+  }
   const loading: InboxSnapshot = { status: 'loading' };
+  let retained: InboxSnapshot = loading;
   let inbox: Inbox | undefined;
   let watchers = 0;
-  return {
-    getSnapshot: () => inbox?.getSnapshot() ?? loading,
+  const observed: InboxObservation = {
+    getSnapshot: () => inbox?.getSnapshot() ?? retained,
     getInbox: () => inbox,
+    watching: () => watchers > 0,
     subscribe(listener: () => void) {
-      inbox ??= createInbox(client, query);
+      inbox ??= createInbox(client, query, retained);
       watchers += 1;
       const off = inbox.subscribe(listener);
+      let closed = false;
       return () => {
+        if (closed) return;
+        closed = true;
         off();
         watchers -= 1;
         if (watchers !== 0) return;
+        retained = inbox?.getSnapshot() ?? retained;
         inbox?.stop();
         inbox = undefined;
       };
     },
   };
+  cache.set(key, observed);
+  let inactive = [...cache.values()].filter((entry) => !entry.watching()).length;
+  for (const [entryKey, entry] of cache) {
+    if (inactive <= INACTIVE_QUERY_LIMIT) break;
+    if (entry.watching()) continue;
+    cache.delete(entryKey);
+    inactive--;
+  }
+  return observed;
+}
+
+export function prefetchInbox(client: HostClient, query: InboxQuery): () => void {
+  const observed = observeInbox(client, query);
+  if (observed.getSnapshot().status === 'ready') return () => {};
+  let off = () => {};
+  const settled = () => {
+    const { status } = observed.getSnapshot();
+    if (status === 'ready' || status === 'error') off();
+  };
+  off = observed.subscribe(settled);
+  settled();
+  return off;
 }

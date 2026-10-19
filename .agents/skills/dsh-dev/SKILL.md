@@ -23,7 +23,7 @@ The web client calls `/api/<endpoint>` over plain HTTP (`fetch` + auth cookie). 
 
 ## Dev loop (WSL, fnm node)
 
-Use the worktree's local `@deepseek-ai/dsh@0.2.0-rc.2`, not a global `dsh` binary. The launcher checks the installed version, creates an isolated Web Profile, links all Bundle members as dependencies, enables only the `deepseekbot` umbrella, and probes the authenticated API.
+Use the worktree's local `@deepseek-ai/dsh@0.2.1-rc.2`, not a global `dsh` binary. The launcher checks the installed version, creates an isolated Web Profile, links all Bundle members as dependencies, enables only the `deepseekbot` umbrella, and probes the authenticated API.
 
 ```bash
 corepack pnpm build
@@ -35,6 +35,19 @@ The launch summary includes the Host PID and local login URL. For Client edits, 
 
 The helper injects a shared machine-local DeepSeek key when available; `node scripts/dev-secret.mjs check` reports its source without a value. Existing Profile credentials are another DSH source. Confirm model access with a real DM reply. `node scripts/dev-secret.mjs adopt-profile --home <existing-DSH_HOME>` copies only the DeepSeek reference into a private local file for later isolated Profiles.
 
+## DSH 0.2.1 migration contracts
+
+Source inspection of `dsh-subagent/lib/types/types.d.ts` and `lib/index.js` in `0.2.1-rc.2`:
+`startActivation` replaces `start` and `startContinuable`; `delivery: 'parent'` sends the result
+to the parent, while `'caller'` returns it only to the caller. Its signal owns startup only;
+callers that retain cancellation ownership must connect later aborts to the receipt's `dispose()`.
+The old `settleRun` export is gone. `dsh-client-connection` also replaces the shared `operator`
+with per-Peer identity; Owner-only Remote methods check `invocation.peer.principal.kind`.
+
+### Supporting the 0.2.0 floor while building against 0.2.1
+
+Use application adapters for both API generations rather than raising the install floor to the SDK pin. Detect `startActivation` before starting; otherwise use native `start` / `startContinuable`. Never retry a failed modern operation through the legacy path. Owner checks use the trusted native principal when present, otherwise the exact legacy connection operator object, never caller-supplied identity. Resolve native Shell Plugins from the running Host. A bundled scoped file Plugin must retain the reviewed `read_image` injection patch and adapt the missing `workingDirectory` service locally to the legacy Session cwd. Do not discard that patch by blindly externalizing file tools. A preset containing 0.2.1-only Plugins also fails on the old Host before an adapter can help. Conversely, the old persona `{{cwd}}` suffix fails at conversation assembly on 0.2.1, where that variable is no longer registered; do not inject it into the common preset. The legacy workingDirectory fallback must isolate that Service before providing it; Agent Scope alone does not isolate Cordis Services. Exercise two Agents and dispose one to prove the other retains its file tools. Check the entire boot log: a disabled native dependency can leave an apparently healthy Host with missing features. The product bundles the unchanged ComputerUseRegistry as an owned child Plugin to avoid an incompatible separately installed native manifest. Qualify the same packed product on both released versions; a SemVer preflight is only admission evidence.
+
 ## Profile model
 
 - Isolated `DSH_HOME` (one directory per worktree/port); profiles live in `$DSH_HOME/profiles/<name>`: `package.json` (`dsh.profile.bundles`), `cordis.yml`, user patch layer `cordis.patch.yml`, `node_modules` (our bundles via `link:`).
@@ -43,6 +56,10 @@ The helper injects a shared machine-local DeepSeek key when available; `node scr
 - `cordis.patch.yml` is the bisect tool: disable a plugin (`- id: botharness-core` / `disabled: true`) or override config, no reinstall needed.
 
 ## Pitfall log
+
+On DSH `0.2.1-rc.2`, the first-run Preview Notice can hide a shell whose Settings entry now lives under the account menu. An older verification prelude that waits for a visible `Settings` button before dismissing overlays times out although Client diagnostics report `shell-ready`. Preserve the failure capture, dismiss the actual `Continue` dialog, then address the observed `Bot mode` or `Account menu` entry by accessible name. This qualifies shell navigation only; it does not establish a model reply or native IM delivery.
+
+Restored application runtime work can run before an undeclared native Service Provider loads. In #2056 a real held-draft Host restart resumed an Orchestrator before `ctx.credentials` existed and published a model-readiness failure, although the same configured key worked after startup. BotHarness now declares `credentials` in its required `inject` dependencies. A real Cordis/LocalCredentialProvider regression starts the Consumer before the Provider and verifies readiness is not attempted until that Provider is available. Do not hide this race with a credential fallback, polling delay or suppressed failure; use the Service dependency lifecycle.
 
 When a DSH-side bug or trap is diagnosed, **record it here (or in the playbook) in the same change**. Entries:
 
@@ -153,7 +170,7 @@ DSH 0.2.0 provider token reports use disjoint uncached input, output, cache-read
 
 Pre-execution refusal can leave an application-owned Session ID without a DSH Session. Before retrying that reserved identity, use Session Persistence `stat(id)` to distinguish an absent stored Session from an existing one: create only when `stat` returns `undefined`, and propagate storage failures. Do not infer persistent existence from the live Session Store or blindly resume a reserved ID. Verified against DSH 0.2.0-rc.1 in #500 with a rejected model route followed by a successful Human repair.
 
-- **DSH source checkout**: `reference/deepseek-harness` (gitignored, in this worktree) pinned to the installed tag — currently `dsh-v0.2.0-rc.2`. Read the TypeScript source (`packages/typert`, `packages/*connection*`, `packages/*gateway*`, `apps/cli/reference/README.md`) when the how/why matters; the installed `lib/*.js` is bundled output. Re-pin when DSH is bumped: `git fetch --depth 1 origin tag <tag> && git checkout <tag>`.
+- **DSH source checkout**: `reference/deepseek-harness` (gitignored, in this worktree) must match the installed tag, now `dsh-v0.2.1-rc.2`. Read the TypeScript source (`packages/typert`, `packages/*connection*`, `packages/*gateway*`, `apps/cli/reference/README.md`) when the how/why matters; the installed `lib/*.js` is bundled output. Re-pin when DSH is bumped: `git fetch --depth 1 origin tag <tag> && git checkout <tag>`.
 - `references/debugging-playbook.md` — boot verification, status-code semantics, WS mux probe, bisect recipes, headless puppeteer probe.
 - `references/probe-web.mjs` — headless browser probe (console errors, failed requests, WS, internal fetch); run from the repo.
 - `dsh-ui` skill — in-harness UI rules; `docs/client-bridge.md` §7 — dev loop; ADR-0023 / #50 — bridge transport contract.
@@ -242,3 +259,120 @@ Summing only `assistant/message` usage omits failed native `assistant/attempt` e
 ## Additional verified pitfall — #2089
 
 In rc.2, `tools.restrict({ deny: [...] })` validates names against the global Tool registry even when called from an Agent scope. Naming an application-defined Tool registered only in that Agent scope, or intentionally omitted there, fails Agent setup with `names unknown global tool` before the model runs. Tob creation reproduced this on macOS Desktop with `bot_create`. Omit the legacy registration and use an Agent-scoped `tools.guard` for execution refusal, retaining the callback's current-run authority check for stale references. A mocked restriction collector cannot qualify this behavior; test the pinned `ToolRuntime` with real Cordis scopes.
+
+## Additional verified pitfall — #2056 verification transport
+
+Against an idle RC2 Host on Windows, Node's pooled `fetch` reproduced `ECONNRESET` after the probe's event loop was blocked for six seconds: it reused a connection whose close event had not been consumed. An asynchronous six-second wait and a request with `Connection: close` both succeeded. The `verify-app` RPC helper uses one connection per request; it preserves a lost mutation response as an error instead of retrying a possibly committed write. Distinguish this test transport failure from a model-provider failure, and correlate Host health with any deliberate restart before diagnosing a crash. Preserve failed cohort attempts; register changed transport settings before a new comparison rather than replacing old results.
+
+
+## Additional verified pitfall — #2192 Desktop approvals
+
+In DSH `0.2.1-rc.2`, the native API remotes approval answerer can run before an application's Channel answerer and hold a Session-backed approval without calling `next()`. Native Session events then show `approval/asked`, but no application Channel card appears and the command times out. Register the application-owned answerer with Cordis `prepend: true`, retaining exact Agent/call tracking and owner checks, and delegate unowned requests to `next()`. Native `never` policy still refuses before the waterfall. An isolated macOS Desktop reproduced the missing card; after this change, approving once visibly created a Bot and group through Tob's CLI. Regression coverage must exercise an earlier swallowing answerer, delegation, cancellation and native policy denial; do not bypass approval to make the journey pass.
+
+## Additional verified pitfall — #2221
+
+DeepSeekBot 1.4.0's workspace shell explicitly refused `html[data-windows-titlebar]`, so a Windows Desktop could load current Bot features while retaining the old sidebar. This is a platform fallback, not proof of a stale npm package or cache. In DSH 0.2.0-rc.2 and 0.2.1-rc.2, the native layout reserves the Windows title bar with frame padding; the preload menu is a body-level shadow root and caption buttons remain Electron-owned. The workspace can claim the existing content columns without replacing that frame or its padding. Preserve structural qualification, overlay ownership and disposal; do not clear user layout state or disable native drag regions. Source regression tests cover activation and DOM/CSS ownership, while Windows native title-bar controls, dragging, display scaling and restart persistence remain separate device gates in #2221.
+
+The Windows 1.4.0 fallback also writes layout version 8 while keeping Sessions and Bot panels flat. On workspace activation, import that geometry based on the absent rail plus flat-panel authority, retain an untouched backup, and update the mounted dock's seeds before it saves. Workspace ownership arrives after the legacy render, so a storage-only migration test misses stale React refs overwriting the imported ratio. Native Windows blank drag regions need explicit CSS: the upstream data-window-drag rules are macOS-only. Verify native drag separately from DOM/style tests.
+
+## Additional verified pitfall — #2214
+
+A bundled Markdown dependency can resolve its package-internal condition imports to Node implementations even in a Client build. With `react-markdown` / `vfile` in the pinned tsdown/Rolldown toolchain, the Client required `node:process`, `node:path` and `node:url`; the real DSH loader refused the plugin before Bot mode could mount. Explicit browser export conditions alone did not change vfile's `#minpath` / `#minproc` / `#minurl` resolution. Resolve those three imports only inside vfile to its shipped `.browser.js` implementations in the Client build, retain the native external baseline, and verify both the actual built Bundle and a cold browser boot. Do not add Node modules to the shell baseline or install a global process shim. The browser condition also selects DOM entity decoding; the Bundle execution test needs a real DOM for that browser-only code.
+
+## Additional verified pitfall — #2290 QA
+
+A fresh Windows build on pinned DSH `0.2.1-rc.2` exposed `vfile` Node imports in the Client bundle: the resolver hook matched slash-only importer paths and missed Windows backslashes. Normalizing that task build's importer path selected the existing browser modules and restored boot; no global process shim was needed. Keep this build-environment recovery separate from private-input behavior proof. The existing screenshot helper also waited for Settings before dismissing the native preview dialog; dismiss the observed dialog first. In the current dock, select Messages before opening a Channel from Home. Preserve boot/drive failures and inspect the actual console and accessibility tree before retrying.
+
+## Additional verified pitfalls — #2268 desktop zoom composition
+
+The npm `dsh-client-ui-theme` 0.2.1-rc.2 Host artifact imports Schemastery as ESM.
+A generated local copy that rewrites this to `createRequire.resolve()`'s CommonJS entry
+can fail full Profile startup with an ESM/CJS loading race. Keep the canonical ESM singleton
+(`lib/index.mjs`) and verify by importing the generated Host, then cold-booting a complete
+isolated Profile. Do not infer native startup from a syntax-only transformation test.
+
+The same release's shortcut `normalizeBinding` rejects `NumpadAdd`, `NumpadSubtract` and
+`Numpad0`. Validate contributed defaults against the real pinned protocol before registering;
+a thrown registration must revoke earlier commands, restore owned compatibility resources,
+and expose a refusal. Do not silently turn a failed zoom mount into apparent success.
+
+### Native desktop restart and private CLI launch metadata
+
+The pinned desktop worker chooses a new loopback HTTP port and process launch token on a real
+restart. A previously saved CLI endpoint can be unreachable; substituting the new port with the
+old token correctly refuses login. For the isolated zoom QA Profile, the launcher's task-only
+Bundle consumes the public `webServer.getOrigin()` and `connection.authenticatedUrl()` methods
+and writes fresh 0600 machine-local CLI metadata. It adds no listener or product route. Never
+publish its token or private metadata, weaken authentication, or attribute this refusal to the
+feature's Host relay before refreshing the launch credentials.
+
+### Stop the owned desktop before a full linked build
+
+`pnpm build` cleans the Client output directories before writing the new bundles. A running
+linked native Profile can hot-load during that missing-file interval. In the pinned RC, the
+first failed script load can poison the current module-loader generation and leave later
+bundle requests marked as skipped even after files return. Preserve the first crash report,
+finish the build, then restart only that task-owned desktop with the same Profile and user-data
+directory. Stop the owned process before future full builds; never disable third-party Plugins
+or erase the Profile to recover this development sequencing failure. A Client-only iteration
+and an installed immutable product build are separate paths.
+
+### Zoomed settings navigation and native portals (#2269)
+
+In pinned 0.2.1-rc.2, root CSS zoom changes the body's local layout width but leaves
+`matchMedia('(max-width: 648px)')` tied to the original viewport. At 430%, a wide Settings
+sidebar survives in a 293px local layout. The native Modal also scales its frame overlay
+padding, leaving only 235 viewport pixels for the card. Measure the local body width and
+normalize only the application Settings overlay's safe-area padding; keep the card zoomed.
+The native Menu's portaled anchor can be multiplied again (observed y=1247 in an 820px
+viewport). The compact application section picker reuses the existing viewport menu owner,
+which clamps and converts coordinates. This does not qualify other native dropdowns.
+
+## Additional verified pitfall — #2268 desktop theme packaging
+
+A Bundle Patch's `name` guards an existing row; it does not replace its implementation.
+Renaming a replacement row to `qualified-theme` breaks the native Client's hardcoded
+`configForms.get('ui-theme')`; a successful boot and one Client module id do not prove font
+settings preservation. Startup Node hooks also failed to redirect the native Client metadata
+resolver in the actual Host, despite standalone Node resolver tests passing. Do not use those
+approaches as qualified delivery. Retain the original row and use an explicit Profile-local
+package override through `deepseekbot-zoom-setup enable`, then restart. The command refuses
+unsupported platforms/releases or other owners and exposes `runtimeVerified:false`.
+Disable before product removal. pnpm can leave an unlisted `link:` symlink after remove;
+the owner removes only its exact link and verifies it is absent. Native `ui-theme` reads,
+writes, restart and disable must retain the same font preference. Keep the copied identity,
+license and relative ESM schema import; no installed ASAR or upstream files are changed.
+
+The copied Client exposes its zoom lease only when the actual `__DSH_BOOT__.release.version`
+is 0.2.1-rc.2. Unknown/missing releases retain the font-key scope and expose no zoom capability.
+This runtime guard does not remove an already installed Profile package override or qualify
+that copied theme on another Host. Disable the override before switching outside the verified
+Desktop/Host/Client tuple; re-enable only after qualifying the new combination.
+## Windows vfile browser imports (#2289)
+
+Rolldown can pass a Windows importer path with backslashes. The vfile browser-variant override must normalize separators before matching `node_modules/vfile/lib`; otherwise a successful build can retain `require("node:process")`, and the real Client refuses @botharness/ui before its Services exist. The existing Client bundle contract reproduces this: two assertions fail before normalization and all seven pass after it. Rebuild the Client and restart the task-owned Host, then inspect its actual browser console; API health alone does not qualify plugin boot.
+
+
+### Desktop plain-library overrides require an explicit offline installer (#2268)
+
+The 0.2.1-rc.2 CLI refuses `desktop` because Electron owns its lifecycle. The native Plugin
+Manager's `installBundle` validates installation-first metadata; adding `dsh.bundle` only to a
+Profile-local copy of the shipped theme still returns `not-bundle`. Headless Profile setup
+success did not qualify Desktop. DeepSeekBot's opt-in setup uses the explicitly selected app's
+bundled pnpm only after the target Desktop Host exits, takes the native Profile manifest writer
+lock, disables scripts and preserves the native `ui-theme` row and preference Patch. Keep the
+app closed until setup returns. Refuse other owners, a busy Profile, an unsupported app version
+or a running target; do not edit ASARs, silently replay uncertain writes or relabel failed
+native-manager attempts as installation proof. Reopen the same Profile/user-data for acceptance.
+
+### Desktop plugin-event stream churn (#2269)
+
+On the actual 0.2.1-rc.2 Desktop, a passive Network observer recorded `/plugins/events`
+returning HTTP 200 plus a graph frame, failing with `net::ERR_FAILED` after about 301 seconds,
+and reconnecting three seconds later with HTTP 200 and a fresh graph. The shipped Desktop
+forwards this scheme route through Node fetch; the shipped HMR Client uses EventSource.
+This identifies native plugin-event transport churn and observed recovery, not the exact
+underlying timeout source. Do not report that cohort as console-error-free, infer webview
+painting from the stream, or add guest reload/recreation to conceal it. Preserve the full
+request/failure/reconnect sequence without auth data and distinguish a page exception or
+failed reconnection from this measured sequence.

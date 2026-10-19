@@ -145,6 +145,18 @@ The web render is layout evidence, not native evidence: it shows the app's own v
 
 The device credential is stored only in the platform's secure storage and never logged; the Host keeps only its hash. "Unpair" forgets it on the phone; revoking it in the Web Client cuts the phone off on the Host.
 
+## TestFlight and Google Play test builds
+
+The `store-test` EAS profile builds the formal app: **DeepSeekBot** / `app.deepseekbot.mobile`, scheme `deepseekbot`, owner `deepseekbots-team` and the linked EAS project (`app.config.js` reads `DEEPSEEKBOT_APP_VARIANT=store`). Development builds keep `DeepSeekBot Dev` / `ai.botharness.deepseekbot.dev`. The store build sets `EXPO_PUBLIC_DEEPSEEKBOT_CLOUD=off`, so it only pairs with the Human's own Computers over Tailscale HTTPS: a fresh install opens pairing, and cloud Channels, workspace tabs and cloud links are hidden. Build numbers are remote and auto-increment; OTA updates stay off.
+
+```bash
+cd apps/mobile
+npx eas-cli build:version:get -p all -e store-test   # once: compare with App Store Connect and Play Console
+npx eas-cli build --profile store-test --platform all --auto-submit
+```
+
+`--auto-submit` uploads iOS to TestFlight (`ascAppId` in `eas.json`) and Android to the Play internal track as a draft, which is rolled out in Play Console. Google Play needs one manual AAB upload before the API (and so `eas submit`) can upload, plus a Google service account key in EAS credentials. Android push needs FCM credentials (`npx eas-cli credentials`); without them the app works but cannot register for notifications.
+
 ## Optional statistics
 
 Phone statistics default on for new installs and preserve saved opt-outs, independently of Host telemetry. Settings places the switch last with collapsed details. A one-time informational notice follows the Web client; collection does not wait for dismissal. Public mobile privacy copy and device qualification remain release gates. See [privacy, configuration and device acceptance](../../docs/mobile-statistics.md). Builds send nothing unless explicitly configured for tagged QA or qualified production.
@@ -156,3 +168,11 @@ Use the repository's pinned Node and pnpm versions. SDK 58 targets React Native 
 CI checks Expo Doctor, types and tests, and exports both iOS and Android bundles in a required `mobile-export` job. Exporting bundles does not compile native code: separately verify a fresh iOS build and Android Release build (including R8), then the native user journeys. Android compilation requires compile SDK 37. The web preview explicitly retains single-page output. The simulator cache uses the strict fingerprint preset so app-version changes invalidate a cached native binary; SDK 58's balanced default ignores those version fields.
 
 For retained-data acceptance, install over an existing build with the same app identity and verify paired Hosts, local appearance, collapsed sections, DM activity preferences and statistics settings after restart. The fresh-install simulator journey alone does not prove upgrade preservation. Record simulator, real-device and Human QA results separately; follow [shared device QA](../../docs/agents/device-qa.md) for scheduling and resource limits.
+
+### Channel Agents (UAT candidate)
+
+Open Cloud channels → choose an owned channel → Channel agents. Create a named Agent, then explicitly Copy credential into its private configuration file. Only message read/send is granted in this channel; no organization membership or computer execution permission. One saved handoff can be retried after restart. Remove saved credential does not revoke the Agent; Revoke agent does. Secrets are omitted from normal snapshots/logs, and sign-out removes the saved handoff. Real UAT/native evidence is still pending for this increment.
+
+### Memory file previews
+
+Open a Bot profile, expand Memory and choose a file. PNG/JPEG/GIF/WebP and safe static SVG open in the reader and tap to enlarge; Share uses the displayed temporary bytes. Markdown opens as a readable GFM document with Preview/Source controls. Local image references follow the observed document version and the same repository-relative rules as Web; pull to refresh when a document changes. External HTTPS images require an explicit tap and only load when visible. Static SVG shares the Host XML/CSS, size and expansion checks before native decoding. Native Git diff navigation, editor and attachment previews remain future #2214 slices. Native acceptance is scheduled through the shared device QA queue; component shims and bundle exports are separate checks.

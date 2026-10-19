@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement } from 'react';
+import { act, createElement, useLayoutEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,6 +22,7 @@ vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
 vi.mock('expo-router', () => ({
   useRouter: () => ({ push: () => undefined }),
   useIsFocused: () => true,
+  useFocusEffect: (work: () => void) => useLayoutEffect(work, [work]),
   Stack: { Screen: () => null },
 }));
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
@@ -31,7 +32,7 @@ vi.mock('../src/ui/bot-avatar', () => ({
 }));
 
 import { createHostClient, type HostClient } from '../src/host/client';
-import type { InboxSnapshot } from '../src/host/inbox';
+import { observeInbox, type InboxSnapshot } from '../src/host/inbox';
 import type { HumanAttentionItem } from '../src/host/wire';
 import { ActivityFeed, feedRows } from '../src/ui/shell/activity-feed';
 import { t } from '../src/ui/strings';
@@ -216,6 +217,84 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('retries through the current Inbox while a cached return is still refreshing', async () => {
+    const fake = host();
+    const view = await feed(fake, ready([]), 'cached-host', 5000);
+    const observed = observeInbox(client!, { activity: true, section: 'action' });
+    fake.answers.set('humanAttention', () => ({
+      ok: false,
+      error: { code: 'unavailable', message: 'temporary failure', details: {} },
+    }));
+    await act(async () => observed.getInbox()!.refresh());
+    expect(view.textContent).toContain('temporary failure');
+    act(() => root!.unmount());
+
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reads = 0;
+    const request = fake.carrier.request;
+    fake.carrier.request = async (url, init) => {
+      if (url.includes('humanAttention')) {
+        reads++;
+        await pending;
+      }
+      return request(url, init);
+    };
+    fake.answers.set('humanAttention', () => ({ ok: true, value: { items: [], queryVersion: 1 } }));
+    root = createRoot(view);
+    try {
+      await act(async () =>
+        root!.render(
+          createElement(ActivityFeed, {
+            hostId: 'cached-host',
+            client,
+            inbox: undefined,
+            snapshot: ready([]),
+            botSlugs: [],
+            bot: () => undefined,
+            onOpen: () => undefined,
+          }),
+        ),
+      );
+      await settle();
+      expect(reads).toBe(1);
+      await press(button(view, t.tryAgain));
+      await act(async () => release());
+      await settle();
+      expect(reads).toBe(2);
+      expect(view.textContent).not.toContain('temporary failure');
+    } finally {
+      release();
+    }
+  });
+
+  it('shows navigable tabs and a skeleton while the initial Host read remains pending', async () => {
+    const fake = host();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const request = fake.carrier.request;
+    fake.carrier.request = async (url, init) => {
+      if (url.includes('humanAttention')) await pending;
+      return request(url, init);
+    };
+    const view = await feed(fake, ready([]), 'slow-host', 5000);
+    expect(view.querySelector('[data-testid="list-skeleton"]')).not.toBeNull();
+    expect(button(view, t.inboxSections.action).getAttribute('aria-selected')).toBe('true');
+    await press(button(view, t.inboxSections.unread));
+    expect(button(view, t.inboxSections.unread).getAttribute('aria-selected')).toBe('true');
+    expect(view.textContent).not.toContain(t.inboxEmpty);
+    await act(async () => release());
+    await settle();
+    expect(
+      [...view.querySelectorAll('[data-testid="list-skeleton"]')].filter(
+        (node) => !node.closest('[hidden]'),
+      ),
+    ).toHaveLength(0);
+  });
   it('bounds the native unread preview while opening the original full item', async () => {
     const unread: HumanAttentionItem = {
       ...reply,
@@ -560,7 +639,7 @@ describe('Activity feed', () => {
     });
     const fetched = queries.length;
     await press(view.querySelector<HTMLElement>('[data-testid="pager-previous"]')!);
-    expect(queries.length).toBe(fetched);
+    expect(queries.length).toBe(fetched + 1);
     expect(queries.findLast((query) => query.category === 'replies')).toMatchObject({
       category: 'replies',
       sort: 'oldest',
@@ -582,5 +661,31 @@ describe('Activity feed', () => {
     expect(view.querySelector('[data-testid="card-line"]')?.getAttribute('aria-label')).toContain(
       t.elsewhere(t.cardAnswered),
     );
+  });
+  it('keeps category paging but exposes no Computer items or actions in unavailable scope', async () => {
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () =>
+      root!.render(
+        createElement(ActivityFeed, {
+          hostId: '',
+          client: undefined,
+          inbox: undefined,
+          snapshot: ready([question]),
+          botSlugs: [],
+          bot: () => undefined,
+          onOpen: vi.fn(),
+          unavailable: t.activitySourceUnavailable,
+        }),
+      ),
+    );
+    await settle();
+    expect(container.textContent).toContain(t.activitySourceUnavailable);
+    expect(post(container, question)).toBeNull();
+    expect(container.querySelector(`button[aria-label="${t.activityOptions}"]`)).toBeNull();
+    await press(container.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(button(container, t.inboxSections.replies).getAttribute('aria-selected')).toBe('true');
+    expect(post(container, question)).toBeNull();
   });
 });

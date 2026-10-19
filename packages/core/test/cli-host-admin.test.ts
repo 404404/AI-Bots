@@ -457,3 +457,25 @@ it('routes archive and restore through the Host and retains protected Tob refusa
   expect((await invoke(['pause', 'ordinary'], live.url)).json.bot.paused).toBe(true);
   expect((await invoke(['resume', 'ordinary'], live.url)).json.bot.paused).toBe(false);
 });
+
+it('release-check --force forwards the manual refresh to the Host cache owner', async () => {
+  const server = await host(() =>
+    ok({
+      status: 'blocked',
+      current: '1.3.1',
+      latest: '1.4.0',
+      compatibility: { status: 'unknown', reason: 'runtime-unavailable' },
+    }),
+  );
+  const result = await invoke(['release-check', '--force'], server.url);
+  expect(server.calls).toEqual([{ method: 'releaseUpdate', args: { force: true } }]);
+  expect(result.code).toBe(0);
+});
+
+it('queries and changes onboarding through the owning Host with coded invalid-action refusal', async () => {
+  const live = await host((method, args) => ok({ method, ...args }));
+  expect((await invoke(['onboarding'], live.url)).json.method).toBe('onboarding');
+  expect((await invoke(['onboarding', '--action', 'pause'], live.url)).json.action).toBe('pause');
+  expect((await invoke(['onboarding', '--action', 'invalid'], live.url)).code).not.toBe(0);
+  expect(live.calls).toHaveLength(2);
+});

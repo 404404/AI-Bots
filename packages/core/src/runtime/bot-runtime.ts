@@ -554,6 +554,12 @@ export interface OrchestratorChannelAccess {
     deliveryKey?: string;
   }): Promise<{ channelId: string; message: ChannelMessage }>;
   createBot?(input: BotCreateInput): BotCreateOutcome;
+  inspectDrafts?(input: {
+    channelId: string;
+    draftId?: string;
+  }):
+    | import('../channels/send-review.js').DraftInspection
+    | import('../channels/send-review.js').SendReviewOutcome;
   dropDraft?(input: {
     channelId: string;
     draftId: string;
@@ -563,6 +569,8 @@ export interface OrchestratorChannelAccess {
   send(input: {
     observationId?: string;
     draftId?: string;
+    freshnessOverride?: import('../channels/send-review.js').FreshnessOverride;
+    recover?: boolean;
     body: string;
     channelId?: string;
     replyTo?: string;
@@ -726,8 +734,11 @@ export interface BotRuntime {
   admitGroupJoinRequest?(ownerDmChannelId: string, requestId: string): void;
   admitGroupJoinDecision?(requesterDmChannelId: string, requestId: string): void;
   listAssignments(botSlug: string): AssignmentSummary[];
+  latestAssignmentActivity?(): ReadonlyMap<string, number>;
   currentOrchestratorSessionId?(botSlug: string): string | undefined;
   replaceOrchestrator?<T>(botSlug: string, body: () => T): Promise<OrchestratorReplacement<T>>;
+  startFreshOrchestrator?(botSlug: string, assertCurrent?: () => void): Promise<'started' | 'busy'>;
+  turnRunning?(botSlug: string): boolean;
   directBotTools?(): DirectBotToolSpec[];
   directBotToolCalls?(botSlug: string): readonly DirectBotToolCall[];
   runDirectBotTool?(
@@ -1258,6 +1269,15 @@ function sessionFailureDetails(error: unknown): { code?: string; status?: number
   };
 }
 
+const CONTEXT_WINDOW_EXCEEDED_NOTICE =
+  "This conversation's context is full and automatic compaction could not recover it. Retry with a smaller request, for example ask for one part of a large file or command output instead of all of it.";
+
+function sessionFailureBody(details: { code?: string; detail: string }): string {
+  if (details.code === 'CONTEXT_WINDOW_EXCEEDED')
+    return `Session failed: CONTEXT_WINDOW_EXCEEDED: ${CONTEXT_WINDOW_EXCEEDED_NOTICE}`;
+  return `Session failed: ${details.code === undefined ? '' : details.code + ': '}${details.detail}`;
+}
+
 class BotRuntimeImplementation implements BotRuntime {
   readonly #requireExecution: BotRuntimeOptions['requireExecution'];
   readonly #externalMessaging: OutboundMessaging | undefined;
@@ -1357,6 +1377,11 @@ class BotRuntimeImplementation implements BotRuntime {
       attachOperationalModule(options.database, 'channel-send-review'),
       options.now,
       options.channels.projectMessageAttachments,
+      (message) =>
+        message.attachments?.map((ref) => {
+          if (!options.attachments) throw new Error('Attachment owner is unavailable for review');
+          return options.attachments.contentVersion(ref);
+        }) ?? [],
     );
     this.#inboxHistory =
       options.inboxHistory ??
@@ -1410,6 +1435,7 @@ class BotRuntimeImplementation implements BotRuntime {
 
     if (options.database.mode === 'ready') {
       const interruptedDms = this.#recoverInterruptedAttempts();
+      this.#retireRevokedGroupRetries();
       this.#recoverPendingChannelAdmissions();
       for (const row of interruptedDms) {
         const admission = this.admitDmMessage({
@@ -3404,6 +3430,10 @@ class BotRuntimeImplementation implements BotRuntime {
     } catch {
       return false;
     }
+    return this.#hasLocalPrivateInputSource(owner.botSlug, turn.acceptedEventIds);
+  }
+
+  #hasLocalPrivateInputSource(botSlug: string, sourceEventIds: Iterable<string>): boolean {
     return this.#database.read((db) => {
       const human = db.prepare(
         `SELECT e.channel_id FROM source_events e
@@ -3411,15 +3441,15 @@ class BotRuntimeImplementation implements BotRuntime {
          WHERE e.source_event_id = ? AND a.bot_slug = ? AND e.source_kind = 'human-message'
            AND a.reason IN ('human-dm', 'group-mention', 'group-ordinary')`,
       );
-      return [...turn.acceptedEventIds].some((id) => {
-        const source = human.get(id, owner.botSlug);
+      return [...sourceEventIds].some((id) => {
+        const source = human.get(id, botSlug);
         if (
           typeof source?.channel_id !== 'string' ||
           this.#channels.get(source.channel_id) === undefined
         )
           return false;
         try {
-          requireSourceEffects(db, id, owner.botSlug);
+          requireSourceEffects(db, id, botSlug);
           return true;
         } catch {
           return false;
@@ -3435,6 +3465,11 @@ class BotRuntimeImplementation implements BotRuntime {
       if (selected !== undefined) throw new Error('Private input IM source is unavailable');
       return undefined;
     }
+    if (
+      selected === undefined &&
+      this.#hasLocalPrivateInputSource(owner.botSlug, turn.acceptedEventIds)
+    )
+      return undefined;
     const ids = this.#database.read((db) => {
       const query = db.prepare('SELECT source_kind FROM source_events WHERE source_event_id = ?');
       return [...turn.acceptedEventIds].filter(
@@ -3749,6 +3784,26 @@ class BotRuntimeImplementation implements BotRuntime {
       )?.sessionId;
   }
 
+  latestAssignmentActivity(): ReadonlyMap<string, number> {
+    return this.#database.read((database) => {
+      const rows = database
+        .prepare(
+          `SELECT bot_slug, MAX(unixepoch(latest_report_at, 'subsec') * 1000) AS at
+         FROM assignments WHERE latest_report_at IS NOT NULL GROUP BY bot_slug`,
+        )
+        .all();
+      return new Map(
+        rows.flatMap((row) =>
+          typeof row['bot_slug'] === 'string' &&
+          typeof row['at'] === 'number' &&
+          Number.isFinite(row['at'])
+            ? [[row['bot_slug'], row['at']]]
+            : [],
+        ),
+      );
+    });
+  }
+
   listAssignments(botSlug: string): AssignmentSummary[] {
     const rows = this.#database.read((database) =>
       database
@@ -3831,6 +3886,19 @@ class BotRuntimeImplementation implements BotRuntime {
     });
     if (result === undefined) throw new Error(`Unknown PersonaBot: ${botSlug}`);
     return result;
+  }
+
+  async startFreshOrchestrator(
+    botSlug: string,
+    assertCurrent?: () => void,
+  ): Promise<'started' | 'busy'> {
+    assertCurrent?.();
+    const outcome = await this.replaceOrchestrator(botSlug, () => assertCurrent?.());
+    return outcome.outcome === 'refused' ? 'busy' : 'started';
+  }
+
+  turnRunning(botSlug: string): boolean {
+    return this.#turnSources.has(botSlug) && this.#activeTurns.has(botSlug);
   }
 
   async #replaceOrchestrator<T>(
@@ -3972,6 +4040,7 @@ class BotRuntimeImplementation implements BotRuntime {
     ].filter((run): run is Promise<void> => run !== undefined);
     if (this.#agents.stopBot === undefined && active.length > 0)
       throw new Error('Agent adapter cannot stop this Bot safely');
+    this.groupSendReview.stop(botSlug);
     this.#database.transaction(
       (database) => {
         database
@@ -4005,6 +4074,7 @@ class BotRuntimeImplementation implements BotRuntime {
     const sessionId = this.#agents.stopOrchestratorTurn?.(botSlug);
     if (sessionId === undefined) return undefined;
     this.#stoppedTurns.add(botSlug);
+    this.groupSendReview.stop(botSlug);
     this.#stopNotices.set(
       botSlug,
       `[Host: the Human stopped your previous turn at ${this.#now().toISOString()} before it finished. Do not resume that work unless they ask again.]\n\n`,
@@ -4735,7 +4805,7 @@ class BotRuntimeImplementation implements BotRuntime {
       id: `session-failure-${randomUUID()}`,
       at: this.#now().toISOString(),
       author: { kind: 'bot', slug: input.botSlug },
-      body: `Session failed: ${details.code === undefined ? '' : details.code + ': '}${details.detail}`,
+      body: sessionFailureBody(details),
       format: 'text',
       sessionFailure: {
         ...failure,
@@ -5092,6 +5162,44 @@ class BotRuntimeImplementation implements BotRuntime {
     return interruptedDms;
   }
 
+  #retireRevokedGroupRetries(): void {
+    const retries = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT a.source_event_id, a.bot_slug, e.channel_id
+          FROM inbox_admissions a JOIN source_events e USING (source_event_id)
+         WHERE a.reason IN ('group-mention', 'group-ordinary')
+           AND a.attempt_state IN ('pending', 'retryable')
+           AND a.side_effect_started_at IS NULL AND a.ignored_at IS NULL
+           AND e.source_kind != 'bridge-message' AND e.channel_id IS NOT NULL
+      `)
+        .all(),
+    ) as Array<{ source_event_id: string; bot_slug: string; channel_id: string }>;
+    const revoked = retries.filter((row) => {
+      const channel = this.#channels.get(row.channel_id);
+      return channel === undefined || !this.#isMember(row.bot_slug, channel);
+    });
+    if (revoked.length === 0) return;
+    const at = this.#now().toISOString();
+    this.#database.transaction(
+      (database) => {
+        for (const row of revoked)
+          database
+            .prepare(`
+          UPDATE inbox_admissions
+             SET attempt_state = 'handled', handled_at = ?, ignored_at = ?,
+                 snoozed_until = NULL, wake_count = NULL, wake_interval_ms = NULL,
+                 last_error = 'Group membership revoked during recovery'
+           WHERE source_event_id = ? AND bot_slug = ?
+             AND attempt_state IN ('pending', 'retryable')
+             AND side_effect_started_at IS NULL AND ignored_at IS NULL
+        `)
+            .run(at, at, row.source_event_id, row.bot_slug);
+      },
+      ['bot-inbox'],
+    );
+  }
+
   originalAttachmentRoot(
     sessionId: string,
     path: string,
@@ -5116,6 +5224,7 @@ class BotRuntimeImplementation implements BotRuntime {
       ? `direct:${botSlug}`
       : `${botSlug}:${sessionId}`;
     const observations = new Map<string, string>();
+    const exhaustedDrops = new Map<string, string>();
     const recordObservation = (views: ChannelMessageView[]): void => {
       for (const id of new Set(views.map((view) => view.channelId))) {
         if (!this.groupSendReview.enabled(id)) continue;
@@ -5968,9 +6077,30 @@ class BotRuntimeImplementation implements BotRuntime {
         if (appended === undefined) throw new Error(`Channel disappeared: ${channel.id}`);
         return appended;
       },
+      inspectDrafts: (input) => {
+        const channel = this.#channels.get(input.channelId);
+        const bot = this.#registry.get(botSlug);
+        if (
+          !channel ||
+          channel.type !== 'group' ||
+          !this.#isMember(botSlug, channel) ||
+          !bot ||
+          bot.paused ||
+          this.#closed
+        )
+          return {
+            status: 'refused',
+            channelId: input.channelId,
+            draftId: input.draftId ?? '',
+            reason: 'draft-access-unavailable',
+          };
+        requireReplySource();
+        this.#requireSendReviewOwner(botSlug, sessionId);
+        return this.groupSendReview.inspectRecords(reviewOwner, channel.id, input.draftId);
+      },
       dropDraft: (input) => {
         resolve(input.channelId);
-        return this.groupSendReview.drop(
+        const result = this.groupSendReview.drop(
           reviewOwner,
           input.channelId,
           input.draftId,
@@ -5981,6 +6111,9 @@ class BotRuntimeImplementation implements BotRuntime {
                 messageIds: input.yieldToMessageIds,
               },
         );
+        if (result.status === 'dropped' && result.budget?.exhausted)
+          exhaustedDrops.set(input.channelId, input.draftId);
+        return result;
       },
       send: async (input) => {
         requireReplySource();
@@ -6020,6 +6153,17 @@ class BotRuntimeImplementation implements BotRuntime {
               )}. Call channel_send again with channel_id for the Channel this reply belongs to, or with reply_to set to the message ID you are answering.`,
           );
         const channel = resolve(input.channelId);
+        const exhaustedDraftId = exhaustedDrops.get(channel.id);
+        if (exhaustedDraftId)
+          throw new SendReviewRequired({
+            status: 'requires-review',
+            channelId: channel.id,
+            draftId: exhaustedDraftId,
+            reason: 'dropped-exhausted-draft-defer-turn',
+            choices: ['snooze-inbox'],
+          });
+        if (input.freshnessOverride && channel.type !== 'group')
+          throw new Error('Freshness override requires the original Group draft');
         if (input.mentionBotIds?.length && channel.type !== 'group')
           throw new Error('Bot mentions require a Group Channel');
         if (input.mentionHumanIds?.length && channel.type !== 'group')
@@ -6049,6 +6193,8 @@ class BotRuntimeImplementation implements BotRuntime {
             reviewOwner,
             observationId: input.observationId ?? initialObservations.get(channel.id),
             draftId: input.draftId,
+            freshnessOverride: input.freshnessOverride,
+            recover: input.recover,
             botSlug,
             channel,
             sourceEventId,
@@ -6063,7 +6209,10 @@ class BotRuntimeImplementation implements BotRuntime {
             mentionHumanIds: input.mentionHumanIds,
             deliveryKey: input.deliveryKey,
           }).catch((error: unknown) => {
-            if (!(error instanceof SendReviewRequired) || error.outcome.status !== 'held')
+            if (
+              !(error instanceof SendReviewRequired) ||
+              (error.outcome.status !== 'held' && error.outcome.status !== 'requires-review')
+            )
               throw error;
             const changed = error.outcome.changedMessageIds;
             if (!changed?.length) throw error;
@@ -6141,10 +6290,23 @@ class BotRuntimeImplementation implements BotRuntime {
     };
   }
 
+  #requireSendReviewOwner(botSlug: string, sessionId: string): void {
+    if (sessionId.startsWith('direct-')) return;
+    const owner = this.#ownership?.resolve(sessionId);
+    if (
+      owner?.botSlug !== botSlug ||
+      owner.rootRole !== 'orchestrator' ||
+      !this.#ownership?.contentAvailable(sessionId)
+    )
+      throw new Error('Group sender Session ownership changed');
+  }
+
   async #sendBotGroup(input: {
     reviewOwner?: string | undefined;
     observationId?: string | undefined;
     draftId?: string | undefined;
+    freshnessOverride?: import('../channels/send-review.js').FreshnessOverride | undefined;
+    recover?: boolean | undefined;
     botSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
@@ -6242,6 +6404,26 @@ class BotRuntimeImplementation implements BotRuntime {
       ...this.#perf(input.sessionId, body),
     };
     input.beforeSend();
+    if (this.groupSendReview.enabled(channel.id) || input.draftId !== undefined)
+      this.#requireSendReviewOwner(botSlug, input.sessionId);
+    this.#database.read((db) => requireSourceEffects(db, input.sourceEventId, botSlug));
+    if (
+      input.reviewOwner !== undefined &&
+      (this.groupSendReview.enabled(channel.id) || input.draftId !== undefined)
+    ) {
+      const replayId = this.groupSendReview.replay(
+        input.reviewOwner,
+        channel.id,
+        input.draftId ?? message.id,
+        message,
+      );
+      if (replayId !== undefined) {
+        const committed = this.#channels.message(channel.id, replayId);
+        if (!committed) throw new Error('Committed Group message is unavailable');
+        input.afterSend?.();
+        return committed;
+      }
+    }
     let reviewOutcome: import('../channels/send-review.js').SendReviewOutcome | undefined;
     const result = await this.#channels.appendMessageOnce(
       channel.id,
@@ -6254,19 +6436,13 @@ class BotRuntimeImplementation implements BotRuntime {
       (db) => {
         this.#requireMembership(botSlug, channel.id);
         const current = this.#registry.get(botSlug);
-        if (this.#closed || !current || current.paused)
+        if (this.#closed || !current || current.paused || this.#stoppedTurns.has(botSlug))
           throw new Error('Bot Group sender is unavailable');
         if (
           !input.sessionId.startsWith('direct-') &&
           (this.groupSendReview.enabled(channel.id) || input.draftId !== undefined)
         ) {
-          const owner = this.#ownership?.resolve(input.sessionId);
-          if (
-            owner?.botSlug !== botSlug ||
-            owner.rootRole !== 'orchestrator' ||
-            !this.#ownership?.contentAvailable(input.sessionId)
-          )
-            throw new Error('Group sender Session ownership changed');
+          this.#requireSendReviewOwner(botSlug, input.sessionId);
         }
         this.#database.read((database) =>
           requireSourceEffects(database, input.sourceEventId, botSlug),
@@ -6281,6 +6457,10 @@ class BotRuntimeImplementation implements BotRuntime {
             message,
             ...(input.observationId === undefined ? {} : { observationId: input.observationId }),
             ...(input.draftId === undefined ? {} : { draftId: input.draftId }),
+            ...(input.freshnessOverride === undefined
+              ? {}
+              : { freshnessOverride: input.freshnessOverride }),
+            ...(input.recover === undefined ? {} : { recover: input.recover }),
           });
           if (reviewOutcome) return false;
         }

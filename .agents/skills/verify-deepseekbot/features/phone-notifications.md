@@ -4,11 +4,13 @@ The phone app keeps every paired computer and shows one. A push notification is 
 
 ## Sub-features
 
-- `switch` changes the shown computer in the Host drawer, opened from the Chats header (the "<name>, switch computer" button), a swipe from the left edge of Chats or Activity, or Settings (the avatar at the top right of Chats) → Computers; the current row is selected ("<name>, Showing, …").
+- `switch` changes the shown computer in the Host drawer, opened from the Chats header (the "Workspaces" Chats title/chevron button), a swipe from the left edge of Chats or Activity, or Settings (the avatar at the top right of Chats) → Computers; the current row is selected ("<name>, Showing, …").
 - `permission` shows Settings → Notifications as off, denied (with "Open phone settings"), unavailable (a build without an EAS projectId), or on, with a switch per kind and "Send a test notification".
 - `tap` routes a notification: a Tool approval or question opens the request (`/inbox/[id]`, or the card in the Bot's DM when the shown computer's Roster has that DM), a reply opens the DM, and a test or badge-only notification opens Activity. A notification for another computer switches first.
 - `badge` sets the app badge to the shown computer's unresolved actions and dismisses banners for items no longer unresolved whenever the shown computer's Inbox changes.
 - `register` stores one Expo push token per device on the Host (`/botharness-device/push/register`); revoking the device deletes it, and the Host log records `push phase=…` lines without the token.
+
+- `environment-paging` (#2194) taps/swipes All → Computer → member Organization → guest Organization without changing the paired Computer. Show an empty member Organization too. Open/send through real source routes, read back author/channel via public API/CLI, then isolate the task Computer route: keep Cloud send working, preserve the Computer draft across restart and prove reconnect does not auto-send. Inspect Activity in Cloud scope for its unavailable notice and absence of unrelated Computer badge; category swipe must remain. Capture matched light/dark before/after screenshots and a short paging recording at the frozen PR head. Default/intermediate/maximum text, keyboard, source removal and cold restoration are distinct checks. One Computer is not simultaneous multi-Computer proof.
 
 ## How to get to it (user POV)
 

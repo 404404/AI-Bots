@@ -213,7 +213,7 @@ export function titleOf(row: Conversation): string {
   return row.kind === 'bot' ? row.bot.displayName : row.channel.name;
 }
 
-function searchKey(value: string): string {
+export function searchKey(value: string): string {
   return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/gu, ' ').trim();
 }
 

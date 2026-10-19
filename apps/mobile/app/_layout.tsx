@@ -5,8 +5,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { usePushRouting } from '../src/host/push-routing';
+import { HostDrawer, WorkspaceButton } from '../src/ui/shell/host-drawer';
 import { StatisticsNotice } from '../src/ui/shell/statistics-notice';
 import { KeyboardRoot } from '../src/ui/primitives/keyboard-frame';
+import { AppDialogHost } from '../src/ui/primitives/app-dialog-host';
 import { sheetScreenOptions } from '../src/ui/primitives/sheet-screen';
 import { useDesignTheme } from '../src/ui/design/theme';
 import { t } from '../src/ui/strings';
@@ -61,6 +63,36 @@ export default function RootLayout() {
               />
               <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
               <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
+              <Stack.Screen
+                name="cloud-join"
+                options={{ title: t.cloudJoin.title, headerRight: () => <WorkspaceButton /> }}
+              />
+              <Stack.Screen
+                name="cloud-services"
+                options={{ title: t.cloud.title, headerRight: () => <WorkspaceButton /> }}
+              />
+              <Stack.Screen
+                name="cloud-organizations"
+                options={{
+                  title: t.cloudOrganizations.title,
+                  headerRight: () => <WorkspaceButton />,
+                }}
+              />
+              <Stack.Screen
+                name="cloud-invitations"
+                options={{
+                  title: t.cloudInvitations.title,
+                  headerRight: () => <WorkspaceButton />,
+                }}
+              />
+              <Stack.Screen
+                name="cloud-agents"
+                options={{ title: t.cloudAgents.title, headerRight: () => <WorkspaceButton /> }}
+              />
+              <Stack.Screen
+                name="cloud-channels"
+                options={{ title: t.cloudChannels.title, headerRight: () => <WorkspaceButton /> }}
+              />
               <Stack.Screen name="notifications" options={{ title: t.notifications }} />
               <Stack.Screen
                 name="browser/[slug]"
@@ -98,6 +130,8 @@ export default function RootLayout() {
               />
             </Stack>
             <StatisticsNotice />
+            <HostDrawer />
+            <AppDialogHost />
           </View>
         </SafeAreaProvider>
       </KeyboardRoot>

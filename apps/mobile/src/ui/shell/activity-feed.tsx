@@ -7,13 +7,18 @@ import {
   useRef,
   useMemo,
   useState,
-  useSyncExternalStore,
   memo,
   type ReactElement,
 } from 'react';
-import { Platform, Pressable, RefreshControl, View, useWindowDimensions } from 'react-native';
+import {
+  Animated as NativeAnimated,
+  Platform,
+  Pressable,
+  RefreshControl,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { TabView } from 'react-native-tab-view';
-import { useIsFocused } from 'expo-router';
 import Animated, {
   FadeOut,
   LinearTransition,
@@ -39,6 +44,7 @@ import {
   type RequestRef,
 } from '../../host/requests';
 import type { HumanAttentionItem } from '../../host/wire';
+import { useFocusedSnapshot } from '../../host/use-focused-snapshot';
 import { BotAvatar } from '../bot-avatar';
 import { ApprovalCard } from '../chat/approval-card';
 import { QuestionCard } from '../chat/question-card';
@@ -46,9 +52,11 @@ import { useDesignTheme } from '../design/theme';
 import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { CountBadge } from '../primitives/count-badge';
-import { Loading, Notice } from '../request-parts';
+import { Notice } from '../request-parts';
 import { useChatHeaderHeight } from '../chat/header-chrome';
 import { Button } from '../primitives/button';
+import { DeferredContent } from '../primitives/deferred-content';
+import { ListSkeleton } from '../primitives/list-skeleton';
 import { ActivityToolbar, type ActivityToolbarHandle } from './activity-toolbar';
 import { ActivityTabs, ACTIVITY_TABS, type ActivityTab } from './activity-tabs';
 import { useFloatingTabInset } from './floating-tab-inset';
@@ -63,6 +71,7 @@ import {
 
 const AVATAR = 32;
 const LOADING: InboxSnapshot = { status: 'loading' };
+const EMPTY_SOURCE = { getSnapshot: () => LOADING, subscribe: () => () => {} };
 const ACTIVITY_ROUTES = [...ACTIVITY_TABS];
 const SUMMARY_PREVIEW_LIMIT = 512;
 
@@ -239,7 +248,6 @@ const Row = memo(function Row({
 
 function Post({
   client,
-  inbox,
   item,
   requestRef: ref,
   bot,
@@ -248,7 +256,6 @@ function Post({
   onSettled,
 }: {
   client: HostClient;
-  inbox: Inbox | undefined;
   item: HumanAttentionItem;
   requestRef: RequestRef;
   bot: RosterBot | undefined;
@@ -280,7 +287,6 @@ function Post({
   }, [client, channelId, messageId, botSlug]);
   const settled = (result: DecisionResult) => {
     onSettled(item, result);
-    void inbox?.refresh();
   };
   return (
     <View
@@ -347,6 +353,7 @@ function Post({
 }
 
 type ActivityFeedProps = {
+  unavailable?: string | undefined;
   hostId: string;
   client: HostClient | undefined;
   inbox: Inbox | undefined;
@@ -359,7 +366,7 @@ type ActivityFeedProps = {
   now?: number;
 };
 
-export function ActivityFeed(props: ActivityFeedProps) {
+export const ActivityFeed = memo(function ActivityFeed(props: ActivityFeedProps) {
   const { botSlugs, channels = [], bot } = props;
   const theme = useDesignTheme();
   const toolbar = useRef<ActivityToolbarHandle>(null);
@@ -375,10 +382,10 @@ export function ActivityFeed(props: ActivityFeedProps) {
   const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 0 : initialHeight);
   const width = useWindowDimensions().width;
   const reducedMotion = useReducedMotion();
-  const focused = useIsFocused();
   const progress = useChromeProgress();
   const selectedIndex = ACTIVITY_TABS.findIndex((tab) => tab.key === filter.section);
   const index = selectedIndex < 0 ? lastTab : selectedIndex;
+  const placeholderPosition = useMemo(() => new NativeAnimated.Value(index), [index]);
   const slugsWithSelection =
     filter.bot !== undefined && !botSlugs.includes(filter.bot)
       ? [...botSlugs, filter.bot]
@@ -401,39 +408,59 @@ export function ActivityFeed(props: ActivityFeedProps) {
       behavior="padding"
     >
       <Animated.View style={[{ flex: 1, marginTop: top, marginBottom: -travel }, pageStyle]}>
-        <TabView
-          style={{ backgroundColor: theme.color.base }}
-          navigationState={{ index, routes: ACTIVITY_ROUTES }}
-          initialLayout={{ width }}
-          onIndexChange={selectIndex}
-          animationEnabled={!reducedMotion}
-          lazy
-          renderLazyPlaceholder={() => <Loading />}
-          renderTabBar={({ position, jumpTo }) => (
-            <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
-          )}
-          renderScene={({ route }: { route: ActivityTab }) => (
-            <ActivityPage
-              {...props}
-              section={route.key === ACTIVITY_TABS[index]?.key ? filter.section : route.key}
-              filterBot={filter.bot}
-              filterChannel={filter.channel}
-              filterUnread={filter.unreadOnly}
-              search={search}
-              sort={sort}
-              active={route.key === ACTIVITY_TABS[index]?.key}
-              searchFocused={searchFocused}
-              scrollActive={focused && route.key === ACTIVITY_TABS[index]?.key}
-              pinChrome={searchFocused || filtering}
-              headerTravel={travel}
-              dismissSearch={dismissSearch}
-            />
-          )}
-        />
+        <DeferredContent
+          fallback={
+            <View style={{ flex: 1 }}>
+              <ActivityTabs
+                selected={filter.section}
+                position={placeholderPosition}
+                onSelect={(key) => selectIndex(ACTIVITY_TABS.findIndex((tab) => tab.key === key))}
+              />
+              <ListSkeleton />
+            </View>
+          }
+        >
+          <TabView
+            style={{ backgroundColor: theme.color.base }}
+            navigationState={{ index, routes: ACTIVITY_ROUTES }}
+            initialLayout={{ width }}
+            onIndexChange={selectIndex}
+            animationEnabled={!reducedMotion}
+            lazy
+            renderLazyPlaceholder={() => <ListSkeleton />}
+            renderTabBar={({ position, jumpTo }) => (
+              <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
+            )}
+            renderScene={({ route }: { route: ActivityTab }) =>
+              props.unavailable ? (
+                <View style={{ padding: space.x6 }}>
+                  <Text tone="muted">{props.unavailable}</Text>
+                </View>
+              ) : (
+                <ActivityPage
+                  {...props}
+                  section={route.key === ACTIVITY_TABS[index]?.key ? filter.section : route.key}
+                  filterBot={filter.bot}
+                  filterChannel={filter.channel}
+                  filterUnread={filter.unreadOnly}
+                  search={search}
+                  sort={sort}
+                  active={route.key === ACTIVITY_TABS[index]?.key}
+                  searchFocused={searchFocused}
+                  scrollActive={route.key === ACTIVITY_TABS[index]?.key}
+                  pinChrome={searchFocused || filtering}
+                  headerTravel={travel}
+                  dismissSearch={dismissSearch}
+                />
+              )
+            }
+          />
+        </DeferredContent>
       </Animated.View>
       <CollapsingToolbar travel={travel} height={top}>
         <ActivityToolbar
           ref={toolbar}
+          unavailable={props.unavailable !== undefined}
           search={search}
           onSearchFocus={setSearchFocused}
           filtered={
@@ -472,7 +499,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
       />
     </KeyboardAvoidingView>
   );
-}
+});
 
 const ActivityPage = memo(function ActivityPage({
   hostId,
@@ -551,22 +578,20 @@ const ActivityPage = memo(function ActivityPage({
       activeSettlementScope.current = undefined;
     };
   }, [settlementScope, active]);
-  const scopedSnapshot = useSyncExternalStore(
-    useCallback((listener: () => void) => scoped?.subscribe(listener) ?? (() => {}), [scoped]),
-    useCallback(() => scoped?.getSnapshot() ?? LOADING, [scoped]),
-  );
+  const scopedSnapshot = useFocusedSnapshot(scoped ?? EMPTY_SOURCE, scrollActive);
   const visible = scoped === undefined ? snapshot : scopedSnapshot;
-  const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
+  const currentInbox = () => (scoped === undefined ? inbox : scoped.getInbox());
   const rows = feedRows(visible, gone, held, filter, search);
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
     if (activeSettlementScope.current !== settlementScope) return;
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
     else setHeld((current) => [...current.filter((kept) => kept.id !== item.id), item]);
+    void currentInbox()?.refresh();
   };
   const refresh = () => {
     setRefreshing(true);
     setHeld([]);
-    void (activeInbox?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
+    void (currentInbox()?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
   };
   return (
     <View
@@ -616,7 +641,7 @@ const ActivityPage = memo(function ActivityPage({
                       <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
                     </View>
                   ) : null}
-                  {visible.status === 'loading' ? <Loading /> : null}
+                  {visible.status === 'loading' ? <ListSkeleton /> : null}
                   {visible.status === 'ready' &&
                   Object.values(visible.cursors ?? {}).some(Boolean) ? (
                     <Text variant="meta" tone="muted" style={{ paddingHorizontal: space.x5 }}>
@@ -640,7 +665,7 @@ const ActivityPage = memo(function ActivityPage({
                     visible.status === 'ready' &&
                     visible.loadingMore?.includes(row.section) === true
                   }
-                  onPress={() => void activeInbox?.loadMore?.(row.section)}
+                  onPress={() => void currentInbox()?.loadMore?.(row.section)}
                 />
               </View>
             );
@@ -667,7 +692,6 @@ const ActivityPage = memo(function ActivityPage({
               {client === undefined ? null : (
                 <Post
                   client={client}
-                  inbox={activeInbox}
                   item={row.item}
                   requestRef={row.ref}
                   bot={bot(row.item.botSlug)}

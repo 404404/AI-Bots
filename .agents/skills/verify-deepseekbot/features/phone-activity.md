@@ -77,4 +77,8 @@ Web preview evidence does not qualify native keyboard, safe-area or scrolling.
 
 ## Gotchas
 
+For navigation responsiveness (#2111), time Chats → Activity separately from the data read. Cold-open, then repeat after idle prefetch and after returning from a visited page. The title/three tabs and a bounded skeleton must appear without awaiting a slow initial request. Returning to the same Host/query shows its retained data while refreshing; failure keeps that data plus Retry. Change Host and filters to confirm cache isolation. Switching away stops the scoped view subscription while the shared Host remains connected. Keep pending question choices and each visited page's scroll position, and confirm no loaded question re-enters its initial loading state. Profile the actual switches and long history/streaming with fixed input; record Debug versus production-JS versus Release, JS versus presented-frame measures, and leave 120 FPS unqualified without the corresponding native proof.
+
 The earlier PR #1928 evidence remains specific to its own commit and limitations. Native iOS and Android acceptance are separate; this map does not requalify earlier evidence.
+
+Load a second Activity page, switch away and return, then wait for refresh: both loaded pages remain when Host data is unchanged. Repeat with a cached refresh error and delay the next read; Retry must queue a fresh read through the current query instance. Changed Host data may still move rows; this check does not establish scroll anchoring across arbitrary inserts or deletions.

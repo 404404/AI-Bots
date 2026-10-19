@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { SourceName } from './source-name';
 import { Pressable, View } from 'react-native';
 
 import { BotAvatar } from '../bot-avatar';
@@ -23,7 +25,6 @@ export function ConversationRow({
   now: Date;
   onPress?: () => void;
 }) {
-  const theme = useDesignTheme();
   const title = titleOf(row);
   const busy = row.kind === 'bot' && (row.bot.state === 'thinking' || row.bot.state === 'working');
   const preview =
@@ -47,9 +48,69 @@ export function ConversationRow({
     .filter((part) => part !== undefined)
     .join(', ');
   return (
+    <ConversationRowFrame
+      title={title}
+      source="computer"
+      label={label}
+      preview={preview}
+      time={time}
+      busy={busy}
+      badge={badge}
+      onPress={onPress}
+      avatar={
+        row.kind === 'bot' ? (
+          <BotAvatar bot={row.bot} size={AVATAR} />
+        ) : (
+          <ConversationGroupAvatar avatar={row.channel.avatar} />
+        )
+      }
+    />
+  );
+}
+
+export function ConversationGroupAvatar({ avatar }: { avatar?: string | undefined }) {
+  return (
+    <View
+      style={{
+        width: AVATAR + RING,
+        height: AVATAR + RING,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <GroupMark avatar={avatar} size={AVATAR} corner={radius.md} variant="title" strong={false} />
+    </View>
+  );
+}
+
+export function ConversationRowFrame({
+  title,
+  source,
+  label,
+  preview,
+  time = '',
+  busy = false,
+  badge,
+  avatar,
+  onPress,
+  disabled = false,
+}: {
+  title: string;
+  source: 'computer' | 'cloud';
+  label: string;
+  preview: string;
+  time?: string;
+  busy?: boolean;
+  badge?: ReturnType<typeof countBadge>;
+  avatar: ReactNode;
+  onPress?: (() => void) | undefined;
+  disabled?: boolean;
+}) {
+  const theme = useDesignTheme();
+  return (
     <Pressable
       onPress={onPress}
-      disabled={onPress === undefined}
+      disabled={disabled || onPress === undefined}
       accessibilityRole={onPress === undefined ? undefined : 'button'}
       accessibilityLabel={label}
       style={({ pressed }) => ({
@@ -62,26 +123,7 @@ export function ConversationRow({
         backgroundColor: pressed ? theme.layer.canvas.pressed : theme.layer.canvas.fill,
       })}
     >
-      {row.kind === 'bot' ? (
-        <BotAvatar bot={row.bot} size={AVATAR} />
-      ) : (
-        <View
-          style={{
-            width: AVATAR + RING,
-            height: AVATAR + RING,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <GroupMark
-            avatar={row.channel.avatar}
-            size={AVATAR}
-            corner={radius.md}
-            variant="title"
-            strong={false}
-          />
-        </View>
-      )}
+      {avatar}
       <View style={{ flex: 1, minWidth: 0, gap: space.x1 }}>
         <View
           style={{
@@ -90,9 +132,7 @@ export function ConversationRow({
             gap: space.x3,
           }}
         >
-          <Text strong numberOfLines={1} ellipsizeMode="tail" style={{ flex: 1, minWidth: 0 }}>
-            {title}
-          </Text>
+          <SourceName name={title} source={source} />
           {time === '' ? null : (
             <Text variant="meta" tone="subtle" numberOfLines={1} style={{ flexShrink: 0 }}>
               {time}

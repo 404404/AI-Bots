@@ -2,6 +2,10 @@
 
 | Feature | Needs a model | Scripted journey | File |
 | --- | --- | --- | --- |
+| Desktop whole-window zoom (controlled S1) | no | `scripts/e2e-desktop-zoom-launch.mjs`, `scripts/e2e-dock-zoom.mjs`, `scripts/e2e-workspace-chrome.mjs` | [desktop-window-zoom.md](desktop-window-zoom.md) |
+| DeepSeekBot device-local appearance | no | `scripts/e2e-local-appearance.mjs` | [local-appearance.md](local-appearance.md) |
+| Functional Panel appearance | no | `scripts/e2e-panel-appearance.mjs`, `scripts/e2e-nested-appearance.mjs` | [panel-appearance.md](panel-appearance.md) |
+| Global panel materials | no | `scripts/e2e-global-materials.mjs` | [global-materials.md](global-materials.md) |
 | Home and protected Tob (Bot management, models, runtime, privacy and updates) | yes for reply and approval | `scripts/e2e-tob-home.mjs`, `scripts/e2e-tob-model-runtime.mjs`, `scripts/e2e-tob-bot-management.mjs`, `scripts/e2e-tob-channel-management.mjs`, `scripts/e2e-tob-group-settings.mjs`, `scripts/e2e-tob-group-decisions.mjs` | [tob-home.md](tob-home.md) |
 | DSH Session list Bot folders | for fresh execution | `scripts/e2e-bot-session-folders.mjs` | [bot-session-folders.md](bot-session-folders.md) |
 
@@ -9,12 +13,13 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 
 | Feature                                                                                            | Needs a model              | Scripted journey                                                                                     | File                                                 |
 | -------------------------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Bot mode entry and the default DeepSeek Bot                                                        | no                         | `scripts/e2e-bot-mode-sidebar.mjs`, `scripts/e2e-panel-workspace.mjs`                                                                   | [bot-mode.md](bot-mode.md)                           |
+| Bot mode entry and the default DeepSeek Bot                                                        | no                         | `scripts/e2e-bot-mode-sidebar.mjs`, `scripts/e2e-panel-workspace.mjs`, `scripts/e2e-bot-mode-exit.mjs`                                                                   | [bot-mode.md](bot-mode.md)                           |
 | Bot mode dock (desktop layout, unified Sessions, Channel header, Profile, settings, files and Inbox) | no | `scripts/e2e-panel-workspace.mjs`, `scripts/e2e-channel-sessions.mjs`, `scripts/e2e-bot-subpanels.mjs`, `scripts/e2e-browser-computer-subpanels.mjs`, `scripts/e2e-panel-size-persistence.mjs`, `scripts/e2e-panel-resize-stability.mjs`, `scripts/e2e-nested-channel-panels.mjs`, `scripts/e2e-channel-sessions-desktop.mjs`, `scripts/e2e-bot-mode-sidebar.mjs` | [bot-mode-dock.md](bot-mode-dock.md) |
 | Orchestrator model switching | yes, for reply evidence | none | [orchestrator-model-switch.md](orchestrator-model-switch.md) |
+| Private input with mixed local/IM sources | yes, for native tool/approval proof | `scripts/e2e-private-input-origin.mjs` | [private-input-origin.md](private-input-origin.md) |
 | Bot DM reply                                                                                       | yes                        | `scripts/e2e-llm-scenarios.mjs --scenario dm-reply`                                                  | [bot-dm-reply.md](bot-dm-reply.md)                   |
 | Bot-to-Bot Group mentions and wake                                                                 | yes                        | `scripts/e2e-llm-scenarios.mjs` (nightly)                                                            | [bot-group-mention.md](bot-group-mention.md)         |
-| Group send review | yes for A/B; no for direct tools | `scripts/e2e-group-send-review.mjs`, `scripts/e2e-group-peer-review.mjs` | [group-send-review.md](group-send-review.md) |
+| Group send review | yes for A/B; no for direct tools | `scripts/e2e-group-send-review.mjs`, `scripts/e2e-group-peer-review.mjs`, `scripts/e2e-group-busy-review.mjs`, `scripts/e2e-group-responsibility.mjs` | [group-send-review.md](group-send-review.md) |
 | Conversation timeline: new-messages divider, kept place, folding, image preview, reactions, search, member mention | for replies | none | [conversation-timeline.md](conversation-timeline.md) |
 | PersonaBot creation and restart persistence                                                        | for Bot-created Bots       | `scripts/e2e-personabot-create.mjs` (CI)                                                             | [personabot-create.md](personabot-create.md)         |
 | Stop a working Bot (Web Client)                                                                    | yes                        | `scripts/e2e-web-stop.mjs`                                                                           | [bot-stop.md](bot-stop.md)                           |
@@ -33,10 +38,13 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Default Bot Browser open, observe, stop and Access refusal | no | `scripts/e2e-browser-lifecycle.mjs` | [browser-lifecycle.md](browser-lifecycle.md) |
 | Composer footer customization and optional reply speed | yes for a speed sample | none (Web interaction path) | [composer-footer.md](composer-footer.md) |
 | Disposable Memory history, restore and stale-head refusal | no | `scripts/e2e-memory-restore.mjs` | [memory-restore.md](memory-restore.md) |
+| Version-bound Memory images, Markdown previews and CLI export | no | `scripts/e2e-memory-images.mjs`, `scripts/e2e-memory-markdown.mjs`, `scripts/e2e-memory-formats.mjs` | [memory-images.md](memory-images.md) |
 
-| Activity Center inline Tool approvals: page and Dock | yes (real pending requests) | `scripts/e2e-inbox-tool-approval.mjs` | [activity-inline-approval.md](activity-inline-approval.md) |
+| Activity Center: approvals, Channel mute and independent control-rail indicator; page and Dock | yes (real pending requests) | `scripts/e2e-inbox-tool-approval.mjs`, `scripts/e2e-activity-live.mjs`, `scripts/e2e-activity-approve-sync.mjs`, `scripts/e2e-activity-load.mjs` | [activity-inline-approval.md](activity-inline-approval.md) |
 
 ## Coverage and maintenance
+
+| IM DM commands, current authority and canonical reply outcomes | no for commands; yes for ordinary follow-up | none (isolated Host, CLI and authorized native IM path) | [im-dm-commands.md](im-dm-commands.md) |
 
 The index routes verification; it is not a list of features proven on the current commit.
 Some files contain manual paths or API-only journeys. Read each file's preconditions and
@@ -52,7 +60,9 @@ The check fails for a missing feature row, required section, local link or scrip
 an index row's scripted journeys disagree with its feature file. It runs in lint. Passing
 checks only reference integrity: update and run the affected paths when the product changes.
 
+| Cloud Agent Host connections | yes for Agent response; no for credential management | isolated Host plus real TOB UAT, two Hosts for collaboration | [cloud-host-connections.md](cloud-host-connections.md) |
 | IM conversation mirroring and forwarding settings | no for settings; yes for a model-generated reply | `verify-app` settings path; real IM destination required for delivery | [im-conversation-mirroring.md](im-conversation-mirroring.md) |
+| Memory working and commit diffs | no | `scripts/e2e-memory-diff-wrap.mjs` | [memory-diffs.md](memory-diffs.md) |
 
 ## Not mapped yet
 
@@ -70,3 +80,9 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 
 - `scripts/e2e-activity-entry.mjs` passed login, then timed out on `.bh-overview` behind onboarding.
 - `scripts/e2e-harvest.mjs` needed a model reply and timed out without one.
+
+| Image wallpaper | no | `scripts/e2e-image-wallpaper.mjs` | [image-wallpaper.md](image-wallpaper.md) |
+
+| Video wallpaper | no | `scripts/e2e-video-wallpaper.mjs` | [video-wallpaper.md](video-wallpaper.md) |
+
+| Appearance recovery | no | `scripts/e2e-appearance-recovery.mjs`, `scripts/e2e-message-history-mask.mjs` | [appearance-recovery.md](appearance-recovery.md) |

@@ -5,6 +5,8 @@ import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 
 export const HOST_ADMIN_OPTIONS = {
+  force: { type: 'boolean' },
+  action: { type: 'string' },
   query: { type: 'string' },
   topic: { type: 'string' },
   sort: { type: 'string' },
@@ -15,6 +17,8 @@ export const HOST_ADMIN_OPTIONS = {
 } as const;
 
 export interface HostAdminValues {
+  force?: boolean;
+  action?: string;
   query?: string;
   topic?: string;
   sort?: string;
@@ -29,6 +33,7 @@ export interface HostAdminValues {
 }
 
 export const HOST_ADMIN_COMMANDS = [
+  { command: 'onboarding', description: 'read or manage the Tob getting-started journey' },
   { command: 'pause', description: 'archive a Bot through the Host owner' },
   { command: 'resume', description: 'restore an archived Bot through the Host owner' },
   {
@@ -82,6 +87,7 @@ const POSITIONALS: Record<HostAdminCommand, number> = {
   pause: 1,
   resume: 1,
   'tob-home': 0,
+  onboarding: 0,
   'marketplace-list': 0,
   'marketplace-topics': 0,
   'marketplace-detail': 1,
@@ -220,6 +226,13 @@ export async function runHostAdminCommand(
     case 'pause':
     case 'resume':
       return rpc(command, { slug: rest[0]!.trim() });
+    case 'onboarding':
+      if (
+        values.action !== undefined &&
+        !['start', 'pause', 'skip', 'continue', 'restart', 'finish'].includes(values.action)
+      )
+        usage('Invalid onboarding action.');
+      return rpc('onboarding', values.action === undefined ? {} : { action: values.action });
     case 'tob-home':
       return rpc('tobHome', {});
     case 'marketplace-list':
@@ -249,7 +262,7 @@ export async function runHostAdminCommand(
       });
     }
     case 'release-check':
-      return rpc('releaseUpdate', {});
+      return rpc('releaseUpdate', values.force === true ? { force: true } : {});
     case 'release-install': {
       const result = record(await rpc('releaseInstall', { version: target }));
       if (result['status'] === 'failed')

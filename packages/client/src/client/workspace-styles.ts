@@ -10,11 +10,15 @@ export const WORKSPACE_CSS = `
 [data-bh-workspace-frame] > [data-bh-workspace-main] { grid-column:1 / 3; grid-row:1; border-left:0 !important; }
 [data-bh-workspace-frame] > [data-rightbar-col] { grid-column:3; grid-row:1; }
 .bh-workspace-chrome { display:none; }
+/* The native Windows caption stays owned by DSH; workspace blanks add drag boxes. */
+html[data-windows-titlebar] [data-workspace-dock] :is([data-window-drag], .dv-tabs-and-actions-container, .dv-tab) { -webkit-app-region:drag; }
+html[data-windows-titlebar] [data-workspace-dock] :is([data-window-drag-recall], button, a, input, select, textarea, [contenteditable="true"], [role="menu"], [role="dialog"], [role="tooltip"]) { -webkit-app-region:no-drag; }
+html[data-windows-titlebar]:has([data-workspace-dock]) body > :not(#root) { -webkit-app-region:no-drag; }
 [data-bh-workspace-main] { --dsh-frame-leading-clearance:0px; }
-html[data-platform="darwin"]:not([data-fullscreen]) [data-workspace-enabled] > .bh-workspace-chrome { display:block; position:absolute; top:0; left:0; width:calc(${size.nav} * 2 + ${space.x3}); height:${size.nav}; z-index:10; background:${color.base}; }
+html[data-platform="darwin"]:not([data-fullscreen]) [data-workspace-enabled] > .bh-workspace-chrome { display:block; position:absolute; top:0; left:0; width:calc((${size.nav} * 2 + ${space.x3}) / var(--bh-workspace-zoom, 1)); height:calc(${size.nav} / var(--bh-workspace-zoom, 1)); z-index:10; background:${color.base}; }
 .bh-dock[data-workspace-dock] .dv-groupview { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; }
 .bh-dock[data-workspace-dock] .bh-root { background:${panelBackground}; }
-html[data-platform="darwin"]:not([data-fullscreen]) .bh-dock:has([data-bh-rail-corner]) .bh-workspace-rail { padding-top:calc(${size.nav} + ${space.x2}); }
+html[data-platform="darwin"]:not([data-fullscreen]) .bh-dock:has([data-bh-rail-corner]) .bh-workspace-rail { padding-top:calc(${size.nav} / var(--bh-workspace-zoom, 1) + ${space.x2}); }
 html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] > .dv-tabs-and-actions-container .bh-dock-header,
 html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-topbar { padding-left:var(--bh-mac-leading); box-sizing:border-box; }
 .bh-dock[data-workspace-dock] .dv-dockview { background:${color.base}; }
@@ -25,18 +29,19 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 .bh-workspace-rail { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; position:relative; height:100%; display:flex; flex-direction:column; align-items:center; gap:${space.x2}; padding:${space.x2}; box-sizing:border-box; background:${panelBackground}; }
 /* Light DSH base and the blended Panel are both nearly white. Recess only
    the workspace canvas; keep Panels bright and the existing dark palette. */
-body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock],
-body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-dockview,
-body:not([data-ds-dark-theme]) .bh-message-member-divider,
-body:not([data-ds-dark-theme]) .bh-channel-session-divider,
-html[data-platform="darwin"]:not([data-fullscreen]) body:not([data-ds-dark-theme]) [data-workspace-enabled] > .bh-workspace-chrome { background:${color.surface}; }
-body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-actions-container { border-bottom-color:${color.surface}; }
+:root:has(style[data-bh-appearance="light"]) .bh-dock[data-workspace-dock],
+:root:has(style[data-bh-appearance="light"]) .bh-dock[data-workspace-dock] .dv-dockview,
+:root:has(style[data-bh-appearance="light"]) .bh-message-member-divider,
+:root:has(style[data-bh-appearance="light"]) .bh-channel-session-divider,
+html[data-platform="darwin"]:not([data-fullscreen]):has(style[data-bh-appearance="light"]) [data-workspace-enabled] > .bh-workspace-chrome { background:${color.surface}; }
+:root:has(style[data-bh-appearance="light"]) .bh-dock[data-workspace-dock] .dv-tabs-and-actions-container { border-bottom-color:${color.surface}; }
 .bh-workspace-rail > button, .bh-workspace-rail > span > button, .bh-workspace-move { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:${size.row}; height:${size.row}; padding:0; border:0; border-radius:${radius.md}; corner-shape:round; color:${color.fg}; background:transparent; cursor:pointer; }
 .bh-workspace-rail button:hover { background:${color.hover}; }
 .bh-workspace-rail button:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }
 .bh-workspace-grip { opacity:0; transition:opacity 120ms; }
 .bh-workspace-rail:hover .bh-workspace-grip, .bh-workspace-rail:focus-within .bh-workspace-grip { opacity:1; }
 .bh-workspace-controls { min-height:0; flex:1; overflow:auto; width:100%; }
+.bh-workspace-controls > [data-window-drag-recall] { width:fit-content; margin:0 auto; }
 .bh-workspace-controls .bh-pinned-panels { margin:0; padding:0; }
 .bh-workspace-exit-icon { display:none; color:${color.danger}; }
 .bh-workspace-exit:hover .bh-workspace-brand, .bh-workspace-exit:focus-visible .bh-workspace-brand { display:none; }
@@ -73,7 +78,7 @@ body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-action
 .bh-channel-message-host > .bh-message-split { flex:1; }
 .bh-channel-session-host { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; border-radius:${radius.xs}; }
 .bh-channel-session-host[hidden], .bh-channel-session-divider[hidden] { display:none; }
-.bh-channel-session-header { flex:none; height:calc(${size.row} + ${space.x1} * 2); border-bottom:var(--bh-workspace-header-gap) solid ${color.base}; cursor:grab; }
+.bh-channel-session-header { flex:none; height:calc(${size.row} + ${space.x1} * 2); border-bottom:var(--bh-workspace-header-gap) solid ${color.base}; }
 .bh-channel-session-host > section { flex:1; min-height:0; }
 .bh-channel-session-divider { flex:0 0 var(--bh-workspace-gap); min-width:${space.x1}; background:${color.base}; cursor:col-resize; touch-action:none; }
 .bh-channel-workspace[data-split-axis="vertical"] > .bh-channel-session-divider { min-width:0; min-height:${space.x1}; cursor:row-resize; }

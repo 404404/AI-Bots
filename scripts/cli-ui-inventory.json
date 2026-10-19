@@ -7,13 +7,13 @@
       "scope": "Client",
       "surfaces": [
         "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.language')}",
-        "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.theme')}",
         "setting:packages/client/src/client/notification-settings.tsx:{t('desktopNotify.row.title')}",
         "storage:packages/client/src/client/composer-footer-preferences.ts:setItem(FOOTER_STORAGE_KEY)",
         "storage:packages/client/src/client/desktop-notifications.ts:setItem(DESKTOP_NOTIFICATIONS_KEY)",
         "storage:packages/client/src/client/dm-actions.ts:setItem(STORAGE_KEY)",
         "storage:packages/client/src/client/file-open-preferences.ts:setItem(storageKey)",
-        "setting:packages/client/src/client/channel-personal-settings.tsx:{t(`dmTrace.kind.${kind}`)}"
+        "setting:packages/client/src/client/channel-personal-settings.tsx:{t(`dmTrace.kind.${kind}`)}",
+        "storage:packages/client/src/client/activity-indicator.ts:setItem(ACTIVITY_INDICATOR_KEY)"
       ],
       "issue": "#2095"
     },
@@ -291,6 +291,13 @@
       "issue": "#2089"
     },
     {
+      "id": "memory-image-preview",
+      "description": "Version-bound standalone and document-relative Memory PNG/JPEG/GIF/WebP/safe-SVG transfer; --image-reference binds inline images to Markdown metadata from existing Memory commands.",
+      "scope": "Host",
+      "surfaces": ["route:packages/core/src/plugin.ts:MEMORY_IMAGE_PATH"],
+      "commands": ["memory-image"]
+    },
+    {
       "id": "memory-download",
       "description": "Current Memory file download.",
       "scope": "Host",
@@ -328,6 +335,8 @@
         "storage:packages/client/src/client/composer-draft-store.ts:setItem(prefix + this.writer + ':' + version.sequence)",
         "storage:packages/client/src/client/composer-submission-store.ts:setItem(SUBMISSION_PREFIX + scope)",
         "storage:packages/client/src/client/home-panel.tsx:setItem('botharness/home-draft/' + home.botSlug)",
+        "storage:packages/client/src/client/home-panel.tsx:setItem(key)",
+        "storage:packages/client/src/client/home-panel.tsx:removeItem(key)",
         "storage:packages/client/src/client/reachable-post-requests.ts:setItem(this.#key)"
       ],
       "exemption": "Drafts, pending sends and transport request recovery are per-Client delivery state, not configurable settings; sending is already covered by send.",
@@ -335,7 +344,7 @@
     },
     {
       "id": "ui-tour",
-      "description": "Tutorial navigation/seen markers only; not a setting controlling Bot or Host behavior. Retains the existing onboarding exemption.",
+      "description": "Tutorial lifecycle is covered by onboarding; device-local presentation markers remain nonconfigurable.",
       "scope": "Client transport / transient state",
       "surfaces": [
         "setting:packages/client/src/client/onboarding-view.tsx:{t('onboarding.settings.title')}",
@@ -346,9 +355,12 @@
         "storage:packages/client/src/client/onboarding-sessions-tour.ts:setItem(RETURN_KEY)",
         "storage:packages/client/src/client/onboarding-sessions-tour.ts:setItem(SEEN_KEY)",
         "storage:packages/client/src/client/onboarding.ts:removeItem(key)",
-        "storage:packages/client/src/client/onboarding.ts:setItem(key)"
+        "storage:packages/client/src/client/onboarding.ts:removeItem(`botharness/onboarding/layout-v2/${receipt.profileId}`)",
+        "storage:packages/client/src/client/onboarding.ts:setItem(key)",
+        "storage:packages/client/src/client/onboarding.ts:removeItem('botharness/onboarding/sessions-return')",
+        "storage:packages/client/src/client/onboarding.ts:setItem(`botharness/onboarding/layout-v2/${this.state.receipt.profileId}`)"
       ],
-      "exemption": "Tutorial navigation/seen markers only; not a setting controlling Bot or Host behavior. Retains the existing onboarding exemption.",
+      "exemption": "Device-local tour anchors and seen markers are presentation state, not Host settings. Profile tutorial lifecycle is available through onboarding.",
       "configurable": false
     },
     {
@@ -358,7 +370,8 @@
       "surfaces": [
         "setting:packages/client/src/client/bot-settings-sections.tsx:{t('build.row.title')}",
         "setting:packages/client/src/client/release-notes-view.tsx:{t('release.row.title')}",
-        "storage:packages/client/src/client/release-notes.ts:setItem(RELEASE_NOTES_SEEN_KEY)"
+        "storage:packages/client/src/client/release-notes.ts:setItem(RELEASE_NOTES_SEEN_KEY)",
+        "storage:packages/client/src/client/release-notes.ts:setItem(key)"
       ],
       "exemption": "Release/build information and seen receipt only, not configurable release controls.",
       "configurable": false
@@ -663,6 +676,46 @@
       "surfaces": [
         "setting:packages/computer/src/client/settings-rows.tsx:{t('rows.exportSection.title')}",
         "setting:packages/computer/src/client/settings-rows.tsx:{t('rows.importSection.title')}"
+      ]
+    },
+    {
+      "id": "desktop-window-zoom",
+      "description": "Device-local primary window preferences; Host relays exact Client requests without storing settings.",
+      "scope": "Client / desktop primary window",
+      "surfaces": [
+        "route:packages/core/src/plugin.ts:WINDOW_ZOOM_CONTROL_PATH",
+        "setting:packages/client/src/client/window-zoom-settings.tsx:{t('zoom.current')}",
+        "setting:packages/client/src/client/window-zoom-settings.tsx:{t('zoom.default')}",
+        "storage:packages/client/src/client/window-zoom.ts:setItem(WINDOW_ZOOM_KEY)"
+      ],
+      "commands": ["window-zoom-clients", "window-zoom-get", "window-zoom-set", "window-zoom-reset"]
+    },
+    {
+      "id": "deepseekbot-local-appearance",
+      "description": "Explicit Client-targeted device-local DeepSeekBot themes; authenticated Host forwards requests without a preference mirror.",
+      "scope": "Client",
+      "surfaces": [
+        "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.theme')}",
+        "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPreset' : 'appearance.darkPreset')}",
+        "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPrimary' : 'appearance.darkPrimary')}",
+        "storage:packages/client/src/client/appearance.ts:setItem(APPEARANCE_KEY)",
+        "route:packages/core/src/plugin.ts:APPEARANCE_CONTROL_PATH",
+        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialBlur')}",
+        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialColor')}",
+        "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialOpacity')}",
+        "setting:packages/client/src/client/appearance-panel-settings.tsx:{t( field === 'color' ? 'appearance.materialColor' : field === 'opacity' ? 'appearance.materialOpacity' : 'appearance.materialBlur', )}"
+      ],
+      "commands": [
+        "appearance-clients",
+        "appearance-get",
+        "appearance-set",
+        "appearance-targets",
+        "wallpaper-get",
+        "wallpaper-import",
+        "wallpaper-crop",
+        "wallpaper-remove",
+        "appearance-clear-panels",
+        "appearance-reset"
       ]
     }
   ]

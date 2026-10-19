@@ -1,3 +1,4 @@
+import type { Context } from '@deepseek-ai/cordis';
 import type { ToolApprovalActor } from './tool-approval-actor.js';
 export type { ToolApprovalActor } from './tool-approval-actor.js';
 import { randomUUID } from 'node:crypto';
@@ -990,4 +991,14 @@ export class ChannelToolApproval {
     pending.signal?.removeEventListener('abort', pending.abort);
     pending.resolve(outcome);
   }
+}
+
+export function registerChannelToolApproval(
+  ctx: Context,
+  approval: Pick<ChannelToolApproval, 'ask'>,
+): void {
+  ctx.on('approval/request', async (request, next) => (await approval.ask(request)) ?? next(), {
+    global: true,
+    prepend: true,
+  });
 }

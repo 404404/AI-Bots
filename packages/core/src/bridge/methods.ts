@@ -1,3 +1,15 @@
+import { MemoryImageError } from '../memory/image.js';
+import { isDeepStrictEqual } from 'node:util';
+import { DEEPSEEKBOT_RECIPE } from '../onboarding/service.js';
+import { type CloudWork } from '../cloud/work.js';
+import { runCloudWorkDirect } from '../cloud/work-tool.js';
+import {
+  manageCloud,
+  parseCloudManagement,
+  type CloudManagementResult,
+} from '../cloud/management.js';
+import type { CloudConnections } from '../cloud/connections.js';
+import { ClientError as CloudError } from '../cloud/instance-contract.js';
 import {
   ChannelManagementError,
   type ChannelManagementService,
@@ -259,6 +271,7 @@ import {
 import {
   HUMAN_INBOX_SNOOZE_MAX_MS,
   type HumanAttentionQuery,
+  type HumanAttentionStatus,
   type HumanAttentionDecisions,
   type HumanAttentionPage,
   type HumanAttentionCategory,
@@ -314,6 +327,8 @@ export interface ActivityOverview {
 }
 
 export interface PersonaBotSummary {
+  lastActivityAt?: number;
+  tob?: { defaultName: boolean; defaultAvatar: boolean };
   slug: string;
   displayName: string;
   roles: string[];
@@ -465,6 +480,7 @@ export interface BridgeMethods {
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
+  botNewSession(payload: unknown): Promise<BridgeResult<{ started: true }>>;
   channelBotStop(
     payload: unknown,
   ): Promise<BridgeResult<{ stopped: { botSlug: string; sessionId: string; messageId: string } }>>;
@@ -504,6 +520,8 @@ export interface BridgeMethods {
   messagingSource(payload: unknown): Promise<BridgeResult<{ source: ExternalSource }>>;
   messagingDefaults(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   messagingDefaultsSet(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
+  cloudConnections(payload: unknown): Promise<BridgeResult<CloudManagementResult>>;
+  cloudWork(payload: unknown): Promise<BridgeResult<Awaited<ReturnType<CloudWork['run']>>>>;
   messagingApps(): Promise<BridgeResult<MessagingAppsView>>;
   messagingSnapshot(payload: unknown): Promise<BridgeResult<MessagingSnapshot>>;
   messagingReachable(
@@ -528,7 +546,10 @@ export interface BridgeMethods {
   modelPresetUpdate(payload: unknown): Promise<BridgeResult<{ preset: ModelPreset }>>;
   modelPresetApply(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlan(payload: unknown): Promise<BridgeResult<ModelPlanState>>;
-  modelPlanCustomize(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
+  modelPlanCustomize(
+    payload: unknown,
+    beforeCommit?: () => void,
+  ): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlanAssignmentsSet(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   modelPlanSet(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   list(payload: unknown): BridgeResult<{ bots: PersonaBotSummary[] }>;
@@ -602,7 +623,7 @@ export interface BridgeMethods {
   activityOverview(payload: unknown): BridgeResult<ActivityOverview>;
   humanAttention(payload: unknown): BridgeResult<HumanAttentionPage>;
   humanAssignmentContext(payload: unknown): BridgeResult<{ context: HumanAssignmentContext }>;
-  humanAttentionStatus(payload: unknown): BridgeResult<{ unreadCount: number; hasAction: boolean }>;
+  humanAttentionStatus(payload: unknown): BridgeResult<HumanAttentionStatus>;
   channelUnreadCounts(
     payload: unknown,
   ): BridgeResult<{ channels: Array<{ channelId: string; unreadCount: number }> }>;
@@ -662,9 +683,16 @@ export interface BridgeMethods {
   channelMediaTarget(payload: unknown): Promise<BridgeResult<{ target: MemoryFileTarget }>>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memorySnapshot(payload: unknown): BridgeResult<{ snapshot: MemoryAcceptedSnapshot }>;
-  memoryFile(
-    payload: unknown,
-  ): BridgeResult<{ file?: { path: string; body: string; head: string } }>;
+  memoryFile(payload: unknown): BridgeResult<{
+    file?: {
+      path: string;
+      body: string;
+      head: string;
+      binary?: boolean;
+      image?: import('../memory/image.js').MemoryImage;
+      markdown?: import('../memory/markdown.js').MemoryMarkdown;
+    };
+  }>;
   memoryHistory(payload: unknown): BridgeResult<{ commits: MemoryAcceptedCommit[] }>;
   memoryDiff(payload: unknown): BridgeResult<{ sha: string; diff: string }>;
   memoryGitGraph(payload: unknown): BridgeResult<MemoryGitGraph>;
@@ -741,7 +769,7 @@ export interface BridgeMethods {
   marketplaceChallenge(): Promise<BridgeResult<AltchaChallenge>>;
   marketplaceReport(payload: unknown): Promise<BridgeResult<{ received: true }>>;
   releaseInfo(payload: unknown): BridgeResult<ReleaseInfo>;
-  releaseUpdate(): Promise<BridgeResult<ReleaseUpdate>>;
+  releaseUpdate(payload?: unknown): Promise<BridgeResult<ReleaseUpdate>>;
   releaseInstall(payload: unknown): Promise<BridgeResult<ReleaseInstall>>;
   releaseRestart(payload: unknown): Promise<BridgeResult<ReleaseRestart>>;
   telemetryStatus(): BridgeResult<TelemetryStatus>;
@@ -765,6 +793,8 @@ export interface ApprovalReviewerModelView {
 }
 
 export interface BridgeMethodsDeps {
+  cloudConnections?: CloudConnections;
+  cloudWork?: CloudWork;
   approvalReviewer?: ApprovalReviewerSettings;
   composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
@@ -1128,10 +1158,25 @@ function createFailure(
   }
 }
 
-function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBotSummary {
+function summarize(
+  record: PersonaBotRecord,
+  snapshot: BotStateSnapshot,
+  protectedTob = false,
+): PersonaBotSummary {
   return {
     slug: record.slug,
     displayName: record.displayName,
+    ...(protectedTob
+      ? {
+          tob: {
+            defaultName: record.displayNameCustomized !== true && record.displayName === 'Tob',
+            defaultAvatar:
+              record.avatarCustomized !== true &&
+              ((!record.avatar?.trim() && record.appearance === undefined) ||
+                isDeepStrictEqual(record.appearance?.recipe, DEEPSEEKBOT_RECIPE)),
+          },
+        }
+      : {}),
     aggregateState: snapshot.state,
     workspaces: [...record.workspaces],
     createdAt: record.createdAt,
@@ -1161,9 +1206,13 @@ function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): Person
   };
 }
 
-function detail(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBotDetail {
+function detail(
+  record: PersonaBotRecord,
+  snapshot: BotStateSnapshot,
+  protectedTob = false,
+): PersonaBotDetail {
   return {
-    ...summarize(record, snapshot),
+    ...summarize(record, snapshot, protectedTob),
     sessions: { ...snapshot.sessions },
     ...(record.model === undefined ? {} : { model: record.model }),
     ...(record.modelPlan === undefined ? {} : { modelPlan: record.modelPlan }),
@@ -1273,7 +1322,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
   };
   const createBotId = deps.createBotId ?? (() => 'bot-' + randomUUID().replaceAll('-', ''));
   const detailOf = (record: PersonaBotRecord): { bot: PersonaBotDetail } => ({
-    bot: detail(record, deps.states.snapshot(record.slug)),
+    bot: detail(record, deps.states.snapshot(record.slug), deps.tob?.isTob(record.slug)),
   });
 
   const rosterWrite = async <T>(operation: () => Promise<T>): Promise<BridgeResult<T>> => {
@@ -1315,7 +1364,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     try {
       return { ok: true, value: operation() };
     } catch (error) {
-      if (error instanceof MemoryAcceptError) {
+      if (error instanceof MemoryAcceptError || error instanceof MemoryImageError) {
         return { ok: false, error: { code: error.code, message: error.message } };
       }
       if (error instanceof MemoryFileError)
@@ -1636,6 +1685,36 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return Promise.resolve(invalidInput('Valid qualified platform defaults required'));
       return messagingCall((service) => service.setDefaults(parsed.data));
     },
+    async cloudWork(payload) {
+      const parsed = z
+        .object({ slug: z.string().min(1), input: z.unknown() })
+        .strict()
+        .safeParse(payload);
+      if (!parsed.success || !deps.registry.get(parsed.data.slug))
+        return invalidInput('Known bot and cloud work input required');
+      try {
+        if (!deps.cloudWork) throw new CloudError('CLOUD_UNAVAILABLE');
+        return {
+          ok: true,
+          value: await runCloudWorkDirect(deps.cloudWork, parsed.data.slug, parsed.data.input),
+        };
+      } catch (error) {
+        const code = error instanceof CloudError ? error.code : 'CLOUD_WORK_UNAVAILABLE';
+        return { ok: false, error: { code, message: code } };
+      }
+    },
+    async cloudConnections(payload) {
+      try {
+        if (!deps.cloudConnections) throw new CloudError('CLOUD_UNAVAILABLE');
+        return {
+          ok: true,
+          value: await manageCloud(deps.cloudConnections, parseCloudManagement(payload)),
+        };
+      } catch (error) {
+        const code = error instanceof CloudError ? error.code : 'CLOUD_UNAVAILABLE';
+        return { ok: false, error: { code, message: code } };
+      }
+    },
     messagingApps() {
       return messagingCall(async (service) => ({
         apps: await service.apps(),
@@ -1867,7 +1946,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const action = source['action'];
       if (
         action !== undefined &&
-        !['start', 'pause', 'skip', 'continue', 'restart'].includes(String(action))
+        !['start', 'pause', 'skip', 'continue', 'restart', 'finish'].includes(String(action))
       )
         return invalidInput('Invalid tutorial action');
       try {
@@ -2023,6 +2102,26 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return { ok: true, value: { accepted: true } };
       } catch (error) {
         return invalidInput(error instanceof Error ? error.message : 'Retry unavailable');
+      }
+    },
+    async botNewSession(payload) {
+      const slug = asSlug(payload);
+      if (slug === undefined) return invalidInput('slug is required');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.runtime?.startFreshOrchestrator === undefined) return unavailable();
+      try {
+        const outcome = await deps.runtime.startFreshOrchestrator(slug);
+        if (outcome === 'busy')
+          return {
+            ok: false,
+            error: { code: 'bot-busy', message: 'Stop the Bot before starting a fresh Session' },
+          };
+        return { ok: true, value: { started: true } };
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'session-reset-failed', message: 'Could not start a fresh Session' },
+        };
       }
     },
     async channelBotStop(payload) {
@@ -2258,7 +2357,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         },
       };
     },
-    async modelPlanCustomize(payload) {
+    async modelPlanCustomize(payload, beforeCommit) {
       if (deps.modelCatalog === undefined) return unavailable();
       const source = asObject(payload);
       const slug = source['slug'];
@@ -2280,6 +2379,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('A valid expected revision is required');
       try {
         await deps.modelCatalog.validate(orchestrator);
+        beforeCommit?.();
         const result = deps.registry.customizeModelPlan(slug, orchestrator, expectedRevision);
         if (!result.ok)
           return result.reason === 'not-found'
@@ -2426,6 +2526,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     list(payload) {
+      const activity = new Map(deps.channels.latestBotActivity?.());
+      for (const [slug, at] of deps.runtime?.latestAssignmentActivity?.() ?? [])
+        activity.set(slug, Math.max(activity.get(slug) ?? 0, at));
       const query = asQuery(payload)?.trim().toLowerCase();
       const bots = deps.registry
         .listHistorical()
@@ -2438,7 +2541,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           );
         })
         .map((record) => ({
-          ...summarize(record, deps.states.snapshot(record.slug)),
+          ...summarize(record, deps.states.snapshot(record.slug), deps.tob?.isTob(record.slug)),
+          ...(activity.has(record.slug) ? { lastActivityAt: activity.get(record.slug)! } : {}),
           ...(deps.registry.get(record.slug) === undefined
             ? {
                 deleted: true,
@@ -2674,9 +2778,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (since !== undefined && typeof since !== 'string') return invalidInput('invalid since');
       return { ok: true, value: deps.release.info(since) };
     },
-    async releaseUpdate() {
+    async releaseUpdate(payload) {
       if (deps.release === undefined) return releaseUnavailable();
-      return { ok: true, value: await deps.release.update() };
+      const force = asObject(payload)['force'];
+      if (force !== undefined && typeof force !== 'boolean') return invalidInput('invalid force');
+      return { ok: true, value: await deps.release.update(force) };
     },
     async releaseInstall(payload) {
       if (deps.release === undefined) return releaseUnavailable();
@@ -4797,11 +4903,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(String(error));
       }
     },
-    humanAttentionStatus() {
+    humanAttentionStatus(payload) {
+      const requested = asObject(payload)['messageCounts'];
+      if (requested !== undefined && typeof requested !== 'boolean')
+        return invalidInput('messageCounts must be boolean');
       try {
         return {
           ok: true,
-          value: deps.humanAttention?.status() ?? { unreadCount: 0, hasAction: false },
+          value: deps.humanAttention?.status(requested === true) ?? {
+            unreadCount: 0,
+            hasAction: false,
+            ...(requested === true ? { messageCounts: { replies: 0, other: 0 } } : {}),
+          },
         };
       } catch (error) {
         return invalidInput(String(error));

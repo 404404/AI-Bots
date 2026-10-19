@@ -30,6 +30,7 @@ export interface OnboardingViewState {
   guideOpen: boolean;
   sessionsTourOpen: boolean;
   checklistOpen: boolean;
+  layoutComplete?: boolean;
   evidence?: ChecklistEvidence | undefined;
   experience?: 'memory' | 'im' | undefined;
   busy: boolean;
@@ -80,6 +81,28 @@ export class OnboardingController {
         guideOpen: justCompleted || receipt.tutorial !== 'active' ? false : this.state.guideOpen,
         checklistOpen: receipt.tutorial !== 'active' ? false : opening || this.state.checklistOpen,
       });
+      if (receipt.journey) {
+        if (first) {
+          try {
+            this.update({
+              layoutComplete:
+                localStorage.getItem(`botharness/onboarding/layout-v2/${receipt.profileId}`) ===
+                '1',
+            });
+          } catch {}
+          setSessionsTourPending(undefined);
+          try {
+            sessionStorage.removeItem('botharness/onboarding/sessions-return');
+          } catch {}
+        }
+        if (action === 'restart') {
+          try {
+            localStorage.removeItem(`botharness/onboarding/layout-v2/${receipt.profileId}`);
+          } catch {}
+          this.update({ layoutComplete: false });
+        }
+        if (opening) this.revealHome?.();
+      }
       if (opening || (justCompleted && !first)) void this.refreshEvidence();
       if (first) {
         try {
@@ -101,12 +124,23 @@ export class OnboardingController {
           await companion?.start();
           companion?.initializeDefault(receipt.defaultBotSlug);
         }
-        if (receipt.channelId && (select || store.getSnapshot().selection === undefined))
+        if (
+          !receipt.journey &&
+          receipt.channelId &&
+          (select || store.getSnapshot().selection === undefined)
+        )
           await this.actions.openChannel(receipt.channelId);
       }
     } catch (error) {
       this.update({ error: errorMessage(error) });
     }
+  }
+  private revealHome: (() => void) | undefined;
+  attachHome(reveal: () => void): () => void {
+    this.revealHome = reveal;
+    return () => {
+      if (this.revealHome === reveal) this.revealHome = undefined;
+    };
   }
   private companion: WindowCompanions | undefined;
   attachCompanion(companion: WindowCompanions | undefined): void {
@@ -123,6 +157,7 @@ export class OnboardingController {
   async refreshEvidence(): Promise<void> {
     const receipt = this.state.receipt;
     if (!receipt) return;
+    if (receipt.journey) return;
     const target = this.target();
     const present = target !== undefined && this.companion?.get(target.slug) !== undefined;
     const evidence = await loadChecklistEvidence(this.actions, receipt, target, present);
@@ -161,7 +196,11 @@ export class OnboardingController {
   async startTour(): Promise<void> {
     const target = this.target();
     this.closeChecklistForAction();
-    if (target && store.getSnapshot().conversation.channel?.id !== target.channelId)
+    if (
+      !this.state.receipt?.journey &&
+      target &&
+      store.getSnapshot().conversation.channel?.id !== target.channelId
+    )
       await this.actions.openChannel(target.channelId);
     if (this.state.receipt?.tutorial !== 'active') await this.refresh(undefined, 'continue');
     this.update({ guideOpen: true, sessionsTourOpen: false, checklistOpen: false });
@@ -253,7 +292,48 @@ export class OnboardingController {
       this.savePending(undefined);
   }
   finishTour(): void {
+    if (this.state.receipt?.journey) {
+      try {
+        localStorage.setItem(
+          `botharness/onboarding/layout-v2/${this.state.receipt.profileId}`,
+          '1',
+        );
+      } catch {}
+      this.update({ guideOpen: false, checklistOpen: false, layoutComplete: true });
+      return;
+    }
     this.update({ guideOpen: false, checklistOpen: this.state.receipt?.tutorial === 'active' });
+  }
+  async finishFromHomeTitle(revealMessages: () => void): Promise<void> {
+    const receipt = this.state.receipt;
+    if (
+      !this.state.layoutComplete ||
+      receipt?.tutorial !== 'active' ||
+      receipt.journey?.done ||
+      !receipt.journey?.botSlug ||
+      !receipt.journey.groupChannelId ||
+      !receipt.channelId
+    )
+      return;
+    try {
+      revealMessages();
+      await this.actions.openChannel(receipt.channelId);
+      const { selection, conversation } = store.getSnapshot();
+      if (
+        selection?.kind !== 'channel' ||
+        selection.channelId !== receipt.channelId ||
+        conversation.status !== 'ready' ||
+        conversation.error
+      ) {
+        this.revealHome?.();
+        this.update({ error: conversation.error ?? 'Unable to open the Tob conversation' });
+        return;
+      }
+      await this.refresh(undefined, 'finish');
+    } catch (error) {
+      this.revealHome?.();
+      this.update({ error: errorMessage(error) });
+    }
   }
   pauseGuide(): void {
     const wasOpen = this.state.guideOpen;

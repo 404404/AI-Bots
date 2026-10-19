@@ -408,6 +408,7 @@ export function createOutboundMessaging(options: {
   onPlaced?(commit: ChannelMessageCommit): void;
   onShared?(botSlugs: string[]): void;
   onIngested?(channelId: string, messageId: string): void;
+  imCommands?(): import('./im-commands.js').ImCommandServices | undefined;
   timeoutMs?: number;
   recover?: boolean;
   now?: () => Date;
@@ -1112,6 +1113,21 @@ export function createOutboundMessaging(options: {
     },
     sourcePolicy: options.sourcePolicy ?? createBotSourcePolicyStore(database),
     isBotActive: options.isBotActive,
+    async replyCommand(botSlug, sourceEventId, text) {
+      let part = 0;
+      for (let offset = 0; offset < text.length;) {
+        let end = Math.min(offset + 4000, text.length);
+        if (end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1]!)) end--;
+        const result = await routedReply(
+          botSlug,
+          sourceEventId,
+          text.slice(offset, end),
+          `im-command-${sourceEventId}-${part++}`,
+        );
+        if (result.state !== 'provider-accepted') throw new MessagingError(result.state);
+        offset = end;
+      }
+    },
     onAdmissionCommitted(botSlug, sourceEventId) {
       feedback.notify(botSlug, sourceEventId, 'received');
     },
@@ -1123,6 +1139,7 @@ export function createOutboundMessaging(options: {
     },
     ...(options.onShared ? { onShared: options.onShared } : {}),
     ...(options.onIngested ? { onIngested: options.onIngested } : {}),
+    ...(options.imCommands === undefined ? {} : { imCommands: options.imCommands }),
     ...(options.warn === undefined ? {} : { warn: options.warn }),
   });
   const sourceForReply = (botSlug: string, sourceEventId: string, value: MessagingGrant) => {
@@ -3074,7 +3091,7 @@ export function createOutboundMessaging(options: {
               throw new MessagingError('grant-revoked');
             enabledBinding(acceptedGrant.bindingId, acceptedIdentity);
             assertConversationAllowed(latest, postScope);
-            database.read((db) => checkPostLimit(db, acceptedGrant.bindingId, true));
+            if (report) database.read((db) => checkPostLimit(db, acceptedGrant.bindingId, true));
             return !controller.signal.aborted;
           } catch (error) {
             postFenceReason =
@@ -3163,6 +3180,7 @@ export function createOutboundMessaging(options: {
                       );
                     }
                     return entry.provider.reply!({
+                      operationId: id.id,
                       accountRef: acceptedGrant.accountRef,
                       fingerprint: acceptedGrant.fingerprint,
                       route,
@@ -3189,6 +3207,7 @@ export function createOutboundMessaging(options: {
                 ? entry.provider.postConversation !== undefined &&
                   (acceptedGrant.origin === 'implicit' || entry.provider.post === undefined)
                   ? entry.provider.postConversation({
+                      operationId: id.id,
                       accountRef: acceptedGrant.accountRef,
                       fingerprint: acceptedGrant.fingerprint,
                       conversationId: conversationId!,
@@ -3201,6 +3220,7 @@ export function createOutboundMessaging(options: {
                         new MessagingProviderError('capability-unavailable', 'not-started'),
                       )
                     : entry.provider.post({
+                        operationId: id.id,
                         accountRef: acceptedGrant.accountRef,
                         targetRef: acceptedGrant.targetRef,
                         fingerprint: acceptedGrant.fingerprint,
@@ -3211,6 +3231,8 @@ export function createOutboundMessaging(options: {
                         beforeSend: beforePost,
                       })
                 : entry.provider.send({
+                    operationId: id.id,
+                    beforeSend: beforePost,
                     accountRef: acceptedGrant.accountRef,
                     targetRef: acceptedGrant.targetRef,
                     fingerprint: acceptedGrant.fingerprint,

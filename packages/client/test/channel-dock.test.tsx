@@ -120,6 +120,7 @@ async function click(selector: string): Promise<void> {
 
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  vi.stubGlobal('PointerEvent', class extends MouseEvent {});
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -560,6 +561,28 @@ it('persists hidden rail controls, closes only the hidden Panel and supports hea
   expect(host.querySelector('[data-roster-search]')).toBeNull();
   act(() => registry.open(WORKSPACE_CHANNELS));
   await settle();
+  const title = () =>
+    host.querySelector<HTMLButtonElement>(
+      `[data-dock-header="${WORKSPACE_CHANNELS}"] [data-panel-hide]`,
+    )!;
+  act(() => {
+    title().dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 30, clientY: 40 }),
+    );
+    title().dispatchEvent(
+      new MouseEvent('pointermove', { bubbles: true, clientX: 100, clientY: 40 }),
+    );
+    title().dispatchEvent(
+      new MouseEvent('click', { bubbles: true, detail: 1, clientX: 30, clientY: 40 }),
+    );
+  });
+  expect(registry.isOpen(WORKSPACE_CHANNELS)).toBe(true);
+  act(() => title().click());
+  await settle();
+  expect(registry.isOpen(WORKSPACE_CHANNELS)).toBe(false);
+  expect(readChannelDock(storage)?.hiddenControls).toEqual([]);
+  act(() => registry.open(WORKSPACE_CHANNELS));
+  await settle();
   const header = host.querySelector<HTMLElement>(`[data-dock-header="${WORKSPACE_CHANNELS}"]`)!;
   act(() =>
     header.dispatchEvent(
@@ -729,6 +752,44 @@ it('opens Bot Inbox only inside DM Messages, supports registry navigation and sw
   expect(Object.keys(panels())).not.toContain('bot-inbox');
 });
 
+it('imports fallback panel sizes when workspace ownership is enabled after mounting', async () => {
+  const { WorkspaceContext } = await import('../src/client/workspace-context.js');
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  registry.register({ id: 'sessions', title: 'Sessions', scope: 'global', component: () => null });
+  const view = (enabled: boolean) =>
+    createElement(
+      WorkspaceContext.Provider,
+      { value: enabled ? { rail: () => createElement('nav') } : undefined },
+      createElement(ChannelDock, {
+        body: createElement('div'),
+        panels: registry.panels(),
+        registry,
+        channel: { id: 'dm', type: 'dm', botSlug: 'ada' },
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view(false)));
+  await settle();
+  const fallback = readChannelDock(storage)!;
+  const nodes = fallback.layout.grid.root.data as { size: number }[];
+  nodes[0]!.size = 570;
+  nodes[1]!.size = 430;
+  storage.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify(fallback));
+  act(() => root.render(view(true)));
+  await settle();
+  expect(readChannelDock(storage)?.sessionSeed?.ratio).toBeCloseTo(0.43);
+  expect(host.querySelector('[data-workspace-dock]')).not.toBeNull();
+});
+
 it('updates the Messages Channel title and trailing actions without replacing its draft', async () => {
   const { WorkspaceContext } = await import('../src/client/workspace-context.js');
   const registry = createDockPanelRegistry();
@@ -774,6 +835,28 @@ it('updates the Messages Channel title and trailing actions without replacing it
   draft.value = 'Keep';
   const header = host.querySelector('[data-dock-header="bh:channel-body"]')!;
   expect(header.textContent).toContain('MessagesAda');
+  const titleHandle = header.querySelector<HTMLElement>('[data-panel-hide]')!;
+  const channelContext = header.querySelector<HTMLElement>('[data-panel-context]')!;
+  expect(titleHandle.textContent).toBe('Messages');
+  expect(channelContext.textContent).toBe('Ada');
+  act(() => channelContext.click());
+  expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+  for (const target of [
+    header,
+    channelContext,
+    header.closest('.dv-tab')!,
+    header.closest('.dv-tabs-and-actions-container')!,
+  ]) {
+    const drag = new Event('dragstart', { bubbles: true, cancelable: true });
+    act(() => target.dispatchEvent(drag));
+    expect(drag.defaultPrevented).toBe(true);
+  }
+
+  const titleDrag = new Event('dragstart', { bubbles: true, cancelable: true });
+  act(() => titleHandle.dispatchEvent(titleDrag));
+  expect(titleDrag.defaultPrevented).toBe(false);
+  act(() => titleHandle.dispatchEvent(new Event('dragend', { bubbles: true })));
+
   await act(async () =>
     header.querySelector<HTMLButtonElement>('[aria-label="Channel settings"]')!.click(),
   );
@@ -1035,4 +1118,176 @@ it('does not reapply Dockview options while geometry changes', async () => {
   expect(update).toHaveBeenCalledWith(
     expect.objectContaining({ theme: expect.objectContaining({ gap: 12 }) }),
   );
+});
+
+it('restores Home and nested global panel geometry without remounting surviving content', async () => {
+  const { WorkspaceContext, WORKSPACE_CHANNELS, WORKSPACE_HOME } =
+    await import('../src/client/workspace-context.js');
+  let dock: import('dockview-react').DockviewApi | undefined;
+  const registry = createDockPanelRegistry();
+  for (const [id, title] of [
+    [CHANNEL_BODY_PANEL, 'Messages'],
+    [WORKSPACE_CHANNELS, 'Channels'],
+    [WORKSPACE_HOME, 'Home'],
+    ['computer', 'Computer'],
+  ])
+    registry.register({
+      id: id!,
+      title: title!,
+      scope: 'global',
+      component: () => createElement('input', { 'data-content': id, defaultValue: title }),
+    });
+  const view = () =>
+    createElement(
+      WorkspaceContext.Provider,
+      {
+        value: {
+          rail: (api) => {
+            dock = api;
+            return createElement('nav');
+          },
+        },
+      },
+      createElement(ChannelDock, {
+        body: createElement('input', { 'data-message-draft': '' }),
+        panels: registry.panels(),
+        registry,
+        entryProps,
+        shows: () => true,
+        t: zhTranslate,
+        storage,
+      }),
+    );
+  act(() => root.render(view()));
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(CHANNEL_BODY_PANEL);
+    dock!.getPanel(CHANNEL_BODY_PANEL)!.api.moveTo({ position: 'right' });
+    registry.open('computer');
+  });
+  await settle();
+  act(() => {
+    dock!.getPanel('computer')!.api.moveTo({
+      group: dock!.getPanel(CHANNEL_BODY_PANEL)!.group,
+      position: 'bottom',
+    });
+    dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 265 });
+    dock!.getPanel(WORKSPACE_HOME)!.group.api.setSize({ width: 550 });
+    dock!.getPanel('computer')!.group.api.setSize({ height: 330 });
+  });
+  await settle();
+  const grid = () =>
+    JSON.parse(
+      JSON.stringify(dock!.toJSON().grid, (_key, value) =>
+        typeof value === 'number' ? Math.round(value * 1e6) / 1e6 : value,
+      ),
+    );
+  const before = grid();
+  const draft = host.querySelector<HTMLInputElement>('[data-message-draft]')!;
+  draft.value = 'unsent message';
+  const computer = dock!.getPanel('computer');
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  expect(registry.isOpen(WORKSPACE_HOME)).toBe(false);
+  act(() => registry.open(WORKSPACE_HOME));
+  await settle();
+  expect(grid()).toEqual(before);
+  expect(host.querySelector('[data-message-draft]')).toBe(draft);
+  expect(draft.value).toBe('unsent message');
+  expect(dock!.getPanel('computer')).toBe(computer);
+
+  act(() => {
+    registry.close(WORKSPACE_HOME);
+    registry.close(CHANNEL_BODY_PANEL);
+    registry.open(WORKSPACE_HOME);
+    registry.open(CHANNEL_BODY_PANEL);
+  });
+  await settle();
+  expect(grid()).toEqual(before);
+
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  expect(readChannelDock(storage)?.visibilityLayout).toBeDefined();
+  act(() => root.unmount());
+  root = createRoot(host);
+  act(() => root.render(view()));
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(WORKSPACE_HOME);
+  });
+  await settle();
+  expect(grid()).toEqual(before);
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  act(() => registry.close(WORKSPACE_HOME));
+  await settle();
+  const fromJSON = dock!.fromJSON.bind(dock!);
+  const restore = vi.spyOn(dock!, 'fromJSON').mockImplementationOnce((layout, options) => {
+    fromJSON(layout, options);
+    throw Error('restore interrupted after partial mutation');
+  });
+  act(() => registry.open(WORKSPACE_HOME));
+  await settle();
+  expect(dock!.panels.filter((x) => x.id === WORKSPACE_HOME)).toHaveLength(1);
+  expect(dock!.getPanel(CHANNEL_BODY_PANEL)).toBeDefined();
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  restore.mockRestore();
+});
+
+it('keeps a newly resized column when a hidden lower panel is reopened', async () => {
+  const { WorkspaceContext, WORKSPACE_CHANNELS, WORKSPACE_HOME } =
+    await import('../src/client/workspace-context.js');
+  let dock: import('dockview-react').DockviewApi | undefined;
+  const registry = createDockPanelRegistry();
+  for (const id of [CHANNEL_BODY_PANEL, WORKSPACE_CHANNELS, WORKSPACE_HOME])
+    registry.register({ id, title: id, scope: 'global', component: () => createElement('div') });
+  act(() =>
+    root.render(
+      createElement(
+        WorkspaceContext.Provider,
+        {
+          value: {
+            rail: (api) => {
+              dock = api;
+              return createElement('nav');
+            },
+          },
+        },
+        createElement(ChannelDock, {
+          body: createElement('div'),
+          panels: registry.panels(),
+          registry,
+          entryProps,
+          shows: () => true,
+          t: zhTranslate,
+          storage,
+        }),
+      ),
+    ),
+  );
+  await settle();
+  act(() => {
+    dock!.layout(1500, 900);
+    registry.open(CHANNEL_BODY_PANEL);
+    dock!.getPanel(CHANNEL_BODY_PANEL)!.api.moveTo({
+      group: dock!.getPanel(WORKSPACE_HOME)!.group,
+      position: 'bottom',
+    });
+    dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 500 });
+  });
+  await settle();
+  act(() => registry.close(CHANNEL_BODY_PANEL));
+  await settle();
+  act(() => {
+    host.querySelector('.dv-sash')!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 280 });
+    window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+  });
+  await settle();
+  const width = dock!.getPanel(WORKSPACE_CHANNELS)!.group.width;
+  expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  act(() => registry.open(CHANNEL_BODY_PANEL));
+  await settle();
+  expect(Math.abs(dock!.getPanel(WORKSPACE_CHANNELS)!.group.width - width)).toBeLessThanOrEqual(4);
 });

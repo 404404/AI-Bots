@@ -82,16 +82,6 @@ export function createTobService(options: {
     }
     const channel = channels.getOrCreateDm(slug, bot.displayName);
     if (!channel) throw new TobError('tob-channel-unavailable');
-    const result = await channels.appendMessageOnce(channel.id, {
-      id: 'tob-welcome-v1',
-      at: new Date().toISOString(),
-      author: { kind: 'system' },
-      onboardingWelcome: { version: 1, kind: 'tob' },
-      body: 'Hello, I’m Tob. I can help you understand your Bots and manage this workspace.',
-      format: 'text',
-    });
-    if (!['appended', 'existing'].includes(result.status))
-      throw new TobError('tob-welcome-unavailable');
     return { botSlug: slug, channelId: channel.id, workspacePath };
   };
   const provider = (): TobSettingsProvider => {

@@ -73,6 +73,17 @@ describe('Bot mode layout persistence', () => {
     });
   });
 
+  it('round-trips the optional pre-hide grid and ignores a damaged snapshot', () => {
+    const storage = memoryStorage();
+    writeChannelDock({ layout, parked: {}, visibilityLayout: layout }, storage);
+    expect(readChannelDock(storage)?.visibilityLayout).toEqual(layout);
+    storage.setItem(
+      CHANNEL_DOCK_STORAGE_KEY,
+      JSON.stringify({ version: 8, layout, parked: {}, visibilityLayout: { panels: {} } }),
+    );
+    expect(readChannelDock(storage)?.visibilityLayout).toBeUndefined();
+  });
+
   it('validates and preserves rail visibility preferences', () => {
     const storage = memoryStorage();
     storage.setItem(
@@ -217,6 +228,77 @@ describe('Work → Sessions upgrade', () => {
 });
 
 describe('flat Sessions → Channel workspace migration', () => {
+  it('retains a closed fallback panel size without overwriting Channel-specific state', () => {
+    const storage = memoryStorage();
+    const channel = { open: true, direction: 'left', ratio: 0.36, hiddenControl: false };
+    storage.setItem(
+      CHANNEL_DOCK_STORAGE_KEY,
+      JSON.stringify({
+        version: 8,
+        layout: {
+          ...layout,
+          grid: {
+            ...layout.grid,
+            root: { type: 'branch', data: [leaf('messages', CHANNEL_BODY_PANEL)] },
+          },
+          panels: { [CHANNEL_BODY_PANEL]: { id: CHANNEL_BODY_PANEL } },
+        },
+        parked: {
+          sessions: {
+            neighbor: CHANNEL_BODY_PANEL,
+            direction: 'below',
+            size: { width: 1, height: 0.44 },
+          },
+        },
+        hiddenControls: ['sessions'],
+        channelWorkspaces: { existing: channel },
+      }),
+    );
+    const migrated = readChannelDock(storage, true)!;
+    expect(migrated.sessionSeed).toEqual({
+      open: false,
+      direction: 'below',
+      ratio: 0.44,
+      hiddenControl: true,
+    });
+    expect(migrated.channelWorkspaces?.existing).toEqual(channel);
+    expect(migrated.parked.sessions).toBeUndefined();
+    expect(readChannelDock(storage, true)).toEqual(migrated);
+  });
+
+  it('imports the visible Windows v8 fallback geometry before enabling the workspace', () => {
+    const storage = memoryStorage();
+    const raw = JSON.stringify({
+      version: 8,
+      layout: {
+        ...layout,
+        grid: {
+          ...layout.grid,
+          root: {
+            type: 'branch',
+            data: [
+              { ...leaf('messages', CHANNEL_BODY_PANEL), size: 570 },
+              { ...leaf('sessions', 'sessions'), size: 430 },
+            ],
+          },
+        },
+        panels: Object.fromEntries([CHANNEL_BODY_PANEL, 'sessions'].map((id) => [id, { id }])),
+      },
+      sessionSeed: { open: true, direction: 'right', ratio: 0.3, hiddenControl: false },
+      parked: {},
+      channelWorkspaces: {},
+      channelSplits: {},
+    });
+    storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
+    expect(readChannelDock(storage)?.layout.panels.sessions).toBeDefined();
+    expect(storage.getItem(CHANNEL_DOCK_STORAGE_KEY)).toBe(raw);
+    const migrated = readChannelDock(storage, true)!;
+    expect(migrated.sessionSeed?.ratio).toBeCloseTo(0.43);
+    expect(migrated.layout.panels.sessions).toBeUndefined();
+    expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-workspace-shell`)).toBe(raw);
+    expect(readChannelDock(storage, true)).toEqual(migrated);
+  });
+
   it.each([1, 2, 3])(
     'backs up v%s, preserves unrelated plugins and migrates only once',
     (version) => {

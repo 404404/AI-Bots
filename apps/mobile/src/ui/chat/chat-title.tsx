@@ -1,10 +1,10 @@
+import { SourceName } from './source-name';
 import { Pressable, View } from 'react-native';
 
 import type { RosterBot } from '../../host/client';
 import { BotAvatar } from '../bot-avatar';
 import { frosted, useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
-import { Text } from '../primitives/text';
 import { t } from '../strings';
 import { botDotTone } from './bot-tone';
 
@@ -45,9 +45,7 @@ export function ChatTitle({
       })}
     >
       {bot === undefined ? null : <BotAvatar bot={bot} size={AVATAR} ring={false} />}
-      <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
-        {name}
-      </Text>
+      <SourceName name={name} source="computer" />
       {bot === undefined ? null : (
         <View
           testID="chat-title-state"

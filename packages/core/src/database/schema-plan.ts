@@ -2345,6 +2345,64 @@ const GROUP_SEND_REVIEW_MIGRATION: SchemaMigration = {
   },
 };
 
+const CLOUD_CONNECTION_MIGRATION: SchemaMigration = {
+  generation: 100,
+  module: 'messaging',
+  description: 'Track explicit cloud Agent connections without storing secret values',
+  migrate(database) {
+    database.exec(`CREATE TABLE cloud_connections (
+      id TEXT PRIMARY KEY,
+      connection_json TEXT NOT NULL,
+      credential_revision TEXT NOT NULL,
+      active INTEGER NOT NULL CHECK (active IN (0,1)),
+      cursor INTEGER NOT NULL CHECK (cursor >= 0),
+      policy_json TEXT NOT NULL,
+      revision INTEGER NOT NULL CHECK (revision >= 1)
+    );`);
+  },
+};
+
+const CLOUD_WORK_MIGRATION: SchemaMigration = {
+  generation: 101,
+  module: 'messaging',
+  description: 'Fence bounded cloud work execution and forwarding across retries',
+  migrate(database) {
+    database.exec(`CREATE TABLE cloud_work (
+      connection_id TEXT NOT NULL,
+      request_id TEXT NOT NULL,
+      bot_slug TEXT NOT NULL,
+      source_event_id TEXT NOT NULL,
+      request_hash TEXT NOT NULL,
+      state TEXT NOT NULL CHECK (state IN ('authorizing','started','outbox','finished','forwarding','forwarded')),
+      target_actor_id TEXT,
+      environment TEXT NOT NULL,
+      execution_count INTEGER NOT NULL CHECK (execution_count IN (0,1)),
+      outcome_json TEXT,
+      PRIMARY KEY (connection_id,request_id)
+    );`);
+  },
+};
+
+const TOB_ONBOARDING_MIGRATION: SchemaMigration = {
+  generation: 102,
+  module: 'bot-onboarding',
+  description: 'Version the short Tob journey without restarting legacy tutorials',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE bot_onboarding ADD COLUMN journey_version INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_started_at TEXT;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_bot TEXT;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_group TEXT;
+      ALTER TABLE bot_onboarding ADD COLUMN journey_done INTEGER NOT NULL DEFAULT 0;
+      CREATE TABLE onboarding_creation_results (
+        operation_key TEXT NOT NULL, kind TEXT NOT NULL, target_id TEXT,
+        session_id TEXT NOT NULL, recorded_at TEXT NOT NULL,
+        PRIMARY KEY (operation_key, kind)
+      );
+    `);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2444,4 +2502,7 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   BOT_CREATION_OPERATION_MIGRATION,
   CHANNEL_MANAGEMENT_OPERATION_MIGRATION,
   GROUP_SEND_REVIEW_MIGRATION,
+  CLOUD_CONNECTION_MIGRATION,
+  CLOUD_WORK_MIGRATION,
+  TOB_ONBOARDING_MIGRATION,
 ]);

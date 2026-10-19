@@ -1,8 +1,20 @@
+import { mountWindowZoomControl } from './window-zoom-control.js';
+import { mountWindowZoom, type ZoomCompatibility } from './window-zoom-mount.js';
+import { Wallpaper } from './wallpaper.js';
+import { createWallpaperStore } from './wallpaper-store.js';
+import { mountWallpaper } from './wallpaper-layer.js';
+import { panelTargetId } from './appearance-panels.js';
+import { refreshBotPrimaryColors } from './bot-primary-color.js';
+import { Appearance } from './appearance.js';
+import { mountAppearance } from './appearance-scope.js';
+import { mountAppearanceControl } from './appearance-control.js';
+import { bindBotAppearance } from './bot-color-scheme.js';
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client';
 import { AppearanceSection } from './appearance-settings.js';
 import { KeyboardSettings, setWorkShortcutNotice } from './keyboard-settings.js';
 import { DesktopNotificationSetting } from './notification-settings.js';
 import { createElement } from 'react';
+import { bindTobPresentation } from './tob-presentation.js';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
 import { registerWorkspaceShortcuts, migrateWorkShortcut } from './workspace-shortcuts.js';
 import type {} from '@deepseek-ai/dsh-client-shortcuts/client';
@@ -185,11 +197,49 @@ export function installStyles(): () => void {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => clearConversationDrafts);
   const storage = defaultStorage();
+  const wallpaper = new Wallpaper(
+    createWallpaperStore(typeof indexedDB === 'undefined' ? undefined : indexedDB),
+  );
+  const appearance = new Appearance(storage, () =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light',
+  );
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    const offScheme = bindBotAppearance(appearance);
+    const offStyle = mountAppearance(appearance);
+    const offColors = appearance.subscribe(refreshBotPrimaryColors);
+    refreshBotPrimaryColors();
+    const offWallpaper = mountWallpaper(wallpaper);
+    const offControl = mountAppearanceControl(appearance, wallpaper);
+    return () => {
+      offControl();
+      offWallpaper();
+      offColors();
+      offStyle();
+      offScheme();
+    };
+  });
   const hmrView =
     typeof window === 'undefined'
       ? undefined
       : takeHmrView(window as unknown as Record<string, unknown>);
   const t = ctx.locale.bind(LOCALE_NS);
+  const zoom = mountWindowZoom({
+    document: typeof document === 'undefined' ? undefined : document,
+    window: typeof window === 'undefined' ? undefined : window,
+    shortcuts: ctx.shortcuts,
+    storage,
+    onReady: mountWindowZoomControl,
+    compatibility:
+      typeof window === 'undefined'
+        ? undefined
+        : (window as unknown as { __botharnessWindowZoomCompatibility?: ZoomCompatibility })
+            .__botharnessWindowZoomCompatibility,
+    t,
+  });
+  ctx.effect(() => () => zoom.dispose(), 'botharness: device-local window zoom');
   const nativeChatT = ctx.locale.bind('chat');
   const call = createBridgeCall(ctx);
   const profileContext = async (): Promise<{ profileId: string }> => {
@@ -268,6 +318,22 @@ export function apply(ctx: ClientContext): void {
     };
   }, 'botharness: independent Window Companion owner');
   const prefs = new BotModePrefs(storage);
+  ctx.effect(
+    () =>
+      bindTobPresentation({
+        bot: (slug) => store.getSnapshot().bots.find((bot) => bot.slug === slug),
+        icon: () => prefs.source.getSnapshot().botIcon,
+        subscribe(listener) {
+          const offStore = store.subscribe(listener);
+          const offPrefs = prefs.source.subscribe(listener);
+          return () => {
+            offStore();
+            offPrefs();
+          };
+        },
+      }),
+    'botharness: Tob presentation',
+  );
   const botFolderGroups = createSnapshotStore<readonly BotSessionGroup[]>([]);
   const botFolderHost = createSnapshotStore<HTMLElement | null>(null);
   let botFolderMount: NativeBotFolderMount | undefined;
@@ -398,6 +464,13 @@ export function apply(ctx: ClientContext): void {
   }, 'botharness: Bot Session visibility');
   const dockPanels = createDockPanelRegistry();
   ctx.provide('dockPanels', dockPanels);
+  ctx.effect(() =>
+    appearance.setTargetSource(() => [
+      ...dockPanels.panels().map((panel) => ({ id: panelTargetId(panel.id), label: panel.title })),
+      { id: panelTargetId('memory-details'), label: t('appearance.memoryDetails') },
+      { id: panelTargetId('generated-files'), label: t('generatedFiles.title') },
+    ]),
+  );
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
   const workspace = {
     actions,
@@ -422,7 +495,7 @@ export function apply(ctx: ClientContext): void {
         ),
       ),
     exitBotMode: () => ctx.layout.selectPanel(null),
-    openBotSettings: () => botSettings.open(),
+    openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
   };
 
   ctx.effect(() =>
@@ -490,6 +563,11 @@ export function apply(ctx: ClientContext): void {
     return mountMotionPolicyAttribute(prefs.source, document.documentElement);
   }, 'botharness: motion policy boundary');
   ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), 'botharness: dictionaries');
+  ctx.effect(() => {
+    const reconcile = () => store.setDefaultTobName(t('tob.defaultName'));
+    reconcile();
+    return ctx.locale.subscribe(reconcile);
+  }, 'botharness: localized Tob name');
   ctx.effect(() => {
     if (typeof document === 'undefined') return () => {};
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -713,7 +791,12 @@ export function apply(ctx: ClientContext): void {
 
   ctx.inject(['configForms'], (settingsCtx) => {
     const scope = settingsCtx.configForms.get<BotModeSettings>(BOT_MODE_NAMESPACE);
-    prefs.attach(scope);
+    prefs.attach({
+      getSnapshot: () => ({ ...scope.getSnapshot(), mode: 'host' }),
+      subscribe: (listener) => scope.subscribe(listener),
+      set: (field, value) => scope.set(field, value),
+      mutate: (ops, expectedRevision) => scope.mutate(ops, expectedRevision),
+    });
     const releaseNavIcon = installBotNavIcon({
       labels: () => [t('settings.nav')],
       markup: () => botIconMarkup(prefs.source.getSnapshot().botIcon, readBotColorScheme()),
@@ -734,7 +817,11 @@ export function apply(ctx: ClientContext): void {
           order: 0,
           label: () => t('botSettings.section.general'),
           locale: LOCALE_NS,
-          inject: () => ({ actions, closeBotSettings: botSettings.close }),
+          inject: () => ({
+            actions,
+            closeBotSettings: botSettings.close,
+            zoomSurface: zoom.surface,
+          }),
         },
         GeneralSection,
       ),
@@ -750,11 +837,8 @@ export function apply(ctx: ClientContext): void {
           children: { 'botharness.settings.layout': { kind: 'list', scope: 'root' } },
           inject: () => ({
             ...botModePrefsFace(prefs),
-            themeSource: {
-              getSnapshot: () => ctx.theme.getTheme(),
-              subscribe: (listener: () => void) => ctx.on('theme/change', listener),
-              set: (value: string) => ctx.theme.setTheme(value),
-            },
+            appearance,
+            wallpaper,
             localeSource: {
               getSnapshot: () => ctx.locale.getSnapshot(),
               subscribe: (listener: () => void) => ctx.locale.subscribe(listener),
@@ -926,7 +1010,7 @@ export function apply(ctx: ClientContext): void {
           order: 25,
           label: () => t('settings.nav'),
           locale: LOCALE_NS,
-          inject: () => ({ openBotSettings: () => botSettings.open() }),
+          inject: () => ({ openBotSettings: (sectionId?: string) => botSettings.open(sectionId) }),
         },
         DshBotSettingsItem,
       ),
@@ -982,6 +1066,7 @@ export function apply(ctx: ClientContext): void {
           channelSidebar,
           dockPanels,
           profileCards,
+          appearance,
           nativeChatT,
           nativeSessions,
           prefs,
@@ -990,7 +1075,7 @@ export function apply(ctx: ClientContext): void {
           workspace,
           ...botModePrefsFace(prefs),
           exitBotMode: () => ctx.layout.selectPanel(null),
-          openBotSettings: () => botSettings.open(),
+          openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
         }),
       },
       MobileBotPanel,
@@ -1076,7 +1161,7 @@ export function apply(ctx: ClientContext): void {
             ...botModePrefsFace(prefs),
             exitBotMode: () => ctx.layout.selectPanel(null),
             toggleSidebar: () => ctx.layout.toggleSidebar(),
-            openBotSettings: () => botSettings.open(),
+            openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
           }),
         },
         BotModeSidebar,
@@ -1127,6 +1212,7 @@ export function apply(ctx: ClientContext): void {
             channelSidebar,
             dockPanels,
             profileCards,
+            appearance,
             nativeChatT,
             nativeSessions,
             prefs,

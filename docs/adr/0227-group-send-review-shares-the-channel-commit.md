@@ -1,6 +1,6 @@
 # ADR-0227: Group send review shares the Channel commit transaction
 
-- Status: Accepted for #2053 with explicit Human quiet-latency exception; #2054 peer-yield extension awaits its own evaluation
+- Status: Accepted for #2053 and #2054 with their recorded Human evaluation exceptions
 - Date: 2026-10-17
 - Issue: [#2053](https://github.com/BotHarness/DeepSeekBot/issues/2053)
 - Specification: [#2051](https://github.com/BotHarness/DeepSeekBot/issues/2051)
@@ -30,8 +30,8 @@ read nor a dropped draft resolves work automatically.
 
 A held send persists its identity, owner, original/current draft, basis, expiry and retry count
 in the existing Operational Database. It produces no public message or downstream Admission.
-One explicit revision or unchanged recheck is allowed. Another change stops the attempt with
-`requires-review`. Drop is separate from Inbox resolution. Ten-minute expiry and a different
+The initial #2053 policy allowed one explicit revision or unchanged recheck. The busy-Group
+policy now extends that boundary to two rechecks and an explicit progress decision (ADR-0231). Drop is separate from Inbox resolution. Ten-minute expiry and a different
 Host boot fail closed; positive restart recovery belongs to #2056. Purging a Channel source
 also clears that Channel's derived send drafts. Revocation, Bot status, Session ownership and
 source-content fences remain independent checks at commit.
@@ -89,7 +89,7 @@ more than 20 changed messages remain incomplete and cannot be silently skipped. 
 messages are selected, then offered in chronological order; a recent Human correction is not
 excluded merely because older changes occupied the ID window. The existing content budget
 can still omit oversized messages, which never become observed.
-Successful submission deletes the pending draft inside the same Channel commit transaction;
+Ordinary successful submission deletes the pending draft inside the same Channel commit transaction;
 the canonical Channel message remains, and an explicit retry of the retired draft is refused.
 Unfinished and dropped intents retain the existing conservative inspection/purge behavior.
 

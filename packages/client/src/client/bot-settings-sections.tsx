@@ -1,3 +1,5 @@
+import { WindowZoomSettings } from './window-zoom-settings.js';
+import type { ZoomSurface } from './window-zoom-mount.js';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
@@ -37,6 +39,7 @@ function Rows({ children }: { children: ReactNode }): ReactElement {
 }
 
 export type GeneralSectionFace = {
+  zoomSurface: ZoomSurface;
   actions: BridgeActions;
   closeBotSettings(): void;
 };
@@ -49,6 +52,7 @@ export type MessagingSectionFace = BotModePrefsFace & {
 export function GeneralSection(props: SectionProps<GeneralSectionFace>): ReactElement {
   return (
     <Rows>
+      <WindowZoomSettings surface={props.zoomSurface} t={props.t} />
       <OnboardingSetting
         actions={props.actions}
         closeBotSettings={props.closeBotSettings}

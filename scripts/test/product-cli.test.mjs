@@ -28,6 +28,11 @@ it('starts the shipped CLI entry outside DSH without Host-only packages', async 
       join(temporary, 'node_modules', '@resvg', 'resvg-js'),
       process.platform === 'win32' ? 'junction' : 'dir',
     );
+    symlinkSync(
+      dirname(coreRequire.resolve('css-tree/package.json')),
+      join(temporary, 'node_modules', 'css-tree'),
+      process.platform === 'win32' ? 'junction' : 'dir',
+    );
     await build({ ...coreCliBundleOptions, config: false, cwd: root, outDir: join(core, 'cli') });
     const entry = join(temporary, 'deepseekbot.mjs');
     writeFileSync(

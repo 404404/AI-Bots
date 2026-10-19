@@ -46,6 +46,10 @@ export const DIAGNOSTIC_COMMANDS = [
 
 export const LIFECYCLE_COMMANDS = [
   {
+    command: 'bot-new-session',
+    description: "retire an idle Bot's Orchestrator Session; the next message starts a fresh one",
+  },
+  {
     command: 'bot-delete-preview',
     description: 'inspect the current PersonaBot deletion scope and confirmation token',
   },
@@ -217,6 +221,7 @@ export async function runOnlineManagement(
     return rpc('modelPresetApply', { slug, presetId: values.preset!.trim(), ...revisions });
   }
   if (command === 'model-plan') return rpc('modelPlan', { slug });
+  if (command === 'bot-new-session') return rpc('botNewSession', { slug });
   if (command === 'bot-delete-preview') return rpc('deletionPreview', { slug });
   if (command === 'bot-delete-memory-folder') return rpc('deletionMemoryFolder', { slug });
   if (command === 'bot-delete-confirm')

@@ -4,6 +4,14 @@
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
+      "id": "messaging.im-dm-commands",
+      "label": "Handle whole-text IM DM commands with current authority and canonical Outbox replies",
+      "source": "packages/core/src/messaging/im-commands.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/im-dm-commands.md",
+      "task": 2005,
+      "gap": "Controlled-Provider and isolated-Host paths do not establish a fresh native WeChat command exchange."
+    },
+    {
       "id": "desktop.sessions.bot-folders",
       "label": "Group native Sessions under DeepSeekBot and Bot-avatar subgroups without changing execution directories",
       "source": "packages/client/src/client/bot-session-folders.tsx",
@@ -520,6 +528,110 @@
       "source": "apps/mobile/src/host/chat-background.ts",
       "task": 2118,
       "guide": ".agents/skills/verify-deepseekbot/features/phone-chat-backgrounds.md"
+    },
+    {
+      "id": "cloud.host.connections",
+      "label": "Import a cloud Agent into an explicit Host, bind a PersonaBot and preserve source identity on replay",
+      "source": "packages/core/src/cloud/provider.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/cloud-host-connections.md",
+      "task": 2155,
+      "gap": null
+    },
+    {
+      "id": "memory.diff-wrap",
+      "label": "Read working and commit diffs with compact gutters and default-on switchable wrapping",
+      "source": "packages/client/src/client/memory-reader-parts.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-diffs.md",
+      "task": 2213,
+      "gap": null
+    },
+    {
+      "id": "desktop.memory.png-preview",
+      "label": "Read and compare version-bound Memory PNG images with real Web decoding and CLI export",
+      "source": "packages/client/src/client/memory-image-view.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
+      "task": 2214,
+      "gap": "Standalone PNG slice only; Markdown has its own catalogue row. Other local formats and native mobile remain in #2214."
+    },
+    {
+      "id": "desktop.memory.markdown-preview",
+      "label": "Read rendered Markdown and source, compare version-local PNG references with explicit remote-image loading",
+      "source": "packages/client/src/client/memory-markdown-view.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
+      "task": 2214,
+      "gap": "Web Markdown and local PNG only; editor/file-card previews, other local formats and native mobile remain in #2214."
+    },
+    {
+      "id": "desktop.memory.image-formats",
+      "label": "Read and compare original JPEG/GIF/WebP/static SVG bytes with genuine decode, animation and CLI export",
+      "source": "packages/core/src/media/image-format.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/memory-images.md",
+      "task": 2214,
+      "gap": "Native decoding/sharing remains queued; SVG is the bounded static subset, editor/file-card/mobile diff paths remain #2214."
+    },
+    {
+      "id": "desktop.window-zoom",
+      "label": "Set and restore device-local primary-window zoom through Settings and exact-target CLI",
+      "source": "packages/client/src/client/window-zoom.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/desktop-window-zoom.md",
+      "task": 2268,
+      "gap": "Explicitly opted-in macOS0.2.1-rc.2 product composition qualified on representative input/popup/native guest paths; unknown versions/arbitrary pages are not qualified. Windows/Linux remain S3. CI and unmerged PR delivery are separate from runtime evidence."
+    },
+    {
+      "id": "desktop.local-appearance",
+      "label": "Save independent device-local DeepSeekBot mode, palettes and Primary with explicit Client CLI control",
+      "source": "packages/client/src/client/appearance-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/local-appearance.md",
+      "task": 2258,
+      "gap": "Native restart and different-Host restore require the task-owned Desktop procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.global-materials",
+      "label": "Adjust global Header/Body materials through UI and targeted CLI with actual backdrop blur",
+      "source": "packages/client/src/client/appearance-material-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/global-materials.md",
+      "task": 2259,
+      "gap": "Native restart uses the task-owned Desktop procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.panel-appearance",
+      "label": "Edit one functional Panel from its Header context menu with local persistence and per-property inheritance",
+      "source": "packages/client/src/client/appearance-panel-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/panel-appearance.md",
+      "task": 2260,
+      "gap": "Task-owned macOS restart follows the feature procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.image-wallpaper",
+      "label": "Save a device-local image wallpaper through preview/crop and targeted CLI with atomic replacement",
+      "source": "packages/client/src/client/wallpaper-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/image-wallpaper.md",
+      "task": 2262,
+      "gap": "Native restart and different-Host restore require the task-owned Desktop procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.video-wallpaper",
+      "label": "Save and play local video wallpaper with background pause and poster recovery",
+      "source": "packages/client/src/client/wallpaper-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/video-wallpaper.md",
+      "task": 2263,
+      "gap": "Actual codecs and native minimize/restart require the task-owned runtime; Human QA remains separate."
+    },
+    {
+      "id": "desktop.appearance-recovery",
+      "label": "Clear current-mode overrides or confirm full local appearance/media reset with truthful retry",
+      "source": "packages/client/src/client/appearance-recovery-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/appearance-recovery.md",
+      "task": 2264,
+      "gap": "Native restart follows the task-owned Desktop procedure; Windows and Human QA remain separate."
+    },
+    {
+      "id": "credentials.private-input-origin",
+      "label": "Consume local credentials in mixed local and accepted IM turns with native approval",
+      "source": "packages/core/src/runtime/bot-runtime.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/private-input-origin.md",
+      "task": 2290,
+      "gap": "Controlled Provider; real external delivery and GitHub authentication are not qualified."
     }
   ],
   "scripts": [
@@ -1103,9 +1215,9 @@
       "path": "scripts/e2e-fresh-profile-install.mjs",
       "category": "historical-regression",
       "behaviors": ["product.fresh-install"],
-      "reason": "Exact prepared artifact manifest and fresh output directory; installs/restarts real Host, creates Bot/DM; no Client check.",
+      "reason": "Exact prepared artifacts and fresh Profile; installs/restarts real Host, rejects native preflight plugin disablement, creates Bot/DM; no Client check.",
       "task": 1980,
-      "sha256": "8cee7c889b55c115cba0c17d0057a9a79a60e1aa643051e35c80509cbf1eec5b"
+      "sha256": "15d101840fae11397b69a8b516ac992bfcd3221dde767ffdf1040e234a6cc16b"
     },
     {
       "path": "scripts/e2e-grant-attention.mjs",
@@ -1292,6 +1404,14 @@
       "sha256": "401f5733fa76d7151a247abda68a0fd8914e7b3fca18675539366dfd395dab95"
     },
     {
+      "path": "scripts/e2e-activity-live.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Task-local real browser: idle and slow-read stability, live cross-Channel message and request arrivals, read/source identity, actual WebSocket reconnect, snooze expiry, group-join decision and bounded CLI watch.",
+      "task": 2230,
+      "sha256": "c8afb92a41d9af11b7d629eb245cdb7e03c378e2099e0ee59954bc75ae929b5e"
+    },
+    {
       "path": "scripts/e2e-inbox-tool-approval.mjs",
       "category": "mapped",
       "behaviors": ["desktop.activity-center.inline-tool-approval"],
@@ -1375,9 +1495,9 @@
       "path": "scripts/e2e-mobile-pairing-web.mjs",
       "category": "mapped",
       "behaviors": ["phone.pairing"],
-      "reason": "Own task Host and Expo Web export; pair/reload/revoke UI in browser, native/physical pairing separate.",
+      "reason": "Own task Host and Expo Web export (English locale); broken-link refusal, pair/reload/revoke UI in browser, native/physical pairing separate.",
       "task": 1967,
-      "sha256": "079e8bc29a8ca9186bc1b5d6580e4472c4dcddf345f92c0c474efe60dd3d4143"
+      "sha256": "c617612575367537186f0d75d03bbfdced91264cc22f4ce0dd59d052fde9c7b6"
     },
     {
       "path": "scripts/e2e-mobile-reactions-web.mjs",
@@ -1612,6 +1732,14 @@
       "sha256": "4d06c35370b6a936c644e5f662d33644f30201a3203a92f6fbefebb0cefc0cf4"
     },
     {
+      "path": "scripts/e2e-bot-mode-exit.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.bot-mode.entry"],
+      "reason": "Real isolated Web Client: permanent bottom return, original logo, pointer and keyboard activation, last-mode restoration, moved-rail layout and unsent draft preservation, short window and narrow/wide transitions. Localized light/dark screenshots; no model or native Desktop claim.",
+      "task": 2289,
+      "sha256": "666c5a940eed71f111bbaf5d619fc86ddb072804026efac129a8f3a1f6bd2d62"
+    },
+    {
       "path": "scripts/e2e-panel-workspace.mjs",
       "category": "mapped",
       "behaviors": ["desktop.bot-mode.entry", "desktop.bot-mode.dock"],
@@ -1737,9 +1865,9 @@
       "path": "scripts/e2e-group-send-review.mjs",
       "category": "mapped",
       "behaviors": ["desktop.group.send-review"],
-      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate.",
+      "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate. Native export also includes inbox_snooze arguments/results for bounded review and deferred-resume assessment (#2055).",
       "task": 2053,
-      "sha256": "67c155764229bafca82518fa77d2fc314b5ca98197fd30efdd095f90400e8562"
+      "sha256": "5215105fca692ef6e1255c47754f3b81dd01ec7a7a8f172c29f43d9595ada3cf"
     },
     {
       "path": "scripts/e2e-group-peer-review.mjs",
@@ -1764,6 +1892,166 @@
       "reason": "Natural Tob pending-invitation cancellation and join acceptance/decline through rendered approval, denial and concurrent stale refusal; actual ordinary-Bot selected-Group join preconditions, canonical decision history and Members UI, terminal refusal and Web/macOS restart.",
       "task": 2090,
       "sha256": "6998a510585f53ccbe6210f73458fd8c666716df6dbb257c8388f1e345cf916e"
+    },
+    {
+      "path": "scripts/e2e-group-busy-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Real DSH busy-Group triplets with full records and all-Bot costs. v3 bounds outcome time and waits for original, observed and snoozed canonical Inbox responsibility before early settlement; preserves frozen older cohorts, unknown future cost and separate semantic judgment.",
+      "task": 2055,
+      "sha256": "27a142b32d0219d5d7a04f7a6123bfb004881c20a63e8db4a633a96bb05b970b"
+    },
+    {
+      "path": "scripts/e2e-group-responsibility.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Read-only isolated Profile helper for Group episode completion. Counts all unresolved observed/snoozed Admissions plus the acting original across Channels, excludes unopened silent peer copies, bounds evidence not totals, refuses missing canonical facts.",
+      "task": 2055,
+      "sha256": "03b1f454483c43716fd11e784dee3ffaf08d3b1fc4cea2a15d1ca6ca325de5eb"
+    },
+    {
+      "path": "scripts/e2e-memory-diff-wrap.mjs",
+      "category": "mapped",
+      "behaviors": ["memory.diff-wrap"],
+      "reason": "Isolated synthetic Memory repository; real Client checks both diff entry points, wrap/scroll switching, five-digit gutters, narrow panes, light/dark themes and browser errors.",
+      "task": 2213,
+      "sha256": "d0777a9dfd7bb30de5a23f03be842de9fde975a391e64a32c61123a44103294e"
+    },
+    {
+      "path": "scripts/e2e-activity-approve-sync.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Real native bash Allow once from Activity and conversation with independent browser observers, canonical decision identity and native file effect.",
+      "task": 2230,
+      "sha256": "6ca3f039719c512d5740c44df6182c3a7b60d4da82e40a928b92ae850d2abde7"
+    },
+    {
+      "path": "scripts/e2e-activity-load.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.activity-center.inline-tool-approval"],
+      "reason": "Sequential main/candidate real Host load: 24 silent Groups, public direct channel_send, three 240-message rounds, query/coalescing/latency/long-task/heap and idle-recovery evidence.",
+      "task": 2230,
+      "sha256": "461ebc88f911f1424e9179475eae14e88741a6059735b85dde75a2634cbce9e0"
+    },
+    {
+      "path": "scripts/e2e-memory-images.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.png-preview"],
+      "reason": "Task-owned isolated Host, synthetic Git fixture, current/working/history Web decode and image exports with unauthenticated-route refusal.",
+      "task": 2214,
+      "sha256": "9684512792bcea2179b176cf7dbfd8a2e3c0db5cf5a694a7cda740cd9634e3f8"
+    },
+    {
+      "path": "scripts/e2e-memory-markdown.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.markdown-preview"],
+      "reason": "Task-owned isolated Git/Host fixture; real Markdown rendering and image decode, source/line toggles, historical/index/local bytes, explicit intercepted external load, missing/stale/anonymous refusal and narrow layout.",
+      "task": 2214,
+      "sha256": "504d4ddc27e5fd5b4f844a044f02c5ea04a05e487c691841dceac97d4e087abf"
+    },
+    {
+      "path": "scripts/e2e-memory-formats.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.image-formats"],
+      "reason": "Matched main/candidate current/Markdown/working/history/narrow images, genuine pixels and animation advancement, version/MIME original-byte exports and rejected SVG external-resource loads.",
+      "task": 2214,
+      "sha256": "f781c109dba94abe6bae2b3a41b2db0d68a86e3dd3f6a0904ebe5dbf536c0391"
+    },
+    {
+      "path": "scripts/e2e-desktop-zoom-launch.mjs",
+      "sha256": "7aa97d564aa93d76372e952e2d0a747a4cd9d310f54a49fb655e56642c319a9a",
+      "category": "mapped",
+      "reason": "Audited isolated native launcher with explicit closed-Desktop package setup and a bounded wait for fresh process-bound CLI metadata; package install, readiness and native acceptance remain separate.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
+    },
+    {
+      "path": "scripts/e2e-dock-zoom.mjs",
+      "sha256": "959a96ba4108d84ac3e7af98221de235079125f81413b56f870b669951d79b86",
+      "category": "mapped",
+      "reason": "Real pinned Dockview dependency fixture for zoomed persistent overlay allocation and horizontal/vertical splitter movement; not a DSH/native acceptance journey.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
+    },
+    {
+      "path": "scripts/e2e-workspace-chrome.mjs",
+      "sha256": "12ff9ff097069a576e34de1c7aa0ad99f55fafa00ab3ee64ace1f76d2b136122",
+      "category": "mapped",
+      "reason": "Production workspace corner CSS and coordinate owner across zoom, panel gaps, rail positions and platform/fullscreen exclusion; does not render native traffic lights.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
+    },
+    {
+      "path": "scripts/e2e-local-appearance.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.local-appearance"],
+      "reason": "Runs actual scoped theme controls, local persistence and explicit Client-targeted CLI against an isolated Host; no model call.",
+      "task": 2258,
+      "sha256": "d96263dc55463e905e5220c773f9c17fbc988be3d065fa9b83221880c3a58bb5"
+    },
+    {
+      "path": "scripts/e2e-global-materials.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.global-materials"],
+      "reason": "Real mode/material UI and CLI, reload, native isolation and controlled background pixel proof of blur.",
+      "task": 2259,
+      "sha256": "2cbb7edf42ead539c8e23aa029b78353d5e514ac3a78210c4b715d7fb4f97be9"
+    },
+    {
+      "path": "scripts/e2e-panel-appearance.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.panel-appearance"],
+      "reason": "Real Header menus, UI/CLI overrides, follow global, modes, close/reopen, content switch, reload and scoped reset.",
+      "task": 2260,
+      "sha256": "504a472d36343156026b2f89fce57fb9e147ccf0af5c98dfcab8228049e60e32"
+    },
+    {
+      "path": "scripts/e2e-nested-appearance.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.panel-appearance"],
+      "reason": "Real nested Header menus, shared Memory detail identity, independent contribution lifetime and live Browser viewer without content recoloring.",
+      "task": 2261,
+      "sha256": "3d3663e2b12634f34f456b3378c14adefa5a8db2b0cd89328b5f7e79d1f900c2"
+    },
+    {
+      "path": "scripts/e2e-image-wallpaper.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.image-wallpaper"],
+      "reason": "Real upload/crop, original-byte persistence, resize, failure preservation, DSH isolation and directed CLI.",
+      "task": 2262,
+      "sha256": "d28f8ca4636d1ed745ea3a3cb519309957ee87c179736f663c1e2a7c65135a75"
+    },
+    {
+      "path": "scripts/e2e-video-wallpaper.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.video-wallpaper"],
+      "reason": "Actual loop frames, background pause/resume, decode error and saved poster restoration, explicit Client CLI and exit cleanup.",
+      "task": 2263,
+      "sha256": "797e435677bf35161bd314b80c57e229220d845d2c24910ba89b593ab299e6db"
+    },
+    {
+      "path": "scripts/e2e-appearance-recovery.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.appearance-recovery"],
+      "reason": "Real current-mode clear, confirmed image/video reset, failure preservation/partial retry, preview cleanup, CLI and independent Client isolation.",
+      "task": 2264,
+      "sha256": "30f6f9fe940150bfd9f5eeb3804a6b59cf7ed420e2392e093ccc63e8cfb103f3"
+    },
+    {
+      "path": "scripts/e2e-message-history-mask.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.appearance-recovery"],
+      "reason": "Human QA alpha-mask regression: committed Channel history, edge/center pixels, custom Panel colors and wallpaper, composer input, reload and task-owned Desktop.",
+      "task": 2264,
+      "sha256": "65040dd245fc5eb18148f8f4660ef55d093eebf8457e36c5694c246002876625"
+    },
+    {
+      "path": "scripts/e2e-private-input-origin.mjs",
+      "category": "mapped",
+      "behaviors": ["credentials.private-input-origin"],
+      "reason": "Isolated Host, visible DM composer, synthetic private input, native approval and actual Tool result with two live accepted IM sources; no production receiver or credential.",
+      "task": 2290,
+      "sha256": "a523ea1964d31850aa65b4e96ee2c37318d2c3c90b2b7feb86e8dfacfd4adce8"
     }
   ],
   "native": [

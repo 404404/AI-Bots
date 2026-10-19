@@ -2982,15 +2982,6 @@ button.bh-profile-heat-cell:focus-visible {
   outline: ${border.focus} solid var(--dsw-alias-label-primary);
   outline-offset: 2px;
 }
-.bh-chat-top-fade {
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 2;
-  height: 96px;
-  background: var(--dsw-alias-bg-base);
-  mask-image: linear-gradient(to bottom, var(--dsw-alias-label-primary) 16%, transparent 100%);
-  pointer-events: none;
-}
 .bh-content {
   flex: 1;
   min-height: 0;
@@ -3030,6 +3021,9 @@ button.bh-profile-heat-cell:focus-visible {
   position: relative;
 }
 .bh-chat-body {
+  --bh-chat-mask-bottom: var(--bh-activity-overlay-inset, 0px);
+  mask-image: linear-gradient(to bottom, transparent, black min(var(--bh-chat-mask-top, ${space.x6}), 20%), black calc(100% - ${space.x3} - var(--bh-chat-mask-bottom)), transparent calc(100% - var(--bh-chat-mask-bottom)));
+  mask-mode: alpha;
   position: relative;
   z-index: 1;
   flex: 1;
@@ -3044,6 +3038,7 @@ button.bh-profile-heat-cell:focus-visible {
 /* The faded composer status gives its reserved space back only after the
    fade, so the working rows slide down instead of jumping onto its text. */
 .bh-chat-pane[data-activity-concealed='true'] .bh-chat-body {
+  --bh-chat-mask-bottom: 0px;
   padding-bottom: ${space.x3};
   transition-delay: 160ms;
 }
@@ -3310,7 +3305,7 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
   --bh-bubble-me-fill: var(--bh-bubble-me-fill-light, color-mix(in srgb, ${color.accent} 90%, ${color.fg}));
   --bh-bubble-me-ink: var(--bh-bubble-me-ink-light, ${color.onAccent});
 }
-body[data-ds-dark-theme] .bh-message-group-me {
+:root:has(style[data-bh-appearance="dark"]) .bh-message-group-me {
   --bh-bubble-me-fill: var(--bh-bubble-me-fill-dark, ${color.accent});
   --bh-bubble-me-ink: var(--bh-bubble-me-ink-dark, ${color.onAccent});
 }
@@ -3957,17 +3952,6 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
   padding: 0 ${space.x2};
   color: var(--dsw-alias-label-secondary);
   font-size: var(--dsh-content-font-size);
-}
-/* Scrolled into history, the status sits over messages, so it carries a
-   backdrop that fades in from the chat background above it. */
-.bh-composer-activity-status { isolation: isolate; }
-.bh-composer-activity-status::before {
-  content: '';
-  position: absolute;
-  inset: -12px 0 -6px;
-  z-index: -1;
-  background: linear-gradient(to bottom, transparent, var(--dsw-alias-bg-base) 12px);
-  pointer-events: none;
 }
 /* At the latest message the working rows already show every active Bot, so
    the status only fades out: it stays the screen-reader live region. */
@@ -5614,11 +5598,15 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 pre.bh-memory-commit-code { padding: ${space.x3} ${space.x5}; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bh-memory-diff-scroll { overflow: auto; background: var(--dsw-alias-bg-base); }
 .bh-memory-diff-table { width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0; font-family: var(--dsw-font-markdown-code-block-font-family); font-size: ${text.metaSize}; line-height: ${text.bodyLine}; white-space: pre; }
+.bh-memory-diff-table[data-wrap="true"] { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bh-memory-diff-wrap-button[aria-pressed="true"] { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); }
+.bh-memory-commit-header > .bh-memory-diff-wrap-button { margin-left: auto; }
+.bh-memory-commit-header > .bh-memory-diff-wrap-button + .bh-memory-view-icon-button { margin-left: 0; }
 .bh-memory-diff-table td { box-sizing: border-box; height: 24px; padding: ${space.x1} 0; vertical-align: top; }
-.bh-memory-diff-number { width: 1%; min-width: 34px; padding: ${space.x1} ${space.x2} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: right; user-select: none; }
+.bh-memory-diff-number { width: 1px; white-space: pre; min-width: 34px; padding: ${space.x1} ${space.x2} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: right; user-select: none; }
 .bh-memory-diff-number:first-child { position: relative; padding-left: ${space.x3} !important; }
 .bh-memory-diff-number:nth-child(2) { border-right: ${border.hairline} solid ${color.divider}; }
-.bh-memory-diff-sign { width: 1%; min-width: 20px; padding: ${space.x1} ${space.x1} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: center; user-select: none; }
+.bh-memory-diff-sign { width: 1px; white-space: pre; min-width: 20px; padding: ${space.x1} ${space.x1} !important; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; text-align: center; user-select: none; }
 .bh-memory-diff-content { padding: ${space.x1} ${space.x5} ${space.x1} ${space.x2} !important; color: var(--dsw-alias-label-primary); }
 .bh-memory-diff-hunk td, .bh-memory-diff-note td { padding: ${space.x2} ${space.x4} !important; color: var(--dsw-alias-label-secondary); }
 .bh-memory-diff-hunk { background: color-mix(in srgb, var(--bh-accent) 6%, var(--dsw-alias-bg-base)); }
@@ -6139,6 +6127,13 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-panel-activity[data-wi
 @media (max-width:700px) {.bh-overview-memory-bots > li {flex-wrap:wrap;gap:${space.x2};}.bh-overview-memory-trend {width:84px;}.bh-overview-memory-name {flex-basis:calc(100% - 36px);}.bh-overview-memory-bots .bh-profile-pin {margin-left:auto;}}
 .bh-overview-usage {margin-top:${space.x4};min-width:0;container-type:inline-size;}
 .bh-overview-usage h3 {margin:0;font-weight:${text.regular};}
+/* Home uses the same flat surface, inset and rounding as conversation approval cards. */
+.bh-overview-usage[data-home-history] {margin-top:0;border:0;border-radius:${radius.lg};background:${color.surface};box-shadow:none;}
+.bh-overview-usage[data-home-history] h3 {font-size:${text.titleSize};line-height:${text.titleLine};font-weight:${text.strong};color:${color.fg};}
+.bh-overview-usage[data-home-history] .bh-usage-grouping {border:0;background:${color.well};}
+.bh-overview-usage[data-home-history] .bh-usage-grouping button {border:0;box-shadow:none;}
+.bh-overview-usage[data-home-history] .bh-usage-grouping button[aria-pressed='true'] {background:var(--bh-surface-selected);}
+
 .bh-overview-usage .bh-profile-card-head {flex-wrap:wrap;}
 .bh-overview-usage-controls {display:flex;flex-wrap:wrap;align-items:center;gap:${space.x3};min-width:0;}
 .bh-overview-usage .bh-usage-grouping button {white-space:nowrap;}

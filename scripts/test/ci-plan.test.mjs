@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  androidNativeTests,
   checkClassification,
   checkTestInclude,
   checkWorkflow,
@@ -36,13 +37,16 @@ const repo = {
   [DOCS_SITE_TEST]: 'const docs = resolve(ROOT, "apps/docs");',
   'apps/docs/src/pages/index.astro': '',
   'scripts/test/workflow.test.mjs':
-    "const workflow = new URL('../../.github/workflows/npm-release.yml', import.meta.url);",
-  '.github/workflows/npm-release.yml': '',
+    "const workflow = new URL('../../.github/workflows/npm-provider-release.yml', import.meta.url);",
+  '.github/workflows/npm-provider-release.yml': '',
   '.github/workflows/verify.yml': '',
   '.github/pr-screenshots/chip/compare.png': '',
   'changes/1640-chip.md': '',
   'docs/adr/0001-thing.md': '',
   'CHANGELOG.md': '',
+  'CHANGELOG.zh.md': '',
+  'apps/docs/test/changelog-release-site.test.ts':
+    'readFileSync(resolve(ROOT, "CHANGELOG.md")); readFileSync(resolve(ROOT, "CHANGELOG.zh.md"));',
 };
 const index = createIndex(Object.keys(repo), (file) => repo[file]);
 const pr = (...paths) => ({
@@ -52,6 +56,28 @@ const pr = (...paths) => ({
 });
 
 describe('CI test plan', () => {
+  it('runs native module tests for Kotlin, native config, removals and full runs', () => {
+    expect(
+      androidNativeTests('none', [
+        { path: 'apps/mobile/modules/stream-reveal/android/src/main/java/TextReveal.kt' },
+      ]),
+    ).toBe(true);
+    expect(
+      androidNativeTests('none', [
+        { path: 'apps/mobile/modules/stream-reveal/expo-module.config.json' },
+      ]),
+    ).toBe(true);
+    expect(
+      androidNativeTests('affected', [
+        { path: 'elsewhere.kt', previous: 'apps/mobile/modules/stream-reveal/old.kt' },
+      ]),
+    ).toBe(true);
+    expect(androidNativeTests('full', [])).toBe(true);
+    expect(
+      androidNativeTests('affected', [{ path: 'apps/mobile/src/ui/chat/message-bubble.tsx' }]),
+    ).toBe(false);
+    expect(androidNativeTests('none', [{ path: 'docs/research/rendering.md' }])).toBe(false);
+  });
   it('runs related tests without the docs site for a Client-only change', () => {
     const result = plan(pr('packages/client/src/client/chip.tsx', 'changes/1640-chip.md'));
     expect(result).toMatchObject({ tests: 'affected', docsSite: false });
@@ -114,8 +140,12 @@ describe('CI test plan', () => {
     expect(result.related).toContain('packages/market/test/market-harness.ts');
   });
 
+  it('runs the full plan when release verification gates change', () => {
+    expect(plan(pr('.github/workflows/npm-release.yml')).tests).toBe('full');
+  });
+
   it('selects a test that names a changed file that is not a module', () => {
-    expect(plan(pr('.github/workflows/npm-release.yml')).related).toEqual([
+    expect(plan(pr('.github/workflows/npm-provider-release.yml')).related).toEqual([
       'scripts/test/workflow.test.mjs',
     ]);
   });
@@ -125,6 +155,17 @@ describe('CI test plan', () => {
       'apps/docs/test/release-draft.test.ts',
     );
   });
+
+  it.each(['CHANGELOG.md', 'CHANGELOG.zh.md'])(
+    'selects release projection tests for %s',
+    (path) => {
+      expect(plan(pr(path))).toMatchObject({
+        tests: 'affected',
+        docsSite: true,
+        related: expect.arrayContaining(['apps/docs/test/changelog-release-site.test.ts']),
+      });
+    },
+  );
 
   it('builds the docs site for docs inputs and docs site imports, never as a related test', () => {
     for (const path of [

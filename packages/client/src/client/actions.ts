@@ -104,6 +104,7 @@ import {
   inviteGroupBot,
   setGroupAvatar as setGroupAvatarViaBridge,
   setChannelHumanName,
+  loadHumanIdentity,
   setBotAvatar as setBotAvatarViaBridge,
   setBotBanner as setBotBannerViaBridge,
   updateBotProfile as updateBotProfileViaBridge,
@@ -330,6 +331,7 @@ export interface HostDirectoryListing {
 }
 
 export interface BridgeActions {
+  humanIdentity(signal?: AbortSignal): Promise<import('./bridge.js').LocalHumanIdentity>;
   tobHome(): Promise<
     import('../../../core/src/tob/service.js').TobHome & {
       attention?: { unreadCount: number; hasAction: boolean };
@@ -607,7 +609,17 @@ export interface BridgeActions {
   memoryFile(
     channelId: string,
     path: string,
-  ): Promise<{ path: string; body: string; head: string; binary?: boolean } | undefined>;
+  ): Promise<
+    | {
+        path: string;
+        body: string;
+        head: string;
+        binary?: boolean;
+        image?: import('./bridge.js').MemoryImage;
+        markdown?: import('./bridge.js').MemoryMarkdown;
+      }
+    | undefined
+  >;
   memoryHistory(channelId: string): Promise<MemoryAcceptedCommit[]>;
   memoryDiff(channelId: string, sha: string): Promise<string>;
   memoryGitGraph(channelId: string, offset: number): Promise<MemoryGitGraph>;
@@ -1117,6 +1129,7 @@ export function createActions(
     }
     if (rosterResult.status === 'fulfilled') {
       const snapshot = rosterResult.value;
+      const previousMuted = clientStore.getSnapshot().roster.muted;
       clientStore.setRosterState({
         pins: snapshot.pins,
         hidden: snapshot.hidden,
@@ -1125,6 +1138,8 @@ export function createActions(
         topOrder: snapshot.topOrder,
         readOnly: false,
       });
+      if (!sameIds([...previousMuted].sort(), [...snapshot.muted].sort()))
+        void refreshHumanInboxStatus();
     } else if (
       rosterResult.reason instanceof BridgeCallError &&
       rosterResult.reason.code === 'storage-unavailable'
@@ -1240,7 +1255,12 @@ export function createActions(
   let humanInboxScopeVersion = 0;
   let humanInboxStatusSeq = 0;
   const loadInboxStatus = async (): Promise<
-    Partial<Pick<HumanInboxState, 'unreadCount' | 'hasAction' | 'channelUnread'>>
+    Partial<
+      Pick<
+        HumanInboxState,
+        'unreadCount' | 'hasAction' | 'channelUnread' | 'messageCounts' | 'attentionStatus'
+      >
+    >
   > => {
     const [status, channelUnread] = await Promise.allSettled([
       loadHumanAttentionStatus(call),
@@ -1249,6 +1269,7 @@ export function createActions(
     if (status.status === 'rejected') throw status.reason;
     return {
       ...status.value,
+      attentionStatus: 'ready',
       ...(channelUnread.status === 'fulfilled' ? { channelUnread: channelUnread.value } : {}),
     };
   };
@@ -1258,6 +1279,8 @@ export function createActions(
       const status = await loadInboxStatus();
       if (requestSeq === humanInboxStatusSeq) clientStore.setHumanInbox(status);
     } catch {
+      if (requestSeq === humanInboxStatusSeq)
+        clientStore.setHumanInbox({ attentionStatus: 'error' });
       return;
     }
   };
@@ -1513,6 +1536,7 @@ export function createActions(
   };
   const actions: BridgeActions = {
     tobHome: () => invoke('tobHome', {}),
+    humanIdentity: (signal) => loadHumanIdentity(call, signal),
     async sendHome(channelId, body, messageId, attachments) {
       const message = await sendChannelMessage(
         call,

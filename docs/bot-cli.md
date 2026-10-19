@@ -1,5 +1,7 @@
 # Create Bots from the command line
 
+Bot summaries from `list` also include `lastActivityAt` (epoch milliseconds) when committed Bot messages visible to the local Human or an Assignment report record activity. It survives later Channel messages and restart; missing means no recorded activity, not a creation or Channel-visit timestamp.
+
 `deepseekbot create` makes a new PersonaBot without clicking: blank, from a bot bundle (a directory or a zip with the same shape as the [bot-zip export](docs/bot-zip.md)), or from GitHub. It is built for external coding agents driving a DSH install, so its output is machine-first.
 
 ## Usage
@@ -69,11 +71,14 @@ deepseekbot channels
 deepseekbot bot-attention <bot-id> --limit 20 --state handled
 deepseekbot bot-sessions <bot-id> --limit 20
 deepseekbot bot-activity <bot-id> --limit 20
+deepseekbot bot-new-session <bot-id>
 ```
 
 Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `steps` and `next`. The model preset is applied through its owner, never forwarded as a native Agent preset. A missing specified preset is rejected before creation; other model failures after creation preserve the Bot and return its known identity and steps with `outcome: created`. A lost creation/import response without a stable operation key can return `outcome: unknown`: inspect the Host before creating again; no automatic mutation retry is provided. For blank online creation, use the [receipt-backed operation key](#tob-bot-creation-profiles-and-lifecycle) to reconcile the same identity. A created Bot alone does not prove model usability: use `send` and its exact correlated committed reply.
 
 `bot-attention` supports `--cursor` and the Host's pending/processing/observed/deferred/needs-repair/handled states; it limits pages to 1–100. Session summaries are newest-first and limited to 1–100 (default 50), with `total`; activity limits its session details and reports `sessionCount`. These are bounded summaries, not full tool-call logs or streaming drafts.
+
+`bot-new-session <bot-id>` retires an idle Bot’s Orchestrator Session through the same Host runtime as IM `/new`; the next message starts a fresh Session. It returns `{"started":true}` and refuses with `bot-busy` while the Bot is working; stop the current turn first.
 
 For explicit cleanup, `bot-delete-preview <bot-id>` returns the owner's current scope and `preview.token`. Review it, then pipe `{"token":"<preview.token>"}` to `bot-delete-confirm <bot-id> --confirmation-stdin --confirm`. Memory is retained unless `--erase-memory` explicitly selects the owner-reviewed directory, and it erases the Bot's private-input secrets during the stop phase. Inspect `deletion.phase`; an incomplete cleanup can be continued with `bot-delete-retry <bot-id> --confirm`. Scope changes remain owner refusals; deletion is not content purge or complete data erasure.
 
@@ -172,9 +177,20 @@ Pass the target's handle as `observation_id` to `channel_send`. A `held` result 
 message: read `review.content` when present. If `review.complete` is true, pass its
 `review.observationId` as `observation_id` without another `channel_read`; otherwise read the
 missing content first. Then pass `draft_id` with the new observation and revised
-(or unchanged) `body`. Only one recheck is allowed. Send `drop: true`, `draft_id` and an empty
+(or unchanged) `body`. At most two rechecks are allowed. Send `drop: true`, `draft_id` and an empty
 `body` to abandon the draft without resolving its Inbox item. `expired`, `refused` and
 `requires-review` are terminal for automatic sending. Handles cannot cross Bot owners or Groups.
+
+After an interrupted Group send, use the same direct Tool command with
+`{"channel_id":"...","body":"","review_action":"inspect"}`. This returns at most 20 own
+draft/receipt metadata entries (pending first) and `hasMore`; supply `draft_id` for an exact
+older record. It sends nothing and does not resolve Inbox work. After a Host restart, read the
+current Channel, then send `review_action:"recover"`, `draft_id`, the fresh `observation_id`
+and corrected `body`. Old observations, expiry and exhausted retry budgets cannot be reset.
+For a committed receipt, read its canonical `messageId`; resubmitting that `draft_id` with the
+same content returns the same message ID without a new message or Admission. Changed content
+returns `draft-commit-content-changed`. Current membership, owner, source and attachment checks
+still apply; a revoked Group may be refused by the direct runner before Tool execution.
 
 For deliberate yielding, the same direct `bot-tool <bot> channel_send --args-stdin` accepts
 `{"channel_id":"...","body":"","drop":true,"draft_id":"...","observation_id":"...","yield_to_message_ids":["..."]}`.
@@ -187,11 +203,44 @@ still use the existing send path; resolve only explicitly selected completed Inb
 
 `channel <group-channel>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}` and refuses non-group Channels. Stable creation/invitation inputs and retry semantics are described under [Tob group creation and invitations](#tob-group-creation-and-invitations); Human online commands may use them too.
 
-Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply. `channel-unread` lists the unread Bot message count of each Channel that has any; these are the numbers the sidebar shows on each row. `channel-mute` mutes a Channel the way the sidebar menu does: it keeps its row greyed and its unread messages out of the Activity total; `--off` unmutes it. `channel-bot-stop` stops the Bot's current turn, as the Stop button on the working status does: the Bot goes idle, the Channel records that the Human stopped it, and a Bot that is not working is refused with `not-working`. Assignments the Bot delegated keep running. `channel-react` adds your reaction to one message, or removes it with `--remove`, and returns the message's `reactions`; a message holds at most 20 of your reactions, and the emoji must be a single emoji. Bots react through `channel_send` with `react_to` and `reaction`, and an empty `body` when they only react; `bot-tool <bot> channel_send --args-stdin` runs that without the model. `channel-search` matches `--query` without case in the messages you can see, newest first, and pages with the `nextCursor` it returns.
+Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply. `channel-unread` lists the unread Bot message count of each Channel that has any; these are the numbers the sidebar shows on each row. `channel-mute` mutes a Channel the way the sidebar menu does: it keeps its row greyed and excludes its ordinary messages, mentions and replies from Activity message lists and the global unread total; `--off` restores eligibility under the existing read/dismissal/snooze rules. Actual Channel read positions and explicit pending Human requests remain unchanged. `channel-bot-stop` stops the Bot's current turn, as the Stop button on the working status does: the Bot goes idle, the Channel records that the Human stopped it, and a Bot that is not working is refused with `not-working`. Assignments the Bot delegated keep running. `channel-react` adds your reaction to one message, or removes it with `--remove`, and returns the message's `reactions`; a message holds at most 20 of your reactions, and the emoji must be a single emoji. Bots react through `channel_send` with `react_to` and `reaction`, and an empty `body` when they only react; `bot-tool <bot> channel_send --args-stdin` runs that without the model. `channel-search` matches `--query` without case in the messages you can see, newest first, and pages with the `nextCursor` it returns.
 
 `group-delete` and `channel-purge-confirm` cannot be undone and need `--confirm`. `channel-history` lists deleted groups whose content can still be purged. Purging works in two steps like the history page: `channel-purge-preview` lists the messages, Bot admissions, files and effects the chosen Source Events would remove and returns a short-lived `token`; `channel-purge-confirm` reads `{"token": …}` from stdin for the same Source Events and fails coded when the scope changed. Pick Source Events from `channel-history-sources`, which pages with the `before` cursor it returns.
 
 `channel-media-target` acquires checked source media through current Human Channel authorization and returns its canonical Host file target. `channel-media-download` uses the same authenticated attachment route as the card, writes the original bytes to a new local `--out` file and returns size, MIME and SHA-256 in its JSON result. It refuses an existing output instead of overwriting it. Both commands use `channel + source-event + attachment` without a Bot selector or model call; source revocation remains a coded refusal. The default bound is 25 MiB.
+
+Busy Groups allow an initial hold and at most two rechecks. `budget.exhausted` returns
+`requires-review`, `draftVersion` and choices; new source messages do not reset the existing
+draft. To defer, drop without `resolve_inbox_ids`, then use `inbox_snooze` for the observed
+unfinished work with a time and note. Do not mark waiting work done.
+For freshness-only contention, `suggestedSnoozeUntil` supplies a Host-time hint 30 seconds
+ahead for `inbox_snooze.until_time`; it schedules nothing itself. A later Human deadline
+or unmet condition takes precedence, and cancellation still ends the work.
+An exhausted drop without observed peer-yield evidence returns `keepOpenInboxIds` for the
+original request's Source Event and Group Message IDs. These are excluded from any composed
+`resolve_inbox_ids` selection and reported in `inboxResolution.keptOpen`; other selected
+completed FYI items can still resolve. If all selected IDs must stay open, the outcome is
+`kept-open`. Continue unfinished work through `inbox_snooze`; if it is genuinely cancelled
+or otherwise complete, resolve it explicitly with `inbox_resolve`. Peer-yield completion
+remains available. Direct CLI uses the same checks.
+The unfinished-request continuation instruction is returned even when completion IDs are
+omitted or contain only FYI: resolving background work does not prove the answer was sent.
+Inside a native Orchestrator turn, dropping an exhausted draft fences replacement sends
+until the turn ends (`dropped-exhausted-draft-defer-turn`). A later turn can read fresh
+context and proceed. Separate direct CLI invocations do not share a native turn.
+
+After reading all required content, an answer that remains necessary may use the same direct
+command with `freshness_override: {"draftVersion":3,"reason":"Necessary after review"}`,
+`draft_id`, `observation_id`, original `channel_id` and the actual `body`. Use the returned
+version, never a guessed constant. This explicit attempt is permitted once per exhausted
+draft and still atomically checks current content. `override-context-changed-defer` means a
+new message or edit arrived: nothing was sent, and the attempt is spent. Read that context,
+drop without resolving unfinished work, then snooze briefly and read fresh context on return;
+respect a later Human time or condition. `override-already-attempted-defer` refuses repetition.
+The attempt does not bypass membership, stopped/archived state, expiry, purge or ownership.
+`draft-version-changed`, `override-context-not-observed` and `override-requires-exhausted-draft`
+are coded refusals, not delivery. A committed message ID proves the result; tool traces retain
+the selected reason. Human requests to wait or cancel must never be overridden.
 
 ### Bot profile, roster and Part Library
 
@@ -318,6 +367,7 @@ deepseekbot grants <bot-id>
 ```bash
 deepseekbot inbox --category action --limit 20
 deepseekbot inbox --category replies --search budget --unread --sort mentions-first
+deepseekbot inbox-watch --category unread --watch-seconds 10
 deepseekbot inbox-status
 deepseekbot inbox-dismiss <item-id> --source-key <source-event-id>
 deepseekbot inbox-snooze <item-id> --source-key <source-event-id> --until 2026-10-15T09:00:00Z
@@ -337,6 +387,10 @@ deepseekbot grant-write-set <bot-id> --grant <grant-id> --disabled
 deepseekbot private-mcp-set <bot-id> --server <name> --enabled
 deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
+
+`inbox-status` requests the complete message-category summary and returns `unreadCount`, `hasAction` and, on a supporting Host, `messageCounts: { replies, other }`. The categories partition distinct unread Source Events after visibility and Channel mute rules; read retained personal messages and handled requests do not trigger a message indicator. These are complete counts, independent of Activity pagination or browser filters. A legacy Host may omit `messageCounts`; missing data is not zero. The control-rail indicator preference is browser/Host-origin-local presentation and does not change this CLI state.
+
+`inbox-watch` subscribes to the existing authenticated roster stream before its baseline read. It observes for 1–60 seconds (default 10), then emits one JSON document with `initial`, `current` and the number of `invalidations`. Both snapshots use the same Human Inbox query and filters as `inbox`; intermediate events are invalidations, not a second notification store. An interrupted stream is a coded refusal. Set `--timeout` longer than the observation window.
 
 `inbox --search <text>` searches safe Activity summaries, Channel names and Bot slugs before pagination (maximum 200 characters). `--unread` restricts personal messages to unread entries and leaves pending actions intact. `--sort newest|oldest` orders each category; `--category replies --sort mentions-first` puts mentions before replies. Keep filters unchanged when using `--cursor`. Search, unread filtering and mention ordering require query version 1; an older Host fails with `host-query-unsupported` instead of returning partial results.
 
@@ -556,7 +610,7 @@ deepseekbot marketplace-topics
 deepseekbot marketplace-detail <owner/repo>
 deepseekbot marketplace-submit https://github.com/<owner>/<repo>
 deepseekbot marketplace-report <owner/repo> [--reason <text>]
-deepseekbot release-check
+deepseekbot release-check [--force]
 deepseekbot release-install <version> --confirm
 deepseekbot release-restart --confirm
 deepseekbot telemetry-status
@@ -570,9 +624,11 @@ deepseekbot pairing-review <bot-id> <pairing-id> --decision reject
 deepseekbot pairing-review <bot-id> <pairing-id> --decision revoke --confirm
 ```
 
+`release-check --force` bypasses the Host check cache. `available` includes native DSH compatibility and may expose `blockedLatest` when a newer release is incompatible; `blocked` carries incompatible requirements or an unknown-runtime/metadata reason. Compatibility covers the exact Bundle, first-party components and its pinned IM Provider using the running DSH evaluator. Installation rechecks metadata and still uses the native Plugin Manager for final admission. A cached/offline failure is never “up to date”.
+
 `release-info` includes an optional Host-owned `identity`: `development` with source revision/dirty state, `release` with version, or `unknown` with a metadata/composition reason. Old Hosts omit this field; absence is not verified release identity. The internal source version placeholder remains `0.0.0`; About displays source identity instead. `release-check` can return `unknown`; install/restart then refuse with `release-identity-invalid`. Installed/staged and running versions remain separate until the new Host answers with the exact target version.
 
-`marketplace-submit` and `marketplace-report` first solve the Host's proof-of-work challenge, as the Web page does, so they can take a few seconds; the Marketplace's own refusals (`repository-missing-topic`, `rate-limited`, …) come back as the error code. A report reason is at most 500 characters. `release-check` returns the update status (`current`, `available`, `restart-required`, `development`, `unknown` or `unavailable`). `release-install` and `release-restart` need `--confirm`; a failed install or restart exits non-zero with `release-<reason>`, such as `release-network` or `release-not-pending`. Restarting stops every running Bot turn, so do it only on a Host you own. `pairing-list` shows a Bot's pairing requests and its roles; `pairing-review` reads the current revisions itself, so a request that changed in between is refused instead of overwritten. Approve with one `--role` for a conversation request or with `--capability` for a management request.
+`marketplace-submit` and `marketplace-report` first solve the Host's proof-of-work challenge, as the Web page does, so they can take a few seconds; the Marketplace's own refusals (`repository-missing-topic`, `rate-limited`, …) come back as the error code. A report reason is at most 500 characters. `release-check` returns the update status (`current`, `available`, `restart-required`, `blocked`, `development`, `unknown` or `unavailable`). `release-install` and `release-restart` need `--confirm`; a failed install or restart exits non-zero with `release-<reason>`, such as `release-network` or `release-not-pending`. Restarting stops every running Bot turn, so do it only on a Host you own. `pairing-list` shows a Bot's pairing requests and its roles; `pairing-review` reads the current revisions itself, so a request that changed in between is refused instead of overwritten. Approve with one `--role` for a conversation request or with `--capability` for a management request.
 
 ## IM application authorization
 
@@ -849,3 +905,151 @@ deepseekbot release-restart --confirm
 These reuse the same telemetry, Git and release owners as Settings. Environment-locked telemetry cannot be overridden; inspect the returned effective/locked state rather than assuming the stored preference controls collection. Git covers availability and installation only, with no new global Git identity editor.
 
 Scoped `release-install` and `release-restart` require explicit `--confirm` and a fresh Human decision for every invocation. Full access, remembered allow rules and automatic approval cannot replace that decision; the flag itself is not approval. `git-install` does not use `--confirm` and retains its existing review policy. Restart can interrupt running turns and disconnect the requesting CLI; do not automatically repeat an install or restart after an uncertain result. Reconnect and inspect release status before deciding another action. Test these operations only in an owned isolated Profile, preserving the Human's active Desktop.
+
+### Recover an exhausted Group draft
+
+After restarting the Host, inspect the draft, read the current Group, and pass both
+`review_action: "recover"` and `freshness_override` with the current `draftVersion`,
+fresh `observation_id`, original `draft_id`, and revised body to the same direct
+`bot-tool ... channel_send --args-stdin` command. Recovery does not renew the two-recheck
+budget or a spent explicit override. A changed context still refuses the final attempt.
+A successful override retains a commit receipt; retrying its unchanged intent returns
+the same message ID, including after another restart. Inspection cannot include
+`freshness_override` or other mutation arguments.
+
+### Cloud Agent connections (UAT)
+
+`deepseekbot cloud list` reads public connection state from the selected live Host. Import an operator-trusted TOB Agent credential with `deepseekbot cloud import --input-stdin < /absolute/private-agent.json`; the Host qualifies its instance/channel/Agent identity before saving the secret in native Credentials. Do not paste credential values into command arguments. Imported accounts appear in `cloud list` and the existing Apps UI; explicitly bind the account to a local Bot through the existing `im-bind <bot> --app <cloud-id>` command/UI. Cloud import never selects a phone/CLI Human organization or creates a Bot.
+
+`deepseekbot cloud policy --input-stdin` accepts `{ "id": "cloud-<fingerprint>", "revision": 1, "policy": { "allowedUsers": ["user_..."], "forwardTargets": [], "environment": "host-a" } }`. This records an explicit local work allow-list; it does not bypass native tool permissions. `deepseekbot cloud remove --input-stdin --confirm` accepts `{ "id": "cloud-<fingerprint>", "revision": 2 }`. Read the actual current revision first. Removal disables traffic before deleting the secret; `credentialRemoved: false` requires retrying cleanup. Two-Host execution and runtime evidence are tracked in #2155, not established by these command examples.
+
+`deepseekbot cloud-work <bot> --input-stdin` invokes the same bounded `cloud_work` Tool as the Bot. Pass `{ "operation": "inspect", "source_event_id": "im-..." }` for the canonical request and configured forward targets. `execute` performs only the fixed runtime health check; `forward` additionally requires `target_actor_id` from those configured targets. The input cannot supply a Human identity, request body or shell command. Current source access, binding and local policy apply to every operation. Retry uncertain operations with the same source/operation/target: result delivery never repeats the local check, while interrupted execution reports `needs-review`. A forward attempt cannot fall back to execution. The fixed model-mediated two-Host UAT path and direct replay after both Host restarts are qualified at `f02c2423b`; this does not qualify arbitrary work or a fresh phone run.
+
+## Desktop onboarding
+
+`deepseekbot onboarding` reads the Profile journey and actual Bot/group result references. Use `--action start|pause|skip|continue|restart|finish` to change tutorial lifecycle. `finish` refuses before actual Bot/group creation. Restart preserves resources, approvals, layouts and history. Layout tip completion stays on the current Client; this command does not operate the UI or mark provider execution successful.
+
+### Version-bound Memory images
+
+`memory-file`, `memory-working-diff`, and `memory-commit-diff` include optional image metadata for PNG, JPEG/JPG, GIF, WebP and safe static SVG files. `source` identifies the working tree, index, or exact commit; `revision` binds the returned bytes. No image body is printed in JSON.
+
+```bash
+deepseekbot memory-image <bot-id> --path preview.png --image-source <source> --image-revision <revision> --out /absolute/new-preview.png
+```
+
+Markdown `.md` / `.markdown` results from `memory-file`, `memory-working-diff` and `memory-commit-diff` additionally expose a `markdown` document (or `before` / `after` documents): `source`, `revision` (SHA-256 of the document bytes), `status`, and the exact UTF-8 `body`. Diff previews have independent text budgets: 4 MiB per document and 4 MiB total document bodies per commit query; line-diff limits stay unchanged. No rendered HTML or image bodies enter these JSON results.
+
+For an inline local image, pass the document's source/revision and the authored reference:
+
+```bash
+deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document-source> --image-revision <document-revision> --image-reference ../chart.png --out /absolute/new-chart.png
+```
+
+With `--image-reference`, `--path` names the Markdown document and `--image-revision` identifies that document, not the image. The receipt includes `reference`. Relative images resolve from the document directory, `/chart.png` from the Memory Repository root. Percent-encoded spaces/Unicode and in-root parent traversal work; root escape, `.git`, backslashes, URL schemes and symlink escape are refused. The route revalidates mutable document content before and after reading the image; index/commit images never fall back to the worktree. It returns the selected source's image at load time; refresh the view to observe later mutable image changes. External HTTPS images are a Client-only explicit-load action; the Host/CLI do not fetch external URLs.
+
+Use the exact metadata from the selected file/diff side. The authenticated Host returns those original image bytes and their detected MIME, or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. Preview limits are 25 MiB per image, 16,384 pixels per axis and 40 million decoded pixels. GIF/WebP keep their original animation within 256 frames and 40 million canvas pixels across all frames. SVG additionally allows at most 1 MiB UTF-8, 10,000 XML nodes, depth 64, 64 KiB CSS and 20,000 expanded nodes. The static SVG subset accepts ordinary shapes, text, CSS, gradients, markers, clipping and bounded internal references; scripts, event handlers, foreign HTML, images, filters, animation, external references, DTDs, processing instructions and reference cycles are refused. SVG stays an image resource, never inserted markup, and all successful exports preserve the original SVG bytes. Original-file download and Open current file remain separate actions.
+
+## Desktop window zoom (controlled S1)
+
+The product includes a separate opt-in configuration command. Install the product normally,
+quit the target macOS Desktop, then point setup at that application's bundle and explicit
+Profile. Setup uses the selected application's bundled pnpm with scripts disabled, under the
+same Profile writer lock as the native plugin manager. It refuses a running Desktop Host,
+other theme overrides, stale product composition and an app version other than 0.2.1-rc.2.
+It changes one Profile dependency and never edits the installed application:
+
+```sh
+deepseekbot-zoom-setup enable --home <absolute-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+deepseekbot-zoom-setup disable --home <absolute-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+```
+
+Keep Desktop closed until setup returns, then reopen it. A busy Profile or uncertain package
+outcome requires inspection rather than automatic retry. For a non-Desktop isolated Profile,
+use `--profile <profile> --dsh <qualified-dsh-cli>` instead. The DSH CLI intentionally refuses
+the managed `desktop` Profile; the native plugin manager also refuses this plain-library
+replacement, because it resolves the installation-owned theme before Profile Bundle metadata.
+Those two paths do not establish Desktop activation.
+
+Run `disable` before uninstalling the product and restart to restore native package resolution.
+Manual font preferences remain in the same native `ui-theme` Patch. JSON stdout reports
+`restartRequired:true` and `runtimeVerified:false`; a successful package change does not prove
+the native window has loaded it. An uncertain package operation is not retried automatically.
+
+`window-zoom-clients` lists active targets. Select one `--client-id`; commands never choose a
+window implicitly. `window-zoom-get` reads the Client-owned snapshot. A write requires the
+returned `document.revision` as `--expected-revision`:
+
+```sh
+deepseekbot window-zoom-clients --host <host> --token-file <private-file>
+deepseekbot window-zoom-get --client-id <id> --host <host> --token-file <private-file>
+deepseekbot window-zoom-set --client-id <id> --zoom-level=-1 --expected-revision <revision> --host <host> --token-file <private-file>
+deepseekbot window-zoom-reset --client-id <id> --expected-revision <revision> --host <host> --token-file <private-file>
+```
+
+Levels are integers -8…8; the factor is `1.2 ** level`. Use `--zoom-default` with `window-zoom-set`
+to save the device default and apply it to the current window. A normal set changes only the
+current window; reset restores its saved default. Negative arguments use `--zoom-level=-1`.
+The stable desktop origin stores this locally; the Host only relays requests. Browser Clients
+and desktops without the qualified compatibility composition do not register targets.
+
+`zoom-client-stale`, `zoom-client-unavailable`, `zoom-revision-conflict` and storage errors are
+refusals, not successful fallback writes. A timeout/cancellation after delivery has an unknown
+write outcome: read the same live Client before deciding what to do; never retry blindly.
+Restarting the Client changes its delivery ID; list again. The desktop's primary-window state
+survives independently. See [S1](https://github.com/BotHarness/DeepSeekBot/issues/2268) for native
+qualification limits. No model or Host-side preference copy is involved.
+
+## Device-local DeepSeekBot appearance
+
+`appearance-clients` lists the online Client ids and platform on the authenticated Host. Select one explicitly; a new mount/reload gets a new id. This controls DeepSeekBot, not the DSH-native Host theme.
+
+```bash
+deepseekbot appearance-clients --host http://127.0.0.1:PORT --token-file /private/host-token
+deepseekbot appearance-get --client-id CLIENT_ID --host http://127.0.0.1:PORT --token-file /private/host-token
+printf '%s' '{"preference":"dark","mode":"dark","preset":"mist-purple","primary":"#9876cb"}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+Use `snapshot.config.revision` from the read as `REVISION`. Patch fields: `preference` is `light`, `dark` or `system`; `mode` is `light` or `dark` and is required with `preset` (`classic-blue` / `mist-purple`) or `primary` (six-digit hex). Selecting a preset resets that mode's Primary unless the same patch supplies another. Other mode and unknown future fields are retained.
+
+A successful command emits one JSON document after the target Client acknowledges local storage; read it back and inspect the UI. Web persists per browser/site; Desktop per application regardless of Host. Other browser profiles and Desktop do not receive the command. Same-site tabs share local storage intentionally.
+
+Refusals include `appearance-client-required`, `appearance-client-stale`, `appearance-client-unavailable`, `appearance-client-busy`, `appearance-client-timeout`, `appearance-revision-required`, `appearance-revision-conflict`, `appearance-invalid-input`, `appearance-storage-invalid` and `appearance-storage-unavailable`. A timeout after delivery has an unknown outcome: read again before retrying. There is no offline queue, broadcast, Host preference mirror or model call.
+
+Global materials (T2): the four presets are `classic-blue`, `mist-purple`, `forest-green` and `warm-amber`. Add `materials.header` and/or `materials.body` to a mode patch; each accepts optional `color` (six-digit hex), `opacity` (0–100 percent) and `blur` (0–40 CSS pixels). Fields merge independently. Choosing a preset clears known global adjustments only for that mode. The same Client acknowledgment, revision checks and storage refusals apply.
+
+```bash
+printf '%s' '{"mode":"light","materials":{"header":{"color":"#e9ddf6","opacity":75,"blur":16},"body":{"opacity":80,"blur":12}}}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+Functional Panels (T3): `deepseekbot appearance-targets --client-id CLIENT_ID` reads the target catalog and snapshot from that Client (use the same Host/auth flags as above). IDs such as `dock:bh:channel-body` identify the Messages function, regardless of its selected Channel. `appearance-get` also returns `targets`.
+
+Use `appearance-set` with `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":"#e0c1ed","opacity":42},"body":{"blur":8}}}}`. Send a field as `null` to follow global, for example `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":null}}}}`. Reset only that target/mode with `{"mode":"light","panel":{"id":"dock:bh:channel-body","reset":true}}`. Panel operations cannot mix global fields in the same patch. All writes require `--patch-stdin` and the last `--expected-revision`.
+
+Target refusals are `appearance-target-unavailable`, `appearance-target-duplicate` and `appearance-target-invalid`; they never redirect to another Panel. Closing a Panel does not delete its override. Global preset changes retain it. Nested targets are introduced separately.
+
+Nested appearance uses the same `appearance-targets` and `appearance-set` commands. Targets include registered Memory files/evolution, Browser/Computer and independent contributions; `dock:memory-details` is shared by file preview, commit detail and working changes. Use `dock:generated-files` for the Channel file side panel. Every omitted field follows the current mode's global setting directly, even inside a customized parent. A hidden panel keeps its appearance; an unregistered contribution refuses writes until it returns. Resetting a parent never clears child overrides.
+
+### Device-local image wallpaper
+
+Use `appearance-clients` to identify one online Web or Desktop Client, then `wallpaper-get --client-id <id>` to read its `wallpaper.revision`. Wallpaper revisions are separate from appearance revisions. All mutations require that exact `--expected-revision` (initially `empty`):
+
+```bash
+deepseekbot wallpaper-import --client-id <id> --expected-revision <revision> --file ./image.png
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --patch-stdin < crop.json
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
+```
+
+`crop.json` contains exactly `{ "x": 0.5, "y": 0.5, "zoom": 1.5 }`: center coordinates 0–1 and zoom 1–5. Import optionally accepts the same crop through `--patch-stdin`. The file is read on the CLI machine, must be a nonempty decodable image no larger than 20 MiB, and is transferred in ordered bounded chunks. Only the selected Client stores the original bytes. Successful stdout reports metadata and the new revision; no file path or media bytes are returned. Offline/stale Clients, revision conflicts, invalid media/crop, expired uploads and storage failures return coded refusals. A timeout after delivery requires a fresh read before retry; never automatically replay the import. Web and Desktop storage are independent, and neither is keyed by Host.
+
+The same wallpaper commands also accept videos up to 100 MiB. Import must actually play/decode on the selected Client and generate a poster before committing; originals are not transcoded. `wallpaper-get` returns transient `playback.state` (`playing`, `paused`, `poster`, `inactive`) and a coded `reason` when degraded. The saved poster is used if playback fails or a later runtime cannot decode an accepted video. Image limits remain 20 MiB. Support is runtime/codec-specific; a successful transport alone does not prove playback.
+
+### Appearance recovery
+
+Read `appearance-get --client-id <id>` and `wallpaper-get --client-id <id>` first; their revisions are independent.
+
+```bash
+deepseekbot appearance-clear-panels --client-id <id> --mode light --expected-revision <appearance-revision>
+deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-revision> --expected-wallpaper-revision <media-revision> --confirm-reset
+```
+
+Clear removes all functional Panel overrides only in the explicit mode, including unregistered saved targets; theme/materials/Primary, the other mode, media and layout stay unchanged. Full reset requires `--confirm-reset`, defaults both palettes/mode/overrides, and removes shared media. It never changes DSH, Bot identity or business data. A preference write failure leaves media untouched. `appearance-reset-wallpaper-failed` means defaults were committed but media cleanup failed; reread both owners and retry with fresh revisions. The command does not claim a single transaction across localStorage and IndexedDB, nor automatically replay a delivered timeout.

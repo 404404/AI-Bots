@@ -8,10 +8,13 @@ on:
   schedule:
     - cron: '0 18 * * *'
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: verify-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
-  cancel-in-progress: true
+  # Main/release commits keep their own verification; only superseded PR runs cancel.
+  # github.workflow separates a release caller from the normal verify run on the same SHA.
+  group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -31,6 +34,7 @@ jobs:
       tests: ${{ steps.plan.outputs.tests }}
       docs-site: ${{ steps.plan.outputs.docs-site }}
       related: ${{ steps.plan.outputs.related }}
+      android-native: ${{ steps.plan.outputs.android-native }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -87,6 +91,33 @@ jobs:
         env:
           CI: '1'
           EXPO_OFFLINE: '1'
+
+  mobile-native:
+    name: Android native module tests
+    needs: plan
+    if: needs.plan.outputs.android-native == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @botharness/mobile exec expo prebuild --platform android --no-install
+        env:
+          CI: '1'
+          EXPO_OFFLINE: '1'
+      - run: bash apps/mobile/android/gradlew -p apps/mobile/android :stream-reveal:testDebugUnitTest -PreactNativeArchitectures=x86_64 --max-workers=2 --console=plain
 
   test-full:
     name: test (shard ${{ matrix.shard }})
@@ -173,7 +204,8 @@ jobs:
 
   verify:
     name: lint, format, typecheck, test, build, docs
-    needs: [plan, static, mobile-export, test-full, test-affected, docs-site, e2e-smoke]
+    needs:
+      [plan, static, mobile-export, mobile-native, test-full, test-affected, docs-site, e2e-smoke]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

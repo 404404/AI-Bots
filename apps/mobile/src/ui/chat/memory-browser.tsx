@@ -1,15 +1,7 @@
-import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  ScrollView,
-  View,
-  type ScrollViewInstance,
-} from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { memoryEntries, type MemoryEntry } from '../../host/bot-profile';
-import type { MemoryFile } from '../../host/wire';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
@@ -24,20 +16,31 @@ type Loaded<T> =
   | { status: 'ready'; value: T }
   | { status: 'failed'; error: string };
 
-function useLoad<T, N>(load: () => Promise<T>) {
+export function useLoad<T, N>(load: () => Promise<T>) {
   const [state, setState] = useState<Loaded<T>>({ status: 'loading' });
+  const generation = useRef(0);
   const read = useCallback(() => {
+    const current = ++generation.current;
     setState({ status: 'loading' });
     load().then(
-      (value) => setState({ status: 'ready', value }),
-      (error: unknown) =>
-        setState({
-          status: 'failed',
-          error: error instanceof Error ? error.message : String(error),
-        }),
+      (value) => {
+        if (current === generation.current) setState({ status: 'ready', value });
+      },
+      (error: unknown) => {
+        if (current === generation.current)
+          setState({
+            status: 'failed',
+            error: error instanceof Error ? error.message : String(error),
+          });
+      },
     );
   }, [load]);
-  const mount = useMounted<N>(() => read(), [read]);
+  const mount = useMounted<N>(() => {
+    read();
+    return () => {
+      generation.current++;
+    };
+  }, [read]);
   return { state, read, mount };
 }
 
@@ -93,7 +96,7 @@ export function MemoryEntryRow({
   );
 }
 
-function Status({
+export function Status({
   state,
   onRetry,
 }: {
@@ -161,39 +164,5 @@ export function MemoryFolderView({
         )
       }
     />
-  );
-}
-
-export function MemoryFileView({ load }: { load: () => Promise<MemoryFile | undefined> }) {
-  const theme = useDesignTheme();
-  const { state, read, mount } = useLoad<MemoryFile | undefined, ScrollViewInstance>(load);
-  return (
-    <ScrollView
-      ref={mount}
-      style={{ flex: 1, backgroundColor: theme.overlay.fill }}
-      contentContainerStyle={{ padding: space.x5 }}
-    >
-      {state.status !== 'ready' ? (
-        <Status state={state} onRetry={read} />
-      ) : (
-        <View
-          style={{
-            backgroundColor: theme.layer.sheet.fill,
-            borderRadius: radius.md,
-            padding: space.x5,
-          }}
-        >
-          {state.value === undefined ? (
-            <Text tone="muted">{t.memoryMissing}</Text>
-          ) : state.value.binary === true ? (
-            <Text tone="muted">{t.memoryBinary}</Text>
-          ) : state.value.body.trim() === '' ? (
-            <Text tone="muted">{t.memoryEmptyFile}</Text>
-          ) : (
-            <Text selectable>{state.value.body}</Text>
-          )}
-        </View>
-      )}
-    </ScrollView>
   );
 }

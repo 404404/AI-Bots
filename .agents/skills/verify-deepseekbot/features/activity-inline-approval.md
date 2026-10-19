@@ -71,3 +71,63 @@ own runtime checks before claiming them. Human QA remains a separate gate.
 ## Three-section and search follow-up
 
 Verify all three headers on page and narrow/wide Dock, light/dark. Collapse each independently, reload and reopen the panel to verify persistence; arrivals must not reopen a collapsed section. Open Search notifications in the header, type a matching query and a no-result query, then close with Escape or the clear button. Verify focus returns to the search trigger and browsing never marks read or consumes approvals. Search matches beyond the first page through Host `humanAttention` query version 1; unread summaries search eligible message bodies before grouping. Verify Bot/Channel filters, default/chronological sort, handled history and per-section pagination, including stale responses after a search switch and failed-page retry. The CLI equivalent is `deepseekbot inbox --category replies --search <text> --sort mentions-first`; an old Host must refuse the versioned query instead of silently returning unfiltered data.
+
+## Live Activity refresh
+
+Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-activity-live.mjs`
+on a fresh task-local Host after `doctor`. This journey observes 12 idle seconds with no list
+polling, delays background reads by 350ms without replacing the loaded empty DOM, creates a
+real reply in another Channel, marks it read through Activity, closes the browser's actual
+WebSocket while offline, and checks canonical unread recovery after reconnect. Source navigation
+must reveal the same message ID in the conversation. A second disposable Bot requests membership in a Human-selected Group: its Activity card
+appears, snoozes, returns at expiry and disappears after a decision from the public API.
+The journey also runs `inbox-watch` against that same Host and saves its bounded JSON result.
+
+QA Bots use the already configured `deepseek-official/deepseek-flash` route; override only these
+Bots with `BH_QA_PROVIDER` / `BH_QA_MODEL` if that catalog route is unavailable. The shared AX
+default may return QUOTA even when the alternate configured route works. Preserve that failure;
+never treat Host health or a mocked reply as proof of model usability. The browser instrumentation
+only closes its transport or delays its own requests; it does not fabricate messages or requests.
+
+Also compare the three empty sections on full page (600×1000) and Dock (1440×1000), light/dark,
+with the base revision: background reads must preserve text and section heights. Screenshots,
+ARIA, canonical item/message/Source Event IDs and console failures stay in the instance evidence.
+Human QA and native mobile behavior remain separate from these Web checks.
+
+The first RC2 run of this journey observed a native `ask_user_question` tool pending without a
+canonical Channel question card, including after a timed retry. Preserve the trace and do not
+claim native question creation as verified by this journey. The group-join case qualifies updates
+to existing canonical action sources; it does not repair or substitute for that request-creation path.
+
+## Bidirectional Approve and sustained multi-Channel load
+
+Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-activity-approve-sync.mjs`
+for two real native bash approvals. It creates disposable QA Bots, validates the exact harmless
+marker commands, clicks **Allow once** in Activity and then in the conversation, and checks
+both rendered projections, exactly one canonical decision, and the actual native file effect.
+Each observer uses a separate browser so a hidden tab's rendering lifecycle is not mistaken
+for a live synchronization failure. Saved layout state must be handled when opening a second
+page. A resolved request renders an approved notice rather than retaining its pending card.
+
+Run `BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-activity-load.mjs`
+on a fresh isolated Host. It creates 24 silent Groups and drives the public `botToolRun`
+`channel_send` path (no model tokens or fabricated Client events) after a trusted Human Source
+Event in each Group. Three rounds each send 240 messages in waves of 24, with a 100ms minimum
+wave period. The actual achieved rate is reported, not assumed. Compare sequential runs on
+main and the candidate on the same machine; use `BH_LOAD_BASELINE=1` for the main run.
+Capture write/query latency, query counts, browser task time, animation frame intervals,
+long tasks, heap samples, bounded draining of in-flight refreshes before the 12-second idle window,
+one existing remote.mux connection, and exact latest
+message identities across all 24 Channels. This bounded load is not an unlimited-capacity
+or long-duration memory-leak qualification. Preserve failed runs and their DOM evidence.
+
+## Channel mute message filtering (#2231, first slice)
+
+Seed Group messages and Human mentions through a real Bot turn using `channel_send` with `channel_id` and `mention_human_ids`. The direct no-model send can seed a Human DM, but a Group send requires trusted Source Event causation and must not be fabricated. In the Channel list, right-click that Channel and choose Mute. Verify both Activity page and Dock remove its Related to you and Other unread entries, while pending explicit Human requests remain. Unmute and verify eligibility returns without advancing the Channel read position. Repeat via `channel-mute` in the CLI while Activity stays open, and verify the existing Roster subscription updates the list and global status without a page reload. Capture before/after with the same data, theme and viewport; inspect console and source IDs, `channel-unread`, Inbox categories and read position. The Channel's grey local unread count remains real. The following indicator journey separately qualifies its display preference.
+
+
+## Independent control-rail indicator (#2231, second slice)
+
+Right-click the desktop control-rail Activity button, or focus it and press Shift+F10/ContextMenu. Verify All notifications, Needs you, Related to you, Other unread and Off as a single selection. Context-menu open must not toggle the Activity panel; Escape/selection must restore focus and outside dismissal must keep the new target's focus. Off hides only the dot: normal click and the shortcut still open Activity, and the accessible label retains true counts. Read retained replies and handled requests never light the corresponding scope.
+
+Use real ordinary messages, Human mentions/replies and a pending Group join request. Compare every indicator scope against CLI `inbox-status` messageCounts and existing Inbox queries. Mute/unmute through the Channel menu and CLI, mark the latest message read, and resolve the disposable join request; verify status refresh changes the dot while filters remain independent. Change Activity search/category and clear its filters, then change the indicator scope; neither setting may overwrite the other. Check persistence after reload, same-origin second-window synchronization, and a different origin or browser context staying independent. Invalid stored values return to All. A deliberately failed status request must show unknown rather than a fabricated zero; Off remains off through failure/recovery. Label this injected transport failure separately from real outages. Capture menu and dot states in light/dark and inspect browser errors and canonical read state. The narrow native sidebar entry is outside the control-rail preference's scope.

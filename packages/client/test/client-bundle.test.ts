@@ -15,6 +15,10 @@ interface LoadedEntry {
 }
 
 const requireFromTest = createRequire(import.meta.url);
+const { JSDOM } = requireFromTest('jsdom');
+const browserDom = new JSDOM('<!doctype html><html><body></body></html>', {
+  url: 'http://localhost',
+});
 const tempDir = mkdtempSync(join(tmpdir(), 'botharness-client-bundle-'));
 
 const BASELINE_MODULES = new Set([
@@ -94,16 +98,26 @@ beforeAll(async () => {
   await build({ ...clientBundleOptions, config: false, outDir: tempDir });
   bundleCode = readFileSync(join(tempDir, 'client.js'), 'utf8');
   const sandbox = {
-    window: {
+    document: browserDom.window.document,
+    MutationObserver: browserDom.window.MutationObserver,
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    },
+    window: Object.assign(browserDom.window, {
       matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
-      location: { hash: '' },
       __ModuleLoader__: {
         load: (loaded: LoadedEntry) => {
           entry = loaded;
         },
       },
-    },
+    }),
     fetch: globalThis.fetch,
+    setTimeout: browserDom.window.setTimeout.bind(browserDom.window),
+    clearTimeout: browserDom.window.clearTimeout.bind(browserDom.window),
+    setInterval: browserDom.window.setInterval.bind(browserDom.window),
+    clearInterval: browserDom.window.clearInterval.bind(browserDom.window),
     queueMicrotask,
     TextEncoder,
     TextDecoder,
@@ -117,12 +131,14 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(() => {
+  browserDom.window.close();
   rmSync(tempDir, { recursive: true, force: true });
 });
 
 describe('@botharness/ui browser bundle', () => {
   it('does not defer Node environment reads to browser interactions', () => {
     expect(bundleCode).not.toMatch(/\bprocess\.env\b/);
+    expect(bundleCode).not.toMatch(/require\(["']node:/);
   });
   it('self-registers with the lazy-CJS module-loader contract', () => {
     const loaded = loadedEntry();
