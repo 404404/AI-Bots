@@ -83,3 +83,13 @@ portaled menu multiplies viewport anchor coordinates under root CSS zoom. Test k
 Escape/focus return and section selection; do not infer all other anchored dropdowns are
 qualified from this picker. Real IME/recording/custom-binding and wider embedded-page,
 compatibility and platform matrices remain separate S2/S3 gates.
+
+## Product activation and native Settings identity
+
+Ordinary Bundle install alone does not activate zoom. In the explicit isolated Profile,
+run `deepseekbot-zoom-setup enable --home <home> --profile <profile> --dsh <qualified-cli>`
+and restart the same Host/Desktop. Keep the root `ui-theme` namespace and one native theme
+module id. Read pre-existing fonts, edit them through native Settings, restart and read back.
+Run `disable` before product removal, restart and verify original theme bytes and retained
+font preferences. The package command reports configuration only, not runtime acceptance.
+Never replace this check with a standalone Node hook test or rename the settings namespace.

@@ -213,6 +213,7 @@ export default defineConfig([
   {
     entry: {
       'profile-cli': 'packages/deepseekbot/src/profile-cli.mjs',
+      'desktop-zoom-setup': 'packages/deepseekbot/src/desktop-zoom-setup.mjs',
       deepseekbot: 'packages/deepseekbot/src/deepseekbot.mjs',
       'theme-schema': 'packages/client/src/theme-schema.ts',
     },

@@ -13,6 +13,7 @@ import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { prepareDesktopZoomQa } from './desktop-zoom-qa.mjs';
 import { developmentProfileManifest } from './dev-profile.mjs';
+import { configureDesktopZoom } from '../packages/deepseekbot/src/desktop-zoom-setup.mjs';
 const source = process.cwd();
 const { devSecretEnvironment } = await import(
   pathToFileURL(join(source, 'scripts/dev-secret.mjs'))
@@ -190,6 +191,12 @@ try {
     writeFileSync(manifest, JSON.stringify(data, null, 2));
   }
   prepareDesktopZoomQa(root);
+  configureDesktopZoom({
+    action: 'enable',
+    home: join(root, 'home'),
+    profile: 'desktop',
+    dsh: join(source, 'node_modules/.bin/dsh'),
+  });
   await launch();
   await ready(true);
   const cliAccessFile = join(root, 'cli-access.json');

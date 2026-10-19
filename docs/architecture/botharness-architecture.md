@@ -1166,8 +1166,12 @@ explicitly addressed CLI share its versioned local default/current-primary-windo
 the authenticated Host route is an ephemeral delivery relay with no preference copy. A pinned,
 MIT-preserving downstream theme composition leases only the original font-shortcut Fiber,
 then returns it on disposal. The product build carries that licensed theme and a portable ESM
-schema module. Native Bundle patches select one theme Provider for the composed release;
-unknown releases retain the original theme and Windows/Linux retain their original composition.
+schema module. Bundle patches retain the original `ui-theme` row and canonical Settings
+namespace. An explicit `deepseekbot-zoom-setup enable` command installs one Profile-local
+package link through the native package manager and requires a restart. It accepts only macOS
+and CLI 0.2.1-rc.2, refusing other overrides. `disable` removes only this dependency and its
+exact owned symlink, preserving font preferences; run it before product removal. Installing
+the Bundle alone does not activate compatibility. Windows/Linux remain unchanged.
 It does not edit the installed desktop shell. Ordinary Web zoom is unchanged. Native-input,
 packaged-install and Human QA evidence remain separate from source coverage; numberpad,
 broader reliability and other desktop platforms are tracked in #2269/#2270.
