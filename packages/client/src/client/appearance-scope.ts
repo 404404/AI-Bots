@@ -1,3 +1,4 @@
+import { appearanceMaterials } from './appearance-materials.js';
 import {
   APPEARANCE_KEY,
   APPEARANCE_PRIMARY,
@@ -10,10 +11,17 @@ export function appearanceCss(snapshot: AppearanceSnapshot): string {
   const { config, mode } = snapshot;
   const selected = config.modes[mode];
   const primary = selected.primary ?? APPEARANCE_PRIMARY[selected.preset][mode];
+  const materials = appearanceMaterials(selected, mode);
   const tokens: Record<string, string> = {
     ...NATIVE_LIGHT,
     ...(mode === 'dark' ? NATIVE_DARK : {}),
   };
+  for (const part of ['header', 'body'] as const) {
+    const material = materials[part];
+    tokens[`--bh-global-${part}-fill`] =
+      `color-mix(in srgb, ${material.color} ${material.opacity}%, transparent)`;
+    tokens[`--bh-global-${part}-blur`] = `${material.blur}px`;
+  }
   tokens['--dsw-alias-state-business-primary'] = primary;
   tokens['--dsw-alias-state-business-secondary'] =
     `color-mix(in srgb, ${primary} 45%, transparent)`;
@@ -26,7 +34,7 @@ export function appearanceCss(snapshot: AppearanceSnapshot): string {
     .map(([k, v]) => `${k}:${v}`)
     .join(
       ';',
-    )}}:root [data-bh-appearance-owned][data-menu-material],:root .${APPEARANCE_CLASS}[data-menu-material],:root .${APPEARANCE_CLASS} [data-menu-material]{--dsw-elevation-stroke-color:var(--dsw-alias-border-${mode === 'dark' ? 'l3' : 'l4'})}`;
+    )}}:root [data-bh-appearance-owned][data-menu-material],:root .${APPEARANCE_CLASS}[data-menu-material],:root .${APPEARANCE_CLASS} [data-menu-material]{--dsw-elevation-stroke-color:var(--dsw-alias-border-${mode === 'dark' ? 'l3' : 'l4'})}${materialCss()}`;
 }
 
 export function mountAppearance(owner: Appearance): () => void {
@@ -52,4 +60,14 @@ export function mountAppearance(owner: Appearance): () => void {
     media.removeEventListener('change', owner.refresh);
     window.removeEventListener('storage', onStorage);
   };
+}
+
+function materialCss(): string {
+  const scope = ':root .bh-workspace-mount[data-workspace-enabled]';
+  return `
+${scope} .bh-dock-theme { --dv-group-view-background-color:transparent; --dv-tabs-and-actions-container-background-color:transparent; --dv-activegroup-visiblepanel-tab-background-color:transparent; --dv-inactivegroup-visiblepanel-tab-background-color:transparent; --dv-activegroup-hiddenpanel-tab-background-color:transparent; --dv-inactivegroup-hiddenpanel-tab-background-color:transparent; }
+${scope} .bh-root, ${scope} .bh-workspace-rail { background:transparent; }
+${scope} .dv-tabs-and-actions-container, ${scope} .bh-channel-session-header { background:var(--bh-global-header-fill); backdrop-filter:blur(var(--bh-global-header-blur)); }
+${scope} .dv-content-container { background:var(--bh-global-body-fill); backdrop-filter:blur(var(--bh-global-body-blur)); }
+`;
 }

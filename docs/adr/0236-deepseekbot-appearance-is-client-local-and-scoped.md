@@ -31,3 +31,9 @@ This is not #2095's native Host-theme/locale control. Native language, notificat
 ## Verification boundaries
 
 Owner tests cover mode independence, restart restoration, unknown-field retention, failed writes and revision conflicts. Delivery tests cover exact targeting, private poll tokens, expiry and refusal propagation. The feature map supplies runnable real Web and task-owned macOS Desktop journeys. Source tests, runtime evidence and Human QA are separate gates; this ADR does not assert an unrun platform passed.
+
+## T2: global materials
+
+Each mode may hold partial `materials.header` and `materials.body` values: six-digit `color`, `opacity` from 0 to 100 percent, and `blur` from 0 to 40 CSS pixels. These are application-owned surface properties, not a DSH theme or layout setting. Each field resolves against that mode's selected preset. Classic Blue retains the opaque neutral panel baseline; Mist Purple, Forest Green and Warm Amber supply translucent, blurred defaults in both modes. Explicit user values are not automatically recolored for contrast.
+
+Changing a preset clears the known Primary and global material adjustments for that mode, retaining the other mode and unknown future fields. The same local owner and explicit Client CLI patch process every field; no Host preference store is added. CSS paints the Dock header and content container, with alpha only in the background color and blur only in backdrop-filter. Internal roots and the Control Rail stop painting redundant opaque backgrounds. Dock geometry, message bubbles, cards, inputs and scoped modal/menu palettes remain independent. A controlled background pixel comparison verifies actual blur separately from computed-property assertions. Wallpaper assets and panel-specific overrides belong to later slices.

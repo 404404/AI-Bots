@@ -576,6 +576,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/local-appearance.md",
       "task": 2258,
       "gap": "Native restart and different-Host restore require the task-owned Desktop procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.global-materials",
+      "label": "Adjust global Header/Body materials through UI and targeted CLI with actual backdrop blur",
+      "source": "packages/client/src/client/appearance-material-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/global-materials.md",
+      "task": 2259,
+      "gap": "Native restart uses the task-owned Desktop procedure; Human QA is separate."
     }
   ],
   "scripts": [
@@ -1900,6 +1908,14 @@
       "reason": "Runs actual scoped theme controls, local persistence and explicit Client-targeted CLI against an isolated Host; no model call.",
       "task": 2258,
       "sha256": "d96263dc55463e905e5220c773f9c17fbc988be3d065fa9b83221880c3a58bb5"
+    },
+    {
+      "path": "scripts/e2e-global-materials.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.global-materials"],
+      "reason": "Real mode/material UI and CLI, reload, native isolation and controlled background pixel proof of blur.",
+      "task": 2259,
+      "sha256": "2cbb7edf42ead539c8e23aa029b78353d5e514ac3a78210c4b715d7fb4f97be9"
     }
   ],
   "native": [
