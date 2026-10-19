@@ -284,6 +284,31 @@ describe('Holding the mic', () => {
   });
 });
 
+describe('native compose bar', () => {
+  it('keeps + outside the field capsule and the mic or Send inside it', async () => {
+    const attach = button(t.attach)!;
+    const capsule = attach.nextElementSibling!;
+    expect(capsule.contains(field())).toBe(true);
+    expect(capsule.contains(button(t.dictate))).toBe(true);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        field(),
+        'Hello',
+      );
+      field().dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(capsule.contains(button(t.send))).toBe(true);
+    expect(button(t.attach)).toBe(attach);
+  });
+
+  it('puts cancel in the + slot while listening', async () => {
+    const slot = button(t.attach)!.parentElement!;
+    await press(t.dictate);
+    expect(button(t.attach)).toBeNull();
+    expect(button(t.cancelDictation)!.parentElement).toBe(slot);
+  });
+});
+
 describe('expanded draft', () => {
   it('shares edits with the existing composer and sends the current draft once', async () => {
     const original = field();

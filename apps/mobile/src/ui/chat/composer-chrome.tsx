@@ -1,0 +1,53 @@
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { pressTint, useDesignTheme } from '../design/theme';
+import { radius } from '../design/tokens';
+
+export const rippleFeedback = true;
+
+export function ComposerCircleButton({
+  label,
+  size,
+  onPress,
+  children,
+}: {
+  label: string;
+  size: number;
+  onPress(): void;
+  children: ReactNode;
+}) {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      android_ripple={{ color: pressTint(theme.color.fg), borderless: true, radius: size / 2 }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius.round,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+export function ComposerFieldMaterial({ cornerRadius }: { cornerRadius: number }) {
+  const theme = useDesignTheme();
+  return (
+    <View
+      pointerEvents="none"
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      style={[
+        StyleSheet.absoluteFill,
+        { borderRadius: cornerRadius, backgroundColor: theme.layer.raised.fill },
+      ]}
+    />
+  );
+}

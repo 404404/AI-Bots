@@ -19,7 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { PickSource, PickedFile } from '../../host/pick-files';
-import { useDesignTheme } from '../design/theme';
+import { pressTint, useDesignTheme } from '../design/theme';
 import { edge, motion, radius, space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import {
@@ -34,6 +34,7 @@ import {
   PlusIcon,
   RecordingStopIcon,
 } from '../shell/icons';
+import { ComposerCircleButton, ComposerFieldMaterial, rippleFeedback } from './composer-chrome';
 import { DraftEditor } from './draft-editor';
 import { haptic } from '../haptics';
 import { t } from '../strings';
@@ -72,6 +73,15 @@ function RoundButton({
       accessibilityLabel={label}
       onPress={onPress}
       hitSlop={space.x2}
+      android_ripple={
+        rippleFeedback
+          ? {
+              color: pressTint(filled ? theme.color.onAccent : theme.color.fg),
+              borderless: true,
+              radius: size / 2,
+            }
+          : undefined
+      }
       style={({ pressed }) => ({
         width: size,
         height: size,
@@ -80,10 +90,10 @@ function RoundButton({
         justifyContent: 'center',
         backgroundColor: filled
           ? theme.color.accent
-          : pressed
-            ? theme.layer.raised.pressed
+          : pressed && !rippleFeedback
+            ? pressTint(theme.color.fg)
             : undefined,
-        opacity: filled && pressed ? 0.7 : 1,
+        opacity: filled && pressed && !rippleFeedback ? 0.7 : 1,
       })}
     >
       {children}
@@ -239,7 +249,7 @@ function VoiceButton({
 
 function HoldDot() {
   const theme = useDesignTheme();
-  const size = theme.touch - space.x4;
+  const size = theme.touch;
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View
@@ -384,11 +394,12 @@ export function Composer({
   const lineHeight = Math.max(theme.touch - space.x4, textLine);
   const fieldPadding = Math.max(space.x2, (lineHeight - textLine) / 2);
   const fieldLimit = Math.max(textLine + 2 * fieldPadding, viewportHeight / 5);
-  const inset = space.x3;
-  const pillHeight = useSharedValue(lineHeight + 2 * (inset + edge.hairline));
+  const button = theme.touch - space.x4;
+  const inset = (theme.touch - button) / 2;
+  const corner = theme.touch / 2;
+  const pillHeight = useSharedValue(lineHeight + 2 * inset);
   const pillStyle = useAnimatedStyle(() => ({ height: pillHeight.value }));
-  const settlePill = (content: number) => {
-    const next = content + 2 * edge.hairline;
+  const settlePill = (next: number) => {
     if (pill.height === 0) pillHeight.value = next;
     else
       pillHeight.value = withTiming(next, {
@@ -411,27 +422,30 @@ export function Composer({
   const expanded = theme.largeText || wraps;
   const stacked = composerStacked(actions, files.length, expanded);
   const icon = theme.type.title.line;
-  const button = theme.touch - space.x4;
-  const compactWidth = pill.width - 2 * (inset + button + space.x2);
   const leading = held ? (
     <HoldDot key="lead" />
   ) : listening ? (
-    <RoundButton key="lead" label={t.cancelDictation} filled={false} onPress={onCancelDictation}>
-      <CloseIcon color={theme.color.muted} size={icon} />
-    </RoundButton>
+    <ComposerCircleButton
+      key="lead"
+      label={t.cancelDictation}
+      size={theme.touch}
+      onPress={onCancelDictation}
+    >
+      <CloseIcon color={theme.color.fg} size={icon} />
+    </ComposerCircleButton>
   ) : canAttach ? (
-    <RoundButton
+    <ComposerCircleButton
       key="lead"
       label={menu ? t.closeAttach : t.attach}
-      filled={false}
+      size={theme.touch}
       onPress={toggleMenu}
     >
       {menu ? (
-        <CloseIcon color={theme.color.muted} size={icon} />
+        <CloseIcon color={theme.color.fg} size={icon} />
       ) : (
-        <PlusIcon color={theme.color.muted} size={icon} />
+        <PlusIcon color={theme.color.fg} size={icon} />
       )}
-    </RoundButton>
+    </ComposerCircleButton>
   ) : null;
   const field = (
     <TextInput
@@ -469,7 +483,7 @@ export function Composer({
             }
           : { height: textLine + fieldPadding * 2 }),
         paddingVertical: fieldPadding,
-        paddingHorizontal: stacked || leading === null ? space.x3 : 0,
+        paddingHorizontal: space.x3,
         color: theme.color.fg,
         fontSize: theme.type.body.size,
         lineHeight: theme.type.body.line,
@@ -503,6 +517,14 @@ export function Composer({
       />
     ),
   );
+  const compactWidth =
+    pill.width - 2 * (inset + space.x3) - (trailing.length === 0 ? 0 : button + space.x2);
+  const expand =
+    expanded && !listening ? (
+      <RoundButton label={t.expandDraft} filled={false} onPress={() => setEditing(true)}>
+        <ChevronUpIcon color={theme.color.muted} size={icon} />
+      </RoundButton>
+    ) : null;
   return (
     <View
       style={{
@@ -545,82 +567,71 @@ export function Composer({
       >
         M
       </Text>
-      <Animated.View
-        style={[
-          {
-            borderRadius: (theme.touch - space.x4) / 2 + inset,
-            borderWidth: edge.hairline,
-            borderColor: theme.color.borderStrong,
-            backgroundColor: theme.color.surface,
-            overflow: 'hidden',
-          },
-          pillStyle,
-        ]}
-      >
-        <View
-          style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
-          onLayout={(event) => {
-            const { width, height } = event.nativeEvent.layout;
-            settlePill(height);
-            setPill({ width, height: height + 2 * edge.hairline });
-          }}
-        >
-          {files.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingHorizontal: space.x4, paddingTop: space.x2 }}
-            >
-              {files.map((file) => (
-                <AttachmentTile key={file.id} file={file} onRemove={() => onRemove(file.id)} />
-              ))}
-            </ScrollView>
-          ) : null}
-          <View style={{ padding: inset }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                paddingLeft: stacked || leading === null ? 0 : button + space.x2,
-                paddingRight: stacked || trailing.length === 0 ? 0 : button + space.x2,
-              }}
-            >
-              {field}
-            </View>
-            <View
-              pointerEvents="box-none"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: space.x2,
-                ...(stacked
-                  ? { paddingTop: space.x2 }
-                  : { position: 'absolute', left: inset, right: inset, bottom: inset }),
-              }}
-            >
-              {leading}
-              {expanded && !listening ? (
-                <RoundButton label={t.expandDraft} filled={false} onPress={() => setEditing(true)}>
-                  <ChevronUpIcon color={theme.color.muted} size={icon} />
-                </RoundButton>
-              ) : null}
-              <View pointerEvents="none" style={{ flex: 1 }} />
-              {trailing}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.x3 }}>
+        {leading}
+        <Animated.View style={[{ flex: 1, borderRadius: corner, overflow: 'hidden' }, pillStyle]}>
+          <ComposerFieldMaterial cornerRadius={corner} />
+          <View
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+            onLayout={(event) => {
+              const { width, height } = event.nativeEvent.layout;
+              settlePill(height);
+              setPill({ width, height });
+            }}
+          >
+            {files.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingHorizontal: space.x4, paddingTop: space.x2 }}
+              >
+                {files.map((file) => (
+                  <AttachmentTile key={file.id} file={file} onRemove={() => onRemove(file.id)} />
+                ))}
+              </ScrollView>
+            ) : null}
+            <View style={{ padding: inset }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  paddingRight: stacked || trailing.length === 0 ? 0 : button + space.x2,
+                }}
+              >
+                {field}
+              </View>
+              {stacked && expand === null && trailing.length === 0 ? null : (
+                <View
+                  pointerEvents="box-none"
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: space.x2,
+                    ...(stacked
+                      ? { paddingTop: space.x2 }
+                      : { position: 'absolute', left: inset, right: inset, bottom: inset }),
+                  }}
+                >
+                  {expand}
+                  <View pointerEvents="none" style={{ flex: 1 }} />
+                  {trailing}
+                </View>
+              )}
             </View>
           </View>
-        </View>
-        {compactWidth > 0 ? (
-          <Text
-            variant="body"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            onLayout={(event) => setWraps(event.nativeEvent.layout.height > textLine * 1.5)}
-            style={{ position: 'absolute', opacity: 0, width: compactWidth, left: 0, top: 0 }}
-          >
-            {value === '' ? ' ' : value}
-          </Text>
-        ) : null}
-      </Animated.View>
+          {compactWidth > 0 ? (
+            <Text
+              variant="body"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              onLayout={(event) => setWraps(event.nativeEvent.layout.height > textLine * 1.5)}
+              style={{ position: 'absolute', opacity: 0, width: compactWidth, left: 0, top: 0 }}
+            >
+              {value === '' ? ' ' : value}
+            </Text>
+          ) : null}
+        </Animated.View>
+      </View>
       {footer === undefined ? null : (
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
@@ -633,7 +644,7 @@ export function Composer({
         <LockHint
           style={{
             position: 'absolute',
-            right: space.x4 + edge.hairline + inset,
+            right: space.x4 + inset,
             bottom:
               Math.max(insets.bottom, space.x3) +
               (footer === undefined ? 0 : footerHeight) +
