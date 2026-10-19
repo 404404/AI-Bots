@@ -1,3 +1,8 @@
+import {
+  WINDOW_ZOOM_COMMANDS,
+  WINDOW_ZOOM_OPTIONS,
+  runWindowZoomCommand,
+} from './cli-window-zoom.js';
 import { APPEARANCE_COMMANDS, APPEARANCE_OPTIONS, runAppearanceCommand } from './cli-appearance.js';
 import { prepareCloud, prepareCloudWork } from './cli-cloud.js';
 import { randomUUID } from 'node:crypto';
@@ -97,6 +102,7 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...WINDOW_ZOOM_OPTIONS,
   ...APPEARANCE_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
@@ -189,6 +195,7 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...WINDOW_ZOOM_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   {
@@ -712,6 +719,10 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (WINDOW_ZOOM_COMMANDS.some((entry) => entry.command === command))
+    return runWindowZoomCommand(command, rest, values, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (command === 'cloud-work') {
     const input = await prepareCloudWork(rest, values, io);
     const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));

@@ -253,5 +253,15 @@ try {
   );
   throw error;
 } finally {
-  await browser.close();
+  let timer;
+  const closed = await Promise.race([
+    browser.close().then(() => true),
+    new Promise((done) => {
+      timer = setTimeout(() => done(false), 5000);
+    }),
+  ]);
+  clearTimeout(timer);
+  if (!closed) browser.process()?.kill();
 }
+
+process.exit(0);

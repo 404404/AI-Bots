@@ -933,6 +933,28 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 
 使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应的原始图片字节、检测所得 MIME 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。图片上限为 25 MiB、单边 16,384 像素及解码后 4000 万像素。GIF/WebP 保留原动画，上限 256 帧，全部帧画布像素之和不超过 4000 万。SVG 另有 1 MiB UTF-8 源文件、10,000 XML 节点、64 层深度、64 KiB CSS 和 20,000 展开节点预算。静态 SVG 子集支持常用形状、文字、CSS、渐变、箭头标记、裁剪及有界内部引用；拒绝脚本、事件处理器、外来 HTML、图片、滤镜、动画、外部引用、DTD、处理指令和引用循环。SVG 始终作为图片资源，不插入页面标记；成功导出保留原始 SVG 字节。原文件下载与“打开当前文件”仍为独立操作。
 
+## 桌面整页缩放（S1 受控切片）
+
+`window-zoom-clients` 列出在线目标，必须明确传入 `--client-id`，不会隐式选择窗口。
+`window-zoom-get` 读取 Client 持有的状态；写入必须携带其 `document.revision`：
+
+```sh
+deepseekbot window-zoom-clients --host <host> --token-file <private-file>
+deepseekbot window-zoom-get --client-id <id> --host <host> --token-file <private-file>
+deepseekbot window-zoom-set --client-id <id> --zoom-level=-1 --expected-revision <revision> --host <host> --token-file <private-file>
+deepseekbot window-zoom-reset --client-id <id> --expected-revision <revision> --host <host> --token-file <private-file>
+```
+
+级别为 -8…8 的整数，倍率为 `1.2 ** level`。`window-zoom-set` 加 `--zoom-default` 时，
+保存设备默认值并应用于当前窗口；普通设置只改变当前窗口，重置恢复已保存的默认值。
+负数采用 `--zoom-level=-1` 写法。偏好保存在稳定桌面 origin 的本地存储中，Host 仅转发请求。
+浏览器 Client 和没有合格兼容组合的桌面不会注册目标。
+
+`zoom-client-stale`、`zoom-client-unavailable`、`zoom-revision-conflict` 和存储错误均表示拒绝，
+不会降级写入。投递后的超时或取消意味着写入结果未知，必须先读取同一在线 Client，不能盲目重试。
+Client 重启后投递 ID 会改变，需要重新列出；主窗口偏好独立保存。原生验证范围见
+[S1](https://github.com/BotHarness/DeepSeekBot/issues/2268)。这条路径不需要模型，也没有 Host 偏好副本。
+
 ## 设备本地 DeepSeekBot 外观
 
 `appearance-clients` 列出已认证 Host 上在线 Client 的 id 和平台。必须明确选择一个；重载后会生成新 id。此功能控制 DeepSeekBot 自己的外观，不修改 DSH 原生 Host 主题。

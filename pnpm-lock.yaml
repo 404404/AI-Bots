@@ -171,6 +171,7 @@ packageExtensionsChecksum: sha256-nTetP7MNwyU1g9eYGetFQDe+KmsSqdiIWUwSDTQtDmc=
 patchedDependencies:
   '@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.2': c02d991e1c83a16bccce25bd47847fe9e5c97117ff3d0b6b04ef9f8edb273c9d
   '@deepseek-ai/dsh-tool-fs@0.2.1-rc.2': 4b2e510cb0df4904b95b99936edd4cdaec5b19438561254906b3abf0d2c3b204
+  dockview-core@8.4.1: 6d5f9165424be95472edbb4e667b16cf9abd150f139d3524cc1ca9a6b7863b86
 
 importers:
 
@@ -21750,7 +21751,7 @@ snapshots:
 
   dnssd-advertise@1.1.6: {}
 
-  dockview-core@8.4.1: {}
+  dockview-core@8.4.1(patch_hash=6d5f9165424be95472edbb4e667b16cf9abd150f139d3524cc1ca9a6b7863b86): {}
 
   dockview-react@8.4.1(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
@@ -21761,7 +21762,7 @@ snapshots:
 
   dockview@8.4.1:
     dependencies:
-      dockview-core: 8.4.1
+      dockview-core: 8.4.1(patch_hash=6d5f9165424be95472edbb4e667b16cf9abd150f139d3524cc1ca9a6b7863b86)
 
   dom-serializer@2.0.0:
     dependencies:

@@ -679,6 +679,18 @@
       ]
     },
     {
+      "id": "desktop-window-zoom",
+      "description": "Device-local primary window preferences; Host relays exact Client requests without storing settings.",
+      "scope": "Client / desktop primary window",
+      "surfaces": [
+        "route:packages/core/src/plugin.ts:WINDOW_ZOOM_CONTROL_PATH",
+        "setting:packages/client/src/client/window-zoom-settings.tsx:{t('zoom.current')}",
+        "setting:packages/client/src/client/window-zoom-settings.tsx:{t('zoom.default')}",
+        "storage:packages/client/src/client/window-zoom.ts:setItem(WINDOW_ZOOM_KEY)"
+      ],
+      "commands": ["window-zoom-clients", "window-zoom-get", "window-zoom-set", "window-zoom-reset"]
+    },
+    {
       "id": "deepseekbot-local-appearance",
       "description": "Explicit Client-targeted device-local DeepSeekBot themes; authenticated Host forwards requests without a preference mirror.",
       "scope": "Client",

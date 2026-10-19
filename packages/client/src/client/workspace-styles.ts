@@ -15,10 +15,10 @@ html[data-windows-titlebar] [data-workspace-dock] :is([data-window-drag], .dv-ta
 html[data-windows-titlebar] [data-workspace-dock] :is([data-window-drag-recall], button, a, input, select, textarea, [contenteditable="true"], [role="menu"], [role="dialog"], [role="tooltip"]) { -webkit-app-region:no-drag; }
 html[data-windows-titlebar]:has([data-workspace-dock]) body > :not(#root) { -webkit-app-region:no-drag; }
 [data-bh-workspace-main] { --dsh-frame-leading-clearance:0px; }
-html[data-platform="darwin"]:not([data-fullscreen]) [data-workspace-enabled] > .bh-workspace-chrome { display:block; position:absolute; top:0; left:0; width:calc(${size.nav} * 2 + ${space.x3}); height:${size.nav}; z-index:10; background:${color.base}; }
+html[data-platform="darwin"]:not([data-fullscreen]) [data-workspace-enabled] > .bh-workspace-chrome { display:block; position:absolute; top:0; left:0; width:calc((${size.nav} * 2 + ${space.x3}) / var(--bh-workspace-zoom, 1)); height:calc(${size.nav} / var(--bh-workspace-zoom, 1)); z-index:10; background:${color.base}; }
 .bh-dock[data-workspace-dock] .dv-groupview { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; }
 .bh-dock[data-workspace-dock] .bh-root { background:${panelBackground}; }
-html[data-platform="darwin"]:not([data-fullscreen]) .bh-dock:has([data-bh-rail-corner]) .bh-workspace-rail { padding-top:calc(${size.nav} + ${space.x2}); }
+html[data-platform="darwin"]:not([data-fullscreen]) .bh-dock:has([data-bh-rail-corner]) .bh-workspace-rail { padding-top:calc(${size.nav} / var(--bh-workspace-zoom, 1) + ${space.x2}); }
 html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] > .dv-tabs-and-actions-container .bh-dock-header,
 html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-topbar { padding-left:var(--bh-mac-leading); box-sizing:border-box; }
 .bh-dock[data-workspace-dock] .dv-dockview { background:${color.base}; }

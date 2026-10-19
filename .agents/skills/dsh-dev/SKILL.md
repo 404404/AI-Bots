@@ -282,3 +282,48 @@ A bundled Markdown dependency can resolve its package-internal condition imports
 ## Additional verified pitfall — #2290 QA
 
 A fresh Windows build on pinned DSH `0.2.1-rc.2` exposed `vfile` Node imports in the Client bundle: the resolver hook matched slash-only importer paths and missed Windows backslashes. Normalizing that task build's importer path selected the existing browser modules and restored boot; no global process shim was needed. Keep this build-environment recovery separate from private-input behavior proof. The existing screenshot helper also waited for Settings before dismissing the native preview dialog; dismiss the observed dialog first. In the current dock, select Messages before opening a Channel from Home. Preserve boot/drive failures and inspect the actual console and accessibility tree before retrying.
+
+## Additional verified pitfalls — #2268 desktop zoom composition
+
+The npm `dsh-client-ui-theme` 0.2.1-rc.2 Host artifact imports Schemastery as ESM.
+A generated local copy that rewrites this to `createRequire.resolve()`'s CommonJS entry
+can fail full Profile startup with an ESM/CJS loading race. Keep the canonical ESM singleton
+(`lib/index.mjs`) and verify by importing the generated Host, then cold-booting a complete
+isolated Profile. Do not infer native startup from a syntax-only transformation test.
+
+The same release's shortcut `normalizeBinding` rejects `NumpadAdd`, `NumpadSubtract` and
+`Numpad0`. Validate contributed defaults against the real pinned protocol before registering;
+a thrown registration must revoke earlier commands, restore owned compatibility resources,
+and expose a refusal. Do not silently turn a failed zoom mount into apparent success.
+
+### Native desktop restart and private CLI launch metadata
+
+The pinned desktop worker chooses a new loopback HTTP port and process launch token on a real
+restart. A previously saved CLI endpoint can be unreachable; substituting the new port with the
+old token correctly refuses login. For the isolated zoom QA Profile, the launcher's task-only
+Bundle consumes the public `webServer.getOrigin()` and `connection.authenticatedUrl()` methods
+and writes fresh 0600 machine-local CLI metadata. It adds no listener or product route. Never
+publish its token or private metadata, weaken authentication, or attribute this refusal to the
+feature's Host relay before refreshing the launch credentials.
+
+### Stop the owned desktop before a full linked build
+
+`pnpm build` cleans the Client output directories before writing the new bundles. A running
+linked native Profile can hot-load during that missing-file interval. In the pinned RC, the
+first failed script load can poison the current module-loader generation and leave later
+bundle requests marked as skipped even after files return. Preserve the first crash report,
+finish the build, then restart only that task-owned desktop with the same Profile and user-data
+directory. Stop the owned process before future full builds; never disable third-party Plugins
+or erase the Profile to recover this development sequencing failure. A Client-only iteration
+and an installed immutable product build are separate paths.
+
+### Zoomed settings navigation and native portals (#2269)
+
+In pinned 0.2.1-rc.2, root CSS zoom changes the body's local layout width but leaves
+`matchMedia('(max-width: 648px)')` tied to the original viewport. At 430%, a wide Settings
+sidebar survives in a 293px local layout. The native Modal also scales its frame overlay
+padding, leaving only 235 viewport pixels for the card. Measure the local body width and
+normalize only the application Settings overlay's safe-area padding; keep the card zoomed.
+The native Menu's portaled anchor can be multiplied again (observed y=1247 in an 820px
+viewport). The compact application section picker reuses the existing viewport menu owner,
+which clamps and converts coordinates. This does not qualify other native dropdowns.

@@ -570,6 +570,14 @@
       "gap": "Native decoding/sharing remains queued; SVG is the bounded static subset, editor/file-card/mobile diff paths remain #2214."
     },
     {
+      "id": "desktop.window-zoom",
+      "label": "Set and restore device-local primary-window zoom through Settings and exact-target CLI",
+      "source": "packages/client/src/client/window-zoom.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/desktop-window-zoom.md",
+      "task": 2268,
+      "gap": "Controlled S1 composition only. Ordinary native guest foreground restoration, final native input/visual proof and Human QA remain qualification gates; Windows/Linux are S3."
+    },
+    {
       "id": "desktop.local-appearance",
       "label": "Save independent device-local DeepSeekBot mode, palettes and Primary with explicit Client CLI control",
       "source": "packages/client/src/client/appearance-settings.tsx",
@@ -1942,6 +1950,30 @@
       "sha256": "f781c109dba94abe6bae2b3a41b2db0d68a86e3dd3f6a0904ebe5dbf536c0391"
     },
     {
+      "path": "scripts/e2e-desktop-zoom-launch.mjs",
+      "sha256": "dff52b6c29319953f17933b2d7f2bd8c2b1bed88932e33348abd9011c7f8174e",
+      "category": "mapped",
+      "reason": "Audited isolated native launcher and readiness probe; feature guide explicitly distinguishes launch from acceptance.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
+    },
+    {
+      "path": "scripts/e2e-dock-zoom.mjs",
+      "sha256": "959a96ba4108d84ac3e7af98221de235079125f81413b56f870b669951d79b86",
+      "category": "mapped",
+      "reason": "Real pinned Dockview dependency fixture for zoomed persistent overlay allocation and horizontal/vertical splitter movement; not a DSH/native acceptance journey.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
+    },
+    {
+      "path": "scripts/e2e-workspace-chrome.mjs",
+      "sha256": "12ff9ff097069a576e34de1c7aa0ad99f55fafa00ab3ee64ace1f76d2b136122",
+      "category": "mapped",
+      "reason": "Production workspace corner CSS and coordinate owner across zoom, panel gaps, rail positions and platform/fullscreen exclusion; does not render native traffic lights.",
+      "task": 2268,
+      "behaviors": ["desktop.window-zoom"]
+    },
+    {
       "path": "scripts/e2e-local-appearance.mjs",
       "category": "mapped",
       "behaviors": ["desktop.local-appearance"],
@@ -2011,7 +2043,7 @@
       "behaviors": ["credentials.private-input-origin"],
       "reason": "Isolated Host, visible DM composer, synthetic private input, native approval and actual Tool result with two live accepted IM sources; no production receiver or credential.",
       "task": 2290,
-      "sha256": "a2c9bcc60ca43da3fa6115c5fa7f653a33a6a9651052ad2fa2832fe12df4a240"
+      "sha256": "a523ea1964d31850aa65b4e96ee2c37318d2c3c90b2b7feb86e8dfacfd4adce8"
     }
   ],
   "native": [

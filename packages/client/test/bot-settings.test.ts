@@ -291,14 +291,19 @@ it('renders only a section dropdown in narrow frames and switches sections from 
   expect(picker?.hasAttribute('data-modal-autofocus')).toBe(true);
   expect(picker?.getAttribute('aria-haspopup')).toBe('menu');
   expect(picker?.getAttribute('aria-label')).toBe('Bot 设置分区：模型与运行');
-  expect(document.querySelector('[data-menu="sections"]')?.getAttribute('data-selected')).toBe(
-    'models',
-  );
 
   act(() => {
     picker?.click();
   });
   expect(picker?.getAttribute('aria-expanded')).toBe('true');
+  expect(
+    document
+      .querySelector('[role="dialog"]')
+      ?.contains(document.querySelector('[data-pointer-menu]')),
+  ).toBe(true);
+  expect(document.querySelector('[data-menu="sections"]')?.getAttribute('data-selected')).toBe(
+    'models',
+  );
   expect(
     [...document.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent),
   ).toEqual(['通用', '模型与运行', '数据与隐私', '关于']);
