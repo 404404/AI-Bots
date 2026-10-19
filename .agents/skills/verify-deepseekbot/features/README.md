@@ -3,6 +3,9 @@
 | Feature | Needs a model | Scripted journey | File |
 | --- | --- | --- | --- |
 | VRM companion Panel | yes for speaking | `scripts/e2e-vrm-companion.mjs` | [vrm-companion.md](vrm-companion.md) |
+| DeepSeekBot device-local appearance | no | `scripts/e2e-local-appearance.mjs` | [local-appearance.md](local-appearance.md) |
+| Functional Panel appearance | no | `scripts/e2e-panel-appearance.mjs`, `scripts/e2e-nested-appearance.mjs` | [panel-appearance.md](panel-appearance.md) |
+| Global panel materials | no | `scripts/e2e-global-materials.mjs` | [global-materials.md](global-materials.md) |
 | Home and protected Tob (Bot management, models, runtime, privacy and updates) | yes for reply and approval | `scripts/e2e-tob-home.mjs`, `scripts/e2e-tob-model-runtime.mjs`, `scripts/e2e-tob-bot-management.mjs`, `scripts/e2e-tob-channel-management.mjs`, `scripts/e2e-tob-group-settings.mjs`, `scripts/e2e-tob-group-decisions.mjs` | [tob-home.md](tob-home.md) |
 | DSH Session list Bot folders | for fresh execution | `scripts/e2e-bot-session-folders.mjs` | [bot-session-folders.md](bot-session-folders.md) |
 
@@ -76,3 +79,9 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 
 - `scripts/e2e-activity-entry.mjs` passed login, then timed out on `.bh-overview` behind onboarding.
 - `scripts/e2e-harvest.mjs` needed a model reply and timed out without one.
+
+| Image wallpaper | no | `scripts/e2e-image-wallpaper.mjs` | [image-wallpaper.md](image-wallpaper.md) |
+
+| Video wallpaper | no | `scripts/e2e-video-wallpaper.mjs` | [video-wallpaper.md](video-wallpaper.md) |
+
+| Appearance recovery | no | `scripts/e2e-appearance-recovery.mjs`, `scripts/e2e-message-history-mask.mjs` | [appearance-recovery.md](appearance-recovery.md) |

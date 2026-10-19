@@ -145,6 +145,7 @@ export function MarkdownText({
       <Text
         key={index}
         selectable={selectable}
+        textBreakStrategy="simple"
         variant={token.type === 'heading' ? 'title' : 'body'}
         style={{ color }}
       >

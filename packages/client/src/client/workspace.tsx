@@ -1,3 +1,4 @@
+import { Menu } from './appearance-primitives.js';
 import { activityIndicator } from './activity-indicator.js';
 import { useActivityIndicatorMenu } from './activity-indicator-menu.js';
 import { onboardingFor } from './onboarding.js';
@@ -13,7 +14,7 @@ import { SettingsRow, SettingsSection } from './ds/settings-row.js';
 
 import { workspaceColumns, moveWorkspaceRail } from './workspace-layout.js';
 import { useState, useSyncExternalStore, type ReactNode, type ReactElement } from 'react';
-import { Button, Menu, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { DockviewApi } from 'dockview-react';
 import type { BotModeSidebarProps } from './bot-mode-sidebar.js';
 import type { BotModePrefs } from './bot-mode-prefs.js';

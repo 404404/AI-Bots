@@ -9,6 +9,7 @@ import {
   type Conversation,
   type ConversationSnapshot,
 } from '../src/host/conversation';
+import { createConversationPlayback } from '../src/host/conversation-playback';
 import { FakeHost, type FakeChannel } from './fake-host';
 import wire from './fixtures/host-wire.json';
 import type { ChannelMessage } from '../../../packages/core/src/channels/channel';
@@ -88,6 +89,30 @@ function contiguous(snapshot: ConversationSnapshot): boolean {
 }
 
 describe('DM conversation', () => {
+  it('shows paged committed history immediately while playback is held away from latest', async () => {
+    const host = new FakeHost();
+    seed(host.channel(DM), 25);
+    const target = open(host);
+    await until(target, (snapshot) => snapshot.status === 'live');
+    const playback = createConversationPlayback(target);
+    const stop = playback.subscribe(() => {});
+    playback.setFollowing(false);
+    try {
+      await target.loadOlder();
+      const messages = target.getSnapshot().messages;
+      expect(messages[0]).toMatchObject({ revision: 8, body: 'answer 8' });
+      const presented = messages.map(
+        (message) => (playback.getBubble(playback.rowKey(message.id))?.message ?? message).body,
+      );
+      expect(presented).toEqual(messages.map((message) => message.body));
+      expect(playback.diagnostics()).toEqual([]);
+      playback.setFollowing(true);
+      expect(playback.diagnostics()).toEqual([]);
+    } finally {
+      stop();
+    }
+  });
+
   it('presents recorded activity through the live journal and keeps every revision for read tracking', async () => {
     const host = new FakeHost();
     const channel = host.channel(DM);

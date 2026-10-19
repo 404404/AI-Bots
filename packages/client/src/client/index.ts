@@ -1,5 +1,14 @@
 import { readChannelDock, writeChannelDock } from './channel-dock-layout.js';
 import { createBotPresentation } from './bot-presentation.js';
+import { Wallpaper } from './wallpaper.js';
+import { createWallpaperStore } from './wallpaper-store.js';
+import { mountWallpaper } from './wallpaper-layer.js';
+import { panelTargetId } from './appearance-panels.js';
+import { refreshBotPrimaryColors } from './bot-primary-color.js';
+import { Appearance } from './appearance.js';
+import { mountAppearance } from './appearance-scope.js';
+import { mountAppearanceControl } from './appearance-control.js';
+import { bindBotAppearance } from './bot-color-scheme.js';
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client';
 import { AppearanceSection } from './appearance-settings.js';
 import { KeyboardSettings, setWorkShortcutNotice } from './keyboard-settings.js';
@@ -188,6 +197,30 @@ export function installStyles(): () => void {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => clearConversationDrafts);
   const storage = defaultStorage();
+  const wallpaper = new Wallpaper(
+    createWallpaperStore(typeof indexedDB === 'undefined' ? undefined : indexedDB),
+  );
+  const appearance = new Appearance(storage, () =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light',
+  );
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    const offScheme = bindBotAppearance(appearance);
+    const offStyle = mountAppearance(appearance);
+    const offColors = appearance.subscribe(refreshBotPrimaryColors);
+    refreshBotPrimaryColors();
+    const offWallpaper = mountWallpaper(wallpaper);
+    const offControl = mountAppearanceControl(appearance, wallpaper);
+    return () => {
+      offControl();
+      offWallpaper();
+      offColors();
+      offStyle();
+      offScheme();
+    };
+  });
   const hmrView =
     typeof window === 'undefined'
       ? undefined
@@ -410,6 +443,13 @@ export function apply(ctx: ClientContext): void {
     },
   });
   ctx.provide('dockPanels', dockPanels);
+  ctx.effect(() =>
+    appearance.setTargetSource(() => [
+      ...dockPanels.panels().map((panel) => ({ id: panelTargetId(panel.id), label: panel.title })),
+      { id: panelTargetId('memory-details'), label: t('appearance.memoryDetails') },
+      { id: panelTargetId('generated-files'), label: t('generatedFiles.title') },
+    ]),
+  );
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
   const workspace = {
     actions,
@@ -768,11 +808,8 @@ export function apply(ctx: ClientContext): void {
           children: { 'botharness.settings.layout': { kind: 'list', scope: 'root' } },
           inject: () => ({
             ...botModePrefsFace(prefs),
-            themeSource: {
-              getSnapshot: () => ctx.theme.getTheme(),
-              subscribe: (listener: () => void) => ctx.on('theme/change', listener),
-              set: (value: string) => ctx.theme.setTheme(value),
-            },
+            appearance,
+            wallpaper,
             localeSource: {
               getSnapshot: () => ctx.locale.getSnapshot(),
               subscribe: (listener: () => void) => ctx.locale.subscribe(listener),
@@ -1000,6 +1037,7 @@ export function apply(ctx: ClientContext): void {
           channelSidebar,
           dockPanels,
           profileCards,
+          appearance,
           nativeChatT,
           nativeSessions,
           prefs,
@@ -1145,6 +1183,7 @@ export function apply(ctx: ClientContext): void {
             channelSidebar,
             dockPanels,
             profileCards,
+            appearance,
             nativeChatT,
             nativeSessions,
             prefs,

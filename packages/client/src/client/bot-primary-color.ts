@@ -1,3 +1,4 @@
+import { readBotColorScheme } from './bot-color-scheme.js';
 import { useCallback, useSyncExternalStore } from 'react';
 
 import {
@@ -112,9 +113,7 @@ export function botPrimaryColorOf(
 }
 
 function currentTheme(): ThemeName {
-  return typeof document !== 'undefined' && document.body?.hasAttribute('data-ds-dark-theme')
-    ? 'dark'
-    : 'light';
+  return readBotColorScheme();
 }
 
 function blend(top: Rgb, alpha: number, bottom: Rgb): Rgb {
@@ -225,12 +224,15 @@ export function paintBotName(element: HTMLElement | null, source: string | undef
   watchTheme();
 }
 
+export function refreshBotPrimaryColors(): void {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll<HTMLElement>('[data-bot-name-source]').forEach(paint);
+  document.querySelectorAll<HTMLElement>('[data-bot-scale-source]').forEach(paintScale);
+}
+
 function watchTheme(): void {
   if (painter !== undefined || typeof MutationObserver !== 'function') return;
-  painter = new MutationObserver(() => {
-    document.querySelectorAll<HTMLElement>('[data-bot-name-source]').forEach(paint);
-    document.querySelectorAll<HTMLElement>('[data-bot-scale-source]').forEach(paintScale);
-  });
+  painter = new MutationObserver(refreshBotPrimaryColors);
   painter.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] });
   painter.observe(document.documentElement, {
     attributes: true,

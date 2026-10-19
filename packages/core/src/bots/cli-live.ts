@@ -1,3 +1,4 @@
+import { APPEARANCE_COMMANDS, APPEARANCE_OPTIONS, runAppearanceCommand } from './cli-appearance.js';
 import { prepareCloud, prepareCloudWork } from './cli-cloud.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
@@ -96,6 +97,7 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...APPEARANCE_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -200,6 +202,7 @@ export const LIVE_COMMANDS = [
   ...MODELS_USAGE_COMMANDS,
   ...CHANNEL_COMMANDS,
   ...HOST_ADMIN_COMMANDS,
+  ...APPEARANCE_COMMANDS,
   ...INBOX_COMMANDS,
   ...BROWSER_COMPUTER_COMMANDS,
   ...PROFILE_COMMANDS,
@@ -371,6 +374,7 @@ interface LiveValues
     TodoValues,
     ApprovalTemplateValues,
     ApprovalReviewerValues {
+  'client-id'?: string;
   host?: string;
   'token-file'?: string;
   'image-source'?: string;
@@ -734,6 +738,10 @@ export async function runLiveCli(
   }
   if (isBrowserComputerCommand(command))
     return runBrowserComputerCommand(command, rest, values, io, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
+  if (APPEARANCE_COMMANDS.some((entry) => entry.command === command))
+    return runAppearanceCommand(command, rest, values, io, () =>
       connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
     );
   if (isProfileCommand(command))

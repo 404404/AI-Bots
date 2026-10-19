@@ -1,7 +1,8 @@
+import { Menu } from '../appearance-primitives.js';
 import type { ComponentProps } from 'react';
 import { createPortal } from 'react-dom';
 import * as stylex from '@stylexjs/stylex';
-import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+
 import { useMountedResource } from '../mounted-resource.js';
 import { border, space } from './tokens.stylex.js';
 

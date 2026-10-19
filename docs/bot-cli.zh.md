@@ -932,3 +932,58 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 指定 `--image-reference` 后，`--path` 表示 Markdown 文档，`--image-revision` 表示该文档的版本；回执另含 `reference`。相对路径从文档所在目录解析，`/chart.png` 从 Memory Repository 根解析。支持百分号编码的空格和 Unicode，以及仍在仓库内的上级路径；拒绝根目录越界、`.git`、反斜线、URL 协议和逃逸符号链接。图片读取前后均检查可变文档版本；index 和历史图片不会回退到工作区。图片来自加载时的所选来源，后续可变图片变更通过刷新查看。外部 HTTPS 图片只由 Client 在明确点击后加载，Host 与 CLI 不请求外部 URL。
 
 使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应的原始图片字节、检测所得 MIME 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。图片上限为 25 MiB、单边 16,384 像素及解码后 4000 万像素。GIF/WebP 保留原动画，上限 256 帧，全部帧画布像素之和不超过 4000 万。SVG 另有 1 MiB UTF-8 源文件、10,000 XML 节点、64 层深度、64 KiB CSS 和 20,000 展开节点预算。静态 SVG 子集支持常用形状、文字、CSS、渐变、箭头标记、裁剪及有界内部引用；拒绝脚本、事件处理器、外来 HTML、图片、滤镜、动画、外部引用、DTD、处理指令和引用循环。SVG 始终作为图片资源，不插入页面标记；成功导出保留原始 SVG 字节。原文件下载与“打开当前文件”仍为独立操作。
+
+## 设备本地 DeepSeekBot 外观
+
+`appearance-clients` 列出已认证 Host 上在线 Client 的 id 和平台。必须明确选择一个；重载后会生成新 id。此功能控制 DeepSeekBot 自己的外观，不修改 DSH 原生 Host 主题。
+
+```bash
+deepseekbot appearance-clients --host http://127.0.0.1:PORT --token-file /private/host-token
+deepseekbot appearance-get --client-id CLIENT_ID --host http://127.0.0.1:PORT --token-file /private/host-token
+printf '%s' '{"preference":"dark","mode":"dark","preset":"mist-purple","primary":"#9876cb"}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+`REVISION` 使用读取结果中的 `snapshot.config.revision`。`preference` 可为 `light`、`dark`、`system`。设置 `preset`（`classic-blue` / `mist-purple`）或六位十六进制 `primary` 时必须明确 `mode`（`light` / `dark`）。选预设会清除该模式的 Primary 覆盖；同一补丁仍可指定新 Primary。保留另一模式和未知后续字段。
+
+成功输出一份 JSON，代表目标 Client 已确认本地保存；再读取并检查 UI。Web 按浏览器/站点保存；Desktop 按应用保存，不含 Host 键。其他浏览器配置与 Desktop 不会收到该命令；同站点标签页按设计共享本地存储。
+
+拒绝码包括 `appearance-client-required`、`appearance-client-stale`、`appearance-client-unavailable`、`appearance-client-busy`、`appearance-client-timeout`、`appearance-revision-required`、`appearance-revision-conflict`、`appearance-invalid-input`、`appearance-storage-invalid`、`appearance-storage-unavailable`。已投递后的超时结果不确定，应先重读再重试。不提供离线队列、广播、Host 偏好副本，也不调用模型。
+
+全局材质（T2）：四套预设为 `classic-blue`、`mist-purple`、`forest-green`、`warm-amber`。模式补丁可含 `materials.header` 和/或 `materials.body`，各自接受可选 `color`（六位十六进制）、`opacity`（0–100，不透明度百分比）、`blur`（0–40 CSS 像素）。各属性独立合并。选择预设仅清除该模式的已知全局调整。使用相同的 Client 回执、版本检查与存储拒绝语义。
+
+```bash
+printf '%s' '{"mode":"light","materials":{"header":{"color":"#e9ddf6","opacity":75,"blur":16},"body":{"opacity":80,"blur":12}}}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+功能 Panel（T3）：`deepseekbot appearance-targets --client-id CLIENT_ID` 从指定 Client 读取功能目标和本地快照，Host/认证参数同上。`dock:bh:channel-body` 表示 Messages 功能，不随当前频道改变。`appearance-get` 也返回 `targets`。
+
+使用 `appearance-set` 补丁 `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":"#e0c1ed","opacity":42},"body":{"blur":8}}}}`。字段传 `null` 恢复跟随全局，例如 `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":null}}}}`。仅恢复该目标和模式：`{"mode":"light","panel":{"id":"dock:bh:channel-body","reset":true}}`。Panel 操作不能与全局属性混在一个补丁中。写入仍要求 `--patch-stdin` 和刚读取的 `--expected-revision`。
+
+目标拒绝码：`appearance-target-unavailable`、`appearance-target-duplicate`、`appearance-target-invalid`，不会替换成另一个 Panel。关闭 Panel 保留覆盖，切换全局主题也保留。嵌套目标在后续切片接入。
+
+嵌套外观复用 `appearance-targets` 和 `appearance-set`。已注册的 Memory 文件／演化、Browser／Computer 和独立贡献均使用稳定功能目标；`dock:memory-details` 由文件预览、提交详情和工作区变更共享，`dock:generated-files` 对应频道文件侧面板。未覆盖字段直接继承当前模式全局设置。隐藏面板保留外观；卸载贡献后拒绝写入，重新注册可恢复。恢复父面板不会清除子面板覆盖。
+
+### 本机图片壁纸
+
+先用 `appearance-clients` 明确选择在线 Web 或桌面 Client，再用 `wallpaper-get --client-id <id>` 读取 `wallpaper.revision`。壁纸修订号独立于外观修订号；写操作必须传入该 `--expected-revision`（初始为 `empty`）：
+
+```bash
+deepseekbot wallpaper-import --client-id <id> --expected-revision <revision> --file ./image.png
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --patch-stdin < crop.json
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
+```
+
+`crop.json` 只含 `{ "x": 0.5, "y": 0.5, "zoom": 1.5 }`：中心坐标范围 0–1，缩放 1–5。导入也可用 `--patch-stdin` 指定裁切。文件在 CLI 所在机器读取，须为非空、可解码且不超过 20 MiB 的图片，再按顺序分块传给指定 Client。原始字节只保存在该 Client，成功输出只有元数据和新修订号。离线或过期目标、修订冲突、无效媒体或裁切、上传过期及存储失败均返回明确错误码。请求送达后超时须先重读，不能自动重放导入。Web 与桌面各自保存，不以 Host 为键。
+
+同一组壁纸命令也支持最大 100 MiB 的视频。提交前，指定 Client 必须实际播放解码并生成封面；不会转码原文件。`wallpaper-get` 返回临时观测的 `playback.state`（`playing`、`paused`、`poster`、`inactive`），降级时附带明确 `reason`。播放失败或之后的运行环境无法解码时使用已保存封面。图片上限仍为 20 MiB；兼容性按运行环境与编码分别验证，传输成功不等于可播放。
+
+### 外观恢复
+
+先读取 `appearance-get --client-id <id>` 与 `wallpaper-get --client-id <id>`，两者修订号独立。
+
+```bash
+deepseekbot appearance-clear-panels --client-id <id> --mode light --expected-revision <appearance-revision>
+deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-revision> --expected-wallpaper-revision <media-revision> --confirm-reset
+```
+
+清除只移除指定模式的全部功能面板覆盖，包含已保存但当前未注册的目标；主题、全局材质、主色、另一模式、媒体和布局不变。全部恢复必须带 `--confirm-reset`，重置两套配色、模式和覆盖，并移除共享媒体；不修改 DSH、Bot 身份或业务数据。偏好写入失败时不开始媒体清理。`appearance-reset-wallpaper-failed` 表示默认配色已保存、媒体清理失败；须重读两个 owner，再用新修订号重试。不宣称 localStorage 与 IndexedDB 是同一事务，不自动重放已送达但超时的操作。

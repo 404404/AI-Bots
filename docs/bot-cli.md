@@ -948,3 +948,58 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 With `--image-reference`, `--path` names the Markdown document and `--image-revision` identifies that document, not the image. The receipt includes `reference`. Relative images resolve from the document directory, `/chart.png` from the Memory Repository root. Percent-encoded spaces/Unicode and in-root parent traversal work; root escape, `.git`, backslashes, URL schemes and symlink escape are refused. The route revalidates mutable document content before and after reading the image; index/commit images never fall back to the worktree. It returns the selected source's image at load time; refresh the view to observe later mutable image changes. External HTTPS images are a Client-only explicit-load action; the Host/CLI do not fetch external URLs.
 
 Use the exact metadata from the selected file/diff side. The authenticated Host returns those original image bytes and their detected MIME, or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. Preview limits are 25 MiB per image, 16,384 pixels per axis and 40 million decoded pixels. GIF/WebP keep their original animation within 256 frames and 40 million canvas pixels across all frames. SVG additionally allows at most 1 MiB UTF-8, 10,000 XML nodes, depth 64, 64 KiB CSS and 20,000 expanded nodes. The static SVG subset accepts ordinary shapes, text, CSS, gradients, markers, clipping and bounded internal references; scripts, event handlers, foreign HTML, images, filters, animation, external references, DTDs, processing instructions and reference cycles are refused. SVG stays an image resource, never inserted markup, and all successful exports preserve the original SVG bytes. Original-file download and Open current file remain separate actions.
+
+## Device-local DeepSeekBot appearance
+
+`appearance-clients` lists the online Client ids and platform on the authenticated Host. Select one explicitly; a new mount/reload gets a new id. This controls DeepSeekBot, not the DSH-native Host theme.
+
+```bash
+deepseekbot appearance-clients --host http://127.0.0.1:PORT --token-file /private/host-token
+deepseekbot appearance-get --client-id CLIENT_ID --host http://127.0.0.1:PORT --token-file /private/host-token
+printf '%s' '{"preference":"dark","mode":"dark","preset":"mist-purple","primary":"#9876cb"}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+Use `snapshot.config.revision` from the read as `REVISION`. Patch fields: `preference` is `light`, `dark` or `system`; `mode` is `light` or `dark` and is required with `preset` (`classic-blue` / `mist-purple`) or `primary` (six-digit hex). Selecting a preset resets that mode's Primary unless the same patch supplies another. Other mode and unknown future fields are retained.
+
+A successful command emits one JSON document after the target Client acknowledges local storage; read it back and inspect the UI. Web persists per browser/site; Desktop per application regardless of Host. Other browser profiles and Desktop do not receive the command. Same-site tabs share local storage intentionally.
+
+Refusals include `appearance-client-required`, `appearance-client-stale`, `appearance-client-unavailable`, `appearance-client-busy`, `appearance-client-timeout`, `appearance-revision-required`, `appearance-revision-conflict`, `appearance-invalid-input`, `appearance-storage-invalid` and `appearance-storage-unavailable`. A timeout after delivery has an unknown outcome: read again before retrying. There is no offline queue, broadcast, Host preference mirror or model call.
+
+Global materials (T2): the four presets are `classic-blue`, `mist-purple`, `forest-green` and `warm-amber`. Add `materials.header` and/or `materials.body` to a mode patch; each accepts optional `color` (six-digit hex), `opacity` (0–100 percent) and `blur` (0–40 CSS pixels). Fields merge independently. Choosing a preset clears known global adjustments only for that mode. The same Client acknowledgment, revision checks and storage refusals apply.
+
+```bash
+printf '%s' '{"mode":"light","materials":{"header":{"color":"#e9ddf6","opacity":75,"blur":16},"body":{"opacity":80,"blur":12}}}' | deepseekbot appearance-set --client-id CLIENT_ID --expected-revision REVISION --patch-stdin --host http://127.0.0.1:PORT --token-file /private/host-token
+```
+
+Functional Panels (T3): `deepseekbot appearance-targets --client-id CLIENT_ID` reads the target catalog and snapshot from that Client (use the same Host/auth flags as above). IDs such as `dock:bh:channel-body` identify the Messages function, regardless of its selected Channel. `appearance-get` also returns `targets`.
+
+Use `appearance-set` with `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":"#e0c1ed","opacity":42},"body":{"blur":8}}}}`. Send a field as `null` to follow global, for example `{"mode":"light","panel":{"id":"dock:bh:channel-body","materials":{"header":{"color":null}}}}`. Reset only that target/mode with `{"mode":"light","panel":{"id":"dock:bh:channel-body","reset":true}}`. Panel operations cannot mix global fields in the same patch. All writes require `--patch-stdin` and the last `--expected-revision`.
+
+Target refusals are `appearance-target-unavailable`, `appearance-target-duplicate` and `appearance-target-invalid`; they never redirect to another Panel. Closing a Panel does not delete its override. Global preset changes retain it. Nested targets are introduced separately.
+
+Nested appearance uses the same `appearance-targets` and `appearance-set` commands. Targets include registered Memory files/evolution, Browser/Computer and independent contributions; `dock:memory-details` is shared by file preview, commit detail and working changes. Use `dock:generated-files` for the Channel file side panel. Every omitted field follows the current mode's global setting directly, even inside a customized parent. A hidden panel keeps its appearance; an unregistered contribution refuses writes until it returns. Resetting a parent never clears child overrides.
+
+### Device-local image wallpaper
+
+Use `appearance-clients` to identify one online Web or Desktop Client, then `wallpaper-get --client-id <id>` to read its `wallpaper.revision`. Wallpaper revisions are separate from appearance revisions. All mutations require that exact `--expected-revision` (initially `empty`):
+
+```bash
+deepseekbot wallpaper-import --client-id <id> --expected-revision <revision> --file ./image.png
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --patch-stdin < crop.json
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
+```
+
+`crop.json` contains exactly `{ "x": 0.5, "y": 0.5, "zoom": 1.5 }`: center coordinates 0–1 and zoom 1–5. Import optionally accepts the same crop through `--patch-stdin`. The file is read on the CLI machine, must be a nonempty decodable image no larger than 20 MiB, and is transferred in ordered bounded chunks. Only the selected Client stores the original bytes. Successful stdout reports metadata and the new revision; no file path or media bytes are returned. Offline/stale Clients, revision conflicts, invalid media/crop, expired uploads and storage failures return coded refusals. A timeout after delivery requires a fresh read before retry; never automatically replay the import. Web and Desktop storage are independent, and neither is keyed by Host.
+
+The same wallpaper commands also accept videos up to 100 MiB. Import must actually play/decode on the selected Client and generate a poster before committing; originals are not transcoded. `wallpaper-get` returns transient `playback.state` (`playing`, `paused`, `poster`, `inactive`) and a coded `reason` when degraded. The saved poster is used if playback fails or a later runtime cannot decode an accepted video. Image limits remain 20 MiB. Support is runtime/codec-specific; a successful transport alone does not prove playback.
+
+### Appearance recovery
+
+Read `appearance-get --client-id <id>` and `wallpaper-get --client-id <id>` first; their revisions are independent.
+
+```bash
+deepseekbot appearance-clear-panels --client-id <id> --mode light --expected-revision <appearance-revision>
+deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-revision> --expected-wallpaper-revision <media-revision> --confirm-reset
+```
+
+Clear removes all functional Panel overrides only in the explicit mode, including unregistered saved targets; theme/materials/Primary, the other mode, media and layout stay unchanged. Full reset requires `--confirm-reset`, defaults both palettes/mode/overrides, and removes shared media. It never changes DSH, Bot identity or business data. A preference write failure leaves media untouched. `appearance-reset-wallpaper-failed` means defaults were committed but media cleanup failed; reread both owners and retry with fresh revisions. The command does not claim a single transaction across localStorage and IndexedDB, nor automatically replay a delivered timeout.

@@ -29,12 +29,12 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 .bh-workspace-rail { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; position:relative; height:100%; display:flex; flex-direction:column; align-items:center; gap:${space.x2}; padding:${space.x2}; box-sizing:border-box; background:${panelBackground}; }
 /* Light DSH base and the blended Panel are both nearly white. Recess only
    the workspace canvas; keep Panels bright and the existing dark palette. */
-body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock],
-body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-dockview,
-body:not([data-ds-dark-theme]) .bh-message-member-divider,
-body:not([data-ds-dark-theme]) .bh-channel-session-divider,
-html[data-platform="darwin"]:not([data-fullscreen]) body:not([data-ds-dark-theme]) [data-workspace-enabled] > .bh-workspace-chrome { background:${color.surface}; }
-body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-actions-container { border-bottom-color:${color.surface}; }
+:root:has(style[data-bh-appearance="light"]) .bh-dock[data-workspace-dock],
+:root:has(style[data-bh-appearance="light"]) .bh-dock[data-workspace-dock] .dv-dockview,
+:root:has(style[data-bh-appearance="light"]) .bh-message-member-divider,
+:root:has(style[data-bh-appearance="light"]) .bh-channel-session-divider,
+html[data-platform="darwin"]:not([data-fullscreen]):has(style[data-bh-appearance="light"]) [data-workspace-enabled] > .bh-workspace-chrome { background:${color.surface}; }
+:root:has(style[data-bh-appearance="light"]) .bh-dock[data-workspace-dock] .dv-tabs-and-actions-container { border-bottom-color:${color.surface}; }
 .bh-workspace-rail > button, .bh-workspace-rail > span > button, .bh-workspace-move { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:${size.row}; height:${size.row}; padding:0; border:0; border-radius:${radius.md}; corner-shape:round; color:${color.fg}; background:transparent; cursor:pointer; }
 .bh-workspace-rail button:hover { background:${color.hover}; }
 .bh-workspace-rail button:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }

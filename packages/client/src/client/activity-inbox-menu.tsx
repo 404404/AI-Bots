@@ -1,9 +1,9 @@
+import { Menu } from './appearance-primitives.js';
 import { useState, useRef, type ReactElement } from 'react';
 import {
   IconEllipsisOutlineRegular,
   IconSearchOutlineRegular,
   IconCloseFillRegular,
-  Menu,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
