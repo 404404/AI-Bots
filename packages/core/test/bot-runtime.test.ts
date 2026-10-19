@@ -183,6 +183,51 @@ it('publishes failed Orchestrator and Assignment turns into the owning DM', asyn
   owner.close();
 });
 
+it('tells the Human plainly when a turn fails on context overflow', async () => {
+  const home = createTempRoot('botharness-turn-overflow-');
+  const registry = createTestRegistry({ rootDir: join(home, 'bots'), now: FIXED_NOW });
+  expect(registry.create({ slug: 'ada', displayName: 'Ada' }).ok).toBe(true);
+  const channels = createChannelStore({ rootDir: join(home, 'channels'), now: FIXED_NOW });
+  const dm = channels.getOrCreateDm('ada', 'Ada');
+  const owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+  const agents: BotAgentAdapter = {
+    async runOrchestrator() {
+      throw new Error('CONTEXT_WINDOW_EXCEEDED: Context window exceeded after compaction retry');
+    },
+    async runAssignment() {},
+    requestAssignment(run) {
+      return { delivery: 'followup', accepted: Promise.resolve(), done: this.runAssignment(run) };
+    },
+    async close() {},
+  };
+  const runtime = createBotRuntime({
+    database: owner,
+    grants: createTestWorkspaceGrants(owner, home),
+    registry,
+    channels,
+    agents,
+    now: FIXED_NOW,
+  });
+  await expect(
+    admit(runtime, { channelId: dm!.id, messageId: 'human-overflow', body: '读完整个日志' }),
+  ).rejects.toThrow(/CONTEXT_WINDOW_EXCEEDED/);
+  const notices = channels
+    .readMessages(dm!.id)
+    .filter((message) => message.sessionFailure !== undefined);
+  expect(notices).toHaveLength(1);
+  expect(notices[0]?.sessionFailure).toMatchObject({
+    role: 'orchestrator',
+    code: 'CONTEXT_WINDOW_EXCEEDED',
+    detail: 'Context window exceeded after compaction retry',
+    requestMessageId: 'human-overflow',
+  });
+  expect(notices[0]?.body).toBe(
+    "Session failed: CONTEXT_WINDOW_EXCEEDED: This conversation's context is full and automatic compaction could not recover it. Retry with a smaller request, for example ask for one part of a large file or command output instead of all of it.",
+  );
+  await runtime.close();
+  owner.close();
+});
+
 it('reads only a joined Channel image by durable message and attachment reference', async () => {
   const home = createTempRoot('botharness-bot-runtime-image-read-');
   const registry = createTestRegistry({ rootDir: join(home, 'bots'), now: FIXED_NOW });
