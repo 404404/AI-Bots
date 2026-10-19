@@ -1,3 +1,6 @@
+import { Wallpaper } from './wallpaper.js';
+import { createWallpaperStore } from './wallpaper-store.js';
+import { mountWallpaper } from './wallpaper-layer.js';
 import { panelTargetId } from './appearance-panels.js';
 import { refreshBotPrimaryColors } from './bot-primary-color.js';
 import { Appearance } from './appearance.js';
@@ -192,6 +195,9 @@ export function installStyles(): () => void {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => clearConversationDrafts);
   const storage = defaultStorage();
+  const wallpaper = new Wallpaper(
+    createWallpaperStore(typeof indexedDB === 'undefined' ? undefined : indexedDB),
+  );
   const appearance = new Appearance(storage, () =>
     typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'
@@ -203,9 +209,11 @@ export function apply(ctx: ClientContext): void {
     const offStyle = mountAppearance(appearance);
     const offColors = appearance.subscribe(refreshBotPrimaryColors);
     refreshBotPrimaryColors();
-    const offControl = mountAppearanceControl(appearance);
+    const offWallpaper = mountWallpaper(wallpaper);
+    const offControl = mountAppearanceControl(appearance, wallpaper);
     return () => {
       offControl();
+      offWallpaper();
       offColors();
       offStyle();
       offScheme();
@@ -810,6 +818,7 @@ export function apply(ctx: ClientContext): void {
           inject: () => ({
             ...botModePrefsFace(prefs),
             appearance,
+            wallpaper,
             localeSource: {
               getSnapshot: () => ctx.locale.getSnapshot(),
               subscribe: (listener: () => void) => ctx.locale.subscribe(listener),

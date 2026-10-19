@@ -592,6 +592,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/panel-appearance.md",
       "task": 2260,
       "gap": "Task-owned macOS restart follows the feature procedure; Human QA is separate."
+    },
+    {
+      "id": "desktop.image-wallpaper",
+      "label": "Save a device-local image wallpaper through preview/crop and targeted CLI with atomic replacement",
+      "source": "packages/client/src/client/wallpaper-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/image-wallpaper.md",
+      "task": 2262,
+      "gap": "Native restart and different-Host restore require the task-owned Desktop procedure; Human QA is separate."
     }
   ],
   "scripts": [
@@ -1940,6 +1948,14 @@
       "reason": "Real nested Header menus, shared Memory detail identity, independent contribution lifetime and live Browser viewer without content recoloring.",
       "task": 2261,
       "sha256": "3d3663e2b12634f34f456b3378c14adefa5a8db2b0cd89328b5f7e79d1f900c2"
+    },
+    {
+      "path": "scripts/e2e-image-wallpaper.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.image-wallpaper"],
+      "reason": "Real upload/crop, original-byte persistence, resize, failure preservation, DSH isolation and directed CLI.",
+      "task": 2262,
+      "sha256": "6519b389b315e32d12ff92258e2f275e0b8bd9b7930c7c2fa11fea1351b02038"
     }
   ],
   "native": [

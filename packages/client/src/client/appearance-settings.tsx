@@ -1,3 +1,5 @@
+import { WallpaperSettings } from './wallpaper-settings.js';
+import type { Wallpaper } from './wallpaper.js';
 import { AppearanceMaterialSettings } from './appearance-material-settings.js';
 import { useSyncExternalStore, type ReactNode, type ReactElement } from 'react';
 import type { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client';
@@ -11,6 +13,7 @@ import { Note } from './ds/note.js';
 
 export interface AppearanceFace extends BotModePrefsFace {
   appearance: Appearance;
+  wallpaper: Wallpaper;
   localeSource: Pick<LocaleRuntime, 'getSnapshot' | 'subscribe' | 'setLocale'>;
 }
 
@@ -19,7 +22,7 @@ export function AppearanceSection(
     InjectFace<AppearanceFace> &
     PropsRenderSlots<'botharness.settings.layout'>,
 ): ReactElement {
-  const { t, appearance, localeSource, renderSlot } = props;
+  const { t, appearance, wallpaper, localeSource, renderSlot } = props;
   const theme = useSyncExternalStore(appearance.subscribe, appearance.getSnapshot);
   const locale = useSyncExternalStore(localeSource.subscribe, localeSource.getSnapshot);
   const change = (patch: AppearancePatch) => {
@@ -83,6 +86,7 @@ export function AppearanceSection(
           />
         </div>
       ))}
+      <WallpaperSettings owner={wallpaper} t={t} />
       <AppearanceMaterialSettings appearance={appearance} snapshot={theme} t={t} />
       <MotionSetting {...props} />
       <BotIconSetting {...props} />

@@ -80,4 +80,50 @@ describe('explicit Client appearance delivery', () => {
     });
     host.dispose();
   });
+  it('transports one bounded media chunk only to its explicit Client and refuses mixed or oversized writes', async () => {
+    const host = createAppearanceControl();
+    const client = await (
+      await host.fetch(request({ action: 'register', platform: 'web' }))
+    ).json();
+    const wallpaper = { action: 'append', uploadId: 'upload', offset: 0, data: 'A'.repeat(262144) };
+    for (const body of [
+      {
+        action: 'request',
+        clientId: client.clientId,
+        wallpaper: { ...wallpaper, data: 'A'.repeat(280000) },
+      },
+      {
+        action: 'request',
+        clientId: client.clientId,
+        wallpaper: { action: 'remove' },
+        patch: { preference: 'dark' },
+        expectedRevision: 'empty',
+      },
+      {
+        action: 'request',
+        clientId: client.clientId,
+        patch: { invalid: 'A'.repeat(5000) },
+        expectedRevision: 'empty',
+      },
+    ])
+      expect((await host.fetch(request(body))).status).toBe(400);
+    const poll = host.fetch(request({ action: 'poll', ...client }));
+    await Promise.resolve();
+    const result = host.fetch(
+      request({
+        action: 'request',
+        clientId: client.clientId,
+        wallpaper,
+        expectedRevision: 'empty',
+      }),
+    );
+    const { command } = await (await poll).json();
+    expect(command.wallpaper).toEqual(wallpaper);
+    expect(command.expectedRevision).toBe('empty');
+    await host.fetch(
+      request({ action: 'reply', ...client, requestId: command.id, result: { offset: 196608 } }),
+    );
+    expect(await (await result).json()).toEqual({ offset: 196608 });
+    host.dispose();
+  });
 });

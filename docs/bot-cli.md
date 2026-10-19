@@ -978,3 +978,15 @@ Use `appearance-set` with `{"mode":"light","panel":{"id":"dock:bh:channel-body",
 Target refusals are `appearance-target-unavailable`, `appearance-target-duplicate` and `appearance-target-invalid`; they never redirect to another Panel. Closing a Panel does not delete its override. Global preset changes retain it. Nested targets are introduced separately.
 
 Nested appearance uses the same `appearance-targets` and `appearance-set` commands. Targets include registered Memory files/evolution, Browser/Computer and independent contributions; `dock:memory-details` is shared by file preview, commit detail and working changes. Use `dock:generated-files` for the Channel file side panel. Every omitted field follows the current mode's global setting directly, even inside a customized parent. A hidden panel keeps its appearance; an unregistered contribution refuses writes until it returns. Resetting a parent never clears child overrides.
+
+### Device-local image wallpaper
+
+Use `appearance-clients` to identify one online Web or Desktop Client, then `wallpaper-get --client-id <id>` to read its `wallpaper.revision`. Wallpaper revisions are separate from appearance revisions. All mutations require that exact `--expected-revision` (initially `empty`):
+
+```bash
+deepseekbot wallpaper-import --client-id <id> --expected-revision <revision> --file ./image.png
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --patch-stdin < crop.json
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
+```
+
+`crop.json` contains exactly `{ "x": 0.5, "y": 0.5, "zoom": 1.5 }`: center coordinates 0–1 and zoom 1–5. Import optionally accepts the same crop through `--patch-stdin`. The file is read on the CLI machine, must be a nonempty decodable image no larger than 20 MiB, and is transferred in ordered bounded chunks. Only the selected Client stores the original bytes. Successful stdout reports metadata and the new revision; no file path or media bytes are returned. Offline/stale Clients, revision conflicts, invalid media/crop, expired uploads and storage failures return coded refusals. A timeout after delivery requires a fresh read before retry; never automatically replay the import. Web and Desktop storage are independent, and neither is keyed by Host.
