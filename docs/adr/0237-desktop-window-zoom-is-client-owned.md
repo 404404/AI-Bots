@@ -51,9 +51,16 @@ its native package identity, styles, locales, types and MIT license. Its only Ho
 rewritten to the product's bundled ESM schema module through a relative path. No local machine
 path or postinstall script is required. Both Bundle patches leave the original `ui-theme`
 Loader row, settings namespace and Profile Patch ownership unchanged. The explicit product
-command `deepseekbot-zoom-setup enable --home <home> --profile <profile> --dsh <dsh-cli>`
-uses the native package manager to add one Profile-local link to the product-carried theme.
-It refuses non-macOS platforms, a CLI release other than 0.2.1-rc.2, other theme overrides,
+command `deepseekbot-zoom-setup enable --home <home> --profile desktop --desktop-app <app>`
+requires the target Desktop to be closed. It uses that app's bundled pnpm with scripts disabled
+and holds the native `package.json.lock` writer lock while adding one Profile-local link.
+It checks the running process list before and after package changes, refuses a running target
+Host, and never stops another application's process. Keep Desktop closed for the complete
+transaction. Native plugin management remains the ordinary Bundle installation path: its
+installation-first Bundle lookup rejects this same-name plain-library override, and the DSH
+CLI refuses the managed Desktop Profile. Those observed refusals are preserved; the downstream
+offline installer is explicit additional opt-in, not an automatic product install hook.
+It refuses non-macOS platforms, an app release other than 0.2.1-rc.2, other theme overrides,
 unqualified artifacts and the obsolete grouped composition. Restart the Host/Desktop after
 setup; configuration success is not a runtime qualification claim. This opt-in is additional
 to ordinary product installation. Disable it before uninstalling the product; disable removes

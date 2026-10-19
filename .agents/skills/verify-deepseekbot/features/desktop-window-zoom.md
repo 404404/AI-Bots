@@ -12,9 +12,9 @@ In the isolated desktop, enter Bot mode → Bot Settings → General → Window 
 Set a default, press ordinary Cmd+= once, and reset to the saved default. The sidebar,
 settings modal and content must change together while manual font sizes remain unchanged.
 Ordinary product install carries the pinned adapter but does not enable it. Use the explicit
-`deepseekbot-zoom-setup enable --home <home> --profile <profile> --dsh <qualified-cli>`
-command in the isolated Profile, then restart the same Desktop. It accepts only macOS and
-CLI 0.2.1-rc.2, retaining the root `ui-theme` settings namespace and exactly one native theme
+`deepseekbot-zoom-setup enable --home <home> --profile desktop --desktop-app <app>`
+command with the isolated Desktop fully closed, then reopen the same Desktop. It accepts only macOS and
+app 0.2.1-rc.2, retaining the root `ui-theme` settings namespace and exactly one native theme
 module id. A Profile-local package link points to the portable licensed product payload;
 there is no task-only theme dependency or installed-app modification. The actual Client boot
 release also gates the font-key lease. Disable before uninstall or switching outside the
@@ -90,8 +90,8 @@ compatibility and platform matrices remain separate S2/S3 gates.
 ## Product activation and native Settings identity
 
 Ordinary Bundle install alone does not activate zoom. In the explicit isolated Profile,
-run `deepseekbot-zoom-setup enable --home <home> --profile <profile> --dsh <qualified-cli>`
-and restart the same Host/Desktop. Keep the root `ui-theme` namespace and one native theme
+run `deepseekbot-zoom-setup enable --home <home> --profile desktop --desktop-app <app>`
+with the target Desktop fully closed, then reopen it. Keep the root `ui-theme` namespace and one native theme
 module id. Read pre-existing fonts, edit them through native Settings, restart and read back.
 Run `disable` before product removal, restart and verify original theme bytes and retained
 font preferences. The package command reports configuration only, not runtime acceptance.
@@ -102,3 +102,11 @@ is 0.2.1-rc.2. Unknown/missing releases retain the font-key scope and expose no 
 This runtime guard does not remove an already installed Profile package override or qualify
 that copied theme on another Host. Disable the override before switching outside the verified
 Desktop/Host/Client tuple; re-enable only after qualifying the new combination.
+
+
+The Desktop Profile is excluded from DSH CLI management. Native plugin-manager installation
+also rejects the copied native theme as `not-bundle` because installation-owned metadata wins.
+The opt-in installer therefore uses the explicitly selected app's bundled pnpm while Desktop
+is closed, under the native Profile writer lock. Verify refusal while running, then closed-app
+enable, native cold boot, closed-app disable and unchanged `ui-theme` values. Do not replace
+this qualification with a headless Profile or the failed native installation attempt.

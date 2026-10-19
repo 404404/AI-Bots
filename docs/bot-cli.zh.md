@@ -935,14 +935,20 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 
 ## 桌面整页缩放（S1 受控切片）
 
-产品附带独立配置命令。普通安装产品后，须明确在目标 macOS Profile 启用经验证的主题，
-再重启同一个 Host／桌面窗口。CLI 版本不是 0.2.1-rc.2、存在其他主题覆盖或产品仍采用旧组合时均拒绝。
-此操作只改变一个 Profile 依赖，不修改已安装应用：
+产品附带独立的显式启用命令。普通安装产品后，先退出目标 macOS 桌面，再明确指定应用 Bundle
+和 Profile。命令使用所选应用附带的 pnpm，禁用安装脚本，并持有与原生插件管理器相同的 Profile
+写锁。桌面 Host 仍在运行、存在其他主题覆盖、产品仍采用旧组合或应用版本不是 0.2.1-rc.2 时拒绝。
+只改变一个 Profile 依赖，不修改已安装应用：
 
 ```sh
-deepseekbot-zoom-setup enable --home <绝对路径-DSH_HOME> --profile <profile> --dsh <已验证的-dsh-cli>
-deepseekbot-zoom-setup disable --home <绝对路径-DSH_HOME> --profile <profile> --dsh <dsh-cli>
+deepseekbot-zoom-setup enable --home <绝对路径-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+deepseekbot-zoom-setup disable --home <绝对路径-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
 ```
+
+命令返回前保持桌面关闭，完成后再打开。Profile 被占用或包操作结果不确定时须检查，不会自动重试。
+非桌面的隔离 Profile 继续使用 `--profile <profile> --dsh <已验证的-dsh-cli>`。
+DSH CLI 明确拒绝管理 `desktop` Profile；原生插件管理器会优先解析应用自带的同名主题，因此也拒绝
+这一普通库替换。两条路径的无窗口测试结果不能作为桌面启用验收。
 
 卸载产品前先 `disable`，并重启以恢复原生包解析。手动字体偏好仍由原生 `ui-theme` Patch 保存。
 JSON 标准输出包含 `restartRequired:true`、`runtimeVerified:false`；包配置成功不表示原生窗口已加载。
