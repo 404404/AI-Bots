@@ -137,6 +137,10 @@ Single-context layout: root `CONTEXT.md` + `docs/adr/` (extended lazily by the d
 
 Building or changing in-harness UI follows the `dsh-ui` skill: DSH tokens (central alias table, no inline hex), `ui-primitives`, the native inset contract, and the measure-the-shell workflow (ADR-0028). For net-new UI, the skill's `references/design-references.md` names the external precedents (coss.com/ui, Beautiful UI, shadcn/ui, Lucide) — patterns to adapt rather than dependencies, except vendored Lucide glyphs (ADR-0032).
 
+### UI copy
+
+Visible text on web, desktop and mobile follows [UI copy](docs/agents/ui-copy.md): call a PersonaBot "Bot" in the UI, and keep hints, captions and errors short and plain in both English and Chinese. `PersonaBot` stays the term in code and developer docs.
+
 ### Verify behavior
 
 Before claiming a feature or fix works, reproducing a bug in the running app, or capturing PR screenshots, follow the `verify-deepseekbot` skill: it launches an isolated Host, drives the Web Client by accessible name, and keeps screenshots, ARIA snapshots and console output as evidence. Its feature map names each mapped feature's user path and the observable result that proves it; update the map in the same change when the app moves. `node scripts/check-feature-map.mjs` (in lint) checks map references; run the touched journey to verify behavior. For a failed or surprising drive, use `verify-app observe` and the skill’s observation guide before retrying.

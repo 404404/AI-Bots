@@ -1,19 +1,20 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import type { ConnectionState } from '../host/client';
 import type { OverviewUsage } from '../host/usage';
 import { SHEET_GROUP } from './chat/sheet';
 import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
+import { confirmDestructive } from './primitives/app-dialog';
+import { RowIcon } from './primitives/row-icon';
+import { DrawerHeader } from './primitives/drawer-header';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
-import { Text } from './primitives/text';
 import { errorText, Notice } from './request-parts';
 import { UsageCard } from './shell/usage-card';
 import { t } from './strings';
 
 export interface SettingsActions {
-  onClose(): void;
   onUsage(): void;
   onOpenFullClient(): void;
   onComputers(): void;
@@ -60,50 +61,20 @@ export function SettingsView({
   const status = [STATUS[connection.status], connection.route].filter((part) => part !== '');
   return (
     <View style={{ flex: 1, backgroundColor: theme.overlay.fill }}>
+      <View style={{ paddingHorizontal: space.x5, paddingTop: space.x5 }}>
+        <DrawerHeader title={t.settings} />
+      </View>
       <ScrollView
         nestedScrollEnabled
         style={{ flex: 1 }}
         contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
-        <View
-          style={{
-            flexDirection: theme.largeText ? 'column' : 'row',
-            alignItems: theme.largeText ? 'stretch' : 'center',
-            gap: space.x3,
-            marginRight: -space.x3,
-          }}
-        >
-          <Text
-            variant="title"
-            accessibilityRole="header"
-            style={theme.largeText ? undefined : { flex: 1 }}
-          >
-            {t.settings}
-          </Text>
-          <Pressable
-            onPress={actions.onClose}
-            accessibilityRole="button"
-            accessibilityLabel={t.done}
-            style={({ pressed }) => ({
-              alignSelf: theme.largeText ? 'flex-end' : 'auto',
-              minWidth: theme.touch,
-              minHeight: theme.touch,
-              paddingHorizontal: space.x3,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Text tone="accent" strong>
-              {t.done}
-            </Text>
-          </Pressable>
-        </View>
         <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
         <SettingsSection title={t.modelSettings.title} on={SHEET_GROUP}>
           <SettingsRow
             on={SHEET_GROUP}
             title={t.modelSettings.title}
+            leading={<RowIcon name="model" />}
             detail={t.modelSettings.global}
             disclosure
             onPress={actions.onModels}
@@ -114,6 +85,7 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.computers}
+            leading={<RowIcon name="computer" />}
             detail={t.computersHint}
             disclosure
             onPress={actions.onComputers}
@@ -121,23 +93,33 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.notifications}
+            leading={<RowIcon name="notifications" />}
             disclosure
             onPress={actions.onNotifications}
           />
           <SettingsRow
             on={SHEET_GROUP}
             title={t.openFullClient}
+            leading={<RowIcon name="browser" color={theme.color.accent} />}
             tone="accent"
             onPress={actions.onOpenFullClient}
           />
           <SettingsRow
             on={SHEET_GROUP}
             title={t.unpair}
+            leading={<RowIcon name="unpair" color={theme.color.danger} />}
             tone="danger"
-            onPress={() => {
-              setUnpairError(undefined);
-              actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
-            }}
+            onPress={() =>
+              confirmDestructive(
+                t.unpairHost(hostName ?? '—'),
+                t.unpairHostDetail,
+                t.unpair,
+                () => {
+                  setUnpairError(undefined);
+                  actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
+                },
+              )
+            }
           />
         </SettingsSection>
         {unpairError === undefined ? null : (
@@ -147,6 +129,7 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.appIcon}
+            leading={<RowIcon name="appIcon" />}
             detail={t.appIconHint}
             disclosure
             onPress={actions.onAppIcon}
@@ -159,6 +142,7 @@ export function SettingsView({
           <SettingsRow
             on={SHEET_GROUP}
             title={t.appVersion}
+            leading={<RowIcon name="version" />}
             detail={
               version === ''
                 ? t.appVersionUnknown

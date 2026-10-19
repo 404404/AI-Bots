@@ -3,7 +3,13 @@ import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-r
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import {
+  refreshQuietChannels,
+  useHostSession,
+  useHostSnapshot,
+  useInbox,
+  useQuietChannels,
+} from '../../../src/host/host-session';
 import { prefetchInbox } from '../../../src/host/inbox';
 import { useHostLook } from '../../../src/host/native-host-look';
 import { cloudClient, useCloudSnapshot } from '../../../src/cloud/native';
@@ -17,8 +23,9 @@ import { conversations, searchKey, type Conversation } from '../../../src/ui/cha
 import { CloudConversationRow } from '../../../src/ui/chat/cloud-conversation-row';
 import { useConversationFilter } from '../../../src/host/native-conversation-filter';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
+import { useDesignTheme } from '../../../src/ui/design/theme';
 import { space } from '../../../src/ui/design/tokens';
-import { SearchField } from '../../../src/ui/primitives/search-field';
+import { BottomSearch, bottomSearchHeight } from '../../../src/ui/shell/bottom-search';
 import { EnvironmentPager } from '../../../src/ui/shell/environment-pager';
 import {
   conversationEnvironments,
@@ -92,13 +99,15 @@ const HomeContent = memo(function HomeContent({
       };
     }, [router, client]),
   );
-  const onScroll = useChromeScroll();
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const onScroll = useChromeScroll(true, searching || query !== '');
   const chrome = useScrollChrome();
-  const bottom = useFloatingTabInset();
+  const theme = useDesignTheme();
+  const bottom = useFloatingTabInset() + bottomSearchHeight(theme.touch);
   const look = useHostLook(saved?.hostId);
   const cloud = useCloudSnapshot();
   const directory = useCloudConversations();
-  const [query, setQuery] = useState('');
   const [filter, setFilter] = useConversationFilter();
   const [refreshing, setRefreshing] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -120,6 +129,12 @@ const HomeContent = memo(function HomeContent({
     [saved, look, cloud.rows, directory.workspaces],
   );
   const effectiveFilter = filters.some((f) => f.key === filter) ? filter : 'all';
+  const quiet = useQuietChannels(saved?.hostId);
+  useFocusEffect(
+    useCallback(() => {
+      if (saved) refreshQuietChannels(saved);
+    }, [saved]),
+  );
   useFocusEffect(
     useCallback(() => {
       if (
@@ -149,6 +164,7 @@ const HomeContent = memo(function HomeContent({
           snapshot.roster,
           list.status === 'ready' ? list.sections.action : [],
           list.status === 'ready' ? list.unread : {},
+          quiet,
         ).map((conversation) => ({
           key: JSON.stringify(['computer', saved.hostId, conversation.key]),
           environment: computerEnvironmentKey(saved.hostId),
@@ -193,7 +209,7 @@ const HomeContent = memo(function HomeContent({
           (Date.parse(b.at ?? '') || 0) - (Date.parse(a.at ?? '') || 0) ||
           a.key.localeCompare(b.key),
       );
-  }, [snapshot.roster, list, directory.rows, saved, query]);
+  }, [snapshot.roster, list, directory.rows, saved, query, quiet]);
   if (saved === undefined || (!cloud.ready && !cloud.error))
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -287,12 +303,6 @@ const HomeContent = memo(function HomeContent({
                           onPairAgain={() => router.push('/pair')}
                         />
                       )}
-                    <SearchField
-                      inset={space.x5}
-                      value={query}
-                      placeholder={t.searchPlaceholder}
-                      onChangeText={setQuery}
-                    />
                     {(directory.errors.length > 0 || cloud.error || error) && (
                       <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
                         {t.cloudListUnavailable}
@@ -334,6 +344,12 @@ const HomeContent = memo(function HomeContent({
             )}
           />
         </HomeHeader>
+        <BottomSearch
+          value={query}
+          placeholder={t.searchPlaceholder}
+          onChangeText={setQuery}
+          onFocusChange={setSearching}
+        />
       </HostDrawerEdge>
     </>
   );

@@ -21,9 +21,9 @@ export function Chip({
         <FilterChip
           selected={selected}
           onClick={onPress}
-          border={{ color: selected ? theme.color.accent : theme.layer.canvas.edge }}
+          border={{ color: selected ? theme.color.accent : theme.color.muted }}
           colors={{
-            containerColor: theme.layer.canvas.fill,
+            containerColor: 'transparent',
             labelColor: theme.color.fg,
             selectedContainerColor: theme.layer.canvas.chosen,
             selectedLabelColor: theme.color.fg,

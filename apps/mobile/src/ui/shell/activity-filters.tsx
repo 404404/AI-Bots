@@ -6,6 +6,7 @@ import { INBOX_SECTIONS, type InboxSection } from '../../host/inbox';
 import { Sheet } from '../chat/sheet';
 import { useDesignTheme } from '../design/theme';
 import { androidSettings, edge, radius, space } from '../design/tokens';
+import { DrawerHeader } from '../primitives/drawer-header';
 import { RadioMark } from '../primitives/radio-mark';
 import { segmentCorners } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
@@ -162,14 +163,9 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
       ) : null}
       <FlatList
         ListHeaderComponent={
-          <Text
-            variant="display"
-            strong
-            accessibilityRole="header"
-            style={{ paddingHorizontal: space.x5, paddingTop: space.x2, paddingBottom: space.x3 }}
-          >
-            {t.activityOptions}
-          </Text>
+          <View style={{ paddingHorizontal: space.x5, paddingTop: space.x2 }}>
+            <DrawerHeader title={t.activityOptions} onClose={onClose} />
+          </View>
         }
         data={rows}
         keyExtractor={(row) => row.key}

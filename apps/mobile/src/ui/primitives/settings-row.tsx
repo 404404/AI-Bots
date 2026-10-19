@@ -46,6 +46,7 @@ export function SettingsRow({
   strong = false,
   leading,
   trailing,
+  accessory,
   selected,
   expanded,
   disclosure = false,
@@ -59,6 +60,7 @@ export function SettingsRow({
   strong?: boolean;
   leading?: ReactNode;
   trailing?: ReactNode;
+  accessory?: ReactNode;
   selected?: boolean;
   expanded?: boolean;
   disclosure?: boolean;
@@ -70,7 +72,7 @@ export function SettingsRow({
   const layer = theme.layer[on];
   const android = Platform.OS === 'android';
   const colors = settingsColors(theme, on);
-  return (
+  const row = (
     <SettingsFrame
       onPress={onPress}
       disabled={onPress === undefined}
@@ -86,6 +88,7 @@ export function SettingsRow({
         selected === undefined && expanded === undefined ? undefined : { selected, expanded }
       }
       style={({ pressed }) => ({
+        flex: accessory === undefined ? undefined : 1,
         minHeight: android
           ? detail === undefined
             ? androidSettings.rowHeight
@@ -121,6 +124,20 @@ export function SettingsRow({
           <ChevronRightIcon size={space.x6} color={theme.color.muted} />
         ) : null)}
     </SettingsFrame>
+  );
+  if (accessory === undefined) return row;
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingRight: space.x3,
+        backgroundColor: android && selected ? colors.selected : layer.fill,
+      }}
+    >
+      {row}
+      {accessory}
+    </View>
   );
 }
 

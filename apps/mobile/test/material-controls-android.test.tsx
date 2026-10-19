@@ -3,8 +3,10 @@ import { act, createElement, useState, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 
+const screen = vi.hoisted(() => ({ width: 411, height: 914, scale: 3, fontScale: 1 }));
 vi.mock('react-native', async () => ({
   ...(await import('./react-native-shim')),
+  useWindowDimensions: () => screen,
   Platform: { OS: 'android' },
   View: (props: {
     children?: ReactNode;
@@ -60,11 +62,13 @@ vi.mock('@expo/ui/jetpack-compose', async () => {
       createElement('i', { 'data-testid': 'native-radio', 'data-selected': props.selected }),
   };
 });
+vi.mock('../src/ui/shell/icons', () => ({ ChevronRightIcon: () => null }));
+vi.mock('../src/ui/primitives/radio-mark', () => import('../src/ui/primitives/radio-mark.android'));
 vi.mock('@expo/ui/jetpack-compose/modifiers', () => ({ fillMaxWidth: () => ({}) }));
 
 import { PercentageSlider } from '../src/ui/primitives/percentage-slider.android';
 import { RadioMark } from '../src/ui/primitives/radio-mark.android';
-import { Segmented } from '../src/ui/primitives/segmented.android';
+import { Segmented, segmentsFit } from '../src/ui/primitives/segmented.android';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: Root | undefined;
@@ -162,4 +166,31 @@ it('rebuilds the native segmented row when the option set changes, so each segme
   await act(async () => root!.render(render(true)));
   expect(view.querySelectorAll('[data-testid="segment"]')).toHaveLength(3);
   expect(rows.size).toBe(steady + 1);
+});
+
+it('turns Segmented into a radio list when the labels cannot fit on one line', async () => {
+  const periods = ['Today', '7 days', '4 weeks', '12 weeks'];
+  expect(segmentsFit(periods, 411, 1)).toBe(true);
+  expect(segmentsFit(periods, 411, 2)).toBe(false);
+  screen.fontScale = 2;
+  try {
+    const changed = vi.fn();
+    const view = await mount(
+      <Segmented
+        label="Period"
+        value="day"
+        options={periods.map((label, index) => ({ value: String(index), label }))}
+        onChange={changed}
+      />,
+    );
+    expect(view.querySelector('[data-testid="segmented-row"]')).toBeNull();
+    expect(view.querySelectorAll('[data-testid="native-radio"]')).toHaveLength(4);
+    const week = [...view.querySelectorAll('button')].find(
+      (button) => button.getAttribute('aria-label') === '12 weeks',
+    );
+    await act(async () => week!.click());
+    expect(changed).toHaveBeenCalledWith('3');
+  } finally {
+    screen.fontScale = 1;
+  }
 });
