@@ -40,7 +40,10 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
       {
         name: 'botharness:vfile-browser-imports',
         resolveId(id, importer) {
-          if (/^#min(?:path|proc|url)$/u.test(id) && importer?.includes('/node_modules/vfile/lib/'))
+          if (
+            /^#min(?:path|proc|url)$/u.test(id) &&
+            importer?.replaceAll('\\', '/').includes('/node_modules/vfile/lib/')
+          )
             return join(dirname(importer), `${id.slice(1)}.browser.js`);
           return null;
         },
