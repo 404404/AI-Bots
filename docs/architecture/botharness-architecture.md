@@ -1179,3 +1179,8 @@ packaged-install and Human QA evidence remain separate from source coverage; num
 broader reliability and other desktop platforms are tracked in #2269/#2270.
 
 Bot-mode Dockview content overlays and splitter movement convert viewport coordinates to local CSS units through the repository-pinned Dockview compatibility patch. The patch is bundled in the Client; it changes no DSH executable and preserves persistent panel instances and the existing layout store. The macOS workspace corner separately retains the native 88×40 viewport-pixel traffic-light footprint and converts measured group intersections into local header padding; zoom, layout and fullscreen updates do not change that physical footprint.
+
+Bot-owned choice controls use the shared `ds/Select` → `PointerMenu` geometry owner under
+window zoom. It keeps the native Menu renderer and keyboard owner inside the owning Modal,
+converts viewport anchor coordinates through effective CSS zoom, clamps to the safe viewport
+and returns focus after dismissal. No second shortcut router or Panel state is introduced.

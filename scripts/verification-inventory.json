@@ -575,7 +575,7 @@
       "source": "packages/client/src/client/window-zoom.ts",
       "guide": ".agents/skills/verify-deepseekbot/features/desktop-window-zoom.md",
       "task": 2268,
-      "gap": "Controlled S1 composition only. Ordinary native guest foreground restoration, final native input/visual proof and Human QA remain qualification gates; Windows/Linux are S3."
+      "gap": "Explicitly opted-in macOS0.2.1-rc.2 product composition qualified on representative input/popup/native guest paths; unknown versions/arbitrary pages are not qualified. Windows/Linux remain S3. CI and unmerged PR delivery are separate from runtime evidence."
     },
     {
       "id": "desktop.local-appearance",

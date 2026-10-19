@@ -2327,6 +2327,76 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region packages/client/src/client/ds/pointer-menu.tsx
+		function pointerMenuPosition(point, width, height, viewport) {
+			const margin = Number.parseFloat(space.x4);
+			return {
+				x: Math.max(margin, Math.min(point.x, viewport.width - width - margin)),
+				y: Math.max(Math.max(margin, viewport.top), Math.min(point.y, viewport.height - height - margin))
+			};
+		}
+		function PointerMenu({ point, container = document.body, align = "start", ...props }) {
+			const mount = useMountedResource((node) => {
+				const menu = node.querySelector("[role=\"menu\"]");
+				if (!menu) return;
+				const originalMaxWidth = Number.parseFloat(getComputedStyle(menu).maxWidth);
+				const originalMinWidth = Number.parseFloat(getComputedStyle(menu).minWidth);
+				const place = () => {
+					const scale = node.getBoundingClientRect();
+					if (!scale.width || !scale.height) return;
+					const cssZoom = "currentCSSZoom" in node && typeof node.currentCSSZoom === "number" ? node.currentCSSZoom : void 0;
+					const scaleX = cssZoom ?? scale.width;
+					const scaleY = cssZoom ?? scale.height;
+					const root = document.documentElement;
+					const clearance = root.hasAttribute("data-fullscreen") ? 0 : Number.parseFloat(getComputedStyle(root).getPropertyValue("--dsh-frame-top-clearance")) || 0;
+					const margin = Number.parseFloat(space.x4);
+					const availableWidth = Math.max(0, innerWidth - 2 * margin) / scaleX;
+					menu.style.minWidth = `${Math.min(originalMinWidth || 0, availableWidth)}px`;
+					menu.style.maxWidth = `${Math.min(originalMaxWidth || Infinity, availableWidth)}px`;
+					menu.style.maxHeight = `${Math.max(0, innerHeight - Math.max(margin, clearance) - margin) / scaleY}px`;
+					const box = menu.getBoundingClientRect();
+					const desired = pointerMenuPosition({
+						x: align === "end" ? point.x - box.width : point.x,
+						y: point.y
+					}, box.width, box.height, {
+						width: innerWidth,
+						height: innerHeight,
+						top: clearance
+					});
+					const left = Number.parseFloat(node.style.left) || 0;
+					const top = Number.parseFloat(node.style.top) || 0;
+					node.style.left = `${left + (desired.x - box.left) / scaleX}px`;
+					node.style.top = `${top + (desired.y - box.top) / scaleY}px`;
+				};
+				place();
+				const observer = typeof ResizeObserver === "undefined" ? void 0 : new ResizeObserver(place);
+				observer?.observe(menu);
+				observer?.observe(node);
+				window.addEventListener("resize", place);
+				window.addEventListener("scroll", place, true);
+				return () => {
+					observer?.disconnect();
+					window.removeEventListener("resize", place);
+					window.removeEventListener("scroll", place, true);
+				};
+			}, [
+				point.x,
+				point.y,
+				align
+			]);
+			return (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				ref: mount,
+				"data-pointer-menu": "",
+				className: "bhxixxii4 bhxu96u03 bhx13vifvy bhx51uzqw bhx1kkor1i bhxp6lfbs bhx47corl",
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Menu, {
+					...props,
+					open: true,
+					portal: false,
+					className: { className: "bhx67bb7w" }.className
+				})
+			}), container);
+		}
+		//#endregion
 		//#region packages/client/src/client/ds/pill-button.tsx
 		const pillStyles = { pill: {
 			k1xSpc: "bhx3nfvp2",
@@ -2353,44 +2423,94 @@ window.__ModuleLoader__.load({
 		//#region packages/client/src/client/ds/select.tsx
 		function Select({ label, value, options, onChange, disabled = false, align = "end", autoFocus = false, reselect = false }) {
 			const [open, setOpen] = (0, react.useState)(false);
+			const [point, setPoint] = (0, react.useState)();
+			const trigger = (0, react.useRef)(null);
+			const active = open && !disabled;
+			const mount = useMountedResource((node) => {
+				trigger.current = node;
+				if (!active) return () => {
+					trigger.current = null;
+				};
+				const place = () => {
+					const rect = node.getBoundingClientRect();
+					const scale = node.offsetHeight > 0 ? rect.height / node.offsetHeight : 1;
+					const next = {
+						x: align === "end" ? rect.right : rect.left,
+						y: rect.bottom + Number.parseFloat(space.x2) * scale
+					};
+					setPoint((previous) => previous?.x === next.x && previous.y === next.y ? previous : next);
+				};
+				place();
+				const resize = typeof ResizeObserver === "undefined" ? void 0 : new ResizeObserver(place);
+				resize?.observe(node);
+				resize?.observe(document.documentElement);
+				const observer = new MutationObserver(place);
+				observer.observe(document.documentElement, {
+					attributes: true,
+					attributeFilter: ["style", "data-fullscreen"]
+				});
+				window.addEventListener("resize", place);
+				window.addEventListener("scroll", place, true);
+				return () => {
+					trigger.current = null;
+					resize?.disconnect();
+					observer.disconnect();
+					window.removeEventListener("resize", place);
+					window.removeEventListener("scroll", place, true);
+				};
+			}, [active, align]);
+			const close = () => {
+				const button = trigger.current;
+				const menu = document.activeElement?.closest("[data-pointer-menu]");
+				setOpen(false);
+				setPoint(void 0);
+				queueMicrotask(() => {
+					const focused = document.activeElement;
+					if (button?.isConnected && !button.disabled && (focused === document.body || focused !== null && menu?.contains(focused))) button.focus({ preventScroll: true });
+				});
+			};
 			const current = options.find((option) => option.value === value);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Menu, {
-				open: open && !disabled,
-				portal: true,
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				ref: mount,
+				type: "button",
+				"aria-label": label,
+				"aria-haspopup": "menu",
+				"aria-expanded": active,
+				disabled,
+				"data-modal-autofocus": autoFocus ? "" : void 0,
+				onPointerDown: (event) => {
+					if (active) event.stopPropagation();
+				},
+				onClick: () => {
+					if (active) close();
+					else setOpen(true);
+				},
+				...props(pillStyles.pill),
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bhxeuugli bhxb3r6kr bhxlyipyv bhxuxw1ft",
+					children: current?.label
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bhx3nfvp2 bhx2lah0s bhxr3raxm",
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })
+				})]
+			}), active && point ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PointerMenu, {
+				point,
 				align,
+				container: trigger.current?.closest("[role=\"dialog\"]") ?? document.body,
+				autoFocus: true,
+				anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "aria-hidden": "true" }),
 				items: options.map((option) => ({
 					id: option.value,
 					label: option.label
 				})),
 				selectedId: value,
 				onSelect: (id) => {
-					setOpen(false);
+					close();
 					const next = options.find((option) => option.value === id);
 					if (next !== void 0 && (reselect || next.value !== value)) onChange(next.value);
 				},
-				onClose: () => {
-					setOpen(false);
-				},
-				anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-					type: "button",
-					"aria-label": label,
-					"aria-haspopup": "menu",
-					"aria-expanded": open && !disabled,
-					disabled,
-					"data-modal-autofocus": autoFocus ? "" : void 0,
-					onClick: () => {
-						setOpen((previous) => !previous);
-					},
-					...props(pillStyles.pill),
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bhxeuugli bhxb3r6kr bhxlyipyv bhxuxw1ft",
-						children: current?.label
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bhx3nfvp2 bhx2lah0s bhxr3raxm",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })
-					})]
-				})
-			});
+				onClose: close
+			}) : null] });
 		}
 		//#endregion
 		//#region packages/client/src/client/ds/settings-row.tsx
@@ -2965,11 +3085,15 @@ window.__ModuleLoader__.load({
 .bhx1hc1fzr:not(#\\#):not(#\\#):not(#\\#){opacity:1}
 .bhx1y3gkto:not(#\\#):not(#\\#):not(#\\#){outline-offset:1px}
 .bhxj0a0fe:not(#\\#):not(#\\#):not(#\\#){overflow-wrap:anywhere}
+.bhx67bb7w:not(#\\#):not(#\\#):not(#\\#){pointer-events:auto}
+.bhx47corl:not(#\\#):not(#\\#):not(#\\#){pointer-events:none}
+.bhxixxii4:not(#\\#):not(#\\#):not(#\\#){position:fixed}
 .bhx2b8uid:not(#\\#):not(#\\#):not(#\\#){text-align:center}
 .bhxp4054r:not(#\\#):not(#\\#):not(#\\#){text-align:end}
 .bhxlyipyv:not(#\\#):not(#\\#):not(#\\#){text-overflow:ellipsis}
 .bhxuxw1ft:not(#\\#):not(#\\#):not(#\\#){white-space:nowrap}
 .bhx126k92a:not(#\\#):not(#\\#):not(#\\#){white-space:pre-wrap}
+.bhxp6lfbs:not(#\\#):not(#\\#):not(#\\#){z-index:1100}
 .bhxtgyt42:disabled:not(#\\#):not(#\\#):not(#\\#){cursor:default}
 .bhxijokvz:disabled:not(#\\#):not(#\\#):not(#\\#){opacity:.5}
 .bhx1lc0nsx:hover:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-interactive-bg-hover)}
@@ -2983,16 +3107,20 @@ window.__ModuleLoader__.load({
 .bhxnoyelg:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:var(--dsw-alias-border-l1)}
 .bhx1q0q8m5:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-style:solid}
 .bhxrvphhj:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-width:1px}
+.bhx1kkor1i:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:1px}
 .bhxxevliy:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:28px}
 .bhxdkzj7d:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:40px}
 .bhxols6we:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:6px}
+.bhxu96u03:not(#\\#):not(#\\#):not(#\\#):not(#\\#){left:0}
 .bhx193iq5w:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}
 .bhxxc7z9f:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:360px}
 .bhxh9uqaf:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:60%}
 .bhxeuugli:not(#\\#):not(#\\#):not(#\\#):not(#\\#){min-width:0}
 .bhx1e1oj2y:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-bottom:4px}
 .bhxb590mu:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:16px}
+.bhx13vifvy:not(#\\#):not(#\\#):not(#\\#):not(#\\#){top:0}
 .bhxh8yej3:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:100%}
+.bhx51uzqw:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:1px}
 .bhx1i1gie9:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:40px}
 .bhx10zg81t:first-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:0}
 .bhx1bta2m4:last-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:transparent}

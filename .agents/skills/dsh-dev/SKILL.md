@@ -364,3 +364,15 @@ lock, disables scripts and preserves the native `ui-theme` row and preference Pa
 app closed until setup returns. Refuse other owners, a busy Profile, an unsupported app version
 or a running target; do not edit ASARs, silently replay uncertain writes or relabel failed
 native-manager attempts as installation proof. Reopen the same Profile/user-data for acceptance.
+
+### Desktop plugin-event stream churn (#2269)
+
+On the actual 0.2.1-rc.2 Desktop, a passive Network observer recorded `/plugins/events`
+returning HTTP 200 plus a graph frame, failing with `net::ERR_FAILED` after about 301 seconds,
+and reconnecting three seconds later with HTTP 200 and a fresh graph. The shipped Desktop
+forwards this scheme route through Node fetch; the shipped HMR Client uses EventSource.
+This identifies native plugin-event transport churn and observed recovery, not the exact
+underlying timeout source. Do not report that cohort as console-error-free, infer webview
+painting from the stream, or add guest reload/recreation to conceal it. Preserve the full
+request/failure/reconnect sequence without auth data and distinguish a page exception or
+failed reconnection from this measured sequence.
