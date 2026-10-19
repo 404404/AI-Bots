@@ -28,10 +28,11 @@ export function adaptZoomTheme(client) {
 
         const installFontKeys = () => installFontSizeShortcuts(ctx, delta => this.adjustFontSizes(delta));
         let fontKeys = installFontKeys();
-        if (location.protocol === 'dsh-app:' && location.hostname === 'app' && document.documentElement.dataset.platform === 'darwin' && window.__DSH_BOOT__?.release?.version === '0.2.1-rc.2') {
+        if (location.protocol === 'dsh-app:' && location.hostname === 'app' && ['darwin', 'win32'].includes(document.documentElement.dataset.platform) && window.__DSH_BOOT__?.release?.version === '0.2.1-rc.2') {
           let alive = true, held = false;
           const compatibility = {
             version: 1, desktopVersion: '0.2.1-rc.2',
+            platform: document.documentElement.dataset.platform === 'win32' ? 'windows' : 'macos',
             async acquire() {
               if (!alive || held) throw Error('zoom-compatibility-unavailable');
               held = true;
@@ -60,7 +61,8 @@ export function adaptZoomTheme(client) {
 export function prepareDesktopZoomCompatibility({ source, target, schemaModule }) {
   source = realpathSync(source);
   target = resolve(target);
-  if (!relative(source, target).startsWith('..') || existsSync(target))
+  const path = relative(source, target);
+  if (!(path === '..' || path.startsWith(`..${sep}`) || isAbsolute(path)) || existsSync(target))
     throw Error('zoom-target-must-be-new');
   const manifest = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8'));
   if (
@@ -100,7 +102,7 @@ export function prepareDesktopZoomCompatibility({ source, target, schemaModule }
     clientAfter: hash(after),
     hostBefore: hash(host),
     sourceModified: false,
-    platforms: ['macos'],
+    platforms: ['macos', 'windows'],
     changes: ['lease-owned font shortcut handoff', 'canonical schema module import'],
   };
   writeFileSync(join(target, 'botharness-zoom-compat.json'), JSON.stringify(provenance, null, 2));
@@ -156,7 +158,7 @@ export function preparePackagedDesktopZoomTheme({ source, target }) {
     clientAfter: hash(adapted),
     hostBefore: hash(host),
     sourceModified: false,
-    platforms: ['macos'],
+    platforms: ['macos', 'windows'],
     changes: ['lease-owned font shortcut handoff', 'portable product-owned schema module'],
   };
   save(join(target, 'botharness-zoom-compat.json'), JSON.stringify(provenance, null, 2) + '\n');

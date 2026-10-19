@@ -13,8 +13,8 @@ Set a default, press ordinary Cmd+= once, and press Cmd+0 to reset to the saved 
 settings modal and content must change together while manual font sizes remain unchanged.
 Ordinary product install carries the pinned adapter but does not enable it. Use the explicit
 `deepseekbot-zoom-setup enable --home <home> --profile desktop --desktop-app <app>`
-command with the isolated Desktop fully closed, then reopen the same Desktop. It accepts only macOS and
-app 0.2.1-rc.2, retaining the root `ui-theme` settings namespace and exactly one native theme
+command with the isolated Desktop fully closed, then reopen the same Desktop. The macOS path and Windows
+candidate accept app 0.2.1-rc.2, retaining the root `ui-theme` settings namespace and exactly one native theme
 module id. A Profile-local package link points to the portable licensed product payload;
 there is no task-only theme dependency or installed-app modification. The actual Client boot
 release also gates the font-key lease. Disable before uninstall or switching outside the
@@ -73,7 +73,7 @@ as well: the browser fixture does not render the operating system traffic lights
 - Create and resize guests while hidden, restore normally at unchanged geometry, and compare
   fixture rulers, retained input, guest identity, navigation count and zoom action count.
   Reload, guest replacement or forced fullscreen are not fixes. Failure blocks qualification.
-- Browser tabs retain browser-native zoom; Windows/Linux are not enabled by S1.
+- Browser tabs retain browser-native zoom; Linux remains disabled. Windows qualification is S3.
 
 ## S2 settings recovery
 
@@ -115,6 +115,64 @@ The opt-in installer therefore uses the explicitly selected app's bundled pnpm w
 is closed, under the native Profile writer lock. Verify refusal while running, then closed-app
 enable, native cold boot, closed-app disable and unchanged `ui-theme` values. Do not replace
 this qualification with a headless Profile or the failed native installation attempt.
+
+## Windows candidate and native lifecycle (#2270)
+
+Use Node from `.node-version` and the official Windows Desktop FileVersion `0.2.1-rc.2`.
+Its numeric ProductVersion omits the prerelease suffix and cannot qualify the executable.
+Keep the official executable and ASAR intact. All actions below reuse one explicit root:
+
+```powershell
+node scripts/e2e-desktop-zoom-windows.mjs start --root <private-root> --app "<app>/DeepSeek Harness.exe"
+node scripts/e2e-desktop-zoom-windows.mjs stop --root <private-root> --app "<app>/DeepSeek Harness.exe"
+node scripts/e2e-desktop-zoom-windows.mjs prepare --root <private-root> --app "<app>/DeepSeek Harness.exe" --artifacts <immutable-candidate-directory>
+node scripts/e2e-desktop-zoom-windows.mjs enable --root <private-root> --app "<app>/DeepSeek Harness.exe"
+node scripts/e2e-desktop-zoom-windows.mjs start --root <private-root> --app "<app>/DeepSeek Harness.exe"
+node scripts/e2e-desktop-zoom-windows.mjs status --root <private-root> --app "<app>/DeepSeek Harness.exe"
+```
+
+The first start lets the native initializer create the Profile. `prepare` verifies candidate
+hashes, installs with the selected app's bundled pnpm and scripts disabled, and adds only the
+task QA Bundle for fresh private CLI access metadata. Installation and activation remain
+separate. Use the candidate package's own `dist/desktop-zoom-setup.mjs` for formal lifecycle
+acceptance. `disable` uses the same explicit root/app flags and runs only after `stop`.
+Native shutdown outcome is checked, never retried blindly. A root marker, exact executable,
+user-data argument, PID and loopback listener ownership protect other instances. A new boot
+rediscovers `DevToolsActivePort`; old CLI access metadata is not an endpoint authority.
+The root and its evidence survive shutdown. Keep credentials under the private root's user
+ACL on Windows; POSIX mode bits alone do not prove Windows privacy.
+
+Baseline before enable: no zoom target, unchanged fonts and no compatibility marker. After
+enable: the real shell marker is `win32`, Shortcut Service platform is `windows`, boot release
+is exact, and the lease reports `windows`. Other releases/platforms, platform-mismatched
+leases, macOS-only payloads, foreign theme links and running Desktop package transactions
+must refuse. Do not fake either platform value. Check native theme identity and font settings.
+
+Save default 120%, set current 144%, retain a real draft and selection, then press Ctrl+0
+once. Record handler invocation and storage-write counts separately; an idempotent second
+handler can hide behind one write. Repeat Equal, Shift+Equal, Minus and Digit0 from main,
+owned same/cross-origin iframe and the real leased Browser webview. Verify IME, recording,
+custom binding, explicit conflicts and unbinding through the native input owner. Probe numberpad
+codes through the real protocol and disclose refusals. Do not replace native input qualification
+with DOM dispatch or a second listener. If a Windows input tool produces an empty physical
+`KeyboardEvent.code`, record that tool limitation and obtain real-keyboard proof.
+
+At 83/100/120/144% and 23/430%, check Panel allocations, splitters, anchored controls, wallpaper,
+Escape and focus return. Preserve native Windows menus, caption buttons, window drag and
+double-click maximize. Windows reserves no macOS 88×40 corner. Record actual DPI; 100/125/150/200%
+and cross-monitor moves require their own native results, with unavailable cases untested.
+
+For the independent guest-painting gate, keep RGB rulers, editable input, guest identity and
+navigation count. Create/resize while minimized, wait about eight seconds, then restore
+normally at unchanged geometry. Inspect whole-window native pixels. DOM visibility, CDP-only
+screenshots, refresh, replacement guests, resize jitter and forced fullscreen do not qualify it.
+A failure blocks support for that Windows tuple.
+
+Finally use the same root/user-data for a true process exit/cold boot, re-enumerate the CLI
+Client and verify current/default zoom, draft, layout, fonts and wallpaper. Exercise candidate
+install/enable/disable/upgrade/rollback/removal while closed. Record source SHA, artifact hashes,
+Windows build, DPI, focus, counts, native pixels, pass/fail/untested and Human feedback. Windows
+results never close the Linux scope of #2270.
 
 
 ## Native Tooltip placement

@@ -26,8 +26,10 @@ describe('isolated desktop zoom CLI access metadata', () => {
         connection: { authenticatedUrl: () => 'http://127.0.0.1:3000/?token=first-test-token' },
       };
       plugin.apply(context);
-      expect(statSync(paths.tokenFile).mode & 0o777).toBe(0o600);
-      expect(statSync(paths.infoFile).mode & 0o777).toBe(0o600);
+      if (process.platform !== 'win32') {
+        expect(statSync(paths.tokenFile).mode & 0o777).toBe(0o600);
+        expect(statSync(paths.infoFile).mode & 0o777).toBe(0o600);
+      }
       expect(readFileSync(paths.infoFile, 'utf8')).not.toContain('first-test-token');
       context.connection.authenticatedUrl = () => 'http://127.0.0.1:3000/?token=next-test-token';
       plugin.apply(context);
