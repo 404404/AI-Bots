@@ -38,6 +38,8 @@ export function messageMenuActions(
 }
 
 export function menuGroups(actions: MessageMenuAction[]): MessageMenuAction[][] {
+  if (!actions.some((action) => action.key === 'open'))
+    return actions.length === 0 ? [] : [actions];
   return [
     actions.filter((action) => action.key === 'copy'),
     actions.filter((action) => action.key !== 'copy'),

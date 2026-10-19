@@ -1,6 +1,6 @@
 import {
+  Box,
   Column,
-  FilledIconToggleButton,
   HorizontalDivider,
   Host,
   ListItem,
@@ -10,11 +10,16 @@ import {
   Text,
 } from '@expo/ui/jetpack-compose';
 import {
+  Shapes,
+  background,
   clickable,
+  clip,
+  defaultMinSize,
   horizontalScroll,
   padding,
+  paddingAll,
   semantics,
-  size,
+  toggleable,
 } from '@expo/ui/jetpack-compose/modifiers';
 import { Fragment } from 'react';
 import { StyleSheet } from 'react-native';
@@ -87,20 +92,23 @@ export function MessageActions({
               {MENU_REACTIONS.map((emoji) => {
                 const picked = mine.has(emoji);
                 return (
-                  <FilledIconToggleButton
+                  <Box
                     key={emoji}
-                    checked={picked}
-                    onCheckedChange={() => {
-                      onReact(message, emoji, !picked);
-                      onClose();
-                    }}
+                    contentAlignment="center"
                     modifiers={[
-                      size(theme.touch, theme.touch),
+                      defaultMinSize({ minWidth: theme.touch, minHeight: theme.touch }),
+                      clip(Shapes.Circle),
+                      background(picked ? theme.layer.raised.chosen : theme.layer.raised.fill),
+                      toggleable(picked, () => {
+                        onReact(message, emoji, !picked);
+                        onClose();
+                      }),
                       semantics({ contentDescription: picked ? t.unreact(emoji) : t.react(emoji) }),
+                      paddingAll(space.x3),
                     ]}
                   >
                     <Text style={{ typography: 'titleLarge' }}>{emoji}</Text>
-                  </FilledIconToggleButton>
+                  </Box>
                 );
               })}
             </Row>
@@ -132,7 +140,7 @@ export function MessageActions({
                 >
                   <ListItem.LeadingContent>
                     <RNHostView matchContents>
-                      <RowIcon name={action.key} />
+                      <RowIcon name={action.key} size={theme.type.title.line * theme.fontScale} />
                     </RNHostView>
                   </ListItem.LeadingContent>
                   <ListItem.HeadlineContent>

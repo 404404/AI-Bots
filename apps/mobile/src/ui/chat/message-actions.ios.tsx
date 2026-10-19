@@ -19,9 +19,11 @@ import {
   background,
   buttonStyle,
   contentShape,
+  fixedSize,
   font,
   foregroundStyle,
   frame,
+  imageScale,
   padding,
   presentationBackground,
   presentationDragIndicator,
@@ -136,7 +138,11 @@ function SheetContent({
     <VStack
       alignment="leading"
       spacing={space.x5}
-      modifiers={[accessibilityElement('contain'), accessibilityLabel(menuLabel(target))]}
+      modifiers={[
+        fixedSize({ horizontal: false, vertical: true }),
+        accessibilityElement('contain'),
+        accessibilityLabel(menuLabel(target)),
+      ]}
     >
       <Text modifiers={[font({ textStyle: 'footnote' }), foregroundStyle(theme.color.muted)]}>
         {menuTime(message.at, new Date())}
@@ -163,7 +169,8 @@ function SheetContent({
                   <Text
                     modifiers={[
                       font({ textStyle: 'title2' }),
-                      frame({ width: theme.touch, height: theme.touch }),
+                      padding({ all: space.x3 }),
+                      frame({ minWidth: theme.touch, minHeight: theme.touch }),
                       background(
                         picked ? theme.layer.raised.chosen : theme.layer.raised.fill,
                         shapes.circle(),
@@ -220,7 +227,8 @@ function SheetContent({
                     modifiers={[
                       font({ textStyle: 'body' }),
                       foregroundStyle(theme.color.fg),
-                      frame({ width: icon }),
+                      imageScale('medium'),
+                      frame({ minWidth: icon }),
                     ]}
                   />
                   <Text modifiers={[font({ textStyle: 'body' }), foregroundStyle(theme.color.fg)]}>

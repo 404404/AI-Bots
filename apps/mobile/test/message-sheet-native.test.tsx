@@ -11,7 +11,18 @@ const native = vi.hoisted(() => ({
   dismiss: () => {},
 }));
 
-type Modifier = { label?: string; traits?: string[]; description?: string; onClick?: () => void };
+type Modifier = {
+  label?: string;
+  traits?: string[];
+  description?: string;
+  onClick?: () => void;
+  toggled?: boolean;
+  minWidth?: number;
+  fixed?: boolean;
+  fixedWidth?: number;
+};
+const fixedWidth = (modifiers?: Modifier[]) =>
+  modifiers?.find((modifier) => modifier.fixedWidth !== undefined)?.fixedWidth;
 const labelOf = (modifiers?: Modifier[]) =>
   modifiers?.find((modifier) => modifier.label !== undefined)?.label ??
   modifiers?.find((modifier) => modifier.description !== undefined)?.description;
@@ -43,7 +54,9 @@ vi.mock('@expo/ui/swift-ui/modifiers', () => {
     contentShape: none,
     font: none,
     foregroundStyle: none,
-    frame: none,
+    fixedSize: ({ vertical }: { vertical: boolean }) => ({ fixed: vertical }),
+    frame: (params: { width?: number }) => ({ fixedWidth: params.width }),
+    imageScale: none,
     padding: none,
     presentationBackground: none,
     presentationDragIndicator: (visibility: string) => ({ grabber: visibility }),
@@ -54,7 +67,14 @@ vi.mock('@expo/ui/swift-ui', () => {
   const box =
     (tag: string) =>
     ({ children, modifiers }: { children?: ReactNode; modifiers?: Modifier[] }) =>
-      createElement(tag, { 'aria-label': labelOf(modifiers) }, children);
+      createElement(
+        tag,
+        {
+          'aria-label': labelOf(modifiers),
+          'data-fixed': String(modifiers?.some((modifier) => modifier.fixed) ?? false),
+        },
+        children,
+      );
   return {
     BottomSheet: ({
       isPresented,
@@ -99,23 +119,29 @@ vi.mock('@expo/ui/swift-ui', () => {
     Group: box('section'),
     HStack: box('div'),
     Host: box('div'),
-    Image: ({ systemName }: { systemName: string }) =>
-      createElement('i', { 'data-symbol': systemName }),
+    Image: ({ systemName, modifiers }: { systemName: string; modifiers: Modifier[] }) =>
+      createElement('i', { 'data-symbol': systemName, 'data-width': fixedWidth(modifiers) }),
     RNHostView: ({ children }: { children: ReactNode }) => children,
     ScrollView: box('div'),
     Spacer: () => null,
-    Text: ({ children }: { children: ReactNode }) => createElement('span', null, children),
+    Text: ({ children, modifiers }: { children: ReactNode; modifiers?: Modifier[] }) =>
+      createElement('span', { 'data-width': fixedWidth(modifiers) }, children),
     VStack: box('div'),
   };
 });
 vi.mock('@expo/ui/jetpack-compose/modifiers', () => ({
+  Shapes: { Circle: {} },
+  background: () => ({}),
   clickable: (onClick: () => void) => ({ onClick }),
+  clip: () => ({}),
+  defaultMinSize: ({ minWidth }: { minWidth: number }) => ({ minWidth }),
   horizontalScroll: () => ({}),
   padding: () => ({}),
+  paddingAll: () => ({}),
+  toggleable: (value: boolean, onClick: () => void) => ({ toggled: value, onClick }),
   semantics: ({ contentDescription }: { contentDescription: string }) => ({
     description: contentDescription,
   }),
-  size: () => ({}),
 }));
 vi.mock('@expo/ui/jetpack-compose', () => {
   const pass = ({ children }: { children?: ReactNode }) => children ?? null;
@@ -129,26 +155,19 @@ vi.mock('@expo/ui/jetpack-compose', () => {
   ListItem.HeadlineContent = pass;
   return {
     Column: box('div'),
-    FilledIconToggleButton: ({
-      children,
-      checked,
-      onCheckedChange,
-      modifiers,
-    }: {
-      children: ReactNode;
-      checked: boolean;
-      onCheckedChange(checked: boolean): void;
-      modifiers: Modifier[];
-    }) =>
-      createElement(
+    Box: ({ children, modifiers }: { children: ReactNode; modifiers: Modifier[] }) => {
+      const toggle = modifiers.find((modifier) => modifier.toggled !== undefined);
+      return createElement(
         'button',
         {
-          onClick: () => onCheckedChange(!checked),
+          onClick: toggle?.onClick,
           'aria-label': labelOf(modifiers),
-          'aria-selected': String(checked),
+          'aria-selected': String(toggle?.toggled),
+          'data-min': String(modifiers.some((modifier) => modifier.minWidth !== undefined)),
         },
         children,
-      ),
+      );
+    },
     HorizontalDivider: () => createElement('hr'),
     Host: pass,
     ListItem,
@@ -215,7 +234,7 @@ const rows = () =>
   ]);
 
 describe('message sheet groups', () => {
-  it('sets Copy apart from the other actions', () => {
+  it('keeps Copy and Share together, setting Copy apart only beside Open', () => {
     expect(
       menuGroups([
         { key: 'open', label: 'Open memory' },
@@ -223,6 +242,12 @@ describe('message sheet groups', () => {
         { key: 'share', label: t.shareText },
       ]).map((group) => group.map((action) => action.key)),
     ).toEqual([['copy'], ['open', 'share']]);
+    expect(
+      menuGroups([
+        { key: 'copy', label: t.copy },
+        { key: 'share', label: t.shareText },
+      ]).map((group) => group.map((action) => action.key)),
+    ).toEqual([['copy', 'share']]);
     expect(menuGroups([])).toEqual([]);
   });
 });
@@ -247,7 +272,9 @@ describe('iOS message sheet', () => {
       ['doc.on.doc', t.copy],
       ['square.and.arrow.up', t.shareText],
     ]);
-    expect(host?.querySelectorAll('hr')).toHaveLength(0);
+    expect(host?.querySelectorAll('hr')).toHaveLength(1);
+    expect(host?.querySelector('[data-fixed="true"]')).not.toBeNull();
+    expect(host?.querySelector('[data-width]')).toBeNull();
   });
 
   it('toggles a reaction and closes', () => {
@@ -325,7 +352,8 @@ describe('Android message sheet', () => {
       ['content_copy', t.copy],
       ['share', t.shareText],
     ]);
-    expect(host?.querySelectorAll('hr')).toHaveLength(2);
+    expect(host?.querySelectorAll('hr')).toHaveLength(1);
+    expect(byLabel(t.react('👍'))?.getAttribute('data-min')).toBe('true');
     act(() => byLabel(t.react('👍'))?.click());
     expect(handlers.onReact).toHaveBeenCalledWith(bot, '👍', true);
     expect(handlers.onClose).toHaveBeenCalledOnce();

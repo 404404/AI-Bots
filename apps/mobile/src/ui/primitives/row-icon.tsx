@@ -24,12 +24,20 @@ export function rowSymbol(name: RowIconName) {
   return ROW_ICONS[name];
 }
 
-export function RowIcon({ name, color }: { name: RowIconName; color?: ColorValue }) {
+export function RowIcon({
+  name,
+  color,
+  size,
+}: {
+  name: RowIconName;
+  color?: ColorValue;
+  size?: number;
+}) {
   const theme = useDesignTheme();
   return (
     <SymbolView
       name={ROW_ICONS[name]}
-      size={theme.type.title.line}
+      size={size ?? theme.type.title.line}
       tintColor={color ?? theme.color.fg}
       accessible={false}
       importantForAccessibility="no"
