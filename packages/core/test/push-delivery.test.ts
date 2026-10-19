@@ -547,6 +547,7 @@ describe('Human Inbox push source', () => {
     ).toEqual([
       ['approval:1', 'approval', undefined, 'bash · date > now', 'tool-approval'],
       ['approval:2', 'approval', 'ops', 'secret_cli', 'tool-approval-once'],
+      ['join:1', 'approval', undefined, '请求批准执行 bash', undefined],
       ['secret:1', 'private-input', undefined, undefined, undefined],
       ['question:1', 'question', undefined, 'Which branch?', undefined],
       ['reply:1', 'reply', undefined, `${'x'.repeat(139)}…`, undefined],
@@ -624,6 +625,47 @@ describe('Human Inbox push source', () => {
       },
     ]);
     expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it('notifies auto-rejections and join requests as approvals and Assignment asks as questions', () => {
+    const item = (id: string, kind: string, summary: string) => ({
+      id,
+      category: 'action' as const,
+      kind: kind as 'tool-approval',
+      createdAt: '2026-10-14T08:00:00.000Z',
+      botSlug: 'ada',
+      summary,
+      channelId: 'dm-ada',
+    });
+    const source = humanInboxPushSource(
+      {
+        list: ({ category }) => ({
+          items:
+            category === 'action'
+              ? [
+                  item('autoreject:e1', 'auto-rejection', 'Rejected by the template'),
+                  item('join:r1', 'group-join-request', ''),
+                  item('assignment:s1', 'assignment-waiting-human', 'Which region?'),
+                  item('assignment:s2', 'assignment-blocked', 'Build is failing'),
+                  item('repair:e2:ada', 'bot-message-needs-repair', 'Check this'),
+                ]
+              : [],
+        }),
+        actionCount: () => 5,
+        dmReplies: () => [],
+      },
+      () => 'Ada',
+    );
+    expect(
+      source
+        .pending()
+        .items.map((entry) => [entry.id, entry.kind, entry.preview, entry.categoryId]),
+    ).toEqual([
+      ['autoreject:e1', 'approval', 'Rejected by the template', undefined],
+      ['join:r1', 'approval', undefined, undefined],
+      ['assignment:s1', 'question', 'Which region?', undefined],
+      ['assignment:s2', 'question', 'Build is failing', undefined],
+    ]);
   });
 });
 

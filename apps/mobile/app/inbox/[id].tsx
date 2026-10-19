@@ -15,6 +15,7 @@ import {
   type RequestRef,
 } from '../../src/host/requests';
 import { ApprovalView } from '../../src/ui/approval-view';
+import { ATTENTION_KINDS, AttentionItemView } from '../../src/ui/attention-item';
 import { GrantRequestCard } from '../../src/ui/chat/grant-request-card';
 import { QuestionView } from '../../src/ui/question-view';
 import { ActionButton, Notice } from '../../src/ui/request-parts';
@@ -89,6 +90,10 @@ export default function InboxItemScreen() {
     [client, inbox, ref],
   );
 
+  const attention = useMemo(
+    () => ({ id: params.id, botSlug: params.botSlug }),
+    [params.id, params.botSlug],
+  );
   const target: FullClientTarget =
     params.kind === 'private-input' && ref !== undefined
       ? {
@@ -98,6 +103,32 @@ export default function InboxItemScreen() {
         }
       : { kind: 'home' };
   const title = t.kind[params.kind] ?? t.otherKind;
+  const fallback = (
+    <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <Text style={{ color: theme.ink, fontSize: 20, fontWeight: '700' }}>{botName}</Text>
+      {params.summary ? (
+        <Text selectable style={{ color: theme.ink, fontSize: 16 }}>
+          {params.summary}
+        </Text>
+      ) : null}
+      <Notice tone="warning">
+        {params.kind === 'private-input' ? t.privateInputHint : t.readOnlyHint}
+      </Notice>
+      {saved ? (
+        <View style={{ flexDirection: 'row' }}>
+          <ActionButton
+            label={t.openFullClient}
+            onPress={() =>
+              router.push({
+                pathname: '/full-client',
+                params: fullClientParams(target),
+              })
+            }
+          />
+        </View>
+      ) : null}
+    </ScrollView>
+  );
   let body;
   if (params.kind === 'tool-approval' && approvalPort !== undefined)
     body = <ApprovalView port={approvalPort} botName={botName} listed={listed} />;
@@ -109,33 +140,18 @@ export default function InboxItemScreen() {
         <GrantRequestCard port={grantPort} botName={botName} wide />
       </ScrollView>
     );
-  else
+  else if (ATTENTION_KINDS.has(params.kind) && client !== undefined)
     body = (
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-        <Text style={{ color: theme.ink, fontSize: 20, fontWeight: '700' }}>{botName}</Text>
-        {params.summary ? (
-          <Text selectable style={{ color: theme.ink, fontSize: 16 }}>
-            {params.summary}
-          </Text>
-        ) : null}
-        <Notice tone="warning">
-          {params.kind === 'private-input' ? t.privateInputHint : t.readOnlyHint}
-        </Notice>
-        {saved ? (
-          <View style={{ flexDirection: 'row' }}>
-            <ActionButton
-              label={t.openFullClient}
-              onPress={() =>
-                router.push({
-                  pathname: '/full-client',
-                  params: fullClientParams(target),
-                })
-              }
-            />
-          </View>
-        ) : null}
-      </ScrollView>
+      <AttentionItemView
+        client={client}
+        target={attention}
+        known={inbox?.find(params.id)}
+        botName={botName}
+        after={() => void inbox?.refresh()}
+        fallback={fallback}
+      />
     );
+  else body = fallback;
 
   return (
     <>

@@ -5,6 +5,10 @@ import type { PushCandidate, PushKind, PushSource } from './delivery.js';
 const KIND: Partial<Record<HumanAttentionItem['kind'], PushKind>> = {
   'tool-approval': 'approval',
   'workspace-grant-request': 'approval',
+  'auto-rejection': 'approval',
+  'group-join-request': 'approval',
+  'assignment-waiting-human': 'question',
+  'assignment-blocked': 'question',
   'user-question': 'question',
   'private-input': 'private-input',
   'channel-reply': 'reply',
