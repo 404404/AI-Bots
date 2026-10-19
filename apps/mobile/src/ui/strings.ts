@@ -660,7 +660,7 @@ const en = {
   channelNotifications: {
     quietHere: 'Do Not Disturb on this phone',
     quietHereFootnote:
-      'Mentions and replies here stop notifying this phone. Tool approvals, questions and private input requests still notify.',
+      'Mentions and replies here stop notifying this phone. Approvals, folder access, questions and private input requests still notify.',
     quietByHost: 'Muted on this computer, so this phone stays quiet too.',
     muteHost: 'Mute on this computer',
     muteHostFootnote:
@@ -670,7 +670,7 @@ const en = {
     pushOff: 'Notifications are off for this phone. Turn them on in Settings → Notifications.',
   },
   pushKind: {
-    approval: 'Tool approvals',
+    approval: 'Approvals & folder access',
     question: 'Questions',
     'private-input': 'Private input requests',
     reply: 'Mentions & replies',
@@ -1653,7 +1653,8 @@ const zh: typeof en = {
   allowNotificationsOff: '这台手机不会收到这台电脑的任何通知。重新打开后，下面的选择会恢复。',
   channelNotifications: {
     quietHere: '这台手机免打扰',
-    quietHereFootnote: '这里的提及和回复不再通知这台手机。工具审批、提问和私密输入请求照常通知。',
+    quietHereFootnote:
+      '这里的提及和回复不再通知这台手机。审批、文件夹授权、提问和私密输入请求照常通知。',
     quietByHost: '已在这台电脑上静音，这台手机也不会收到。',
     muteHost: '在这台电脑上静音',
     muteHostFootnote: '连这台电脑的网页端和每台手机都会在这里静音，未读消息也不再计入未读数。',
@@ -1661,7 +1662,7 @@ const zh: typeof en = {
     pushOff: '这台手机的通知已关闭。可以在 设置 → 通知 里打开。',
   },
   pushKind: {
-    approval: '工具审批',
+    approval: '审批与文件夹授权',
     question: '提问',
     'private-input': '私密输入请求',
     reply: '提及与回复',
