@@ -48,5 +48,5 @@ unsent draft. It is actual Desktop capture; the earlier source matrices remain s
 ![Integrated native Desktop at 144%](native-window-144.png)
 
 The Human explicitly accepted real Chinese IME candidate/draft/zoom protection. Final visual
-QA for wallpaper/header in both native window modes is pending; Windows/Linux stay in #2270.
+QA for wallpaper/header, panels and zoom Settings passed in both native window modes (Human: “都正常”); Windows/Linux stay in #2270.
 No PR has been merged and no release has been published.
