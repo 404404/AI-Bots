@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import type { ConnectionState } from '../host/client';
 import type { OverviewUsage } from '../host/usage';
@@ -8,7 +8,6 @@ import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
 import { DrawerHeader } from './primitives/drawer-header';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
-import { Text } from './primitives/text';
 import { errorText, Notice } from './request-parts';
 import { UsageCard } from './shell/usage-card';
 import { t } from './strings';
