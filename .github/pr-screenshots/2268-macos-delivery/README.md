@@ -29,7 +29,6 @@ invalidate the prior headless result as Desktop installation proof. The explicit
 installer is a downstream package transaction and changes no installed app files. Fresh native
 acceptance of the final installer is recorded separately below when completed.
 
-
 ## Actual macOS Desktop delivery — 2026-10-19
 
 The [native delivery record](native-desktop-20261019.json) supersedes the earlier headless-only
