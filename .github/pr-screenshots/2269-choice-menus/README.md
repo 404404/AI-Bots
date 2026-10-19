@@ -97,8 +97,9 @@ Default reset and numberpad bindings have not shipped: the pinned native protoco
 numberpad codes, and reset remains Settings/CLI/custom-bindable without a default. This
 outstanding original requirement is tracked explicitly in #2318; it has not been waived or
 counted as passing S2 acceptance. #2299 closes only the bounded #2269 delivery after review
-and merge; it stays Draft and unmerged. The separate mobile Expo-doctor failure is fixed by
-dependency PR #2317 for #2314; fresh CI for the updated stack remains a separate gate.
+and merge. The separate mobile Expo-doctor failure is fixed on main by merged #2319,
+which superseded the closed dependency PR #2317 for #2314. Fresh CI for the updated stack
+remains a separate gate.
 Unknown app versions, arbitrary third-party pages and Windows/Linux remain outside this
 qualification.
 
