@@ -134,6 +134,14 @@ Date: 2026-10-19. Same scratch harness and SwiftShader caveat, 960 × 540 frames
 - **Lighting.** The lamp spotlight now targets the desk in front of the book and mug and is about 35 % weaker at night, so the hands are no longer blown out. MToon surfaces get a rim light that follows the time of day (neutral by day, warm orange at sunset, blue at night), and their base color is reduced by 10 % so pale skin and white clothes keep shading under the room lights.
 - **Frames.** Reference beside the Panel at sunset and in rainy night, plus night portrait and the night room view with the L-shaped desk: `chill-compare-3.jpg`.
 
+## Softer glow (Human feedback)
+
+Date: 2026-10-19.
+
+- **Feedback.** Much better; keep this direction, but glow and strong highlights are overdone and objects have glowing outlines.
+- **Change.** The glow pass now only picks up values above 3.2 (was 2.4) and is added at 0.28–0.42 strength (was 0.5–0.8), so lit paper, cups and hands no longer halo; the lamp bulb and sun core still glow. The monitor's back glow is at about a third of its former strength, and the character's time-of-day rim light is roughly halved.
+- **Video.** A 37-second tour (sunset typing, sip and window gestures, rainy night thinking, portrait, room view) was rendered frame by frame at 24 fps in the scratch harness with a stepped clock, because SwiftShader cannot render in real time; it is shared with Vain, not committed.
+
 ## Acceptance limits and next action
 
 The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

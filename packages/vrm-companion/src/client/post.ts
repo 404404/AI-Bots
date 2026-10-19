@@ -171,7 +171,7 @@ export function createPost(renderer: WebGLRenderer) {
         .lerp(warm.setRGB(0.1, 0.16, 0.24), night)
         .lerp(warm.setRGB(0.45, 0.5, 0.55), wet * 0.5);
       uniforms.hazeAmount!.value = 0.06 + twilight * 0.14 + wet * 0.06;
-      uniforms.bloom!.value = 0.5 + night * 0.3;
+      uniforms.bloom!.value = 0.28 + night * 0.14;
     },
     render(scene: Scene, camera: PerspectiveCamera) {
       uniforms.near!.value = camera.near;
@@ -180,7 +180,7 @@ export function createPost(renderer: WebGLRenderer) {
       renderer.render(scene, camera);
       const calls = renderer.info.render.calls;
       blur.uniforms.source!.value = target.texture;
-      blur.uniforms.threshold!.value = 2.4;
+      blur.uniforms.threshold!.value = 3.2;
       blur.uniforms.step!.value.set(4 / size.x, 0);
       pass(blur, bloomA);
       blur.uniforms.source!.value = bloomA.texture;

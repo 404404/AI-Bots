@@ -245,10 +245,10 @@ export function mountStage(
       post.grade(daylight);
       shading?.rim(
         rim
-          .setRGB(0.22, 0.2, 0.18)
-          .lerp(warm.setRGB(0.75, 0.32, 0.12), daylight.twilight)
+          .setRGB(0.1, 0.09, 0.08)
+          .lerp(warm.setRGB(0.4, 0.17, 0.06), daylight.twilight)
           .lerp(
-            warm.setRGB(0.12, 0.2, 0.42),
+            warm.setRGB(0.06, 0.1, 0.22),
             Math.max(0, 1 - daylight.daylight - daylight.twilight),
           ),
       );

@@ -253,7 +253,7 @@ export function createScreen(width: number, height: number) {
       light.color.lerp(target, Math.min(1, seconds * 2 + (drawn < 0 ? 0.2 : 0)));
       haloMaterial.color.copy(light.color);
       light.intensity = 0.08 + night * 0.65;
-      haloMaterial.opacity = night * 0.32;
+      haloMaterial.opacity = night * 0.12;
       material.color.setScalar(0.92 + night * 0.18);
       if (drawn < 0 || time - drawn >= 0.1 || seconds === 0) {
         drawn = time;
