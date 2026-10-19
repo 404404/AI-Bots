@@ -11,6 +11,8 @@ export function composerPrimary(theme: DesignTheme): { fill: string; ink: string
   return { fill: theme.color.fg, ink: theme.color.base };
 }
 
+export const micAlwaysFilled = true;
+
 export const rippleFeedback = false;
 
 function Glass({ cornerRadius }: { cornerRadius?: number }) {

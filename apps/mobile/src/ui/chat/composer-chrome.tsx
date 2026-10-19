@@ -8,6 +8,8 @@ export function composerPrimary(theme: DesignTheme): { fill: string; ink: string
   return { fill: theme.color.accent, ink: theme.color.onAccent };
 }
 
+export const micAlwaysFilled = false;
+
 export const rippleFeedback = true;
 
 export function ComposerCircleButton({

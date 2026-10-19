@@ -38,6 +38,7 @@ import {
   ComposerCircleButton,
   ComposerFieldMaterial,
   composerPrimary,
+  micAlwaysFilled,
   rippleFeedback,
 } from './composer-chrome';
 import { DraftEditor } from './draft-editor';
@@ -224,7 +225,7 @@ function VoiceButton({
       onPanResponderTerminate: () => hold(false),
     }),
   ).current;
-  const filled = active || held;
+  const filled = micAlwaysFilled || active || held;
   return (
     <View
       {...responder.panHandlers}
