@@ -375,6 +375,10 @@ async function shot(options, paths) {
   try {
     page = await browser.newPage();
     await page.setExtraHTTPHeaders({ 'accept-language': lang });
+    await page.evaluateOnNewDocument((language) => {
+      Object.defineProperty(navigator, 'language', { get: () => language });
+      Object.defineProperty(navigator, 'languages', { get: () => [language] });
+    }, lang);
     await page.setViewport({
       width: options.width,
       height: options.height,

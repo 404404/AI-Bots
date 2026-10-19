@@ -63,6 +63,8 @@ import {
   BotSettingsView,
   botSettingsSectionSource,
 } from './bot-settings.js';
+import type { QuickSwitcherSettings } from './quick-switcher.js';
+import { searchSettings } from './settings-search.js';
 import { DshBotSettingsItem } from './dsh-bot-settings-item.js';
 import { createImApps, ImAppsSection } from './im-apps-section.js';
 import {
@@ -390,6 +392,10 @@ export function apply(ctx: ClientContext): void {
     ),
   );
   const botSettingsSections = botSettingsSectionSource(ctx);
+  const quickSwitcherSettings: QuickSwitcherSettings = {
+    search: (query) => searchSettings(botSettingsSections.getSnapshot(), query, t),
+    open: (result) => botSettings.open(result.section, result.target),
+  };
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
       {
@@ -498,6 +504,7 @@ export function apply(ctx: ClientContext): void {
       ),
     exitBotMode: () => ctx.layout.selectPanel(null),
     openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+    quickSwitcherSettings,
   };
 
   ctx.effect(() =>
@@ -1088,6 +1095,7 @@ export function apply(ctx: ClientContext): void {
           ...botModePrefsFace(prefs),
           exitBotMode: () => ctx.layout.selectPanel(null),
           openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+          quickSwitcherSettings,
         }),
       },
       MobileBotPanel,
@@ -1174,6 +1182,7 @@ export function apply(ctx: ClientContext): void {
             exitBotMode: () => ctx.layout.selectPanel(null),
             toggleSidebar: () => ctx.layout.toggleSidebar(),
             openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+            quickSwitcherSettings,
           }),
         },
         BotModeSidebar,

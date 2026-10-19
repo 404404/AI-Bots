@@ -229,6 +229,7 @@ export function ApprovalCard({
         <CardButtons stack>
           <Button
             label={t.allowOnce}
+            testID="approval-allow-once"
             tone="primary"
             disabled={phase.busy !== undefined}
             busy={phase.busy === 'allowed-once'}
@@ -237,6 +238,7 @@ export function ApprovalCard({
           {offersAlwaysAllow(request.toolName) ? (
             <Button
               label={t.alwaysAllow}
+              testID="approval-always-allow"
               disabled={phase.busy !== undefined}
               busy={phase.busy === 'allowed-always-exact'}
               onPress={() => void decide('allowed-always-exact')}
@@ -244,6 +246,7 @@ export function ApprovalCard({
           ) : null}
           <Button
             label={t.deny}
+            testID="approval-deny"
             tone="danger"
             disabled={phase.busy !== undefined}
             busy={phase.busy === 'rejected'}

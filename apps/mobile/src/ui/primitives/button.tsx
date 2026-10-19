@@ -18,6 +18,7 @@ export function Button({
   on = 'raised',
   variant = 'filled',
   icon,
+  testID,
 }: {
   label: string;
   onPress(): void;
@@ -27,6 +28,7 @@ export function Button({
   on?: LayerName;
   variant?: 'filled' | 'text';
   icon?: ReactNode;
+  testID?: string;
 }) {
   const theme = useDesignTheme();
   const colors = buttonColors(theme, tone, on);
@@ -38,6 +40,7 @@ export function Button({
       : theme.color.fg;
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || busy, busy }}

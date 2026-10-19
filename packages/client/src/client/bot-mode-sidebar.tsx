@@ -24,6 +24,7 @@ import { observeHumanAttention } from './messaging-defaults-live.js';
 import { useMountedResource } from './mounted-resource.js';
 import { OnboardingLauncher } from './onboarding-checklist-view.js';
 import { PinnedPanelCards } from './pinned-panel-cards.js';
+import type { QuickSwitcherSettings } from './quick-switcher.js';
 import type { ShortcutBindings } from './shortcut-bindings.js';
 import type { WindowCompanions } from './window-companions.js';
 
@@ -41,6 +42,7 @@ export interface BotModeSidebarProps {
   exitBotMode: () => void;
   toggleSidebar: () => void;
   openBotSettings: (sectionId?: string) => void;
+  quickSwitcherSettings?: QuickSwitcherSettings | undefined;
   t: BotHarnessTranslate;
 }
 
@@ -201,6 +203,7 @@ export function BotModeSidebar(props: BotModeSidebarProps): ReactElement {
           useBotModePrefs={useBotModePrefs}
           channelSidebar={props.channelSidebar}
           shortcutBindings={props.shortcutBindings}
+          quickSwitcherSettings={props.quickSwitcherSettings}
           setSortMode={props.setSortMode}
           setSectionSortMode={props.setSectionSortMode}
           t={t}

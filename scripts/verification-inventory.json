@@ -578,6 +578,14 @@
       "gap": "Explicitly opted-in macOS0.2.1-rc.2 product composition qualified on representative input/popup/native guest paths; unknown versions/arbitrary pages are not qualified. Windows/Linux remain S3. CI and unmerged PR delivery are separate from runtime evidence."
     },
     {
+      "id": "client.global-search",
+      "label": "Open global search with Alt/Option+K and find conversations and Bot settings by pinyin or English",
+      "source": "packages/client/src/client/quick-switcher.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/global-search.md",
+      "task": 2360,
+      "gap": "Headless Web capture covers the search path; the native Desktop key path needs Human QA on macOS and Windows."
+    },
+    {
       "id": "desktop.local-appearance",
       "label": "Save independent device-local DeepSeekBot mode, palettes and Primary with explicit Client CLI control",
       "source": "packages/client/src/client/appearance-settings.tsx",

@@ -70,7 +70,8 @@ import {
   webQuickSwitcherBlocked,
   webShortcutBlocked,
 } from './channel-shortcuts.js';
-import { QuickSwitcher } from './quick-switcher.js';
+import { QuickSwitcher, type QuickSwitcherSettings } from './quick-switcher.js';
+import { searchTextMatches } from './search-match.js';
 import { ShortcutBindings } from './shortcut-bindings.js';
 import { quickSwitcherEntries, type QuickSwitcherEntry } from './quick-switcher-rank.js';
 import {
@@ -402,6 +403,7 @@ interface SidebarProps {
   setSectionSortMode: (sectionId: string, mode: BotModeSortMode | undefined) => void;
   channelSidebar?: ChannelSidebarRegistry | undefined;
   shortcutBindings?: ShortcutBindings | undefined;
+  quickSwitcherSettings?: QuickSwitcherSettings | undefined;
   t: BotHarnessTranslate;
 }
 
@@ -437,7 +439,7 @@ interface PinDragState {
 
 function matchesQuery(query: string, ...values: (string | undefined)[]): boolean {
   if (query.length === 0) return true;
-  return values.some((value) => (value ?? '').toLowerCase().includes(query));
+  return values.some((value) => searchTextMatches(value ?? '', query));
 }
 
 function RoleBadges({ roles }: { roles: readonly string[] }): ReactElement | null {
@@ -949,6 +951,7 @@ export function BotSidebar({
   setSectionSortMode,
   channelSidebar,
   shortcutBindings = fallbackShortcutBindings,
+  quickSwitcherSettings,
   t,
 }: SidebarProps): ReactElement {
   const state = useClientState();
@@ -2838,6 +2841,17 @@ export function BotSidebar({
       {quickSwitcherOpen ? (
         <QuickSwitcher
           entries={quickSwitcherEntries(state.channels, state.bots, state.roster.hidden)}
+          settings={
+            quickSwitcherSettings === undefined
+              ? undefined
+              : {
+                  search: quickSwitcherSettings.search,
+                  open: (result) => {
+                    setQuickSwitcherOpen(false);
+                    quickSwitcherSettings.open(result);
+                  },
+                }
+          }
           bots={botBySlug}
           activityOf={(bot) => personaBotActivity(state, bot)}
           shortcutBindings={shortcutBindings}
