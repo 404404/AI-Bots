@@ -96,3 +96,9 @@ Source tests cover state/refusal and cleanup, with real pinned shortcut normaliz
 CLI read/set/default/reset has reached the isolated desktop owner. Source tests and loaded
 shells do not qualify native input, visual restoration, true process restart, extreme layouts,
 Human QA or Windows/Linux. Those remain explicit issue/PR gates until measured.
+
+The copied Client exposes its zoom lease only when the actual `__DSH_BOOT__.release.version`
+is 0.2.1-rc.2. Unknown/missing releases retain the font-key scope and expose no zoom capability.
+This runtime guard does not remove an already installed Profile package override or qualify
+that copied theme on another Host. Disable the override before switching outside the verified
+Desktop/Host/Client tuple; re-enable only after qualifying the new combination.

@@ -4,7 +4,7 @@ Current implementation: ordinary product installation carries the licensed theme
 
 The earlier grouped replacement booted but renamed the Settings namespace to `qualified-theme`. That was not a valid manual-font preservation proof. Both sync and async Node-hook experiments also failed actual DSH metadata discovery despite standalone resolver tests. Those experiments are not part of the delivered source. The historical validation record must not be used to accept the discarded composition.
 
-Actual prepared product `0.0.0-zoom.2268.7`, isolated macOS Node v24.21.0 / DSH 0.2.1-rc.2, authenticated native Host API:
+Actual prepared product `0.0.0-zoom.2268.9`, isolated macOS Node v24.21.0 / DSH 0.2.1-rc.2, authenticated native Host API:
 
 - Baseline native `ui-theme`: font 16, dark preference.
 - Product installed and explicitly enabled: exactly one native theme module id, compatibility marker present, original namespace and font 16/dark retained.
@@ -12,10 +12,12 @@ Actual prepared product `0.0.0-zoom.2268.7`, isolated macOS Node v24.21.0 / DSH 
 - Setup disable plus restart restores native theme bytes without the marker; the same original namespace still contains 17/dark.
 - pnpm may leave an unlisted link on remove. Setup removes only its exact owned symlink and verifies absence; other overrides are refused.
 
-These are real tarball/Host/settings checks, not native Desktop visual or manual-font UI acceptance. Both supported Host versions passed fresh ordinary product install, Bot/DM creation and real restart. Reinstall, local-version upgrade and rollback preserved the same canonical Bot identity and one theme module. Raw product removal fell back to the original native theme and retained font 17; explicit post-removal cleanup removed the owned override. The setup command refused 0.2.0-rc.2 without changing the Profile. All 47 focused tests, lint, format, types and targeted product build passed; see `validation.json`. No model or external IM delivery is claimed.
+These are real tarball/Host/settings checks, not native Desktop visual or manual-font UI acceptance. Both supported Host versions passed fresh ordinary product install, Bot/DM creation and real restart. Reinstall, local-version upgrade and rollback preserved the same canonical Bot identity and one theme module. Raw product removal fell back to the original native theme and retained font 17; explicit post-removal cleanup removed the owned override. The setup command refused 0.2.0-rc.2 without changing the Profile. All 48 focused tests, lint, format, types and targeted product build passed; see `validation.json`. No model or external IM delivery is claimed.
 
 The existing native window remains held for the Human's physical IME check and has not been silently replaced. Earlier native shortcut recording rejected an occupied binding without changing zoom; a temporary custom binding changed one level and retained a synthetic draft, then was reset. That earlier window is not evidence for this corrected package composition.
 
 No new rendered UI is introduced by this packaging/CLI correction. A fresh native-install before/after pair remains pending; the separate fresh-product Web origin was denied by browser approval and no alternate browser/CDP access was attempted. Required wallpaper and chrome before/after evidence belongs to the separate PRs #2294/#2295. Same-user-data Host switching, corrected packed native activation, physical IME and the broader #2269 native matrix remain open.
 
 #2268 and #2269 remain unaccepted. Windows/Linux are deferred to Human testing under #2270. No merge or release.
+
+The final generated Client checks actual `__DSH_BOOT__.release.version` before exposing its font-key lease. Generated-adapter execution tests cover qualified, mismatched and missing versions. The preserved native window's boot version was read without changing its state, but the new guard is not yet loaded there. The final candidate repeated the five native Host/settings lifecycle checks; its setup and Host bytes match the earlier .7/.8 reinstall/upgrade/rollback artifacts. Existing Profile overrides still need explicit disable before switching outside the qualified tuple; absence of the zoom capability does not qualify a copied theme on unknown versions.

@@ -28,7 +28,7 @@ export function adaptZoomTheme(client) {
 
         const installFontKeys = () => installFontSizeShortcuts(ctx, delta => this.adjustFontSizes(delta));
         let fontKeys = installFontKeys();
-        if (location.protocol === 'dsh-app:' && location.hostname === 'app' && document.documentElement.dataset.platform === 'darwin') {
+        if (location.protocol === 'dsh-app:' && location.hostname === 'app' && document.documentElement.dataset.platform === 'darwin' && window.__DSH_BOOT__?.release?.version === '0.2.1-rc.2') {
           let alive = true, held = false;
           const compatibility = {
             version: 1, desktopVersion: '0.2.1-rc.2',

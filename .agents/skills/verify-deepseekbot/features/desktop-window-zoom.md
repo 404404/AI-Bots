@@ -93,3 +93,9 @@ module id. Read pre-existing fonts, edit them through native Settings, restart a
 Run `disable` before product removal, restart and verify original theme bytes and retained
 font preferences. The package command reports configuration only, not runtime acceptance.
 Never replace this check with a standalone Node hook test or rename the settings namespace.
+
+The copied Client exposes its zoom lease only when the actual `__DSH_BOOT__.release.version`
+is 0.2.1-rc.2. Unknown/missing releases retain the font-key scope and expose no zoom capability.
+This runtime guard does not remove an already installed Profile package override or qualify
+that copied theme on another Host. Disable the override before switching outside the verified
+Desktop/Host/Client tuple; re-enable only after qualifying the new combination.
