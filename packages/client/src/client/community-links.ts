@@ -1,4 +1,3 @@
-/** Public community entry points, kept in step with the README Community section. */
 export const COMMUNITY = {
   qqGroup: '1125565676',
   discord: 'https://discord.gg/aEB2Ayhu7B',
@@ -8,7 +7,6 @@ export const COMMUNITY = {
 
 const STARS_KEY = 'botharness/community/github-stars';
 
-/** The last star count this device saw, so an offline intro still shows a number. */
 export function cachedGithubStars(): number | undefined {
   try {
     const value = Number(localStorage.getItem(STARS_KEY));
@@ -18,7 +16,6 @@ export function cachedGithubStars(): number | undefined {
   }
 }
 
-/** Fetch the live star count; resolves undefined when offline, rate limited or slow. */
 export async function fetchGithubStars(
   signal: AbortSignal,
   request: typeof fetch = fetch,

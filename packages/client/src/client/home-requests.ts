@@ -3,7 +3,6 @@ type HomeRequestListener = (body: string) => void;
 const listeners = new Set<HomeRequestListener>();
 let pending: string | undefined;
 
-/** Send a message to Tob through the Home composer, or keep it until Home mounts. */
 export function requestHomeMessage(body: string): void {
   const listener = [...listeners].at(-1);
   if (listener) listener(body);

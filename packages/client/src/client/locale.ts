@@ -348,7 +348,6 @@ export const zh = {
     '我是你的本地总管。你可以请我创建 Bot、拉群、安排任务，也可以问我每个 Bot 最近在忙什么。这里的每个 Bot 都有自己的性格和记忆，会记得你们聊过的事。',
   'intro.welcome.next': '先花一分钟把这里布置成你喜欢的样子，然后我们就开始吧。',
   'intro.founder.title': '创始人的话',
-  // TODO(Vain): replace with DoodleBear's founder note.
   'intro.founder.body': '【待补充：DoodleBear 的创始人寄语】',
   'intro.founder.signature': '—— DoodleBear',
   'intro.theme.title': '选一个你喜欢的样子',
@@ -4235,7 +4234,6 @@ export const en = {
     'I’m your local steward. Ask me to create Bots, start groups and plan tasks, or ask what each Bot has been up to. Every Bot here has its own personality and memory, and remembers what you talked about.',
   'intro.welcome.next': 'Take a minute to make this place yours, then let’s get started.',
   'intro.founder.title': 'From the founder',
-  // TODO(Vain): replace with DoodleBear's founder note.
   'intro.founder.body': '[To be added: a note from DoodleBear]',
   'intro.founder.signature': '— DoodleBear',
   'intro.theme.title': 'Pick a look you like',
