@@ -56,8 +56,6 @@ export interface MarkdownBlock {
 }
 
 function parseBlocks(source: string, normalized: string) {
-  // Only a letter-led, single plain paragraph can bypass GFM. Exclude inline
-  // syntax, entities and autolinks; any later syntax reparses the whole tail.
   if (
     /^\p{L}/u.test(normalized) &&
     !/[\\`*_[\]<>~&:@\r\n\t]/.test(normalized) &&

@@ -34,7 +34,6 @@ it.each([
   for (let end = 0; end <= text.length; end++) {
     const source = text.slice(0, end);
     const blocks = parse(source);
-    // A single ordinary paragraph must retain the exact lexer token structure.
     const expected = Lexer.lex(source, { gfm: true });
     if (expected.length === 1 && expected[0]?.type === 'paragraph') {
       expect(blocks).toHaveLength(1);
