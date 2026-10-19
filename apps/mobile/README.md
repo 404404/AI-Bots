@@ -145,6 +145,18 @@ The web render is layout evidence, not native evidence: it shows the app's own v
 
 The device credential is stored only in the platform's secure storage and never logged; the Host keeps only its hash. "Unpair" forgets it on the phone; revoking it in the Web Client cuts the phone off on the Host.
 
+## TestFlight and Google Play test builds
+
+The `store-test` EAS profile builds the formal app: **DeepSeekBot** / `app.deepseekbot.mobile`, scheme `deepseekbot`, owner `deepseekbots-team` and the linked EAS project (`app.config.js` reads `DEEPSEEKBOT_APP_VARIANT=store`). Development builds keep `DeepSeekBot Dev` / `ai.botharness.deepseekbot.dev`. The store build sets `EXPO_PUBLIC_DEEPSEEKBOT_CLOUD=off`, so it only pairs with the Human's own Computers over Tailscale HTTPS: a fresh install opens pairing, and cloud Channels, workspace tabs and cloud links are hidden. Build numbers are remote and auto-increment; OTA updates stay off.
+
+```bash
+cd apps/mobile
+npx eas-cli build:version:get -p all -e store-test   # once: compare with App Store Connect and Play Console
+npx eas-cli build --profile store-test --platform all --auto-submit
+```
+
+`--auto-submit` uploads iOS to TestFlight (`ascAppId` in `eas.json`) and Android to the Play internal track as a draft, which is rolled out in Play Console. Google Play needs one manual AAB upload before the API (and so `eas submit`) can upload, plus a Google service account key in EAS credentials. Android push needs FCM credentials (`npx eas-cli credentials`); without them the app works but cannot register for notifications.
+
 ## Optional statistics
 
 Phone statistics default on for new installs and preserve saved opt-outs, independently of Host telemetry. Settings places the switch last with collapsed details. A one-time informational notice follows the Web client; collection does not wait for dismissal. Public mobile privacy copy and device qualification remain release gates. See [privacy, configuration and device acceptance](../../docs/mobile-statistics.md). Builds send nothing unless explicitly configured for tagged QA or qualified production.
