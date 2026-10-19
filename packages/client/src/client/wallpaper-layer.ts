@@ -31,7 +31,7 @@ export function mountWallpaper(owner: Wallpaper): () => void {
 :root .bh-workspace-mount[data-wallpaper-active] .bh-dock[data-workspace-dock] .dv-dockview,
 :root .bh-workspace-mount[data-wallpaper-active] .bh-channel-session-divider,
 :root .bh-workspace-mount[data-wallpaper-active] .bh-message-member-divider { background:transparent; }
-:root .bh-workspace-mount[data-workspace-enabled][data-wallpaper-active] .bh-dock[data-workspace-dock] :is(.dv-tabs-and-actions-container, .bh-channel-session-header) { border-bottom-color:transparent; background-clip:padding-box; }
+:root .bh-workspace-mount[data-workspace-enabled][data-wallpaper-active] .bh-dock[data-workspace-dock] .bh-dock-theme .dv-groupview :is(.dv-tabs-and-actions-container, .bh-channel-session-header) { border-bottom-color:transparent; background-clip:padding-box; }
 :root[data-platform="darwin"]:not([data-fullscreen]) .bh-workspace-mount[data-workspace-enabled][data-wallpaper-active] > .bh-workspace-chrome { background:transparent; backdrop-filter:none; }
 `;
   document.head.append(style);
