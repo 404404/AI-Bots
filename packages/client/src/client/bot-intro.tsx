@@ -215,6 +215,7 @@ const styles = stylex.create({
     lineHeight: text.bodyLine,
     fontWeight: text.strong,
   },
+  starterItem: { display: 'flex', flexDirection: 'column' },
   note: { display: 'flex', flexDirection: 'column', gap: space.x2 },
   signature: { margin: 0, alignSelf: 'flex-end', color: color.muted, fontSize: text.bodySize },
   section: { display: 'flex', flexDirection: 'column', gap: space.x4, minWidth: 0 },
@@ -805,7 +806,7 @@ function CommunityStep({
           onClick={() => {
             track('qq');
             void navigator.clipboard
-              .writeText(COMMUNITY.qqGroup)
+              ?.writeText(COMMUNITY.qqGroup)
               .then(() => setCopied(true))
               .catch(() => {});
           }}
@@ -834,18 +835,18 @@ function StartStep({
       </div>
       <div {...stylex.props(styles.starters)} role="list" aria-label={t('home.starters')}>
         {STARTERS.map(({ key, id }) => (
-          <button
-            key={key}
-            type="button"
-            role="listitem"
-            onClick={() => pick(id, t(key))}
-            {...stylex.props(styles.link, styles.starter)}
-          >
-            <span {...stylex.props(styles.linkIcon)}>
-              <ChannelSidebarIcon name="messages-circle" size={18} />
-            </span>
-            <span {...stylex.props(styles.linkText)}>{t(key)}</span>
-          </button>
+          <div key={key} role="listitem" {...stylex.props(styles.starterItem)}>
+            <button
+              type="button"
+              onClick={() => pick(id, t(key))}
+              {...stylex.props(styles.link, styles.starter)}
+            >
+              <span {...stylex.props(styles.linkIcon)}>
+                <ChannelSidebarIcon name="messages-circle" size={18} />
+              </span>
+              <span {...stylex.props(styles.linkText)}>{t(key)}</span>
+            </button>
+          </div>
         ))}
       </div>
       <Button variant="ghost" onClick={() => pick('own')}>

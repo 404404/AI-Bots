@@ -238,13 +238,14 @@ export function HomePanel({
     for (const item of added) startUpload(item);
     return next.caret;
   };
-  const submit = async (text = draft) => {
+  const submit = async (text = draft, draftAfterSuccess = '') => {
+    const current = uploadsRef.current;
     if (
       !home ||
       !ready ||
       sending.current ||
-      (!hasVisibleText(text) && !uploads.length) ||
-      uploads.some((x) => x.status !== 'ready' || !x.ref)
+      (!hasVisibleText(text) && !current.length) ||
+      current.some((x) => x.status !== 'ready' || !x.ref)
     )
       return;
     sending.current = true;
@@ -261,7 +262,7 @@ export function HomePanel({
         'botharness/home-draft/' + home.botSlug,
         JSON.stringify({
           ...request,
-          uploads: uploadsRef.current.map((x) => ({
+          uploads: current.map((x) => ({
             id: x.id,
             name: x.file.name,
             mime: x.file.type,
@@ -279,12 +280,12 @@ export function HomePanel({
         home.channelId,
         body,
         request.id,
-        uploads.flatMap((x) => (x.ref ? [x.ref] : [])),
+        current.flatMap((x) => (x.ref ? [x.ref] : [])),
       );
       pending.current = undefined;
       uploadsRef.current = [];
       setUploads([]);
-      saveDraft('');
+      saveDraft(draftAfterSuccess);
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -295,8 +296,9 @@ export function HomePanel({
   const requests = useMountedResource<HTMLSpanElement>(() => {
     if (!home || ready === undefined) return;
     return receiveHomeMessages((body) => {
+      const previous = draftRef.current;
       saveDraft(body);
-      if (ready && !uploadsRef.current.length) void submit(body);
+      if (ready && !uploadsRef.current.length) void submit(body, previous);
       else setFocusSignal((value) => value + 1);
     });
   }, [home, ready]);

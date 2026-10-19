@@ -2053,7 +2053,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const properties: Record<string, string | boolean> = {};
       for (const [key, allowed] of Object.entries(shape)) {
         const value = source[key];
-        if (allowed === 'boolean' ? typeof value !== 'boolean' : !allowed.includes(String(value)))
+        if (
+          allowed === 'boolean'
+            ? typeof value !== 'boolean'
+            : typeof value !== 'string' || !allowed.includes(value)
+        )
           return invalidInput(`Invalid intro event ${key}`);
         properties[key] = value as string | boolean;
       }

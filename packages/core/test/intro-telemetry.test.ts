@@ -33,6 +33,7 @@ describe('intro and tutorial telemetry', () => {
     expect(methods.introEvent({ event: 'anything' }).ok).toBe(false);
     expect(methods.introEvent({ event: 'intro_step_viewed', step: 'secret' }).ok).toBe(false);
     expect(methods.introEvent({ event: 'intro_model_saved', advanced: 'yes' }).ok).toBe(false);
+    expect(methods.introEvent({ event: 'intro_step_viewed', step: ['welcome'] }).ok).toBe(false);
     expect(capture).not.toHaveBeenCalled();
   });
 

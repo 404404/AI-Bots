@@ -100,7 +100,8 @@ export class OnboardingController {
           try {
             localStorage.removeItem(`botharness/onboarding/layout-v2/${receipt.profileId}`);
           } catch {}
-          this.update({ layoutComplete: false, intro: { step: 0, hidden: false } });
+          this.update({ layoutComplete: false });
+          this.openIntro();
         }
         if (opening) this.revealHome?.();
       }
