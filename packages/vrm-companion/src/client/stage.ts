@@ -58,6 +58,8 @@ export interface Stage {
   shading(value: CharacterShading): void;
   dispose(): void;
 }
+const GRIP = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
+const SIDEWAYS = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2);
 export function mountStage(
   host: HTMLElement,
   model: string,
@@ -260,17 +262,19 @@ export function mountStage(
         return {
           reach: span(0, 0.22) - span(0.86, 1),
           lift: span(0.24, 0.42) - span(0.68, 0.84),
+          tilt: span(0.4, 0.48) - span(0.6, 0.68),
         };
       };
-      const drink = sip ? drinkPath(idleFrame.progress) : { reach: 0, lift: 0 };
+      const drink = sip ? drinkPath(idleFrame.progress) : { reach: 0, lift: 0, tilt: 0 };
       host.dataset.vrmIdle = idleFrame.action ?? 'none';
       pose(
         'spine',
-        sway + (working ? 0.04 : 0) - stretch * 0.14 + sip * drink.reach * 0.1 * (1 - drink.lift),
-        -outside * 0.3 - sip * drink.reach * 0.2,
+        sway + (working ? 0.04 : 0) - stretch * 0.14 + sip * drink.reach * 0.12 * (1 - drink.lift),
+        -outside * 0.3 - sip * drink.reach * 0.2 * (1 - drink.lift),
         0,
         blend,
       );
+      pose('rightShoulder', 0, sip * drink.reach * 0.15 * (1 - drink.lift), 0, blend);
       const looking = talking || waiting || blocked || glance > 0.5;
       const desk = room?.tableY ?? 0.75;
       const desiredGaze = looking
@@ -339,6 +343,11 @@ export function mountStage(
       const reach = sit * (1 - stretch);
       let rightGoal: Vector3 | undefined;
       let rightWeight = 0;
+      let rightGrip: Quaternion | undefined;
+      if (room) {
+        room.mug.position.copy(room.mugHome);
+        room.mug.quaternion.identity();
+      }
       if (room && head && (chin > 0 || sip > 0)) {
         actor.updateMatrixWorld(true);
         const facing = new Vector3(Math.sin(motion.yaw), 0, Math.cos(motion.yaw));
@@ -350,8 +359,18 @@ export function mountStage(
           rightGoal = mouth.clone().add(new Vector3(0.02, -0.07 * modelScale, 0));
           rightWeight = chin;
         } else {
-          const handle = room.mugHome.clone().add(room.mugGrip);
-          rightGoal = handle.lerp(mouth, drink.lift);
+          const lifted = sip * drink.lift;
+          const held = new Quaternion()
+            .setFromAxisAngle(new Vector3(1, 0, 0), -0.6 * drink.tilt)
+            .multiply(SIDEWAYS);
+          const atMouth = mouth.clone().sub(room.mugRim.clone().applyQuaternion(held));
+          room.mug.position.lerp(atMouth, lifted);
+          room.mug.quaternion.slerp(held, lifted);
+          rightGoal = room.mugWrist
+            .clone()
+            .applyQuaternion(room.mug.quaternion)
+            .add(room.mug.position);
+          rightGrip = room.mug.quaternion.clone().multiply(GRIP);
           rightWeight = sip * drink.reach;
         }
       }
@@ -396,18 +415,26 @@ export function mountStage(
           const wrist = new Quaternion().setFromEuler(
             new Euler(0, side === 'left' ? -Math.PI / 2 : Math.PI / 2, 0),
           );
+          const held = side === 'right' && rightGrip;
+          if (held) wrist.slerp(rightGrip!, free);
           hand.quaternion.slerp(
             hand.parent!.getWorldQuaternion(new Quaternion()).invert().multiply(wrist),
-            reach * (1 - free * 0.8),
+            held ? reach : reach * (1 - free * 0.8),
           );
         }
       }
-      if (room) {
-        const carried = sip * Math.min(drink.reach, Math.max(0, Math.min(1, drink.lift * 4)));
-        const hand = vrm.humanoid.getNormalizedBoneNode('rightHand');
-        room.mug.position.copy(room.mugHome);
-        if (carried > 0 && hand)
-          room.mug.position.lerp(hand.getWorldPosition(new Vector3()).sub(room.mugGrip), carried);
+      const grasp = rightGrip ? rightWeight : 0;
+      for (const side of ['left', 'right'] as const) {
+        const curl = side === 'right' ? 0.15 + grasp * 0.95 : 0.15;
+        const sign = side === 'right' ? 1 : -1;
+        for (const finger of ['Index', 'Middle', 'Ring', 'Little'] as const) {
+          pose(`${side}${finger}Proximal`, 0, 0, sign * curl, blend);
+          pose(`${side}${finger}Intermediate`, 0, 0, sign * curl * 1.1, blend);
+          pose(`${side}${finger}Distal`, 0, 0, sign * curl * 0.7, blend);
+        }
+        const thumb = side === 'right' ? grasp : 0;
+        pose(`${side}ThumbProximal`, 0, sign * -0.35 * thumb, sign * 0.2 * thumb, blend);
+        pose(`${side}ThumbDistal`, 0, sign * -0.3 * thumb, 0, blend);
       }
       const expressions = vrm.expressionManager;
       if (expressions?.getExpression('aa'))

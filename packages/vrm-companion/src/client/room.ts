@@ -173,13 +173,14 @@ export function createRoom(seatHeight: number) {
   root.add(decor.root);
   box(-0.85, tableY + 0.055, 0.4, 0.22, 0.007, 0.16, cream).rotation.y = 0.2;
   const mug = new Group();
-  const mugHome = new Vector3(0.02, tableY, 0.3);
+  const mugHome = new Vector3(0.12, tableY, 0.3);
   mug.position.copy(mugHome);
   root.add(mug);
   const cup = new Mesh(new CylinderGeometry(0.085, 0.075, 0.18, 32, 1, true), cream);
   cup.position.set(0, 0.14, 0);
   cup.castShadow = true;
   mug.add(cup);
+  mug.add(cylinder(0, 0.055, 0, 0.075, 0.075, 0.01, cream));
   const coffee = new MeshStandardMaterial({ color: 0x21120c, roughness: 0.22 });
   mug.add(cylinder(0, 0.215, 0, 0.078, 0.078, 0.005, coffee));
   const rim = new Mesh(new TorusGeometry(0.082, 0.006, 8, 32), cream);
@@ -198,10 +199,11 @@ export function createRoom(seatHeight: number) {
     root.add(wisp);
     steam.push(wisp);
   }
-  const mugGrip = new Vector3(0.07, 0.15, -0.07);
+  const mugWrist = new Vector3(0.075, 0.14, -0.1);
+  const mugRim = new Vector3(0.085, 0.23, 0);
   const handle = new Mesh(new TorusGeometry(0.055, 0.015, 8, 20), cream);
-  handle.position.copy(mugGrip);
-  handle.rotation.y = Math.PI / 4;
+  handle.position.set(0, 0.15, -0.1);
+  handle.rotation.y = Math.PI / 2;
   mug.add(handle);
   box(1.58, 0.8, -0.85, 0.44, 0.28, 0.2, cream);
   for (const x of [1.46, 1.7]) {
@@ -288,7 +290,8 @@ export function createRoom(seatHeight: number) {
     tableY,
     mug,
     mugHome,
-    mugGrip,
+    mugWrist,
+    mugRim,
     setMood,
     update,
     get assets() {
