@@ -726,9 +726,6 @@ export function ChannelComposer({
   };
   const handleFilePaste = (event: ClipboardEvent<HTMLElement>): boolean => {
     const clipboard = event.clipboardData;
-    // `files` and the file entries of `items` describe the same clipboard data, but
-    // Chromium builds a new File for each read with its own lastModified, so one image
-    // reads as two. Use `items` only when the platform leaves `files` empty.
     const listed = Array.from(clipboard.files);
     const files =
       listed.length > 0

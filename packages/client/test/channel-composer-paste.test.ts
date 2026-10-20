@@ -200,7 +200,6 @@ describe('Channel composer clipboard attachments', () => {
         }),
       ),
     );
-    // Chromium hands out a fresh File per read: same bytes, a later lastModified.
     const listed = new File(['image'], 'image.png', { type: 'image/png', lastModified: 1000 });
     const item = new File(['image'], 'image.png', { type: 'image/png', lastModified: 1002 });
     const shellPaste = vi.fn();
