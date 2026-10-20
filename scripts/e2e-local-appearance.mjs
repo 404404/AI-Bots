@@ -93,6 +93,11 @@ async function appearance() {
   await sleep(350);
 }
 async function select(name, value) {
+  if (await page.$(`[role="radiogroup"][aria-label="${name}"]`)) {
+    await page.locator(`::-p-aria(${value}[role="radio"])`).click();
+    await sleep(150);
+    return;
+  }
   await click(name);
   await page.locator(`::-p-aria(${value}[role="menuitem"])`).click();
   await sleep(150);
@@ -125,18 +130,14 @@ try {
   }));
   await appearance();
   await select('Theme', 'Light');
-  await select('Light palette', 'Mist Purple');
-  await select('Dark palette', 'Classic Blue');
+  await select('Colors', 'Mist Purple');
   await proof('01-light-purple');
   assert.equal(
     await page.$eval('[role="dialog"]', (n) => getComputedStyle(n).colorScheme),
     'light',
   );
-  await click('Light palette');
-  assert.equal(await page.$eval('[role="menu"]', (n) => getComputedStyle(n).colorScheme), 'light');
-  await page.keyboard.press('Escape');
   await select('Theme', 'Dark');
-  await proof('02-dark-blue');
+  await proof('02-dark-purple');
   assert.equal(await page.$eval('[role="dialog"]', (n) => getComputedStyle(n).colorScheme), 'dark');
   assert.deepEqual(
     await page.evaluate(() => ({
@@ -176,9 +177,9 @@ try {
   );
   assert.equal(await other.evaluate((k) => localStorage.getItem(k), key), otherBefore);
   await proof('04-cli-readback');
-  await select('Light palette', 'Mist Purple');
+  await select('Colors', 'Mist Purple');
   assert.equal((await read()).modes.light.primary, undefined);
-  assert.equal((await read()).modes.dark.preset, 'classic-blue');
+  assert.equal((await read()).modes.dark.preset, 'mist-purple');
   const conflict = await cli(
     'appearance-set',
     ['--client-id', target, '--patch-stdin', '--expected-revision', stored.revision],

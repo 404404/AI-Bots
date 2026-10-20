@@ -692,7 +692,7 @@ describe('Tool approval card', () => {
       );
       expect(container.textContent).toContain('终端 · 已允许');
       expect(container.textContent).toContain('等待运行名额');
-      expect(container.textContent).not.toContain('仅批准这一次');
+      expect(container.textContent).not.toContain('允许这次');
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1000);
       });
@@ -742,14 +742,14 @@ describe('Tool approval card', () => {
           }),
         );
       });
-      expect(container.textContent).toContain('仅批准这一次');
+      expect(container.textContent).toContain('允许这次');
       await act(async () => {
         window.dispatchEvent(
           new CustomEvent(WORKSPACE_GRANTS_CHANGED, { detail: { slug: 'ada' } }),
         );
       });
       expect(toolApprovalStatus).toHaveBeenCalledTimes(2);
-      expect(container.textContent).not.toContain('仅批准这一次');
+      expect(container.textContent).not.toContain('允许这次');
       expect(container.textContent).toContain('终端 · 已过期');
     } finally {
       await act(async () => root.unmount());
@@ -855,7 +855,7 @@ describe('Tool approval text follows the UI locale (#1293)', () => {
     expect(toolApprovalText(decision('rejected'), enTranslate)).toBe('This call was rejected');
     expect(toolApprovalText(decision('allowed-once'), enTranslate)).toBe('This call was approved');
     expect(toolApprovalText(decision('allowed-always-all'), enTranslate)).toBe(
-      'Automatic approval rule saved; this call was approved',
+      'Allowed this time and saved your choice',
     );
     expect(toolApprovalText(decision('rejected'), zhTranslate)).toBe('已拒绝这一次调用');
     expect(toolApprovalText({}, enTranslate)).toBeUndefined();

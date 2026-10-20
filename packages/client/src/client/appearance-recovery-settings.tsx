@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
+import * as stylex from '@stylexjs/stylex';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import { AppearanceError, type Appearance } from './appearance.js';
 import type { Wallpaper } from './wallpaper.js';
@@ -7,6 +8,17 @@ import { resetAppearance } from './appearance-recovery.js';
 import { SettingsSection } from './ds/settings-row.js';
 import { Note } from './ds/note.js';
 import { PanelDialog } from './ds/panel-dialog.js';
+import { space } from './ds/tokens.stylex.js';
+
+const styles = stylex.create({
+  actions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: space.x3,
+    paddingTop: space.x3,
+  },
+});
+
 export function AppearanceRecoverySettings({
   appearance,
   wallpaper,
@@ -22,18 +34,18 @@ export function AppearanceRecoverySettings({
   const [result, setResult] = useState<'done' | 'cleared' | 'partial' | 'failed'>();
   return (
     <>
-      <SettingsSection title={t('recovery.title')}>
-        <Note>
-          {t('recovery.scope', {
-            mode: t(snapshot.mode === 'light' ? 'settings.theme.light' : 'settings.theme.dark'),
-          })}
-        </Note>
+      <SettingsSection
+        title={t('recovery.title')}
+        description={t('recovery.scope', {
+          mode: t(snapshot.mode === 'light' ? 'settings.theme.light' : 'settings.theme.dark'),
+        })}
+      >
         {result && (
           <Note tone={result === 'partial' || result === 'failed' ? 'danger' : 'success'}>
             {t(`recovery.${result}`)}
           </Note>
         )}
-        <div>
+        <div {...stylex.props(styles.actions)}>
           <Button
             variant="outline"
             disabled={busy}
@@ -50,7 +62,7 @@ export function AppearanceRecoverySettings({
             }}
           >
             {t('recovery.clear')}
-          </Button>{' '}
+          </Button>
           <Button
             variant="outline"
             disabled={busy}

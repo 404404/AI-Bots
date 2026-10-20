@@ -375,6 +375,10 @@ async function shot(options, paths) {
   try {
     page = await browser.newPage();
     await page.setExtraHTTPHeaders({ 'accept-language': lang });
+    await page.evaluateOnNewDocument((language) => {
+      Object.defineProperty(navigator, 'language', { get: () => language });
+      Object.defineProperty(navigator, 'languages', { get: () => [language] });
+    }, lang);
     await page.setViewport({
       width: options.width,
       height: options.height,
@@ -391,7 +395,7 @@ async function shot(options, paths) {
     await page.waitForFunction(
       () =>
         [...document.querySelectorAll('button')].some((node) =>
-          ['Settings', '设置'].includes(node.textContent?.trim() ?? ''),
+          ['Settings', '设置', 'More', '更多'].includes(node.textContent?.trim() ?? ''),
         ),
       { timeout: 30_000 },
     );

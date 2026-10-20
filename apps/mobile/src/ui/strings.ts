@@ -469,6 +469,7 @@ const en = {
   expired: 'This request expired before a decision, so nothing was sent.',
   outcome: {
     'allowed-once': 'allowed once',
+    'allowed-always-tool': 'Always allowed for this tool',
     'allowed-always-exact': 'always allowed for this command',
     'allowed-always-all': 'always allowed for this tool',
     rejected: 'rejected',
@@ -573,6 +574,7 @@ const en = {
   option: (letter: string, label: string) => `${letter}. ${label}`,
   cardOutcome: {
     'allowed-once': 'Allowed once',
+    'allowed-always-tool': 'Always allowed for this tool',
     'allowed-always-exact': 'Always allowed',
     'allowed-always-all': 'Always allowed',
     rejected: 'Denied',
@@ -605,7 +607,14 @@ const en = {
   appVersionUnknown: 'Unknown',
   back: 'Back',
   backToChats: 'Back to Chats',
-  workingPreview: 'Working…',
+  rowStatus: {
+    'needs-you': 'Needs you',
+    blocked: 'Blocked',
+    working: 'Working',
+    paused: 'Paused',
+    'done-unread': 'Finished, unread',
+    done: 'Finished',
+  },
   effect: {
     searching: 'Searching',
     coding: 'Editing',
@@ -613,6 +622,7 @@ const en = {
     'generic-working': 'Working',
   },
   needsYouCount: (count: number) => (count === 1 ? 'needs you' : `${count} need you`),
+  sectionNeedsYou: (count: number) => (count === 1 ? '1 needs you' : `${count} need you`),
   unreadCount: (count: number) => (count === 1 ? '1 unread message' : `${count} unread messages`),
   mutedUnread: (count: number) =>
     count === 1 ? 'muted, 1 unread message' : `muted, ${count} unread messages`,
@@ -1455,6 +1465,7 @@ const zh: typeof en = {
   expired: '这个请求在处理前已过期，没有发送任何决定。',
   outcome: {
     'allowed-once': '允许一次',
+    'allowed-always-tool': '始终允许此工具',
     'allowed-always-exact': '始终允许这条命令',
     'allowed-always-all': '始终允许这个工具',
     rejected: '已拒绝',
@@ -1555,6 +1566,7 @@ const zh: typeof en = {
   option: (letter: string, label: string) => `${letter}. ${label}`,
   cardOutcome: {
     'allowed-once': '已允许一次',
+    'allowed-always-tool': '始终允许此工具',
     'allowed-always-exact': '已始终允许',
     'allowed-always-all': '已始终允许',
     rejected: '已拒绝',
@@ -1587,7 +1599,14 @@ const zh: typeof en = {
   appVersionUnknown: '未知',
   back: '返回',
   backToChats: '返回聊天列表',
-  workingPreview: '工作中…',
+  rowStatus: {
+    'needs-you': '正在等待你',
+    blocked: '已受阻',
+    working: '工作中',
+    paused: '已暂停',
+    'done-unread': '已完成，未读',
+    done: '已完成',
+  },
   effect: {
     searching: '正在搜索',
     coding: '正在编辑',
@@ -1595,6 +1614,7 @@ const zh: typeof en = {
     'generic-working': '工作中',
   },
   needsYouCount: (count: number) => (count === 1 ? '等你处理' : `${count} 项等你处理`),
+  sectionNeedsYou: (count: number) => `${count} 个需要你`,
   unreadCount: (count: number) => `${count} 条未读消息`,
   mutedUnread: (count: number) => `已静音，${count} 条未读消息`,
   closeSearch: '关闭搜索',

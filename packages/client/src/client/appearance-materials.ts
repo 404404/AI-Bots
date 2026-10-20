@@ -1,4 +1,9 @@
-import type { AppearanceMode, AppearanceModeConfig, AppearancePreset } from './appearance.js';
+import type {
+  AppearanceConfig,
+  AppearanceMode,
+  AppearanceModeConfig,
+  AppearancePreset,
+} from './appearance.js';
 export interface AppearanceMaterial extends Record<string, unknown> {
   color: string;
   opacity: number;
@@ -104,4 +109,18 @@ export function clearMaterialAdjustments(config: AppearanceModeConfig): void {
     delete material.opacity;
     delete material.blur;
   }
+}
+export const WALLPAPER_MATERIALS = {
+  header: { opacity: 80 },
+  body: { opacity: 50, blur: 2 },
+} as const;
+export function wallpaperMaterialPatches(config: AppearanceConfig) {
+  return (['light', 'dark'] as const)
+    .filter((mode) =>
+      (['header', 'body'] as const).every((part) => {
+        const material = config.modes[mode].materials?.[part];
+        return material?.opacity === undefined && material?.blur === undefined;
+      }),
+    )
+    .map((mode) => ({ mode, materials: WALLPAPER_MATERIALS }));
 }

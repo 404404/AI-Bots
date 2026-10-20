@@ -96,6 +96,7 @@ deepseekbot send-status <bot-id> --message-id <回执中的消息-id>
 deepseekbot channel-messages <channel-id> --host http://127.0.0.1:31917 --limit 20
 deepseekbot tool-approval-status <channel-id> --message-id <卡片-id>
 deepseekbot tool-approval-decide <channel-id> --message-id <卡片-id> --outcome allowed-once
+deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-always-tool
 deepseekbot tool-approval-decide <channel-id> --message-id <卡片-id> --outcome allowed-always-kind
 deepseekbot tool-approval-decide <channel-id> --message-id <卡片-id> --outcome rejected
 deepseekbot user-question-status <channel-id> --message-id <卡片-id>
@@ -123,7 +124,7 @@ deepseekbot workspace-create /srv/bots/workspace
 deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 ```
 
-`access-set` 设置 `danger-full-access` 时必须带 `--acknowledge-risk`：完全访问下 Bot 可以执行任意命令，并且使用浏览器和 Computer 都不弹审批卡。`--scope chat` 同时作用于 Bot 自己的对话；`assignments` 只作用于新的 Assignment。`settings` 返回一个命名空间的 `{ns, revision, value}`；`settings-set` 从标准输入读取一个字段 JSON 对象，并基于该版本号应用，所以并发修改会失败而不是被覆盖。只有 Host 标记为可在线修改的字段才能这样改。`workspace-create` 接受绝对路径并返回 Host 工作区，其 id 供 `grant-create` 使用。
+`access-set` 设置 `danger-full-access` 时必须带 `--acknowledge-risk`：完全访问下普通工具请求不再逐次弹卡；识别出的权限／策略变更仍需 Human 本次决定，浏览器和 Computer 保留各自能力检查。`--scope chat` 同时作用于 Bot 自己的对话；`assignments` 只作用于新的 Assignment。`settings` 返回一个命名空间的 `{ns, revision, value}`；`settings-set` 从标准输入读取一个字段 JSON 对象，并基于该版本号应用，所以并发修改会失败而不是被覆盖。只有 Host 标记为可在线修改的字段才能这样改。`workspace-create` 接受绝对路径并返回 Host 工作区，其 id 供 `grant-create` 使用。
 
 ### 频道与群组
 
@@ -695,6 +696,17 @@ Bot 名字只是标签，身份是 id。不带 operation key 时，每次创建�
 
 `channels` 列出 Channel，`channel-messages` 读一页消息（从新到旧，`--limit`、`--before` 分页）。`grants` 列出 Bot 的 workspace 授权，`grant-revoke`/`grant-write-set` 管理它们；新建授权需要 Host 的 workspace 注册表，仍是 Host 侧动作。`schedules` 列出 Bot 的计划；`schedule-create` 要 `--title`、`--prompt` 和唯一一种触发器（`--every` 秒数、`--daily`/`--weekly` 时间加 `--weekdays`、`--once-date` 加 `--once-time`、`--cron`），日历触发器必须传 `--timezone`；`schedule-update`/`schedule-delete`/`schedule-history` 用 `--sid` 指定计划；`schedule-run-now` 记录一次手动触发，Host 启动后执行；`schedule-preview` 不指定 Bot、只渲染触发器的未来时刻。`pairings` 列出 Bot 的 IM 配对请求。不存在的计划报 `unknown-schedule`；删除返回 `removed`。
 
+### 在线批准工作区请求
+
+```bash
+deepseekbot inbox --category action --bot <bot-id>
+deepseekbot workspace-options
+deepseekbot grant-request-approve <bot-id> --channel <channel-id> --request <message-id> --workspace <workspace-id> --confirm
+deepseekbot grants <bot-id>
+```
+
+`grant-request-approve` 与 Web 请求卡使用同一个仅 Owner 可调用的 Host 命令。Host 在同一事务中保存持续读写权限和关联 Grant 的决议，再沿既有 Inbox 继续原任务；已有只读 Grant 也可经这次明确确认升级。重复批准同一请求只读回既有决定，不重复创建 Grant 或唤醒；已撤销或改变的目标会被拒绝。目录卡不是工具批准，应使用此命令，而非 `tool-approval-decide`。缺少 `--confirm` 返回 `usage`，失效或不可用权限返回稳定拒绝代码。这是在线操作，不是直接修改数据库的离线修复。
+
 ## Memory
 
 `memory-snapshot`、`memory-file --path`、`memory-history [--limit]`、`memory-diff --sha` 读取 Bot 记忆库；`memory-save --path (--body | --body-stdin)` 写一个文件并提交。`--expected-head` 默认取当前 HEAD（要做 compare-and-swap 请显式传）；`--edit-id` 默认生成新的 UUID，重复提交幂等。HEAD 过期或无变化的写入报 `memory-conflict`，不存在的文件读回 `null`，非法 sha 报 `invalid-input`。
@@ -1043,6 +1055,17 @@ deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
 
 同一组壁纸命令也支持最大 100 MiB 的视频。提交前，指定 Client 必须实际播放解码并生成封面；不会转码原文件。`wallpaper-get` 返回临时观测的 `playback.state`（`playing`、`paused`、`poster`、`inactive`），降级时附带明确 `reason`。播放失败或之后的运行环境无法解码时使用已保存封面。图片上限仍为 20 MiB；兼容性按运行环境与编码分别验证，传输成功不等于可播放。
 
+壁纸是最多 24 项的壁纸库。导入会加入媒体并立即显示。`wallpaper-get` 返回 `wallpaper.library`：每项的 `id`、`kind`、大小和裁切，选中的 `active` 项以及轮播设置；`wallpaper.current` 是当前显示的那一项。
+
+```bash
+deepseekbot wallpaper-select --client-id <id> --expected-revision <revision> --wallpaper-item <item-id|none>
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision> --wallpaper-item <item-id>
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --wallpaper-item <item-id> --patch-stdin < crop.json
+echo '{"interval":900000,"shuffle":true}' | deepseekbot wallpaper-rotation --client-id <id> --expected-revision <revision> --patch-stdin
+```
+
+不带 `--wallpaper-item` 时，裁切和删除作用于当前显示的那一项。`none` 保留壁纸库但不显示壁纸。删除当前显示项会切到下一项。`interval` 取 `0`（关闭）、`60000`、`300000`、`900000`（默认）、`1800000` 或 `3600000` 毫秒；`shuffle` 随机顺序，且不会连续两次显示同一项。轮播按时钟计算，同一 Client 的所有窗口显示同一项，无需额外写入。全部恢复会清空壁纸库。
+
 ### 外观恢复
 
 先读取 `appearance-get --client-id <id>` 与 `wallpaper-get --client-id <id>`，两者修订号独立。
@@ -1053,3 +1076,9 @@ deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-re
 ```
 
 清除只移除指定模式的全部功能面板覆盖，包含已保存但当前未注册的目标；主题、全局材质、主色、另一模式、媒体和布局不变。全部恢复必须带 `--confirm-reset`，重置两套配色、模式和覆盖，并移除共享媒体；不修改 DSH、Bot 身份或业务数据。偏好写入失败时不开始媒体清理。`appearance-reset-wallpaper-failed` 表示默认配色已保存、媒体清理失败；须重读两个 owner，再用新修订号重试。不宣称 localStorage 与 IndexedDB 是同一事务，不自动重放已送达但超时的操作。
+
+### 三个审批动作（#2080）
+
+`tool-approval-decide ... --outcome allowed-always-tool` 对应网页的“始终允许”：批准本次并记住此 Bot、角色及当前授权范围中的当前工具。参数变化仍可匹配；其他工具和变化后的范围不能匹配。`tool-approval-rules` 返回 `tool` 类型；`tool-approval-rule-revoke --confirm` 撤销后恢复询问。旧 exact／broad／Secret 规则不改义。权限与策略变更不能记住；不可用的“始终允许”由 Host 返回带代码的拒绝。Secret CLI 仍只记住程序、账号及环境变量名；MCP 服务记忆保留独立检查。
+
+Full Access 保留原生 `ask`，使识别出的权限变更可以到达 Human；明确范围内的普通请求自动回答，不再逐次弹卡。不会扩大选定 mode／scope 或已有 Assignment 权限。原生 `never` 仍表示直接拒绝，没有绕过它。目录授权仍使用 `grant-request-approve --confirm`。

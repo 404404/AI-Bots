@@ -53,6 +53,11 @@ const cli = async (command, args = [], patch) => {
 };
 const click = (name) => page.locator(`::-p-aria(${name}[role="button"])`).click();
 const select = async (name, value) => {
+  if (await page.$(`[role="radiogroup"][aria-label="${name}"]`)) {
+    await page.locator(`::-p-aria(${value}[role="radio"])`).click();
+    await pause();
+    return;
+  }
   await click(name);
   await page.locator(`::-p-aria(${value}[role="menuitem"])`).click();
   await pause();
@@ -127,22 +132,31 @@ const record = () =>
         q.onerror = reject;
         q.onsuccess = () => {
           const db = q.result;
-          const r = db.transaction('assets').objectStore('assets').get('current');
-          r.onsuccess = async () => {
-            const v = r.result;
-            resolve(
-              v
-                ? {
-                    revision: v.revision,
-                    kind: v.kind,
-                    crop: v.crop,
-                    size: v.blob.size,
-                    bytes: Array.from(new Uint8Array(await v.blob.arrayBuffer())),
-                    poster: v.poster?.size,
-                  }
-                : null,
-            );
-            db.close();
+          const store = db.transaction('assets').objectStore('assets');
+          const index = store.get('library');
+          index.onsuccess = () => {
+            if (!index.result?.active) {
+              resolve(null);
+              db.close();
+              return;
+            }
+            const r = store.get('item:' + index.result.active);
+            r.onsuccess = async () => {
+              const v = r.result;
+              resolve(
+                v
+                  ? {
+                      revision: v.revision,
+                      kind: v.kind,
+                      crop: v.crop,
+                      size: v.blob.size,
+                      bytes: Array.from(new Uint8Array(await v.blob.arrayBuffer())),
+                      poster: v.poster?.size,
+                    }
+                  : null,
+              );
+              db.close();
+            };
           };
         };
       }),
@@ -192,7 +206,7 @@ try {
     await screenshot('before-settings');
     await (
       await page.$(
-        baseline ? 'input[aria-label="Upload image"]' : 'input[aria-label="Upload image or video"]',
+        baseline ? 'input[aria-label="Upload image"]' : 'input[aria-label="Add wallpaper"]',
       )
     ).uploadFile(imagePath);
     await page.waitForSelector('[data-wallpaper-preview]');
@@ -201,7 +215,9 @@ try {
     await screenshot('before-image');
   } else {
     await screenshot('after-settings');
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(videoPath);
+    await (await page.$('input[aria-label="Add wallpaper"]')).uploadFile(videoPath);
+    await page.waitForSelector('[data-wallpaper-item]');
+    await click('Adjust crop · Wallpaper 1');
     await page.waitForSelector('[data-wallpaper-preview] video');
     await screenshot('video-preview');
     await page.$eval('input[aria-label="Zoom"]', (n) => {
@@ -209,7 +225,8 @@ try {
       n.dispatchEvent(new Event('input', { bubbles: true }));
       n.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    await click('Use');
+    await click('Save');
+    await page.waitForFunction(() => !document.querySelector('[data-wallpaper-preview]'));
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => {
       const v = document.querySelector('[data-bh-wallpaper] video');
@@ -294,12 +311,10 @@ try {
     const oversized = resolve(out, 'oversized.webm');
     writeFileSync(oversized, 'x');
     truncateSync(oversized, 100 * 1024 * 1024 + 1);
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(oversized);
-    await page.locator('::-p-text(The media could not be decoded or saved)').wait();
+    await (await page.$('input[aria-label="Add wallpaper"]')).uploadFile(oversized);
+    await page.locator('::-p-text(Could not add or save)').wait();
     assert.deepEqual(await record(), accepted);
     unlinkSync(oversized);
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(videoPath);
-    await page.waitForSelector('[data-wallpaper-preview] video');
     await page.evaluate(() => {
       window.restoreVideoPut = IDBObjectStore.prototype.put;
       IDBObjectStore.prototype.put = function () {
@@ -308,23 +323,31 @@ try {
         return window.restoreVideoPut.apply(this, arguments);
       };
     });
-    await click('Use');
+    const items = (await page.$$('[data-wallpaper-item]')).length;
+    await (await page.$('input[aria-label="Add wallpaper"]')).uploadFile(videoPath);
+    await page.locator('::-p-text(Could not add or save)').wait();
     await pause();
     assert.deepEqual(await record(), accepted);
+    assert.equal((await page.$$('[data-wallpaper-item]')).length, items);
     await screenshot('video-storage-failure');
     await page.evaluate(() => {
       IDBObjectStore.prototype.put = window.restoreVideoPut;
       delete window.restoreVideoPut;
     });
-    await click('Cancel');
     const invalid = resolve(out, 'invalid.webm');
     writeFileSync(invalid, 'invalid video');
     await (
       await page.$(
-        baseline ? 'input[aria-label="Upload image"]' : 'input[aria-label="Upload image or video"]',
+        baseline ? 'input[aria-label="Upload image"]' : 'input[aria-label="Add wallpaper"]',
       )
     ).uploadFile(invalid);
-    await page.locator('::-p-text(The media could not be decoded or saved)').wait();
+    await page
+      .locator(
+        baseline
+          ? '::-p-text(The media could not be decoded or saved)'
+          : '::-p-text(Could not add or save)',
+      )
+      .wait();
     assert.deepEqual(await record(), accepted);
     await page.keyboard.press('Escape');
     await page.evaluate(() => {

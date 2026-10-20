@@ -6,6 +6,7 @@ export interface WireMessage {
   id: string;
   at: string;
   body: string;
+  author?: WireAuthor;
 }
 
 export type WireAuthor =
@@ -386,6 +387,7 @@ export interface ToolApprovalRequestCard {
 
 export type ToolApprovalOutcome =
   | 'allowed-once'
+  | 'allowed-always-tool'
   | 'allowed-always-exact'
   | 'allowed-always-all'
   | 'rejected';
