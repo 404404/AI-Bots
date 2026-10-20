@@ -1,6 +1,6 @@
 import { AppearanceContext } from './appearance-context.js';
 import type { Appearance } from './appearance.js';
-import { onboardingFor } from './onboarding.js';
+import { onboardingFor, type OnboardingViewState } from './onboarding.js';
 import { PointerMenu } from './ds/pointer-menu.js';
 import { useScopedRef, useScopedState } from './scoped-state.js';
 import { PanelEmptyState } from './ds/empty-state.js';
@@ -263,16 +263,29 @@ function authorLabel(
   }
 }
 
+// Every visible message formats its time on each render, and building an
+// Intl formatter costs far more than using one, so formatters are reused.
+const timeFormats = new Map<string, Intl.DateTimeFormat>();
+function timeFormat(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let format = timeFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale || undefined, options);
+    timeFormats.set(key, format);
+  }
+  return format;
+}
+
 function clockTime(at: string): string {
   const date = new Date(at);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return timeFormat('', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
 function fullTime(at: string, t: BotHarnessTranslate): string {
   const date = new Date(at);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(t('main.date.locale'), { dateStyle: 'full', timeStyle: 'short' });
+  return timeFormat(t('main.date.locale'), { dateStyle: 'full', timeStyle: 'short' }).format(date);
 }
 
 const messageStyles = stylex.create({
@@ -3503,6 +3516,18 @@ function BotMainContent({
 
 const subscribeWithoutPrefs = (): (() => void) => () => {};
 
+function releaseDeferred(state: OnboardingViewState): boolean {
+  return (
+    state.modelOpen ||
+    state.sendOpen ||
+    state.guideOpen ||
+    state.checklistOpen ||
+    state.sessionsTourOpen ||
+    state.intro !== undefined ||
+    (state.receipt === undefined && state.error === undefined)
+  );
+}
+
 export function BotMain({
   appearance,
   prefs,
@@ -3570,15 +3595,11 @@ export function BotPanel({
   t: BotHarnessTranslate;
 }): ReactElement {
   const onboarding = onboardingFor(actions);
-  const onboardingState = useSyncExternalStore(onboarding.subscribe, onboarding.getSnapshot);
-  const deferRelease =
-    onboardingState.modelOpen ||
-    onboardingState.sendOpen ||
-    onboardingState.guideOpen ||
-    onboardingState.checklistOpen ||
-    onboardingState.sessionsTourOpen ||
-    onboardingState.intro !== undefined ||
-    (onboardingState.receipt === undefined && onboardingState.error === undefined);
+  // Onboarding polls every few seconds; subscribing to the boolean keeps those
+  // polls from re-rendering the whole conversation below.
+  const deferRelease = useSyncExternalStore(onboarding.subscribe, () =>
+    releaseDeferred(onboarding.getSnapshot()),
+  );
   const modeMount = useMountedResource<HTMLSpanElement>(() => {
     store.setMode('bot');
     return () => {
