@@ -86,16 +86,16 @@ apps/docs/src/content/docs-zh/docs/vps-qq-tutorial.mdx
 packages/deepseekbot/desktop-theme/
 
 # EAS Build uploads: only apps/mobile and the workspace root are needed
-.git/
-docs/
-.github/
-.agents/
-.claude/
-.humanlayer/
-apps/docs/
-apps/presentations/
-design/
-prototype/
-dsh_research/
-changes/
-agent/
+/.git/
+/docs/
+/.github/
+/.agents/
+/.claude/
+/.humanlayer/
+/apps/docs/
+/apps/presentations/
+/design/
+/prototype/
+/dsh_research/
+/changes/
+/agent/
