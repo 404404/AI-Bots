@@ -6,7 +6,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Platform, Pressable, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { hostSession } from '../src/host/host-session';
+import { hostSession, useHostSession } from '../src/host/host-session';
 import { hostLooks } from '../src/host/native-host-look';
 import { HOST_NAME_MAX, hostLookName, withHostName } from '../src/ui/design/host-look';
 import { ConnectionNameField } from '../src/ui/primitives/connection-name-field';
@@ -36,6 +36,7 @@ export default function PairScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const presentedAsSheet = router.canGoBack();
+  const firstPairing = useHostSession().hosts.length === 0;
   const params = useLocalSearchParams<{ p?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [link, setLink] = useState('');
@@ -165,7 +166,7 @@ export default function PairScreen() {
           onPress={() => void pair(handled.current!, lastMethod.current, true)}
         />
       ) : null}
-      <PairingGuide initiallyOpen={!presentedAsSheet} />
+      <PairingGuide initiallyOpen={firstPairing} />
       <View style={{ gap: space.x2 }}>
         <Text variant="meta" tone="muted" accessibilityRole="header">
           {t.pasteLink}
