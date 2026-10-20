@@ -8,6 +8,8 @@ import { Workspace, type WorkspaceOptions } from './workspace.js';
 import { WorkspaceContext } from './workspace-context.js';
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
+import { BotIntro } from './bot-intro.js';
+import type { Wallpaper } from './wallpaper.js';
 import {
   ChannelMark,
   ChannelMenuCaret,
@@ -19,6 +21,7 @@ import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { useDmComposerContext } from './dm-composer-context.js';
 import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
+import { COMPANION_READ_INSET } from './companion-surface.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 import { ComposerSendKeyContext } from './composer-send-key.js';
@@ -542,7 +545,11 @@ function MessageGroupView({
   resolvedGrantRequests: ReadonlySet<string>;
   toolApprovalDecisions: ReadonlyMap<
     string,
-    'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected'
+    | 'allowed-once'
+    | 'allowed-always-tool'
+    | 'allowed-always-exact'
+    | 'allowed-always-all'
+    | 'rejected'
   >;
   userQuestionResolutions: ReadonlyMap<string, 'answered' | 'cancelled'>;
   t: BotHarnessTranslate;
@@ -1212,6 +1219,29 @@ function ConversationView({
     return true;
   };
   const followingLatest = useScopedRef(scopeKey, true);
+  const companionReadMount = useMountedResource<HTMLElement>(
+    (pane) => {
+      let visible: boolean | undefined;
+      const sync = () => {
+        const next = (companion?.getSnapshot().companions.length ?? 0) > 0;
+        if (visible === next) return;
+        visible = next;
+        if (next) pane.style.setProperty('--bh-companion-read-inset', COMPANION_READ_INSET + 'px');
+        else pane.style.removeProperty('--bh-companion-read-inset');
+        const timeline = pane.querySelector<HTMLElement>('.bh-chat-body');
+        if (
+          timeline &&
+          followingLatest.current &&
+          !store.getSnapshot().conversation.timeline.hasNewer
+        ) {
+          timeline.scrollTop = timeline.scrollHeight;
+        }
+      };
+      sync();
+      return companion?.subscribe(sync);
+    },
+    [companion, scopeKey],
+  );
   const activityOverlayPane = useScopedRef<HTMLElement | null>(scopeKey, null);
   const resizeActivityOverlay = useCallback(
     (height: number): void => {
@@ -2364,6 +2394,7 @@ function ConversationView({
     dockBotSlug !== undefined && dockEntryProps !== undefined && inboxEntry !== undefined;
   const conversationPane = (
     <section
+      ref={companionReadMount}
       className="bh-chat-pane"
       data-activity-concealed={composerActivityConcealed ? 'true' : undefined}
       {...fileDrop.handlers}
@@ -3370,9 +3401,13 @@ function ConversationView({
               closeLabel={t('dock.close', { label: t('entry.botInbox') })}
               onClose={() => setInboxOpen(false)}
               scroll
-              secondary={inboxEntry.headerAction && <inboxEntry.headerAction {...dockEntryProps} />}
+              secondary={
+                inboxEntry.headerAction && (
+                  <inboxEntry.headerAction key={dockBotSlug} {...dockEntryProps} />
+                )
+              }
             >
-              <inboxEntry.component {...dockEntryProps} flush />
+              <inboxEntry.component key={dockBotSlug} {...dockEntryProps} flush />
             </PanelDialog>
           )}
         </GeneratedFilesContext.Provider>
@@ -3503,6 +3538,7 @@ export function BotMain({
 
 export function BotPanel({
   appearance,
+  wallpaper,
   onMobileBack,
   workspace,
   prefs,
@@ -3529,6 +3565,7 @@ export function BotPanel({
   releaseNotes?: ReleaseNotesController | undefined;
   telemetryNotice?: TelemetryNoticeController | undefined;
   appearance?: Appearance | undefined;
+  wallpaper?: Wallpaper | undefined;
   workspace?: WorkspaceOptions | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
@@ -3540,6 +3577,7 @@ export function BotPanel({
     onboardingState.guideOpen ||
     onboardingState.checklistOpen ||
     onboardingState.sessionsTourOpen ||
+    onboardingState.intro !== undefined ||
     (onboardingState.receipt === undefined && onboardingState.error === undefined);
   const modeMount = useMountedResource<HTMLSpanElement>(() => {
     store.setMode('bot');
@@ -3551,6 +3589,7 @@ export function BotPanel({
     <>
       <span ref={modeMount} hidden aria-hidden="true" />
       <OnboardingOverlay actions={actions} companion={companion} t={t} />
+      <BotIntro actions={actions} appearance={appearance} wallpaper={wallpaper} t={t} />
       {releaseNotes === undefined ? null : (
         <ReleaseNotesAnnouncement controller={releaseNotes} t={t} deferred={deferRelease} />
       )}

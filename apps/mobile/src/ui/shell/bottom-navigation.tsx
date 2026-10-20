@@ -192,7 +192,7 @@ function ScopedNavigationBar({
     setError(undefined);
     setMenu(scope);
   };
-  const fabBottom = reserved - space.x5 + space.x3 + (theme.touch - fab.size) / 2;
+  const fabBottom = size + bottom + fab.margin;
   const panel = menu === scope && (
     <CreationPanel
       key={scope}

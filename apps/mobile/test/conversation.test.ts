@@ -155,45 +155,114 @@ describe('DM conversation', () => {
     });
   });
 
-  it('marks request cards and the messages that resolve them', async () => {
+  it.each(['allowed-once', 'allowed-always-tool'] as const)(
+    'marks request cards and %s history',
+    async (outcome) => {
+      const host = new FakeHost();
+      const channel = host.channel(DM);
+      const bot = { kind: 'bot' as const, slug: SLUG };
+      channel.append({
+        id: 'ask-tool',
+        author: bot,
+        body: '请求批准执行 bash',
+        toolApprovalRequest: { toolName: 'bash', role: 'orchestrator', cwd: '/w', input: '{}' },
+      } as never);
+      channel.append({
+        id: 'tool-decided',
+        body: '已批准这一次工具调用',
+        toolApprovalDecision: { requestMessageId: 'ask-tool', outcome },
+      } as never);
+      channel.append({
+        id: 'ask-question',
+        author: bot,
+        body: 'Which colour?',
+        userQuestionRequest: { questions: [{ id: 'c', question: 'Which colour?' }] },
+      } as never);
+      channel.append({
+        id: 'question-cancelled',
+        author: bot,
+        body: '提问已取消',
+        userQuestionResolution: { requestMessageId: 'ask-question', state: 'cancelled' },
+      } as never);
+      const live = await until(open(host), (snapshot) => snapshot.status === 'live');
+      const [tool, decided, ask, cancelled] = live.messages;
+      expect(tool?.card).toEqual({ kind: 'tool-approval', channelId: DM, subject: 'bash' });
+      expect(decided?.resolves).toEqual({
+        requestId: 'ask-tool',
+        resolution: { kind: 'tool-approval', outcome },
+      });
+      expect(ask?.card).toEqual({ kind: 'user-question', channelId: DM, subject: 'Which colour?' });
+      expect(cancelled?.resolves).toEqual({
+        requestId: 'ask-question',
+        resolution: { kind: 'user-question', state: 'cancelled' },
+      });
+    },
+  );
+
+  it('marks folder requests as cards and hides the read/write answer behind them', async () => {
     const host = new FakeHost();
     const channel = host.channel(DM);
     const bot = { kind: 'bot' as const, slug: SLUG };
     channel.append({
-      id: 'ask-tool',
+      id: 'ask-folder',
       author: bot,
-      body: '请求批准执行 bash',
-      toolApprovalRequest: { toolName: 'bash', role: 'orchestrator', cwd: '/w', input: '{}' },
+      body: 'I need your project folder.',
+      grantRequest: true,
     } as never);
     channel.append({
-      id: 'tool-decided',
-      body: '已批准这一次工具调用',
-      toolApprovalDecision: { requestMessageId: 'ask-tool', outcome: 'allowed-once' },
+      id: 'grant-resolution-ask-folder',
+      body: 'I authorized workspace “Project” for read/write. Continue the original task.',
+      replyTo: 'ask-folder',
+      grantRequestResolution: { requestMessageId: 'ask-folder', grantId: 'g1' },
     } as never);
     channel.append({
-      id: 'ask-question',
+      id: 'ask-old-folder',
       author: bot,
-      body: 'Which colour?',
-      userQuestionRequest: { questions: [{ id: 'c', question: 'Which colour?' }] },
-    } as never);
-    channel.append({
-      id: 'question-cancelled',
-      author: bot,
-      body: '提问已取消',
-      userQuestionResolution: { requestMessageId: 'ask-question', state: 'cancelled' },
+      body: 'Another folder.',
+      grantRequest: true,
+      grantRequestResolved: true,
     } as never);
     const live = await until(open(host), (snapshot) => snapshot.status === 'live');
-    const [tool, decided, ask, cancelled] = live.messages;
-    expect(tool?.card).toEqual({ kind: 'tool-approval', channelId: DM, subject: 'bash' });
-    expect(decided?.resolves).toEqual({
-      requestId: 'ask-tool',
-      resolution: { kind: 'tool-approval', outcome: 'allowed-once' },
+    const [ask, answered, old] = live.messages;
+    expect(ask?.card).toEqual({ kind: 'grant', channelId: DM });
+    expect(answered?.resolves).toEqual({ requestId: 'ask-folder', resolution: { kind: 'grant' } });
+    expect(old?.card).toEqual({ kind: 'grant', channelId: DM, resolved: true });
+    expect(live.messages.filter(shownInChat).map((message) => message.id)).toEqual([
+      'ask-folder',
+      'ask-old-folder',
+    ]);
+  });
+
+  it('marks private input requests as cards and hides their resolution', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    channel.append({
+      id: 'ask-key',
+      author: { kind: 'bot' as const, slug: SLUG },
+      body: 'I need the GitHub token.',
+      privateInputRequest: {
+        account: 'github',
+        purpose: 'Read the private repository',
+        fields: [{ id: 'token', label: 'Token', required: true }],
+      },
+    } as never);
+    channel.append({
+      id: 'private-resolution-ask-key',
+      body: 'Private input configured.',
+      privateInputResolution: { requestMessageId: 'ask-key', state: 'configured', references: {} },
+    } as never);
+    const live = await until(open(host), (snapshot) => snapshot.status === 'live');
+    const [ask, resolution] = live.messages;
+    expect(ask?.card).toEqual({
+      kind: 'private-input',
+      channelId: DM,
+      subject: 'Read the private repository',
     });
-    expect(ask?.card).toEqual({ kind: 'user-question', channelId: DM, subject: 'Which colour?' });
-    expect(cancelled?.resolves).toEqual({
-      requestId: 'ask-question',
-      resolution: { kind: 'user-question', state: 'cancelled' },
+    expect(resolution?.resolves).toEqual({
+      requestId: 'ask-key',
+      resolution: { kind: 'private-input' },
     });
+    expect(live.messages.filter(shownInChat).map((message) => message.id)).toEqual(['ask-key']);
   });
 
   it('shows recognized activity while hiding the welcome and malformed empty notices', async () => {

@@ -58,4 +58,70 @@ describe('directed wallpaper CLI', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it('selects, deletes and rotates library items with bounded options', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const http = vi.fn(async (_path: string, body?: Record<string, unknown>) => {
+      bodies.push(body!.wallpaper as Record<string, unknown>);
+      return { bytes: new TextEncoder().encode('{"wallpaper":{}}') };
+    });
+    const connect = async () => ({ http });
+    const base = { 'client-id': 'one', 'expected-revision': 'r1' };
+    await runWallpaperCommand(
+      'wallpaper-select',
+      [],
+      { ...base, 'wallpaper-item': 'a' },
+      io,
+      connect,
+    );
+    await runWallpaperCommand(
+      'wallpaper-select',
+      [],
+      { ...base, 'wallpaper-item': 'none' },
+      io,
+      connect,
+    );
+    await runWallpaperCommand(
+      'wallpaper-remove',
+      [],
+      { ...base, 'wallpaper-item': 'b' },
+      io,
+      connect,
+    );
+    await runWallpaperCommand(
+      'wallpaper-rotation',
+      [],
+      { ...base, 'patch-stdin': true },
+      { ...io, readStdin: async () => '{"interval":300000,"shuffle":true}' },
+      connect,
+    );
+    expect(bodies).toEqual([
+      { action: 'select', item: 'a' },
+      { action: 'select' },
+      { action: 'remove', item: 'b' },
+      { action: 'rotation', interval: 300000, shuffle: true },
+    ]);
+    const refused = vi.fn();
+    await expect(
+      runWallpaperCommand('wallpaper-select', [], base, io, refused),
+    ).rejects.toMatchObject({ code: 'usage' });
+    await expect(
+      runWallpaperCommand(
+        'wallpaper-get',
+        [],
+        { 'client-id': 'one', 'wallpaper-item': 'a' },
+        io,
+        refused,
+      ),
+    ).rejects.toMatchObject({ code: 'usage' });
+    await expect(
+      runWallpaperCommand(
+        'wallpaper-rotation',
+        [],
+        { ...base, 'patch-stdin': true },
+        { ...io, readStdin: async () => '{"speed":1}' },
+        refused,
+      ),
+    ).rejects.toMatchObject({ code: 'usage' });
+    expect(refused).not.toHaveBeenCalled();
+  });
 });

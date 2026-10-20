@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded Windows Desktop candidate activation, executable and platform identification, physical-key driver limits and immutable Provider provenance in the [local development guide](../dsh-dev/SKILL.md), with the [native verification journey](../verify-deepseekbot/features/desktop-window-zoom.md); DSH/Cordis Context and Decision Tree remain unchanged ([#2270](https://github.com/BotHarness/DeepSeekBot/issues/2270)).
+
 - Recorded rc.2 shortcut-definition readiness and archived Session navigation qualification in the [local development guide](../dsh-dev/SKILL.md), verified through real Web upgrade and Session navigation; DSH/Cordis Context and Skill behavior remain unchanged ([#2034](https://github.com/BotHarness/DeepSeekBot/issues/2034)).
 
 - Recorded production-factory option forwarding and fresh native receiver qualification in the [local development guide](../dsh-dev/SKILL.md), verified with a DSH `0.2.0-rc.2` Host and the immutable dsh-im ordinary-text candidate; DSH/Cordis Context and Skill behavior remain unchanged ([#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155)).

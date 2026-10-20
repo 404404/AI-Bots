@@ -43,6 +43,7 @@ function fixture(profile = 'qa') {
     join(root, 'desktop-theme/botharness-zoom-compat.json'),
     JSON.stringify({
       sourceVersion: '0.2.1-rc.2',
+      platforms: ['macos', 'windows'],
       clientAfter: createHash('sha256').update('qualified').digest('hex'),
     }),
   );
@@ -204,4 +205,95 @@ it('requires an explicit target and refuses unknown or repeated flags', () => {
     'arguments-invalid',
   );
   expect(() => runDesktopZoomSetup(['enable', '--token', 'secret'])).toThrow('arguments-invalid');
+});
+
+function windowsFixture() {
+  const f = fixture('desktop');
+  const desktopApp = join(f.home, 'Windows Harness');
+  const executable = join(desktopApp, 'DeepSeek Harness.exe');
+  const pnpm = join(desktopApp, 'resources/runtime/primary-runtime/dependencies/pnpm/bin/pnpm.mjs');
+  mkdirSync(join(pnpm, '..'), { recursive: true });
+  writeFileSync(pnpm, '');
+  writeFileSync(executable, '');
+  const original = f.run.getMockImplementation();
+  f.run.mockImplementation((command, args) =>
+    command === 'powershell.exe' ? '0.2.1-rc.2\n' : original(command, args),
+  );
+  return {
+    ...f,
+    desktopApp,
+    executable,
+    pnpm,
+    platform: 'win32',
+    windowsProcesses: vi.fn(() => []),
+  };
+}
+
+it('installs and disables on Windows using FileVersion and the exact app bundled pnpm', () => {
+  const f = windowsFixture();
+  expect(configureDesktopZoom({ ...f, action: 'enable' }).changed).toBe(true);
+  expect(f.run.mock.calls[0][0]).toBe('powershell.exe');
+  const script = Buffer.from(f.run.mock.calls[0][1].at(-1), 'base64').toString('utf16le');
+  expect(script).toContain('VersionInfo.FileVersion');
+  expect(script).toContain('-LiteralPath');
+  expect(f.run.mock.calls[1][1]).toEqual([
+    f.pnpm,
+    'add',
+    '@deepseek-ai/dsh-client-ui-theme@link:node_modules/deepseekbot/desktop-theme',
+    '--config.ignore-scripts=true',
+  ]);
+  expect(configureDesktopZoom({ ...f, action: 'disable' }).changed).toBe(true);
+  expect(readFileSync(join(f.directory, 'cordis.patch.yml'), 'utf8')).toBe(
+    'native preference unchanged',
+  );
+});
+
+it('refuses live Windows parent and Host processes including slash and case differences', () => {
+  for (const action of ['enable', 'disable']) {
+    const f = windowsFixture();
+    for (const row of [
+      { ExecutablePath: f.executable.toUpperCase().replaceAll('/', '\\') },
+      {
+        CommandLine: `node D:\\App\\dsh-desktop-host\\lib\\index.js "${f.directory.toUpperCase().replaceAll('/', '\\')}"`,
+      },
+    ]) {
+      f.windowsProcesses.mockReturnValue([row]);
+      expect(() => configureDesktopZoom({ ...f, action })).toThrow('desktop-running');
+    }
+    expect(f.run.mock.calls.every(([command]) => command === 'powershell.exe')).toBe(true);
+  }
+});
+
+it('preserves a foreign writer that replaced the lock during a Windows transaction', () => {
+  const f = windowsFixture();
+  const lock = join(f.directory, 'package.json.lock');
+  f.run.mockImplementationOnce(() => {
+    rmSync(lock);
+    writeFileSync(lock, 'other writer');
+    return '0.2.2';
+  });
+  expect(() => configureDesktopZoom({ ...f, action: 'enable' })).toThrow('version-unsupported');
+  expect(readFileSync(lock, 'utf8')).toBe('other writer');
+});
+
+it('refuses a Windows process query failure without attempting package changes', () => {
+  const f = windowsFixture();
+  f.windowsProcesses.mockImplementation(() => {
+    throw Error('access denied');
+  });
+  expect(() => configureDesktopZoom({ ...f, action: 'enable' })).toThrow('access denied');
+  expect(f.run).toHaveBeenCalledTimes(1);
+});
+
+it('refuses a macOS-only payload on Windows before adding its Profile alias', () => {
+  const f = windowsFixture();
+  const path = join(
+    f.directory,
+    'node_modules/deepseekbot/desktop-theme/botharness-zoom-compat.json',
+  );
+  const provenance = JSON.parse(readFileSync(path, 'utf8'));
+  provenance.platforms = ['macos'];
+  writeFileSync(path, JSON.stringify(provenance));
+  expect(() => configureDesktopZoom({ ...f, action: 'enable' })).toThrow('theme-unqualified');
+  expect(f.run).toHaveBeenCalledTimes(1);
 });
