@@ -1,5 +1,5 @@
 import { TextInput } from '../primitives/system-text';
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ComponentRef, type ReactNode, type Ref } from 'react';
 import {
   Image,
   Keyboard,
@@ -347,6 +347,8 @@ function AttachMenu({ onPick }: { onPick(source: PickSource): void }) {
   );
 }
 
+export type ComposerInput = ComponentRef<typeof TextInput>;
+
 export function Composer({
   value,
   placeholder,
@@ -366,6 +368,8 @@ export function Composer({
   above,
   selection,
   onSelection,
+  inputRef,
+  onFocusChange,
 }: {
   value: string;
   placeholder: string;
@@ -385,6 +389,8 @@ export function Composer({
   above?: ReactNode;
   selection?: { start: number; end: number } | undefined;
   onSelection?(caret: number): void;
+  inputRef?: Ref<ComposerInput>;
+  onFocusChange?(focused: boolean): void;
 }) {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
@@ -462,6 +468,7 @@ export function Composer({
   const field = (
     <TextInput
       key="field"
+      ref={inputRef}
       testID="composer-input"
       value={value}
       onChangeText={onChange}
@@ -472,7 +479,11 @@ export function Composer({
             onSelectionChange: (event: { nativeEvent: { selection: { end: number } } }) =>
               onSelection(event.nativeEvent.selection.end),
           })}
-      onFocus={() => setMenu(false)}
+      onFocus={() => {
+        setMenu(false);
+        onFocusChange?.(true);
+      }}
+      onBlur={() => onFocusChange?.(false)}
       placeholder={
         held
           ? t.dictationHoldHint

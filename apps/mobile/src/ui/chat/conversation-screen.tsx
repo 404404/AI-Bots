@@ -6,6 +6,8 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   useWindowDimensions,
   View,
@@ -34,7 +36,13 @@ import {
 import type { Inbox } from '../../host/inbox';
 import type { WireAllBotPreview } from '../../host/wire';
 import { shareAttachment } from '../../host/share-attachment';
-import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../host/pick-files';
+import {
+  MAX_PICKED,
+  fromClipboardImage,
+  pickFiles,
+  type PickSource,
+  type PickedFile,
+} from '../../host/pick-files';
 import {
   useChannelConversation,
   useConversation,
@@ -62,11 +70,14 @@ import type { BubbleGroup } from './bubble-shape';
 import { botBusy } from './bot-tone';
 import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
-import { Composer } from './composer';
+import { Composer, type ComposerInput } from './composer';
+import { ClipboardImageOffer, useClipboardImage } from './clipboard-image';
 import { EdgeFade, HeaderBackButton } from './header-chrome';
 import { ScrollEdgeElement, nativeScrollEdge } from '../primitives/scroll-edge-element';
 import { barLabelStyle, glassHeader, useHeaderOverlap } from './native-header';
 import { useFollowLatest } from './follow-latest';
+import { usePullToCompose } from './pull-to-compose';
+import { PullToComposeHint } from './pull-to-compose-hint';
 import { useMarkRead } from './mark-read';
 import { useBotNames } from './use-bot-names';
 import { ImageViewer } from './image-viewer';
@@ -92,7 +103,7 @@ import { QuestionCard } from './question-card';
 import { WorkingStatus } from './working-status';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
-import { edgeFade, space } from '../design/tokens';
+import { edgeFade, pullToCompose, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
 import { fullClientParams, type FullClientTarget } from '../../host/full-client';
 import { leaveScreen } from '../shell/leave-screen';
@@ -103,6 +114,8 @@ import { t } from '../strings';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
 const NO_DRAFTS: ConversationDraftReference[] = [];
+
+type ScrollEvent = NativeSyntheticEvent<NativeScrollEvent>;
 
 export type ChatPlace =
   | { kind: 'dm'; slug: string | undefined }
@@ -388,7 +401,12 @@ function ChatConversation({
   const attachList = useCallback(
     (node: FlatList<Row> | null) => {
       list(node);
-      content(node?.getNativeScrollRef()?.getInnerViewRef() ?? null);
+      const scroll = node?.getNativeScrollRef?.();
+      content(
+        scroll !== null && scroll !== undefined && 'getInnerViewRef' in scroll
+          ? scroll.getInnerViewRef()
+          : null,
+      );
     },
     [list, content],
   );
@@ -404,6 +422,21 @@ function ChatConversation({
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
   const latest = useFollowLatest(list, visible, playback?.setFollowing, headerOverlap);
+  const composerInput = useRef<ComposerInput>(null);
+  const [typing, setTyping] = useState(false);
+  const clipboard = useClipboardImage(typing && files.length < MAX_PICKED);
+  const composable = !botDm && conversation !== undefined && host.connection.status === 'connected';
+  const { jumpToLatest } = latest;
+  const compose = useCallback(() => {
+    jumpToLatest();
+    composerInput.current?.focus();
+  }, [jumpToLatest]);
+  const pull = usePullToCompose({
+    enabled: composable,
+    threshold: pullToCompose.threshold,
+    flick: Platform.OS === 'android' ? pullToCompose.flick : undefined,
+    onCompose: compose,
+  });
   const markdownViewport = useMemo(
     () => ({ scroll, viewport, content, layout: viewportLayout, active: focused }),
     [scroll, viewport, content, viewportLayout, focused],
@@ -839,9 +872,24 @@ function ChatConversation({
                   setSelection(undefined);
                   setCaret(next);
                 }}
-                {...(candidates.length === 0
-                  ? {}
-                  : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
+                {...(candidates.length > 0
+                  ? { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> }
+                  : clipboard.offered
+                    ? {
+                        above: (
+                          <ClipboardImageOffer
+                            onUnreadable={clipboard.used}
+                            onPaste={(data) => {
+                              clipboard.used();
+                              setAttachError(false);
+                              setFiles((current) =>
+                                [...current, fromClipboardImage(data)].slice(0, MAX_PICKED),
+                              );
+                            }}
+                          />
+                        ),
+                      }
+                    : {})}
                 onSend={send}
                 onPick={pick}
                 onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
@@ -851,6 +899,8 @@ function ChatConversation({
                 }}
                 onStopDictation={dictation.stop}
                 onCancelDictation={dictation.cancel}
+                inputRef={composerInput}
+                onFocusChange={setTyping}
               />
             )}
           </ScrollEdgeElement>
@@ -948,6 +998,18 @@ function ChatConversation({
                 {...(latest.ready ? { onStartReached: () => void conversation?.loadOlder() } : {})}
                 onStartReachedThreshold={0.5}
                 {...latest.listProps}
+                onScrollBeginDrag={(event: ScrollEvent) => {
+                  pull.onScrollBeginDrag(event);
+                  latest.listProps.onScrollBeginDrag();
+                }}
+                onScroll={(event: ScrollEvent) => {
+                  latest.listProps.onScroll(event);
+                  pull.onScroll(event);
+                }}
+                onScrollEndDrag={(event: ScrollEvent) => {
+                  latest.listProps.onScrollEndDrag(event);
+                  pull.onScrollEndDrag(event);
+                }}
                 onContentSizeChange={(width: number, height: number) => {
                   latest.listProps.onContentSizeChange(width, height);
                   jump();
@@ -993,6 +1055,13 @@ function ChatConversation({
           {nativeScrollEdge ? null : (
             <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
           )}
+          {composable && Platform.OS === 'ios' ? (
+            <PullToComposeHint
+              progress={pull.progress}
+              ready={pull.ready}
+              bottom={composerHeight + space.x3}
+            />
+          ) : null}
           {latest.away ? (
             <View
               pointerEvents="box-none"

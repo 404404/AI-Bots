@@ -122,6 +122,10 @@ export const motion = {
   menu: 160,
 } as const;
 
+export const pullToCompose = { threshold: 40, flick: 1 } as const;
+
+export const doubleTap = { window: 300, emoji: '👍' } as const;
+
 export const markdownTable = { minColumnWidth: 96, maxColumnWidth: 280 } as const;
 
 export const drawerSpring = { duration: 280, dampingRatio: 1 } as const;
