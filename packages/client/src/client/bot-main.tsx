@@ -8,6 +8,8 @@ import { Workspace, type WorkspaceOptions } from './workspace.js';
 import { WorkspaceContext } from './workspace-context.js';
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
+import { BotIntro } from './bot-intro.js';
+import type { Wallpaper } from './wallpaper.js';
 import {
   ChannelMark,
   ChannelMenuCaret,
@@ -3399,9 +3401,13 @@ function ConversationView({
               closeLabel={t('dock.close', { label: t('entry.botInbox') })}
               onClose={() => setInboxOpen(false)}
               scroll
-              secondary={inboxEntry.headerAction && <inboxEntry.headerAction {...dockEntryProps} />}
+              secondary={
+                inboxEntry.headerAction && (
+                  <inboxEntry.headerAction key={dockBotSlug} {...dockEntryProps} />
+                )
+              }
             >
-              <inboxEntry.component {...dockEntryProps} flush />
+              <inboxEntry.component key={dockBotSlug} {...dockEntryProps} flush />
             </PanelDialog>
           )}
         </GeneratedFilesContext.Provider>
@@ -3532,6 +3538,7 @@ export function BotMain({
 
 export function BotPanel({
   appearance,
+  wallpaper,
   onMobileBack,
   workspace,
   prefs,
@@ -3558,6 +3565,7 @@ export function BotPanel({
   releaseNotes?: ReleaseNotesController | undefined;
   telemetryNotice?: TelemetryNoticeController | undefined;
   appearance?: Appearance | undefined;
+  wallpaper?: Wallpaper | undefined;
   workspace?: WorkspaceOptions | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
@@ -3569,6 +3577,7 @@ export function BotPanel({
     onboardingState.guideOpen ||
     onboardingState.checklistOpen ||
     onboardingState.sessionsTourOpen ||
+    onboardingState.intro !== undefined ||
     (onboardingState.receipt === undefined && onboardingState.error === undefined);
   const modeMount = useMountedResource<HTMLSpanElement>(() => {
     store.setMode('bot');
@@ -3580,6 +3589,7 @@ export function BotPanel({
     <>
       <span ref={modeMount} hidden aria-hidden="true" />
       <OnboardingOverlay actions={actions} companion={companion} t={t} />
+      <BotIntro actions={actions} appearance={appearance} wallpaper={wallpaper} t={t} />
       {releaseNotes === undefined ? null : (
         <ReleaseNotesAnnouncement controller={releaseNotes} t={t} deferred={deferRelease} />
       )}
