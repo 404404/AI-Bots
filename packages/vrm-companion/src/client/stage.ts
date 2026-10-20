@@ -151,7 +151,9 @@ export function mountStage(
   let windowStart = 0,
     windowFrames = 0,
     windowWork = 0,
-    slowWindows = 0;
+    slowWindows = 0,
+    fastWindows = 0,
+    promoteAfter = 5;
   const post = createPost(renderer);
   const rim = new Color();
   const warm = new Color();
@@ -684,6 +686,7 @@ export function mountStage(
     measure(time, performance.now() - started);
   };
   const measure = (time: number, work: number) => {
+    if (!vrm) return;
     if (!windowStart) windowStart = time;
     windowFrames++;
     windowWork += work;
@@ -691,7 +694,8 @@ export function mountStage(
     if (span < 2000) return;
     const fps = (windowFrames * 1000) / span;
     host.dataset.vrmFps = fps.toFixed(1);
-    host.dataset.vrmWork = (windowWork / windowFrames).toFixed(1);
+    const average = windowWork / windowFrames;
+    host.dataset.vrmWork = average.toFixed(1);
     host.dataset.vrmPixelRatio = String(RATIOS[ratioStep]);
     windowStart = time;
     windowFrames = 0;
@@ -699,8 +703,14 @@ export function mountStage(
     host.dataset.vrmPace = String(pace);
     const target = reduced.matches ? 10 : pace;
     slowWindows = fps < target * 0.8 ? slowWindows + 1 : 0;
-    if (slowWindows >= 2 && pace > 30) {
+    fastWindows = pace < 60 && fps >= 27 && average < 6 ? fastWindows + 1 : 0;
+    if (fastWindows >= promoteAfter && !reduced.matches) {
+      fastWindows = 0;
       slowWindows = 0;
+      pace = 60;
+    } else if (slowWindows >= 2 && pace > 30) {
+      slowWindows = 0;
+      promoteAfter = Math.min(promoteAfter * 2, 60);
       pace = 30;
     } else if (slowWindows >= 2 && ratioStep < RATIOS.length - 1) {
       slowWindows = 0;
