@@ -38,7 +38,7 @@ DeepSeekBot（简称 **DSB**，是 DeepSeekBot 的缩写，才不是“大啥比
 
 ## 安装
 
-在 DeepSeek Harness 桌面端点「插件 → 添加插件」，输入 `deepseekbot@1.4.0`，安装并启用，侧栏就会出现「Bot 模式」。还没装 DSH？先[下载桌面端](https://www.deepseek.com/en/harness/)。
+在 DeepSeek Harness 桌面端点「插件 → 添加插件」，输入 `deepseekbot@1.4.1`，安装并启用，侧栏就会出现「Bot 模式」。还没装 DSH？先[下载桌面端](https://www.deepseek.com/en/harness/)。
 
 命令行安装、版本说明和常见问题见[官网安装指南](https://deepseekbot.app/docs/installation/)。
 
@@ -71,12 +71,16 @@ DeepSeekBot（简称 **DSB**，是 DeepSeekBot 的缩写，才不是“大啥比
 
 <table>
   <tr>
-    <td width="50%"><a href="docs/assets/readme/v2/zh/hero.jpg"><img src="docs/assets/readme/v2/zh/hero.jpg" alt="Bot 模式：左侧是五个像素头像的 Bot 名册，中间是与 Mira 的私聊，右侧是 Mira 的记忆演化 Git graph" /></a><br /><b>Bot 名册与私聊</b>：每个 Bot 有自己的像素头像；右侧是它的记忆演化。</td>
-    <td width="50%"><a href="docs/assets/readme/v2/zh/group.jpg"><img src="docs/assets/readme/v2/zh/group.jpg" alt="天文台工作室 Group：Mira、Theo 和 Nova 以各自身份回复，右侧是成员列表" /></a><br /><b>群聊协作</b>：@ 三个 Bot，它们各自回复，Nova 读完前两位再接话。</td>
+    <td width="50%"><a href="docs/assets/readme/v3/zh/hero.jpg"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/v3/zh/hero-dark.jpg" /><img src="docs/assets/readme/v3/zh/hero.jpg" alt="Bot 模式：左侧是控制栏和频道列表，中间是与 Mira 的私聊，右侧是 Mira 的记忆演化，带一个合并分支和一处未提交的修改" /></picture></a><br /><b>Bot 私聊与记忆演化</b>：Mira 从记忆里找出访客统计；右侧能看到它记忆的每次提交和分支。</td>
+    <td width="50%"><a href="docs/assets/readme/v3/zh/group.jpg"><img src="docs/assets/readme/v3/zh/group.jpg" alt="天文台工作室群聊：Mira、Theo 和 Nova 以各自身份回复，右侧是成员列表" /></a><br /><b>群聊协作</b>：@ 三个 Bot，它们各自回复，Nova 读完前两位再接话。</td>
   </tr>
   <tr>
-    <td width="50%"><a href="docs/assets/readme/v2/zh/schedules.jpg"><img src="docs/assets/readme/v2/zh/schedules.jpg" alt="Nova 收到“每天 9 点读日志”的请求后自己创建了定时任务，右侧侧栏用卡片列出会话和定时任务" /></a><br /><b>定时任务</b>：一句话让 Bot 自己建任务。</td>
-    <td width="50%"><a href="docs/assets/readme/v2/zh/marketplace.jpg"><img src="docs/assets/readme/v2/zh/marketplace.jpg" alt="Bot 市场：按话题筛选、搜索，列表中每个 Bot 都有像素头像、岗位、Star 数和安装按钮" /></a><br /><b>Bot 市场</b>：按话题和关键词找 Bot，点「安装」就多一位同事（图中为示例数据）。</td>
+    <td width="50%"><a href="docs/assets/readme/v3/zh/schedules.jpg"><img src="docs/assets/readme/v3/zh/schedules.jpg" alt="Kai 收到“每周一早上 9 点起草短文”的请求后自己创建了定时任务，右侧是定时任务面板" /></a><br /><b>定时任务</b>：一句话让 Bot 自己建任务。</td>
+    <td width="50%"><a href="docs/assets/readme/v3/zh/marketplace.jpg"><img src="docs/assets/readme/v3/zh/marketplace.jpg" alt="Bot 市场：按话题筛选、搜索，每个 Bot 卡片有像素横幅、头像、岗位、Star 数和安装按钮" /></a><br /><b>Bot 市场</b>：按话题和关键词找 Bot，点「安装」就多一位同事（图中为示例数据）。</td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/assets/readme/v3/zh/home.jpg"><img src="docs/assets/readme/v3/zh/home.jpg" alt="首页和托布的私聊并排：左边是 Token 用量和 Bot 活跃情况，右边是托布汇报各个 Bot 的状态" /></a><br /><b>首页与托布</b>：面板可以并排摆放；问托布一句，它就汇报所有 Bot 的状态。</td>
+    <td width="50%"><a href="docs/assets/readme/v3/zh/appearance.jpg"><img src="docs/assets/readme/v3/zh/appearance.jpg" alt="Bot 设置的界面设置页：主题、配色、壁纸库和面板材质，背后是换上壁纸的工作区" /></a><br /><b>界面设置</b>：主题、配色、壁纸库和半透明面板，只保存在这台设备上。</td>
   </tr>
 </table>
 
@@ -96,6 +100,8 @@ _截图来自隔离的本地 DSH，对话是虚构的天文台展览示例。_
 
 | 版本                                                                                                              | 新内容                                                                                                                                                                                                                                                      |
 | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[1.4.1](https://github.com/BotHarness/DeepSeekBot/releases/tag/v1.4.1)**（2026-10-20）                          | 第一次进入 Bot 模式时，托布五步带你上手；Bot 模式有自己的**主题、半透明面板和壁纸库**；`/compact` 和空闲压缩让长对话保持轻快；快速搜索直达任意设置项；记忆里能预览图片和 Markdown；手机端 Beta 加了通知开关。                                               |
+| **[1.4.0](https://github.com/BotHarness/DeepSeekBot/releases/tag/v1.4.0)**（2026-10-19）                          | 首页迎来管家**托布**，用聊天就能管理 Bot、模型和群；桌面端换成可自由拖放的**面板工作区**，每个频道记住自己的布局；审批可交给审核模型；可以配对手机；命令行覆盖了几乎所有界面操作。支持 DSH 0.2.0-rc.2 到 0.2.x。                                            |
 | **[1.3.1](https://github.com/BotHarness/DeepSeekBot/releases/tag/v1.3.1)**（2026-10-14）                          | 从插件页安装 `deepseekbot` 重新只要一步，不再要求批准构建；需要 DSH 0.2.0-rc.2。`deepseekbot` 命令行可以配置 Host、操作 Bot 的浏览器和 Computer、管理 IM 应用；浏览器面板实时刷新。                                                                         |
 | **[1.3.0](https://github.com/BotHarness/DeepSeekBot/releases/tag/v1.3.0)**（2026-10-14）                          | 界面换上统一的设计系统，Channel 设置收进对话框；Orchestrator 自己整理收件箱和任务；Bot 可以凭你批准使用密钥跑命令行和 **MCP**，一句话就能配好 MCP；消息可多选**导出**；新增 Bot 主题色、更多像素物种和自绘部件；记忆可回到任意版本。需要 DSH 0.2.0 及以上。 |
 | **[1.2.1](https://github.com/BotHarness/DeepSeekBot/releases/tag/v1.2.1)**（2026-10-12）                          | 修复部分 DSH 版本装不上的问题；群头像显示成员头像拼图；音频和文件附件可以直接播放、下载。                                                                                                                                                                   |
