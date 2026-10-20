@@ -233,6 +233,38 @@ describe('DM conversation', () => {
     ]);
   });
 
+  it('marks private input requests as cards and hides their resolution', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    channel.append({
+      id: 'ask-key',
+      author: { kind: 'bot' as const, slug: SLUG },
+      body: 'I need the GitHub token.',
+      privateInputRequest: {
+        account: 'github',
+        purpose: 'Read the private repository',
+        fields: [{ id: 'token', label: 'Token', required: true }],
+      },
+    } as never);
+    channel.append({
+      id: 'private-resolution-ask-key',
+      body: 'Private input configured.',
+      privateInputResolution: { requestMessageId: 'ask-key', state: 'configured', references: {} },
+    } as never);
+    const live = await until(open(host), (snapshot) => snapshot.status === 'live');
+    const [ask, resolution] = live.messages;
+    expect(ask?.card).toEqual({
+      kind: 'private-input',
+      channelId: DM,
+      subject: 'Read the private repository',
+    });
+    expect(resolution?.resolves).toEqual({
+      requestId: 'ask-key',
+      resolution: { kind: 'private-input' },
+    });
+    expect(live.messages.filter(shownInChat).map((message) => message.id)).toEqual(['ask-key']);
+  });
+
   it('shows recognized activity while hiding the welcome and malformed empty notices', async () => {
     const host = new FakeHost();
     const channel = host.channel(DM);

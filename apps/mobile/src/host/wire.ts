@@ -53,6 +53,7 @@ export interface ChannelWireMessage extends WireMessage {
   grantRequest?: true;
   grantRequestResolved?: boolean;
   grantRequestResolution?: unknown;
+  privateInputResolution?: unknown;
   toolApprovalDecision?: unknown;
   userQuestionResolution?: unknown;
   onboardingWelcome?: unknown;
@@ -369,9 +370,36 @@ export interface HumanAttentionItem {
   botSlug: string;
   summary: string;
   messageId?: string;
+  requestId?: string;
+  assignmentSessionId?: string;
+  sourceEventId?: string;
   responseMessageId?: string;
   unreadCount?: number;
   isUnread?: boolean;
+  autoRejection?: {
+    sessionId: string;
+    toolName: string;
+    input: string;
+    template: string;
+    reason: string;
+  };
+}
+
+export interface HumanAssignmentReport {
+  sourceEventId: string;
+  at: string;
+  state: 'progress' | 'completed' | 'blocked' | 'waiting-human' | 'failed';
+  summary: string;
+}
+
+export interface HumanAssignmentContext {
+  botSlug: string;
+  sessionId: string;
+  purpose: string;
+  sourceEventId: string;
+  reports: HumanAssignmentReport[];
+  canReply: boolean;
+  reply?: { id: string; at: string; body: string };
 }
 
 export interface HumanAttentionPage {

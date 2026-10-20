@@ -10,7 +10,11 @@ import {
   type DecisionResult,
 } from '../../host/requests';
 import type { ToolApprovalOutcome } from '../../host/wire';
-import { alwaysNote } from '../approval-note';
+import {
+  approvalFileChange,
+  approvalShellCommand,
+} from '../../../../../packages/client/src/client/approval-diff';
+import { alwaysNote, executionNote, expiryLabel, highRisk, riskNote } from '../approval-note';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
@@ -27,6 +31,7 @@ import {
   DetailRow,
   type CardLineTone,
 } from './action-card';
+import { FileDiff } from './approval-diff';
 import type { BubbleGroup } from './bubble-shape';
 
 export interface ApprovalCardPort {
@@ -190,12 +195,21 @@ export function ApprovalCard({
     }
   };
   const rows = readableInput(request.input);
-  const first = previewInput(request.input);
+  const change = approvalFileChange(request.toolName, request.input);
+  const shell =
+    change === undefined ? approvalShellCommand(request.toolName, request.input) : undefined;
+  const first =
+    change !== undefined
+      ? { label: '', value: `${change.path}  +${change.added} −${change.removed}` }
+      : shell !== undefined
+        ? { label: '', value: shell.command }
+        : previewInput(request.input);
+  const running = executionNote(request);
   return (
     <View ref={mount}>
       <ActionCard
         category={category}
-        status={t.needsYou}
+        status={expiryLabel(request.expiresAt, Date.now()) ?? t.needsYou}
         title={title}
         focused={focused}
         wide={wide}
@@ -227,12 +241,19 @@ export function ApprovalCard({
           <>
             <DetailRow label={t.tool} value={request.toolName} />
             <DetailRow label={t.workingFolder} value={request.cwd} />
-            {rows.map((row, index) => (
-              <DetailRow key={`${row.label}-${index}`} label={row.label} value={row.value} />
-            ))}
+            {change !== undefined ? (
+              <FileDiff change={change} />
+            ) : (
+              rows.map((row, index) => (
+                <DetailRow key={`${row.label}-${index}`} label={row.label} value={row.value} />
+              ))
+            )}
+            {highRisk(request.toolName) ? null : <CardNote>{riskNote(request.toolName)}</CardNote>}
           </>
         }
       >
+        {running === undefined ? null : <CardNote>{running}</CardNote>}
+        {highRisk(request.toolName) ? <CardNote>{riskNote(request.toolName)}</CardNote> : null}
         <CardNote>{alwaysNote(request)}</CardNote>
         <CardButtons stack>
           <Button
