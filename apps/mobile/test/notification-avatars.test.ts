@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { RosterBot, RosterChannel, RosterView } from '../src/host/client';
 import {
@@ -37,10 +37,19 @@ function memoryStore() {
   const files = new Map<string, Record<string, string>>();
   const rendered: string[] = [];
   const removed: string[] = [];
+  const reports: Record<string, string>[] = [];
+  const aborted: AbortSignal[] = [];
   let fail = new Set<string>();
+  let hang = new Set<string>();
   return {
     rendered,
     removed,
+    reports,
+    files,
+    aborted,
+    hangOn(file: string) {
+      hang = new Set([file]);
+    },
     failOn(file: string) {
       fail = new Set([file]);
     },
@@ -48,21 +57,59 @@ function memoryStore() {
       async read(host: string) {
         return { ...files.get(host) };
       },
-      async render(host: string, file: string, _image: AvatarImage) {
+      async render(host: string, file: string, _image: AvatarImage, signal: AbortSignal) {
         if (fail.has(file)) throw Error('render-failed');
+        if (hang.has(file)) {
+          aborted.push(signal);
+          return new Promise<void>(() => {});
+        }
         rendered.push(`${host}/${file}`);
       },
       remove(host: string, file: string) {
         removed.push(`${host}/${file}`);
       },
       write(host: string, index: Record<string, string>) {
-        files.set(host, index);
+        files.set(host, { ...index });
+      },
+      report(_host: string, errors: Record<string, string>) {
+        reports.push(errors);
       },
     },
   };
 }
 
 describe('notification avatars', () => {
+  it('gives up on a render that never settles and keeps the others', async () => {
+    vi.useFakeTimers();
+    try {
+      const memory = memoryStore();
+      const avatars = createNotificationAvatars(memory.store);
+      memory.hangOn('bot-ada.png');
+      const done = avatars.sync(
+        'h',
+        roster([bot('ada')], [channel('g1', 'data:image/png;base64,AAAA')]),
+      );
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(await done).toBe(false);
+      expect(memory.rendered).toEqual(['h/channel-g1.png']);
+      expect(Object.keys(memory.files.get('h') ?? {})).toEqual(['channel-g1.png']);
+      expect(memory.reports).toEqual([{ 'bot-ada.png': 'render-timeout' }]);
+      expect(memory.aborted.map((signal) => signal.aborted)).toEqual([true]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports a store that cannot be opened', async () => {
+    const memory = memoryStore();
+    const avatars = createNotificationAvatars({
+      ...memory.store,
+      read: () => Promise.reject(Error('notification-avatars-unavailable')),
+    });
+    expect(await avatars.sync('h', roster([bot('ada')]))).toBe(false);
+    expect(memory.reports).toEqual([{ '*': 'notification-avatars-unavailable' }]);
+  });
+
   it('names files the way the native notification code reads them', () => {
     expect(avatarFile('bot', 'ada')).toBe('bot-ada.png');
     expect(avatarFile('channel', 'g/1 x')).toBe('channel-g_1_x.png');

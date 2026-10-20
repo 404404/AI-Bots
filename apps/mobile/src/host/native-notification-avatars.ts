@@ -8,6 +8,7 @@ import { createNotificationAvatars, safeName } from './notification-avatars';
 
 const SIZE = 192;
 const INDEX = 'index.json';
+const STATUS = 'status.json';
 
 function root(): Directory | undefined {
   if (Platform.OS === 'android') return new Directory(Paths.document, 'notification-avatars');
@@ -34,10 +35,13 @@ export const notificationAvatars = createNotificationAvatars({
       return {};
     }
   },
-  async render(host, file, image) {
+  async render(host, file, image, signal) {
     const dir = hostDir(host);
     if (dir === undefined) throw Error('notification-avatars-unavailable');
-    const source = await Image.loadAsync(image, { maxWidth: SIZE, maxHeight: SIZE });
+    const source = await Image.loadAsync(image, {
+      maxWidth: SIZE,
+      maxHeight: SIZE,
+    });
     const context = ImageManipulator.manipulate(source);
     let rendered: ImageRef | undefined;
     try {
@@ -48,6 +52,7 @@ export const notificationAvatars = createNotificationAvatars({
       const target = new File(dir, file);
       const temporary = new File(saved.uri);
       try {
+        if (signal.aborted) throw Error('render-timeout');
         if (target.exists) target.delete();
         await temporary.copy(target);
       } finally {
@@ -71,10 +76,29 @@ export const notificationAvatars = createNotificationAvatars({
     try {
       const dir = hostDir(host);
       if (dir === undefined) return;
-      if (!dir.exists) dir.create({ intermediates: true });
-      const file = new File(dir, INDEX);
-      if (!file.exists) file.create();
-      file.writeSync(JSON.stringify(index));
+      writeJson(dir, INDEX, index);
+    } catch {}
+  },
+  report(host, errors) {
+    const status: Record<string, unknown> = { host, at: new Date().toISOString(), errors };
+    try {
+      status.root = root()?.uri ?? 'unavailable';
+      const dir = hostDir(host);
+      if (dir !== undefined) writeJson(dir, STATUS, status);
+    } catch (error) {
+      status.write = error instanceof Error ? error.message : String(error);
+    }
+    if (Object.keys(errors).length > 0 || status.write !== undefined)
+      console.warn('notification avatars', status);
+    try {
+      writeJson(Paths.document, `notification-avatars-${STATUS}`, status);
     } catch {}
   },
 });
+
+function writeJson(dir: Directory, name: string, value: unknown): void {
+  if (!dir.exists) dir.create({ intermediates: true });
+  const file = new File(dir, name);
+  if (!file.exists) file.create();
+  file.writeSync(JSON.stringify(value));
+}

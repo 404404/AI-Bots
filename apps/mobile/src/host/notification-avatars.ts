@@ -15,9 +15,28 @@ export interface AvatarEntry {
 
 export interface AvatarStore {
   read(host: string): Promise<Record<string, string>>;
-  render(host: string, file: string, image: AvatarImage): Promise<void>;
+  render(host: string, file: string, image: AvatarImage, signal: AbortSignal): Promise<void>;
   remove(host: string, file: string): void;
   write(host: string, index: Record<string, string>): void;
+  report(host: string, errors: Record<string, string>): void;
+}
+
+const RENDER_TIMEOUT = 10_000;
+
+function reason(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function bounded(work: (signal: AbortSignal) => Promise<void>, ms: number): Promise<void> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(Error('render-timeout'));
+    }, ms);
+  });
+  return Promise.race([work(controller.signal), timeout]).finally(() => clearTimeout(timer));
 }
 
 export const safeName = (value: string): string => value.replace(/[^A-Za-z0-9._-]/gu, '_');
@@ -102,27 +121,38 @@ export function createNotificationAvatars(store: AvatarStore) {
   let next: { host: string; roster: RosterView } | undefined;
 
   const syncOnce = async (host: string, roster: RosterView): Promise<boolean> => {
-    let complete = true;
-    const stored = await store.read(host);
+    const errors: Record<string, string> = {};
+    let stored: Record<string, string>;
+    let wanted: AvatarEntry[];
+    try {
+      stored = await store.read(host);
+      wanted = notificationAvatars(roster);
+    } catch (error) {
+      store.report(host, { '*': reason(error) });
+      return false;
+    }
+    const kept = new Set(wanted.map((entry) => entry.file));
     const index: Record<string, string> = {};
-    const wanted = notificationAvatars(roster);
+    for (const entry of wanted)
+      if (stored[entry.file] === entry.signature) index[entry.file] = entry.signature;
+    for (const file of Object.keys(stored)) if (!kept.has(file)) store.remove(host, file);
+    store.write(host, index);
     for (const entry of wanted) {
-      if (stored[entry.file] === entry.signature) {
-        index[entry.file] = entry.signature;
-        continue;
-      }
+      if (index[entry.file] !== undefined) continue;
       try {
-        await store.render(host, entry.file, entry.image);
+        await bounded(
+          (signal) => store.render(host, entry.file, entry.image, signal),
+          RENDER_TIMEOUT,
+        );
         index[entry.file] = entry.signature;
-      } catch {
-        complete = false;
+        store.write(host, index);
+      } catch (error) {
+        errors[entry.file] = reason(error);
         store.remove(host, entry.file);
       }
     }
-    const kept = new Set(wanted.map((entry) => entry.file));
-    for (const file of Object.keys(stored)) if (!kept.has(file)) store.remove(host, file);
-    store.write(host, index);
-    return complete;
+    store.report(host, errors);
+    return Object.keys(errors).length === 0;
   };
 
   return {
