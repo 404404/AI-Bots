@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Platform, Pressable, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { hostSession } from '../src/host/host-session';
 import { hostLooks } from '../src/host/native-host-look';
@@ -33,6 +34,8 @@ export default function PairScreen() {
   const { width } = useWindowDimensions();
   const scan = Math.min(width * pairingScan.widthRatio, pairingScan.maxSize);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const presentedAsSheet = router.canGoBack();
   const params = useLocalSearchParams<{ p?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [link, setLink] = useState('');
@@ -96,11 +99,15 @@ export default function PairScreen() {
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       style={{ flex: 1, backgroundColor: theme.overlay.fill }}
-      contentContainerStyle={{ padding: space.x5, gap: space.x4 }}
+      contentContainerStyle={{
+        padding: space.x5,
+        paddingTop: presentedAsSheet ? space.x5 : insets.top + space.x5,
+        gap: space.x4,
+      }}
     >
       <DrawerHeader
         title={t.pairTitle}
-        {...(router.canGoBack() ? { onClose: () => router.back() } : {})}
+        {...(presentedAsSheet ? { onClose: () => router.back() } : {})}
       />
       <View
         style={{
