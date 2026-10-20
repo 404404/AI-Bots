@@ -3909,7 +3909,7 @@ export const zh = {
     '这个地址已经用 tailscale serve 发布了别的服务。自动运行会覆盖它，所以这一步需要你自己决定。',
   'devices.route.confirm.title': '运行 tailscale serve？',
   'devices.route.confirm.description':
-    'DeepSeekBot 会在这台电脑上运行下面的命令，用 HTTPS 把本机 {port} 端口发布到你的 tailnet。只有你 tailnet 里的设备能访问，随时可以运行 tailscale serve reset 撤销。',
+    'DeepSeekBot 会在这台电脑上运行下面的命令，用 HTTPS 把本机 {port} 端口发布到你的 tailnet。只有你 tailnet 里的设备能访问，随时可以运行 tailscale serve --https=443 off 撤销，不影响其他 Serve 配置。',
   'devices.route.confirm.action': '运行',
   'devices.route.enableAction': '打开 Tailscale 后台',
   'devices.route.failure.needsEnable':
@@ -8087,7 +8087,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'tailscale serve already publishes another service at this address. Running it automatically would replace that, so this step is your call.',
   'devices.route.confirm.title': 'Run tailscale serve?',
   'devices.route.confirm.description':
-    'DeepSeekBot will run the command below on this computer to publish local port {port} over HTTPS on your tailnet. Only devices on your tailnet can reach it; run tailscale serve reset to undo.',
+    'DeepSeekBot will run the command below on this computer to publish local port {port} over HTTPS on your tailnet. Only devices on your tailnet can reach it; run tailscale serve --https=443 off to undo; other Serve entries stay.',
   'devices.route.confirm.action': 'Run',
   'devices.route.enableAction': 'Open Tailscale admin',
   'devices.route.failure.needsEnable':
