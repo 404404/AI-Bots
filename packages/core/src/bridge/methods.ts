@@ -197,6 +197,12 @@ import type {
   PersonaBotDeletionPreview,
   PersonaBotDeletion,
 } from '../bots/deletion.js';
+import {
+  DataResetError,
+  type DataReset,
+  type DataResetPreview,
+  type DataResetResult,
+} from '../data-reset/reset.js';
 import { isValidSlug } from '../bots/slug.js';
 import {
   memoryMoveTarget,
@@ -587,6 +593,8 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<{ bot: PersonaBotDetail; httpsFallback?: HttpsFallback }>>;
   update(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  dataResetPreview(): BridgeResult<{ preview: DataResetPreview }>;
+  dataResetConfirm(payload: unknown): BridgeResult<{ reset: DataResetResult }>;
   deletionPreview(payload: unknown): BridgeResult<{ preview: PersonaBotDeletionPreview }>;
   deletionConfirm(payload: unknown): Promise<BridgeResult<{ deletion: PersonaBotDeletion }>>;
   deletionRetry(payload: unknown): Promise<BridgeResult<{ deletion: PersonaBotDeletion }>>;
@@ -852,6 +860,7 @@ export interface BridgeMethodsDeps {
   approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
+  dataReset?: DataReset;
   attachments?: AttachmentStore;
   modelPresets?: ModelPresetStore;
   modelCatalog?: ModelCatalog;
@@ -1116,6 +1125,18 @@ function idleCompactionView(deps: IdleCompactionDeps): IdleCompactionView {
     minimumIdleSeconds: MIN_IDLE_MS / 1000,
     scheduled: deps.scheduler.scheduled(),
     routes: deps.scheduler.describe(deps.routes()),
+  };
+}
+
+function dataResetFailure(error: unknown): BridgeResult<never> {
+  if (error instanceof DataResetError)
+    return { ok: false, error: { code: error.code, message: error.message } };
+  return {
+    ok: false,
+    error: {
+      code: 'data-reset-failed',
+      message: error instanceof Error ? error.message : 'BotHarness data could not be cleared',
+    },
   };
 }
 
@@ -2548,6 +2569,25 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return { ok: true, value: { plan: result.record.modelPlan } };
       } catch (error) {
         return invalidInput(error instanceof Error ? error.message : String(error));
+      }
+    },
+    dataResetPreview() {
+      if (deps.dataReset === undefined) return unavailable();
+      try {
+        return { ok: true, value: { preview: deps.dataReset.preview() } };
+      } catch (error) {
+        return dataResetFailure(error);
+      }
+    },
+    dataResetConfirm(payload) {
+      const token = asObject(payload)['token'];
+      if (typeof token !== 'string' || token.length === 0 || token.length > 256)
+        return invalidInput('token is required');
+      if (deps.dataReset === undefined) return unavailable();
+      try {
+        return { ok: true, value: { reset: deps.dataReset.confirm(token) } };
+      } catch (error) {
+        return dataResetFailure(error);
       }
     },
     deletionPreview(payload) {

@@ -500,6 +500,8 @@ describe('plugin entry', () => {
       'create',
       'createFromGit',
       'update',
+      'dataResetPreview',
+      'dataResetConfirm',
       'deletionPreview',
       'deletionConfirm',
       'deletionRetry',

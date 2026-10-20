@@ -661,6 +661,17 @@ deepseekbot pairing-review <bot-id> <pairing-id> --decision revoke --confirm
 
 `--lang zh|en` asks for listings in that language, as the Marketplace page does in the interface language: the name and bio come from the author's `bot.json` `i18n` translation, then a bio already in that language, then the Marketplace's generated summary (`descriptionGenerated: true`); `marketplace-detail` returns the repository's README in that language and names it in `readmeLanguage`, else `README.md`: for `zh` it takes `README.zh-CN.md`, then `README.zh.md`, then another spelling such as `README_CN.md` or `README-zh.md`; for `en` it takes `README.en.md`. `marketplace-submit` and `marketplace-report` first solve the Host's proof-of-work challenge, as the Web page does, so they can take a few seconds; the Marketplace's own refusals (`repository-missing-topic`, `rate-limited`, …) come back as the error code. A report reason is at most 500 characters. `release-check` returns the update status (`current`, `available`, `restart-required`, `blocked`, `development`, `unknown` or `unavailable`). `release-install` and `release-restart` need `--confirm`; a failed install or restart exits non-zero with `release-<reason>`, such as `release-network` or `release-not-pending`. Restarting stops every running Bot turn, so do it only on a Host you own. `pairing-list` shows a Bot's pairing requests and its roles; `pairing-review` reads the current revisions itself, so a request that changed in between is refused instead of overwritten. Approve with one `--role` for a conversation request or with `--capability` for a management request.
 
+### Clear all BotHarness data
+
+```bash
+deepseekbot data-reset-preview
+printf '%s' '{"token":"<preview.token>"}' | deepseekbot data-reset-confirm --confirmation-stdin --confirm
+```
+
+This is the CLI form of **Settings → Data & privacy → Clear all BotHarness data**. `data-reset-preview` lists exactly what a reset removes: `targets` names each existing folder (`data` is `$DSH_HOME/botharness`, with the database, Bots, Memory in its default place, attachments, channel files and workspaces; `im-settings` is each bundled IM Provider folder under `$DSH_HOME/integrations`; `local-tools` is `~/.botharness`, such as the computer driver), with its size and file count. `kept` lists what stays: DSH's own `$DSH_HOME/.credentials.yaml`, every Memory folder a Human chose for a Bot (kept even when it sits inside a removed folder) and the `BotHarness Exports` folder. The token lasts ten minutes and only for that exact scope; a new Bot, a moved Memory folder or an expired token refuses with `data-reset-preview-stale`, so preview again.
+
+`data-reset-confirm` needs `--confirmation-stdin --confirm`. It stops BotHarness writing, records the reset in `$DSH_HOME/botharness-reset.json` and returns `{reset:{status:"restarting"}}`: the folders are removed when the old Host exits, before it starts again. When the Host cannot restart itself it returns `restart-required`; Bots stay stopped and the removal finishes at the next Host start, including after the plugin is reinstalled. DSH sessions, DSH settings and other plugins stay. Only the Host owner can run it; it is not a Bot tool.
+
 ## IM application authorization
 
 Use the same live Host authentication described above. `im-apps` discovers compatible Feishu and WeChat flows; it does not expose account credentials. The isolated development launcher can install the qualified Provider with `--im-provider`.
