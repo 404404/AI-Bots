@@ -148,6 +148,14 @@
       "gap": null
     },
     {
+      "id": "desktop.data.reset",
+      "label": "Preview, confirm twice and clear all BotHarness data, then restart fresh",
+      "source": "packages/client/src/client/data-reset-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/data-reset.md",
+      "task": 2426,
+      "gap": null
+    },
+    {
       "id": "desktop.release.identity",
       "label": "About and CLI show the actual source-build identity",
       "source": "packages/client/src/client/bot-settings.tsx",

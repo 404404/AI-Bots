@@ -63,6 +63,7 @@ import type { ExternalSource } from '../messaging/inbound.js';
 import type { MessagingSnapshot, MessagingGrant, OutboxIntent } from '../messaging/outbound.js';
 import type { MessagingTarget } from '../messaging/provider.js';
 import type { PersonaBotDeletionPreview, PersonaBotDeletion } from '../bots/deletion.js';
+import type { DataResetPreview, DataResetResult } from '../data-reset/reset.js';
 import type { MemoryFileTarget } from '../memory/file-actions.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { UsageFilter, UsageQueryResult } from '../usage/query.js';
@@ -811,6 +812,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.update({ slug, patch, expectedProfile }));
   }
 
+  dataResetPreview(): { preview: DataResetPreview } {
+    return unwrap(this.methods.dataResetPreview());
+  }
+  dataResetConfirm(token: string): { reset: DataResetResult } {
+    return unwrap(this.methods.dataResetConfirm({ token }));
+  }
   deletionPreview(slug: string): { preview: PersonaBotDeletionPreview } {
     return unwrap(this.methods.deletionPreview({ slug }));
   }
@@ -1906,6 +1913,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'create',
   'createFromGit',
   'update',
+  'dataResetPreview',
+  'dataResetConfirm',
   'deletionPreview',
   'deletionConfirm',
   'deletionRetry',

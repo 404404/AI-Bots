@@ -567,6 +567,8 @@ describe('bridge typert service', () => {
       'create',
       'createFromGit',
       'update',
+      'dataResetPreview',
+      'dataResetConfirm',
       'deletionPreview',
       'deletionConfirm',
       'deletionRetry',

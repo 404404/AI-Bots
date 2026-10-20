@@ -3951,6 +3951,36 @@ export const zh = {
   'telemetry.row.lockedDoNotTrack': '已由环境变量 DO_NOT_TRACK=1 关闭。',
   'telemetry.row.lockedEnv': '已由环境变量 BOTHARNESS_TELEMETRY=0 关闭。',
   'telemetry.row.error': '保存失败，请重试。',
+  'dataReset.row.title': '清除全部 BotHarness 数据',
+  'dataReset.row.description':
+    '删除所有 Bot、聊天记录、记忆和设置，让插件回到刚安装时的样子。卸载插件前可以先清除。',
+  'dataReset.row.action': '清除…',
+  'dataReset.title': '清除全部 BotHarness 数据',
+  'dataReset.loading': '正在检查要删除的内容…',
+  'dataReset.lead': '会删除这台 Host 上的 {bots} 个 Bot 和下面列出的全部内容，无法撤销。',
+  'dataReset.removed': '会删除',
+  'dataReset.kept': '会保留',
+  'dataReset.nothing': '没有找到 BotHarness 数据。',
+  'dataReset.target.data': 'BotHarness 数据',
+  'dataReset.target.dataBody':
+    '数据库、Bot、默认位置的记忆、附件、频道文件、工作区和浏览器登录状态',
+  'dataReset.target.im': 'IM 连接设置',
+  'dataReset.target.imBody': '飞书等 IM 应用的连接设置',
+  'dataReset.target.tools': '下载的工具',
+  'dataReset.target.toolsBody': '电脑操控驱动等之后可重新下载的工具',
+  'dataReset.size': '{size} · {files} 个文件',
+  'dataReset.sizeMore': '至少 {size} · {files} 个文件',
+  'dataReset.kept.credentials': 'DSH 凭据',
+  'dataReset.kept.memory': '你为 Bot 选择的记忆位置',
+  'dataReset.kept.exports': '导出的文件',
+  'dataReset.manualNote':
+    '这台 Host 不能自动重启。清除后 Bot 会停止工作，手动重启 Host 后完成删除。',
+  'dataReset.acknowledge': '我了解这会永久删除以上内容',
+  'dataReset.confirm': '清除并重启',
+  'dataReset.confirmManual': '清除',
+  'dataReset.restarting': '正在清除数据并重启 Host，页面稍后会重新连接。',
+  'dataReset.restartManual': '已开始清除。请手动重启 Host 来完成删除。',
+  'dataReset.error': '清除失败，请重试。',
 } as const satisfies Record<string, string>;
 
 export type BotHarnessKey = keyof typeof zh;
@@ -8136,6 +8166,37 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'telemetry.row.lockedDoNotTrack': 'Turned off by the environment variable DO_NOT_TRACK=1.',
   'telemetry.row.lockedEnv': 'Turned off by the environment variable BOTHARNESS_TELEMETRY=0.',
   'telemetry.row.error': 'Could not save. Try again.',
+  'dataReset.row.title': 'Clear all BotHarness data',
+  'dataReset.row.description':
+    'Delete every Bot, chat, Memory and setting so the plugin is like a fresh install. Do this before you uninstall the plugin.',
+  'dataReset.row.action': 'Clear…',
+  'dataReset.title': 'Clear all BotHarness data',
+  'dataReset.loading': 'Checking what will be deleted…',
+  'dataReset.lead':
+    'This deletes the {bots} Bots on this Host and everything listed below. It cannot be undone.',
+  'dataReset.removed': 'Will be deleted',
+  'dataReset.kept': 'Will be kept',
+  'dataReset.nothing': 'No BotHarness data was found.',
+  'dataReset.target.data': 'BotHarness data',
+  'dataReset.target.dataBody':
+    'Database, Bots, Memory in its default place, attachments, channel files, workspaces and browser sign-ins',
+  'dataReset.target.im': 'IM connection settings',
+  'dataReset.target.imBody': 'Connection settings for Feishu and other IM apps',
+  'dataReset.target.tools': 'Downloaded tools',
+  'dataReset.target.toolsBody': 'Tools such as the computer driver, downloaded again when needed',
+  'dataReset.size': '{size} · {files} files',
+  'dataReset.sizeMore': 'At least {size} · {files} files',
+  'dataReset.kept.credentials': 'DSH credentials',
+  'dataReset.kept.memory': 'Memory folder you chose for a Bot',
+  'dataReset.kept.exports': 'Exported files',
+  'dataReset.manualNote':
+    'This Host cannot restart itself. Bots stop after you clear; restart the Host yourself to finish.',
+  'dataReset.acknowledge': 'I understand this permanently deletes everything above',
+  'dataReset.confirm': 'Clear and restart',
+  'dataReset.confirmManual': 'Clear',
+  'dataReset.restarting': 'Clearing data and restarting the Host. This page reconnects shortly.',
+  'dataReset.restartManual': 'Clearing has started. Restart the Host yourself to finish.',
+  'dataReset.error': 'Could not clear. Try again.',
 } satisfies Record<BotHarnessKey, string>;
 
 export type BotHarnessTranslate = TranslateNS<typeof LOCALE_NS>;

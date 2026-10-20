@@ -148,9 +148,11 @@ import {
 import { createSqliteChannelStore } from './channels/sqlite-store.js';
 import {
   attachOperationalModule,
+  failOperationalDatabase,
   mountOperationalDatabase,
   type OperationalDatabaseOwner,
 } from './database/owner.js';
+import { applyPendingDataReset, createDataReset } from './data-reset/reset.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from './database/schema-plan.js';
 import { resolveDshHome } from './im/config-store.js';
 import { ensureMemoryRepository } from './memory/repository.js';
@@ -1034,6 +1036,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     profile === undefined ? [] : [profile.installAnchor, join(profile.dir, 'package.json')];
   installedPackage.identity(releaseAnchors);
   const dshHome = resolveDshHome();
+  applyPendingDataReset({ dshHome, home: homedir(), log: (message) => ctx.logger.info(message) });
   mountClientDiagnostics(ctx, dshHome);
   const release = installedRelease(import.meta.url);
   const telemetryChoice = telemetryDecision(config.telemetry);
@@ -2097,6 +2100,30 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       };
     }, 'botharness: release restarter');
   });
+  const dataReset = createDataReset({
+    dshHome,
+    home: homedir(),
+    bots: () => {
+      const bots = core.registry.listHistorical();
+      return {
+        count: bots.length,
+        chosenMemoryDirs: bots.flatMap((bot) => {
+          const memoryDir = core.registry.memoryDirFor(bot.slug);
+          return memoryDir === undefined ||
+            memoryDir === core.registry.defaultMemoryDirFor(bot.slug)
+            ? []
+            : [memoryDir];
+        }),
+      };
+    },
+    restarter: () => releaseRestarter.current,
+    stopWriting: () =>
+      failOperationalDatabase(
+        core.operationalDatabase,
+        'BotHarness data is being cleared; restart the Host to finish',
+      ),
+    log: (message) => ctx.logger.info(message),
+  });
   const releaseService = createLoadingReleaseService({
     version: () => runningRelease.version,
     ...(profile === undefined
@@ -2159,6 +2186,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     approvalTemplates,
     deletions: core.deletions,
     contentPurge: core.contentPurge,
+    dataReset,
     defaultModelSettings: () => ctx.get('settings') as unknown as TobNativeSettings | undefined,
     modelPresets: core.modelPresets,
     modelCatalog,
