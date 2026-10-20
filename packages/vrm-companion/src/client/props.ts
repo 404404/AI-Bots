@@ -156,8 +156,8 @@ export function createProps(surface: number, sill: number, materials: Materials)
     pen.rotation.set(Math.sin(i * 1.6) * 0.18, 0, -Math.cos(i * 1.6) * 0.18);
   }
   const phone = new Group();
-  phone.position.set(1.0, surface, 0.52);
-  phone.rotation.y = 0.35;
+  phone.position.set(0.72, surface, 0.42);
+  phone.rotation.y = -0.25;
   root.add(phone);
   block(0, 0.004, 0, 0.072, 0.008, 0.15, dark, phone);
   const phoneScreen = toon(0x4c6a8a);

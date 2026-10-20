@@ -296,7 +296,7 @@ export function createRoom(seatHeight: number) {
   root.add(props.root);
   textures.push(...props.textures);
   const phoneHome = props.phone.position.clone();
-  const notice = createNotice(phoneHome, new Vector3(-0.65, surface + 0.36, 0.78));
+  const notice = createNotice(props.phone, new Vector3(-0.65, surface + 0.36, 0.78));
   root.add(notice.root);
   textures.push(...notice.textures);
   const notify = (delta: number, reduced: boolean, head: Vector3): NoticeFrame => {

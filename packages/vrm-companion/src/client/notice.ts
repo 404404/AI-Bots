@@ -3,6 +3,7 @@ import {
   CanvasTexture,
   Group,
   Mesh,
+  type Object3D,
   MeshBasicMaterial,
   PlaneGeometry,
   SRGBColorSpace,
@@ -62,7 +63,7 @@ const icon = (draw: (brush: CanvasRenderingContext2D) => void) => {
   return texture;
 };
 
-export function createNotice(phoneSpot: Vector3, screenSpot: Vector3) {
+export function createNotice(phone: Object3D, screenSpot: Vector3) {
   const root = new Group();
   const alertTexture = icon((brush) => {
     brush.fillStyle = '#fff6e0';
@@ -116,10 +117,11 @@ export function createNotice(phoneSpot: Vector3, screenSpot: Vector3) {
     blending: AdditiveBlending,
     depthWrite: false,
   });
-  const glow = new Mesh(new PlaneGeometry(0.22, 0.28), glowMaterial);
-  glow.rotation.set(-Math.PI / 2, 0, 0.35);
-  glow.position.copy(phoneSpot).add(new Vector3(0, 0.012, 0));
-  root.add(alert, envelope, glow);
+  const glow = new Mesh(new PlaneGeometry(0.11, 0.2), glowMaterial);
+  glow.rotation.x = -Math.PI / 2;
+  glow.position.y = 0.011;
+  phone.add(glow);
+  root.add(alert, envelope);
   alert.visible = envelope.visible = glow.visible = false;
   let age = Infinity;
   const lift = new Vector3();
