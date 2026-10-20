@@ -14,6 +14,7 @@ import { nativeCarrier } from './native-carrier';
 import { nativeNotifications } from './native-notifications';
 import { notificationAvatars } from './native-notification-avatars';
 import { avatarInputs } from './notification-avatars';
+import { revokePairing } from './pairing';
 import { createHostPush } from './push';
 import { createPushSession, type PushStatus } from './push-session';
 import { createQuietChannels } from './quiet-channels';
@@ -154,12 +155,11 @@ export const hostSession = {
     await commit(next);
     return true;
   },
-  async unpair(hostId?: string): Promise<void> {
+  async unpair(hostId?: string): Promise<{ revoked: Promise<boolean> } | undefined> {
     const host =
       hostId === undefined ? state.saved : stored.hosts.find((entry) => entry.hostId === hostId);
-    if (host === null || host === undefined) return;
+    if (host === null || host === undefined) return undefined;
     const current = host.hostId === state.saved?.hostId;
-    void pushSession.forget(host);
     await sourceDrafts.ready;
     sourceDrafts.removeWhere((key) => {
       try {
@@ -170,10 +170,15 @@ export const hostSession = {
       }
     });
     await commit(withoutHost(stored, host.hostId));
-    if (!current) return;
-    try {
-      clearConversationCache();
-    } catch {}
+    if (current)
+      try {
+        clearConversationCache();
+      } catch {}
+    const revoked = pushSession
+      .forget(host)
+      .then(() => revokePairing({ host, carrier: nativeCarrier() }))
+      .then((result) => result === 'revoked');
+    return { revoked };
   },
 };
 
