@@ -20,7 +20,7 @@
 - Performance: the stage reports `data-vrm-fps`, `data-vrm-work` (main-thread ms per frame), `data-vrm-pace` (60 or 30) and `data-vrm-pixel-ratio` every 2 s of drawing; frame metrics such as `data-vrm-frames` update every 15 frames.
 - The **Auto camera tour** header icon sets `data-vrm-tour=on` and cycles `data-vrm-shot` through portrait, wide, shoulder, room and desk every ~15 s of wall-clock time; picking a view turns it off.
 - While the Bot speaks, `[data-vrm-speech]` shows the current sentence (`page`) in a bubble above the head, holding each before the next; `data-vrm-conversing` stays `true` through pauses and the stage's `data-vrm-attending` is `true` while the character faces the camera (panel vars `--vrm-head-x`/`--vrm-head-y`), and it disappears when speaking ends.
-- When the Bot wakes from idle (send it a DM), the stage sets `data-vrm-notice=true` for about 3 s while the phone lights, an envelope flies to the head and a `!` pops; `data-vrm-typing` reads `fast` while working, `slow` while thinking and `none` at idle. The composer status and sidebar hold a state at least 1.5 s, so a short tool call stays on thinking. `data-vrm-sunrise`/`data-vrm-sunset` hold today's local times.
+- When the Bot wakes from idle (send it a DM), the stage sets `data-vrm-notice=true` for about 3 s while the phone lights, an envelope pops out of the phone and a `!` pops; `data-vrm-typing` reads `fast` while working, `slow` while thinking and `none` at idle. The composer status and sidebar hold a state at least 1.5 s, so a short tool call stays on thinking. `data-vrm-sunrise`/`data-vrm-sunset` hold today's local times.
 
 ## How to get to it (user POV)
 

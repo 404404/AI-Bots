@@ -1,7 +1,7 @@
-import type { PersonaBotActivitySnapshot } from './store.js';
-
-type Entry = PersonaBotActivitySnapshot['bots'][number];
-type State = Entry['state'];
+export interface SmoothedActivity {
+  state: string;
+  activity?: unknown;
+}
 
 export const ACTIVITY_SETTLE_MS = 700;
 export const ACTIVITY_IDLE_SETTLE_MS = 900;
@@ -10,20 +10,20 @@ export const ACTIVITY_DETAIL_MS = 1500;
 
 const URGENT = new Set<string>(['waiting', 'blocked']);
 
-interface Track {
-  state: State;
+interface Track<Entry extends SmoothedActivity> {
+  state: Entry['state'];
   activity: Entry['activity'];
   shownAt: number;
   detailAt: number;
-  pending: State | undefined;
+  pending: Entry['state'] | undefined;
   pendingSince: number;
 }
 
-const sameActivity = (a: Entry['activity'], b: Entry['activity']) =>
+const sameActivity = (a: unknown, b: unknown) =>
   JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-export class ActivitySmoother {
-  #tracks = new Map<string, Track>();
+export class ActivitySmoother<Entry extends SmoothedActivity = SmoothedActivity> {
+  #tracks = new Map<string, Track<Entry>>();
 
   step(
     raw: ReadonlyMap<string, Entry>,
@@ -90,7 +90,7 @@ export class ActivitySmoother {
         ...(track.state === 'working' && track.activity !== undefined
           ? { activity: track.activity }
           : {}),
-      });
+      } as Entry);
     }
     return { shown, wake };
   }

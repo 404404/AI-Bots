@@ -695,7 +695,7 @@ export function createStore({
   let activity: PersonaBotActivitySnapshot | undefined;
   let activityStates = new Map<string, PersonaBotActivitySnapshot['bots'][number]>();
   let rawActivity = new Map<string, PersonaBotActivitySnapshot['bots'][number]>();
-  const smoother = new ActivitySmoother();
+  const smoother = new ActivitySmoother<PersonaBotActivitySnapshot['bots'][number]>();
   let settle: ReturnType<typeof setTimeout> | undefined;
   const smooth = () => {
     if (settle !== undefined) clearTimeout(settle);

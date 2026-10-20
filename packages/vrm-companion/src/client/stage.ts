@@ -1,4 +1,5 @@
 import {
+  Matrix4,
   AmbientLight,
   HemisphereLight,
   PMREMGenerator,
@@ -68,6 +69,8 @@ export interface Stage {
 const GRIP = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
 const SIDEWAYS = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2);
 const FINGERS = ['Index', 'Middle', 'Ring', 'Little'] as const;
+const REST_CURL = [0.22, 0.3, 0.38, 0.46];
+const SPREAD = [-1, -0.3, 0.4, 1];
 const TAP_FINGERS = ['Index', 'Index', 'Middle', 'Middle', 'Ring', 'Little'] as const;
 const noise = (seed: number) => {
   const value = Math.sin(seed * 91.7 + 13.1) * 43758.5453;
@@ -543,6 +546,8 @@ export function mountStage(
       pose('rightLowerLeg', (sit * Math.PI) / 2 + Math.max(0, walk) * 1.4, 0, 0, blend);
       pose('leftFoot', -Math.max(0, -walk) * 0.4, 0, 0, blend);
       pose('rightFoot', -Math.max(0, walk) * 0.4, 0, 0, blend);
+      pose('leftHand', 0, 0, stretch * 0.9, blend);
+      pose('rightHand', 0, 0, -stretch * 0.9, blend);
       const reach = sit * (1 - stretch);
       let rightGoal: Vector3 | undefined;
       let rightWeight = 0;
@@ -559,8 +564,13 @@ export function mountStage(
           .addScaledVector(facing, 0.11 * modelScale)
           .add(new Vector3(0, 0.02 * modelScale, 0));
         if (chin > 0) {
-          rightGoal = mouth.clone().add(new Vector3(0.02, -0.07 * modelScale, 0));
+          rightGoal = mouth.clone().add(new Vector3(0.02, -0.1 * modelScale, 0));
           rightWeight = chin;
+          const x = new Vector3(0, -1, 0).addScaledVector(facing, 0.25).normalize();
+          const y = facing.clone().negate().addScaledVector(x, x.dot(facing)).normalize();
+          rightGrip = new Quaternion().setFromRotationMatrix(
+            new Matrix4().makeBasis(x, y, x.clone().cross(y)),
+          );
         } else {
           const lifted = sip * drink.lift;
           const held = new Quaternion()
@@ -634,21 +644,35 @@ export function mountStage(
       }
       const grasp = rightGrip ? rightWeight : 0;
       const quick = reduced.matches ? 1 : 1 - Math.exp(-delta * 24);
+      const open = stretch;
       for (const side of ['left', 'right'] as const) {
         const sign = side === 'right' ? 1 : -1;
-        for (const finger of FINGERS) {
+        const fist = side === 'right' ? grasp : 0;
+        for (const [index, finger] of FINGERS.entries()) {
           const neighbor =
             Math.abs(FINGERS.indexOf(finger) - FINGERS.indexOf(tapFinger)) === 1 ? 0.2 : 0;
           const tap = typing && side === tapSide ? hit * (finger === tapFinger ? 1 : neighbor) : 0;
+          const breathe = moving
+            ? Math.sin(phase * 0.9 + index * 1.3 + (sign > 0 ? 0 : 2)) * 0.03
+            : 0;
+          const relaxed = (REST_CURL[index]! + breathe) * (1 - open * 0.85) * (1 - typing * 0.5);
           const curl =
-            (side === 'right' ? 0.15 + grasp * 0.95 : 0.15) +
+            relaxed +
+            fist * (0.85 + index * 0.1) +
             typing * (0.32 + (finger === 'Little' ? 0.1 : 0) + tap * 0.5);
-          pose(`${side}${finger}Proximal`, 0, 0, sign * curl, quick);
+          const spread = SPREAD[index]! * (0.04 + open * 0.12) * (1 - fist) * (1 - typing * 0.6);
+          pose(`${side}${finger}Proximal`, 0, sign * spread, sign * curl, quick);
           pose(`${side}${finger}Intermediate`, 0, 0, sign * curl * (1.1 - tap * 0.4), quick);
-          pose(`${side}${finger}Distal`, 0, 0, sign * curl * 0.7, quick);
+          pose(`${side}${finger}Distal`, 0, 0, sign * curl * (0.6 + fist * 0.2), quick);
         }
-        const thumb = Math.max(side === 'right' ? grasp : 0, typing * 0.4);
-        pose(`${side}ThumbProximal`, 0, sign * -0.35 * thumb, sign * 0.2 * thumb, blend);
+        const thumb = Math.max(fist, typing * 0.4, 0.25 * (1 - open));
+        pose(
+          `${side}ThumbProximal`,
+          0,
+          sign * (-0.35 * thumb + open * 0.35),
+          sign * 0.2 * thumb,
+          blend,
+        );
         pose(`${side}ThumbDistal`, 0, sign * -0.3 * thumb, 0, blend);
       }
       const expressions = vrm.expressionManager;
