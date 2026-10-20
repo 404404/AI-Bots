@@ -17,6 +17,7 @@ import type { PairingMethod } from '../src/telemetry/schema';
 import { Button } from '../src/ui/primitives/button';
 import { DrawerHeader } from '../src/ui/primitives/drawer-header';
 import { KeyboardFormScroll } from '../src/ui/primitives/keyboard-form';
+import { PairingGuide } from '../src/ui/shell/pairing-guide';
 import { cloudAvailable } from '../src/cloud/available';
 import { t } from '../src/ui/strings';
 import { useDesignTheme } from '../src/ui/design/theme';
@@ -157,6 +158,7 @@ export default function PairScreen() {
           onPress={() => void pair(handled.current!, lastMethod.current, true)}
         />
       ) : null}
+      <PairingGuide />
       <View style={{ gap: space.x2 }}>
         <Text variant="meta" tone="muted" accessibilityRole="header">
           {t.pasteLink}
