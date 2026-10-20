@@ -1516,6 +1516,14 @@
       "sha256": "014810503926fe7e38217f6cc522aa6fcbee8dd2eb36142e096d72787d66b5ef"
     },
     {
+      "path": "scripts/e2e-mobile-activity-swipe-web.mjs",
+      "category": "mapped",
+      "behaviors": ["phone.activity.rows"],
+      "reason": "Own task Host and Expo Web export; Activity swipe clear/snooze/undo and Cleared restore in browser with a real model turn, no native gesture acceptance.",
+      "task": 1954,
+      "sha256": "dea40aea3a3fecb2a6d6c9f2cefb8e287901036e318aa1065f27cd4665a7548f"
+    },
+    {
       "path": "scripts/e2e-mobile-follow-latest-web.mjs",
       "category": "historical-regression",
       "behaviors": ["phone.timeline"],

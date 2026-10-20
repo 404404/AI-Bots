@@ -152,6 +152,43 @@ describe('Human Inbox', () => {
     expect((await ready(inbox)).sections.action).toEqual([]);
   });
 
+  it('puts the newest pending request first by default', async () => {
+    const fake = host();
+    fake.answers.delete('humanAttention');
+    fake.methods.set('humanAttention', () => ({ queryVersion: 1, items: [] }));
+    inbox = createInbox(connect(fake), { activity: true });
+    await ready(inbox);
+    const sorts = Object.fromEntries(
+      fake.calls
+        .filter((call) => call.method === 'humanAttention')
+        .map((call) => [call.args['category'], call.args['sort']]),
+    );
+    expect(sorts).toEqual({ action: 'newest', replies: 'mentions-first', unread: undefined });
+  });
+
+  it('reads cleared items across categories and refuses a Host that cannot list them', async () => {
+    const fake = host();
+    fake.answers.delete('humanAttention');
+    let supported = false;
+    fake.methods.set('humanAttention', (args) => ({
+      queryVersion: 1,
+      items: [],
+      ...(supported && args['dismissed'] === true ? { dismissed: true } : {}),
+    }));
+    inbox = createInbox(connect(fake), { activity: true, section: 'cleared' });
+    const error = await until(() =>
+      inbox!.getSnapshot().status === 'error' ? inbox!.getSnapshot() : undefined,
+    );
+    expect(error).toMatchObject({ error: t.activityUpdateHost });
+    supported = true;
+    fake.calls.length = 0;
+    await inbox.refresh();
+    await ready(inbox);
+    const calls = fake.calls.filter((call) => call.method === 'humanAttention');
+    expect(calls.map((call) => call.args['category'])).toEqual(['action', 'replies', 'unread']);
+    expect(calls.every((call) => call.args['dismissed'] === true)).toBe(true);
+  });
+
   it('lets explicit chronological sorting replace mention priority without fetching history', async () => {
     const fake = host();
     fake.answers.delete('humanAttention');
