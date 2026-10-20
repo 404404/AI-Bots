@@ -5,16 +5,48 @@ import { edge, radius, space } from '../design/tokens';
 import { badgeCount } from '../primitives/badge-count';
 import { Text } from '../primitives/text';
 import { ChevronDownIcon } from '../shell/icons';
+import { useLiquidGlass } from '../primitives/drawer-material';
+import { ComposerCircleButton, composerBar } from './composer-chrome';
 import { t } from '../strings';
 
 export function JumpToLatest({ unseen, onPress }: { unseen: number; onPress(): void }) {
   const theme = useDesignTheme();
   const layer = theme.layer.raised;
   const badge = theme.type.meta.line;
+  const glass = useLiquidGlass();
+  const label = unseen > 0 ? t.unseenLatest(unseen) : t.jumpToLatest;
+  const count =
+    unseen > 0 ? (
+      <View
+        style={{
+          position: 'absolute',
+          top: -space.x2,
+          right: -space.x2,
+          minWidth: badge,
+          height: badge,
+          borderRadius: radius.round,
+          paddingHorizontal: space.x2,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.color.accent,
+        }}
+      >
+        <Text variant="meta" tone="onAccent" strong>
+          {badgeCount(unseen)}
+        </Text>
+      </View>
+    ) : null;
+  if (glass)
+    return (
+      <ComposerCircleButton label={label} size={composerBar(theme) - space.x2} onPress={onPress}>
+        <ChevronDownIcon color={theme.color.fg} size={theme.type.body.line} />
+        {count}
+      </ComposerCircleButton>
+    );
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={unseen > 0 ? t.unseenLatest(unseen) : t.jumpToLatest}
+      accessibilityLabel={label}
       onPress={onPress}
       hitSlop={space.x2}
       style={({ pressed }) => ({
@@ -34,26 +66,7 @@ export function JumpToLatest({ unseen, onPress }: { unseen: number; onPress(): v
       })}
     >
       <ChevronDownIcon color={theme.color.fg} size={theme.type.body.line} />
-      {unseen > 0 ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: -space.x2,
-            right: -space.x2,
-            minWidth: badge,
-            height: badge,
-            borderRadius: radius.round,
-            paddingHorizontal: space.x2,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: theme.color.accent,
-          }}
-        >
-          <Text variant="meta" tone="onAccent" strong>
-            {badgeCount(unseen)}
-          </Text>
-        </View>
-      ) : null}
+      {count}
     </Pressable>
   );
 }
