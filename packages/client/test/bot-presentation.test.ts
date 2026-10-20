@@ -28,7 +28,7 @@ const output = (botId: string, messageId = 'm1') => ({
 });
 function setup() {
   vi.useFakeTimers();
-  const store = createStore();
+  const store = createStore({ smoothActivity: false });
   store.setRoster([bot('a'), bot('b')], []);
   const sources: Source[] = [];
   const errors = vi.fn();
@@ -203,7 +203,7 @@ describe('public Bot presentation', () => {
   });
   it('retries construction failures and cancels the retry when the final view closes', () => {
     vi.useFakeTimers();
-    const store = createStore();
+    const store = createStore({ smoothActivity: false });
     store.setRoster([bot('a')], []);
     const source = vi.fn(() => {
       throw new Error('offline');
