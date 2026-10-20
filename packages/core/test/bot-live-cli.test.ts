@@ -278,6 +278,37 @@ describe('live CLI over the authenticated DSH carrier', () => {
     expect(live.calls).toEqual([]);
   });
 
+  it('names the trusted-host fix when the Host fences a tailnet name after login', async () => {
+    const seen: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = new URL(String(input));
+      seen.push(`${init?.method ?? 'GET'} ${url.pathname}`);
+      if (url.pathname === '/')
+        return new Response(null, {
+          status: 303,
+          headers: { location: '/', 'set-cookie': 'dsh-auth-x=signed; HttpOnly; Secure' },
+        });
+      expect(new Headers(init?.headers).get('cookie')).toBe('dsh-auth-x=signed');
+      return new Response('forbidden', { status: 403 });
+    });
+    const tailnet = 'https://box.tail0123.ts.net';
+    for (const argv of [['release-info'], ['phone-route']]) {
+      const result = await invoke(argv, tailnet);
+      expect(result.code).toBe(1);
+      expect(result.json.error).toEqual({
+        code: 'host-untrusted',
+        message:
+          'The Host does not accept requests addressed to box.tail0123.ts.net; restart it with --trusted-host box.tail0123.ts.net.',
+      });
+    }
+    expect(seen).toEqual([
+      'GET /',
+      'POST /api/botharness/releaseInfo',
+      'GET /',
+      'GET /api/botharness/devices',
+    ]);
+  });
+
   it('fails closed on a stopped Host with a coded error', async () => {
     const live = await host(() => ({ ok: true, value: {} }));
     await new Promise<void>((resolve) => servers.pop()!.close(() => resolve()));

@@ -455,6 +455,10 @@ function usage(message: string): never {
   throw new CliLiveError('usage', message);
 }
 
+function isLoopbackName(name: string): boolean {
+  return name === 'localhost' || name === '[::1]' || /^127\.\d+\.\d+\.\d+$/u.test(name);
+}
+
 function hostUrl(value: string | undefined): URL {
   if (!value) usage('Live commands require --host or DEEPSEEKBOT_HOST.');
   let url: URL;
@@ -464,7 +468,7 @@ function hostUrl(value: string | undefined): URL {
     usage('--host must be an HTTP(S) origin.');
   }
   const name = url.hostname;
-  const loopback = name === 'localhost' || name === '[::1]' || /^127\.\d+\.\d+\.\d+$/u.test(name);
+  const loopback = isLoopbackName(name);
   const tailnet =
     name.endsWith('.ts.net') || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/u.test(name);
   if (
@@ -515,6 +519,16 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
   const login = new URL(base);
   login.searchParams.set('token', secret);
   let cookie = '';
+  const refused = (status: number): CliLiveError =>
+    status === 403 && !isLoopbackName(base.hostname)
+      ? new CliLiveError(
+          'host-untrusted',
+          `The Host does not accept requests addressed to ${base.hostname}; restart it with --trusted-host ${base.hostname}.`,
+        )
+      : new CliLiveError(
+          'host-unauthorized',
+          'The Host refused this authority cookie; refresh its launch token.',
+        );
   const request = async (url: URL, init: RequestInit = {}): Promise<Response> => {
     try {
       return await fetch(url, { ...init, signal, redirect: 'manual' });
@@ -542,10 +556,7 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
   const readResponse = async (response: Response): Promise<Record<string, unknown>> => {
     if (response.status === 401 || response.status === 403) {
       await response.body?.cancel();
-      throw new CliLiveError(
-        'host-unauthorized',
-        'The Host refused this authority cookie; refresh its launch token.',
-      );
+      throw refused(response.status);
     }
     try {
       const body = await response.text();
@@ -641,11 +652,7 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
         : typeof nested['code'] === 'string'
           ? nested['code']
           : undefined;
-    if ((status === 401 || status === 403) && code === undefined)
-      throw new CliLiveError(
-        'host-unauthorized',
-        'Host login was refused; refresh its launch token.',
-      );
+    if ((status === 401 || status === 403) && code === undefined) throw refused(status);
     const packages = Array.isArray(detail['packages'])
       ? detail['packages'].filter((name): name is string => typeof name === 'string')
       : [];
