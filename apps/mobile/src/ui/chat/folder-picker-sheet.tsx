@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SectionList, View, type ViewInstance } from 'react-native';
+import { ScrollView, SectionList, View, type ViewInstance } from 'react-native';
 
 import {
   errorText,
@@ -110,16 +110,18 @@ export function FolderPickerSheet({
         onClose={close}
       >
         {start}
-        {notice}
-        <SettingsGroupItem first last on={SHEET_GROUP}>
-          <SettingsRow
-            title={chosen.title}
-            detail={chosen.path}
-            leading={<RowIcon kind="folder" />}
-            on={SHEET_GROUP}
-          />
-        </SettingsGroupItem>
-        <SheetFooter>{t.grantScopeNote}</SheetFooter>
+        <ScrollView testID="grant-confirm-scroll" style={{ flexShrink: 1 }}>
+          {notice}
+          <SettingsGroupItem first last on={SHEET_GROUP}>
+            <SettingsRow
+              title={chosen.title}
+              detail={chosen.path}
+              leading={<RowIcon kind="folder" />}
+              on={SHEET_GROUP}
+            />
+          </SettingsGroupItem>
+          <SheetFooter>{t.grantScopeNote}</SheetFooter>
+        </ScrollView>
         <SheetActions>
           <Button
             label={t.back}
