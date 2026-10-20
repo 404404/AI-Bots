@@ -11,9 +11,6 @@ export const MESSAGE_FOLD_HEIGHT_PX = 300;
 
 const expanded = new Set<string>();
 
-// Every message measures itself, so one shared observer serves the whole
-// timeline instead of one observer per message, which Chromium checks on
-// every rendered frame.
 const sizeListeners = new Map<Element, () => void>();
 let sizeObserver: ResizeObserver | undefined;
 

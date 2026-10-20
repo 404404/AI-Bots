@@ -263,8 +263,6 @@ function authorLabel(
   }
 }
 
-// Every visible message formats its time on each render, and building an
-// Intl formatter costs far more than using one, so formatters are reused.
 const timeFormats = new Map<string, Intl.DateTimeFormat>();
 function timeFormat(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   const key = `${locale}|${JSON.stringify(options)}`;
@@ -3595,8 +3593,6 @@ export function BotPanel({
   t: BotHarnessTranslate;
 }): ReactElement {
   const onboarding = onboardingFor(actions);
-  // Onboarding polls every few seconds; subscribing to the boolean keeps those
-  // polls from re-rendering the whole conversation below.
   const deferRelease = useSyncExternalStore(onboarding.subscribe, () =>
     releaseDeferred(onboarding.getSnapshot()),
   );
