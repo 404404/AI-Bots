@@ -13,6 +13,7 @@ import { useDesignTheme } from '../design/theme';
 import { useMounted } from '../mounted';
 import { Button } from '../primitives/button';
 import { SettingsGroupItem, SettingsRow } from '../primitives/settings-row';
+import { TextField } from '../primitives/text-field';
 import { ChevronRightIcon } from '../shell/icons';
 import { t } from '../strings';
 import {
@@ -56,16 +57,21 @@ export function FolderPickerSheet({
   const [chosen, setChosen] = useState<WorkspaceOption>();
   const [busy, setBusy] = useState<'resolve' | 'confirm'>();
   const [error, setError] = useState<string>();
+  const [manual, setManual] = useState(false);
+  const [typed, setTyped] = useState('');
 
   const browse = (path?: string) => {
     setListing({ status: 'loading' });
     void port.listFolders(path).then(
       (value) => setListing({ status: 'ready', value }),
-      (cause: unknown) =>
+      (cause: unknown) => {
+        const unavailable = folderBrowsingUnavailable(cause);
+        setManual(unavailable);
         setListing({
           status: 'failed',
-          error: folderBrowsingUnavailable(cause) ? t.browseUnavailable : errorText(cause),
-        }),
+          error: unavailable ? t.browseUnavailableTypePath : errorText(cause),
+        });
+      },
     );
   };
 
@@ -182,6 +188,18 @@ export function FolderPickerSheet({
       onClose={close}
     >
       {start}
+      {manual ? (
+        <TextField
+          accessibilityLabel={t.folderPath}
+          testID="grant-folder-path"
+          placeholder={t.folderPathHint}
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={busy === undefined}
+          value={typed}
+          onChangeText={setTyped}
+        />
+      ) : null}
       {listing.status === 'ready' ? (
         <Crumbs
           crumbs={listing.value.crumbs}
@@ -242,9 +260,12 @@ export function FolderPickerSheet({
           tone="primary"
           on="canvas"
           busy={busy === 'resolve'}
-          disabled={busy !== undefined || listing.status !== 'ready'}
+          disabled={
+            busy !== undefined || (manual ? typed.trim() === '' : listing.status !== 'ready')
+          }
           onPress={() => {
-            if (listing.status === 'ready') choose(listing.value.path);
+            if (manual) choose(typed.trim());
+            else if (listing.status === 'ready') choose(listing.value.path);
           }}
         />
       </SheetActions>
