@@ -726,22 +726,17 @@ export function ChannelComposer({
   };
   const handleFilePaste = (event: ClipboardEvent<HTMLElement>): boolean => {
     const clipboard = event.clipboardData;
-    const files = Array.from(clipboard.files);
-    const unmatchedFiles = [...files];
-    for (const item of Array.from(clipboard.items)) {
-      if (item.kind !== 'file') continue;
-      const file = item.getAsFile();
-      if (file === null) continue;
-      const existingIndex = unmatchedFiles.findIndex(
-        (existing) =>
-          existing.name === file.name &&
-          existing.size === file.size &&
-          existing.type === file.type &&
-          existing.lastModified === file.lastModified,
-      );
-      if (existingIndex < 0) files.push(file);
-      else unmatchedFiles.splice(existingIndex, 1);
-    }
+    // `files` and the file entries of `items` describe the same clipboard data, but
+    // Chromium builds a new File for each read with its own lastModified, so one image
+    // reads as two. Use `items` only when the platform leaves `files` empty.
+    const listed = Array.from(clipboard.files);
+    const files =
+      listed.length > 0
+        ? listed
+        : Array.from(clipboard.items).flatMap((item) => {
+            const file = item.kind === 'file' ? item.getAsFile() : null;
+            return file === null ? [] : [file];
+          });
     if (files.length === 0 || onAddFiles === undefined || sending) return false;
     event.preventDefault();
     event.stopPropagation();
