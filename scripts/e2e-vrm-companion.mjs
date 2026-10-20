@@ -27,10 +27,15 @@ const browser = await puppeteer.launch({
   headless: true,
   userDataDir: resolve(dirname(instancePath), 'browser'),
   args: ['--no-sandbox', '--lang=en-US'],
+  protocolTimeout: 180000,
 });
 const page = await browser.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
+page.on('response', (response) => {
+  if (response.status() >= 400)
+    errors.push(response.status() + ' ' + response.url().replace(/token=[^&]+/, 'token=*'));
+});
 page.on('console', (message) => {
   if (message.type() === 'error') errors.push(message.text());
 });
@@ -44,6 +49,26 @@ async function click(selector) {
   const node = await visible(selector);
   assert(node, 'Missing visible control: ' + selector);
   await node.click();
+}
+async function sceneAction(label) {
+  for (const button of await page.$$('[data-vrm-scene-menu]')) {
+    if (!(await button.isVisible())) continue;
+    await button.click();
+    await delay(200);
+    const picked = await page.$$eval(
+      '[role="menuitem"]',
+      (items, name) => {
+        const item = items.find((n) => n.textContent.trim() === name);
+        item?.click();
+        return !!item;
+      },
+      label,
+    );
+    if (picked) return true;
+    await page.keyboard.press('Escape');
+    await delay(100);
+  }
+  return false;
 }
 async function capture(label) {
   writeFileSync(
@@ -66,10 +91,13 @@ async function capture(label) {
 try {
   await page.setViewport({ width: 1440, height: 900 });
   await page.goto(instance.url, { waitUntil: 'domcontentloaded' });
-  const notice = (await visible(aria('Continue'))) ?? (await visible(aria('继续')));
-  if (notice) await notice.click();
-  if (!(await page.$('.bh-root.bh-main')))
-    await ((await visible(aria('Bot mode'))) ?? (await visible(aria('Bot 模式')))).click();
+  for (let attempt = 0; attempt < 40 && !(await page.$('.bh-root.bh-main')); attempt++) {
+    for (const name of ['Continue', '继续', 'Bot mode', 'Bot 模式']) {
+      const control = await visible(aria(name));
+      if (control) await control.click().catch(() => null);
+    }
+    await delay(500);
+  }
   await page.waitForSelector('.bh-root.bh-main');
   await delay(1500);
   await capture('initial-' + phase);
@@ -78,18 +106,22 @@ try {
     if (skip) await skip.click();
     if (phase === 'instances') {
       for (let n = 0; n < 16; n++) {
-        const remove = await visible(aria('Delete instance'));
-        if (!remove) break;
-        await remove.click();
+        if (!(await sceneAction('Delete instance'))) break;
         await delay(100);
       }
     }
     await click('button[data-channel-id="dm-' + ada.slug + '"]');
     await delay(500);
     if (!(await visible('[data-dock-header="bh:channel-body"]')))
-      await click(aria('消息 · Ctrl + Alt + Shift + 2'));
+      await page.evaluate(() =>
+        [...document.querySelectorAll('button')]
+          .find(
+            (b) => b.offsetParent && /^(Messages|消息)/.test(b.getAttribute('aria-label') ?? ''),
+          )
+          ?.click(),
+      );
     await page.waitForSelector('[data-dock-header="bh:channel-body"]');
-    const homeClose = await visible(aria('关闭 首页'));
+    const homeClose = (await visible(aria('关闭 首页'))) ?? (await visible(aria('Close Home')));
     if (homeClose) await homeClose.click();
     if (!(await visible('[data-vrm-bot="' + ada.slug + '"]')))
       await click('button[aria-label="VRM Companion"]');
@@ -128,7 +160,7 @@ try {
           n.getContext('webgl2'),
         );
       });
-      await click(aria('Delete instance'));
+      assert(await sceneAction('Delete instance'), 'Missing Delete instance');
       await delay(300);
       const lost = await page.evaluate(() => window.qaContexts.map((c) => c.isContextLost()));
       assert.equal(lost.filter(Boolean).length, 1);
@@ -142,14 +174,14 @@ try {
     if (phase === 'instances') {
       const bob = bots.find((b) => b.displayName === 'VRM QA Bob');
       assert(bob);
-      await click(aria('Pin character globally'));
+      assert(await sceneAction('Pin character globally'), 'Missing Pin character globally');
       await delay(800);
       await click('button[aria-label="VRM Companion"]');
       await click('button[data-channel-id="dm-' + bob.slug + '"]');
       await delay(700);
       await click('button[aria-label="VRM Companion"]');
       await page.waitForSelector('[data-vrm-bot="' + bob.slug + '"] [data-vrm-loaded="true"]');
-      await click(aria('Pin character globally'));
+      assert(await sceneAction('Pin character globally'), 'Missing Pin character globally');
       await delay(800);
       await click('button[aria-label="VRM Companion"]');
       const bindings = () =>

@@ -29,7 +29,6 @@ export interface DockPanelPosition {
 }
 
 export interface DockPanel extends PublicDockPanel {
-  readonly headerAction?: ComponentType<DockPanelProps> | undefined;
   readonly onTitleHide?: (() => void) | undefined;
 }
 
@@ -139,7 +138,14 @@ export function createDockPanelRegistry(
         botId: instance.botId,
         instanceId: instance.id,
       }),
-    headerAction: undefined,
+    headerAction:
+      definition.headerAction &&
+      ((props) =>
+        createElement(definition.headerAction!, {
+          ...props,
+          botId: instance.botId,
+          instanceId: instance.id,
+        })),
     onTitleHide: undefined,
   });
   const registry: DockPanelHost = {

@@ -175,6 +175,15 @@ Date: 2026-10-20.
 - **Host.** In the isolated Host (1280 × 800, narrow panel) uploading another VRoid model (`b.vrm`, VRM 0.x) loaded it with typing hands on the keys; after a page reload the panel still showed `b.vrm`. At 1440 × 900 a third VRoid model (`c.vrm`) loaded and typed the same way; **Use default** restored the sample and, after another reload, no custom model remained. The IndexedDB helper has no unit test because no IndexedDB implementation is available in the Node test environment; the Host runs above are its evidence.
 - **Frames.** Custom model at the desk with the header controls: `change-character.jpg`.
 
+## Controls in the panel header and auto camera tour (Human feedback)
+
+Date: 2026-10-20.
+
+- **Feedback.** Controls should not sit inside the Three.js panel body; they belong in the panel header, including settings such as an automatic camera loop and switching character.
+- **Change.** Panel definitions gained an optional public `headerAction`, rendered by the native dock header; fixed instances receive their own `botId` and `instanceId`. The VRM Panel's header now shows the Bot state and a **Scene** menu holding Character (Change character…, Use default, MToon/lilToon), View (Desk/Room/Portrait, Reset view, Auto camera tour), Time, Weather, Look, Movement, and Pin character globally or Delete instance. Submenus would open off-screen for a right-docked panel, so the groups are flat sections of one menu. The canvas keeps only speech, attention, loading and error overlays. **Auto camera tour** cycles desk, portrait, wide, over-the-shoulder and room shots, holding each for 12 seconds of wall-clock time and gliding 3 seconds between them; dragging pauses it for 20 seconds and picking a view stops it.
+- **Host.** At 1440 × 900 the header showed `VRM Companion · idle · Scene`; Night set `data-vrm-mood=night`, uploading `c.vrm` through the menu loaded it, and both pinned Ada/Bob instances carried their own Scene menu. The `instances` journey passed with no console errors after the Host was restarted on the fresh build (a Host started before the rebuild returned 404 for the appearance-control route). With the tour on, `data-vrm-shot` moved portrait → wide → shoulder → room at 18, 28, 47 and 63 seconds under software rendering.
+- **Frames.** Whole app with the header menu: `app-header-scene.jpg`, `app-header-menu.jpg`; tour shots: `camera-tour.jpg`.
+
 ## Acceptance limits and next action
 
 The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

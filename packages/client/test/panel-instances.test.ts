@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createDockPanelRegistry, type DockPanelInstance } from '../src/client/dock-panels.js';
+import {
+  createDockPanelRegistry,
+  type DockPanelInstance,
+  type DockPanelProps,
+} from '../src/client/dock-panels.js';
 const definition = {
   id: 'avatar',
   title: 'Character',
@@ -46,5 +50,18 @@ describe('ordinary Panel instances', () => {
     expect(() => registry.createInstance('avatar', 'a', 'Alice')).toThrow('read_only');
     expect(registry.instances()).toEqual([]);
     expect(registry.panels()).toHaveLength(1);
+  });
+  it('binds a header action to the fixed instance it belongs to', () => {
+    const registry = createDockPanelRegistry();
+    const headerAction = (props: DockPanelProps) => props;
+    registry.register({ ...definition, headerAction: headerAction as never });
+    const a = registry.createInstance('avatar', 'a', 'Alice');
+    const panel = registry.panels().find((p) => p.id === a)!;
+    const element = (
+      panel.headerAction as (props: DockPanelProps) => {
+        props: DockPanelProps;
+      }
+    )({ channel: undefined });
+    expect(element.props).toMatchObject({ botId: 'a', instanceId: a });
   });
 });

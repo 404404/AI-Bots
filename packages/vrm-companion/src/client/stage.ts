@@ -47,6 +47,7 @@ export interface SceneChoices {
   weather: Weather;
   shading: CharacterShading;
   effects: boolean;
+  tour?: boolean;
 }
 export interface StageCallbacks {
   loading(value: string): void;
@@ -60,6 +61,7 @@ export interface Stage {
   mood(value: Mood): void;
   weather(value: Weather): void;
   effects(value: boolean): void;
+  tour(value: boolean): void;
   shading(value: CharacterShading): void;
   dispose(): void;
 }
@@ -163,29 +165,85 @@ export function mountStage(
   scene.add(key);
   const clock = new Clock();
   const base = new Map<string, Quaternion>();
-  const fitCamera = (view: CameraView) => {
-    cameraView = view;
+  const framing = (view: CameraView | 'wide' | 'shoulder') => {
     const portrait = view === 'portrait';
     const target = portrait
       ? new Vector3(motion.x, 1.16 - motion.seated * 0.1, motion.z)
-      : new Vector3(0.5, 1.02, 0.1);
+      : view === 'shoulder'
+        ? new Vector3(0.42, 1.05, 0.6)
+        : new Vector3(0.5, 1.02, 0.1);
     const offset =
       view === 'room'
         ? new Vector3(1.9, 1.5, 4.0)
         : portrait
           ? new Vector3(0.8, 0.12, 1.15)
-          : new Vector3(0.88, 0.18, 0.72);
+          : view === 'wide'
+            ? new Vector3(1.35, 0.5, 1.45)
+            : view === 'shoulder'
+              ? new Vector3(0.5, 0.5, -1.15)
+              : new Vector3(0.88, 0.18, 0.72);
     const aspectScale =
       view === 'desk'
         ? Math.max(1, Math.min(1.8, 1.7 / camera.aspect))
         : Math.max(1, Math.min(1.25, 0.75 / camera.aspect));
     offset.multiplyScalar(aspectScale);
+    return { target, position: target.clone().add(offset) };
+  };
+  const fitCamera = (view: CameraView) => {
+    cameraView = view;
+    const { target, position } = framing(view);
     controls.target.copy(target);
-    camera.position.copy(target).add(offset);
+    camera.position.copy(position);
     camera.lookAt(target);
     controls.update();
     host.dataset.vrmCamera = view;
   };
+  const SHOTS = ['desk', 'portrait', 'wide', 'shoulder', 'room'] as const;
+  let touring = !!initial.tour;
+  host.dataset.vrmTour = touring ? 'on' : 'off';
+  let shot = 0;
+  let hold = 0;
+  let paused = 0;
+  let glide:
+    | { from: Vector3; fromTarget: Vector3; to: Vector3; toTarget: Vector3; t: number }
+    | undefined;
+  const tourStep = (delta: number) => {
+    if (!touring) return;
+    if (paused > 0) {
+      paused -= delta;
+      return;
+    }
+    if (glide) {
+      glide.t = Math.min(1, glide.t + delta / (reduced.matches ? 0.001 : 3));
+      const ease = glide.t * glide.t * (3 - 2 * glide.t);
+      camera.position.lerpVectors(glide.from, glide.to, ease);
+      controls.target.lerpVectors(glide.fromTarget, glide.toTarget, ease);
+      if (glide.t >= 1) glide = undefined;
+      return;
+    }
+    if (!reduced.matches) {
+      const orbit = camera.position.clone().sub(controls.target);
+      orbit.applyAxisAngle(new Vector3(0, 1, 0), delta * 0.012);
+      camera.position.copy(controls.target).add(orbit);
+    }
+    hold += delta;
+    if (hold < 12) return;
+    hold = 0;
+    shot = (shot + 1) % SHOTS.length;
+    const next = framing(SHOTS[shot]!);
+    glide = {
+      from: camera.position.clone(),
+      fromTarget: controls.target.clone(),
+      to: next.position,
+      toTarget: next.target,
+      t: 0,
+    };
+    host.dataset.vrmShot = SHOTS[shot];
+  };
+  controls.addEventListener('start', () => {
+    glide = undefined;
+    paused = 20;
+  });
   const notify = () => {
     const next = `${motion.phase}:${motion.wandering}:${!!vrm}`;
     if (next !== previousState) {
@@ -236,7 +294,8 @@ export function mountStage(
     if (!canDraw()) return;
     frame = requestAnimationFrame(draw);
     if (time - last < 1000 / (reduced.matches ? 10 : 30)) return;
-    const delta = Math.min(clock.getDelta(), 0.05);
+    const passed = clock.getDelta();
+    const delta = Math.min(passed, 0.05);
     last = time;
     const daylight = room?.update(reduced.matches ? 0 : delta);
     if (daylight) {
@@ -536,6 +595,7 @@ export function mountStage(
       vrm.update(delta);
       host.dataset.vrmMouth = String(expressions?.getValue('aa') ?? 0);
     }
+    tourStep(Math.min(passed, 1));
     controls.update();
     shading?.update();
     let calls = 0;
@@ -718,6 +778,13 @@ export function mountStage(
     mood(value) {
       room?.setMood(value);
       host.dataset.vrmMood = value;
+    },
+    tour(value) {
+      touring = value;
+      glide = undefined;
+      hold = 0;
+      paused = 0;
+      host.dataset.vrmTour = value ? 'on' : 'off';
     },
     effects(value) {
       effects = value;
