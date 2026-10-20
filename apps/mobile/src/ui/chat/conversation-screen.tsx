@@ -75,7 +75,6 @@ import { ChatTitle } from './chat-title';
 import { Composer, type ComposerInput } from './composer';
 import { ClipboardImageOffer, useClipboardImage } from './clipboard-image';
 import { EdgeFade, HeaderBackButton, titleChipFill } from './header-chrome';
-import { ScrollEdgeElement, nativeScrollEdge } from '../primitives/scroll-edge-element';
 import {
   barLabelStyle,
   floatingHeader,
@@ -840,6 +839,9 @@ function ChatConversation({
           headerShadowVisible: false,
           headerBackButtonDisplayMode: 'minimal',
           ...(ios && !glassHeader ? { headerBlurEffect: 'systemChromeMaterial' as const } : {}),
+          ...(glassHeader
+            ? { scrollEdgeEffects: { top: 'automatic' as const, bottom: 'hidden' as const } }
+            : {}),
           ...(ios
             ? {
                 title: '',
@@ -893,66 +895,64 @@ function ChatConversation({
         }
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
-          <ScrollEdgeElement edge="bottom">
-            {botDm ? (
-              <View style={{ padding: space.x5, alignItems: 'center' }}>
-                <Text variant="meta" tone="muted">
-                  {t.activityRow.botDm}
-                </Text>
-              </View>
-            ) : (
-              <Composer
-                value={draft}
-                placeholder={
-                  bot !== undefined
-                    ? t.messageBot(bot.displayName)
-                    : channel !== undefined
-                      ? t.messageBot(`#${channel.name}`)
-                      : t.messagePlaceholder
-                }
-                disabled={conversation === undefined || host.connection.status !== 'connected'}
-                files={files}
-                canAttach={files.length < MAX_PICKED}
-                dictation={dictation.state.status}
-                canDictate={conversation !== undefined}
-                onChange={edit}
-                selection={selection}
-                onSelection={(next) => {
-                  setSelection(undefined);
-                  setCaret(next);
-                }}
-                {...(candidates.length > 0
-                  ? { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> }
-                  : clipboard.offered
-                    ? {
-                        above: (
-                          <ClipboardImageOffer
-                            onUnreadable={clipboard.used}
-                            onPaste={(data) => {
-                              clipboard.used();
-                              setAttachError(false);
-                              setFiles((current) =>
-                                [...current, fromClipboardImage(data)].slice(0, MAX_PICKED),
-                              );
-                            }}
-                          />
-                        ),
-                      }
-                    : {})}
-                onSend={send}
-                onPick={pick}
-                onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-                onDictate={() => {
-                  setAttachError(false);
-                  dictation.start();
-                }}
-                onStopDictation={dictation.stop}
-                onCancelDictation={dictation.cancel}
-                inputRef={composerInput}
-                onFocusChange={setTyping}
-              />
-            )}
-          </ScrollEdgeElement>
+          botDm ? (
+            <View style={{ padding: space.x5, alignItems: 'center' }}>
+              <Text variant="meta" tone="muted">
+                {t.activityRow.botDm}
+              </Text>
+            </View>
+          ) : (
+            <Composer
+              value={draft}
+              placeholder={
+                bot !== undefined
+                  ? t.messageBot(bot.displayName)
+                  : channel !== undefined
+                    ? t.messageBot(`#${channel.name}`)
+                    : t.messagePlaceholder
+              }
+              disabled={conversation === undefined || host.connection.status !== 'connected'}
+              files={files}
+              canAttach={files.length < MAX_PICKED}
+              dictation={dictation.state.status}
+              canDictate={conversation !== undefined}
+              onChange={edit}
+              selection={selection}
+              onSelection={(next) => {
+                setSelection(undefined);
+                setCaret(next);
+              }}
+              {...(candidates.length > 0
+                ? { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> }
+                : clipboard.offered
+                  ? {
+                      above: (
+                        <ClipboardImageOffer
+                          onUnreadable={clipboard.used}
+                          onPaste={(data) => {
+                            clipboard.used();
+                            setAttachError(false);
+                            setFiles((current) =>
+                              [...current, fromClipboardImage(data)].slice(0, MAX_PICKED),
+                            );
+                          }}
+                        />
+                      ),
+                    }
+                  : {})}
+              onSend={send}
+              onPick={pick}
+              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+              onDictate={() => {
+                setAttachError(false);
+                dictation.start();
+              }}
+              onStopDictation={dictation.stop}
+              onCancelDictation={dictation.cancel}
+              inputRef={composerInput}
+              onFocusChange={setTyping}
+            />
+          )
         }
       >
         {notice === undefined ? null : (
@@ -1109,13 +1109,12 @@ function ChatConversation({
               color={fadeColor}
             />
           ) : null}
-          {nativeScrollEdge ? null : (
-            <EdgeFade
-              edge="bottom"
-              height={composerHeight + edgeFade.bottom}
-              {...(floatingHeader ? { cover: composerHeight, color: fadeColor } : {})}
-            />
-          )}
+          <EdgeFade
+            edge="bottom"
+            height={composerHeight + edgeFade.bottom}
+            cover={composerHeight}
+            color={fadeColor}
+          />
           {composable && Platform.OS === 'ios' ? (
             <PullToComposeHint
               progress={pull.progress}
