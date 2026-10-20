@@ -1456,8 +1456,8 @@ const zh: typeof en = {
   pairGuide: {
     title: '配对前的准备',
     steps: [
-      '在电脑上安装 DeepSeek Harness（DSH）和 DeepSeekBot 插件。',
-      '在手机和电脑上都安装 Tailscale，并登录同一个账号。无需 Tailscale 的官方 Connect 连接即将推出。',
+      '在电脑上安装 DSH（DeepSeek Harness）和 DeepSeekBot 插件。',
+      '在手机和电脑上都安装 Tailscale，并登录同一个账号。无需 Tailscale 的托管 Connect 即将推出。',
       '在电脑上显示配对二维码，然后在这里扫码。',
     ],
     open: '查看安装与配对教程',
