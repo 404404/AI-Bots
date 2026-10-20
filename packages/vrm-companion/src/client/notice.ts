@@ -26,15 +26,16 @@ export interface NoticeFrame {
   alert: number;
   pop: number;
   envelope: number;
-  flight: number;
+  rise: number;
   glance: number;
 }
 
 export const noticeFrame = (t: number, reduced = false): NoticeFrame => {
   if (t < 0 || t >= NOTICE_DURATION)
-    return { phone: 0, buzz: 0, alert: 0, pop: 0, envelope: 0, flight: 0, glance: 0 };
-  const phone = ramp(t, 0, 0.12) * (1 - ramp(t, 2.2, NOTICE_DURATION));
+    return { phone: 0, buzz: 0, alert: 0, pop: 0, envelope: 0, rise: 0, glance: 0 };
+  const phone = ramp(t, 0, 0.12) * (1 - ramp(t, 2.4, NOTICE_DURATION));
   const alert = ramp(t, 0.7, 0.85) * (1 - ramp(t, 2.1, 2.6));
+  const envelope = ramp(t, 0.15, 0.3) * (1 - ramp(t, 2.0, 2.4));
   const glance = ramp(t, 0.05, 0.3) * (1 - ramp(t, NOTICE_GLANCE - 0.25, NOTICE_GLANCE));
   if (reduced)
     return {
@@ -42,15 +43,14 @@ export const noticeFrame = (t: number, reduced = false): NoticeFrame => {
       buzz: 0,
       alert,
       pop: 1,
-      envelope: 0,
-      flight: 0,
+      envelope,
+      rise: 1,
       glance: t < NOTICE_GLANCE ? 1 : 0,
     };
   const pop = t < 0.7 ? 0 : 1 + Math.sin(Math.min(1, (t - 0.7) / 0.35) * Math.PI) * 0.35;
   const buzz = t < 0.7 ? Math.sin(t * 90) * (1 - t / 0.7) : 0;
-  const flight = ramp(t, 0.05, 0.78);
-  const envelope = ramp(t, 0.05, 0.15) * (1 - ramp(t, 0.68, 0.8));
-  return { phone, buzz, alert, pop, envelope, flight, glance };
+  const rise = ramp(t, 0.15, 0.6);
+  return { phone, buzz, alert, pop, envelope, rise, glance };
 };
 
 const icon = (draw: (brush: CanvasRenderingContext2D) => void) => {
@@ -63,7 +63,7 @@ const icon = (draw: (brush: CanvasRenderingContext2D) => void) => {
   return texture;
 };
 
-export function createNotice(phone: Object3D, screenSpot: Vector3) {
+export function createNotice(phone: Object3D) {
   const root = new Group();
   const alertTexture = icon((brush) => {
     brush.fillStyle = '#fff6e0';
@@ -110,19 +110,8 @@ export function createNotice(phone: Object3D, screenSpot: Vector3) {
     new SpriteMaterial({ map: envelopeTexture, transparent: true, depthTest: false, opacity: 0 }),
   );
   envelope.renderOrder = 10;
-  const glowMaterial = new MeshBasicMaterial({
-    color: 0xbfe6ff,
-    transparent: true,
-    opacity: 0,
-    blending: AdditiveBlending,
-    depthWrite: false,
-  });
-  const glow = new Mesh(new PlaneGeometry(0.11, 0.2), glowMaterial);
-  glow.rotation.x = -Math.PI / 2;
-  glow.position.y = 0.011;
-  phone.add(glow);
   root.add(alert, envelope);
-  alert.visible = envelope.visible = glow.visible = false;
+  alert.visible = envelope.visible = false;
   let age = Infinity;
   const lift = new Vector3();
   return {
@@ -137,21 +126,18 @@ export function createNotice(phone: Object3D, screenSpot: Vector3) {
     update(delta: number, reduced: boolean, head: Vector3): NoticeFrame {
       age += delta;
       const frame = noticeFrame(age, reduced);
-      glow.visible = frame.phone > 0;
-      glowMaterial.opacity = frame.phone * (0.55 + Math.max(0, frame.buzz) * 0.25);
       alert.visible = frame.alert > 0;
       alert.material.opacity = frame.alert;
       alert.position.copy(head).add(lift.set(0.04, 0.26 + frame.alert * 0.03, 0));
       alert.scale.setScalar(0.13 * frame.pop);
       envelope.visible = frame.envelope > 0;
       envelope.material.opacity = frame.envelope;
-      const t = frame.flight;
-      const landing = head.clone().add(lift.set(0.04, 0.26, 0));
-      const arc = screenSpot.clone().lerp(landing, 0.3).lerp(landing, t);
-      arc.y += Math.sin(t * Math.PI) * 0.18;
-      envelope.position.copy(arc);
-      envelope.scale.setScalar(0.16 - t * 0.08);
-      envelope.material.rotation = Math.sin(t * Math.PI * 2) * 0.2;
+      const grow = frame.rise * (1 + Math.sin(frame.rise * Math.PI) * 0.25);
+      phone.getWorldPosition(envelope.position);
+      envelope.position.y +=
+        0.02 + frame.rise * 0.12 + (reduced ? 0 : Math.sin(age * 3.2) * 0.008 * frame.rise);
+      envelope.scale.setScalar(0.085 * grow);
+      envelope.material.rotation = reduced ? 0 : Math.sin(age * 2.4) * 0.08 * frame.rise;
       return frame;
     },
     dispose() {
@@ -159,8 +145,6 @@ export function createNotice(phone: Object3D, screenSpot: Vector3) {
       envelopeTexture.dispose();
       alert.material.dispose();
       envelope.material.dispose();
-      glowMaterial.dispose();
-      glow.geometry.dispose();
     },
   };
 }
