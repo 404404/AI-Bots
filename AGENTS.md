@@ -81,7 +81,7 @@ Native checks for `apps/mobile` share devices and QA Hosts among coding agents. 
 
 ### Machine-local secrets (AX)
 
-Files that device QA and store builds need but git must never hold (Firebase `google-services.json`, FCM and Play keys) live once per machine outside every checkout, reached through environment variables such as `GOOGLE_SERVICES_JSON`, so every branch and worktree reuses them. Read [machine-local secrets](docs/agents/device-secrets.md) for the folder, the one-time setup, local push builds and clean-clone EAS builds.
+Files that device QA and store builds need but git must never hold (Firebase `google-services.json`, FCM and Play keys) live in the gitignored `.secrets/` folder of each machine's main checkout; every worktree resolves to the same folder. Read [machine-local secrets](docs/agents/device-secrets.md) for the file list, how the app finds them, local push builds and clean-clone EAS builds.
 
 ### SEO research and tracking (AX)
 

@@ -17,6 +17,7 @@ apps/docs/src/content/docs-zh/docs/lark-connection.mdx
 *.tsbuildinfo
 
 # env / secrets
+.secrets/
 .env
 .env.*
 !.env.example

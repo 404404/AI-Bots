@@ -1,45 +1,39 @@
 # Machine-local secrets for device QA
 
 Native device checks and store builds need a few files that must never enter git: the Firebase
-config for push and the FCM key (and, once added, the Play service account key). They live once
-per machine, in one folder outside every checkout, so each branch, worktree and fresh clone
-reuses them without copying anything. Environment variables point at that folder; the repo only reads the variables.
+config for push and the FCM key (and, once added, the Play service account key). Each machine
+keeps them in one gitignored folder, `.secrets/` at the root of its main checkout. Every git
+worktree of that checkout reads the same folder, so branches and worktrees reuse the files
+without copying them.
 
-## Where the files live
-
-| Machine | Folder                                                 |
-| ------- | ------------------------------------------------------ |
-| Windows | `D:\secrets\deepseekbot\`                              |
-| macOS   | `~/.secrets/deepseekbot/` (create it with `chmod 700`) |
+## What lives in `.secrets/`
 
 | File                          | What it is                                                                              | Where it comes from                                                                               |
 | ----------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `google-services.json`        | Firebase config for `app.deepseekbot.mobile` and `ai.botharness.deepseekbot.dev` (push) | Firebase project `deepseekbot-d3e3a` → Project settings → General → either Android app → download |
 | `fcm-v1-service-account.json` | FCM V1 service account key, a backup of the one EAS holds                               | Firebase → Project settings → Service accounts → Generate new private key                         |
 
-EAS keeps its own copies: the `GOOGLE_SERVICES_JSON` secret file variable (production, preview
-and development environments) and the FCM V1 key on both packages' Android credentials. Cloud
-builds need nothing from this folder. If a file here is lost, download it again from the source
-above; EAS cannot export secrets.
+`.secrets/` is listed in `.gitignore` and `.easignore`, so it never reaches a commit or an EAS
+upload. A fresh clone has no `.secrets/`: copy the folder from another machine over a private
+channel, or download the files again from the sources above. EAS cannot export secrets.
 
-## One-time setup per machine
+EAS keeps its own copies for cloud builds: the `GOOGLE_SERVICES_JSON` secret file variable
+(production, preview and development environments) and the FCM V1 key on both packages' Android
+credentials. Cloud builds need nothing from `.secrets/`.
 
-Point the variable at the folder once, for every future shell:
+## How the app finds it
 
-```powershell
-setx GOOGLE_SERVICES_JSON D:\secrets\deepseekbot\google-services.json
-```
+`apps/mobile/app.config.js` sets `android.googleServicesFile` from, in order:
 
-```sh
-echo 'export GOOGLE_SERVICES_JSON="$HOME/.secrets/deepseekbot/google-services.json"' >> ~/.zshrc
-```
+1. `GOOGLE_SERVICES_JSON`, set by EAS on its builders (or by hand to try another file);
+2. `.secrets/google-services.json` in the main checkout, found through `git rev-parse
+--git-common-dir`, so a worktree resolves to the same file.
 
-Open a new shell afterwards. `apps/mobile/app.config.js` passes the variable to
-`android.googleServicesFile` for both the development and the store variant.
+With neither, the app builds without push.
 
 ## Local Android build with push
 
-From any checkout or worktree:
+From the main checkout or any of its worktrees:
 
 ```powershell
 pnpm install
@@ -48,9 +42,10 @@ npx expo prebuild --clean --platform android
 npx expo run:android --device
 ```
 
-`prebuild --clean` is needed once per checkout, and again after `app.config.js`, `app.json` or a
-native dependency changes; an `android/` folder generated earlier does not pick up the Firebase
-config. Reserve the phone through [shared device QA](device-qa.md) first.
+`prebuild --clean` is needed once per checkout, and again after `app.config.js`, `app.json`, a
+native dependency or `.secrets/google-services.json` changes; an `android/` folder generated
+earlier does not pick up the Firebase config. Reserve the phone or emulator through
+[shared device QA](device-qa.md) first.
 
 ## Store builds from a clean clone
 
@@ -63,6 +58,6 @@ must uninstall the Play copy before installing it).
 ## Rules
 
 - Never commit these files, paste their contents into chat, a PR, an issue or a log, or copy
-  them into a checkout. Pass paths, not values.
-- A new machine-local secret gets a row in the table above in the same change that starts
-  using it.
+  them into a worktree. Pass paths, not values.
+- A new machine-local secret goes into `.secrets/` and gets a row in the table above in the same
+  change that starts using it.
