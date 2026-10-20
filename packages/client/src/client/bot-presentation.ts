@@ -23,6 +23,7 @@ interface Output {
   start: number;
   hold: number;
 }
+const SPEECH_STALE_LIMIT = 10_000;
 const decode = (event: Event): Record<string, unknown> | undefined => {
   if (!(event instanceof MessageEvent)) return;
   try {
@@ -59,6 +60,7 @@ export function createBotPresentation(
         let queue: Output[] = [];
         let sync: BotPresentationSnapshot['sync'] = 'connecting';
         let primed = false;
+        let staleSince: number | undefined;
         let snapshot: BotPresentationSnapshot = {
           botId,
           name: botId,
@@ -102,7 +104,7 @@ export function createBotPresentation(
               : 'idle') as BotPresentationSnapshot['activity'],
             sync: store.getSnapshot().activitySync === 'stale' ? 'stale' : sync,
           };
-          const quiet = !next.available || next.paused || next.sync !== 'live';
+          const quiet = !next.available || next.paused || sync !== 'live';
           const woke =
             primed &&
             next.available &&
@@ -113,7 +115,9 @@ export function createBotPresentation(
           const counted = woke ? { ...next, inbox: snapshot.inbox + 1 } : next;
           const settled = quiet
             ? { ...counted, speaking: false, conversing: false, mouth: 0 }
-            : counted;
+            : next.sync !== 'live'
+              ? { ...counted, speaking: false, mouth: 0 }
+              : counted;
           if (JSON.stringify(settled) !== JSON.stringify(snapshot)) {
             snapshot = Object.freeze(settled);
             notify();
@@ -163,7 +167,6 @@ export function createBotPresentation(
               sync !== 'live' ||
               !snapshot.available ||
               snapshot.paused ||
-              snapshot.sync !== 'live' ||
               (typeof document !== 'undefined' && document.hidden)
             )
               return;
@@ -208,8 +211,10 @@ export function createBotPresentation(
         const offStore = store.subscribe(() => {
           const state = store.getSnapshot();
           const bot = state.bots.find((b) => b.slug === botId);
-          if (state.activitySync !== 'live' || !bot || bot.paused || bot.deleted) cancel();
-          else publish();
+          if (!bot || bot.paused || bot.deleted) return cancel();
+          if (state.activitySync === 'live') staleSince = undefined;
+          else staleSince ??= Date.now();
+          publish();
         });
         const visibility = () => {
           if (document.hidden) cancel();
@@ -220,6 +225,10 @@ export function createBotPresentation(
           if (typeof document !== 'undefined' && document.hidden) return;
           const item = queue[0];
           if (!item || sync !== 'live') return;
+          if (staleSince !== undefined) {
+            if (Date.now() - staleSince > SPEECH_STALE_LIMIT) cancel();
+            return;
+          }
           if (item.hold > 0) {
             item.hold -= 50;
             if (item.hold <= 0 && item.shown >= item.body.length) {

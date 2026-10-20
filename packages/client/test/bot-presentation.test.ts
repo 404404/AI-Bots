@@ -139,6 +139,58 @@ describe('public Bot presentation', () => {
     a.dispose();
     provider.dispose();
   });
+  it('keeps queued speech through a brief Activity sync blip and drops it when stale persists', () => {
+    const { store, sources, provider } = setup();
+    const a = provider.acquire('a');
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(100);
+    expect(a.getSnapshot()).toMatchObject({ speaking: true, conversing: true });
+    const spoken = a.getSnapshot().text;
+    store.setActivitySync('stale');
+    sources[0]!.emit('message', output('a', 'during-blip'));
+    vi.advanceTimersByTime(1000);
+    expect(a.getSnapshot()).toMatchObject({
+      speaking: false,
+      mouth: 0,
+      conversing: true,
+      text: spoken,
+    });
+    store.setActivitySync('live');
+    vi.advanceTimersByTime(60000);
+    expect(a.getSnapshot()).toMatchObject({ speaking: false, conversing: false, text: '' });
+    const pages: string[] = [];
+    a.subscribe(() => {
+      pages.push(a.getSnapshot().text);
+    });
+    sources[0]!.emit('message', output('a', 'second'));
+    vi.advanceTimersByTime(100);
+    store.setActivitySync('stale');
+    vi.advanceTimersByTime(11000);
+    expect(a.getSnapshot()).toMatchObject({ speaking: false, conversing: false, text: '' });
+    store.setActivitySync('live');
+    vi.advanceTimersByTime(10000);
+    expect(a.getSnapshot().text).toBe('');
+    a.dispose();
+    provider.dispose();
+  });
+  it('plays a reply that arrives while Activity sync is briefly stale', () => {
+    const { store, sources, provider } = setup();
+    const a = provider.acquire('a');
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    const texts = new Set<string>();
+    a.subscribe(() => {
+      texts.add(a.getSnapshot().text);
+    });
+    store.setActivitySync('stale');
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(500);
+    store.setActivitySync('live');
+    vi.advanceTimersByTime(30000);
+    expect(texts).toContain(output('a').body);
+    a.dispose();
+    provider.dispose();
+  });
   it('counts each wake from idle as a new inbox notice once the feed is live', () => {
     const { store, sources, provider } = setup();
     store.applyActivity({ generation: 'g1', revision: 1, bots: [{ slug: 'a', state: 'working' }] });
