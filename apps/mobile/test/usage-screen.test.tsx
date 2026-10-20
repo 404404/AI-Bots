@@ -3,6 +3,7 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../src/ui/primitives/row-icon', () => ({ RowIcon: () => null }));
 vi.mock('react-native-keyboard-controller', async () => import('./keyboard-controller-shim'));
 vi.mock('react-native', () => import('./react-native-shim'));
 vi.mock('expo-image', () => ({ Image: () => null }));
@@ -10,7 +11,13 @@ vi.mock('expo-router', () => ({ useRouter: () => ({ back() {} }) }));
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
-vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null, SvgXml: () => null }));
+vi.mock('react-native-svg', () => ({
+  default: () => null,
+  Path: () => null,
+  Rect: () => null,
+  SvgXml: () => null,
+}));
+vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 
 import type { OverviewMemory, OverviewUsage, UsagePeriod } from '../src/host/usage';
 import { MethodRefused } from '../src/host/client';
@@ -63,7 +70,6 @@ const button = (view: HTMLElement, label: string) =>
 
 function actions(overrides: Partial<SettingsActions> = {}): SettingsActions {
   return {
-    onClose: vi.fn(),
     onUsage: vi.fn(),
     onOpenFullClient: vi.fn(),
     onComputers: vi.fn(),

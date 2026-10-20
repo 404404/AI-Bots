@@ -1,4 +1,21 @@
+import {
+  approveGrantRequest,
+  type GrantRequestApprovalResult,
+} from '../workspaces/grant-requests.js';
 import { MemoryImageError } from '../memory/image.js';
+import {
+  MIN_IDLE_MS,
+  type IdleCompaction,
+  type IdleCompactionRecord,
+  type IdleCompactionRouteView,
+  type ManualCompactionResult,
+} from '../runtime/idle-compaction.js';
+import {
+  isCacheLifetimeSeconds,
+  MAX_CACHE_LIFETIME_SECONDS,
+  type IdleCompactionRoute,
+  type IdleCompactionSettings,
+} from '../runtime/idle-compaction-settings.js';
 import { isDeepStrictEqual } from 'node:util';
 import { DEEPSEEKBOT_RECIPE } from '../onboarding/service.js';
 import { type CloudWork } from '../cloud/work.js';
@@ -86,6 +103,7 @@ import type {
   MarketplaceTopic,
 } from '../marketplace/client.js';
 import type { AltchaChallenge } from '../marketplace/altcha.js';
+import { MARKETPLACE_LANGUAGES, type MarketplaceLanguage } from '../marketplace/language.js';
 import {
   MAX_DESCRIPTOR_BIO_LENGTH,
   MAX_DESCRIPTOR_TAG_LENGTH,
@@ -479,8 +497,10 @@ export interface BridgeMethods {
   onboarding(payload: unknown): Promise<BridgeResult<OnboardingSnapshot>>;
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
+  introEvent(payload: unknown): BridgeResult<null>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
   botNewSession(payload: unknown): Promise<BridgeResult<{ started: true }>>;
+  botCompact(payload: unknown): Promise<BridgeResult<ManualCompactionResult>>;
   channelBotStop(
     payload: unknown,
   ): Promise<BridgeResult<{ stopped: { botSlug: string; sessionId: string; messageId: string } }>>;
@@ -644,6 +664,7 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<{ grant: WorkspaceGrant; created?: boolean }>>;
   grantRevoke(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
+  grantRequestApprove(payload: unknown): Promise<BridgeResult<GrantRequestApprovalResult>>;
   grantWriteSet(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
   assignmentAccessGet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
   assignmentAccessSet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
@@ -748,6 +769,9 @@ export interface BridgeMethods {
   botApprovalTemplateSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   approvalReviewerModel(payload?: unknown): Promise<BridgeResult<ApprovalReviewerModelView>>;
   approvalReviewerModelSet(payload: unknown): Promise<BridgeResult<ApprovalReviewerModelView>>;
+  idleCompaction(payload?: unknown): BridgeResult<IdleCompactionView>;
+  idleCompactionSet(payload: unknown): BridgeResult<IdleCompactionView>;
+  idleCompactionCacheLifetimeSet(payload: unknown): BridgeResult<IdleCompactionView>;
   standingLimitsSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botAvatarSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botBannerSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
@@ -792,7 +816,24 @@ export interface ApprovalReviewerModelView {
   unavailableReason?: string;
 }
 
+export interface IdleCompactionView {
+  enabled: boolean;
+  settingReadable: boolean;
+  minimumIdleSeconds: number;
+  scheduled: number;
+  routes: IdleCompactionRouteView[];
+}
+
+export interface IdleCompactionDeps {
+  settings: IdleCompactionSettings;
+  scheduler: Pick<IdleCompaction, 'describe' | 'scheduled'>;
+  routes(): IdleCompactionRoute[];
+  rescan(): void;
+  compactBot?(slug: string): Promise<ManualCompactionResult>;
+}
+
 export interface BridgeMethodsDeps {
+  idleCompaction?: IdleCompactionDeps;
   cloudConnections?: CloudConnections;
   cloudWork?: CloudWork;
   approvalReviewer?: ApprovalReviewerSettings;
@@ -901,6 +942,11 @@ function asSlug(payload: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
+function marketplaceLang(value: unknown): MarketplaceLanguage | undefined | false {
+  if (value === undefined) return undefined;
+  return MARKETPLACE_LANGUAGES.find((language) => language === value) ?? false;
+}
+
 function parseOptional(source: Record<string, unknown>, key: string): ParsedField<string> {
   const value = source[key];
   if (value === undefined) return { ok: true, value: undefined };
@@ -927,6 +973,17 @@ function releaseUnavailable(): BridgeResult<never> {
     error: { code: 'release-unavailable', message: 'Release information is unavailable' },
   };
 }
+
+const INTRO_STEP_IDS = ['welcome', 'theme', 'model', 'community', 'start'];
+const INTRO_EVENTS: Record<string, Record<string, readonly string[] | 'boolean'>> = {
+  intro_shown: {},
+  intro_step_viewed: { step: INTRO_STEP_IDS },
+  intro_dismissed: { step: INTRO_STEP_IDS, via: ['skip', 'close'] },
+  intro_completed: { starter: ['botPrompt', 'firstRequest', 'exampleRequest', 'own'] },
+  intro_theme_changed: { setting: ['scheme', 'preset', 'wallpaper'] },
+  intro_model_saved: { advanced: 'boolean' },
+  intro_community_clicked: { target: ['github', 'discord', 'qq'] },
+};
 
 function telemetryUnavailable(): BridgeResult<never> {
   return {
@@ -1040,6 +1097,17 @@ function directToolsUnavailable(): BridgeResult<never> {
   return {
     ok: false,
     error: { code: 'unavailable', message: 'Direct Bot tools are unavailable on this Host' },
+  };
+}
+
+function idleCompactionView(deps: IdleCompactionDeps): IdleCompactionView {
+  const setting = deps.settings.read();
+  return {
+    enabled: setting !== 'invalid' && setting.enabled,
+    settingReadable: setting !== 'invalid',
+    minimumIdleSeconds: MIN_IDLE_MS / 1000,
+    scheduled: deps.scheduler.scheduled(),
+    routes: deps.scheduler.describe(deps.routes()),
   };
 }
 
@@ -1954,6 +2022,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           asSlug(payload),
           action as TutorialAction | undefined,
         );
+        if (action !== undefined)
+          deps.telemetry?.capture?.('tutorial_action', { action: String(action) });
         const newsAvailable =
           (await deps
             .onboardingNews?.(asSlug(payload) ?? value.defaultBotSlug)
@@ -1977,6 +2047,28 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const result = deps.registry.inheritModel(slug, revision as number);
       if (!result.ok) return invalidInput('Bot model changed; reopen before saving');
       return { ok: true, value: { revision: result.record.modelPlanRevision ?? 0 } };
+    },
+    introEvent(payload) {
+      const source = asObject(payload);
+      const event = source['event'];
+      const shape =
+        typeof event === 'string' && Object.hasOwn(INTRO_EVENTS, event)
+          ? INTRO_EVENTS[event as keyof typeof INTRO_EVENTS]
+          : undefined;
+      if (shape === undefined) return invalidInput('Unknown intro event');
+      const properties: Record<string, string | boolean> = {};
+      for (const [key, allowed] of Object.entries(shape)) {
+        const value = source[key];
+        if (
+          allowed === 'boolean'
+            ? typeof value !== 'boolean'
+            : typeof value !== 'string' || !allowed.includes(value)
+        )
+          return invalidInput(`Invalid intro event ${key}`);
+        properties[key] = value as string | boolean;
+      }
+      deps.telemetry?.capture?.(event as string, properties);
+      return { ok: true, value: null };
     },
     async onboardingModel(payload) {
       if (deps.modelCatalog === undefined || deps.defaultModel === undefined) return unavailable();
@@ -2121,6 +2213,26 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return {
           ok: false,
           error: { code: 'session-reset-failed', message: 'Could not start a fresh Session' },
+        };
+      }
+    },
+    async botCompact(payload) {
+      const slug = asSlug(payload);
+      if (slug === undefined) return invalidInput('slug is required');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.idleCompaction?.compactBot === undefined) return unavailable();
+      try {
+        const result = await deps.idleCompaction.compactBot(slug);
+        if (result.outcome === 'busy')
+          return {
+            ok: false,
+            error: { code: 'bot-busy', message: 'Stop the Bot before compacting its Session' },
+          };
+        return { ok: true, value: result };
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'compaction-failed', message: 'Could not compact the Session' },
         };
       }
     },
@@ -2767,6 +2879,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return Promise.resolve(invalidInput('invalid sort'));
       }
       if (sort !== undefined) query.sort = sort;
+      const lang = marketplaceLang(source['lang']);
+      if (lang === false) return Promise.resolve(invalidInput('invalid lang'));
+      if (lang !== undefined) query.lang = lang;
       return marketplaceCall((client) => client.list(query));
     },
     marketplaceTopics() {
@@ -2823,11 +2938,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     marketplaceDetail(payload) {
-      const id = asObject(payload)['id'];
+      const { id, lang: langValue } = asObject(payload);
       if (typeof id !== 'string' || id.trim().length === 0) {
         return Promise.resolve(invalidInput('id is required'));
       }
-      return marketplaceCall((client) => client.detail(id.trim()));
+      const lang = marketplaceLang(langValue);
+      if (lang === false) return Promise.resolve(invalidInput('invalid lang'));
+      return marketplaceCall((client) => client.detail(id.trim(), lang));
     },
     marketplaceSubmit(payload) {
       const { url, altcha } = asObject(payload);
@@ -3072,6 +3189,42 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(error instanceof Error ? error.message : String(error));
       }
       return { ok: true, value: await reviewerModelView(route) };
+    },
+    idleCompaction() {
+      if (deps.idleCompaction === undefined) return unavailable();
+      return { ok: true, value: idleCompactionView(deps.idleCompaction) };
+    },
+    idleCompactionSet(payload) {
+      if (deps.idleCompaction === undefined) return unavailable();
+      const enabled = asObject(payload)['enabled'];
+      if (typeof enabled !== 'boolean') return invalidInput('enabled must be true or false');
+      try {
+        deps.idleCompaction.settings.setEnabled(enabled);
+      } catch (error) {
+        return invalidInput(error instanceof Error ? error.message : String(error));
+      }
+      if (enabled) deps.idleCompaction.rescan();
+      return { ok: true, value: idleCompactionView(deps.idleCompaction) };
+    },
+    idleCompactionCacheLifetimeSet(payload) {
+      if (deps.idleCompaction === undefined) return unavailable();
+      const object = asObject(payload);
+      const provider = asNonBlank(object, 'provider');
+      const model = asNonBlank(object, 'model');
+      const lifetime = object['seconds'];
+      if (provider === undefined || model === undefined)
+        return invalidInput('provider and model are required');
+      if (lifetime !== null && !isCacheLifetimeSeconds(lifetime))
+        return invalidInput(
+          `seconds must be a whole number from 0 to ${MAX_CACHE_LIFETIME_SECONDS}, or null to resolve it automatically`,
+        );
+      try {
+        deps.idleCompaction.settings.setCacheLifetime({ provider, model }, lifetime);
+      } catch (error) {
+        return invalidInput(error instanceof Error ? error.message : String(error));
+      }
+      deps.idleCompaction.rescan();
+      return { ok: true, value: idleCompactionView(deps.idleCompaction) };
     },
     standingLimitsSet(payload) {
       const slug = asSlug(payload);
@@ -5283,6 +5436,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         throw error;
       }
     },
+    async grantRequestApprove(payload) {
+      const parsed = z
+        .object({
+          slug: z.string().min(1),
+          channelId: z.string().min(1),
+          requestMessageId: z.string().min(1),
+          workspaceId: z.string().min(1),
+          acknowledgeReadWrite: z.literal(true),
+        })
+        .safeParse(asObject(payload));
+      if (!parsed.success)
+        return invalidInput(
+          'Bot, Channel, request, Workspace and explicit read/write confirmation are required',
+        );
+      if (!deps.grants) return unavailable();
+      try {
+        return {
+          ok: true,
+          value: await approveGrantRequest({ ...deps, grants: deps.grants }, parsed.data),
+        };
+      } catch (error) {
+        if (error instanceof WorkspaceGrantError)
+          return { ok: false, error: { code: error.code, message: error.message } };
+        throw error;
+      }
+    },
     grantWriteSet(payload) {
       const source = asObject(payload);
       const slug = asNonBlank(source, 'slug');
@@ -5407,6 +5586,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         channelId === undefined ||
         messageId === undefined ||
         (outcome !== 'allowed-once' &&
+          outcome !== 'allowed-always-tool' &&
           outcome !== 'allowed-always-exact' &&
           outcome !== 'allowed-always-all' &&
           outcome !== 'allowed-always-kind' &&
@@ -5423,6 +5603,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (request === undefined) {
         return invalidInput('Unknown tool approval request');
       }
+      if (outcome === 'allowed-always-tool' && request.allowAlways !== true)
+        return invalidInput('Always allow is unavailable for this request');
       if (outcome === 'allowed-always-kind' && request.toolName !== 'secret_cli')
         return invalidInput('allowed-always-kind applies only to a secret_cli approval');
       const accepted = await deps.toolApproval?.decide(
@@ -6136,6 +6318,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const usageRows = (deps.usage?.activity(slug, since) ?? []).filter(
         (row) => before === undefined || row.day < before,
       );
+      const idleCompactions: IdleCompactionRecord[] = beforeEnd(
+        deps.usage?.idleCompactions?.(slug, since) ?? [],
+      );
       const createdDay = localDay(deps.registry.getHistorical(slug)?.createdAt ?? '');
       const tokensByDay = new Map<string, ProfileActivityTokensDay>();
       const tokenTotals: ProfileTokenBuckets = {
@@ -6199,6 +6384,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
                   : row.totalTokens,
           })),
           modelUsageStatus: deps.usage === undefined ? 'unavailable' : 'ready',
+          idleCompactions,
         },
       };
     },

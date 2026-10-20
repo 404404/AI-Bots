@@ -545,6 +545,42 @@ window.__ModuleLoader__.load({
 					r: "1"
 				}]
 			],
+			star: [["path", { d: "M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" }]],
+			copy: [["rect", {
+				width: "14",
+				height: "14",
+				x: "8",
+				y: "8",
+				rx: "2",
+				ry: "2"
+			}], ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }]],
+			"external-link": [
+				["path", { d: "M15 3h6v6" }],
+				["path", { d: "M10 14 21 3" }],
+				["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }]
+			],
+			sun: [
+				["circle", {
+					cx: "12",
+					cy: "12",
+					r: "4"
+				}],
+				["path", { d: "M12 2v2" }],
+				["path", { d: "M12 20v2" }],
+				["path", { d: "m4.93 4.93 1.41 1.41" }],
+				["path", { d: "m17.66 17.66 1.41 1.41" }],
+				["path", { d: "M2 12h2" }],
+				["path", { d: "M20 12h2" }],
+				["path", { d: "m6.34 17.66-1.41 1.41" }],
+				["path", { d: "m19.07 4.93-1.41 1.41" }]
+			],
+			moon: [["path", { d: "M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" }]],
+			crop: [["path", { d: "M6 2v14a2 2 0 0 0 2 2h14" }], ["path", { d: "M18 22V8a2 2 0 0 0-2-2H2" }]],
+			ban: [["circle", {
+				cx: "12",
+				cy: "12",
+				r: "10"
+			}], ["path", { d: "M4.929 4.929 19.07 19.071" }]],
 			x: [["path", { d: "M18 6 6 18" }], ["path", { d: "m6 6 12 12" }]],
 			check: [["path", { d: "M20 6 9 17l-5-5" }]]
 		};
@@ -2327,6 +2363,76 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region packages/client/src/client/ds/pointer-menu.tsx
+		function pointerMenuPosition(point, width, height, viewport) {
+			const margin = Number.parseFloat(space.x4);
+			return {
+				x: Math.max(margin, Math.min(point.x, viewport.width - width - margin)),
+				y: Math.max(Math.max(margin, viewport.top), Math.min(point.y, viewport.height - height - margin))
+			};
+		}
+		function PointerMenu({ point, container = document.body, align = "start", ...props }) {
+			const mount = useMountedResource((node) => {
+				const menu = node.querySelector("[role=\"menu\"]");
+				if (!menu) return;
+				const originalMaxWidth = Number.parseFloat(getComputedStyle(menu).maxWidth);
+				const originalMinWidth = Number.parseFloat(getComputedStyle(menu).minWidth);
+				const place = () => {
+					const scale = node.getBoundingClientRect();
+					if (!scale.width || !scale.height) return;
+					const cssZoom = "currentCSSZoom" in node && typeof node.currentCSSZoom === "number" ? node.currentCSSZoom : void 0;
+					const scaleX = cssZoom ?? scale.width;
+					const scaleY = cssZoom ?? scale.height;
+					const root = document.documentElement;
+					const clearance = root.hasAttribute("data-fullscreen") ? 0 : Number.parseFloat(getComputedStyle(root).getPropertyValue("--dsh-frame-top-clearance")) || 0;
+					const margin = Number.parseFloat(space.x4);
+					const availableWidth = Math.max(0, innerWidth - 2 * margin) / scaleX;
+					menu.style.minWidth = `${Math.min(originalMinWidth || 0, availableWidth)}px`;
+					menu.style.maxWidth = `${Math.min(originalMaxWidth || Infinity, availableWidth)}px`;
+					menu.style.maxHeight = `${Math.max(0, innerHeight - Math.max(margin, clearance) - margin) / scaleY}px`;
+					const box = menu.getBoundingClientRect();
+					const desired = pointerMenuPosition({
+						x: align === "end" ? point.x - box.width : point.x,
+						y: point.y
+					}, box.width, box.height, {
+						width: innerWidth,
+						height: innerHeight,
+						top: clearance
+					});
+					const left = Number.parseFloat(node.style.left) || 0;
+					const top = Number.parseFloat(node.style.top) || 0;
+					node.style.left = `${left + (desired.x - box.left) / scaleX}px`;
+					node.style.top = `${top + (desired.y - box.top) / scaleY}px`;
+				};
+				place();
+				const observer = typeof ResizeObserver === "undefined" ? void 0 : new ResizeObserver(place);
+				observer?.observe(menu);
+				observer?.observe(node);
+				window.addEventListener("resize", place);
+				window.addEventListener("scroll", place, true);
+				return () => {
+					observer?.disconnect();
+					window.removeEventListener("resize", place);
+					window.removeEventListener("scroll", place, true);
+				};
+			}, [
+				point.x,
+				point.y,
+				align
+			]);
+			return (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				ref: mount,
+				"data-pointer-menu": "",
+				className: "bhxixxii4 bhxu96u03 bhx13vifvy bhx51uzqw bhx1kkor1i bhxp6lfbs bhx47corl",
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Menu, {
+					...props,
+					open: true,
+					portal: false,
+					className: { className: "bhx67bb7w" }.className
+				})
+			}), container);
+		}
+		//#endregion
 		//#region packages/client/src/client/ds/pill-button.tsx
 		const pillStyles = { pill: {
 			k1xSpc: "bhx3nfvp2",
@@ -2353,44 +2459,94 @@ window.__ModuleLoader__.load({
 		//#region packages/client/src/client/ds/select.tsx
 		function Select({ label, value, options, onChange, disabled = false, align = "end", autoFocus = false, reselect = false }) {
 			const [open, setOpen] = (0, react.useState)(false);
+			const [point, setPoint] = (0, react.useState)();
+			const trigger = (0, react.useRef)(null);
+			const active = open && !disabled;
+			const mount = useMountedResource((node) => {
+				trigger.current = node;
+				if (!active) return () => {
+					trigger.current = null;
+				};
+				const place = () => {
+					const rect = node.getBoundingClientRect();
+					const scale = node.offsetHeight > 0 ? rect.height / node.offsetHeight : 1;
+					const next = {
+						x: align === "end" ? rect.right : rect.left,
+						y: rect.bottom + Number.parseFloat(space.x2) * scale
+					};
+					setPoint((previous) => previous?.x === next.x && previous.y === next.y ? previous : next);
+				};
+				place();
+				const resize = typeof ResizeObserver === "undefined" ? void 0 : new ResizeObserver(place);
+				resize?.observe(node);
+				resize?.observe(document.documentElement);
+				const observer = new MutationObserver(place);
+				observer.observe(document.documentElement, {
+					attributes: true,
+					attributeFilter: ["style", "data-fullscreen"]
+				});
+				window.addEventListener("resize", place);
+				window.addEventListener("scroll", place, true);
+				return () => {
+					trigger.current = null;
+					resize?.disconnect();
+					observer.disconnect();
+					window.removeEventListener("resize", place);
+					window.removeEventListener("scroll", place, true);
+				};
+			}, [active, align]);
+			const close = () => {
+				const button = trigger.current;
+				const menu = document.activeElement?.closest("[data-pointer-menu]");
+				setOpen(false);
+				setPoint(void 0);
+				queueMicrotask(() => {
+					const focused = document.activeElement;
+					if (button?.isConnected && !button.disabled && (focused === document.body || focused !== null && menu?.contains(focused))) button.focus({ preventScroll: true });
+				});
+			};
 			const current = options.find((option) => option.value === value);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Menu, {
-				open: open && !disabled,
-				portal: true,
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				ref: mount,
+				type: "button",
+				"aria-label": label,
+				"aria-haspopup": "menu",
+				"aria-expanded": active,
+				disabled,
+				"data-modal-autofocus": autoFocus ? "" : void 0,
+				onPointerDown: (event) => {
+					if (active) event.stopPropagation();
+				},
+				onClick: () => {
+					if (active) close();
+					else setOpen(true);
+				},
+				...props(pillStyles.pill),
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bhxeuugli bhxb3r6kr bhxlyipyv bhxuxw1ft",
+					children: current?.label
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bhx3nfvp2 bhx2lah0s bhxr3raxm",
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })
+				})]
+			}), active && point ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PointerMenu, {
+				point,
 				align,
+				container: trigger.current?.closest("[role=\"dialog\"]") ?? document.body,
+				autoFocus: true,
+				anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "aria-hidden": "true" }),
 				items: options.map((option) => ({
 					id: option.value,
 					label: option.label
 				})),
 				selectedId: value,
 				onSelect: (id) => {
-					setOpen(false);
+					close();
 					const next = options.find((option) => option.value === id);
 					if (next !== void 0 && (reselect || next.value !== value)) onChange(next.value);
 				},
-				onClose: () => {
-					setOpen(false);
-				},
-				anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-					type: "button",
-					"aria-label": label,
-					"aria-haspopup": "menu",
-					"aria-expanded": open && !disabled,
-					disabled,
-					"data-modal-autofocus": autoFocus ? "" : void 0,
-					onClick: () => {
-						setOpen((previous) => !previous);
-					},
-					...props(pillStyles.pill),
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bhxeuugli bhxb3r6kr bhxlyipyv bhxuxw1ft",
-						children: current?.label
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bhx3nfvp2 bhx2lah0s bhxr3raxm",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })
-					})]
-				})
-			});
+				onClose: close
+			}) : null] });
 		}
 		//#endregion
 		//#region packages/client/src/client/ds/settings-row.tsx
@@ -2411,7 +2567,7 @@ window.__ModuleLoader__.load({
 				"aria-labelledby": titleId,
 				"aria-describedby": description === void 0 ? void 0 : descriptionId,
 				...data,
-				className: "bhx78zum5 bhx6s0dn4 bhx15bqsqq bhx1q0g3np bhx1uptv2i bhx1mckxr8 bhxv0lzym bhxeuugli bhxe74ayl bhxrvphhj bhx1q0q8m5 bhxnoyelg bhx1bta2m4",
+				className: "bhx78zum5 bhx6s0dn4 bhx4bgz6 bhx15bqsqq bhx1q0g3np bhxcxmu7o bhx1uptv2i bhx1mckxr8 bhx1kwkzks bhxv0lzym bhxeuugli bhxe74ayl bhxrvphhj bhx1q0q8m5 bhxnoyelg bhx1bta2m4",
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "bhx78zum5 bhxdt5ytf bhx5v8n67 bhx1iyjqo2 bhxs83m0k bhx1r8uery bhxeuugli",
 					children: [
@@ -2428,7 +2584,7 @@ window.__ModuleLoader__.load({
 						children
 					]
 				}), control === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "bhx78zum5 bhx1a02dak bhx6s0dn4 bhx13a6bvl bhx3xz8fp bhx2zm2ee bhx2lah0s bhxeuugli bhxh9uqaf bhx1cnm762",
+					className: "bhx78zum5 bhx1a02dak bhx6s0dn4 bhx13a6bvl bhx403fy9 bhx3xz8fp bhx2zm2ee bhx2lah0s bhxeuugli bhxh9uqaf bhx1r6q2vj bhx1cnm762",
 					children: control
 				})]
 			});
@@ -2926,6 +3082,7 @@ window.__ModuleLoader__.load({
 .bhx1w8vjyx:not(#\\#):not(#\\#){padding-inline:4px}
 .bhx1m95a6t:focus-visible:not(#\\#):not(#\\#){outline:var(--dsw-focus-ring-width, 2px) solid var(--dsw-alias-state-business-primary)}
 @media (max-width: 648px){.bhxv0lzym.bhxv0lzym:not(#\\#):not(#\\#){gap:8px}}
+@container bh-settings (max-width: 480px){.bhx1kwkzks.bhx1kwkzks:not(#\\#):not(#\\#){gap:8px}}
 .bhx-level-3:not(#\\#):not(#\\#):not(#\\#){}
 .bhx1g31g6d:not(#\\#):not(#\\#):not(#\\#){accent-color:var(--dsw-alias-state-business-primary)}
 .bhx6s0dn4:not(#\\#):not(#\\#):not(#\\#){align-items:center}
@@ -2964,35 +3121,47 @@ window.__ModuleLoader__.load({
 .bhx1hc1fzr:not(#\\#):not(#\\#):not(#\\#){opacity:1}
 .bhx1y3gkto:not(#\\#):not(#\\#):not(#\\#){outline-offset:1px}
 .bhxj0a0fe:not(#\\#):not(#\\#):not(#\\#){overflow-wrap:anywhere}
+.bhx67bb7w:not(#\\#):not(#\\#):not(#\\#){pointer-events:auto}
+.bhx47corl:not(#\\#):not(#\\#):not(#\\#){pointer-events:none}
+.bhxixxii4:not(#\\#):not(#\\#):not(#\\#){position:fixed}
 .bhx2b8uid:not(#\\#):not(#\\#):not(#\\#){text-align:center}
 .bhxp4054r:not(#\\#):not(#\\#):not(#\\#){text-align:end}
 .bhxlyipyv:not(#\\#):not(#\\#):not(#\\#){text-overflow:ellipsis}
 .bhxuxw1ft:not(#\\#):not(#\\#):not(#\\#){white-space:nowrap}
 .bhx126k92a:not(#\\#):not(#\\#):not(#\\#){white-space:pre-wrap}
+.bhxp6lfbs:not(#\\#):not(#\\#):not(#\\#){z-index:1100}
 .bhxtgyt42:disabled:not(#\\#):not(#\\#):not(#\\#){cursor:default}
 .bhxijokvz:disabled:not(#\\#):not(#\\#):not(#\\#){opacity:.5}
 .bhx1lc0nsx:hover:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-interactive-bg-hover)}
 @media (max-width: 648px){.bhx15bqsqq.bhx15bqsqq:not(#\\#):not(#\\#):not(#\\#){align-items:stretch}}
 @media (max-width: 648px){.bhx1uptv2i.bhx1uptv2i:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}}
 @media (max-width: 648px){.bhx3xz8fp.bhx3xz8fp:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-start}}
+@container bh-settings (max-width: 480px){.bhx4bgz6.bhx4bgz6:not(#\\#):not(#\\#):not(#\\#){align-items:stretch}}
+@container bh-settings (max-width: 480px){.bhxcxmu7o.bhxcxmu7o:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}}
+@container bh-settings (max-width: 480px){.bhx403fy9.bhx403fy9:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-start}}
 .bhx-level-4:not(#\\#):not(#\\#):not(#\\#):not(#\\#){}
 .bhxnoyelg:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:var(--dsw-alias-border-l1)}
 .bhx1q0q8m5:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-style:solid}
 .bhxrvphhj:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-width:1px}
+.bhx1kkor1i:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:1px}
 .bhxxevliy:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:28px}
 .bhxdkzj7d:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:40px}
 .bhxols6we:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:6px}
+.bhxu96u03:not(#\\#):not(#\\#):not(#\\#):not(#\\#){left:0}
 .bhx193iq5w:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}
 .bhxxc7z9f:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:360px}
 .bhxh9uqaf:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:60%}
 .bhxeuugli:not(#\\#):not(#\\#):not(#\\#):not(#\\#){min-width:0}
 .bhx1e1oj2y:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-bottom:4px}
 .bhxb590mu:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:16px}
+.bhx13vifvy:not(#\\#):not(#\\#):not(#\\#):not(#\\#){top:0}
 .bhxh8yej3:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:100%}
+.bhx51uzqw:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:1px}
 .bhx1i1gie9:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:40px}
 .bhx10zg81t:first-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:0}
 .bhx1bta2m4:last-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:transparent}
 @media (max-width: 648px){.bhx1cnm762.bhx1cnm762:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}}
+@container bh-settings (max-width: 480px){.bhx1r6q2vj.bhx1r6q2vj:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}}
 `;
 		//#endregion
 		//#region packages/browser/src/client/access-power-icon.tsx

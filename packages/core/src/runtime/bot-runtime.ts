@@ -523,7 +523,7 @@ export interface OrchestratorChannelAccess {
     maxBytes: number;
     signal?: AbortSignal;
   }): Promise<{ ref: ChannelAttachmentRef; data: Uint8Array }>;
-  requestGrant(reason: string): Promise<ChannelMessage>;
+  requestGrant(reason: string, channelId?: string): Promise<ChannelMessage>;
   contacts(input?: BotContactQuery): BotContactPage;
   createGroup(name: string): ChannelRecord;
   inviteGroup(input: { channelId: string; targetBotSlug: string }): GroupInvitation;
@@ -739,6 +739,7 @@ export interface BotRuntime {
   replaceOrchestrator?<T>(botSlug: string, body: () => T): Promise<OrchestratorReplacement<T>>;
   startFreshOrchestrator?(botSlug: string, assertCurrent?: () => void): Promise<'started' | 'busy'>;
   turnRunning?(botSlug: string): boolean;
+  hasPendingInbox?(botSlug: string): boolean;
   directBotTools?(): DirectBotToolSpec[];
   directBotToolCalls?(botSlug: string): readonly DirectBotToolCall[];
   runDirectBotTool?(
@@ -978,7 +979,7 @@ function permissionFromRow(row: AssignmentRow): AssignmentPermissionSnapshot | u
     row.workspace_id === null ||
     row.primary_cwd === null ||
     (row.permission_mode !== 'workspace-write' && row.permission_mode !== 'danger-full-access') ||
-    row.approval_policy !== (row.permission_mode === 'workspace-write' ? 'ask' : 'never') ||
+    row.approval_policy !== 'ask' ||
     row.preset_revision === null
   )
     return undefined;
@@ -1267,6 +1268,15 @@ function sessionFailureDetails(error: unknown): { code?: string; status?: number
     ...(typeof status === 'number' ? { status } : {}),
     detail,
   };
+}
+
+const CONTEXT_WINDOW_EXCEEDED_NOTICE =
+  "This conversation's context is full and automatic compaction could not recover it. Retry with a smaller request, for example ask for one part of a large file or command output instead of all of it.";
+
+function sessionFailureBody(details: { code?: string; detail: string }): string {
+  if (details.code === 'CONTEXT_WINDOW_EXCEEDED')
+    return `Session failed: CONTEXT_WINDOW_EXCEEDED: ${CONTEXT_WINDOW_EXCEEDED_NOTICE}`;
+  return `Session failed: ${details.code === undefined ? '' : details.code + ': '}${details.detail}`;
 }
 
 class BotRuntimeImplementation implements BotRuntime {
@@ -3421,6 +3431,10 @@ class BotRuntimeImplementation implements BotRuntime {
     } catch {
       return false;
     }
+    return this.#hasLocalPrivateInputSource(owner.botSlug, turn.acceptedEventIds);
+  }
+
+  #hasLocalPrivateInputSource(botSlug: string, sourceEventIds: Iterable<string>): boolean {
     return this.#database.read((db) => {
       const human = db.prepare(
         `SELECT e.channel_id FROM source_events e
@@ -3428,15 +3442,15 @@ class BotRuntimeImplementation implements BotRuntime {
          WHERE e.source_event_id = ? AND a.bot_slug = ? AND e.source_kind = 'human-message'
            AND a.reason IN ('human-dm', 'group-mention', 'group-ordinary')`,
       );
-      return [...turn.acceptedEventIds].some((id) => {
-        const source = human.get(id, owner.botSlug);
+      return [...sourceEventIds].some((id) => {
+        const source = human.get(id, botSlug);
         if (
           typeof source?.channel_id !== 'string' ||
           this.#channels.get(source.channel_id) === undefined
         )
           return false;
         try {
-          requireSourceEffects(db, id, owner.botSlug);
+          requireSourceEffects(db, id, botSlug);
           return true;
         } catch {
           return false;
@@ -3452,6 +3466,11 @@ class BotRuntimeImplementation implements BotRuntime {
       if (selected !== undefined) throw new Error('Private input IM source is unavailable');
       return undefined;
     }
+    if (
+      selected === undefined &&
+      this.#hasLocalPrivateInputSource(owner.botSlug, turn.acceptedEventIds)
+    )
+      return undefined;
     const ids = this.#database.read((db) => {
       const query = db.prepare('SELECT source_kind FROM source_events WHERE source_event_id = ?');
       return [...turn.acceptedEventIds].filter(
@@ -3881,6 +3900,20 @@ class BotRuntimeImplementation implements BotRuntime {
 
   turnRunning(botSlug: string): boolean {
     return this.#turnSources.has(botSlug) && this.#activeTurns.has(botSlug);
+  }
+
+  hasPendingInbox(botSlug: string): boolean {
+    if (this.#closed || this.#tails.has(botSlug)) return true;
+    return this.#database.read(
+      (database) =>
+        database
+          .prepare(
+            `SELECT 1 FROM inbox_admissions
+              WHERE bot_slug = ? AND attempt_state IN ('pending', 'running', 'retryable')
+              LIMIT 1`,
+          )
+          .get(botSlug) !== undefined,
+    );
   }
 
   async #replaceOrchestrator<T>(
@@ -4787,7 +4820,7 @@ class BotRuntimeImplementation implements BotRuntime {
       id: `session-failure-${randomUUID()}`,
       at: this.#now().toISOString(),
       author: { kind: 'bot', slug: input.botSlug },
-      body: `Session failed: ${details.code === undefined ? '' : details.code + ': '}${details.detail}`,
+      body: sessionFailureBody(details),
       format: 'text',
       sessionFailure: {
         ...failure,
@@ -6032,8 +6065,8 @@ class BotRuntimeImplementation implements BotRuntime {
         }
         return { ref: downloaded.ref, data };
       },
-      requestGrant: async (reason) => {
-        const channel = resolve();
+      requestGrant: async (reason, channelId) => {
+        const channel = resolve(channelId);
         if (
           channel.type === 'group'
             ? !channel.members.includes(botSlug)
@@ -6051,6 +6084,7 @@ class BotRuntimeImplementation implements BotRuntime {
           author: { kind: 'bot', slug: botSlug },
           body,
           grantRequest: true,
+          grantRequestOwner: this.#registry.get(botSlug)!.createdAt,
         };
         const appended = await this.#channels.appendMessage(channel.id, message, {
           sessionId,
@@ -6877,7 +6911,7 @@ class BotRuntimeImplementation implements BotRuntime {
       workspaceId: grant.workspaceId,
       primaryCwd: grant.workspacePath,
       mode: access.mode,
-      approval: access.mode === 'danger-full-access' ? 'never' : 'ask',
+      approval: 'ask',
       presetRevision: access.revision,
     };
     const key = input.key === undefined ? undefined : requireNonBlank(input.key, 'Continuity Key');

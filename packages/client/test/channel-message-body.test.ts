@@ -543,6 +543,23 @@ describe('Channel message body', () => {
     expect(markup.includes('打开模型设置')).toBe(actionable);
   });
 
+  it('names a context overflow and tells the Human what to do next', () => {
+    const markup = render({ kind: 'bot', slug: 'ada' }, 'Session failed', {
+      sessionFailure: {
+        role: 'orchestrator',
+        sessionId: 'session-overflow',
+        code: 'CONTEXT_WINDOW_EXCEEDED',
+        detail: 'Raw overflow diagnostic',
+        requestMessageId: 'human-1',
+      },
+    });
+    expect(markup).toContain('对话上下文已满');
+    expect(markup).toContain('自动压缩未能恢复。请缩小请求后重试');
+    expect(markup).toContain('Raw overflow diagnostic');
+    expect(markup).not.toContain('请查看错误详情');
+    expect(markup).not.toContain('打开模型设置');
+  });
+
   it('renders server-sniffed images inline and files as downloads', () => {
     const hash = `sha256:${'a'.repeat(64)}`;
     const markup = render({ kind: 'human' }, '', {
@@ -675,7 +692,7 @@ describe('Tool approval card', () => {
       );
       expect(container.textContent).toContain('终端 · 已允许');
       expect(container.textContent).toContain('等待运行名额');
-      expect(container.textContent).not.toContain('仅批准这一次');
+      expect(container.textContent).not.toContain('允许这次');
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1000);
       });
@@ -725,14 +742,14 @@ describe('Tool approval card', () => {
           }),
         );
       });
-      expect(container.textContent).toContain('仅批准这一次');
+      expect(container.textContent).toContain('允许这次');
       await act(async () => {
         window.dispatchEvent(
           new CustomEvent(WORKSPACE_GRANTS_CHANGED, { detail: { slug: 'ada' } }),
         );
       });
       expect(toolApprovalStatus).toHaveBeenCalledTimes(2);
-      expect(container.textContent).not.toContain('仅批准这一次');
+      expect(container.textContent).not.toContain('允许这次');
       expect(container.textContent).toContain('终端 · 已过期');
     } finally {
       await act(async () => root.unmount());
@@ -838,7 +855,7 @@ describe('Tool approval text follows the UI locale (#1293)', () => {
     expect(toolApprovalText(decision('rejected'), enTranslate)).toBe('This call was rejected');
     expect(toolApprovalText(decision('allowed-once'), enTranslate)).toBe('This call was approved');
     expect(toolApprovalText(decision('allowed-always-all'), enTranslate)).toBe(
-      'Automatic approval rule saved; this call was approved',
+      'Allowed this time and saved your choice',
     );
     expect(toolApprovalText(decision('rejected'), zhTranslate)).toBe('已拒绝这一次调用');
     expect(toolApprovalText({}, enTranslate)).toBeUndefined();

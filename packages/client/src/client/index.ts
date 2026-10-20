@@ -1,5 +1,7 @@
 import { readChannelDock, writeChannelDock } from './channel-dock-layout.js';
 import { createBotPresentation } from './bot-presentation.js';
+import { mountWindowZoomControl } from './window-zoom-control.js';
+import { mountWindowZoom, type ZoomCompatibility } from './window-zoom-mount.js';
 import { Wallpaper } from './wallpaper.js';
 import { createWallpaperStore } from './wallpaper-store.js';
 import { mountWallpaper } from './wallpaper-layer.js';
@@ -63,6 +65,8 @@ import {
   BotSettingsView,
   botSettingsSectionSource,
 } from './bot-settings.js';
+import type { QuickSwitcherSettings } from './quick-switcher.js';
+import { searchSettings } from './settings-search.js';
 import { DshBotSettingsItem } from './dsh-bot-settings-item.js';
 import { createImApps, ImAppsSection } from './im-apps-section.js';
 import {
@@ -96,6 +100,7 @@ import {
 } from './channel-sidebar-builtins.js';
 import { webShortcutBlocked, webModalOpen, webShortcutHelpQuestion } from './channel-shortcuts.js';
 import { ShortcutBindings } from './shortcut-bindings.js';
+import { mountSettingsShortcut } from './settings-shortcut.js';
 import {
   browserNotificationApi,
   DesktopNotificationPrefs,
@@ -226,6 +231,20 @@ export function apply(ctx: ClientContext): void {
       ? undefined
       : takeHmrView(window as unknown as Record<string, unknown>);
   const t = ctx.locale.bind(LOCALE_NS);
+  const zoom = mountWindowZoom({
+    document: typeof document === 'undefined' ? undefined : document,
+    window: typeof window === 'undefined' ? undefined : window,
+    shortcuts: ctx.shortcuts,
+    storage,
+    onReady: mountWindowZoomControl,
+    compatibility:
+      typeof window === 'undefined'
+        ? undefined
+        : (window as unknown as { __botharnessWindowZoomCompatibility?: ZoomCompatibility })
+            .__botharnessWindowZoomCompatibility,
+    t,
+  });
+  ctx.effect(() => () => zoom.dispose(), 'botharness: device-local window zoom');
   const nativeChatT = ctx.locale.bind('chat');
   const call = createBridgeCall(ctx);
   const profileContext = async (): Promise<{ profileId: string }> => {
@@ -336,6 +355,7 @@ export function apply(ctx: ClientContext): void {
           companion,
           prefs,
           actions,
+          dropIn: true,
           openDm: (botId: string) => {
             ctx.layout.selectPanel(PANEL_ID);
             void actions.openBot(botId);
@@ -357,6 +377,10 @@ export function apply(ctx: ClientContext): void {
     ),
   );
   const botSettingsSections = botSettingsSectionSource(ctx);
+  const quickSwitcherSettings: QuickSwitcherSettings = {
+    search: (query) => searchSettings(botSettingsSections.getSnapshot(), query, t),
+    open: (result) => botSettings.open(result.section, result.target),
+  };
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
       {
@@ -475,6 +499,7 @@ export function apply(ctx: ClientContext): void {
       ),
     exitBotMode: () => ctx.layout.selectPanel(null),
     openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+    quickSwitcherSettings,
   };
 
   ctx.effect(() =>
@@ -596,6 +621,15 @@ export function apply(ctx: ClientContext): void {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, 'botharness: keyboard shortcut list');
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    return mountSettingsShortcut({
+      document,
+      bindings: shortcutBindings,
+      botSettings,
+      active: () => store.getSnapshot().mode === 'bot',
+    });
+  }, 'botharness: Bot settings keyboard shortcut');
   ctx.effect(() => {
     if (typeof document === 'undefined') return () => {};
     return mountTabTitle(store, document);
@@ -792,7 +826,11 @@ export function apply(ctx: ClientContext): void {
           order: 0,
           label: () => t('botSettings.section.general'),
           locale: LOCALE_NS,
-          inject: () => ({ actions, closeBotSettings: botSettings.close }),
+          inject: () => ({
+            actions,
+            closeBotSettings: botSettings.close,
+            zoomSurface: zoom.surface,
+          }),
         },
         GeneralSection,
       ),
@@ -858,7 +896,7 @@ export function apply(ctx: ClientContext): void {
           order: 10,
           label: () => t('botSettings.section.models'),
           locale: LOCALE_NS,
-          inject: () => ({ ...botModePrefsFace(prefs), actions }),
+          inject: () => ({ ...botModePrefsFace(prefs), actions, call }),
         },
         ModelsSection,
       ),
@@ -1038,6 +1076,7 @@ export function apply(ctx: ClientContext): void {
           dockPanels,
           profileCards,
           appearance,
+          wallpaper,
           nativeChatT,
           nativeSessions,
           prefs,
@@ -1047,6 +1086,7 @@ export function apply(ctx: ClientContext): void {
           ...botModePrefsFace(prefs),
           exitBotMode: () => ctx.layout.selectPanel(null),
           openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+          quickSwitcherSettings,
         }),
       },
       MobileBotPanel,
@@ -1133,6 +1173,7 @@ export function apply(ctx: ClientContext): void {
             exitBotMode: () => ctx.layout.selectPanel(null),
             toggleSidebar: () => ctx.layout.toggleSidebar(),
             openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+            quickSwitcherSettings,
           }),
         },
         BotModeSidebar,

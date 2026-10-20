@@ -3,6 +3,8 @@
 | Feature | Needs a model | Scripted journey | File |
 | --- | --- | --- | --- |
 | VRM companion Panel | yes for speaking | `scripts/e2e-vrm-companion.mjs` | [vrm-companion.md](vrm-companion.md) |
+| Desktop whole-window zoom (controlled S1 / Windows candidate) | no | `scripts/e2e-desktop-zoom-launch.mjs`, `scripts/e2e-desktop-zoom-windows.mjs`, `scripts/e2e-dock-zoom.mjs`, `scripts/e2e-workspace-chrome.mjs` | [desktop-window-zoom.md](desktop-window-zoom.md) |
+| Global search: Alt/Option+K, settings results and pinyin matching | no | `verify-app` Bot mode path | [global-search.md](global-search.md) |
 | DeepSeekBot device-local appearance | no | `scripts/e2e-local-appearance.mjs` | [local-appearance.md](local-appearance.md) |
 | Functional Panel appearance | no | `scripts/e2e-panel-appearance.mjs`, `scripts/e2e-nested-appearance.mjs` | [panel-appearance.md](panel-appearance.md) |
 | Global panel materials | no | `scripts/e2e-global-materials.mjs` | [global-materials.md](global-materials.md) |
@@ -13,9 +15,10 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 
 | Feature                                                                                            | Needs a model              | Scripted journey                                                                                     | File                                                 |
 | -------------------------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Bot mode entry and the default DeepSeek Bot                                                        | no                         | `scripts/e2e-bot-mode-sidebar.mjs`, `scripts/e2e-panel-workspace.mjs`                                                                   | [bot-mode.md](bot-mode.md)                           |
+| Bot mode entry and the default DeepSeek Bot                                                        | no                         | `scripts/e2e-bot-mode-sidebar.mjs`, `scripts/e2e-panel-workspace.mjs`, `scripts/e2e-bot-mode-exit.mjs`                                                                   | [bot-mode.md](bot-mode.md)                           |
 | Bot mode dock (desktop layout, unified Sessions, Channel header, Profile, settings, files and Inbox) | no | `scripts/e2e-panel-workspace.mjs`, `scripts/e2e-channel-sessions.mjs`, `scripts/e2e-bot-subpanels.mjs`, `scripts/e2e-browser-computer-subpanels.mjs`, `scripts/e2e-panel-size-persistence.mjs`, `scripts/e2e-panel-resize-stability.mjs`, `scripts/e2e-nested-channel-panels.mjs`, `scripts/e2e-channel-sessions-desktop.mjs`, `scripts/e2e-bot-mode-sidebar.mjs` | [bot-mode-dock.md](bot-mode-dock.md) |
 | Orchestrator model switching | yes, for reply evidence | none | [orchestrator-model-switch.md](orchestrator-model-switch.md) |
+| Private input with mixed local/IM sources | yes, for native tool/approval proof | `scripts/e2e-private-input-origin.mjs` | [private-input-origin.md](private-input-origin.md) |
 | Bot DM reply                                                                                       | yes                        | `scripts/e2e-llm-scenarios.mjs --scenario dm-reply`                                                  | [bot-dm-reply.md](bot-dm-reply.md)                   |
 | Bot-to-Bot Group mentions and wake                                                                 | yes                        | `scripts/e2e-llm-scenarios.mjs` (nightly)                                                            | [bot-group-mention.md](bot-group-mention.md)         |
 | Group send review | yes for A/B; no for direct tools | `scripts/e2e-group-send-review.mjs`, `scripts/e2e-group-peer-review.mjs`, `scripts/e2e-group-busy-review.mjs`, `scripts/e2e-group-responsibility.mjs` | [group-send-review.md](group-send-review.md) |
@@ -85,3 +88,6 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 | Video wallpaper | no | `scripts/e2e-video-wallpaper.mjs` | [video-wallpaper.md](video-wallpaper.md) |
 
 | Appearance recovery | no | `scripts/e2e-appearance-recovery.mjs`, `scripts/e2e-message-history-mask.mjs` | [appearance-recovery.md](appearance-recovery.md) |
+
+| Three-action tool approval and coherent Full Access | yes | `scripts/e2e-tool-approval-simple.mjs` | [tool-approval-simple.md](tool-approval-simple.md) |
+| Workspace request read/write approval and original-task continuation | yes | `scripts/e2e-workspace-request-write.mjs` | [workspace-request-write.md](workspace-request-write.md) |

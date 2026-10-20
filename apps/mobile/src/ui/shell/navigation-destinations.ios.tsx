@@ -6,14 +6,16 @@ import {
   buttonBorderShape,
   buttonStyle,
   font,
-  fixedSize,
   foregroundStyle,
   frame,
+  lineLimit,
+  minimumScaleFactor,
+  monospacedDigit,
   onLongPressGesture,
 } from '@expo/ui/swift-ui/modifiers';
 import { Platform } from 'react-native';
 import { useDesignTheme } from '../design/theme';
-import { space } from '../design/tokens';
+import { navigationBar, space } from '../design/tokens';
 import { badgeCount } from '../primitives/badge-count';
 import { t } from '../strings';
 import type { NavigationDestination } from './navigation-destination';
@@ -52,7 +54,16 @@ export function NavigationDestinations({ items }: { items: NavigationDestination
                 spacing={space.x1}
                 modifiers={[frame({ maxWidth: Infinity, minHeight: theme.touch })]}
               >
-                <HStack spacing={space.x2}>
+                {item.activity && !item.focused && item.count > 0 ? (
+                  <Text
+                    modifiers={[
+                      font({ textStyle: 'title2', weight: 'semibold' }),
+                      monospacedDigit(),
+                    ]}
+                  >
+                    {badgeCount(item.count)}
+                  </Text>
+                ) : (
                   <Image
                     systemName={
                       item.activity
@@ -65,16 +76,12 @@ export function NavigationDestinations({ items }: { items: NavigationDestination
                     }
                     modifiers={[font({ textStyle: 'title2' })]}
                   />
-                  {item.count > 0 && (
-                    <Text modifiers={[font({ textStyle: 'caption2', weight: 'semibold' })]}>
-                      {badgeCount(item.count)}
-                    </Text>
-                  )}
-                </HStack>
+                )}
                 <Text
                   modifiers={[
                     font({ textStyle: 'caption2' }),
-                    fixedSize({ horizontal: false, vertical: true }),
+                    lineLimit(1),
+                    minimumScaleFactor(navigationBar.labelMinScale),
                   ]}
                 >
                   {label}

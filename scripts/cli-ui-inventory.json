@@ -164,6 +164,15 @@
       ]
     },
     {
+      "id": "idle-compaction",
+      "description": "Host idle Orchestrator Session compaction setting.",
+      "scope": "Host",
+      "surfaces": [
+        "setting:packages/client/src/client/idle-compaction-setting.tsx:{t('idleCompaction.row.title')}"
+      ],
+      "commands": ["idle-compaction", "idle-compaction-set", "idle-compaction-cache-set"]
+    },
+    {
       "id": "messaging-defaults",
       "description": "External messaging default routing and identities.",
       "scope": "Host",
@@ -358,9 +367,18 @@
         "storage:packages/client/src/client/onboarding.ts:removeItem(`botharness/onboarding/layout-v2/${receipt.profileId}`)",
         "storage:packages/client/src/client/onboarding.ts:setItem(key)",
         "storage:packages/client/src/client/onboarding.ts:removeItem('botharness/onboarding/sessions-return')",
-        "storage:packages/client/src/client/onboarding.ts:setItem(`botharness/onboarding/layout-v2/${this.state.receipt.profileId}`)"
+        "storage:packages/client/src/client/onboarding.ts:setItem(`botharness/onboarding/layout-v2/${this.state.receipt.profileId}`)",
+        "storage:packages/client/src/client/onboarding.ts:setItem(introKey(receipt.profileId))"
       ],
       "exemption": "Device-local tour anchors and seen markers are presentation state, not Host settings. Profile tutorial lifecycle is available through onboarding.",
+      "configurable": false
+    },
+    {
+      "id": "ui-community-stars",
+      "description": "The intro's GitHub star count is cached on the device for offline display.",
+      "scope": "Client transport / transient state",
+      "surfaces": ["storage:packages/client/src/client/community-links.ts:setItem(STARS_KEY)"],
+      "exemption": "A display cache of a public GitHub number, not a user setting; nothing to configure.",
       "configurable": false
     },
     {
@@ -679,13 +697,25 @@
       ]
     },
     {
+      "id": "desktop-window-zoom",
+      "description": "Device-local primary window preferences; Host relays exact Client requests without storing settings.",
+      "scope": "Client / desktop primary window",
+      "surfaces": [
+        "route:packages/core/src/plugin.ts:WINDOW_ZOOM_CONTROL_PATH",
+        "setting:packages/client/src/client/window-zoom-settings.tsx:{t('zoom.current')}",
+        "setting:packages/client/src/client/window-zoom-settings.tsx:{t('zoom.default')}",
+        "storage:packages/client/src/client/window-zoom.ts:setItem(WINDOW_ZOOM_KEY)"
+      ],
+      "commands": ["window-zoom-clients", "window-zoom-get", "window-zoom-set", "window-zoom-reset"]
+    },
+    {
       "id": "deepseekbot-local-appearance",
       "description": "Explicit Client-targeted device-local DeepSeekBot themes; authenticated Host forwards requests without a preference mirror.",
       "scope": "Client",
       "surfaces": [
-        "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.theme')}",
-        "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPreset' : 'appearance.darkPreset')}",
-        "setting:packages/client/src/client/appearance-settings.tsx:{t(mode === 'light' ? 'appearance.lightPrimary' : 'appearance.darkPrimary')}",
+        "setting:packages/client/src/client/appearance-settings.tsx:{t('appearance.primary')}",
+        "setting:packages/client/src/client/wallpaper-settings.tsx:{t('wallpaper.interval')}",
+        "setting:packages/client/src/client/wallpaper-settings.tsx:{t('wallpaper.shuffle')}",
         "storage:packages/client/src/client/appearance.ts:setItem(APPEARANCE_KEY)",
         "route:packages/core/src/plugin.ts:APPEARANCE_CONTROL_PATH",
         "setting:packages/client/src/client/appearance-material-settings.tsx:{t('appearance.materialBlur')}",
@@ -702,6 +732,8 @@
         "wallpaper-import",
         "wallpaper-crop",
         "wallpaper-remove",
+        "wallpaper-select",
+        "wallpaper-rotation",
         "appearance-clear-panels",
         "appearance-reset"
       ]

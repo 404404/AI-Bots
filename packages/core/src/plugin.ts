@@ -1,3 +1,4 @@
+import { createWindowZoomControl, WINDOW_ZOOM_CONTROL_PATH } from './window-zoom/control.js';
 import { APPEARANCE_CONTROL_PATH, createAppearanceControl } from './appearance/control.js';
 import { CloudConnections } from './cloud/connections.js';
 import { createCloudProvider } from './cloud/provider.js';
@@ -199,6 +200,14 @@ import {
   isApprovalReviewSession,
 } from './workspaces/approval-reviewer.js';
 import { createApprovalReviewerSettings } from './workspaces/approval-reviewer-settings.js';
+import {
+  compactionThresholdTokens,
+  createIdleCompaction,
+  IdleCompactionError,
+  runCompactCommand,
+  type CompactCommandRunner,
+} from './runtime/idle-compaction.js';
+import { createIdleCompactionSettings } from './runtime/idle-compaction-settings.js';
 import { ChannelUserQuestions } from './channels/user-questions.js';
 import { mountPrivateInputs } from './credentials/mount.js';
 import type { PrivateInputs } from './credentials/private-inputs.js';
@@ -1514,6 +1523,54 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     join(dshHome, 'botharness', 'approval-templates'),
   );
   const approvalReviewer = createApprovalReviewerSettings(join(dshHome, 'botharness'));
+  const idleCompactionSettings = createIdleCompactionSettings(join(dshHome, 'botharness'));
+  const liveAgent = (sessionId: string) =>
+    ctx.agents.list().find((agent) => agent.session.id === sessionId);
+  const idleCompaction = createIdleCompaction({
+    settings: idleCompactionSettings,
+    orchestratorBot: (sessionId) => {
+      const owner = core.ownership.resolve(sessionId);
+      if (owner?.rootRole !== 'orchestrator' || owner.parentSessionId !== undefined)
+        return undefined;
+      return core.runtime.currentOrchestratorSessionId?.(owner.botSlug) === sessionId
+        ? owner.botSlug
+        : undefined;
+    },
+    botBusy: (botSlug) =>
+      (core.runtime.hasPendingInbox?.(botSlug) ?? true) ||
+      (core.runtime.turnRunning?.(botSlug) ?? true),
+    agent: liveAgent,
+    measure: (agent) =>
+      (
+        ctx.get('tokenMeter') as unknown as
+          | { measure(session: unknown): { totalTokens: number } }
+          | undefined
+      )?.measure(agent.session).totalTokens,
+    threshold: async (agent, route) => {
+      const info = await ctx.llm.resolveModelInfo(route.provider, route.model);
+      if (info.context === undefined) return undefined;
+      return compactionThresholdTokens(
+        {},
+        route,
+        info.context.contextWindow,
+        agent.session.requestHeader()?.config.maxTokens ?? info.defaultMaxTokens ?? 0,
+      );
+    },
+    compactNow: async (agent, signal) => {
+      const commands = ctx.get('commands') as unknown as CompactCommandRunner | undefined;
+      if (commands === undefined) throw new IdleCompactionError('unavailable');
+      return runCompactCommand(commands, agent, signal);
+    },
+    record: (record) => core.usage?.recordIdleCompaction(record),
+    log: (event) => ctx.logger.info(`idle-compaction ${JSON.stringify(event)}`),
+  });
+  ctx.effect(() => () => idleCompaction.close(), 'botharness: idle compaction');
+  const compactBot = (slug: string) => {
+    const sessionId = core.runtime.currentOrchestratorSessionId?.(slug);
+    return sessionId === undefined
+      ? Promise.resolve({ outcome: 'not-loaded' as const, tokensBefore: null, tokensAfter: null })
+      : idleCompaction.compactNow(sessionId);
+  };
   let reviewLogs: LogDatabase | undefined;
   try {
     reviewLogs = openLogDatabase({ dir: join(dshHome, 'botharness') });
@@ -1613,6 +1670,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       core.runtime.beginAssignmentApprovalWait?.(sessionId, callId, signal),
     (sessionId) => core.runtime.askChannel?.(sessionId),
     autoApproval,
+    (sessionId) => sessionHasFullAccess(core, sessionId),
   );
   ctx.effect(
     () => core.externalMessaging.approvals.attach(toolApproval, core.channels),
@@ -1858,7 +1916,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                           JSON.stringify(execution.arguments) ?? '',
                           templateInUse,
                         )
-                      ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
+                      ? 'This PersonaBot wants to change persistent permissions or its approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
                       : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
             });
@@ -2069,6 +2127,25 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     cloudConnections,
     cloudWork,
     approvalReviewer,
+    idleCompaction: {
+      settings: idleCompactionSettings,
+      scheduler: idleCompaction,
+      routes: () => {
+        let fallback: { provider: string; model: string } | undefined;
+        try {
+          const selection = defaultModel.currentSelection();
+          fallback = { provider: selection.provider, model: selection.model };
+        } catch {
+          fallback = undefined;
+        }
+        return core.registry.list().flatMap((bot) => {
+          const route = bot.modelPlan?.orchestrator ?? fallback;
+          return route === undefined ? [] : [{ provider: route.provider, model: route.model }];
+        });
+      },
+      rescan: () => idleCompaction.rescan(ctx.agents.list().map((agent) => agent.session.id)),
+      compactBot,
+    },
     composerIdentity: () =>
       composerRecoveryIdentity(
         join(homedir(), '.config', 'botharness', 'composer-host-id'),
@@ -2219,6 +2296,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     startFreshOrchestrator: (slug, assertCurrent) =>
       core.runtime.startFreshOrchestrator!(slug, assertCurrent),
     turnRunning: (slug) => core.runtime.turnRunning!(slug),
+    compact: compactBot,
   };
   const tobBotCreationOperations = createTobBotCreationOperations({
     registry: core.registry,
@@ -2300,6 +2378,21 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         };
       }
     ).connection;
+    connectionCtx.effect(() => {
+      const control = createWindowZoomControl(Date.now, (phase, detail) =>
+        ctx.logger.info('window-zoom-control %j', { phase, ...detail }),
+      );
+      const off = connection.fetch.register({
+        path: WINDOW_ZOOM_CONTROL_PATH,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: control.fetch,
+      });
+      return async () => {
+        control.dispose();
+        await off();
+      };
+    }, 'botharness: targeted window zoom delivery');
     connectionCtx.effect(() => {
       const control = createAppearanceControl();
       const off = connection.fetch.register({
@@ -2576,6 +2669,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       }
       core.usage?.handleSessionEvent(session.id, event);
       core.messagePerf.observeSessionEvent(session.id, event);
+      idleCompaction.observeEvent(session.id, event);
       handleCompactionEvent(
         {
           ownership: core.ownership,
@@ -2608,6 +2702,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     'agent/status',
     ({ agent, status }) => {
       if (status === 'idle') activity.handleAgentIdle(agent.session.id);
+      idleCompaction.agentStatus(agent.session.id, status);
     },
     { global: true },
   );
@@ -2615,12 +2710,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     'agent/disposed',
     ({ agent }) => {
       userQuestions.cancelSession(agent.session.id);
+      idleCompaction.forget(agent.session.id);
       activity.handleSessionDisposed(agent.session.id);
       core.messagePerf.clear(agent.session.id);
     },
     { global: true },
   );
   activity.rebuild(dshSessions.list());
+  idleCompaction.rescan(ctx.agents.list().map((agent) => agent.session.id));
   ctx.on(
     'agent/inbox/discarded',
     ({ agent, message }) => {

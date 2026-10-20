@@ -35,7 +35,8 @@ import { companionSurface } from './companion-surface.js';
 import { hooked } from './ds/hooked.js';
 import { border, color, radius, size, space, text } from './ds/tokens.stylex.js';
 
-const CHARACTER = '96px';
+const CHARACTER_SIZE = 96;
+const CHARACTER = `${CHARACTER_SIZE}px`;
 const SHADOW = `color-mix(in srgb, ${color.fg} 16%, transparent)`;
 
 const styles = stylex.create({
@@ -226,6 +227,7 @@ export interface WindowCompanionViewProps {
   openSettings?(): void;
   sound?: CompanionSound | undefined;
   actions?: BridgeActions | undefined;
+  dropIn?: boolean | undefined;
 }
 export function WindowCompanionView({
   companion,
@@ -239,6 +241,7 @@ export function WindowCompanionView({
   openSettings,
   sound,
   actions,
+  dropIn = false,
 }: WindowCompanionViewProps): ReactElement | null {
   const view = useSyncExternalStore(companion.subscribe, companion.getSnapshot);
   const latest = useRef(view);
@@ -373,6 +376,44 @@ export function WindowCompanionView({
       let measured = false;
       let visible = true;
       let stageVisible = true;
+      let obstacles: readonly { left: number; right: number; height: number }[] = [];
+      let scannedAt = -Infinity;
+      const scanObstacles = (now: number): void => {
+        if (now - scannedAt < 250) return;
+        scannedAt = now;
+        const stage = node.getBoundingClientRect();
+        obstacles = [...document.querySelectorAll<HTMLElement>('[data-companion-avoid]')].flatMap(
+          (element) => {
+            const box = element.getBoundingClientRect();
+            const inset = Math.max(
+              0,
+              Number.parseFloat(
+                getComputedStyle(element).getPropertyValue('--bh-companion-avoid-inset'),
+              ) || 0,
+            );
+            return box.width === 0 ||
+              box.top >= stage.bottom ||
+              box.bottom <= stage.bottom - CHARACTER_SIZE
+              ? []
+              : [
+                  {
+                    left: box.left - stage.left,
+                    right: box.right - stage.left,
+                    height: stage.bottom - box.top + inset + 4,
+                  },
+                ];
+          },
+        );
+      };
+      motion.setGround((x) =>
+        obstacles.reduce(
+          (height, obstacle) =>
+            x + CHARACTER_SIZE > obstacle.left && x < obstacle.right
+              ? Math.max(height, obstacle.height)
+              : height,
+          0,
+        ),
+      );
       const syncAudio = () => {
         const state = companion.getSnapshot();
         if (!state.selection || !state.bot || state.bot.paused || state.sync !== 'live')
@@ -419,6 +460,8 @@ export function WindowCompanionView({
         setPoint(next);
       };
       const measure = () => {
+        scannedAt = -Infinity;
+        scanObstacles(performance.now());
         const box = node.getBoundingClientRect();
         const width = box.width;
         viewport.current = {
@@ -426,13 +469,14 @@ export function WindowCompanionView({
           bottom: box.bottom,
           height: box.height || window.innerHeight,
         };
-        const next = measured
+        let next = measured
           ? motion.resize(width, viewport.current.height)
           : motion.measure(
               width,
               viewport.current.height,
               latest.current.selection?.position ?? 0.75,
             );
+        if (!measured && dropIn && !reducedMotion()) next = motion.drop();
         measured = true;
         const drag = pointer.current;
         if (drag) {
@@ -488,6 +532,7 @@ export function WindowCompanionView({
       };
       const task: CompanionFrameTask = {
         read: () => {
+          scanObstacles(performance.now());
           const state = latest.current;
           sampled =
             !document.hidden && stageVisible && speaking(state)

@@ -23,6 +23,10 @@ export const edge = {
   focus: 2,
 } as const;
 
+export const sidebar = { inset: 8, radius: 44 } as const;
+export const stateRing = { width: 2, inset: 3, segment: 0.26, period: 1300 } as const;
+export const rowGlyph = { size: 16, period: 900 } as const;
+
 export const sheetHandle = { width: 32, height: 4 } as const;
 export const navigationBar = {
   height: 64,
@@ -32,6 +36,7 @@ export const navigationBar = {
   indicatorHeight: 32,
   indicatorRadius: radius.md,
   itemPadding: 6,
+  labelMinScale: 0.5,
   shadow: {
     light: '0 2px 8px rgba(15, 17, 21, 0.06)',
     dark: '0 2px 8px rgba(0, 0, 0, 0.12)',
@@ -39,6 +44,8 @@ export const navigationBar = {
 } as const;
 export const environmentTab = { maxWidth: 220 } as const;
 export const modalRail = { maxWidth: 360 } as const;
+export const messageSheet = { textHeightRatio: 0.4 } as const;
+export const pairingScan = { maxSize: 200, widthRatio: 0.5 } as const;
 
 export const androidSettings = {
   radius: radius.xl,
@@ -100,6 +107,7 @@ export const edgeFade = {
     { offset: 0.5, opacity: 0.4 },
     { offset: 1, opacity: 0 },
   ],
+  blur: ['cc', '59', '14', '00'],
 } as const;
 
 export const pointer = {
@@ -113,6 +121,10 @@ export const motion = {
   lift: 500,
   menu: 160,
 } as const;
+
+export const pullToCompose = { threshold: 40, flick: 1 } as const;
+
+export const doubleTap = { window: 300, emoji: '👍' } as const;
 
 export const markdownTable = { minColumnWidth: 96, maxColumnWidth: 280 } as const;
 

@@ -8,6 +8,8 @@ import { Workspace, type WorkspaceOptions } from './workspace.js';
 import { WorkspaceContext } from './workspace-context.js';
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
+import { BotIntro } from './bot-intro.js';
+import type { Wallpaper } from './wallpaper.js';
 import {
   ChannelMark,
   ChannelMenuCaret,
@@ -19,6 +21,7 @@ import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { useDmComposerContext } from './dm-composer-context.js';
 import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
+import { COMPANION_READ_INSET } from './companion-surface.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 import { ComposerSendKeyContext } from './composer-send-key.js';
@@ -44,6 +47,7 @@ import {
   IconNewChatOutlineRegular,
   IconPanelLeftOutlineRegular,
   IconUserOutlineRegular,
+  Toast,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -541,7 +545,11 @@ function MessageGroupView({
   resolvedGrantRequests: ReadonlySet<string>;
   toolApprovalDecisions: ReadonlyMap<
     string,
-    'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected'
+    | 'allowed-once'
+    | 'allowed-always-tool'
+    | 'allowed-always-exact'
+    | 'allowed-always-all'
+    | 'rejected'
   >;
   userQuestionResolutions: ReadonlyMap<string, 'answered' | 'cancelled'>;
   t: BotHarnessTranslate;
@@ -1138,6 +1146,14 @@ function ConversationView({
   >(scopeKey, undefined);
   const [recallNotice, setRecallNotice] = useScopedState<string>(scopeKey);
   const [submissionNotice, setSubmissionNotice] = useScopedState<string>(scopeKey);
+  const [compactNotice, setCompactNotice] = useScopedState<{
+    seq: number;
+    text: string;
+    tone?: 'success';
+    holdMs: number;
+  }>(scopeKey);
+  const [compacting, setCompacting] = useScopedState(scopeKey, false);
+  const compactSeq = useRef(0);
   const submissionChannelId = draftScope === undefined ? undefined : state.conversation.channel?.id;
   const readSubmissions = () =>
     submissionChannelId === undefined
@@ -1203,6 +1219,29 @@ function ConversationView({
     return true;
   };
   const followingLatest = useScopedRef(scopeKey, true);
+  const companionReadMount = useMountedResource<HTMLElement>(
+    (pane) => {
+      let visible: boolean | undefined;
+      const sync = () => {
+        const next = (companion?.getSnapshot().companions.length ?? 0) > 0;
+        if (visible === next) return;
+        visible = next;
+        if (next) pane.style.setProperty('--bh-companion-read-inset', COMPANION_READ_INSET + 'px');
+        else pane.style.removeProperty('--bh-companion-read-inset');
+        const timeline = pane.querySelector<HTMLElement>('.bh-chat-body');
+        if (
+          timeline &&
+          followingLatest.current &&
+          !store.getSnapshot().conversation.timeline.hasNewer
+        ) {
+          timeline.scrollTop = timeline.scrollHeight;
+        }
+      };
+      sync();
+      return companion?.subscribe(sync);
+    },
+    [companion, scopeKey],
+  );
   const activityOverlayPane = useScopedRef<HTMLElement | null>(scopeKey, null);
   const resizeActivityOverlay = useCallback(
     (height: number): void => {
@@ -1758,6 +1797,43 @@ function ConversationView({
     setSelectedMemoryView(undefined);
     setProfileViewOpen(true);
   };
+  const compactProfileBot = async (): Promise<void> => {
+    if (profileBot === undefined) return;
+    const show = (text: string, holdMs: number, tone?: 'success') => {
+      compactSeq.current += 1;
+      setCompactNotice({ seq: compactSeq.current, text, holdMs, ...(tone ? { tone } : {}) });
+    };
+    setCompacting(true);
+    show(t('composerCompact.running'), 120000);
+    try {
+      const result = await actions.compactBot(profileBot.slug);
+      const tokens = (value: number | null) => (value === null ? '?' : value.toLocaleString());
+      if (result.outcome === 'compacted')
+        show(
+          t('composerCompact.done', {
+            before: tokens(result.tokensBefore),
+            after: tokens(result.tokensAfter),
+          }),
+          4000,
+          'success',
+        );
+      else
+        show(
+          t(
+            result.outcome === 'busy'
+              ? 'composerCompact.busy'
+              : result.outcome === 'not-loaded'
+                ? 'composerCompact.notLoaded'
+                : 'composerCompact.nothing',
+          ),
+          result.outcome === 'nothing' ? 3000 : 6000,
+        );
+    } catch {
+      show(t('composerCompact.failed'), 6000);
+    } finally {
+      setCompacting(false);
+    }
+  };
   const conversationShortcuts: ComposerShortcut[] = [
     ...(dmComposerContext === undefined
       ? []
@@ -1773,6 +1849,13 @@ function ConversationView({
             label: t('composerCommand.sessions'),
             icon: <ChannelSidebarIcon name="text-quote" />,
             run: () => sidebar.openTab('conversation'),
+          },
+          {
+            id: 'compact' as const,
+            label: t('composerCommand.compact'),
+            icon: <ChannelSidebarIcon name="archive" />,
+            disabled: compacting,
+            run: () => void compactProfileBot(),
           },
         ]),
     {
@@ -2311,6 +2394,7 @@ function ConversationView({
     dockBotSlug !== undefined && dockEntryProps !== undefined && inboxEntry !== undefined;
   const conversationPane = (
     <section
+      ref={companionReadMount}
       className="bh-chat-pane"
       data-activity-concealed={composerActivityConcealed ? 'true' : undefined}
       {...fileDrop.handlers}
@@ -2950,6 +3034,19 @@ function ConversationView({
                   activeMemoryView === undefined && selectedIds === undefined ? 'contents' : 'none',
               }}
             >
+              {compactNotice === undefined ? null : (
+                <Toast
+                  key={compactNotice.seq}
+                  text={compactNotice.text}
+                  holdMs={compactNotice.holdMs}
+                  {...(compactNotice.tone ? { tone: compactNotice.tone } : {})}
+                  onDone={() =>
+                    setCompactNotice((current) =>
+                      current?.seq === compactNotice.seq ? undefined : current,
+                    )
+                  }
+                />
+              )}
               <div
                 className="bh-composer-recovery"
                 ref={recovery.mount}
@@ -3304,9 +3401,13 @@ function ConversationView({
               closeLabel={t('dock.close', { label: t('entry.botInbox') })}
               onClose={() => setInboxOpen(false)}
               scroll
-              secondary={inboxEntry.headerAction && <inboxEntry.headerAction {...dockEntryProps} />}
+              secondary={
+                inboxEntry.headerAction && (
+                  <inboxEntry.headerAction key={dockBotSlug} {...dockEntryProps} />
+                )
+              }
             >
-              <inboxEntry.component {...dockEntryProps} flush />
+              <inboxEntry.component key={dockBotSlug} {...dockEntryProps} flush />
             </PanelDialog>
           )}
         </GeneratedFilesContext.Provider>
@@ -3437,6 +3538,7 @@ export function BotMain({
 
 export function BotPanel({
   appearance,
+  wallpaper,
   onMobileBack,
   workspace,
   prefs,
@@ -3463,6 +3565,7 @@ export function BotPanel({
   releaseNotes?: ReleaseNotesController | undefined;
   telemetryNotice?: TelemetryNoticeController | undefined;
   appearance?: Appearance | undefined;
+  wallpaper?: Wallpaper | undefined;
   workspace?: WorkspaceOptions | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
@@ -3474,6 +3577,7 @@ export function BotPanel({
     onboardingState.guideOpen ||
     onboardingState.checklistOpen ||
     onboardingState.sessionsTourOpen ||
+    onboardingState.intro !== undefined ||
     (onboardingState.receipt === undefined && onboardingState.error === undefined);
   const modeMount = useMountedResource<HTMLSpanElement>(() => {
     store.setMode('bot');
@@ -3485,6 +3589,7 @@ export function BotPanel({
     <>
       <span ref={modeMount} hidden aria-hidden="true" />
       <OnboardingOverlay actions={actions} companion={companion} t={t} />
+      <BotIntro actions={actions} appearance={appearance} wallpaper={wallpaper} t={t} />
       {releaseNotes === undefined ? null : (
         <ReleaseNotesAnnouncement controller={releaseNotes} t={t} deferred={deferRelease} />
       )}

@@ -35,6 +35,7 @@ import {
   SheetNote,
   SHEET_GROUP,
 } from './sheet';
+import { confirmDestructive } from '../primitives/app-dialog';
 
 type Mode = 'main' | 'browse' | 'confirm';
 type Pending = { path: string; workspaceId?: string };
@@ -84,7 +85,7 @@ export function templateDescription(template: ApprovalTemplate): string {
   return template.description;
 }
 
-function Grouped({
+export function Grouped({
   index,
   count,
   children,
@@ -100,7 +101,7 @@ function Grouped({
   );
 }
 
-function RowIcon({ kind }: { kind: 'folder' | 'add' }) {
+export function RowIcon({ kind }: { kind: 'folder' | 'add' }) {
   const theme = useDesignTheme();
   const size = theme.type.title.line;
   return kind === 'folder' ? (
@@ -143,7 +144,7 @@ function RemoveButton({
   );
 }
 
-function Crumbs({
+export function Crumbs({
   crumbs,
   disabled,
   onOpen,
@@ -466,7 +467,12 @@ export function WorkspaceSheet({
         ) : null}
         <SectionList<
           BrowseRow,
-          { key: string; title: string; footer?: string | undefined; data: readonly BrowseRow[] }
+          {
+            key: string;
+            title: string;
+            footer?: string | undefined;
+            data: readonly BrowseRow[];
+          }
         >
           style={page !== undefined ? { flex: 1 } : { flexShrink: 1 }}
           sections={sections}
@@ -666,7 +672,14 @@ export function WorkspaceSheet({
                 <RemoveButton
                   label={t.removeFolder(item.grant.workspaceTitle)}
                   disabled={busy !== undefined}
-                  onPress={() => remove(item.grant)}
+                  onPress={() =>
+                    confirmDestructive(
+                      t.confirmAction(t.removeFolder(item.grant.workspaceTitle)),
+                      undefined,
+                      t.remove,
+                      () => remove(item.grant),
+                    )
+                  }
                 />
               )
             }

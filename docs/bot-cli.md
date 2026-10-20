@@ -72,6 +72,7 @@ deepseekbot bot-attention <bot-id> --limit 20 --state handled
 deepseekbot bot-sessions <bot-id> --limit 20
 deepseekbot bot-activity <bot-id> --limit 20
 deepseekbot bot-new-session <bot-id>
+deepseekbot bot-compact <bot-id>
 ```
 
 Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `steps` and `next`. The model preset is applied through its owner, never forwarded as a native Agent preset. A missing specified preset is rejected before creation; other model failures after creation preserve the Bot and return its known identity and steps with `outcome: created`. A lost creation/import response without a stable operation key can return `outcome: unknown`: inspect the Host before creating again; no automatic mutation retry is provided. For blank online creation, use the [receipt-backed operation key](#tob-bot-creation-profiles-and-lifecycle) to reconcile the same identity. A created Bot alone does not prove model usability: use `send` and its exact correlated committed reply.
@@ -79,6 +80,8 @@ Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `s
 `bot-attention` supports `--cursor` and the Host's pending/processing/observed/deferred/needs-repair/handled states; it limits pages to 1–100. Session summaries are newest-first and limited to 1–100 (default 50), with `total`; activity limits its session details and reports `sessionCount`. These are bounded summaries, not full tool-call logs or streaming drafts.
 
 `bot-new-session <bot-id>` retires an idle Bot’s Orchestrator Session through the same Host runtime as IM `/new`; the next message starts a fresh Session. It returns `{"started":true}` and refuses with `bot-busy` while the Bot is working; stop the current turn first.
+
+`bot-compact <bot-id>` compacts an idle Bot’s Orchestrator Session now through DSH `/compact`, the same path as IM `/compact`, the Bot DM composer’s `/compact` and Idle Compaction. It returns `{"outcome":"compacted","tokensBefore":…,"tokensAfter":…}`, `nothing` when DSH finds nothing to compact or a summary would not be smaller, or `not-loaded` when the Session is not live in the Host yet (for example after a Host restart, until the next message). It refuses with `bot-busy` while the Bot has a running turn or a pending Inbox Admission.
 
 For explicit cleanup, `bot-delete-preview <bot-id>` returns the owner's current scope and `preview.token`. Review it, then pipe `{"token":"<preview.token>"}` to `bot-delete-confirm <bot-id> --confirmation-stdin --confirm`. Memory is retained unless `--erase-memory` explicitly selects the owner-reviewed directory, and it erases the Bot's private-input secrets during the stop phase. Inspect `deletion.phase`; an incomplete cleanup can be continued with `bot-delete-retry <bot-id> --confirm`. Scope changes remain owner refusals; deletion is not content purge or complete data erasure.
 
@@ -91,6 +94,7 @@ deepseekbot send-status <bot-id> --message-id <receipt-message-id>
 deepseekbot channel-messages <channel-id> --host http://127.0.0.1:31917 --limit 20
 deepseekbot tool-approval-status <channel-id> --message-id <card-id>
 deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-once
+deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-always-tool
 deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-always-kind
 deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome rejected
 deepseekbot user-question-status <channel-id> --message-id <card-id>
@@ -125,7 +129,7 @@ deepseekbot workspace-create /srv/bots/workspace
 deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 ```
 
-`access-set` refuses `danger-full-access` unless `--acknowledge-risk` is given: full access lets the Bot run any command and use the Browser and Computer without an approval card. `--scope chat` also applies it to the Bot's own chat; `assignments` keeps it to new Assignments. `settings` returns `{ns, revision, value}` for one namespace; `settings-set` reads a JSON object of fields from stdin and applies it against that revision, so a concurrent change fails instead of being overwritten. Only fields the Host marks as live can be changed this way. `workspace-create` takes an absolute path and returns the Host workspace, whose id `grant-create` uses.
+`access-set` refuses `danger-full-access` unless `--acknowledge-risk` is given: full access lets the Bot perform ordinary work and use the Browser and Computer without routine approval cards; permission and approval-policy management still needs an individual Human decision. `--scope chat` also applies it to the Bot's own chat; `assignments` keeps it to new Assignments. `settings` returns `{ns, revision, value}` for one namespace; `settings-set` reads a JSON object of fields from stdin and applies it against that revision, so a concurrent change fails instead of being overwritten. Only fields the Host marks as live can be changed this way. `workspace-create` takes an absolute path and returns the Host workspace, whose id `grant-create` uses.
 
 ### Channels and groups
 
@@ -571,6 +575,19 @@ deepseekbot approval-reviewer-model-set bot
 
 Both commands return `{follows, model}`: `follows` is `bot` (each Bot's own model, `model` is `null`), `model` (the named model is used for every review) or `invalid` (the setting file cannot be read). For a named model they also return `available` and, when it is `false`, `unavailableReason`. A model that is not in the catalog, or whose provider has no working key, is still saved, but every review then posts the ordinary Human card and writes `fallback=model-unavailable` with the reason to `logs.db`; the reviewer never switches to another model on its own. Each review's `approval-review` line in `logs.db` names the `model` and the `reviewSession` it used. When a Bot runs `approval-reviewer-model-set` from its own Shell, the call always becomes a Human approval card; neither a saved rule nor the Approval Reviewer can answer it. Refusals carry a code: `usage` (no `<provider>/<model>`, or `--effort` with `bot`) and `invalid-input`.
 
+### Idle Compaction
+
+When a Bot's Orchestrator Session has no running turn and no pending Bot Inbox Admission, the Host compacts it through DSH (the `/compact` path) at half its model route's prompt-cache lifetime, never before 15 minutes, so the long history is condensed while the provider can still read it at the cache-hit price. Only Sessions above half of DSH's default automatic compaction threshold for that route are compacted; Assignment and Approval Review Sessions never are. Nothing appears in the chat. The setting is Profile-wide and on by default.
+
+```bash
+deepseekbot idle-compaction
+deepseekbot idle-compaction-set on|off
+deepseekbot idle-compaction-cache-set deepseek/<model> <seconds>
+deepseekbot idle-compaction-cache-set deepseek/<model> auto
+```
+
+All three return `{enabled, settingReadable, minimumIdleSeconds, scheduled, routes}`. Each route lists `cacheLifetimeSeconds`, its `source` and `compactAfterSeconds` (`null` when the route is skipped). The lifetime comes from the per-route value set here (`setting`), the model catalog (`catalog`, Anthropic's short tier), the observed gaps before requests that still read most of their input from the cache (`observed`; a warm gap never shortens the default, and a longer cold gap caps it), or 2 hours for DeepSeek routes (`default`); other routes with nothing known are `unknown` and skipped, as are lifetimes under 15 minutes. `idle-compaction-cache-set ... auto` removes the per-route value. Each run is recorded under `idleCompactions` in `deepseekbot bot-activity-history <bot-id>` with the route, idle gap, tokens before and after, and the compaction request's input, cache-read and output tokens. Refusals carry a code: `usage` (a missing `on`/`off`, `<provider>/<model>` or whole seconds) and `invalid-input`.
+
 ### Models, usage and activity
 
 ```bash
@@ -605,9 +622,9 @@ The online Human CLI accepts `home-model-set --orchestrator-effort` and `--expec
 These commands call the same Host methods as the Marketplace page, the update card, the usage statistics notice, the Git prompt and the IM pairing panel:
 
 ```bash
-deepseekbot marketplace-list [--query <words>] [--topic <topic>] [--sort updated|stars] [--cursor <next-cursor>]
+deepseekbot marketplace-list [--query <words>] [--topic <topic>] [--sort updated|stars] [--lang zh|en] [--cursor <next-cursor>]
 deepseekbot marketplace-topics
-deepseekbot marketplace-detail <owner/repo>
+deepseekbot marketplace-detail <owner/repo> [--lang zh|en]
 deepseekbot marketplace-submit https://github.com/<owner>/<repo>
 deepseekbot marketplace-report <owner/repo> [--reason <text>]
 deepseekbot release-check [--force]
@@ -628,7 +645,7 @@ deepseekbot pairing-review <bot-id> <pairing-id> --decision revoke --confirm
 
 `release-info` includes an optional Host-owned `identity`: `development` with source revision/dirty state, `release` with version, or `unknown` with a metadata/composition reason. Old Hosts omit this field; absence is not verified release identity. The internal source version placeholder remains `0.0.0`; About displays source identity instead. `release-check` can return `unknown`; install/restart then refuse with `release-identity-invalid`. Installed/staged and running versions remain separate until the new Host answers with the exact target version.
 
-`marketplace-submit` and `marketplace-report` first solve the Host's proof-of-work challenge, as the Web page does, so they can take a few seconds; the Marketplace's own refusals (`repository-missing-topic`, `rate-limited`, …) come back as the error code. A report reason is at most 500 characters. `release-check` returns the update status (`current`, `available`, `restart-required`, `blocked`, `development`, `unknown` or `unavailable`). `release-install` and `release-restart` need `--confirm`; a failed install or restart exits non-zero with `release-<reason>`, such as `release-network` or `release-not-pending`. Restarting stops every running Bot turn, so do it only on a Host you own. `pairing-list` shows a Bot's pairing requests and its roles; `pairing-review` reads the current revisions itself, so a request that changed in between is refused instead of overwritten. Approve with one `--role` for a conversation request or with `--capability` for a management request.
+`--lang zh|en` asks for listings in that language, as the Marketplace page does in the interface language: the name and bio come from the author's `bot.json` `i18n` translation, then a bio already in that language, then the Marketplace's generated summary (`descriptionGenerated: true`); `marketplace-detail` returns the repository's README in that language and names it in `readmeLanguage`, else `README.md`: for `zh` it takes `README.zh-CN.md`, then `README.zh.md`, then another spelling such as `README_CN.md` or `README-zh.md`; for `en` it takes `README.en.md`. `marketplace-submit` and `marketplace-report` first solve the Host's proof-of-work challenge, as the Web page does, so they can take a few seconds; the Marketplace's own refusals (`repository-missing-topic`, `rate-limited`, …) come back as the error code. A report reason is at most 500 characters. `release-check` returns the update status (`current`, `available`, `restart-required`, `blocked`, `development`, `unknown` or `unavailable`). `release-install` and `release-restart` need `--confirm`; a failed install or restart exits non-zero with `release-<reason>`, such as `release-network` or `release-not-pending`. Restarting stops every running Bot turn, so do it only on a Host you own. `pairing-list` shows a Bot's pairing requests and its roles; `pairing-review` reads the current revisions itself, so a request that changed in between is refused instead of overwritten. Approve with one `--role` for a conversation request or with `--capability` for a management request.
 
 ## IM application authorization
 
@@ -692,6 +709,17 @@ The model verbs manage the same records afterwards: `model-presets` lists the pr
 ## Channels, grants, schedules, pairings
 
 `channels` lists channels and `channel-messages` reads one page newest-first (`--limit`, `--before`). `grants` lists a Bot's workspace grants while `grant-revoke` and `grant-write-set` manage them; creating a grant needs the Host workspace registry and stays a Host-side action. `schedules` lists a Bot's schedules; `schedule-create` takes `--title`, `--prompt`, and exactly one trigger (`--every` seconds, `--daily`/`--weekly` time plus `--weekdays`, `--once-date` plus `--once-time`, or `--cron`), with `--timezone` required for calendar triggers; `schedule-update`/`schedule-delete`/`schedule-history` address a schedule by `--sid`; `schedule-run-now` records a manual firing that the Host executes on start; `schedule-preview` renders upcoming occurrences for a trigger without a bot. `pairings` lists a Bot's IM pairing requests. Missing schedules fail `unknown-schedule`; deleting one reports `removed`.
+
+### Approve one Workspace request online
+
+```bash
+deepseekbot inbox --category action --bot <bot-id>
+deepseekbot workspace-options
+deepseekbot grant-request-approve <bot-id> --channel <channel-id> --request <message-id> --workspace <workspace-id> --confirm
+deepseekbot grants <bot-id>
+```
+
+`grant-request-approve` uses the same Owner-only Host command as the Web request card. The Host commits persistent read/write authority and the Grant-linked resolution together before continuing the original task through its existing Inbox. It also upgrades an existing read-only Grant after this explicit confirmation. Repeating the same approved request reads back the existing decision; it does not create another Grant or wake. A revoked or changed target is refused. An old tool approval is not a Workspace request: use this command rather than `tool-approval-decide`. Missing `--confirm` is `usage`; unavailable or stale authority returns a coded refusal. This is an online command, not an offline database repair.
 
 ## Memory
 
@@ -949,6 +977,66 @@ With `--image-reference`, `--path` names the Markdown document and `--image-revi
 
 Use the exact metadata from the selected file/diff side. The authenticated Host returns those original image bytes and their detected MIME, or a coded refusal such as `memory-image-stale`; refresh mutable metadata rather than substituting the current file. `--out` must be absolute and must not already exist. The command prints one JSON receipt. Preview limits are 25 MiB per image, 16,384 pixels per axis and 40 million decoded pixels. GIF/WebP keep their original animation within 256 frames and 40 million canvas pixels across all frames. SVG additionally allows at most 1 MiB UTF-8, 10,000 XML nodes, depth 64, 64 KiB CSS and 20,000 expanded nodes. The static SVG subset accepts ordinary shapes, text, CSS, gradients, markers, clipping and bounded internal references; scripts, event handlers, foreign HTML, images, filters, animation, external references, DTDs, processing instructions and reference cycles are refused. SVG stays an image resource, never inserted markup, and all successful exports preserve the original SVG bytes. Original-file download and Open current file remain separate actions.
 
+## Desktop window zoom (controlled S1)
+
+The product includes a separate opt-in configuration command. Install the product normally,
+quit the target macOS Desktop, then point setup at that application's bundle and explicit
+Profile. Setup uses the selected application's bundled pnpm with scripts disabled, under the
+same Profile writer lock as the native plugin manager. It refuses a running Desktop Host,
+other theme overrides, stale product composition and an app version other than 0.2.1-rc.2.
+It changes one Profile dependency and never edits the installed application:
+
+```sh
+deepseekbot-zoom-setup enable --home <absolute-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+deepseekbot-zoom-setup disable --home <absolute-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+```
+
+Keep Desktop closed until setup returns, then reopen it. A busy Profile or uncertain package
+outcome requires inspection rather than automatic retry. For a non-Desktop isolated Profile,
+use `--profile <profile> --dsh <qualified-dsh-cli>` instead. The DSH CLI intentionally refuses
+the managed `desktop` Profile; the native plugin manager also refuses this plain-library
+replacement, because it resolves the installation-owned theme before Profile Bundle metadata.
+Those two paths do not establish Desktop activation.
+
+Run `disable` before uninstalling the product and restart to restore native package resolution.
+Manual font preferences remain in the same native `ui-theme` Patch. JSON stdout reports
+`restartRequired:true` and `runtimeVerified:false`; a successful package change does not prove
+the native window has loaded it. An uncertain package operation is not retried automatically.
+
+`window-zoom-clients` lists active targets. Select one `--client-id`; commands never choose a
+window implicitly. `window-zoom-get` reads the Client-owned snapshot. A write requires the
+returned `document.revision` as `--expected-revision`:
+
+```sh
+deepseekbot window-zoom-clients --host <host> --token-file <private-file>
+deepseekbot window-zoom-get --client-id <id> --host <host> --token-file <private-file>
+deepseekbot window-zoom-set --client-id <id> --zoom-level=-1 --expected-revision <revision> --host <host> --token-file <private-file>
+deepseekbot window-zoom-reset --client-id <id> --expected-revision <revision> --host <host> --token-file <private-file>
+```
+
+Levels are integers -8…8; the factor is `1.2 ** level`. Use `--zoom-default` with `window-zoom-set`
+to save the device default and apply it to the current window. A normal set changes only the
+current window; reset restores its saved default. Negative arguments use `--zoom-level=-1`.
+The stable desktop origin stores this locally; the Host only relays requests. Browser Clients
+and desktops without the qualified compatibility composition do not register targets.
+
+`zoom-client-stale`, `zoom-client-unavailable`, `zoom-revision-conflict` and storage errors are
+refusals, not successful fallback writes. A timeout/cancellation after delivery has an unknown
+write outcome: read the same live Client before deciding what to do; never retry blindly.
+Restarting the Client changes its delivery ID; list again. The desktop's primary-window state
+survives independently. See [S1](https://github.com/BotHarness/DeepSeekBot/issues/2268) for native
+qualification limits. No model or Host-side preference copy is involved.
+
+The Windows candidate uses the installed product's `deepseekbot-zoom-setup` command with
+`--home <isolated-home> --profile desktop --desktop-app "<app-directory>/DeepSeek Harness.exe"`.
+Keep the selected Desktop closed throughout `enable` or `disable`; setup refuses any running
+process of that executable. Only FileVersion `0.2.1-rc.2` and a Windows-capable, hash-checked
+theme payload are accepted. The native `ui-theme` row and font settings remain in place.
+Run `disable` before removing the product. After every cold boot, enumerate Client IDs again.
+Ctrl+0 restores the saved default, including 120%; numberpad codes are unsupported by the
+pinned protocol. See [Windows qualification #2270](https://github.com/BotHarness/DeepSeekBot/issues/2270)
+for the separate native input, guest foreground, DPI and Human-QA gates.
+
 ## Device-local DeepSeekBot appearance
 
 `appearance-clients` lists the online Client ids and platform on the authenticated Host. Select one explicitly; a new mount/reload gets a new id. This controls DeepSeekBot, not the DSH-native Host theme.
@@ -993,6 +1081,17 @@ deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
 
 The same wallpaper commands also accept videos up to 100 MiB. Import must actually play/decode on the selected Client and generate a poster before committing; originals are not transcoded. `wallpaper-get` returns transient `playback.state` (`playing`, `paused`, `poster`, `inactive`) and a coded `reason` when degraded. The saved poster is used if playback fails or a later runtime cannot decode an accepted video. Image limits remain 20 MiB. Support is runtime/codec-specific; a successful transport alone does not prove playback.
 
+Wallpapers form a library of up to 24 items. Import adds the media and shows it. `wallpaper-get` returns `wallpaper.library` with each item's `id`, `kind`, size and crop, the chosen `active` item and the rotation settings; `wallpaper.current` is the item on screen now.
+
+```bash
+deepseekbot wallpaper-select --client-id <id> --expected-revision <revision> --wallpaper-item <item-id|none>
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision> --wallpaper-item <item-id>
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --wallpaper-item <item-id> --patch-stdin < crop.json
+echo '{"interval":900000,"shuffle":true}' | deepseekbot wallpaper-rotation --client-id <id> --expected-revision <revision> --patch-stdin
+```
+
+Without `--wallpaper-item`, crop and remove act on the item on screen. `none` keeps the library but shows no wallpaper. Removing the item on screen moves on to the next one. `interval` is `0` (off), `60000`, `300000`, `900000` (default), `1800000` or `3600000` milliseconds; `shuffle` picks a random order without repeating an item twice in a row. Rotation follows the clock, so every window of that Client shows the same item without extra writes. Full appearance reset empties the library.
+
 ### Appearance recovery
 
 Read `appearance-get --client-id <id>` and `wallpaper-get --client-id <id>` first; their revisions are independent.
@@ -1003,3 +1102,9 @@ deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-re
 ```
 
 Clear removes all functional Panel overrides only in the explicit mode, including unregistered saved targets; theme/materials/Primary, the other mode, media and layout stay unchanged. Full reset requires `--confirm-reset`, defaults both palettes/mode/overrides, and removes shared media. It never changes DSH, Bot identity or business data. A preference write failure leaves media untouched. `appearance-reset-wallpaper-failed` means defaults were committed but media cleanup failed; reread both owners and retry with fresh revisions. The command does not claim a single transaction across localStorage and IndexedDB, nor automatically replay a delivered timeout.
+
+### Three-action tool approval (#2080)
+
+`tool-approval-decide ... --outcome allowed-always-tool` matches the Web card's Always allow: it approves the current call and persists the current tool in this Bot/role/authorization scope. Later different inputs match; another tool or changed scope does not. `tool-approval-rules` returns kind `tool`; `tool-approval-rule-revoke --confirm` restores prompting. Existing exact/broad/Secret rules are not reinterpreted. Permission/policy changes cannot be remembered; the Host returns a coded refusal for an unavailable Always allow action. Secret CLI keeps its program/account/variable-name restriction, and MCP service remembering keeps its independent access checks.
+
+Full Access now retains native `ask` so recognized permission changes can reach the Human, while ordinary requests in its explicitly selected scope are automatically answered without routine cards. The selected mode/scope and existing Assignment permissions are not widened. A native `never` policy still means deterministic rejection; it is not bypassed. Directory grants still use `grant-request-approve --confirm`.

@@ -70,6 +70,9 @@ vi.mock('react-native', () => import('./react-native-shim'));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void) => callback() }));
 vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 vi.mock('expo-router', () => {
   const Stack = () => null;
   Stack.Screen = () => null;
@@ -93,6 +96,8 @@ vi.mock('../src/host/host-session', () => ({
     roster: hostState.connecting ? undefined : roster,
   }),
   useInbox: () => ({ status: 'loading' }),
+  useQuietChannels: () => [],
+  refreshQuietChannels: () => {},
 }));
 vi.mock('../src/host/native-section-collapse', () => ({
   sectionCollapse: { toggle: () => {} },
@@ -103,7 +108,20 @@ vi.mock('../src/host/native-host-look', () => ({
 }));
 vi.mock('../src/ui/chat/section-header', () => ({ SectionHeader: () => null }));
 vi.mock('../src/ui/shell/home-header', () => ({
-  HomeHeader: ({ children }: { children: ReactNode }) => children,
+  HomeHeader: ({
+    actions,
+    search,
+    children,
+  }: {
+    actions?: ReactNode;
+    search?: ReactNode;
+    children: ReactNode;
+  }) => (
+    <>
+      {search ?? actions}
+      {children}
+    </>
+  ),
 }));
 vi.mock('../src/ui/shell/host-drawer', () => ({
   HostDrawerEdge: ({ children }: { children: ReactNode }) => children,
@@ -149,6 +167,8 @@ async function home(): Promise<HTMLElement> {
 }
 
 async function type(view: HTMLElement, text: string): Promise<void> {
+  const open = view.querySelector<HTMLButtonElement>('[data-testid="search-button"]');
+  if (open) await act(async () => open.click());
   const field = view.querySelector<HTMLTextAreaElement>(
     `textarea[aria-label="${t.searchPlaceholder}"]`,
   )!;
@@ -161,16 +181,21 @@ async function type(view: HTMLElement, text: string): Promise<void> {
 
 const rows = (view: HTMLElement) =>
   [...view.querySelectorAll('button')]
-    .filter((node) => !node.closest('[hidden]') && !node.dataset.testid)
+    .filter((node) => !node.closest('[hidden]') && !node.dataset.testid?.startsWith('pager-'))
     .filter(
       (node) =>
-        ![t.cloudJoin.newOrJoin, t.allEnvironments, 'studio'].includes(
-          node.getAttribute('aria-label') ?? '',
-        ),
+        ![
+          t.cloudJoin.newOrJoin,
+          t.allEnvironments,
+          'studio',
+          t.closeSearch,
+          t.openSearch,
+          t.settings,
+        ].includes(node.getAttribute('aria-label') ?? ''),
     )
     .map((node) => node.getAttribute('aria-label'));
 
-describe('Search at the top of Chats', () => {
+describe('Search in the Chats header', () => {
   it('keeps the Computer usable when Cloud local state cannot load', async () => {
     cloudState.ready = false;
     cloudState.error = 'STORAGE_UNAVAILABLE';
@@ -320,5 +345,41 @@ describe('Search at the top of Chats', () => {
     await type(view, ' zed ');
     expect(rows(view)).toEqual([]);
     expect(view.textContent).toContain(t.searchNoMatch('zed'));
+  });
+  it('closes search, clearing the query, from the button beside the field', async () => {
+    const view = await home();
+    expect(view.querySelector(`button[aria-label="${t.closeSearch}"]`)).toBeNull();
+    await type(view, 'ada');
+    expect(view.textContent).not.toContain('Launch team');
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>(`button[aria-label="${t.closeSearch}"]`)!.click(),
+    );
+    expect(view.querySelector(`textarea[aria-label="${t.searchPlaceholder}"]`)).toBeNull();
+    expect(view.querySelector(`button[aria-label="${t.settings}"]`)).not.toBeNull();
+    expect(view.textContent).toContain('Launch team');
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>('[data-testid="search-button"]')!.click(),
+    );
+    expect(
+      view.querySelector<HTMLTextAreaElement>(`textarea[aria-label="${t.searchPlaceholder}"]`)!
+        .value,
+    ).toBe('');
+  });
+  it('replaces the title and Settings with the field, and keeps a query after editing ends', async () => {
+    const view = await home();
+    expect(view.querySelector(`textarea[aria-label="${t.searchPlaceholder}"]`)).toBeNull();
+    await type(view, 'ada');
+    expect(view.querySelector(`button[aria-label="${t.settings}"]`)).toBeNull();
+    expect(view.querySelector('[data-testid="search-button"]')).toBeNull();
+    const field = view.querySelector<HTMLTextAreaElement>(
+      `textarea[aria-label="${t.searchPlaceholder}"]`,
+    )!;
+    await act(async () => field.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+    expect(field.isConnected).toBe(true);
+    expect(rows(view)).toEqual(['Ada, Done']);
+    await type(view, '');
+    await act(async () => field.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+    expect(view.querySelector(`textarea[aria-label="${t.searchPlaceholder}"]`)).toBeNull();
+    expect(view.querySelector(`button[aria-label="${t.settings}"]`)).not.toBeNull();
   });
 });

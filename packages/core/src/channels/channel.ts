@@ -316,6 +316,7 @@ export interface ChannelMessage {
   botCausation?: BotMessageCausation;
 
   grantRequest?: true;
+  grantRequestOwner?: string;
   grantRequestResolved?: boolean;
   assignmentReply?: { sessionId: string; sourceEventId: string };
 
@@ -547,6 +548,13 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       (message['author'] as ChannelMessageAuthor).kind !== 'bot')
   )
     return false;
+  if (
+    message['grantRequestOwner'] !== undefined &&
+    (message['grantRequest'] !== true ||
+      typeof message['grantRequestOwner'] !== 'string' ||
+      !message['grantRequestOwner'])
+  )
+    return false;
   const grantResolution = message['grantRequestResolution'];
   const assignmentReply = message['assignmentReply'];
   if (assignmentReply !== undefined) {
@@ -651,6 +659,7 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     if (
       typeof decision['requestMessageId'] !== 'string' ||
       (decision['outcome'] !== 'allowed-once' &&
+        decision['outcome'] !== 'allowed-always-tool' &&
         decision['outcome'] !== 'allowed-always-exact' &&
         decision['outcome'] !== 'allowed-always-all' &&
         decision['outcome'] !== 'rejected') ||

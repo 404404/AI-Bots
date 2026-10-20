@@ -3,10 +3,17 @@ import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-r
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import {
+  refreshQuietChannels,
+  useHostSession,
+  useHostSnapshot,
+  useInbox,
+  useQuietChannels,
+} from '../../../src/host/host-session';
 import { prefetchInbox } from '../../../src/host/inbox';
 import { useHostLook } from '../../../src/host/native-host-look';
 import { cloudClient, useCloudSnapshot } from '../../../src/cloud/native';
+import { cloudAvailable } from '../../../src/cloud/available';
 import { cloudConversations, useCloudConversations } from '../../../src/cloud/native-conversations';
 import { cloudViewScope } from '../../../src/cloud/workspace-directory';
 import { cloudError } from '../../../src/cloud/client';
@@ -17,7 +24,6 @@ import { CloudConversationRow } from '../../../src/ui/chat/cloud-conversation-ro
 import { useConversationFilter } from '../../../src/host/native-conversation-filter';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
-import { SearchField } from '../../../src/ui/primitives/search-field';
 import { EnvironmentPager } from '../../../src/ui/shell/environment-pager';
 import {
   conversationEnvironments,
@@ -26,11 +32,13 @@ import {
 } from '../../../src/host/conversation-environments';
 import { shownHostName } from '../../../src/ui/design/host-look';
 import { Text } from '../../../src/ui/primitives/text';
+import { HeaderSearch, HeaderSearchButton } from '../../../src/ui/shell/header-search';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { SettingsButton } from '../../../src/ui/shell/settings-button';
+import { ConversationPeek, conversationPeek } from '../../../src/ui/shell/conversation-peek';
 import { useFloatingTabInset } from '../../../src/ui/shell/floating-tab-inset';
-import { openConversation } from '../../../src/ui/shell/open-conversation';
+import { conversationHref, openConversation } from '../../../src/ui/shell/open-conversation';
 import { useChromeScroll, useScrollChrome } from '../../../src/ui/shell/scroll-chrome';
 import { t } from '../../../src/ui/strings';
 
@@ -91,13 +99,15 @@ const HomeContent = memo(function HomeContent({
       };
     }, [router, client]),
   );
-  const onScroll = useChromeScroll();
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const onScroll = useChromeScroll(true, searchFocused || query !== '');
   const chrome = useScrollChrome();
   const bottom = useFloatingTabInset();
   const look = useHostLook(saved?.hostId);
   const cloud = useCloudSnapshot();
   const directory = useCloudConversations();
-  const [query, setQuery] = useState('');
   const [filter, setFilter] = useConversationFilter();
   const [refreshing, setRefreshing] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -119,6 +129,12 @@ const HomeContent = memo(function HomeContent({
     [saved, look, cloud.rows, directory.workspaces],
   );
   const effectiveFilter = filters.some((f) => f.key === filter) ? filter : 'all';
+  const quiet = useQuietChannels(saved?.hostId);
+  useFocusEffect(
+    useCallback(() => {
+      if (saved) refreshQuietChannels(saved);
+    }, [saved]),
+  );
   useFocusEffect(
     useCallback(() => {
       if (
@@ -148,6 +164,7 @@ const HomeContent = memo(function HomeContent({
           snapshot.roster,
           list.status === 'ready' ? list.sections.action : [],
           list.status === 'ready' ? list.unread : {},
+          quiet,
         ).map((conversation) => ({
           key: JSON.stringify(['computer', saved.hostId, conversation.key]),
           environment: computerEnvironmentKey(saved.hostId),
@@ -192,14 +209,15 @@ const HomeContent = memo(function HomeContent({
           (Date.parse(b.at ?? '') || 0) - (Date.parse(a.at ?? '') || 0) ||
           a.key.localeCompare(b.key),
       );
-  }, [snapshot.roster, list, directory.rows, saved, query]);
+  }, [snapshot.roster, list, directory.rows, saved, query, quiet]);
   if (saved === undefined || (!cloud.ready && !cloud.error))
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator />
       </View>
     );
-  if (saved === null && cloud.rows.length === 0) return <Redirect href="/cloud-join" />;
+  if (saved === null && cloud.rows.length === 0)
+    return <Redirect href={cloudAvailable ? '/cloud-join' : '/pair'} />;
   const refresh = async () => {
     setRefreshing(true);
     await Promise.all([client?.refresh(), inbox?.refresh(), cloudConversations.refresh()]).catch(
@@ -248,7 +266,35 @@ const HomeContent = memo(function HomeContent({
     <>
       <Stack.Screen options={{ title: t.allConversations, headerShown: false }} />
       <HostDrawerEdge>
-        <HomeHeader actions={<SettingsButton onPress={() => router.push('/settings')} />}>
+        <HomeHeader
+          search={
+            searching ? (
+              <HeaderSearch
+                value={query}
+                placeholder={t.searchPlaceholder}
+                onChangeText={setQuery}
+                onFocusChange={(next) => {
+                  setSearchFocused(next);
+                  if (!next && query === '') setSearching(false);
+                }}
+                onClose={() => {
+                  setSearchFocused(false);
+                  setSearching(false);
+                }}
+              />
+            ) : undefined
+          }
+          actions={
+            <>
+              <HeaderSearchButton
+                label={t.openSearch}
+                testID="search-button"
+                onPress={() => setSearching(true)}
+              />
+              <SettingsButton onPress={() => router.push('/settings')} />
+            </>
+          }
+        >
           <EnvironmentPager
             routes={filters}
             selected={effectiveFilter}
@@ -285,12 +331,6 @@ const HomeContent = memo(function HomeContent({
                           onPairAgain={() => router.push('/pair')}
                         />
                       )}
-                    <SearchField
-                      inset={space.x5}
-                      value={query}
-                      placeholder={t.searchPlaceholder}
-                      onChangeText={setQuery}
-                    />
                     {(directory.errors.length > 0 || cloud.error || error) && (
                       <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
                         {t.cloudListUnavailable}
@@ -315,11 +355,17 @@ const HomeContent = memo(function HomeContent({
                 }
                 renderItem={({ item }) =>
                   item.type === 'computer' ? (
-                    <ConversationRow
-                      row={item.conversation}
-                      now={new Date()}
-                      onPress={() => openConversation(router, item.conversation, saved?.hostId)}
-                    />
+                    conversationPeek ? (
+                      <ConversationPeek href={conversationHref(item.conversation, saved?.hostId)}>
+                        <ConversationRow row={item.conversation} now={new Date()} />
+                      </ConversationPeek>
+                    ) : (
+                      <ConversationRow
+                        row={item.conversation}
+                        now={new Date()}
+                        onPress={() => openConversation(router, item.conversation, saved?.hostId)}
+                      />
+                    )
                   ) : (
                     <CloudConversationRow
                       row={item.conversation}

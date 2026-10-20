@@ -94,6 +94,7 @@ export function Workspace({
                   registry.open(CHANNEL_BODY_PANEL);
                   void options.actions.openBot(slug, 'profile');
                 }}
+                onOpenConversation={() => registry.open(CHANNEL_BODY_PANEL)}
                 wide
                 useBotModePrefs={usePrefs}
                 setSortMode={(mode) => options.prefs.setSortMode(mode)}
@@ -404,6 +405,11 @@ function WorkspaceRail({
       <Tooltip label={t('panel.settings')} side="right">
         <button aria-label={t('panel.settings')} onClick={() => options.openBotSettings()}>
           <ChannelSidebarIcon name="settings" />
+        </button>
+      </Tooltip>
+      <Tooltip label={t('panel.backToHarness')} side="right">
+        <button type="button" aria-label={t('panel.backToHarness')} onClick={options.exitBotMode}>
+          <ExitIcon size={20} />
         </button>
       </Tooltip>
     </nav>

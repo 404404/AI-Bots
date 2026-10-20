@@ -1,3 +1,4 @@
+import { mountWorkspaceChrome, updateWorkspaceChrome } from './workspace-chrome.js';
 import { AppearancePanelHeader } from './appearance-panel-header.js';
 import { AppearanceContext } from './appearance-context.js';
 import { PanelAppearanceSettings } from './appearance-panel-settings.js';
@@ -73,7 +74,11 @@ import {
 } from './channel-dock-layout.js';
 import { NARROW_CHANNEL_SIDEBAR_QUERY } from './channel-sidebar-layout.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
-import { clampChannelSidebarWidth, channelSidebarPrefs } from './channel-sidebar-prefs.js';
+import {
+  clampChannelSidebarWidth,
+  channelSidebarPrefs,
+  channelSidebarScopeKey,
+} from './channel-sidebar-prefs.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
 import { IconButton } from './ds/icon-button.js';
@@ -213,6 +218,10 @@ function useDock(): DockContextValue {
   return value;
 }
 
+function entryScopeKey(props: ChannelSidebarEntryProps): string {
+  return channelSidebarScopeKey(props.scope, props.channelId, props.botSlug);
+}
+
 function useEntryProps(entryId: string): ChannelSidebarEntryProps | undefined {
   const dock = useDock();
   const runtime = dock.runtime(entryId);
@@ -327,13 +336,13 @@ function ChannelMessageContent(): ReactElement {
                 hideLabel={dock.t('dock.close', { label: detailLabel })}
                 badge={
                   !filesOpen && DetailBadge && detailProps ? (
-                    <DetailBadge {...detailProps} />
+                    <DetailBadge key={entryScopeKey(detailProps)} {...detailProps} />
                   ) : undefined
                 }
                 action={
                   <>
                     {!filesOpen && DetailActions && detailProps && (
-                      <DetailActions {...detailProps} />
+                      <DetailActions key={entryScopeKey(detailProps)} {...detailProps} />
                     )}
                     <IconButton
                       aria-label={dock.t('dock.close', { label: detailLabel })}
@@ -369,7 +378,7 @@ function DockPanelBody({ panel }: { panel: DockPanelRegistration }): ReactElemen
           data-dock-panel-body=""
           {...stylex.props(styles.body, !!dock.rail && styles.workspaceBody)}
         >
-          <panel.component channel={channel} />
+          <panel.component key={channel?.id} channel={channel} />
         </div>
       ) : (
         <PanelEmptyState icon={panel?.icon}>{dock.t('dock.empty')}</PanelEmptyState>
@@ -401,7 +410,7 @@ function ChannelEntryContent({ entryId }: { entryId: string }): ReactElement {
               props.flush && styles.flushBody,
             )}
           >
-            <entry.component {...props} />
+            <entry.component key={entryScopeKey(props)} {...props} />
           </div>
         ) : null
       ) : (
@@ -560,9 +569,15 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
               </span>
             ) : undefined
           }
-          badge={Badge === undefined || props === undefined ? undefined : <Badge {...props} />}
+          badge={
+            Badge === undefined || props === undefined ? undefined : (
+              <Badge key={entryScopeKey(props)} {...props} />
+            )
+          }
           tabs={
-            HeaderTabs === undefined || props === undefined ? undefined : <HeaderTabs {...props} />
+            HeaderTabs === undefined || props === undefined ? undefined : (
+              <HeaderTabs key={entryScopeKey(props)} {...props} />
+            )
           }
           action={
             <span
@@ -623,10 +638,13 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
               )}
               {entryId === CHANNEL_BODY_PANEL && dock.header?.actions}
               {HeaderAction === undefined || props === undefined ? null : (
-                <HeaderAction {...props} />
+                <HeaderAction key={entryScopeKey(props)} {...props} />
               )}
               {PanelAction && (
-                <PanelAction channel={panel.scope === 'channel' ? dock.channel : undefined} />
+                <PanelAction
+                  key={panel.scope === 'channel' ? dock.channel?.id : undefined}
+                  channel={panel.scope === 'channel' ? dock.channel : undefined}
+                />
               )}
               {entryId === WORKSPACE_CHANNELS && (
                 <span className="bh-workspace-channel-actions" ref={dock.setChannelsHeader} />
@@ -909,17 +927,10 @@ export function ChannelDock({
 
   const save = (target: DockviewApi): void => {
     hideBodyHeader(target);
-    if (workspace)
-      for (const group of target.groups) {
-        const box = group.api.boundingBox;
-        const inset = box && box.top < 2 ? Math.max(0, 88 - gapRef.current - box.left) : 0;
-        group.element.toggleAttribute('data-bh-mac-corner', inset > 0);
-        group.element.toggleAttribute(
-          'data-bh-rail-corner',
-          inset > 0 && group.panels.some((panel) => panel.id === WORKSPACE_RAIL),
-        );
-        group.element.style.setProperty('--bh-mac-leading', `${inset}px`);
-      }
+    if (workspace) {
+      const root = target.groups[0]?.element.closest<HTMLElement>('[data-workspace-enabled]');
+      if (root) updateWorkspaceChrome(root, target.groups);
+    }
     const ids = target.panels.map((panel) => panel.id);
     setOpenIds(ids);
     reportOpen(target);
@@ -1140,6 +1151,12 @@ export function ChannelDock({
     (node) => {
       if (!api || !node.parentElement) return;
       const root = node.parentElement;
+      const workspaceRoot = workspace
+        ? root.closest<HTMLElement>('[data-workspace-enabled]')
+        : null;
+      const releaseChrome = workspaceRoot
+        ? mountWorkspaceChrome(workspaceRoot, () => api.groups)
+        : undefined;
       let resizing = false;
       const start = (event: PointerEvent) => {
         resizing = event.target instanceof Element && !!event.target.closest('.dv-sash');
@@ -1155,12 +1172,13 @@ export function ChannelDock({
       window.addEventListener('pointerup', finish);
       window.addEventListener('pointercancel', finish);
       return () => {
+        releaseChrome?.();
         root.removeEventListener('pointerdown', start, true);
         window.removeEventListener('pointerup', finish);
         window.removeEventListener('pointercancel', finish);
       };
     },
-    [api],
+    [api, workspaceMode],
   );
 
   const scrollbarsMount = useMountedResource<HTMLSpanElement>((node) => {

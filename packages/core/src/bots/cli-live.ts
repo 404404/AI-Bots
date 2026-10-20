@@ -1,3 +1,8 @@
+import {
+  WINDOW_ZOOM_COMMANDS,
+  WINDOW_ZOOM_OPTIONS,
+  runWindowZoomCommand,
+} from './cli-window-zoom.js';
 import { APPEARANCE_COMMANDS, APPEARANCE_OPTIONS, runAppearanceCommand } from './cli-appearance.js';
 import { prepareCloud, prepareCloudWork } from './cli-cloud.js';
 import { randomUUID } from 'node:crypto';
@@ -94,9 +99,15 @@ import {
   runApprovalReviewerCommand,
   type ApprovalReviewerValues,
 } from './cli-approval-reviewer.js';
+import {
+  IDLE_COMPACTION_COMMANDS,
+  isIdleCompactionCommand,
+  runIdleCompactionCommand,
+} from './cli-idle-compaction.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...WINDOW_ZOOM_OPTIONS,
   ...APPEARANCE_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
@@ -189,6 +200,7 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...WINDOW_ZOOM_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   {
@@ -210,6 +222,7 @@ export const LIVE_COMMANDS = [
   ...TODO_COMMANDS,
   ...APPROVAL_TEMPLATE_COMMANDS,
   ...APPROVAL_REVIEWER_COMMANDS,
+  ...IDLE_COMPACTION_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -712,6 +725,10 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (WINDOW_ZOOM_COMMANDS.some((entry) => entry.command === command))
+    return runWindowZoomCommand(command, rest, values, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (command === 'cloud-work') {
     const input = await prepareCloudWork(rest, values, io);
     const host = await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)));
@@ -751,6 +768,11 @@ export async function runLiveCli(
     });
   if (isApprovalReviewerCommand(command))
     return runApprovalReviewerCommand(command, rest, values, async () => {
+      const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+      return (await connectLiveHost(values, io, signal)).rpc;
+    });
+  if (isIdleCompactionCommand(command))
+    return runIdleCompactionCommand(command, rest, async () => {
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
@@ -870,10 +892,11 @@ export async function runLiveCli(
   if (
     command === 'tool-approval-decide' &&
     values.outcome !== 'allowed-once' &&
+    values.outcome !== 'allowed-always-tool' &&
     values.outcome !== 'allowed-always-kind' &&
     values.outcome !== 'rejected'
   )
-    usage('--outcome must be allowed-once, allowed-always-kind or rejected.');
+    usage('--outcome must be allowed-once, allowed-always-tool, allowed-always-kind or rejected.');
   if (command === 'user-question-answer') {
     if (!values['answer-stdin']) usage('user-question-answer requires --answer-stdin.');
     try {

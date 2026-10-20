@@ -1,3 +1,5 @@
+import { WindowZoomSettings } from './window-zoom-settings.js';
+import type { ZoomSurface } from './window-zoom-mount.js';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
@@ -19,6 +21,7 @@ import type { BridgeCall } from './bridge.js';
 import { SettingsRow, SettingsRows, SettingsSection } from './ds/settings-row.js';
 import { GitSettings } from './git-settings.js';
 import { HumanNameSettings } from './human-name-settings.js';
+import { IdleCompactionSetting } from './idle-compaction-setting.js';
 import { MessagingDefaultsSettings } from './messaging-defaults-settings.js';
 import { DefaultModelSettings, OnboardingSetting } from './onboarding-view.js';
 import { PairedDevicesSettings } from './paired-devices.js';
@@ -37,6 +40,7 @@ function Rows({ children }: { children: ReactNode }): ReactElement {
 }
 
 export type GeneralSectionFace = {
+  zoomSurface: ZoomSurface;
   actions: BridgeActions;
   closeBotSettings(): void;
 };
@@ -49,6 +53,7 @@ export type MessagingSectionFace = BotModePrefsFace & {
 export function GeneralSection(props: SectionProps<GeneralSectionFace>): ReactElement {
   return (
     <Rows>
+      <WindowZoomSettings surface={props.zoomSurface} t={props.t} />
       <OnboardingSetting
         actions={props.actions}
         closeBotSettings={props.closeBotSettings}
@@ -59,11 +64,12 @@ export function GeneralSection(props: SectionProps<GeneralSectionFace>): ReactEl
 }
 
 export function ModelsSection(
-  props: SectionProps<BotModePrefsFace & { actions: BridgeActions }>,
+  props: SectionProps<BotModePrefsFace & { actions: BridgeActions; call: BridgeCall }>,
 ): ReactElement {
   return (
     <Rows>
       <DefaultModelSettings actions={props.actions} t={props.t} />
+      <IdleCompactionSetting call={props.call} t={props.t} />
       <AssignmentConcurrencyRow {...props} />
       <BotSessionsVisibilitySetting {...props} />
       <ApprovalReviewSessionsVisibilitySetting {...props} />

@@ -44,6 +44,7 @@ import type {
   MarketplaceTopic,
 } from '../marketplace/client.js';
 import type { AltchaChallenge } from '../marketplace/altcha.js';
+import type { MarketplaceLanguage } from '../marketplace/language.js';
 import type {
   ReleaseInfo,
   ReleaseInstall,
@@ -52,7 +53,8 @@ import type {
 } from '../release/service.js';
 import type { TelemetryStatus } from '../telemetry/service.js';
 import type { OverviewMemory } from '../memory/overview.js';
-import type { ApprovalReviewerModelView, OverviewUsage } from './methods.js';
+import type { ApprovalReviewerModelView, IdleCompactionView, OverviewUsage } from './methods.js';
+import type { ManualCompactionResult } from '../runtime/idle-compaction.js';
 import type { PersonaBotActivitySnapshot } from '../state/bot-state.js';
 import type { HumanAssignmentContext } from '../runtime/assignment-human-context.js';
 import type { ThreadReceptionInput } from '../messaging/thread-policy.js';
@@ -405,13 +407,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
     );
   }
 
-  private requirePrivateOwner(): void {
+  private requirePrivateOwner(message = 'Private input requires the authenticated Owner'): void {
     if (!isAuthenticatedOwner(this.ctx.invocation?.peer, this.ctx.get('connection')))
-      throw new RemoteError(
-        'forbidden' as RemoteError['code'],
-        'Private input requires the authenticated Owner',
-        {},
-      );
+      throw new RemoteError('forbidden' as RemoteError['code'], message, {});
   }
 
   messagingChannelTarget(
@@ -626,6 +624,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
       }),
     );
   }
+  introEvent(event: string, properties: Record<string, string | boolean> = {}): null {
+    return unwrap(this.methods.introEvent({ ...properties, event }));
+  }
   modelPlanInherit(slug: string, expectedRevision: number): { revision: number } {
     return unwrap(this.methods.modelPlanInherit({ slug, expectedRevision }));
   }
@@ -634,6 +635,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
   botNewSession(slug: string): Promise<{ started: true }> {
     return unwrapAsync(this.methods.botNewSession({ slug }));
+  }
+
+  botCompact(slug: string): Promise<ManualCompactionResult> {
+    return unwrapAsync(this.methods.botCompact({ slug }));
   }
   channelBotStop(
     channelId: string,
@@ -881,6 +886,22 @@ export class BotharnessBridgeService extends TypertRemoteService {
 
   approvalReviewerModelSet(model: ModelRoute | null): Promise<ApprovalReviewerModelView> {
     return unwrapAsync(this.methods.approvalReviewerModelSet({ model }));
+  }
+
+  idleCompaction(): IdleCompactionView {
+    return unwrap(this.methods.idleCompaction({}));
+  }
+
+  idleCompactionSet(enabled: boolean): IdleCompactionView {
+    return unwrap(this.methods.idleCompactionSet({ enabled }));
+  }
+
+  idleCompactionCacheLifetimeSet(
+    provider: string,
+    model: string,
+    seconds: number | null,
+  ): IdleCompactionView {
+    return unwrap(this.methods.idleCompactionCacheLifetimeSet({ provider, model, seconds }));
   }
 
   standingLimitsSet(slug: string, soul: number, coreMemory: number): { bot: PersonaBotDetail } {
@@ -1383,6 +1404,25 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.grantRevoke({ slug, grantId }));
   }
 
+  grantRequestApprove(
+    slug: string,
+    channelId: string,
+    requestMessageId: string,
+    workspaceId: string,
+    acknowledgeReadWrite: boolean,
+  ) {
+    this.requirePrivateOwner('Workspace authorization requires the authenticated Owner');
+    return unwrapAsync(
+      this.methods.grantRequestApprove({
+        slug,
+        channelId,
+        requestMessageId,
+        workspaceId,
+        acknowledgeReadWrite,
+      }),
+    );
+  }
+
   grantWriteSet(slug: string, grantId: string, enabled: boolean): { grant: WorkspaceGrant } {
     return unwrap(this.methods.grantWriteSet({ slug, grantId, enabled }));
   }
@@ -1421,7 +1461,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
   toolApprovalDecide(
     channelId: string,
     messageId: string,
-    outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected',
+    outcome:
+      | 'allowed-once'
+      | 'allowed-always-tool'
+      | 'allowed-always-exact'
+      | 'allowed-always-all'
+      | 'rejected',
   ): Promise<{ accepted: boolean }> {
     return unwrapAsync(this.methods.toolApprovalDecide({ channelId, messageId, outcome }));
   }
@@ -1719,8 +1764,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrapAsync(this.methods.marketplaceTopics());
   }
 
-  async marketplaceDetail(id: string): Promise<MarketplaceDetail> {
-    return unwrapAsync(this.methods.marketplaceDetail({ id }));
+  async marketplaceDetail(id: string, lang?: MarketplaceLanguage): Promise<MarketplaceDetail> {
+    return unwrapAsync(this.methods.marketplaceDetail(lang === undefined ? { id } : { id, lang }));
   }
 
   async releaseInfo(since?: string): Promise<ReleaseInfo> {
@@ -1830,9 +1875,11 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'tobHome',
   'onboarding',
   'onboardingModel',
+  'introEvent',
   'modelPlanInherit',
   'channelRetry',
   'botNewSession',
+  'botCompact',
   'channelBotStop',
   'modelCatalog',
   'modelPresets',
@@ -1912,6 +1959,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'grantCreate',
   'grantRevoke',
   'grantWriteSet',
+  'grantRequestApprove',
   'assignmentAccessGet',
   'assignmentAccessSet',
   'toolApprovalRules',
@@ -1974,6 +2022,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'botApprovalTemplateSet',
   'approvalReviewerModel',
   'approvalReviewerModelSet',
+  'idleCompaction',
+  'idleCompactionSet',
+  'idleCompactionCacheLifetimeSet',
   'standingLimitsSet',
   'botAvatarSet',
   'botAppearanceSet',

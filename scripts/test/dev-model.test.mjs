@@ -97,9 +97,9 @@ describe('AX native OpenCode Go reuse', () => {
     expect(readFileSync(path, 'utf8')).toContain('test-stored-key');
     expect(() => saveAxModel('replacement', DEFAULT_GO_MODEL, path)).toThrow();
   });
-  it('overrides the model for one launch without changing shared credentials or defaults', () => {
+  it('permits an explicit per-launch model override without changing stored selection or credentials', () => {
     const { path } = fixture();
-    saveAxModel('test-stored-key', 'old-model', path);
+    saveAxModel('test-stored-key', 'previous-model', path);
     const before = readFileSync(path, 'utf8');
     const selection = resolveAxModel({
       path,
@@ -109,9 +109,10 @@ describe('AX native OpenCode Go reuse', () => {
     expect(selection.apiKey).toBe('test-stored-key');
     expect(readFileSync(path, 'utf8')).toBe(before);
     expect(() =>
-      resolveAxModel({ path, environment: { BOTHARNESS_AX_MODEL: 'bad/model' } }),
+      resolveAxModel({ path, environment: { BOTHARNESS_AX_MODEL: '../invalid' } }),
     ).toThrow('Invalid AX');
   });
+
   it('rejects exposed storage and links without exposing key values', () => {
     if (process.platform === 'win32') return;
     const { root, path } = fixture();

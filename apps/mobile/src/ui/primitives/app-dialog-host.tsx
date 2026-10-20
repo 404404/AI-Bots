@@ -1,32 +1,21 @@
-import { useRef, useSyncExternalStore } from 'react';
 import {
-  AccessibilityInfo,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-  type ViewInstance,
-} from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+  AlertDialog,
+  Column,
+  HorizontalDivider,
+  Host,
+  ListItem,
+  ModalBottomSheet,
+  Text,
+  TextButton,
+  type ButtonColors,
+} from '@expo/ui/jetpack-compose';
+import { clickable } from '@expo/ui/jetpack-compose/modifiers';
+import { useSyncExternalStore } from 'react';
+import { Platform, StyleSheet } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
-import { buttonColors } from '../design/controls';
-import { androidSettings, modalRail, space } from '../design/tokens';
 import { t } from '../strings';
-import { Button } from './button';
-import { appDialogs } from './dialog-state';
-import { Text } from './text';
-import { ChatsIcon, CloseIcon, ComputerIcon, PersonIcon, SettingsIcon } from '../shell/icons';
-
-const ACTION_ICONS = {
-  person: PersonIcon,
-  chat: ChatsIcon,
-  settings: SettingsIcon,
-  close: CloseIcon,
-  computer: ComputerIcon,
-};
+import { appDialogs, type DialogAction } from './dialog-state';
 
 export function AppDialogHost() {
   const shown = useSyncExternalStore(
@@ -35,150 +24,121 @@ export function AppDialogHost() {
     appDialogs.getSnapshot,
   );
   const theme = useDesignTheme();
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
-  const heading = useRef<ViewInstance>(null);
   if (Platform.OS !== 'android' || shown === undefined) return null;
   const choices = shown.actions.flatMap((action, index) =>
     action.style === 'cancel' ? [] : [{ action, index }],
   );
   const cancel = shown.actions.find((action) => action.style === 'cancel');
   const menu = choices.length > 1;
-  const stacked = theme.largeText || menu;
-  const actionStyle = stacked ? undefined : { width: '50%' as const, flexShrink: 1, minWidth: 0 };
+  const idle = shown.busy === undefined;
   const dismiss = () => appDialogs.dismiss();
-  return (
-    <Modal
-      transparent
-      visible
-      animationType={reducedMotion ? 'none' : 'fade'}
-      onRequestClose={dismiss}
-      onShow={() => {
-        if (heading.current) AccessibilityInfo.sendAccessibilityEvent?.(heading.current, 'focus');
+  const colors = (action: DialogAction): ButtonColors => ({
+    contentColor: action.style === 'destructive' ? theme.color.danger : theme.color.accent,
+  });
+  const choiceButton = ({ action, index }: { action: DialogAction; index: number }) => (
+    <TextButton
+      key={index}
+      enabled={idle}
+      colors={colors(action)}
+      onClick={() => {
+        void appDialogs.choose(index, shown.id);
       }}
     >
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingHorizontal: space.x6,
-          paddingTop: insets.top + space.x6,
-          paddingBottom: insets.bottom + space.x6,
-          backgroundColor: theme.scrim,
-        }}
+      <Text>{shown.busy === index ? `${action.text}…` : action.text}</Text>
+    </TextButton>
+  );
+  if (menu)
+    return (
+      <Host
+        key={shown.id}
+        colorScheme={theme.scheme}
+        seedColor={theme.color.accent}
+        pointerEvents="box-none"
+        style={StyleSheet.absoluteFill}
       >
-        <Pressable
-          accessible={false}
-          importantForAccessibility="no"
-          onPress={dismiss}
-          style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-        />
-        <View
-          testID="app-dialog"
-          accessibilityViewIsModal
-          onAccessibilityEscape={dismiss}
-          style={{
-            width: '100%',
-            maxWidth: modalRail.maxWidth,
-            maxHeight: '100%',
-            borderRadius: androidSettings.radius,
-            backgroundColor: theme.overlay.fill,
-            overflow: 'hidden',
-          }}
+        <ModalBottomSheet
+          onDismissRequest={dismiss}
+          skipPartiallyExpanded
+          properties={{ shouldDismissOnBackPress: idle, shouldDismissOnClickOutside: idle }}
         >
-          <ScrollView
-            contentContainerStyle={{ padding: space.x6, gap: space.x5 }}
-            keyboardShouldPersistTaps="handled"
-            style={{ flexGrow: 0, flexShrink: 1 }}
-          >
-            <View
-              ref={heading}
-              accessible
-              accessibilityRole="header"
-              accessibilityLabel={shown.title}
-            >
-              <Text variant="title" strong accessible={false}>
-                {shown.title}
-              </Text>
-            </View>
-            {shown.message === undefined ? null : <Text tone="muted">{shown.message}</Text>}
-            {shown.error === undefined ? null : (
-              <Text accessibilityRole="alert" accessibilityLiveRegion="polite" tone="danger">
-                {t.dialogFailed} {shown.error}
-              </Text>
-            )}
-            {menu ? (
-              <View style={{ gap: space.x3 }}>
-                {choices.map(({ action, index }) => {
-                  const Icon = action.icon === undefined ? undefined : ACTION_ICONS[action.icon];
-                  const color = buttonColors(
-                    theme,
-                    action.style === 'destructive' ? 'danger' : 'tonal',
-                    'sheet',
-                  ).label;
-                  return (
-                    <Button
-                      key={index}
-                      label={action.text}
-                      tone={action.style === 'destructive' ? 'danger' : 'tonal'}
-                      on="sheet"
-                      icon={
-                        Icon === undefined ? undefined : (
-                          <Icon color={color} size={theme.type.body.line} />
-                        )
-                      }
-                      disabled={shown.busy !== undefined}
-                      busy={shown.busy === index}
-                      onPress={() => {
-                        void appDialogs.choose(index, shown.id);
-                      }}
-                    />
-                  );
-                })}
-              </View>
-            ) : null}
-            {menu ? null : (
-              <View
-                testID="app-dialog-actions"
-                style={{ flexDirection: stacked ? 'column' : 'row', gap: space.x3 }}
-              >
-                {cancel === undefined || menu ? null : (
-                  <View testID="app-dialog-cancel-cell" style={actionStyle}>
-                    <Button
-                      label={cancel.text}
-                      onPress={dismiss}
-                      on="sheet"
-                      variant="text"
-                      disabled={shown.busy !== undefined}
-                    />
-                  </View>
-                )}
-                {menu
-                  ? null
-                  : choices.map(({ action, index }) => (
-                      <View
-                        key={index}
-                        testID={`app-dialog-action-cell-${index}`}
-                        style={actionStyle}
-                      >
-                        <Button
-                          label={action.text}
-                          tone={action.style === 'destructive' ? 'danger' : 'primary'}
-                          on="sheet"
-                          disabled={shown.busy !== undefined}
-                          busy={shown.busy === index}
-                          onPress={() => {
+          <Column>
+            <ListItem>
+              <ListItem.HeadlineContent>
+                <Text color={theme.color.muted}>{shown.title}</Text>
+              </ListItem.HeadlineContent>
+            </ListItem>
+            {choices.map(({ action, index }) => (
+              <Column key={index}>
+                {action.style === 'destructive' ? <HorizontalDivider /> : null}
+                <ListItem
+                  {...(idle
+                    ? {
+                        modifiers: [
+                          clickable(() => {
                             void appDialogs.choose(index, shown.id);
-                          }}
-                        />
-                      </View>
-                    ))}
-              </View>
+                          }),
+                        ],
+                      }
+                    : {})}
+                >
+                  <ListItem.HeadlineContent>
+                    <Text
+                      {...(action.style === 'destructive' ? { color: theme.color.danger } : {})}
+                    >
+                      {shown.busy === index ? `${action.text}…` : action.text}
+                    </Text>
+                  </ListItem.HeadlineContent>
+                </ListItem>
+              </Column>
+            ))}
+            {shown.error === undefined ? null : (
+              <ListItem>
+                <ListItem.HeadlineContent>
+                  <Text color={theme.color.danger}>{`${t.dialogFailed} ${shown.error}`}</Text>
+                </ListItem.HeadlineContent>
+              </ListItem>
             )}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+          </Column>
+        </ModalBottomSheet>
+      </Host>
+    );
+  const single = choices[0];
+  return (
+    <Host
+      key={shown.id}
+      colorScheme={theme.scheme}
+      seedColor={theme.color.accent}
+      pointerEvents="box-none"
+      style={StyleSheet.absoluteFill}
+    >
+      <AlertDialog
+        onDismissRequest={dismiss}
+        properties={{ dismissOnBackPress: idle, dismissOnClickOutside: idle }}
+      >
+        <AlertDialog.Title>
+          <Text>{shown.title}</Text>
+        </AlertDialog.Title>
+        {shown.message === undefined && shown.error === undefined ? null : (
+          <AlertDialog.Text>
+            <Column>
+              {shown.message === undefined ? null : <Text>{shown.message}</Text>}
+              {shown.error === undefined ? null : (
+                <Text color={theme.color.danger}>{`${t.dialogFailed} ${shown.error}`}</Text>
+              )}
+            </Column>
+          </AlertDialog.Text>
+        )}
+        {single === undefined ? null : (
+          <AlertDialog.ConfirmButton>{choiceButton(single)}</AlertDialog.ConfirmButton>
+        )}
+        {cancel === undefined ? null : (
+          <AlertDialog.DismissButton>
+            <TextButton enabled={idle} onClick={dismiss}>
+              <Text>{cancel.text}</Text>
+            </TextButton>
+          </AlertDialog.DismissButton>
+        )}
+      </AlertDialog>
+    </Host>
   );
 }

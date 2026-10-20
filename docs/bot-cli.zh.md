@@ -72,6 +72,7 @@ deepseekbot bot-attention <bot-id> --limit 20 --state handled
 deepseekbot bot-sessions <bot-id> --limit 20
 deepseekbot bot-activity <bot-id> --limit 20
 deepseekbot bot-new-session <bot-id>
+deepseekbot bot-compact <bot-id>
 ```
 
 创建返回 `bot`、`dm`、Host 的 Memory `dataDir`、完成／延后阶段 `steps` 和 `next`。模型预设经其 owner 应用，不会被误传为原生 Agent preset。已确定不存在的预设在创建前拒绝；创建后的模型失败保留 Bot，返回已知身份、完成阶段与 `outcome: created`。不带稳定 operation key 的创建／导入响应丢失时可能返回 `outcome: unknown`，先检查 Host 再决定是否重建，CLI 不自动重试修改。空白在线创建可用下文的持久创建回执核对同一个身份。创建成功不证明模型可用：使用 `send` 和准确关联的持久回复验证。
@@ -79,6 +80,8 @@ deepseekbot bot-new-session <bot-id>
 `bot-attention` 支持 `--cursor` 及 Host 的 pending/processing/observed/deferred/needs-repair/handled 状态，分页上限 1–100。Session 摘要按创建时间倒序，限制 1–100（默认 50），返回 `total`；活动摘要限制 Session 明细并返回 `sessionCount`。这些是有界摘要，不是完整工具调用日志或流式草稿。
 
 `bot-new-session <bot-id>` 通过与 IM `/new` 相同的 Host 运行时退役空闲 Bot 的编排会话，下一条消息开启新会话。成功返回 `{"started":true}`；Bot 正在工作时以 `bot-busy` 拒绝，需先停止当前轮次。
+
+`bot-compact <bot-id>` 通过 DSH `/compact` 立即压缩空闲 Bot 的编排会话，与 IM `/compact`、Bot 私信输入框的 `/compact` 和空闲压缩走同一路径。成功返回 `{"outcome":"compacted","tokensBefore":…,"tokensAfter":…}`；DSH 没有可压缩内容、或摘要不会更小时返回 `nothing`；会话尚未在 Host 中加载（例如 Host 重启后、下一条消息之前）时返回 `not-loaded`。Bot 有进行中的轮次或待处理的 Inbox Admission 时以 `bot-busy` 拒绝。
 
 显式清理先用 `bot-delete-preview <bot-id>` 查看 owner 的当前范围与 `preview.token`，审核后将 `{"token":"<preview.token>"}` 从 stdin 交给 `bot-delete-confirm <bot-id> --confirmation-stdin --confirm`。默认保留 Memory，仅显式 `--erase-memory` 才选择擦除 owner 审核的目录，并在停止阶段删除这个 Bot 通过私密输入保存的密钥。检查 `deletion.phase`；未完成的清理可用 `bot-delete-retry <bot-id> --confirm` 继续。范围变化由 owner 拒绝；删除身份不是内容清除或全部数据擦除。
 
@@ -93,6 +96,7 @@ deepseekbot send-status <bot-id> --message-id <回执中的消息-id>
 deepseekbot channel-messages <channel-id> --host http://127.0.0.1:31917 --limit 20
 deepseekbot tool-approval-status <channel-id> --message-id <卡片-id>
 deepseekbot tool-approval-decide <channel-id> --message-id <卡片-id> --outcome allowed-once
+deepseekbot tool-approval-decide <channel-id> --message-id <card-id> --outcome allowed-always-tool
 deepseekbot tool-approval-decide <channel-id> --message-id <卡片-id> --outcome allowed-always-kind
 deepseekbot tool-approval-decide <channel-id> --message-id <卡片-id> --outcome rejected
 deepseekbot user-question-status <channel-id> --message-id <卡片-id>
@@ -120,7 +124,7 @@ deepseekbot workspace-create /srv/bots/workspace
 deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 ```
 
-`access-set` 设置 `danger-full-access` 时必须带 `--acknowledge-risk`：完全访问下 Bot 可以执行任意命令，并且使用浏览器和 Computer 都不弹审批卡。`--scope chat` 同时作用于 Bot 自己的对话；`assignments` 只作用于新的 Assignment。`settings` 返回一个命名空间的 `{ns, revision, value}`；`settings-set` 从标准输入读取一个字段 JSON 对象，并基于该版本号应用，所以并发修改会失败而不是被覆盖。只有 Host 标记为可在线修改的字段才能这样改。`workspace-create` 接受绝对路径并返回 Host 工作区，其 id 供 `grant-create` 使用。
+`access-set` 设置 `danger-full-access` 时必须带 `--acknowledge-risk`：完全访问下普通工具请求不再逐次弹卡；识别出的权限／策略变更仍需 Human 本次决定，浏览器和 Computer 保留各自能力检查。`--scope chat` 同时作用于 Bot 自己的对话；`assignments` 只作用于新的 Assignment。`settings` 返回一个命名空间的 `{ns, revision, value}`；`settings-set` 从标准输入读取一个字段 JSON 对象，并基于该版本号应用，所以并发修改会失败而不是被覆盖。只有 Host 标记为可在线修改的字段才能这样改。`workspace-create` 接受绝对路径并返回 Host 工作区，其 id 供 `grant-create` 使用。
 
 ### 频道与群组
 
@@ -555,6 +559,19 @@ deepseekbot approval-reviewer-model-set bot
 
 两个命令都返回 `{follows, model}`：`follows` 为 `bot`（跟随每个 Bot 自己的模型，`model` 为 `null`）、`model`（所有审批都用指定模型）或 `invalid`（设置文件读不出来）。指定模型时还会返回 `available`，为 `false` 时附带 `unavailableReason`。不在模型目录里、或服务商没有可用密钥的模型仍会保存，但之后每次审批都会改发普通的人类审批卡片，并在 `logs.db` 里写入 `fallback=model-unavailable` 和原因；审批员绝不会自己换用别的模型。`logs.db` 里每条 `approval-review` 记录都写明这次用的 `model` 和 `reviewSession`。Bot 在自己的 Shell 里运行 `approval-reviewer-model-set` 时，这次调用一定会变成发给人类的审批卡片，已保存的规则和审批员都不能替你回答。拒绝时带错误码：`usage`（没有 `<provider>/<model>`，或对 `bot` 加了 `--effort`）和 `invalid-input`。
 
+### 空闲压缩（Idle Compaction）
+
+Bot 的 Orchestrator Session 没有进行中的轮次、也没有待处理的 Bot Inbox Admission 时，Host 会在所用模型线路提示缓存寿命的一半（最少 15 分钟）通过 DSH（与 `/compact` 同一路径）压缩它，让长历史在服务商仍按缓存命中价读取时就被压缩。只压缩超过该线路 DSH 默认自动压缩阈值一半的会话；Assignment 和审批复核会话从不压缩。聊天中不显示任何内容。该设置对整个 Profile 生效，默认开启。
+
+```bash
+deepseekbot idle-compaction
+deepseekbot idle-compaction-set on|off
+deepseekbot idle-compaction-cache-set deepseek/<model> <seconds>
+deepseekbot idle-compaction-cache-set deepseek/<model> auto
+```
+
+三个命令都返回 `{enabled, settingReadable, minimumIdleSeconds, scheduled, routes}`。每条线路列出 `cacheLifetimeSeconds`、来源 `source` 和 `compactAfterSeconds`（跳过时为 `null`）。缓存寿命依次取自这里为该线路设置的值（`setting`）、模型目录（`catalog`，Anthropic 的短档）、观测到的请求前空闲间隔中仍大部分命中缓存的最长值（`observed`；命中的间隔不会缩短默认值，更长的未命中间隔会把它封顶），或 DeepSeek 线路的 2 小时（`default`）；其它没有任何信息的线路为 `unknown` 并跳过，寿命不足 15 分钟的也跳过。`idle-compaction-cache-set ... auto` 删除该线路的设置值。每次执行都记录在 `deepseekbot bot-activity-history <bot-id>` 的 `idleCompactions` 中，包含线路、空闲时长、压缩前后 token 数，以及压缩请求的输入、缓存读取和输出 token。拒绝时带错误码：`usage`（缺少 `on`/`off`、`<provider>/<model>` 或整数秒）和 `invalid-input`。
+
 ### 模型、用量与活动
 
 ```bash
@@ -591,9 +608,9 @@ deepseekbot group-activity <group-channel>
 这些命令调用的 Host 方法与市场页面、更新卡片、使用统计提示、Git 提示和 IM 配对面板相同：
 
 ```bash
-deepseekbot marketplace-list [--query <关键词>] [--topic <主题>] [--sort updated|stars] [--cursor <next-cursor>]
+deepseekbot marketplace-list [--query <关键词>] [--topic <主题>] [--sort updated|stars] [--lang zh|en] [--cursor <next-cursor>]
 deepseekbot marketplace-topics
-deepseekbot marketplace-detail <owner/repo>
+deepseekbot marketplace-detail <owner/repo> [--lang zh|en]
 deepseekbot marketplace-submit https://github.com/<owner>/<repo>
 deepseekbot marketplace-report <owner/repo> [--reason <说明>]
 deepseekbot release-check [--force]
@@ -614,7 +631,7 @@ deepseekbot pairing-review <bot-id> <pairing-id> --decision revoke --confirm
 
 `release-info` 包含可选的 Host 所有 `identity`：带源码 revision／dirty 的 `development`、带版本的 `release`，或带元数据／组合原因的 `unknown`。旧 Host 缺少该字段，不代表发布身份已经核实。源码内部版本占位仍为 `0.0.0`，关于页面显示源码身份。`release-check` 可返回 `unknown`，此时安装／重启以 `release-identity-invalid` 拒绝。已安装／待生效版本与运行版本分开，直到新 Host 返回精确目标版本。
 
-`marketplace-submit` 和 `marketplace-report` 会像网页一样先完成 Host 下发的工作量证明，因此可能需要几秒；市场本身的拒绝（`repository-missing-topic`、`rate-limited` 等）作为错误码返回。举报说明最多 500 个字符。`release-check` 返回更新状态（`current`、`available`、`restart-required`、`development`、`unknown` 或 `unavailable`）。`release-install` 和 `release-restart` 必须带 `--confirm`；安装或重启失败时以非零退出，错误码为 `release-<原因>`，例如 `release-network` 或 `release-not-pending`。重启会中断所有正在运行的 Bot 回合，只在自己负责的 Host 上执行。`pairing-list` 列出 Bot 的配对请求和角色；`pairing-review` 自行读取当前版本号，期间被改动过的请求会被拒绝而不是被覆盖。对话类请求用一个 `--role` 批准，管理类请求用 `--capability` 批准。
+`--lang zh|en` 按该语言读取列表，与市场页面按界面语言读取一致：名称和简介依次取作者 `bot.json` 里 `i18n` 的翻译、本来就是该语言的简介、市场生成的摘要（`descriptionGenerated: true`）；`marketplace-detail` 返回仓库里该语言的 README，并在 `readmeLanguage` 里注明，没有就返回 `README.md`：`zh` 依次取 `README.zh-CN.md`、`README.zh.md`，再取 `README_CN.md`、`README-zh.md` 等其他写法；`en` 取 `README.en.md`。`marketplace-submit` 和 `marketplace-report` 会像网页一样先完成 Host 下发的工作量证明，因此可能需要几秒；市场本身的拒绝（`repository-missing-topic`、`rate-limited` 等）作为错误码返回。举报说明最多 500 个字符。`release-check` 返回更新状态（`current`、`available`、`restart-required`、`development`、`unknown` 或 `unavailable`）。`release-install` 和 `release-restart` 必须带 `--confirm`；安装或重启失败时以非零退出，错误码为 `release-<原因>`，例如 `release-network` 或 `release-not-pending`。重启会中断所有正在运行的 Bot 回合，只在自己负责的 Host 上执行。`pairing-list` 列出 Bot 的配对请求和角色；`pairing-review` 自行读取当前版本号，期间被改动过的请求会被拒绝而不是被覆盖。对话类请求用一个 `--role` 批准，管理类请求用 `--capability` 批准。
 
 ## IM 应用授权
 
@@ -678,6 +695,17 @@ Bot 名字只是标签，身份是 id。不带 operation key 时，每次创建�
 ## Channel、授权、计划与配对
 
 `channels` 列出 Channel，`channel-messages` 读一页消息（从新到旧，`--limit`、`--before` 分页）。`grants` 列出 Bot 的 workspace 授权，`grant-revoke`/`grant-write-set` 管理它们；新建授权需要 Host 的 workspace 注册表，仍是 Host 侧动作。`schedules` 列出 Bot 的计划；`schedule-create` 要 `--title`、`--prompt` 和唯一一种触发器（`--every` 秒数、`--daily`/`--weekly` 时间加 `--weekdays`、`--once-date` 加 `--once-time`、`--cron`），日历触发器必须传 `--timezone`；`schedule-update`/`schedule-delete`/`schedule-history` 用 `--sid` 指定计划；`schedule-run-now` 记录一次手动触发，Host 启动后执行；`schedule-preview` 不指定 Bot、只渲染触发器的未来时刻。`pairings` 列出 Bot 的 IM 配对请求。不存在的计划报 `unknown-schedule`；删除返回 `removed`。
+
+### 在线批准工作区请求
+
+```bash
+deepseekbot inbox --category action --bot <bot-id>
+deepseekbot workspace-options
+deepseekbot grant-request-approve <bot-id> --channel <channel-id> --request <message-id> --workspace <workspace-id> --confirm
+deepseekbot grants <bot-id>
+```
+
+`grant-request-approve` 与 Web 请求卡使用同一个仅 Owner 可调用的 Host 命令。Host 在同一事务中保存持续读写权限和关联 Grant 的决议，再沿既有 Inbox 继续原任务；已有只读 Grant 也可经这次明确确认升级。重复批准同一请求只读回既有决定，不重复创建 Grant 或唤醒；已撤销或改变的目标会被拒绝。目录卡不是工具批准，应使用此命令，而非 `tool-approval-decide`。缺少 `--confirm` 返回 `usage`，失效或不可用权限返回稳定拒绝代码。这是在线操作，不是直接修改数据库的离线修复。
 
 ## Memory
 
@@ -933,6 +961,56 @@ deepseekbot memory-image <bot-id> --path notes/guide.md --image-source <document
 
 使用所选文件或 diff 一侧的原始元数据。认证 Host 返回对应的原始图片字节、检测所得 MIME 或 `memory-image-stale` 等明确拒绝；可变版本过期时应刷新，不得用当前文件替代。`--out` 必须是尚不存在的绝对路径。命令只输出一个 JSON 回执。图片上限为 25 MiB、单边 16,384 像素及解码后 4000 万像素。GIF/WebP 保留原动画，上限 256 帧，全部帧画布像素之和不超过 4000 万。SVG 另有 1 MiB UTF-8 源文件、10,000 XML 节点、64 层深度、64 KiB CSS 和 20,000 展开节点预算。静态 SVG 子集支持常用形状、文字、CSS、渐变、箭头标记、裁剪及有界内部引用；拒绝脚本、事件处理器、外来 HTML、图片、滤镜、动画、外部引用、DTD、处理指令和引用循环。SVG 始终作为图片资源，不插入页面标记；成功导出保留原始 SVG 字节。原文件下载与“打开当前文件”仍为独立操作。
 
+## 桌面整页缩放（S1 受控切片）
+
+产品附带独立的显式启用命令。普通安装产品后，先退出目标 macOS 桌面，再明确指定应用 Bundle
+和 Profile。命令使用所选应用附带的 pnpm，禁用安装脚本，并持有与原生插件管理器相同的 Profile
+写锁。桌面 Host 仍在运行、存在其他主题覆盖、产品仍采用旧组合或应用版本不是 0.2.1-rc.2 时拒绝。
+只改变一个 Profile 依赖，不修改已安装应用：
+
+```sh
+deepseekbot-zoom-setup enable --home <绝对路径-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+deepseekbot-zoom-setup disable --home <绝对路径-DSH_HOME> --profile desktop --desktop-app "/Applications/DeepSeek Harness.app"
+```
+
+命令返回前保持桌面关闭，完成后再打开。Profile 被占用或包操作结果不确定时须检查，不会自动重试。
+非桌面的隔离 Profile 继续使用 `--profile <profile> --dsh <已验证的-dsh-cli>`。
+DSH CLI 明确拒绝管理 `desktop` Profile；原生插件管理器会优先解析应用自带的同名主题，因此也拒绝
+这一普通库替换。两条路径的无窗口测试结果不能作为桌面启用验收。
+
+卸载产品前先 `disable`，并重启以恢复原生包解析。手动字体偏好仍由原生 `ui-theme` Patch 保存。
+JSON 标准输出包含 `restartRequired:true`、`runtimeVerified:false`；包配置成功不表示原生窗口已加载。
+包操作结果不确定时不会自动重试。
+
+`window-zoom-clients` 列出在线目标，必须明确传入 `--client-id`，不会隐式选择窗口。
+`window-zoom-get` 读取 Client 持有的状态；写入必须携带其 `document.revision`：
+
+```sh
+deepseekbot window-zoom-clients --host <host> --token-file <private-file>
+deepseekbot window-zoom-get --client-id <id> --host <host> --token-file <private-file>
+deepseekbot window-zoom-set --client-id <id> --zoom-level=-1 --expected-revision <revision> --host <host> --token-file <private-file>
+deepseekbot window-zoom-reset --client-id <id> --expected-revision <revision> --host <host> --token-file <private-file>
+```
+
+级别为 -8…8 的整数，倍率为 `1.2 ** level`。`window-zoom-set` 加 `--zoom-default` 时，
+保存设备默认值并应用于当前窗口；普通设置只改变当前窗口，重置恢复已保存的默认值。
+负数采用 `--zoom-level=-1` 写法。偏好保存在稳定桌面 origin 的本地存储中，Host 仅转发请求。
+浏览器 Client 和没有合格兼容组合的桌面不会注册目标。
+
+`zoom-client-stale`、`zoom-client-unavailable`、`zoom-revision-conflict` 和存储错误均表示拒绝，
+不会降级写入。投递后的超时或取消意味着写入结果未知，必须先读取同一在线 Client，不能盲目重试。
+Client 重启后投递 ID 会改变，需要重新列出；主窗口偏好独立保存。原生验证范围见
+[S1](https://github.com/BotHarness/DeepSeekBot/issues/2268)。这条路径不需要模型，也没有 Host 偏好副本。
+
+Windows 候选版使用已安装产品的 `deepseekbot-zoom-setup` 命令，显式传入
+`--home <隔离-home> --profile desktop --desktop-app "<应用目录>/DeepSeek Harness.exe"`。
+整个 `enable` 或 `disable` 事务期间须关闭所选 Desktop；该可执行文件有运行进程即拒绝事务。
+仅接受 FileVersion `0.2.1-rc.2` 和通过哈希检查、声明 Windows 能力的主题包。
+原生 `ui-theme` 行和字体设置保持原有身份。移除产品前先执行 `disable`；每次冷启动后重新枚举 Client ID。
+Ctrl+0 恢复已保存的默认值，包括 120%；固定原生协议不支持数字小键盘键码。
+原生输入、guest 前台恢复、DPI 和 Human QA 的独立门槛见
+[Windows 资格 #2270](https://github.com/BotHarness/DeepSeekBot/issues/2270)。
+
 ## 设备本地 DeepSeekBot 外观
 
 `appearance-clients` 列出已认证 Host 上在线 Client 的 id 和平台。必须明确选择一个；重载后会生成新 id。此功能控制 DeepSeekBot 自己的外观，不修改 DSH 原生 Host 主题。
@@ -977,6 +1055,17 @@ deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision>
 
 同一组壁纸命令也支持最大 100 MiB 的视频。提交前，指定 Client 必须实际播放解码并生成封面；不会转码原文件。`wallpaper-get` 返回临时观测的 `playback.state`（`playing`、`paused`、`poster`、`inactive`），降级时附带明确 `reason`。播放失败或之后的运行环境无法解码时使用已保存封面。图片上限仍为 20 MiB；兼容性按运行环境与编码分别验证，传输成功不等于可播放。
 
+壁纸是最多 24 项的壁纸库。导入会加入媒体并立即显示。`wallpaper-get` 返回 `wallpaper.library`：每项的 `id`、`kind`、大小和裁切，选中的 `active` 项以及轮播设置；`wallpaper.current` 是当前显示的那一项。
+
+```bash
+deepseekbot wallpaper-select --client-id <id> --expected-revision <revision> --wallpaper-item <item-id|none>
+deepseekbot wallpaper-remove --client-id <id> --expected-revision <revision> --wallpaper-item <item-id>
+deepseekbot wallpaper-crop --client-id <id> --expected-revision <revision> --wallpaper-item <item-id> --patch-stdin < crop.json
+echo '{"interval":900000,"shuffle":true}' | deepseekbot wallpaper-rotation --client-id <id> --expected-revision <revision> --patch-stdin
+```
+
+不带 `--wallpaper-item` 时，裁切和删除作用于当前显示的那一项。`none` 保留壁纸库但不显示壁纸。删除当前显示项会切到下一项。`interval` 取 `0`（关闭）、`60000`、`300000`、`900000`（默认）、`1800000` 或 `3600000` 毫秒；`shuffle` 随机顺序，且不会连续两次显示同一项。轮播按时钟计算，同一 Client 的所有窗口显示同一项，无需额外写入。全部恢复会清空壁纸库。
+
 ### 外观恢复
 
 先读取 `appearance-get --client-id <id>` 与 `wallpaper-get --client-id <id>`，两者修订号独立。
@@ -987,3 +1076,9 @@ deepseekbot appearance-reset --client-id <id> --expected-revision <appearance-re
 ```
 
 清除只移除指定模式的全部功能面板覆盖，包含已保存但当前未注册的目标；主题、全局材质、主色、另一模式、媒体和布局不变。全部恢复必须带 `--confirm-reset`，重置两套配色、模式和覆盖，并移除共享媒体；不修改 DSH、Bot 身份或业务数据。偏好写入失败时不开始媒体清理。`appearance-reset-wallpaper-failed` 表示默认配色已保存、媒体清理失败；须重读两个 owner，再用新修订号重试。不宣称 localStorage 与 IndexedDB 是同一事务，不自动重放已送达但超时的操作。
+
+### 三个审批动作（#2080）
+
+`tool-approval-decide ... --outcome allowed-always-tool` 对应网页的“始终允许”：批准本次并记住此 Bot、角色及当前授权范围中的当前工具。参数变化仍可匹配；其他工具和变化后的范围不能匹配。`tool-approval-rules` 返回 `tool` 类型；`tool-approval-rule-revoke --confirm` 撤销后恢复询问。旧 exact／broad／Secret 规则不改义。权限与策略变更不能记住；不可用的“始终允许”由 Host 返回带代码的拒绝。Secret CLI 仍只记住程序、账号及环境变量名；MCP 服务记忆保留独立检查。
+
+Full Access 保留原生 `ask`，使识别出的权限变更可以到达 Human；明确范围内的普通请求自动回答，不再逐次弹卡。不会扩大选定 mode／scope 或已有 Assignment 权限。原生 `never` 仍表示直接拒绝，没有绕过它。目录授权仍使用 `grant-request-approve --confirm`。

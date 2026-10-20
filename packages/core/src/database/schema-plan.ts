@@ -2403,6 +2403,60 @@ const TOB_ONBOARDING_MIGRATION: SchemaMigration = {
   },
 };
 
+const USAGE_IDLE_COMPACTION_MIGRATION: SchemaMigration = {
+  generation: 103,
+  module: 'usage',
+  description: 'Record idle Orchestrator Session compactions for Bot activity',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE usage_idle_compactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bot_slug TEXT NOT NULL,
+        at TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        model TEXT NOT NULL,
+        idle_gap_ms INTEGER NOT NULL,
+        cache_lifetime_ms INTEGER NOT NULL,
+        cache_lifetime_source TEXT NOT NULL,
+        tokens_before INTEGER NOT NULL,
+        tokens_after INTEGER,
+        outcome TEXT NOT NULL CHECK (outcome IN ('compacted', 'nothing', 'failed')),
+        error TEXT,
+        input_tokens INTEGER,
+        cache_read_tokens INTEGER,
+        output_tokens INTEGER
+      );
+      CREATE INDEX usage_idle_compactions_bot_at ON usage_idle_compactions (bot_slug, at);
+    `);
+  },
+};
+
+const THREE_ACTION_APPROVAL_MIGRATION: SchemaMigration = {
+  generation: 104,
+  module: 'tool-approval-rules',
+  description: 'Remember one tool per authority scope and retain native ask for Full Access',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE tool_approval_rules_next (
+        id TEXT PRIMARY KEY, bot_slug TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('orchestrator', 'assignment')),
+        scope_key TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('exact', 'tool', 'all-opaque', 'secret-cli')),
+        tool_name TEXT NOT NULL, input TEXT NOT NULL, created_at TEXT NOT NULL,
+        active INTEGER NOT NULL CHECK (active IN (0, 1)), revoked_at TEXT, external_creator TEXT
+      );
+      INSERT INTO tool_approval_rules_next
+        SELECT * FROM tool_approval_rules;
+      DROP TABLE tool_approval_rules;
+      ALTER TABLE tool_approval_rules_next RENAME TO tool_approval_rules;
+      CREATE INDEX tool_approval_rules_lookup
+        ON tool_approval_rules (bot_slug, role, scope_key, active, revoked_at);
+      UPDATE assignments SET approval_policy = 'ask'
+        WHERE permission_mode = 'danger-full-access' AND approval_policy = 'never';
+    `);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2505,4 +2559,6 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   CLOUD_CONNECTION_MIGRATION,
   CLOUD_WORK_MIGRATION,
   TOB_ONBOARDING_MIGRATION,
+  USAGE_IDLE_COMPACTION_MIGRATION,
+  THREE_ACTION_APPROVAL_MIGRATION,
 ]);

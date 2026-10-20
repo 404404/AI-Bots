@@ -89,8 +89,8 @@ export function resolveAxModel({ path = AX_MODEL_PATH, environment = process.env
   return {
     ...checkedSelection({
       ...selection,
-      model: environment.BOTHARNESS_AX_MODEL?.trim() || selection.model,
       apiKey: override || selection.apiKey,
+      model: environment.BOTHARNESS_AX_MODEL?.trim() ?? selection.model,
     }),
     source: override ? `$${GO_KEY_REF}` : path,
   };

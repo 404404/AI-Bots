@@ -76,6 +76,22 @@ function parameterNames(method: (...args: never[]) => unknown): string[] {
 }
 
 describe('bridge typert service', () => {
+  it('refuses workspace authorization without an authenticated Owner invocation', () => {
+    const { service, methods } = setup();
+    const approve = vi.spyOn(methods, 'grantRequestApprove');
+    expect(() => service.grantRequestApprove('ada', 'dm-ada', 'request', 'project', true)).toThrow(
+      /authenticated Owner/,
+    );
+    const guest = Object.create(service) as typeof service;
+    Object.defineProperty(guest, 'ctx', {
+      value: new Context().extend({ invocation: { peer: { principal: { kind: 'guest' } } } }),
+    });
+    expect(() => guest.grantRequestApprove('ada', 'dm-ada', 'request', 'project', true)).toThrow(
+      /authenticated Owner/,
+    );
+    expect(approve).not.toHaveBeenCalled();
+  });
+
   it('refuses reviewed or keyed Channel writes when the durable owner is unavailable', () => {
     const { service, channels } = setup();
     service.create('Ada');
@@ -528,9 +544,11 @@ describe('bridge typert service', () => {
       'tobHome',
       'onboarding',
       'onboardingModel',
+      'introEvent',
       'modelPlanInherit',
       'channelRetry',
       'botNewSession',
+      'botCompact',
       'channelBotStop',
       'modelCatalog',
       'modelPresets',
@@ -610,6 +628,7 @@ describe('bridge typert service', () => {
       'grantCreate',
       'grantRevoke',
       'grantWriteSet',
+      'grantRequestApprove',
       'assignmentAccessGet',
       'assignmentAccessSet',
       'toolApprovalRules',
@@ -672,6 +691,9 @@ describe('bridge typert service', () => {
       'botApprovalTemplateSet',
       'approvalReviewerModel',
       'approvalReviewerModelSet',
+      'idleCompaction',
+      'idleCompactionSet',
+      'idleCompactionCacheLifetimeSet',
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
@@ -774,7 +796,7 @@ describe('bridge typert service', () => {
     ]);
     expect(parameterNames(service.marketplaceList)).toEqual(['query']);
     expect(parameterNames(service.marketplaceTopics)).toEqual([]);
-    expect(parameterNames(service.marketplaceDetail)).toEqual(['id']);
+    expect(parameterNames(service.marketplaceDetail)).toEqual(['id', 'lang']);
     expect(parameterNames(service.marketplaceSubmit)).toEqual(['url', 'altcha']);
     expect(parameterNames(service.marketplaceChallenge)).toEqual([]);
     expect(parameterNames(service.marketplaceReport)).toEqual(['id', 'altcha', 'reason']);
