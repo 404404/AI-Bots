@@ -990,6 +990,10 @@ const en = {
   browseEmpty: 'No subfolders here.',
   browseTruncated: 'Too many folders; only some are shown.',
   browseUnavailable: 'Your computer cannot list its folders here.',
+  browseUnavailableTypePath:
+    'Your computer opens its own folder chooser, so it cannot list folders on this phone. Pick a registered folder or type the folder path.',
+  folderPath: 'Folder path on your computer',
+  folderPathHint: '/Users/you/Project',
   registeredFolders: 'Folders registered on your computer',
   authorizeHere: 'Authorize this folder',
   authorize: 'Authorize',
@@ -2025,6 +2029,10 @@ const zh: typeof en = {
   browseEmpty: '这个文件夹没有子文件夹。',
   browseTruncated: '文件夹过多，仅显示一部分。',
   browseUnavailable: '电脑无法在这里列出文件夹。',
+  browseUnavailableTypePath:
+    '这台电脑使用系统自带的文件夹选择器，无法在手机上列出文件夹。请选择已登记的文件夹，或输入文件夹路径。',
+  folderPath: '电脑上的文件夹路径',
+  folderPathHint: '/Users/you/Project',
   registeredFolders: '已在电脑上登记的文件夹',
   authorizeHere: '授权此文件夹',
   authorize: '授权',

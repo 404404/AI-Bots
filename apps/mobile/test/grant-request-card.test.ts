@@ -173,6 +173,35 @@ describe('Folder request card', () => {
     expect(approvals(fake)).toEqual([]);
   });
 
+  it('takes a typed folder path when the computer opens its own folder chooser', async () => {
+    const fake = host();
+    fake.methods.delete('directoryPicker/list');
+    fake.answers.set('directoryPicker/list', () => ({
+      ok: false,
+      error: { code: 'directory-picker/unavailable', message: 'native chooser' },
+    }));
+    const view = await render(card(connect(fake)));
+    await press(button(view, t.grantChoose));
+    expect(view.textContent).toContain(t.browseUnavailableTypePath);
+    expect(button(view, t.authorizeHere).disabled).toBe(true);
+    const input = view.querySelector<HTMLInputElement>(`[aria-label="${t.folderPath}"]`)!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        Object.getPrototypeOf(input) as object,
+        'value',
+      )!.set!;
+      setter.call(input, ` ${PROJECT.path} `);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await press(button(view, t.authorizeHere));
+    expect(fake.calls.filter((call) => call.method === 'workspace/create')).toEqual([
+      { method: 'workspace/create', args: { request: { path: PROJECT.path } } },
+    ]);
+    await press(button(view, t.grantAllow));
+    expect(approvals(fake)).toHaveLength(1);
+    expect(line(view)).toBe(t.cardLine(category, `${t.grantAllowed} · Project`));
+  });
+
   it('keeps the request open when the computer does not confirm write access', async () => {
     const fake = host();
     fake.methods.set('grantRequestApprove', () => ({ grant: grant(false), message: {} }));
