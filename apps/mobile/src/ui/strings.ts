@@ -465,6 +465,7 @@ const en = {
     'channel-mention': 'Mention',
     'channel-reply': 'Reply',
     'channel-unread': 'Unread conversation',
+    'bot-message-needs-repair': 'Interrupted message',
   } as Record<string, string>,
   otherKind: 'Update',
   rowTitle: (kind: string, name: string) => `${kind} · ${name}`,
@@ -630,6 +631,10 @@ const en = {
   autoRejectionHint:
     'Only this exact call runs once. The Bot is told it may retry; later calls are still reviewed by the template.',
   autoRejectionAllowed: 'Allowed once. The Bot can retry it now.',
+  repairTitle: (bot: string) => `${bot} stopped partway through your message`,
+  repairHint:
+    'It had already started acting, so it will not run again on its own. Open the conversation to see what happened, then clear this.',
+  repairCleared: 'Cleared. Restore it from Filters → Cleared.',
   joinTitle: (bot: string, channel: string) => `${bot} requested to join ${channel}`,
   joinAccept: 'Accept',
   joinDecline: 'Decline',
@@ -1554,6 +1559,7 @@ const zh: typeof en = {
     'channel-mention': '提及',
     'channel-reply': '回复',
     'channel-unread': '未读会话',
+    'bot-message-needs-repair': '处理中断',
   },
   otherKind: '更新',
   rowTitle: (kind: string, name: string) => `${kind} · ${name}`,
@@ -1708,6 +1714,9 @@ const zh: typeof en = {
   autoRejectionHint:
     '只放行这一次完全相同的调用；Bot 会收到通知并可以重试，之后的调用仍按模板审核。',
   autoRejectionAllowed: '已允许这一次，Bot 现在可以重试。',
+  repairTitle: (bot: string) => `${bot} 处理你的消息时中断了`,
+  repairHint: '它已经开始执行操作，所以不会自动重来。打开会话看看发生了什么，确认后清理这一条。',
+  repairCleared: '已清理，可以在筛选 → 已清理里恢复。',
   joinTitle: (bot: string, channel: string) => `${bot} 申请加入 ${channel}`,
   joinAccept: '同意',
   joinDecline: '拒绝',

@@ -11,6 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
+import { DatabaseSync } from 'node:sqlite';
 import { createServer, request } from 'node:http';
 import { createServer as createNetServer, connect } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -402,6 +403,70 @@ async function main() {
       return items.some((entry) => entry.id === unread.id);
     }, 'Restore from the Cleared filter');
     steps.push('Filters → Cleared listed it; swiping Restore put it back on the Host');
+
+    const database = new DatabaseSync(join(home, 'botharness', 'botharness.db'));
+    try {
+      database
+        .prepare(
+          `UPDATE inbox_admissions SET attempt_state = 'needs-repair', last_error = 'e2e: interrupted after acting'
+            WHERE source_event_id = (SELECT e.source_event_id FROM source_events e
+              WHERE e.channel_id = ? AND e.source_kind = 'human-message' ORDER BY e.created_at LIMIT 1)`,
+        )
+        .run(`dm-${bo.slug}`);
+    } finally {
+      database.close();
+    }
+    const repair = await wait(async () => {
+      const { items } = await call(hostOrigin, 'humanAttention', { category: 'action' });
+      return items.find((entry) => entry.kind === 'bot-message-needs-repair');
+    }, 'the interrupted message in Needs you');
+    steps.push("marked Bo's handled DM message as interrupted in the Host database");
+
+    await page.locator('::-p-aria(Filter and sort)').click();
+    await page.locator('::-p-aria([name="Needs you"][role="radio"])').click();
+    await page.locator('::-p-aria([name="Close"][role="button"])').click();
+    await new Promise((done) => setTimeout(done, 1500));
+    const repairRow = `[data-testid="inbox-swipe-${repair.id}"]`;
+    await visible(repairRow);
+    await page.evaluate((id) => {
+      const scope = [...document.querySelectorAll(`[data-testid="inbox-swipe-${id}"]`)].find(
+        (entry) => entry.getBoundingClientRect().width > 0,
+      );
+      scope.querySelector('[role="button"]').click();
+    }, repair.id);
+    await text('Bo stopped partway through your message');
+    await shot('7-repair-detail');
+    await page.locator('::-p-aria([name="Open conversation"][role="button"])').click();
+    checks.repairOpensConversation = await wait(
+      async () => page.url().includes(`/dm/${bo.slug}`),
+      'the DM to open',
+    );
+    await page.goBack();
+    await page.goBack();
+    await visible(repairRow);
+    await drag(repairRow, 150);
+    await visible('[data-testid="swipe-action-clear"]');
+    checks.repairOffersClear = await page.evaluate((id) => {
+      const scope = [...document.querySelectorAll(`[data-testid="inbox-swipe-${id}"]`)].find(
+        (entry) => entry.getBoundingClientRect().width > 0,
+      );
+      return (
+        scope.querySelector('[data-testid="swipe-action-clear"]') !== null &&
+        scope.querySelector('[data-testid="swipe-action-snooze-tomorrow"]') === null
+      );
+    }, repair.id);
+    await shot('8-repair-revealed');
+    await clickTestId('swipe-action-clear');
+    checks.repairClearedOnHost = await wait(async () => {
+      const { items } = await call(hostOrigin, 'humanAttention', {
+        category: 'action',
+        dismissed: true,
+      });
+      return items.some((entry) => entry.id === repair.id);
+    }, 'the interrupted message dismissed on the Host');
+    steps.push(
+      'the interrupted message explains itself, opens its DM, and its revealed Clear dismisses it on the Host',
+    );
 
     const log = console_.join('\n');
     writeFileSync(join(paths.evidence, 'console.txt'), redact(log));

@@ -743,6 +743,45 @@ const ActivityPage = memo(function ActivityPage({
         },
       ];
     }
+    const clear: SwipeAction = {
+      key: 'clear',
+      label: t.activityClear,
+      tone: 'accent',
+      icon: ArchiveIcon,
+      run: () =>
+        void change(
+          item,
+          () => clearAttentionItem(client, item),
+          t.activityClearedNotice,
+          () => restoreAttentionItem(client, item),
+        ),
+    };
+    const later: SwipeAction = {
+      key: 'snooze',
+      label: t.activitySnooze,
+      tone: 'neutral',
+      icon: ClockIcon,
+      run: () =>
+        showActionMenu(
+          t.activitySnoozeTitle,
+          SNOOZE_CHOICES.flatMap((choice) => {
+            const until = snoozeUntil(choice, new Date());
+            if (until === undefined) return [];
+            const time = until.toLocaleString(undefined, {
+              weekday: choice === 'week' ? 'short' : undefined,
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            return [
+              {
+                text: t.activitySnoozeChoice[choice](time),
+                onPress: () => snoozeTo(item, choice),
+              },
+            ];
+          }),
+        ),
+    };
+    if (section === 'action' && item.kind === 'bot-message-needs-repair') return [clear, later];
     if (section === 'action')
       return [
         {
@@ -752,47 +791,9 @@ const ActivityPage = memo(function ActivityPage({
           icon: ClockIcon,
           run: () => snoozeTo(item, 'tomorrow'),
         },
-        {
-          key: 'snooze',
-          label: t.activitySnooze,
-          tone: 'neutral',
-          icon: ClockIcon,
-          run: () =>
-            showActionMenu(
-              t.activitySnoozeTitle,
-              SNOOZE_CHOICES.flatMap((choice) => {
-                const until = snoozeUntil(choice, new Date());
-                if (until === undefined) return [];
-                const time = until.toLocaleString(undefined, {
-                  weekday: choice === 'week' ? 'short' : undefined,
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
-                return [
-                  {
-                    text: t.activitySnoozeChoice[choice](time),
-                    onPress: () => snoozeTo(item, choice),
-                  },
-                ];
-              }),
-            ),
-        },
+        later,
       ];
-    return [
-      {
-        key: 'clear',
-        label: t.activityClear,
-        tone: 'accent',
-        icon: ArchiveIcon,
-        run: () =>
-          void change(
-            item,
-            () => clearAttentionItem(client, item),
-            t.activityClearedNotice,
-            () => restoreAttentionItem(client, item),
-          ),
-      },
-    ];
+    return [clear];
   };
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
     if (activeSettlementScope.current !== settlementScope) return;

@@ -90,6 +90,8 @@ On a native build, check each step on iOS and Android separately:
 3. Needs you: a pending approval offers Tomorrow and Later… but never Clear. Swipe through: it is
    snoozed to 9:00 tomorrow (`inbox --category action --snoozed`) and the Bot is still waiting.
    Later… lists 1 hour, this evening (until 17:30), tomorrow and next week.
+   An interrupted message (`bot-message-needs-repair`) is the exception: it offers Clear and Later…, and
+   its detail page explains it with Open conversation (focused on that message) and Clear.
 4. Filters → Cleared and Snoozed list those rows with Restore/Unsnooze. A Host without
    `dismissed` support shows the update error under Cleared.
 5. Vertical scrolling, pull-to-refresh and rightward drags never open a row. Newest action is first

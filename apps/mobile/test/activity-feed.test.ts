@@ -721,6 +721,36 @@ describe('Activity feed', () => {
     expect(post(view, question)).toBeNull();
   });
 
+  it('lets an interrupted message be cleared from Needs you, since it never resolves itself', async () => {
+    const repair: HumanAttentionItem = {
+      ...question,
+      id: 'repair:e9:ada',
+      kind: 'bot-message-needs-repair',
+      sourceEventId: 'e9',
+    };
+    const fake = host();
+    let cleared = false;
+    fake.answers.set('humanAttention', (args) => ({
+      ok: true,
+      value: { items: args.category === 'action' && !cleared ? [repair] : [] },
+    }));
+    fake.methods.set('humanAttentionDismiss', () => {
+      cleared = true;
+      return { accepted: true };
+    });
+    const view = await feed(fake, ready([repair]));
+    expect(view.querySelector('[data-testid="swipe-action-snooze-tomorrow"]')).toBeNull();
+    expect(view.querySelector('[data-testid="swipe-action-snooze"]')).not.toBeNull();
+    await press(view.querySelector<HTMLElement>('[data-testid="swipe-action-clear"]')!);
+    expect(fake.calls.find((call) => call.method === 'humanAttentionDismiss')?.args).toEqual({
+      itemId: repair.id,
+      sourceKey: 'e9',
+    });
+    expect(view.querySelector('[data-testid="undo-bar"]')?.textContent).toContain(
+      t.activityClearedNotice,
+    );
+  });
+
   it('lists cleared items through the filters and restores one', async () => {
     const fake = host();
     const queries: Record<string, unknown>[] = [];

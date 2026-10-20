@@ -20,7 +20,7 @@ import {
 import type { HumanAttentionItem, QuestionItem } from '../src/host/wire';
 import { t } from '../src/ui/strings';
 import { FakeHost } from './fake-host';
-import { unreadHref } from '../src/host/push';
+import { messageHref, unreadHref } from '../src/host/push';
 import hostWire from './fixtures/host-wire.json';
 import inboxWire from './fixtures/inbox-wire.json';
 
@@ -238,6 +238,14 @@ describe('Human Inbox', () => {
       ),
     ).toEqual({ pathname: '/channel/[id]', params: { id: 'team' } });
     expect(unreadHref({ ...item, channelId: 'removed' }, () => 'dm-ada')).toBeUndefined();
+  });
+  it('opens an interrupted message at that message in its DM or Group', () => {
+    const item = { botSlug: 'ada', channelId: 'dm-ada', messageId: 'm9' };
+    expect(messageHref(item, () => 'dm-ada')).toEqual({
+      pathname: '/dm/[slug]',
+      params: { slug: 'ada', focus: 'm9' },
+    });
+    expect(messageHref({ botSlug: 'ada' }, () => 'dm-ada')).toBeUndefined();
   });
   it('loads other unread conversations from the owning attention projection', async () => {
     const fake = host();
