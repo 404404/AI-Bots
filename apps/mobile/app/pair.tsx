@@ -165,7 +165,7 @@ export default function PairScreen() {
           onPress={() => void pair(handled.current!, lastMethod.current, true)}
         />
       ) : null}
-      <PairingGuide />
+      <PairingGuide initiallyOpen={!presentedAsSheet} />
       <View style={{ gap: space.x2 }}>
         <Text variant="meta" tone="muted" accessibilityRole="header">
           {t.pasteLink}
