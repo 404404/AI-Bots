@@ -6385,7 +6385,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     profileActivity(payload) {
-      const scope = dmMemory(payload);
+      const scope = dmMemory(payload, true);
       if (!('botSlug' in scope)) return scope;
       const slug = scope.botSlug;
       const source = asObject(payload);
@@ -6412,7 +6412,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const beforeEnd = <T extends { at: string }>(entries: readonly T[]): T[] =>
         end === undefined ? [...entries] : entries.filter((entry) => new Date(entry.at) < end);
       const events = beforeEnd(deps.channels.admissionActivity?.(slug, since) ?? []);
-      const commits = beforeEnd(deps.memory?.activity?.(slug, since) ?? []);
+      let memoryActivity: Array<{ at: string }> = [];
+      try {
+        memoryActivity = deps.memory?.activity?.(slug, since) ?? [];
+      } catch (error) {
+        if (deps.registry.get(slug) !== undefined) throw error;
+      }
+      const commits = beforeEnd(memoryActivity);
       const usageRows = (deps.usage?.activity(slug, since) ?? []).filter(
         (row) => before === undefined || row.day < before,
       );
