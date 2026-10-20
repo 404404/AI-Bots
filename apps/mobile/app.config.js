@@ -1,5 +1,29 @@
+const { execFileSync } = require('node:child_process');
+const { existsSync } = require('node:fs');
+const path = require('node:path');
+
+const mainCheckout = () => {
+  try {
+    const commonDir = execFileSync(
+      'git',
+      ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+      { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    ).trim();
+    return path.dirname(commonDir);
+  } catch {
+    return path.resolve(__dirname, '../..');
+  }
+};
+
+const googleServicesFile = () => {
+  if (process.env.GOOGLE_SERVICES_JSON) return process.env.GOOGLE_SERVICES_JSON;
+  const local = path.join(mainCheckout(), '.secrets', 'google-services.json');
+  return existsSync(local) ? local : undefined;
+};
+
 module.exports = ({ config }) => {
   const store = process.env.DEEPSEEKBOT_APP_VARIANT === 'store';
+  const firebase = googleServicesFile();
   return {
     ...config,
     owner: 'deepseekbots-team',
@@ -13,9 +37,7 @@ module.exports = ({ config }) => {
     android: {
       ...config.android,
       ...(store ? { package: 'app.deepseekbot.mobile' } : {}),
-      ...(process.env.GOOGLE_SERVICES_JSON
-        ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
-        : {}),
+      ...(firebase ? { googleServicesFile: firebase } : {}),
     },
     ...(store ? { name: 'DeepSeekBot', scheme: 'deepseekbot' } : {}),
   };
