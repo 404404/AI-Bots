@@ -28,9 +28,9 @@ import {
   IconSendOutlineRegular,
   IconStopFillRegular,
   ImageLightbox,
-  Tooltip,
   fileSizeText,
 } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Tooltip } from './ds/tooltip.js';
 import { createPortal } from 'react-dom';
 import type { PersonaBotSessionActivity } from '../../../core/src/state/tool-activity.js';
 
