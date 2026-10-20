@@ -16,6 +16,7 @@
 - Clear/Rain weather from Scene controls (`data-vrm-weather`), with rain streaks, overcast sky and droplets on the glass; the monitor's content and glow follow the current Activity, with a music player at idle.
 - Lo-fi look (outlines, glow, halftone shadows, time-of-day grade, vignette) is on by default and Plain turns it off (`data-vrm-effects=on|off`), remembered with the other scene choices.
 - While working, fingers strike keys individually; at night the wall sconce, hutch glow and shelf LED strip light their zones, and at sunset sunbeams come through the window.
+- **Change character…** in `[data-vrm-model-actions]` uploads a `.vrm` (drive the hidden file input); the panel shows the file name and `data-vrm-model=file`, the choice survives a reload in the same browser, and **Use default** forgets it.
 - While the Bot speaks, `[data-vrm-speech]` shows the text in a bubble above the head (panel vars `--vrm-head-x`/`--vrm-head-y`), and it disappears when speaking ends.
 
 ## How to get to it (user POV)

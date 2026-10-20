@@ -166,6 +166,15 @@ Date: 2026-10-19.
 - **Video.** `vrm-speech-expressions.mp4` (45 s, shared with Vain, not committed) shows typing, a spoken line, a window gaze and a sip, rainy-night thinking, blocked and waiting lines with their faces, and a glance and stretch at sunset.
 - **Frames.** Speaking at the desk and in the portrait view: `speech-bubble.jpg`.
 
+## Change character from the panel header (Human feedback)
+
+Date: 2026-10-20.
+
+- **Feedback.** Models should be freely loadable, the motions should adapt, and the panel header should have a button to import a replacement character. Publishing as a separate opt-in npm package is the chosen direction for later, but polishing comes first; nothing about packaging or release changed.
+- **Change.** **Change character…** and, for a custom model, its file name and **Use default** sit under the Bot status at the top of the panel; the Scene controls model group was removed. The chosen file is stored per Bot in this browser's IndexedDB and restored before the stage mounts, so a reload shows the custom model without first loading the default; **Use default** deletes it. If storage fails, the panel notes that the model is kept for this session only. The bundled headphones are only added to the default character. With a Pin button present, the header moves below it so the two do not overlap in a narrow panel.
+- **Host.** In the isolated Host (1280 × 800, narrow panel) uploading another VRoid model (`b.vrm`, VRM 0.x) loaded it with typing hands on the keys; after a page reload the panel still showed `b.vrm`. At 1440 × 900 a third VRoid model (`c.vrm`) loaded and typed the same way; **Use default** restored the sample and, after another reload, no custom model remained. The IndexedDB helper has no unit test because no IndexedDB implementation is available in the Node test environment; the Host runs above are its evidence.
+- **Frames.** Custom model at the desk with the header controls: `change-character.jpg`.
+
 ## Acceptance limits and next action
 
 The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

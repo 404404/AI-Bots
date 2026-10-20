@@ -83,6 +83,7 @@ export function mountStage(
     shading: 'mtoon',
     effects: true,
   },
+  { headphones: wearing = true }: { headphones?: boolean } = {},
 ): Stage {
   for (const key of Object.keys(host.dataset))
     if (key !== 'vrmStage' && key.startsWith('vrm')) delete host.dataset[key];
@@ -664,7 +665,7 @@ export function mountStage(
       scene.add(key);
       actor.position.set(motion.x, floorOffset - hipDrop, motion.z);
       const rawHead = loaded.humanoid.getRawBoneNode('head');
-      if (rawHead) {
+      if (rawHead && wearing) {
         const headphones = new Group();
         const shell = new MeshStandardMaterial({ color: 0x8d3e4c, roughness: 0.7 });
         const cushion = new MeshStandardMaterial({ color: 0x27333e, roughness: 1 });

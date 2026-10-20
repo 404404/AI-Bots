@@ -16,6 +16,7 @@ import {
 } from './stage.js';
 import type { Mood, Weather } from './room.js';
 import type { CharacterShading } from './shading.js';
+import { forgetModel, loadModel, saveModel } from './library.js';
 
 export const name = 'botharness-vrm-companion-client';
 export const inject = ['dockPanels', 'botPresentation'];
@@ -35,9 +36,12 @@ const CSS = `
 [data-vrm-header]{position:absolute;top:12px;left:12px;z-index:1;display:flex;flex-direction:column;align-items:flex-start;gap:8px;max-width:calc(100% - 24px)}
 [data-vrm-header] > [data-vrm-status]{padding:4px 8px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 [data-vrm-instance-actions]{position:absolute;right:12px;top:12px;z-index:2}
+[data-vrm-panel]:has(> [data-vrm-instance-actions]) [data-vrm-header]{top:56px}
 [data-vrm-error]{position:absolute;inset:35% 12px auto;z-index:2;background:var(--dsw-alias-bg-base);padding:12px}
 [data-vrm-loading]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;padding:4px 8px;border-radius:var(--dsw-radius-md);color:var(--dsw-alias-label-secondary);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 [data-vrm-actions]{display:flex;gap:8px;flex-wrap:wrap}
+[data-vrm-model-actions]{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%;padding:4px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
+[data-vrm-model-name]{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary)}
 [data-vrm-controls]{position:absolute;bottom:12px;left:12px;max-width:calc(100% - 24px);padding:8px 12px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent);backdrop-filter:blur(12px)}
 [data-vrm-controls] summary{cursor:pointer;color:var(--dsw-alias-label-secondary);padding:4px 0}
 [data-vrm-controls] [data-vrm-actions]{margin-top:8px}
@@ -45,6 +49,7 @@ const CSS = `
 `;
 const remembered = new Map<string, SceneChoices>();
 const models = new Map<string, { name: string; url: string }>();
+const looked = new Set<string>();
 function Character({ view }: { view: BotPresentationView }) {
   const snapshot = useSyncExternalStore(view.subscribe, view.getSnapshot, view.getSnapshot);
   const cleanup = useRef<(() => void) | undefined>();
@@ -71,14 +76,25 @@ function Character({ view }: { view: BotPresentationView }) {
   const [error, setError] = useState('');
   const [revision, retry] = useState(0);
   const [model, setModel] = useState(models.get(key));
+  const [kept, setKept] = useState(true);
   const picker = useRef<HTMLInputElement>(null);
-  const choose = (next: { name: string; url: string } | undefined) => {
+  const use = (next: { name: string; url: string } | undefined) => {
     const previous = models.get(key);
     if (previous) URL.revokeObjectURL(previous.url);
     if (next) models.set(key, next);
     else models.delete(key);
     setModel(next);
     retry((n) => n + 1);
+  };
+  const choose = (file: File | undefined) => {
+    if (!file) {
+      use(undefined);
+      setKept(true);
+      void forgetModel(key);
+      return;
+    }
+    use({ name: file.name, url: URL.createObjectURL(file) });
+    void saveModel(key, { name: file.name, file }).then(setKept);
   };
   const remember = (change: Partial<SceneChoices>) =>
     remembered.set(key, { ...(remembered.get(key) ?? initial), ...change });
@@ -88,6 +104,21 @@ function Character({ view }: { view: BotPresentationView }) {
       cleanup.current = undefined;
       stageRef.current = undefined;
       if (!node) return;
+      if (!looked.has(key)) {
+        let current = true;
+        cleanup.current = () => {
+          current = false;
+        };
+        setLoading('Loading character…');
+        void loadModel(key).then((stored) => {
+          looked.add(key);
+          if (stored && !models.has(key))
+            models.set(key, { name: stored.name, url: URL.createObjectURL(stored.file) });
+          if (current) retry((n) => n + 1);
+        });
+        return;
+      }
+      setModel(models.get(key));
       try {
         const choices = remembered.get(key) ?? initial;
         setCamera(choices.camera);
@@ -102,6 +133,7 @@ function Character({ view }: { view: BotPresentationView }) {
           models.get(key)?.url ?? __VRM_MODEL__,
           { loading: setLoading, error: setError, changed: setScene },
           choices,
+          { headphones: !models.has(key) },
         );
         stageRef.current = stage;
         const update = () => stage.update(view.getSnapshot());
@@ -140,6 +172,30 @@ function Character({ view }: { view: BotPresentationView }) {
             : 'Bot unavailable'}
         </div>
         {snapshot.attention && <div role="status">{snapshot.attention}</div>}
+        <div data-vrm-model-actions="" role="group" aria-label="Character model">
+          <Button onClick={() => picker.current?.click()}>Change character…</Button>
+          {model && (
+            <>
+              <span data-vrm-model-name="" title={model.name}>
+                {model.name}
+                {kept ? '' : ' · this session only'}
+              </span>
+              <Button onClick={() => choose(undefined)}>Use default</Button>
+            </>
+          )}
+          <input
+            ref={picker}
+            type="file"
+            accept=".vrm,model/gltf-binary"
+            hidden
+            aria-label="VRM file"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = '';
+              if (file) choose(file);
+            }}
+          />
+        </div>
       </div>
       {loading && !error && (
         <div role="status" data-vrm-loading="">
@@ -154,26 +210,6 @@ function Character({ view }: { view: BotPresentationView }) {
       )}
       <details data-vrm-controls="">
         <summary>Scene controls · {scene.phase}</summary>
-        <div data-vrm-actions="" role="group" aria-label="Character model">
-          <Button aria-pressed={!model} onClick={() => model && choose(undefined)}>
-            Sample character
-          </Button>
-          <Button aria-pressed={!!model} onClick={() => picker.current?.click()}>
-            {model ? model.name : 'Open VRM file…'}
-          </Button>
-          <input
-            ref={picker}
-            type="file"
-            accept=".vrm,model/gltf-binary"
-            hidden
-            aria-label="VRM file"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              event.currentTarget.value = '';
-              if (file) choose({ name: file.name, url: URL.createObjectURL(file) });
-            }}
-          />
-        </div>
         <div data-vrm-actions="" role="group" aria-label="Character shading">
           {(['mtoon', 'liltoon'] as const).map((value) => (
             <Button
