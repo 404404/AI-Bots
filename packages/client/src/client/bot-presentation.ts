@@ -58,6 +58,7 @@ export function createBotPresentation(
         const seen = new Set<string>();
         let queue: Output[] = [];
         let sync: BotPresentationSnapshot['sync'] = 'connecting';
+        let primed = false;
         let snapshot: BotPresentationSnapshot = {
           botId,
           name: botId,
@@ -103,15 +104,16 @@ export function createBotPresentation(
           };
           const quiet = !next.available || next.paused || next.sync !== 'live';
           const woke =
-            !quiet &&
-            snapshot.sync === 'live' &&
+            primed &&
+            next.available &&
+            !next.paused &&
             snapshot.activity === 'idle' &&
             next.activity !== 'idle';
+          if (next.sync === 'live') primed = true;
+          const counted = woke ? { ...next, inbox: snapshot.inbox + 1 } : next;
           const settled = quiet
-            ? { ...next, speaking: false, conversing: false, mouth: 0 }
-            : woke
-              ? { ...next, inbox: snapshot.inbox + 1 }
-              : next;
+            ? { ...counted, speaking: false, conversing: false, mouth: 0 }
+            : counted;
           if (JSON.stringify(settled) !== JSON.stringify(snapshot)) {
             snapshot = Object.freeze(settled);
             notify();

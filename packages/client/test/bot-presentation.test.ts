@@ -154,6 +154,11 @@ describe('public Bot presentation', () => {
     state(5, 'idle');
     state(6, 'thinking');
     expect(view.getSnapshot().inbox).toBe(2);
+    state(7, 'idle');
+    store.setActivitySync('stale');
+    state(8, 'thinking');
+    store.setActivitySync('live');
+    expect(view.getSnapshot().inbox).toBe(3);
     view.dispose();
     provider.dispose();
   });

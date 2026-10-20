@@ -437,7 +437,9 @@ export function mountStage(
       const looking = facingViewer > 0.4 || talking || waiting || blocked || glance > 0.5;
       const desk = room?.tableY ?? 0.75;
       const inbox = latest?.inbox ?? 0;
-      if (inboxSeen !== undefined && inbox > inboxSeen && live) room?.notice();
+      if (inboxSeen !== undefined && inbox > inboxSeen && latest?.available && !latest.paused)
+        room?.notice();
+      if (inboxSeen !== inbox) host.dataset.vrmInbox = String(inbox);
       inboxSeen = inbox;
       const crown =
         vrm.humanoid.getNormalizedBoneNode('head')?.getWorldPosition(new Vector3()) ??
