@@ -100,7 +100,6 @@ export const glass = {
 } as const;
 
 export const edgeFade = {
-  top: 24,
   bottom: 24,
   stops: [
     { offset: 0, opacity: 0.8 },

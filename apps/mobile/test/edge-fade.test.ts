@@ -18,3 +18,10 @@ it('reaches full opacity only at the screen edge and eases out over the whole fa
     expect(stops[index]!.opacity).toBeLessThan(stops[index - 1]!.opacity);
   }
 });
+
+it('holds the system bar strip fully opaque before the curve starts', () => {
+  const stops = edgeFadeStops(140, 76, 28);
+  expect(stops[0]).toEqual({ offset: 0, opacity: 1 });
+  expect(stops[1]).toEqual({ offset: 0.2, opacity: 1 });
+  expect(stops.at(-1)).toEqual({ offset: 1, opacity: 0 });
+});

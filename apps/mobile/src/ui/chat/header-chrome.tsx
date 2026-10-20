@@ -101,7 +101,8 @@ export function EdgeFade({
   const glass = useLiquidGlass();
   const id = `fade-${useId().replace(/[^a-z0-9]/giu, '')}`;
   const top = side === 'top';
-  const stops = edgeFadeStops(height, cover);
+  const insets = useSafeAreaInsets();
+  const stops = edgeFadeStops(height, cover, top ? insets.top : insets.bottom);
   return (
     <View
       pointerEvents="none"
