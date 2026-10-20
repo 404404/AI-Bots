@@ -44,7 +44,7 @@ jobs:
         with:
           name: readme-status
           path: ${{ runner.temp }}/readme-status/
-          retention-days: 7
+          retention-days: 3
 
   publish:
     needs: collect
