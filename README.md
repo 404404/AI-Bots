@@ -1,18 +1,18 @@
 <div align="center">
-  <a href="https://deepseekbot.app"><img src="docs/assets/readme/deepseekbot-og-zh-v2.png" width="800" alt="DeepSeekBot：开源的 GrokBot 平替。基于 DeepSeek Harness，兼容其他 DSH 插件，连接飞书、Slack、Discord 和微信，MIT 开源" /></a>
+  <a href="https://deepseekbot.app">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/hero-zh-night.svg" />
+  <img src="docs/assets/readme/pixel/hero-zh-day.svg" width="960" alt="DeepSeekBot — a crew of your own" />
+</picture>
+  </a>
 
 # DeepSeekBot
 
 **中文** ｜ [English](README.en.md)
 
-[![npm](https://img.shields.io/npm/v/deepseekbot?color=CB3837&logo=npm)](https://www.npmjs.com/package/deepseekbot)
-[![官网](https://img.shields.io/badge/官网-deepseekbot.app-3D5AFE)](https://deepseekbot.app)
-[![MIT 许可](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Discord](https://img.shields.io/badge/Discord-加入-5865F2?logo=discord&logoColor=white)](https://discord.gg/aEB2Ayhu7B)
-[![QQ 群：1125565676](https://img.shields.io/badge/QQ-1125565676-12B7F5)](#community)
-[![GitHub stars](https://img.shields.io/github/stars/BotHarness/DeepSeekBot?style=flat)](https://github.com/BotHarness/DeepSeekBot)
-
-<a href="https://www.producthunt.com/products/deepseekbot?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-deepseekbot" target="_blank" rel="noopener noreferrer"><img alt="DeepSeekBot - Open-source Grok Bot alternative built on DeepSeek Harness | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1276820&amp;theme=light&amp;t=1791733459461"></a>
+[![npm](https://img.shields.io/npm/v/deepseekbot?style=flat-square&color=3d5afe&label=npm)](https://www.npmjs.com/package/deepseekbot)
+[![MIT](https://img.shields.io/badge/license-MIT-71964a?style=flat-square)](LICENSE)
+[![DeepSeek Harness](https://img.shields.io/badge/built_for-DeepSeek_Harness-b8702f?style=flat-square)](https://github.com/deepseek-ai/deepseek-harness)
 
 **DeepSeekBot（DSB）：开源的 GrokBot 平替。一组有各自身份、人格和记忆的 bots，一起做事。**
 
@@ -36,6 +36,11 @@ DeepSeekBot（简称 **DSB**，是 DeepSeekBot 的缩写，才不是“大啥比
 
 <a id="install"></a>
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/install-zh-night.svg" />
+  <img src="docs/assets/readme/pixel/install-zh-day.svg" width="960" alt="" />
+</picture>
+
 ## 安装
 
 在 DeepSeek Harness 桌面端点「插件 → 添加插件」，输入 `deepseekbot@1.4.1`，安装并启用，侧栏就会出现「Bot 模式」。还没装 DSH？先[下载桌面端](https://www.deepseek.com/en/harness/)。
@@ -43,6 +48,11 @@ DeepSeekBot（简称 **DSB**，是 DeepSeekBot 的缩写，才不是“大啥比
 命令行安装、版本说明和常见问题见[官网安装指南](https://deepseekbot.app/docs/installation/)。
 
 <a id="features"></a>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/features-zh-night.svg" />
+  <img src="docs/assets/readme/pixel/features-zh-day.svg" width="960" alt="" />
+</picture>
 
 ## 能用它做什么
 
@@ -159,15 +169,47 @@ node scripts/dev-instance.mjs --home /tmp/botharness-demo --port 31967
 
 <a id="community"></a>
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/community-zh-night.svg" />
+  <img src="docs/assets/readme/pixel/community-zh-day.svg" width="960" alt="" />
+</picture>
+
 ## 社区
 
 问题、想法，还有你做出来的 Bot，都欢迎带来。
 
-- **Discord**：[加入 DeepSeekBot 服务器](https://discord.gg/aEB2Ayhu7B)
-- **QQ 群**：在 QQ 中搜索群号 **1125565676**
-- **使用求助、想法与作品分享**：[GitHub Discussions](https://github.com/BotHarness/DeepSeekBot/discussions) · [欢迎帖](https://github.com/BotHarness/DeepSeekBot/discussions/1397)
-- **明确的 Bug 与实施任务**：[GitHub Issues](https://github.com/BotHarness/DeepSeekBot/issues/new/choose)
-- **参与维护**：[贡献指南](CONTRIBUTING.zh.md) · [第一次贡献](https://github.com/BotHarness/DeepSeekBot/discussions/1398)，文档、测试和答疑也欢迎。
+| 来坐坐                                                                                                                                                                                                                                                                                                                                                                                                                                                               | 一起做点什么                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [<picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/badge-discord-night.svg" /><img src="docs/assets/readme/pixel/badge-discord-day.svg" width="160" alt="discord" /></picture>](https://discord.gg/aEB2Ayhu7B)                                                                                                                                                                                                                  | [加入 DeepSeekBot 服务器](https://discord.gg/aEB2Ayhu7B)，交流使用、分享你的小团队。                                                                                                                                                 |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/badge-qq-night.svg" /><img src="docs/assets/readme/pixel/badge-qq-day.svg" width="160" alt="qq" /></picture>                                                                                                                                                                                                                                                                  | 在 QQ 中搜索群号 **1125565676**。                                                                                                                                                                                                    |
+| [<picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/badge-discuss-night.svg" /><img src="docs/assets/readme/pixel/badge-discuss-day.svg" width="160" alt="discuss" /></picture>](https://github.com/BotHarness/DeepSeekBot/discussions)                                                                                                                                                                                          | [使用求助、想法与作品分享](https://github.com/BotHarness/DeepSeekBot/discussions) · [欢迎帖](https://github.com/BotHarness/DeepSeekBot/discussions/1397)。                                                                           |
+| [<picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/badge-contribute-night.svg" /><img src="docs/assets/readme/pixel/badge-contribute-day.svg" width="160" alt="contribute" /></picture>](CONTRIBUTING.zh.md)                                                                                                                                                                                                                    | [贡献指南](CONTRIBUTING.zh.md) · [第一次贡献](https://github.com/BotHarness/DeepSeekBot/discussions/1398)，文档、测试和答疑也欢迎；明确的 Bug 与实施任务请到 [Issues](https://github.com/BotHarness/DeepSeekBot/issues/new/choose)。 |
+| <a href="https://www.producthunt.com/products/deepseekbot?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-deepseekbot" target="_blank" rel="noopener noreferrer"><img alt="DeepSeekBot - Open-source Grok Bot alternative built on DeepSeek Harness &#124; Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1276820&amp;theme=light&amp;t=1791733459461"></a> | 我们已上线 Product Hunt，欢迎看看，也欢迎把 DeepSeekBot 介绍给朋友。                                                                                                                                                                 |
+
+<a id="repository-status"></a>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/status-zh-night.svg" />
+  <img src="docs/assets/readme/pixel/status-zh-day.svg" width="960" alt="" />
+</picture>
+
+## 仓库状态
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BotHarness/DeepSeekBot/readme-status/stats-zh-night.svg" />
+  <img src="https://raw.githubusercontent.com/BotHarness/DeepSeekBot/readme-status/stats-zh-day.svg" width="960" alt="GitHub 仓库状态：Stars、Forks、未关闭 Issues 和 PR、最近 30 天关闭 PR 与提交数；统计口径及文字数据见下方链接。" />
+</picture>
+
+**最近 30 天**：关闭 PR 包含已合并 PR；提交按默认分支所有可达历史统计，包含合并提交和机器人提交。每六小时更新，图中时间为最后成功更新时间。
+
+[文字数据与统计口径](https://github.com/BotHarness/DeepSeekBot/tree/readme-status#readme) · [JSON](https://raw.githubusercontent.com/BotHarness/DeepSeekBot/readme-status/stats.json) · [更新任务](https://github.com/BotHarness/DeepSeekBot/actions/workflows/readme-status.yml)
+
+<a href="https://github.com/BotHarness/DeepSeekBot">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/pixel/star-zh-night.svg" />
+  <img src="docs/assets/readme/pixel/star-zh-day.svg" width="960" alt="收藏 DeepSeekBot，下次回来继续建设。" />
+</picture>
+</a>
 
 ## 灵感与致谢
 
