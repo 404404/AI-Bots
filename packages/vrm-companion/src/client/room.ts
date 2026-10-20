@@ -30,6 +30,7 @@ import { createRoomMaterials } from './materials.js';
 import { createChair } from './chair.js';
 import { createDecor } from './decor.js';
 import { createProps } from './props.js';
+import { createNotice, type NoticeFrame } from './notice.js';
 import { createDetail } from './detail.js';
 import { createScreen } from './screen.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -294,6 +295,20 @@ export function createRoom(seatHeight: number) {
   const props = createProps(surface, sill, materials);
   root.add(props.root);
   textures.push(...props.textures);
+  const phoneHome = props.phone.position.clone();
+  const notice = createNotice(phoneHome, new Vector3(-0.65, surface + 0.36, 0.78));
+  root.add(notice.root);
+  textures.push(...notice.textures);
+  const notify = (delta: number, reduced: boolean, head: Vector3): NoticeFrame => {
+    const frame = notice.update(delta, reduced, head);
+    props.phone.position.set(
+      phoneHome.x + frame.buzz * 0.004,
+      phoneHome.y,
+      phoneHome.z + frame.buzz * 0.002,
+    );
+    props.phoneScreen.emissive.setHex(0x9fd4ff).multiplyScalar(frame.phone * 0.9);
+    return frame;
+  };
   const detail = createDetail(surface, materials);
   root.add(detail.root);
   textures.push(...detail.textures);
@@ -459,12 +474,19 @@ export function createRoom(seatHeight: number) {
     setMood,
     setWeather,
     setScreen: display.setMode,
+    phone: props.phone,
+    notice: notice.trigger,
+    noticeStep: notify,
+    get noticing() {
+      return notice.active;
+    },
     update,
     get assets() {
       return decor.state();
     },
     dispose() {
       decor.dispose();
+      notice.dispose();
       const geometries = new Set<import('three').BufferGeometry>();
       const materials = new Set<import('three').Material>();
       root.traverse((object) => {

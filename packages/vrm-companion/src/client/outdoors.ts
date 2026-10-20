@@ -20,6 +20,7 @@ import {
   TorusGeometry,
   Vector2,
 } from 'three';
+import { solarDay } from './sun.js';
 
 export type SkyTime = 'auto' | 'sunset' | 'night';
 export type Weather = 'clear' | 'rain';
@@ -264,20 +265,33 @@ export function createOutdoors() {
     return { group, left, right, phase: i * 1.37, lead: (i % 3) * 0.9 + Math.floor(i / 3) * 0.5 };
   });
   let wet = 0;
+  let solarKey = '';
+  let solar = solarDay(new Date());
   let seconds = 0;
   const update = (dt: number, mode: SkyTime, weather: Weather = 'clear') => {
     seconds += dt;
     const target = weather === 'rain' ? 1 : 0;
     wet = dt === 0 ? target : wet + (target - wet) * Math.min(1, dt * 0.8);
     const now = new Date();
+    const today = now.toDateString();
+    if (today !== solarKey) {
+      solarKey = today;
+      solar = solarDay(now);
+    }
+    const { sunrise, sunset } = solar;
     const hour =
       mode === 'sunset'
-        ? 18
+        ? sunset
         : mode === 'night'
           ? 23
           : now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
-    const daylight = Math.max(0, Math.sin(((hour - 6) / 12) * Math.PI));
-    const twilight = Math.max(0, 1 - Math.abs(hour - 18) / 1.8, 1 - Math.abs(hour - 6) / 1.8);
+    const arc = (hour - sunrise) / (sunset - sunrise);
+    const daylight = Math.max(0, Math.sin(arc * Math.PI));
+    const twilight = Math.max(
+      0,
+      1 - Math.abs(hour - sunset) / 1.2,
+      1 - Math.abs(hour - sunrise) / 1.2,
+    );
     sky.uniforms
       .zenith!.value.set(0x111c38)
       .lerp(new Color(0x6d9fc3), daylight)
@@ -291,9 +305,9 @@ export function createOutdoors() {
       .lerp(new Color(0x8a6f6a), twilight);
     sky.uniforms.zenith!.value.lerp(overcast, wet * 0.8);
     sky.uniforms.horizon!.value.lerp(overcast.clone().multiplyScalar(1.25), wet * 0.75);
-    const angle = ((hour - 6) / 12) * Math.PI;
+    const angle = arc * Math.PI;
     sun.position.set(12 * Math.cos(angle), 6 + 14 * Math.sin(angle), -24);
-    sun.visible = hour >= 5 && hour <= 19.5;
+    sun.visible = hour >= sunrise - 1 && hour <= sunset + 1.5;
     moon.position.set(-8, 13, -28);
     moon.visible = daylight < 0.12;
     sunMaterial.uniforms
@@ -301,7 +315,7 @@ export function createOutdoors() {
       .lerp(new Color(0xffc27d), Math.min(1, twilight * 1.3));
     sunMaterial.uniforms.opacity!.value = Math.min(
       1,
-      Math.max(0, (hour - 5) * 2, (19.5 - hour) * 2),
+      Math.max(0, Math.min((hour - sunrise + 1) * 2, (sunset + 1.5 - hour) * 2)),
     );
     cloudMaterial.uniforms
       .light!.value.set(0x5d6f99)
@@ -354,7 +368,15 @@ export function createOutdoors() {
       bird.left.rotation.z = flap;
       bird.right.rotation.z = -flap;
     }
-    return { daylight, twilight, hour, wet, sunDirection: sun.position.clone().normalize() };
+    return {
+      daylight,
+      twilight,
+      hour,
+      sunrise,
+      sunset,
+      wet,
+      sunDirection: sun.position.clone().normalize(),
+    };
   };
   update(0, 'auto');
   return {

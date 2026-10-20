@@ -139,6 +139,24 @@ describe('public Bot presentation', () => {
     a.dispose();
     provider.dispose();
   });
+  it('counts each wake from idle as a new inbox notice once the feed is live', () => {
+    const { store, sources, provider } = setup();
+    store.applyActivity({ generation: 'g1', revision: 1, bots: [{ slug: 'a', state: 'working' }] });
+    const view = provider.acquire('a');
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    expect(view.getSnapshot().inbox).toBe(0);
+    const state = (revision: number, value: 'idle' | 'thinking' | 'working') =>
+      store.applyActivity({ generation: 'g1', revision, bots: [{ slug: 'a', state: value }] });
+    state(2, 'idle');
+    state(3, 'thinking');
+    state(4, 'working');
+    expect(view.getSnapshot().inbox).toBe(1);
+    state(5, 'idle');
+    state(6, 'thinking');
+    expect(view.getSnapshot().inbox).toBe(2);
+    view.dispose();
+    provider.dispose();
+  });
   it('isolates throwing and rejecting consumers with bounded diagnostics', async () => {
     const { store, provider, errors } = setup();
     const a = provider.acquire('a');

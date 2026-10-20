@@ -107,6 +107,8 @@ export function mountStage(
   let phase = 0;
   let gait = 0;
   let strokes = 0;
+  let keyWeight = 0;
+  let inboxSeen: number | undefined;
   let attend = 0;
   let nod = 0;
   let pausing = false;
@@ -337,6 +339,8 @@ export function mountStage(
           ),
       );
       host.dataset.vrmHour = daylight.hour.toFixed(3);
+      host.dataset.vrmSunrise = daylight.sunrise.toFixed(2);
+      host.dataset.vrmSunset = daylight.sunset.toFixed(2);
       host.dataset.vrmAssets = room?.assets;
     }
     if (vrm) {
@@ -425,6 +429,14 @@ export function mountStage(
       pose('rightShoulder', 0, sip * drink.reach * 0.15 * (1 - drink.lift), 0, blend);
       const looking = attention > 0.4 || talking || waiting || blocked || glance > 0.5;
       const desk = room?.tableY ?? 0.75;
+      const inbox = latest?.inbox ?? 0;
+      if (inboxSeen !== undefined && inbox > inboxSeen && live) room?.notice();
+      inboxSeen = inbox;
+      const crown =
+        vrm.humanoid.getNormalizedBoneNode('head')?.getWorldPosition(new Vector3()) ??
+        new Vector3(motion.x, 1.3, motion.z);
+      const noticed = room?.noticeStep(delta, reduced.matches, crown);
+      host.dataset.vrmNotice = room?.noticing ? 'true' : 'false';
       const desiredGaze = looking
         ? camera.position.clone()
         : thinking && live
@@ -433,6 +445,8 @@ export function mountStage(
             ? room.mug.getWorldPosition(new Vector3())
             : new Vector3(-0.36, desk + 0.48, 0.78);
       if (outside > 0) desiredGaze.lerp(new Vector3(-2.4, desk + 1.1, -0.9), outside);
+      if (noticed?.glance && room && !talking)
+        desiredGaze.lerp(room.phone.getWorldPosition(new Vector3()), noticed.glance);
       if (reduced.matches) gaze.position.copy(desiredGaze);
       else {
         const spring = Math.min(delta, 0.05);
@@ -464,9 +478,28 @@ export function mountStage(
         (talking ? Math.sin(phase * 5) * 0.025 : 0) - chin * 0.14,
         ease,
       );
-      const typing = working && moving ? 1 - attention : 0;
+      const atKeys =
+        moving && motion.phase === 'seated'
+          ? (working ? 1 : thinking ? 0.7 : 0) * (1 - attention)
+          : 0;
+      keyWeight = reduced.matches
+        ? atKeys
+        : keyWeight +
+          (atKeys - keyWeight) * (1 - Math.exp(-delta * (atKeys > keyWeight ? 2.5 : 1.25)));
+      const typing = keyWeight < 0.01 ? 0 : keyWeight;
       const burst = Math.max(0, Math.min(1, (noise(Math.floor(phase / 2.6)) - 0.18) * 3));
-      strokes += delta * 7 * (0.35 + burst * 0.65) * typing;
+      const musing = noise(Math.floor(phase / 1.7) + 7) > 0.55;
+      const rhythm = working ? 'fast' : thinking && musing ? 'slow' : 'none';
+      const pace = rhythm === 'fast' ? 6 + burst * 2 : rhythm === 'slow' ? 2.5 : 0;
+      const mid = strokes - Math.floor(strokes);
+      strokes =
+        pace > 0
+          ? strokes + delta * pace * Math.min(1, typing * 1.4)
+          : mid > 0
+            ? Math.min(Math.ceil(strokes), strokes + delta * 4)
+            : strokes;
+      if (host.dataset.vrmTyping !== (typing ? rhythm : 'none'))
+        host.dataset.vrmTyping = typing ? rhythm : 'none';
       const key = Math.floor(strokes);
       const stroke = strokes - key;
       const hit =

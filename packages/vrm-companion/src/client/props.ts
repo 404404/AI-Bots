@@ -155,9 +155,13 @@ export function createProps(surface: number, sill: number, materials: Materials)
     pen.position.z += Math.sin(i * 1.6) * 0.012;
     pen.rotation.set(Math.sin(i * 1.6) * 0.18, 0, -Math.cos(i * 1.6) * 0.18);
   }
-  const phone = block(1.0, surface + 0.004, 0.52, 0.072, 0.008, 0.15, dark);
+  const phone = new Group();
+  phone.position.set(1.0, surface, 0.52);
   phone.rotation.y = 0.35;
-  block(1.0, surface + 0.0085, 0.52, 0.064, 0.001, 0.135, toon(0x4c6a8a)).rotation.y = 0.35;
+  root.add(phone);
+  block(0, 0.004, 0, 0.072, 0.008, 0.15, dark, phone);
+  const phoneScreen = toon(0x4c6a8a);
+  block(0, 0.0085, 0, 0.064, 0.001, 0.135, phoneScreen, phone);
   for (const [i, color] of [0x5f8f6e, 0xe3dccb, 0xc2563f].entries()) {
     const note = block(1.2, surface + 0.008 + i * 0.016, 0.62, 0.21, 0.015, 0.15, toon(color));
     note.rotation.y = 0.12 - i * 0.18;
@@ -475,6 +479,8 @@ export function createProps(surface: number, sill: number, materials: Materials)
   return {
     root,
     textures,
+    phone,
+    phoneScreen,
     update(seconds: number, night: number) {
       paper.update(seconds, 1);
       corner.update(seconds);

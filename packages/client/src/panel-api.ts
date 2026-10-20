@@ -61,6 +61,7 @@ export interface BotPresentationSnapshot {
   readonly speaking: boolean;
   readonly conversing: boolean;
   readonly mouth: number;
+  readonly inbox: number;
 }
 export interface BotPresentationView {
   getSnapshot(): BotPresentationSnapshot;

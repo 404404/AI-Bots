@@ -12,7 +12,10 @@ describe('room environment', () => {
     expect(outdoors.update(0, 'auto').daylight).toBeCloseTo(1);
     vi.setSystemTime(new Date(2026, 9, 19, 23, 30, 0));
     expect(outdoors.update(0, 'auto')).toMatchObject({ hour: 23.5, daylight: 0 });
-    expect(outdoors.update(0, 'sunset').twilight).toBe(1);
+    const sunset = outdoors.update(0, 'sunset');
+    expect(sunset.twilight).toBe(1);
+    expect(sunset.hour).toBe(sunset.sunset);
+    expect(sunset.sunrise).toBeLessThan(sunset.sunset);
     expect(outdoors.update(0, 'night').hour).toBe(23);
   });
 

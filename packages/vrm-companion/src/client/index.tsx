@@ -22,6 +22,7 @@ import { mountStage, type CameraView } from './stage.js';
 import type { Mood, Weather } from './room.js';
 import type { CharacterShading } from './shading.js';
 import { loadModel } from './library.js';
+import { clockLabel, solarDay } from './sun.js';
 import { panelControls, type PanelControls } from './controls.js';
 
 export const name = 'botharness-vrm-companion-client';
@@ -54,7 +55,7 @@ const CAMERAS: Array<[CameraView, string]> = [
   ['portrait', 'Portrait view'],
 ];
 const MOODS: Array<[Mood, string]> = [
-  ['auto', 'Local time'],
+  ['auto', 'Follow system clock'],
   ['sunset', 'Sunset'],
   ['night', 'Night'],
 ];
@@ -307,6 +308,7 @@ function SceneMenu({
   const ui = useSyncExternalStore(controls.subscribe, controls.read, controls.read);
   const picker = useRef<HTMLInputElement>(null);
   const ready = ui.scene.ready;
+  const sun = solarDay(new Date());
   const moving = ready && snapshot.sync === 'live' && !snapshot.paused && snapshot.available;
   const group = (id: string, text: string, rows: MenuEntry[]): MenuEntry[] => [
     { type: 'separator', id: id + '-separator' },
@@ -338,6 +340,11 @@ function SceneMenu({
       'Time',
       MOODS.map(([value, label]) => ({ id: 'mood:' + value, label, disabled: !ready })),
     ),
+    {
+      type: 'label',
+      id: 'time-sun',
+      text: `Sunrise ${clockLabel(sun.sunrise)} · Sunset ${clockLabel(sun.sunset)}`,
+    },
     ...group(
       'weather',
       'Weather',

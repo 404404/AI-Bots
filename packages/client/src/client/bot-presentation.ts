@@ -70,6 +70,7 @@ export function createBotPresentation(
           speaking: false,
           conversing: false,
           mouth: 0,
+          inbox: 0,
         };
         const notify = () => {
           for (const listener of [...listeners]) {
@@ -100,9 +101,16 @@ export function createBotPresentation(
               : 'idle') as BotPresentationSnapshot['activity'],
             sync: store.getSnapshot().activitySync === 'stale' ? 'stale' : sync,
           };
-          const settled =
-            !next.available || next.paused || next.sync !== 'live'
-              ? { ...next, speaking: false, conversing: false, mouth: 0 }
+          const quiet = !next.available || next.paused || next.sync !== 'live';
+          const woke =
+            !quiet &&
+            snapshot.sync === 'live' &&
+            snapshot.activity === 'idle' &&
+            next.activity !== 'idle';
+          const settled = quiet
+            ? { ...next, speaking: false, conversing: false, mouth: 0 }
+            : woke
+              ? { ...next, inbox: snapshot.inbox + 1 }
               : next;
           if (JSON.stringify(settled) !== JSON.stringify(snapshot)) {
             snapshot = Object.freeze(settled);
