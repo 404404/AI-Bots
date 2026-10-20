@@ -8,4 +8,4 @@ section: Added
 
 ## zh
 
-- 手机端 Activity 中，向左滑动回复或未读会话即可清理，像逐封处理收件箱一样；底部撤销条可以恢复，桌面端 Activity 也会同步隐藏。需要你处理的请求只能"稍后提醒"（滑到底为明天 9:00，也可以选时间），"需要你"现在默认最新的在最上面。筛选 → 已清理 / 已稍后 可以查看并恢复被放到一边的条目；CLI 可用 `deepseekbot inbox --dismissed` 和 `deepseekbot inbox-restore` 完成同样的操作（[#2404](https://github.com/BotHarness/DeepSeekBot/pull/2404)）。
+- 手机端 Activity 中，向左滑动回复或未读会话即可清理，像逐封处理收件箱一样；底部撤销条可以恢复，桌面端 Activity 也会同步隐藏。需要你处理的请求只能“稍后提醒”（滑到底为明天 9:00，也可以选时间），“待你处理”现在默认最新的在最上面。筛选 → 已清理 / 已延后 可以查看并恢复被放到一边的条目；CLI 可用 `deepseekbot inbox --dismissed` 和 `deepseekbot inbox-restore` 完成同样的操作（[#2404](https://github.com/BotHarness/DeepSeekBot/pull/2404)）。

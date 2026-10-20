@@ -103,12 +103,13 @@ export function SwipeRow({
     openRow = self.current;
   }, []);
   const run = useCallback(
-    (action: SwipeAction | undefined) => {
+    (action: SwipeAction | undefined, settle = false) => {
       if (action === undefined) return;
-      closed();
+      if (settle) close();
+      else closed();
       action.run();
     },
-    [closed],
+    [close, closed],
   );
   const runFirst = useCallback(() => {
     haptic('submit');
@@ -181,7 +182,7 @@ export function SwipeRow({
               <Pressable
                 key={action.key}
                 testID={`swipe-action-${action.key}`}
-                onPress={() => run(action)}
+                onPress={() => run(action, true)}
                 style={({ pressed }) => ({
                   ...(index === 0 ? { flex: 1, minWidth: swipeRow.actionWidth } : {}),
                   width: index === 0 ? undefined : swipeRow.actionWidth,
