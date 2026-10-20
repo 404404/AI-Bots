@@ -19,7 +19,7 @@ ALLOWED_USERS=${ALLOWED_USERS:-}
 [[ -n $WORKOS_CLIENT_ID ]] || read -rp "WorkOS client id (client_…): " WORKOS_CLIENT_ID
 [[ -n $ALLOWED_USERS ]] || read -rp "Allowed WorkOS user ids (user_…, comma-separated): " ALLOWED_USERS
 [[ $WORKOS_CLIENT_ID =~ ^client_[A-Za-z0-9]+$ ]] || { echo "bad client id"; exit 1; }
-[[ $ALLOWED_USERS =~ ^(\*|user_[A-Za-z0-9]+(,user_[A-Za-z0-9]+)*)$ ]] || { echo "bad user ids"; exit 1; }
+[[ $ALLOWED_USERS =~ ^user_[A-Za-z0-9]+(,user_[A-Za-z0-9]+)*$ ]] || { echo "explicit user ids required"; exit 1; }
 
 d1_uuid() {
   w d1 list --json 2>/dev/null | node -e '
