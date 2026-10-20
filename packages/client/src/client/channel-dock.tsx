@@ -36,7 +36,8 @@ import {
 } from 'react';
 
 import * as stylex from '@stylexjs/stylex';
-import { Tooltip, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
+import { type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
+import { InstantTooltipScope, Tooltip } from './ds/tooltip.js';
 import {
   DockviewReact,
   type DockviewApi,
@@ -343,12 +344,14 @@ function ChannelMessageContent(): ReactElement {
                     {!filesOpen && DetailActions && detailProps && (
                       <DetailActions key={entryScopeKey(detailProps)} {...detailProps} />
                     )}
-                    <IconButton
-                      aria-label={dock.t('dock.close', { label: detailLabel })}
-                      onClick={closeDetail}
-                    >
-                      <ChannelSidebarIcon name="x" />
-                    </IconButton>
+                    <Tooltip label={dock.t('dock.close', { label: detailLabel })} side="bottom">
+                      <IconButton
+                        aria-label={dock.t('dock.close', { label: detailLabel })}
+                        onClick={closeDetail}
+                      >
+                        <ChannelSidebarIcon name="x" />
+                      </IconButton>
+                    </Tooltip>
                   </>
                 }
               />
@@ -1629,33 +1632,35 @@ function ChannelDockPanelsMenu({
   ];
   return (
     <span ref={menuMount} className="bh-dock-menu" data-dock-menu="">
-      <Menu
-        open={open}
-        portal
-        dense
-        align="end"
-        anchor={
-          <Tooltip label={label} side="bottom" portal delayMs={500}>
-            <IconButton
-              tone="subtle"
-              aria-label={label}
-              aria-haspopup="menu"
-              aria-expanded={open}
-              onClick={() => setOpen((value) => !value)}
-            >
-              <ChannelSidebarIcon name="panels-top-left" />
-            </IconButton>
-          </Tooltip>
-        }
-        items={items}
-        selectedIds={openIds}
-        onSelect={(id) => {
-          setOpen(false);
-          if (id === RESET_ID) onReset();
-          else onToggle(id);
-        }}
-        onClose={() => setOpen(false)}
-      />
+      <InstantTooltipScope>
+        <Menu
+          open={open}
+          portal
+          dense
+          align="end"
+          anchor={
+            <Tooltip label={label} side="bottom" portal delayMs={500}>
+              <IconButton
+                tone="subtle"
+                aria-label={label}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                onClick={() => setOpen((value) => !value)}
+              >
+                <ChannelSidebarIcon name="panels-top-left" />
+              </IconButton>
+            </Tooltip>
+          }
+          items={items}
+          selectedIds={openIds}
+          onSelect={(id) => {
+            setOpen(false);
+            if (id === RESET_ID) onReset();
+            else onToggle(id);
+          }}
+          onClose={() => setOpen(false)}
+        />
+      </InstantTooltipScope>
     </span>
   );
 }

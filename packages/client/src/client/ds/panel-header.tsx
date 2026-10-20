@@ -2,6 +2,7 @@ import { useRef, type ReactElement, type ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 
+import { InstantTooltipScope } from './tooltip.js';
 import { border, color, radius, size, space, text } from './tokens.stylex.js';
 
 const styles = stylex.create({
@@ -255,8 +256,8 @@ export function PanelHeader({
       )}
       {onHide ? <span aria-hidden="true" {...stylex.props(styles.spacer)} /> : null}
       {action === undefined ? null : (
-        <span data-window-drag-recall {...stylex.props(styles.action)}>
-          {action}
+        <span data-panel-actions="" data-window-drag-recall {...stylex.props(styles.action)}>
+          <InstantTooltipScope>{action}</InstantTooltipScope>
         </span>
       )}
     </div>
