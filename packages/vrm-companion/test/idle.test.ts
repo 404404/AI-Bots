@@ -32,7 +32,8 @@ describe('idle micro-action scheduling', () => {
       if (action && action !== actions.at(-1)) actions.push(action);
     }
     expect(actions.length).toBeGreaterThan(3);
-    for (let i = 1; i < actions.length; i++) expect(actions[i]).not.toBe(actions[i - 1]);
+    for (let i = 1; i < actions.length; i++)
+      expect(actions.slice(Math.max(0, i - 3), i)).not.toContain(actions[i]);
   });
 
   it('retreats smoothly when work, speech or movement interrupts', () => {

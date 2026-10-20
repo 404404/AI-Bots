@@ -193,7 +193,7 @@ export function createBotPresentation(
               id,
               body,
               boundaries,
-              beats: speechBeats(body, boundaries, SPEECH_PAGE),
+              beats: speechBeats(body, boundaries, SPEECH_PAGE, 15),
               shown: 0,
               start: 0,
               hold: 0,

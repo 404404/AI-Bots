@@ -27,7 +27,7 @@ export class IdleScheduler {
   weight = 0;
   #elapsed = 0;
   #wait: number;
-  #last: IdleAction | undefined;
+  #recent: IdleAction[] = [];
   #retreating = false;
 
   constructor(
@@ -69,9 +69,9 @@ export class IdleScheduler {
   }
 
   #start() {
-    const choices = IDLE_ACTIONS.filter((action) => action !== this.#last);
+    const choices = IDLE_ACTIONS.filter((action) => !this.#recent.includes(action));
     this.action = choices[Math.min(choices.length - 1, Math.floor(this.random() * choices.length))];
-    this.#last = this.action;
+    this.#recent = [...this.#recent, this.action!].slice(-3);
     this.#elapsed = 0;
     this.progress = 0;
     this.weight = 0;

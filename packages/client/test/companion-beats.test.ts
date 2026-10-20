@@ -82,3 +82,14 @@ it('turns Markdown into plain spoken text', () => {
     ].join('\n'),
   );
 });
+
+it('joins short sentences into one page and keeps clock times together', () => {
+  const body =
+    '冬季横幅齐全；无头像；状态从 13:35 跳到 14:13，是因为整点同步时有一次时区换算，现在已经恢复正常了。';
+  const ends = speechBeats(body, messageGraphemeBoundaries(body), 40, 15);
+  const pages = ends.map((end, index) => body.slice(ends[index - 1] ?? 0, end));
+  expect(pages.join('')).toBe(body);
+  expect(pages[0]).toBe('冬季横幅齐全；无头像；');
+  expect(pages.every((page) => [...page].length <= 40)).toBe(true);
+  expect(pages.some((page) => page.includes('13:35') && page.includes('14:13'))).toBe(true);
+});
