@@ -10,18 +10,13 @@ module.exports = ({ config }) => {
       infoPlist: { ...config.ios.infoPlist, ITSAppUsesNonExemptEncryption: false },
       ...(store ? { bundleIdentifier: 'app.deepseekbot.mobile' } : {}),
     },
-    ...(store
-      ? {
-          name: 'DeepSeekBot',
-          scheme: 'deepseekbot',
-          android: {
-            ...config.android,
-            package: 'app.deepseekbot.mobile',
-            ...(process.env.GOOGLE_SERVICES_JSON
-              ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
-              : {}),
-          },
-        }
-      : {}),
+    android: {
+      ...config.android,
+      ...(store ? { package: 'app.deepseekbot.mobile' } : {}),
+      ...(process.env.GOOGLE_SERVICES_JSON
+        ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
+        : {}),
+    },
+    ...(store ? { name: 'DeepSeekBot', scheme: 'deepseekbot' } : {}),
   };
 };
