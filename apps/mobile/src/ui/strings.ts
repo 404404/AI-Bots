@@ -469,7 +469,7 @@ const en = {
   expired: 'This request expired before a decision, so nothing was sent.',
   outcome: {
     'allowed-once': 'allowed once',
-    'allowed-always-tool': 'Always allowed for this tool',
+    'allowed-always-tool': 'always allowed for this tool',
     'allowed-always-exact': 'always allowed for this command',
     'allowed-always-all': 'always allowed for this tool',
     rejected: 'rejected',
@@ -561,6 +561,20 @@ const en = {
   shareFailed: 'That file could not be downloaded from your computer.',
   card: 'Open the full client on your computer to respond to this.',
   alwaysAllow: 'Always allow',
+  alwaysToolScope: (tool: string) =>
+    `Always allow lets this Bot use ${tool} in the current authorization scope without asking again, even with different inputs. Shell commands may access files outside the current folder.`,
+  alwaysServiceScope:
+    'Allow and remember this service, keeping its independent access restrictions.',
+  alwaysKindScope:
+    'Always allow lets this program run with any arguments, without asking, for the same account and environment variable names.',
+  alwaysUnavailable: 'This operation needs individual confirmation and cannot be always allowed.',
+  grantTitle: 'Allow folder read/write',
+  grantChoose: 'Choose folder',
+  grantScopeNote:
+    'The Bot can keep reading and writing the folder you choose and its subfolders, then continues the task.',
+  grantConfirm: (name: string) => `Let ${name} read and write`,
+  grantAllow: 'Allow read/write',
+  grantAllowed: 'Read/write allowed',
   deny: 'Deny',
   details: 'Details',
   tool: 'Tool',
@@ -574,7 +588,7 @@ const en = {
   option: (letter: string, label: string) => `${letter}. ${label}`,
   cardOutcome: {
     'allowed-once': 'Allowed once',
-    'allowed-always-tool': 'Always allowed for this tool',
+    'allowed-always-tool': 'Always allowed',
     'allowed-always-exact': 'Always allowed',
     'allowed-always-all': 'Always allowed',
     rejected: 'Denied',
@@ -654,7 +668,7 @@ const en = {
   channelNotifications: {
     quietHere: 'Do Not Disturb on this phone',
     quietHereFootnote:
-      'Mentions and replies here stop notifying this phone. Tool approvals, questions and private input requests still notify.',
+      'Mentions and replies here stop notifying this phone. Approvals, folder access, questions and private input requests still notify.',
     quietByHost: 'Muted on this computer, so this phone stays quiet too.',
     muteHost: 'Mute on this computer',
     muteHostFootnote:
@@ -664,7 +678,7 @@ const en = {
     pushOff: 'Notifications are off for this phone. Turn them on in Settings → Notifications.',
   },
   pushKind: {
-    approval: 'Tool approvals',
+    approval: 'Approvals & folder access',
     question: 'Questions',
     'private-input': 'Private input requests',
     reply: 'Mentions & replies',
@@ -934,6 +948,10 @@ const en = {
   browseEmpty: 'No subfolders here.',
   browseTruncated: 'Too many folders; only some are shown.',
   browseUnavailable: 'Your computer cannot list its folders here.',
+  browseUnavailableTypePath:
+    'Your computer opens its own folder chooser, so it cannot list folders on this phone. Pick a registered folder or type the folder path.',
+  folderPath: 'Folder path on your computer',
+  folderPathHint: '/Users/you/Project',
   registeredFolders: 'Folders registered on your computer',
   authorizeHere: 'Authorize this folder',
   authorize: 'Authorize',
@@ -1449,7 +1467,7 @@ const zh: typeof en = {
   asks: (bot: string) => `${bot} 问你`,
   workingFolder: '工作目录',
   arguments: '参数',
-  allowOnce: '允许一次',
+  allowOnce: '允许这次',
   reject: '拒绝',
   submit: '发送回答',
   otherAnswer: '其他回答',
@@ -1553,6 +1571,18 @@ const zh: typeof en = {
   shareFailed: '无法从你的电脑下载这个文件。',
   card: '请在电脑上的完整客户端中处理这条消息。',
   alwaysAllow: '始终允许',
+  alwaysToolScope: (tool: string) =>
+    `选择“始终允许”后，此 Bot 在当前授权范围使用 ${tool} 不再询问，换参数也一样。终端命令可能访问当前目录之外。`,
+  alwaysServiceScope: '允许并记住这个服务，仍保留其独立访问限制。',
+  alwaysKindScope:
+    '选择“始终允许”后，这个程序用同一账号、同一组环境变量名运行时不再询问，参数不限。',
+  alwaysUnavailable: '此操作需要单独确认，不能设为始终允许。',
+  grantTitle: '允许文件夹读写',
+  grantChoose: '选择文件夹',
+  grantScopeNote: 'Bot 可以持续读写你选的文件夹及其子文件夹，然后继续原来的任务。',
+  grantConfirm: (name: string) => `允许 ${name} 读写`,
+  grantAllow: '允许读写',
+  grantAllowed: '已允许读写',
   deny: '拒绝',
   details: '详情',
   tool: '工具',
@@ -1566,7 +1596,7 @@ const zh: typeof en = {
   option: (letter: string, label: string) => `${letter}. ${label}`,
   cardOutcome: {
     'allowed-once': '已允许一次',
-    'allowed-always-tool': '始终允许此工具',
+    'allowed-always-tool': '已始终允许',
     'allowed-always-exact': '已始终允许',
     'allowed-always-all': '已始终允许',
     rejected: '已拒绝',
@@ -1643,7 +1673,8 @@ const zh: typeof en = {
   allowNotificationsOff: '这台手机不会收到这台电脑的任何通知。重新打开后，下面的选择会恢复。',
   channelNotifications: {
     quietHere: '这台手机免打扰',
-    quietHereFootnote: '这里的提及和回复不再通知这台手机。工具审批、提问和私密输入请求照常通知。',
+    quietHereFootnote:
+      '这里的提及和回复不再通知这台手机。审批、文件夹授权、提问和私密输入请求照常通知。',
     quietByHost: '已在这台电脑上静音，这台手机也不会收到。',
     muteHost: '在这台电脑上静音',
     muteHostFootnote: '连这台电脑的网页端和每台手机都会在这里静音，未读消息也不再计入未读数。',
@@ -1651,7 +1682,7 @@ const zh: typeof en = {
     pushOff: '这台手机的通知已关闭。可以在 设置 → 通知 里打开。',
   },
   pushKind: {
-    approval: '工具审批',
+    approval: '审批与文件夹授权',
     question: '提问',
     'private-input': '私密输入请求',
     reply: '提及与回复',
@@ -1919,6 +1950,10 @@ const zh: typeof en = {
   browseEmpty: '这个文件夹没有子文件夹。',
   browseTruncated: '文件夹过多，仅显示一部分。',
   browseUnavailable: '电脑无法在这里列出文件夹。',
+  browseUnavailableTypePath:
+    '这台电脑使用系统自带的文件夹选择器，无法在手机上列出文件夹。请选择已登记的文件夹，或输入文件夹路径。',
+  folderPath: '电脑上的文件夹路径',
+  folderPathHint: '/Users/you/Project',
   registeredFolders: '已在电脑上登记的文件夹',
   authorizeHere: '授权此文件夹',
   authorize: '授权',

@@ -4,6 +4,7 @@ import type { PushCandidate, PushKind, PushSource } from './delivery.js';
 
 const KIND: Partial<Record<HumanAttentionItem['kind'], PushKind>> = {
   'tool-approval': 'approval',
+  'workspace-grant-request': 'approval',
   'user-question': 'question',
   'private-input': 'private-input',
   'channel-reply': 'reply',
@@ -16,7 +17,10 @@ const PREVIEW_LIMIT = 140;
 const PREVIEW_FIELDS = ['command', 'cmd', 'script', 'code', 'url', 'path', 'file_path'];
 
 export interface PushApprovalLookup {
-  (channelId: string, messageId: string): { toolName: string; input: string } | undefined;
+  (
+    channelId: string,
+    messageId: string,
+  ): { toolName: string; input: string; allowAlways?: boolean } | undefined;
 }
 
 function clip(text: string): string | undefined {
@@ -55,7 +59,10 @@ function approvalOf(
   const preview = clip(shown.trim() === '' ? request.toolName : `${request.toolName} · ${shown}`);
   return {
     ...(preview === undefined ? {} : { preview }),
-    categoryId: ONCE_ONLY_TOOLS.has(request.toolName) ? 'tool-approval-once' : 'tool-approval',
+    categoryId:
+      request.allowAlways === true && !ONCE_ONLY_TOOLS.has(request.toolName)
+        ? 'tool-approval'
+        : 'tool-approval-once',
   };
 }
 
@@ -65,7 +72,7 @@ function details(
   approval: PushApprovalLookup | undefined,
 ): { preview?: string; categoryId?: string } {
   if (kind === 'private-input') return {};
-  if (kind === 'approval') return approvalOf(item, approval);
+  if (kind === 'approval' && item.kind === 'tool-approval') return approvalOf(item, approval);
   const preview = clip(item.summary);
   return preview === undefined ? {} : { preview };
 }
