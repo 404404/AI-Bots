@@ -17,8 +17,9 @@
 - Lo-fi look (outlines, glow, halftone shadows, time-of-day grade, vignette) is on by default and Plain turns it off (`data-vrm-effects=on|off`), remembered with the other scene choices.
 - While working, fingers strike keys individually; at night the wall sconce, hutch glow and shelf LED strip light their zones, and at sunset sunbeams come through the window.
 - **Change character…** in the Character menu uploads a `.vrm` (drive the hidden `input[aria-label="VRM file"]`); the panel shows the file name and `data-vrm-model=file`, the choice survives a reload in the same browser, and **Use default** forgets it.
+- Performance: the stage reports `data-vrm-fps`, `data-vrm-work` (main-thread ms per frame), `data-vrm-pace` (60 or 30) and `data-vrm-pixel-ratio` every 2 s of drawing; frame metrics such as `data-vrm-frames` update every 15 frames.
 - The **Auto camera tour** header icon sets `data-vrm-tour=on` and cycles `data-vrm-shot` through portrait, wide, shoulder, room and desk every ~15 s of wall-clock time; picking a view turns it off.
-- While the Bot speaks, `[data-vrm-speech]` shows the text in a bubble above the head (panel vars `--vrm-head-x`/`--vrm-head-y`), and it disappears when speaking ends.
+- While the Bot speaks, `[data-vrm-speech]` shows the current sentence (`page`) in a bubble above the head, holding each before the next; `data-vrm-conversing` stays `true` through pauses and the stage's `data-vrm-attending` is `true` while the character faces the camera (panel vars `--vrm-head-x`/`--vrm-head-y`), and it disappears when speaking ends.
 
 ## How to get to it (user POV)
 

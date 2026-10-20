@@ -67,6 +67,32 @@ describe('public Bot presentation', () => {
     expect(vi.getTimerCount()).toBe(0);
     provider.dispose();
   });
+  it('pages speech by sentence, holds each page and stays in conversation until the last one ends', () => {
+    const { sources, provider } = setup();
+    const view = provider.acquire('a');
+    sources[0]!.emit('baseline', { activity: { generation: 'g1' } });
+    sources[0]!.emit('message', output('a'));
+    vi.advanceTimersByTime(50 * 'Hello there.'.length);
+    expect(view.getSnapshot()).toMatchObject({ page: 'Hello there.', conversing: true });
+    vi.advanceTimersByTime(600);
+    expect(view.getSnapshot()).toMatchObject({
+      page: 'Hello there.',
+      speaking: false,
+      conversing: true,
+    });
+    vi.advanceTimersByTime(3000);
+    expect(view.getSnapshot().page.startsWith('Hello')).toBe(false);
+    expect(view.getSnapshot().text.startsWith('Hello there. W')).toBe(true);
+    vi.advanceTimersByTime(20000);
+    expect(view.getSnapshot()).toMatchObject({
+      text: '',
+      page: '',
+      speaking: false,
+      conversing: false,
+    });
+    view.dispose();
+    provider.dispose();
+  });
   it('isolates Bots and source visibility, drops duplicate output and callbacks after release', () => {
     const { sources, provider } = setup();
     const a = provider.acquire('a'),

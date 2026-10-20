@@ -48,6 +48,21 @@ describe('idle micro-action scheduling', () => {
     expect(idle.weight).toBe(0);
   });
 
+  it('puts the cup down before letting go when a sip is interrupted', () => {
+    const idle = new IdleScheduler(sequence(0.7), 1, 1);
+    run(idle, 1 + IDLE_DURATION.sip * 0.4);
+    expect(idle.action).toBe('sip');
+    const lifted = idle.progress;
+    idle.step(0.2, false);
+    expect(idle.progress).toBeGreaterThan(lifted);
+    expect(idle.weight).toBe(1);
+    run(idle, 0.4, false);
+    expect(idle.progress).toBeCloseTo(0.86);
+    expect(idle.weight).toBeLessThan(1);
+    run(idle, 0.5, false);
+    expect(idle.action).toBeUndefined();
+  });
+
   it('never catches up on time spent ineligible', () => {
     const idle = new IdleScheduler(sequence(0), 6, 6);
     run(idle, 30, false);

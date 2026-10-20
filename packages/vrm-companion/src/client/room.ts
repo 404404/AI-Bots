@@ -392,7 +392,7 @@ export function createRoom(seatHeight: number) {
   const sun = new DirectionalLight(0xffb57d, 2.1);
   sun.position.set(-2, 3, -2);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.1, far: 12 });
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.015;

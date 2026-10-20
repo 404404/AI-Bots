@@ -139,6 +139,7 @@ function Character({ view, controls }: { view: BotPresentationView; controls: Pa
       data-vrm-bot={snapshot.botId}
       data-vrm-activity={snapshot.activity}
       data-vrm-speaking={snapshot.speaking}
+      data-vrm-conversing={snapshot.conversing}
       data-vrm-model={ui.model ? 'file' : 'sample'}
     >
       <div data-vrm-stage="" ref={mount} />
@@ -158,10 +159,14 @@ function Character({ view, controls }: { view: BotPresentationView; controls: Pa
           <Button onClick={() => controls.retry()}>Retry character</Button>
         </div>
       )}
-      {snapshot.text && (
-        <div data-vrm-speech="" aria-label="Bot speech">
+      {snapshot.conversing && snapshot.page && (
+        <div
+          key={snapshot.text.length - snapshot.page.length}
+          data-vrm-speech=""
+          aria-label="Bot speech"
+        >
           <small>{snapshot.name}</small>
-          <p>{snapshot.text}</p>
+          <p>{snapshot.page}</p>
         </div>
       )}
     </section>

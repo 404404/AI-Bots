@@ -107,6 +107,12 @@ export function mountStage(
   let phase = 0;
   let gait = 0;
   let strokes = 0;
+  let attend = 0;
+  let nod = 0;
+  let pausing = false;
+  let blinkAt = 2;
+  let blinkStart = -1;
+  let blinkTwice = false;
   const gazeVelocity = new Vector3();
   let cameraView: CameraView = initial.camera;
   let previousState = '';
@@ -137,7 +143,15 @@ export function mountStage(
   environment.dispose();
   generator.dispose();
   renderer.shadowMap.type = PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  const RATIOS = [1.5, 1.25, 1, 0.75];
+  let ratioStep = RATIOS.findIndex((value) => value <= Math.min(devicePixelRatio, 1.5));
+  if (ratioStep < 0) ratioStep = RATIOS.length - 1;
+  renderer.setPixelRatio(RATIOS[ratioStep]!);
+  let pace = 60;
+  let windowStart = 0,
+    windowFrames = 0,
+    windowWork = 0,
+    slowWindows = 0;
   const post = createPost(renderer);
   const rim = new Color();
   const warm = new Color();
@@ -293,7 +307,7 @@ export function mountStage(
     frame = 0;
     if (!canDraw()) return;
     frame = requestAnimationFrame(draw);
-    if (time - last < 1000 / (reduced.matches ? 10 : 30)) return;
+    if (last && time - last < 1000 / (reduced.matches ? 10 : pace) - 4) return;
     const passed = clock.getDelta();
     const delta = Math.min(passed, 0.05);
     last = time;
@@ -344,7 +358,13 @@ export function mountStage(
       const working = activity === 'working';
       const blocked = activity === 'blocked';
       const waiting = activity === 'waiting';
+      const conversing = !!moving && !!latest?.conversing;
       const talking = moving && latest?.speaking;
+      const pause = conversing && !latest?.speaking;
+      if (pause && !pausing && !reduced.matches) nod = 1;
+      pausing = pause;
+      nod = Math.max(0, nod - delta * 1.6);
+      const nodding = Math.sin(nod * Math.PI) * 0.09;
       const blend = 1 - Math.exp(-delta * 10);
       const sit = motion.seated;
       const walk = Math.sin(gait) * 0.28 * motion.stride;
@@ -352,10 +372,26 @@ export function mountStage(
         !!live &&
         activity === 'idle' &&
         !latest?.speaking &&
+        !conversing &&
         motion.phase === 'seated' &&
         sit >= 1 &&
         !reduced.matches;
       const idleFrame = idle.step(delta, resting);
+      const settled = conversing && idleFrame.weight < 0.05;
+      attend = reduced.matches
+        ? settled
+          ? 1
+          : 0
+        : Math.max(0, Math.min(1, attend + (settled ? delta * 1.4 : -delta * 1.1)));
+      const attention = attend * attend * (3 - 2 * attend);
+      host.dataset.vrmAttending = attention > 0.5 ? 'true' : 'false';
+      actor.updateMatrixWorld(true);
+      const toCamera = camera.position.clone().sub(actor.position);
+      const turn = Math.atan2(
+        Math.sin(Math.atan2(toCamera.x, toCamera.z) - motion.yaw),
+        Math.cos(Math.atan2(toCamera.x, toCamera.z) - motion.yaw),
+      );
+      const twist = Math.max(-1.1, Math.min(1.1, turn)) * attention;
       const doing = (action: IdleAction) => (idleFrame.action === action ? idleFrame.weight : 0);
       const outside = doing('window');
       const stretch = doing('stretch');
@@ -378,12 +414,14 @@ export function mountStage(
       pose(
         'spine',
         sway + (working ? 0.04 : 0) - stretch * 0.14 + sip * drink.reach * 0.12 * (1 - drink.lift),
-        -outside * 0.3 - sip * drink.reach * 0.2 * (1 - drink.lift),
+        -outside * 0.3 - sip * drink.reach * 0.2 * (1 - drink.lift) + twist * 0.22,
         0,
         blend,
       );
+      pose('chest', 0, twist * 0.2, 0, blend);
+      pose('neck', nodding * 0.4, twist * 0.18, 0, blend);
       pose('rightShoulder', 0, sip * drink.reach * 0.15 * (1 - drink.lift), 0, blend);
-      const looking = talking || waiting || blocked || glance > 0.5;
+      const looking = attention > 0.4 || talking || waiting || blocked || glance > 0.5;
       const desk = room?.tableY ?? 0.75;
       const desiredGaze = looking
         ? camera.position.clone()
@@ -412,15 +450,19 @@ export function mountStage(
       );
       pose(
         'head',
-        (thinking ? -0.1 : blocked ? 0.1 : working && !talking ? 0.08 : sway) -
+        (thinking ? -0.1 : blocked ? 0.1 : working && !conversing ? 0.08 : sway * (1 - attention)) +
+          nodding -
           stretch * 0.25 +
           chin * 0.06 -
           sip * drink.lift * 0.22,
-        Math.max(-0.35, Math.min(0.35, yaw * 0.4)) + (waiting ? -0.1 : 0) - outside * 0.25,
+        Math.max(-0.35, Math.min(0.35, yaw * 0.4)) * (1 - attention) +
+          Math.max(-0.5, Math.min(0.5, (turn - twist * 0.6) * 0.8)) * attention +
+          (waiting ? -0.1 : 0) -
+          outside * 0.25,
         (talking ? Math.sin(phase * 5) * 0.025 : 0) - chin * 0.14,
         ease,
       );
-      const typing = working && moving ? 1 : 0;
+      const typing = working && moving ? 1 - attention : 0;
       const burst = Math.max(0, Math.min(1, (noise(Math.floor(phase / 2.6)) - 0.18) * 3));
       strokes += delta * 7 * (0.35 + burst * 0.65) * typing;
       const key = Math.floor(strokes);
@@ -577,7 +619,20 @@ export function mountStage(
       const expressions = vrm.expressionManager;
       if (expressions?.getExpression('aa'))
         expressions.setValue('aa', moving ? (latest?.mouth ?? 0) : 0);
-      const blink = moving && phase % 4 < 0.16 ? Math.sin(((phase % 4) / 0.16) * Math.PI) : 0;
+      if (phase >= blinkAt && blinkStart < 0) {
+        blinkStart = phase;
+        blinkTwice = noise(blinkAt * 7.3) < 0.2;
+      }
+      const since = blinkStart < 0 ? -1 : phase - blinkStart;
+      const blinkLength = blinkTwice ? 0.42 : 0.16;
+      const blink =
+        moving && since >= 0 && since < blinkLength
+          ? Math.sin(((since % 0.21) / (blinkTwice ? 0.21 : 0.16)) * Math.PI) ** 2
+          : 0;
+      if (since >= blinkLength) {
+        blinkStart = -1;
+        blinkAt = phase + 1.8 + noise(phase * 3.1) * 4.2;
+      }
       if (expressions?.getExpression('blink')) expressions.setValue('blink', blink);
       if (expressions && face) {
         const target = faceTarget(latest, phase, reduced.matches);
@@ -598,12 +653,8 @@ export function mountStage(
     tourStep(Math.min(passed, 1));
     controls.update();
     shading?.update();
-    let calls = 0;
-    if (effects) calls = post.render(scene, camera);
-    else {
-      renderer.render(scene, camera);
-      calls = renderer.info.render.calls;
-    }
+    const started = performance.now();
+    const calls = paint();
     const anchor = vrm?.humanoid.getNormalizedBoneNode('head');
     const panel = host.parentElement;
     if (anchor && panel) {
@@ -623,13 +674,52 @@ export function mountStage(
     }
     frames++;
     elapsed += delta;
-    host.dataset.vrmFrames = String(frames);
-    host.dataset.vrmGeometries = String(renderer.info.memory.geometries);
-    host.dataset.vrmTextures = String(renderer.info.memory.textures);
-    host.dataset.vrmCalls = String(calls);
-    host.dataset.vrmSeconds = elapsed.toFixed(2);
+    if (frames % 15 === 1) {
+      host.dataset.vrmFrames = String(frames);
+      host.dataset.vrmGeometries = String(renderer.info.memory.geometries);
+      host.dataset.vrmTextures = String(renderer.info.memory.textures);
+      host.dataset.vrmCalls = String(calls);
+      host.dataset.vrmSeconds = elapsed.toFixed(2);
+    }
+    measure(time, performance.now() - started);
   };
+  const measure = (time: number, work: number) => {
+    if (!windowStart) windowStart = time;
+    windowFrames++;
+    windowWork += work;
+    const span = time - windowStart;
+    if (span < 2000) return;
+    const fps = (windowFrames * 1000) / span;
+    host.dataset.vrmFps = fps.toFixed(1);
+    host.dataset.vrmWork = (windowWork / windowFrames).toFixed(1);
+    host.dataset.vrmPixelRatio = String(RATIOS[ratioStep]);
+    windowStart = time;
+    windowFrames = 0;
+    windowWork = 0;
+    host.dataset.vrmPace = String(pace);
+    const target = reduced.matches ? 10 : pace;
+    slowWindows = fps < target * 0.8 ? slowWindows + 1 : 0;
+    if (slowWindows >= 2 && pace > 30) {
+      slowWindows = 0;
+      pace = 30;
+    } else if (slowWindows >= 2 && ratioStep < RATIOS.length - 1) {
+      slowWindows = 0;
+      ratioStep++;
+      renderer.setPixelRatio(RATIOS[ratioStep]!);
+      renderer.setSize(width, height, false);
+      post.setSize(width, height);
+      host.dataset.vrmPixelRatio = String(RATIOS[ratioStep]);
+    }
+  };
+  function paint() {
+    if (effects) return post.render(scene, camera);
+    renderer.render(scene, camera);
+    return renderer.info.render.calls;
+  }
   const reconcile = () => {
+    windowStart = 0;
+    windowFrames = 0;
+    windowWork = 0;
     cancelAnimationFrame(frame);
     frame = 0;
     clock.getDelta();
@@ -646,6 +736,7 @@ export function mountStage(
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       fitCamera(cameraView);
+      if (canDraw()) paint();
     }
     reconcile();
   });

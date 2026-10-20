@@ -17,6 +17,8 @@ export interface IdleFrame {
 
 const EASE = 1;
 const RETREAT = 2.5;
+const PUT_DOWN = 0.86;
+const PLAY_OUT = 0.9;
 
 export class IdleScheduler {
   action: IdleAction | undefined;
@@ -38,7 +40,9 @@ export class IdleScheduler {
   step(delta: number, eligible: boolean): IdleFrame {
     if (this.action) {
       if (!eligible) this.#retreating = true;
-      if (this.#retreating) {
+      if (this.#retreating && this.action === 'sip' && this.progress < PUT_DOWN) {
+        this.progress = Math.min(PUT_DOWN, this.progress + delta * PLAY_OUT);
+      } else if (this.#retreating) {
         this.weight = Math.max(0, this.weight - delta * RETREAT);
         if (this.weight === 0) this.#finish();
       } else {

@@ -20,6 +20,7 @@ interface Output {
   boundaries: readonly number[];
   beats: readonly number[];
   shown: number;
+  start: number;
   hold: number;
 }
 const decode = (event: Event): Record<string, unknown> | undefined => {
@@ -65,7 +66,9 @@ export function createBotPresentation(
           sync,
           activity: 'idle',
           text: '',
+          page: '',
           speaking: false,
+          conversing: false,
           mouth: 0,
         };
         const notify = () => {
@@ -99,7 +102,7 @@ export function createBotPresentation(
           };
           const settled =
             !next.available || next.paused || next.sync !== 'live'
-              ? { ...next, speaking: false, mouth: 0 }
+              ? { ...next, speaking: false, conversing: false, mouth: 0 }
               : next;
           if (JSON.stringify(settled) !== JSON.stringify(snapshot)) {
             snapshot = Object.freeze(settled);
@@ -108,7 +111,7 @@ export function createBotPresentation(
         };
         const cancel = () => {
           queue = [];
-          publish({ text: '', speaking: false, mouth: 0 });
+          publish({ text: '', page: '', speaking: false, conversing: false, mouth: 0 });
         };
         const scheduleRetry = () => {
           if (stopped || retry !== undefined) return;
@@ -178,6 +181,7 @@ export function createBotPresentation(
               boundaries,
               beats: speechBeats(body, boundaries),
               shown: 0,
+              start: 0,
               hold: 0,
             });
             queue = queue.slice(-3);
@@ -210,10 +214,17 @@ export function createBotPresentation(
             item.hold -= 50;
             if (item.hold <= 0 && item.shown >= item.body.length) {
               queue.shift();
-              publish({ speaking: false, mouth: 0 });
+              publish({
+                text: '',
+                page: '',
+                speaking: false,
+                conversing: queue.length > 0,
+                mouth: 0,
+              });
               return;
             }
-            publish({ speaking: false, mouth: 0 });
+            if (item.hold <= 0) item.start = item.shown;
+            publish({ speaking: false, conversing: true, mouth: 0 });
             return;
           }
           const previous = item.shown;
@@ -222,7 +233,9 @@ export function createBotPresentation(
           const pause = /[。，、！？!?…；;\s]$/u.test(text);
           publish({
             text,
+            page: item.body.slice(item.start, item.shown).trimStart(),
             speaking: true,
+            conversing: true,
             mouth: pause ? 0 : [0.2, 0.65, 0.9, 0.4][item.boundaries.indexOf(item.shown) % 4]!,
           });
           if (item.beats.includes(item.shown))

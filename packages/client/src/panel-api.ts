@@ -57,7 +57,9 @@ export interface BotPresentationSnapshot {
   readonly activity: 'idle' | 'thinking' | 'working' | 'waiting' | 'blocked';
   readonly attention?: string | undefined;
   readonly text: string;
+  readonly page: string;
   readonly speaking: boolean;
+  readonly conversing: boolean;
   readonly mouth: number;
 }
 export interface BotPresentationView {

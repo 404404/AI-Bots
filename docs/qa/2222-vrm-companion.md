@@ -193,6 +193,16 @@ Date: 2026-10-20.
 - **Host.** At 1440 × 900 the header read `VRM Companion · idle · ▷ · person · sliders · pin`; the tour toggle set `data-vrm-tour=on` and relabelled itself Stop camera tour, both menus opened under their icons, and the `instances` journey (pinning through the pin icon) passed with no console errors.
 - **Frames.** `app-header-icons.jpg`, `app-header-icons-menu.jpg`.
 
+## Speech pages, facing the viewer and performance (Human feedback)
+
+Date: 2026-10-20.
+
+- **Feedback.** On Windows: measure performance; dragging the Panel width flashes white; long replies should show page by page with a pause after each; while talking the character should face the camera and look at the viewer, finishing a sip first, with free motion only when idle; and every movement and expression should feel natural.
+- **Baseline (Human's Windows PC, RTX 3090, 332 × 418 Panel, DPR 1.14, head `64451bc2`).** 26 fps on a 120 Hz display, main thread 4.9 ms p50 / 6.2 ms p95 per frame, 229 draw calls, 362 geometries, 37 textures, no long tasks.
+- **Causes.** The 30 fps throttle compared exact frame intervals, so at 120 Hz it skipped to every fifth frame. `ResizeObserver` called `setSize`, which clears the canvas, and the redraw waited for the next animation frame. The presentation published the whole reply cumulatively. Speaking turned the head at most about 8° and the pause between sentences cleared `speaking`, so the gaze returned to the desk; an interrupted sip shrank all weights together, sliding the cup home.
+- **Change.** Frame pacing allows a 4 ms tolerance and targets 60 fps, falling back to 30 and then lower resolution steps when a view stays below 80% of target. Resize redraws synchronously. The sun shadow map is 1024². Per-frame metrics attributes update every 15 frames, and `data-vrm-fps`/`data-vrm-work`/`data-vrm-pace`/`data-vrm-pixel-ratio` report every 2 s. The presentation adds `page` and `conversing`; the bubble shows only the current sentence and clears after the last hold. While conversing, an interrupted sip plays out to the put-down point, then the spine, chest, neck and head turn toward the camera with eased attention and a small nod at each pause; typing yields. Blinks use irregular 1.8–6 s intervals with occasional doubles.
+- **Checks.** A presentation test covers paging, holds and the end of conversation; an idle test covers the sip put-down. A stepped-clock render shows typing → turned to the camera → still facing in a pause → back to work: `talk-turn.jpg`.
+
 ## Acceptance limits and next action
 
 The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

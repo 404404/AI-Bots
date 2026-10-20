@@ -237,7 +237,7 @@ try {
         const state = await page.$eval('[data-vrm-bot="' + ada.slug + '"]', (n) => ({
           activity: n.dataset.vrmActivity,
           speaking: n.dataset.vrmSpeaking,
-          text: n.querySelector('[data-vrm-speech]').textContent,
+          text: n.querySelector('[data-vrm-speech]')?.textContent ?? '',
         }));
         if (!observed.has(state.activity)) {
           observed.add(state.activity);
