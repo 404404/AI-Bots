@@ -59,6 +59,7 @@ import {
   type HostDrawerRow,
 } from './host-drawer-model';
 import { ActivityIcon, CloudIcon, ComputerIcon, PlusIcon } from './icons';
+import { noticeHostKept } from '../unpair-notice';
 
 export const hostDrawer = createHostDrawer({
   switchTo: async (hostId) => {
@@ -166,7 +167,7 @@ function confirmUnpair(row: HostDrawerRow, name: string): void {
     {
       text: t.unpair,
       style: 'destructive',
-      onPress: () => hostSession.unpair(row.hostId),
+      onPress: () => hostSession.unpair(row.hostId).then((result) => noticeHostKept(result, name)),
     },
   ]);
 }
