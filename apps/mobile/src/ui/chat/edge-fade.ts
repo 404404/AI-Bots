@@ -5,13 +5,8 @@ export function edgeFadeStops(
   cover: number,
 ): readonly { offset: number; opacity: number }[] {
   if (cover <= 0 || height <= cover) return edgeFade.stops;
-  const start = cover / height;
-  const peak = edgeFade.stops[0].opacity;
-  return [
-    { offset: 0, opacity: 1 },
-    ...edgeFade.stops.map((stop) => ({
-      offset: start + stop.offset * (1 - start),
-      opacity: (stop.opacity / peak) * edgeFade.cover,
-    })),
-  ];
+  return Array.from({ length: edgeFade.samples + 1 }, (_, index) => {
+    const offset = index / edgeFade.samples;
+    return { offset, opacity: (1 - offset) ** edgeFade.curve };
+  });
 }

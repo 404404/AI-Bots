@@ -217,7 +217,7 @@ it('keeps the bottom fade at the message viewport edge beneath the composer cont
   const controls = view.querySelector('[data-testid="chat-controls"]')!;
   const fade = content.querySelector('[data-edge="bottom"]');
   expect(fade).not.toBeNull();
-  expect(fade?.getAttribute('data-height')).toBe(String(edgeFade.bottom));
+  expect(fade?.getAttribute('data-height')).toBe(String(edgeFade.reach));
   expect(controls.querySelector('[data-edge]')).toBeNull();
   expect(fade!.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
 });
