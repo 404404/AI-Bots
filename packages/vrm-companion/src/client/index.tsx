@@ -1,6 +1,17 @@
 import type { Context } from '@deepseek-ai/cordis';
-import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
-import { Button, Menu, Tag, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
+import { useCallback, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  Button,
+  IconPauseOutlineRegular,
+  IconPinOutlineRegular,
+  IconPlayOutlineRegular,
+  IconSlidersTwoOutlineRegular,
+  IconUserOutlineRegular,
+  Menu,
+  Tag,
+  Tooltip,
+  type MenuEntry,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 import type {
   BotPresentation,
   BotPresentationView,
@@ -20,7 +31,10 @@ const CSS = `
 [data-vrm-panel] > [data-vrm-panel]{flex:1;height:auto}
 [data-vrm-stage]{position:absolute;inset:0;overflow:hidden}
 [data-vrm-status]{color:var(--dsw-alias-label-secondary)}
-[data-vrm-header-actions]{display:inline-flex;align-items:center;gap:6px;min-width:0}
+[data-vrm-header-actions]{display:inline-flex;align-items:center;gap:2px;min-width:0}
+[data-vrm-header-actions] [data-vrm-icon]{width:28px;padding:0;color:var(--dsw-alias-label-tertiary)}
+[data-vrm-header-actions] [data-vrm-icon]:hover,[data-vrm-header-actions] [data-vrm-icon][aria-expanded=true],[data-vrm-header-actions] [data-vrm-icon][aria-pressed=true]{color:var(--dsw-alias-label-primary)}
+[data-vrm-header-actions] > [data-vrm-activity-tag]{margin-right:4px}
 [data-vrm-header-actions] > [data-vrm-activity-tag]{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 [data-vrm-attention]{position:absolute;top:12px;left:12px;right:12px;z-index:1;padding:4px 8px;border-radius:var(--dsw-radius-md);background:color-mix(in srgb,var(--dsw-alias-bg-base) 85%,transparent)}
 [data-vrm-speech]{--vrm-bubble-width:min(300px,calc(var(--vrm-panel-width,100vw) - 24px));--vrm-bubble-left:clamp(12px,calc(var(--vrm-head-x,70vw) - 150px),calc(var(--vrm-panel-width,100vw) - var(--vrm-bubble-width) - 12px));position:absolute;z-index:1;left:var(--vrm-bubble-left);bottom:clamp(12px,calc(100% - var(--vrm-head-y,35%) + 22px),calc(100% - 72px));width:var(--vrm-bubble-width);display:flex;flex-direction:column;gap:4px;padding:10px 14px;border:1px solid var(--dsw-alias-label-primary);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 8px 22px color-mix(in srgb,var(--dsw-alias-label-primary) 16%,transparent);transform-origin:calc(var(--vrm-head-x,70vw) - var(--vrm-bubble-left)) calc(100% + 10px);animation:vrm-speech-in .22s cubic-bezier(.2,.9,.3,1.2)}
@@ -193,6 +207,84 @@ function BoundCharacter({
     </div>
   );
 }
+type IconComponent = (props: { size?: number }) => ReactNode;
+
+function HeaderIcon({
+  label,
+  icon: Icon,
+  pressed,
+  open,
+  data,
+  onClick,
+}: {
+  label: string;
+  icon: IconComponent;
+  pressed?: boolean;
+  open?: boolean;
+  data: string;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip label={label} side="bottom" delayMs={500}>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label={label}
+        aria-pressed={pressed}
+        aria-haspopup={open === undefined ? undefined : 'menu'}
+        aria-expanded={open}
+        data-vrm-icon=""
+        {...{ [data]: '' }}
+        icon={<Icon size={16} />}
+        onClick={onClick}
+      />
+    </Tooltip>
+  );
+}
+
+function HeaderMenu({
+  label,
+  icon,
+  data,
+  items,
+  selectedIds,
+  onSelect,
+}: {
+  label: string;
+  icon: IconComponent;
+  data: string;
+  items: MenuEntry[];
+  selectedIds: string[];
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Menu
+      open={open}
+      anchor={
+        <HeaderIcon
+          label={label}
+          icon={icon}
+          open={open}
+          data={data}
+          onClick={() => setOpen(!open)}
+        />
+      }
+      items={items}
+      selectedIds={selectedIds}
+      onSelect={(id) => {
+        setOpen(false);
+        onSelect(id);
+      }}
+      onClose={() => setOpen(false)}
+      align="end"
+      portal
+      compact
+      dense
+    />
+  );
+}
+
 function SceneMenu({
   view,
   controls,
@@ -208,7 +300,6 @@ function SceneMenu({
 }) {
   const snapshot = useSyncExternalStore(view.subscribe, view.getSnapshot, view.getSnapshot);
   const ui = useSyncExternalStore(controls.subscribe, controls.read, controls.read);
-  const [open, setOpen] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const ready = ui.scene.ready;
   const moving = ready && snapshot.sync === 'live' && !snapshot.paused && snapshot.available;
@@ -217,8 +308,7 @@ function SceneMenu({
     { type: 'label', id: id + '-label', text },
     ...rows,
   ];
-  const items: MenuEntry[] = [
-    { type: 'label', id: 'character-label', text: 'Character' },
+  const character: MenuEntry[] = [
     { id: 'model:pick', label: 'Change character…' },
     ...(ui.model
       ? [
@@ -228,12 +318,16 @@ function SceneMenu({
           },
         ]
       : []),
-    ...SHADINGS.map(([value, label]) => ({ id: 'shading:' + value, label, disabled: !ready })),
-    ...group('view', 'View', [
-      ...CAMERAS.map(([value, label]) => ({ id: 'camera:' + value, label, disabled: !ready })),
-      { id: 'camera:reset', label: 'Reset view', disabled: !ready },
-      { id: 'tour:toggle', label: 'Auto camera tour', disabled: !ready },
-    ]),
+    ...group(
+      'shading',
+      'Shading',
+      SHADINGS.map(([value, label]) => ({ id: 'shading:' + value, label, disabled: !ready })),
+    ),
+  ];
+  const scene: MenuEntry[] = [
+    { type: 'label', id: 'view-label', text: 'View' },
+    ...CAMERAS.map(([value, label]) => ({ id: 'camera:' + value, label, disabled: !ready })),
+    { id: 'camera:reset', label: 'Reset view', disabled: !ready },
     ...group(
       'time',
       'Time',
@@ -257,27 +351,26 @@ function SceneMenu({
         disabled: !moving,
       },
     ]),
-    { type: 'separator', id: 'instance-separator' },
-    instanceId
-      ? { id: 'instance:delete', label: 'Delete instance', danger: true }
-      : { id: 'instance:pin', label: 'Pin character globally' },
+    ...(instanceId
+      ? [
+          { type: 'separator' as const, id: 'instance-separator' },
+          { id: 'instance:delete', label: 'Delete instance', danger: true },
+        ]
+      : []),
     { type: 'label', id: 'hint', text: 'Drag to orbit · scroll to zoom' },
   ];
   const select = (id: string) => {
-    setOpen(false);
     const [kind, value] = id.split(':') as [string, string];
     if (kind === 'model' && value === 'pick') picker.current?.click();
     else if (kind === 'model' && value === 'reset') controls.reset();
     else if (kind === 'shading') controls.shading(value as CharacterShading);
     else if (kind === 'camera')
       controls.camera(value === 'reset' ? ui.camera : (value as CameraView));
-    else if (kind === 'tour') controls.tour(!ui.tour);
     else if (kind === 'mood') controls.mood(value as Mood);
     else if (kind === 'weather') controls.weather(value as Weather);
     else if (kind === 'effects') controls.effects(value === 'on');
     else if (kind === 'move')
       controls.stage?.command(value === 'sit' ? 'sit' : value === 'stand' ? 'stand' : 'wander');
-    else if (id === 'instance:pin') pin();
     else if (id === 'instance:delete') remove();
   };
   return (
@@ -290,35 +383,44 @@ function SceneMenu({
           <Tag tone="danger">{ui.failure}</Tag>
         </span>
       )}
-      <Menu
-        open={open}
-        anchor={
-          <Button
-            size="sm"
-            variant="toolbar"
-            aria-haspopup="menu"
-            aria-expanded={open}
-            data-vrm-scene-menu=""
-            onClick={() => setOpen(!open)}
-          >
-            Scene
-          </Button>
-        }
-        items={items}
+      <HeaderIcon
+        label={ui.tour ? 'Stop camera tour' : 'Auto camera tour'}
+        icon={ui.tour ? IconPauseOutlineRegular : IconPlayOutlineRegular}
+        pressed={!!ui.tour}
+        data="data-vrm-tour-toggle"
+        onClick={() => {
+          if (ready) controls.tour(!ui.tour);
+        }}
+      />
+      <HeaderMenu
+        label="Character"
+        icon={IconUserOutlineRegular}
+        data="data-vrm-character-menu"
+        items={character}
+        selectedIds={['shading:' + ui.shading]}
+        onSelect={select}
+      />
+      <HeaderMenu
+        label="Scene"
+        icon={IconSlidersTwoOutlineRegular}
+        data="data-vrm-scene-menu"
+        items={scene}
         selectedIds={[
-          ...(ui.tour ? ['tour:toggle'] : ['camera:' + ui.camera]),
+          ...(ui.tour ? [] : ['camera:' + ui.camera]),
           'mood:' + ui.mood,
           'weather:' + ui.weather,
-          'shading:' + ui.shading,
           ui.effects ? 'effects:on' : 'effects:off',
         ]}
         onSelect={select}
-        onClose={() => setOpen(false)}
-        align="end"
-        portal
-        compact
-        dense
       />
+      {!instanceId && (
+        <HeaderIcon
+          label="Pin character globally"
+          icon={IconPinOutlineRegular}
+          data="data-vrm-pin"
+          onClick={pin}
+        />
+      )}
       <input
         ref={picker}
         type="file"

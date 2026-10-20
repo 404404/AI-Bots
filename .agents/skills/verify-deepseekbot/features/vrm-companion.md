@@ -9,20 +9,20 @@
 - Seated idle gestures (window, stretch, chin, sip, glance) start after 6–14 s of live idle; `data-vrm-idle` on the stage names the current one (`none` otherwise) and returns to `none` when work, speaking or movement interrupts.
 - Pause/disconnect/hidden/close cancel playback; reconnect never speaks history.
 - Per-instance renderer disposal, late model loads, reduced motion, resizing and visible fallback on WebGL loss.
-- Full-body Panel canvas with every control in the Panel header's **Scene** menu (`[data-vrm-scene-menu]`), desk/room/portrait cameras, seated keyboard contact and bounded stand/walk/return choreography. The scene is widened by resizing the native Panel split; there is no expanded dialog.
-- The Scene menu loads a local `.vrm` file (`data-vrm-model=file|sample`; `data-vrm-spec` is `0` for VRM 0.x such as VRoid, `1` otherwise) and switch back to the sample.
+- Full-body Panel canvas with every control as an icon button in the Panel header: tour toggle `[data-vrm-tour-toggle]`, Character menu `[data-vrm-character-menu]`, Scene menu `[data-vrm-scene-menu]` and pin `[data-vrm-pin]` (contextual only), desk/room/portrait cameras, seated keyboard contact and bounded stand/walk/return choreography. The scene is widened by resizing the native Panel split; there is no expanded dialog.
+- The Character menu loads a local `.vrm` file (`data-vrm-model=file|sample`; `data-vrm-spec` is `0` for VRM 0.x such as VRoid, `1` otherwise) and switch back to the sample.
 - Reversible MToon/lilToon shading comparison; camera, room time and shading survive a remount of the same Bot's view.
 - Spatial exterior, local-time sky/sun/lamp lighting, explicit sunset/night previews, and reduced-motion-aware ambient movement.
 - Clear/Rain weather from the Scene menu (`data-vrm-weather`), with rain streaks, overcast sky and droplets on the glass; the monitor's content and glow follow the current Activity, with a music player at idle.
 - Lo-fi look (outlines, glow, halftone shadows, time-of-day grade, vignette) is on by default and Plain turns it off (`data-vrm-effects=on|off`), remembered with the other scene choices.
 - While working, fingers strike keys individually; at night the wall sconce, hutch glow and shelf LED strip light their zones, and at sunset sunbeams come through the window.
-- **Change character…** in the Scene menu uploads a `.vrm` (drive the hidden `input[aria-label="VRM file"]`); the panel shows the file name and `data-vrm-model=file`, the choice survives a reload in the same browser, and **Use default** forgets it.
-- **Auto camera tour** in the Scene menu sets `data-vrm-tour=on` and cycles `data-vrm-shot` through portrait, wide, shoulder, room and desk every ~15 s of wall-clock time; picking a view turns it off.
+- **Change character…** in the Character menu uploads a `.vrm` (drive the hidden `input[aria-label="VRM file"]`); the panel shows the file name and `data-vrm-model=file`, the choice survives a reload in the same browser, and **Use default** forgets it.
+- The **Auto camera tour** header icon sets `data-vrm-tour=on` and cycles `data-vrm-shot` through portrait, wide, shoulder, room and desk every ~15 s of wall-clock time; picking a view turns it off.
 - While the Bot speaks, `[data-vrm-speech]` shows the text in a bubble above the head (panel vars `--vrm-head-x`/`--vrm-head-y`), and it disappears when speaking ends.
 
 ## How to get to it (user POV)
 
-Install the local `@botharness/vrm-companion` Bundle into the task-owned Profile. Enter Bot mode, select a Bot, open Messages from the rail if closed, then choose VRM Companion in the Messages header. **Pin character globally** in the Scene menu creates an explicitly fixed instance. **Delete instance** in the same menu removes metadata; a normal close retains it. Group headers omit the contextual entry while fixed global instances remain available.
+Install the local `@botharness/vrm-companion` Bundle into the task-owned Profile. Enter Bot mode, select a Bot, open Messages from the rail if closed, then choose VRM Companion in the Messages header. The header pin icon (**Pin character globally**) creates an explicitly fixed instance. **Delete instance** in the fixed instance's Scene menu removes metadata; a normal close retains it. Group headers omit the contextual entry while fixed global instances remain available.
 
 ## Driving it with verify-app
 

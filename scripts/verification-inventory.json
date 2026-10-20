@@ -1943,7 +1943,7 @@
     },
     {
       "path": "scripts/e2e-vrm-companion.mjs",
-      "sha256": "6be0deb222adfb3b68a1585a7475b74dca4f6efe915b0c1edd362413bf4c9269",
+      "sha256": "43e7b70c119e997b5bb24b779d945698b1f9389f7bb09dd952345970ecff1e01",
       "category": "mapped",
       "reason": "Isolated real Host journey for VRM loading, live speech, fixed bindings, refresh, Group gating and renderer disposal; native CLI uninstall/reinstall requires a task-owned Host restart.",
       "task": 2222,

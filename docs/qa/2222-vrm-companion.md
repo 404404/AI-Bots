@@ -184,6 +184,15 @@ Date: 2026-10-20.
 - **Host.** At 1440 × 900 the header showed `VRM Companion · idle · Scene`; Night set `data-vrm-mood=night`, uploading `c.vrm` through the menu loaded it, and both pinned Ada/Bob instances carried their own Scene menu. The `instances` journey passed with no console errors after the Host was restarted on the fresh build (a Host started before the rebuild returned 404 for the appearance-control route). With the tour on, `data-vrm-shot` moved portrait → wide → shoulder → room at 18, 28, 47 and 63 seconds under software rendering.
 - **Frames.** Whole app with the header menu: `app-header-scene.jpg`, `app-header-menu.jpg`; tour shots: `camera-tour.jpg`.
 
+## Icon buttons in the panel header (Human feedback)
+
+Date: 2026-10-20.
+
+- **Feedback.** The header should not use a text button; follow the other Panel headers and use icons.
+- **Change.** The text **Scene** button became four ghost icon buttons with tooltips, sized and colored like the native header actions: play/pause for **Auto camera tour** (`aria-pressed`), a person icon for the **Character** menu (Change character…, Use default, MToon/lilToon), sliders for the **Scene** menu (View, Time, Weather, Look, Movement, and Delete instance on a fixed instance) and a pin for **Pin character globally** on a contextual Panel.
+- **Host.** At 1440 × 900 the header read `VRM Companion · idle · ▷ · person · sliders · pin`; the tour toggle set `data-vrm-tour=on` and relabelled itself Stop camera tour, both menus opened under their icons, and the `instances` journey (pinning through the pin icon) passed with no console errors.
+- **Frames.** `app-header-icons.jpg`, `app-header-icons-menu.jpg`.
+
 ## Acceptance limits and next action
 
 The default model is VRoid Project's AvatarSample_A; its provenance, license and the texture downscale are recorded with the asset. This is silent text-paced speaking, without TTS, audio lip-sync, VRMA packs, model uploads or final character art. Pause/disconnect/hidden-document cancellation and late callbacks have focused regression coverage; all Activity poses exist, but real waiting/blocked transitions and native hot-disable/HMR were not separately qualified in this run.

@@ -174,14 +174,14 @@ try {
     if (phase === 'instances') {
       const bob = bots.find((b) => b.displayName === 'VRM QA Bob');
       assert(bob);
-      assert(await sceneAction('Pin character globally'), 'Missing Pin character globally');
+      await click('[data-vrm-pin]');
       await delay(800);
       await click('button[aria-label="VRM Companion"]');
       await click('button[data-channel-id="dm-' + bob.slug + '"]');
       await delay(700);
       await click('button[aria-label="VRM Companion"]');
       await page.waitForSelector('[data-vrm-bot="' + bob.slug + '"] [data-vrm-loaded="true"]');
-      assert(await sceneAction('Pin character globally'), 'Missing Pin character globally');
+      await click('[data-vrm-pin]');
       await delay(800);
       await click('button[aria-label="VRM Companion"]');
       const bindings = () =>

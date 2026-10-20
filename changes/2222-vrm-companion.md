@@ -4,7 +4,7 @@ section: Added
 
 ## en
 
-- All VRM panel controls now live in a **Scene** menu in the panel header instead of over the 3D scene: character, view, time, weather, look, movement and pinning. A new **Auto camera tour** slowly cycles the camera through desk, portrait, wide, over-the-shoulder and room shots, pausing while you drag ([#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)).
+- All VRM panel controls now live in the panel header as icon buttons, like the other panels, instead of over the 3D scene: a camera-tour toggle, a **Character** menu, a **Scene** menu for view, time, weather, look and movement, and a pin. The new **Auto camera tour** slowly cycles the camera through desk, portrait, wide, over-the-shoulder and room shots, pausing while you drag ([#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)).
 - **Change character…** in the VRM panel replaces the character with a `.vrm` file from your computer (VRoid/VRM 0.x or VRM 1.0). The file is remembered in this browser for that Bot and never uploaded, the same typing, gestures, expressions and speech bubble apply to it, and **Use default** switches back ([#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)).
 - When the Bot speaks, its words now appear in a speech bubble above the character's head, styled like the Bot avatar's bubble, with the tail following the head as the camera moves. Typing hands now rest on the keys instead of sinking into the keyboard, typing comes in natural bursts, head turns and idle gestures ease in and out, and the clouds are soft and misty instead of blocky ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
 - While typing, the character now strikes keys with individual fingers instead of bobbing its palms. The room surfaces have a soft painted brush texture with smoother toon shading, and the room is lit by several zoned lights: a wall sconce, a glow inside the book hutch, an LED strip under the wall shelf, warm bounce light and sunbeams from the window at sunset. New details include cables to the wall outlet, an air conditioner with a swinging louver, a basket of blankets, slippers, a floor cushion and a printed mug ([#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)).
@@ -23,7 +23,7 @@ section: Added
 
 ## zh
 
-- VRM 面板的控件全部移到面板标题栏的 **Scene** 菜单，不再覆盖在 3D 画面上：人物、视角、时间、天气、画面风格、动作和固定实例都在其中。新增 **Auto camera tour**，镜头会在桌边、近景、远景、肩后和房间全景之间缓慢轮换，拖动画面时暂停（[#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)）。
+- VRM 面板的控件全部移到面板标题栏，和其他面板一样使用图标按钮，不再覆盖在 3D 画面上：轮换机位开关、**Character** 人物菜单、包含视角／时间／天气／画面风格／动作的 **Scene** 菜单，以及固定按钮。新增的 **Auto camera tour**，镜头会在桌边、近景、远景、肩后和房间全景之间缓慢轮换，拖动画面时暂停（[#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)）。
 - VRM 面板新增 **Change character…**，可以用电脑上的 `.vrm` 文件（VRoid/VRM 0.x 或 VRM 1.0）替换人物。文件按 Bot 保存在当前浏览器里，不会上传；打字、小动作、表情和说话气泡同样适用于新人物；**Use default** 恢复默认人物（[#2222](https://github.com/BotHarness/DeepSeekBot/issues/2222)）。
 - Bot 说话时，文字会以对话气泡显示在角色头顶，样式与 Bot 头像的气泡一致，气泡尾巴随镜头跟住头部。打字时手放在按键上，不再陷进键盘，敲击带有自然的快慢节奏；转头和闲置动作的起止更平滑；云改成柔和的云雾，不再是明显的块状（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
 - 打字时角色改为逐根手指敲击按键，不再是手掌上下起伏。房间表面加入柔和的手绘笔触质感，toon 明暗更平滑；房间改由多处分区灯光照亮：墙上壁灯、书架内的暖光、置物架下的 LED 灯带，日落时还有窗边的暖色反光和光束。新增细节包括连到墙上插座的线缆、扫风叶片会摆动的空调、装着毯子的编织篮、拖鞋、地上坐垫和印花马克杯（[#2305](https://github.com/BotHarness/DeepSeekBot/issues/2305)）。
