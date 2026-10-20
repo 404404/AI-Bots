@@ -103,6 +103,7 @@ import type {
   MarketplaceTopic,
 } from '../marketplace/client.js';
 import type { AltchaChallenge } from '../marketplace/altcha.js';
+import { MARKETPLACE_LANGUAGES, type MarketplaceLanguage } from '../marketplace/language.js';
 import {
   MAX_DESCRIPTOR_BIO_LENGTH,
   MAX_DESCRIPTOR_TAG_LENGTH,
@@ -496,6 +497,7 @@ export interface BridgeMethods {
   onboarding(payload: unknown): Promise<BridgeResult<OnboardingSnapshot>>;
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
+  introEvent(payload: unknown): BridgeResult<null>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
   botNewSession(payload: unknown): Promise<BridgeResult<{ started: true }>>;
   botCompact(payload: unknown): Promise<BridgeResult<ManualCompactionResult>>;
@@ -940,6 +942,11 @@ function asSlug(payload: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
+function marketplaceLang(value: unknown): MarketplaceLanguage | undefined | false {
+  if (value === undefined) return undefined;
+  return MARKETPLACE_LANGUAGES.find((language) => language === value) ?? false;
+}
+
 function parseOptional(source: Record<string, unknown>, key: string): ParsedField<string> {
   const value = source[key];
   if (value === undefined) return { ok: true, value: undefined };
@@ -966,6 +973,17 @@ function releaseUnavailable(): BridgeResult<never> {
     error: { code: 'release-unavailable', message: 'Release information is unavailable' },
   };
 }
+
+const INTRO_STEP_IDS = ['welcome', 'theme', 'model', 'community', 'start'];
+const INTRO_EVENTS: Record<string, Record<string, readonly string[] | 'boolean'>> = {
+  intro_shown: {},
+  intro_step_viewed: { step: INTRO_STEP_IDS },
+  intro_dismissed: { step: INTRO_STEP_IDS, via: ['skip', 'close'] },
+  intro_completed: { starter: ['botPrompt', 'firstRequest', 'exampleRequest', 'own'] },
+  intro_theme_changed: { setting: ['scheme', 'preset', 'wallpaper'] },
+  intro_model_saved: { advanced: 'boolean' },
+  intro_community_clicked: { target: ['github', 'discord', 'qq'] },
+};
 
 function telemetryUnavailable(): BridgeResult<never> {
   return {
@@ -2004,6 +2022,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           asSlug(payload),
           action as TutorialAction | undefined,
         );
+        if (action !== undefined)
+          deps.telemetry?.capture?.('tutorial_action', { action: String(action) });
         const newsAvailable =
           (await deps
             .onboardingNews?.(asSlug(payload) ?? value.defaultBotSlug)
@@ -2027,6 +2047,28 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const result = deps.registry.inheritModel(slug, revision as number);
       if (!result.ok) return invalidInput('Bot model changed; reopen before saving');
       return { ok: true, value: { revision: result.record.modelPlanRevision ?? 0 } };
+    },
+    introEvent(payload) {
+      const source = asObject(payload);
+      const event = source['event'];
+      const shape =
+        typeof event === 'string' && Object.hasOwn(INTRO_EVENTS, event)
+          ? INTRO_EVENTS[event as keyof typeof INTRO_EVENTS]
+          : undefined;
+      if (shape === undefined) return invalidInput('Unknown intro event');
+      const properties: Record<string, string | boolean> = {};
+      for (const [key, allowed] of Object.entries(shape)) {
+        const value = source[key];
+        if (
+          allowed === 'boolean'
+            ? typeof value !== 'boolean'
+            : typeof value !== 'string' || !allowed.includes(value)
+        )
+          return invalidInput(`Invalid intro event ${key}`);
+        properties[key] = value as string | boolean;
+      }
+      deps.telemetry?.capture?.(event as string, properties);
+      return { ok: true, value: null };
     },
     async onboardingModel(payload) {
       if (deps.modelCatalog === undefined || deps.defaultModel === undefined) return unavailable();
@@ -2837,6 +2879,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return Promise.resolve(invalidInput('invalid sort'));
       }
       if (sort !== undefined) query.sort = sort;
+      const lang = marketplaceLang(source['lang']);
+      if (lang === false) return Promise.resolve(invalidInput('invalid lang'));
+      if (lang !== undefined) query.lang = lang;
       return marketplaceCall((client) => client.list(query));
     },
     marketplaceTopics() {
@@ -2893,11 +2938,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     marketplaceDetail(payload) {
-      const id = asObject(payload)['id'];
+      const { id, lang: langValue } = asObject(payload);
       if (typeof id !== 'string' || id.trim().length === 0) {
         return Promise.resolve(invalidInput('id is required'));
       }
-      return marketplaceCall((client) => client.detail(id.trim()));
+      const lang = marketplaceLang(langValue);
+      if (lang === false) return Promise.resolve(invalidInput('invalid lang'));
+      return marketplaceCall((client) => client.detail(id.trim(), lang));
     },
     marketplaceSubmit(payload) {
       const { url, altcha } = asObject(payload);
