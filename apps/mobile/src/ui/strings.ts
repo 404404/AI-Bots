@@ -690,6 +690,7 @@ const en = {
   unreadCount: (count: number) => (count === 1 ? '1 unread message' : `${count} unread messages`),
   mutedUnread: (count: number) =>
     count === 1 ? 'muted, 1 unread message' : `muted, ${count} unread messages`,
+  openSearch: 'Search',
   closeSearch: 'Close search',
   searchPlaceholder: 'Search Bots and Channels',
   searchNoMatch: (query: string) => `No Bot or Channel matches “${query}”.`,
@@ -1742,6 +1743,7 @@ const zh: typeof en = {
   sectionNeedsYou: (count: number) => `${count} 个需要你`,
   unreadCount: (count: number) => `${count} 条未读消息`,
   mutedUnread: (count: number) => `已静音，${count} 条未读消息`,
+  openSearch: '搜索',
   closeSearch: '关闭搜索',
   searchPlaceholder: '搜索 Bot 和频道',
   searchNoMatch: (query: string) => `没有名称包含“${query}”的 Bot 或频道。`,
