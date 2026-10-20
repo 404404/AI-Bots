@@ -4,7 +4,7 @@ section: Changed
 
 ## en
 
-- Every section in the Bot settings sidebar, such as General, Models & runtime, Devices and About, now shows an icon before its label so the list is quicker to scan ([#2396](https://github.com/BotHarness/DeepSeekBot/pull/2396)).
+- Every section in the Bot settings sidebar, such as General, Models & execution, Devices and About, now shows an icon before its label so the list is quicker to scan ([#2396](https://github.com/BotHarness/DeepSeekBot/pull/2396)).
 
 ## zh
 
