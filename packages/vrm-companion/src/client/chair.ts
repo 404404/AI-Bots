@@ -79,8 +79,9 @@ export function createChair(seatHeight: number, materials: ReturnType<typeof cre
   cushion(0, 0.56, -0.19, 0.25, 0.11, 0.07);
   cushion(0, 0.16, -0.12, 0.31, 0.14, 0.09);
   for (const side of [-1, 1]) {
-    cushion(side * 0.32, 0.1, 0.04, 0.025, 0.25, 0.03, materials.brass);
-    cushion(side * 0.32, 0.23, 0.04, 0.075, 0.045, 0.32);
+    cushion(side * 0.28, 0.08, 0.04, 0.025, 0.2, 0.03, materials.brass);
+    cushion(side * 0.25, 0.175, 0.04, 0.09, 0.025, 0.03, materials.brass);
+    cushion(side * 0.25, 0.19, 0.06, 0.07, 0.045, 0.3);
   }
   root.traverse((object) => {
     if (object instanceof Mesh) object.castShadow = object.receiveShadow = true;

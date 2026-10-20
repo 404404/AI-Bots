@@ -411,6 +411,7 @@ export function mountStage(
       const chin = doing('chin');
       const sip = doing('sip');
       const glance = doing('glance');
+      const browse = doing('phone');
       const drinkPath = (progress: number) => {
         const span = (from: number, to: number) => {
           const t = Math.max(0, Math.min(1, (progress - from) / (to - from)));
@@ -423,6 +424,18 @@ export function mountStage(
         };
       };
       const drink = sip ? drinkPath(idleFrame.progress) : { reach: 0, lift: 0, tilt: 0 };
+      const handset = browse
+        ? (() => {
+            const span = (from: number, to: number) => {
+              const t = Math.max(0, Math.min(1, (idleFrame.progress - from) / (to - from)));
+              return t * t * (3 - 2 * t);
+            };
+            return {
+              reach: span(0, 0.15) - span(0.9, 1),
+              lift: span(0.17, 0.32) - span(0.7, 0.84),
+            };
+          })()
+        : { reach: 0, lift: 0 };
       host.dataset.vrmIdle = idleFrame.action ?? 'none';
       pose(
         'spine',
@@ -450,9 +463,11 @@ export function mountStage(
         ? camera.position.clone()
         : thinking && live
           ? new Vector3(motion.x - 0.9, desk + 1.6, motion.z + 1.2)
-          : sip > 0 && room
-            ? room.mug.getWorldPosition(new Vector3())
-            : new Vector3(-0.36, desk + 0.48, 0.78);
+          : browse > 0 && room
+            ? room.phone.getWorldPosition(new Vector3())
+            : sip > 0 && room
+              ? room.mug.getWorldPosition(new Vector3())
+              : new Vector3(-0.36, desk + 0.48, 0.78);
       if (outside > 0) desiredGaze.lerp(new Vector3(-2.4, desk + 1.1, -0.9), outside);
       if (noticed?.glance && room && !talking)
         desiredGaze.lerp(room.phone.getWorldPosition(new Vector3()), noticed.glance);
@@ -479,7 +494,8 @@ export function mountStage(
           nodding -
           stretch * 0.25 +
           chin * 0.06 -
-          sip * drink.lift * 0.22,
+          sip * drink.lift * 0.22 +
+          browse * handset.lift * 0.3,
         Math.max(-0.35, Math.min(0.35, yaw * 0.4)) * (1 - facingViewer) +
           Math.max(-0.5, Math.min(0.5, (turn - twist * 0.6) * 0.8)) * facingViewer +
           (waiting ? -0.1 : 0) -
@@ -561,8 +577,10 @@ export function mountStage(
       if (room) {
         room.mug.position.copy(room.mugHome);
         room.mug.quaternion.identity();
+        room.phone.quaternion.copy(room.phoneRest);
+        room.phoneGlow(browse * handset.lift * 0.9);
       }
-      if (room && head && (chin > 0 || sip > 0)) {
+      if (room && head && (chin > 0 || sip > 0 || browse > 0)) {
         actor.updateMatrixWorld(true);
         const facing = new Vector3(Math.sin(motion.yaw), 0, Math.cos(motion.yaw));
         const mouth = head
@@ -574,6 +592,49 @@ export function mountStage(
           rightWeight = chin;
           const x = new Vector3(0, -1, 0).addScaledVector(facing, 0.25).normalize();
           const y = facing.clone().negate().addScaledVector(x, x.dot(facing)).normalize();
+          const rub = reduced.matches ? 0 : Math.sin(phase * 1.7) * 0.08;
+          rightGrip = new Quaternion()
+            .setFromAxisAngle(new Vector3(0, 1, 0), (0.9 + rub) * chin)
+            .multiply(
+              new Quaternion().setFromAxisAngle(
+                new Vector3(0, 1, 0).cross(facing).normalize(),
+                -0.2 * chin,
+              ),
+            )
+            .multiply(
+              new Quaternion().setFromRotationMatrix(
+                new Matrix4().makeBasis(x, y, x.clone().cross(y)),
+              ),
+            );
+        } else if (browse > 0) {
+          const lifted = browse * handset.lift;
+          const crown = head.getWorldPosition(new Vector3());
+          const side = new Vector3(0, 1, 0).cross(facing).normalize();
+          const viewing = crown
+            .clone()
+            .add(new Vector3(0, -0.2 * modelScale, 0))
+            .addScaledVector(facing, 0.25 * modelScale)
+            .addScaledVector(side, -0.05 * modelScale);
+          const toFace = crown.sub(viewing).normalize();
+          const upward = new Vector3(0, 1, 0).addScaledVector(toFace, -toFace.y).normalize();
+          const held = new Quaternion().setFromRotationMatrix(
+            new Matrix4().makeBasis(toFace.clone().cross(upward), toFace, upward),
+          );
+          room.phone.position.lerp(viewing, lifted);
+          room.phone.quaternion.slerp(held, lifted);
+          const screen = new Vector3(0, 1, 0).applyQuaternion(room.phone.quaternion);
+          const length = new Vector3(0, 0, 1).applyQuaternion(room.phone.quaternion);
+          rightGoal = room.phone.position
+            .clone()
+            .addScaledVector(length, -0.09)
+            .addScaledVector(screen, 0.05 * (1 - lifted) - 0.03 * lifted);
+          rightWeight = browse * handset.reach;
+          const x = length.clone().negate();
+          const y = screen
+            .clone()
+            .multiplyScalar(1 - 2 * lifted)
+            .addScaledVector(side, -Math.sin(lifted * Math.PI));
+          y.addScaledVector(x, -x.dot(y)).normalize();
           rightGrip = new Quaternion().setFromRotationMatrix(
             new Matrix4().makeBasis(x, y, x.clone().cross(y)),
           );
@@ -606,7 +667,7 @@ export function mountStage(
           const keys = new Vector3(
             (side === 'left' ? 0.66 : 0.48) +
               typing * Math.sin(phase * 0.7 + (side === 'left' ? 0 : 2.1)) * 0.012,
-            room.tableY + 0.115 - (side === tapSide ? typing * hit * 0.004 : 0),
+            room.tableY + 0.095 - (side === tapSide ? typing * hit * 0.004 : 0),
             0.13 + typing * Math.sin(phase * 0.5 + (side === 'left' ? 1 : 0)) * 0.006,
           );
           const free = side === 'right' && rightGoal ? rightWeight : 0;
@@ -618,7 +679,7 @@ export function mountStage(
           const distance = Math.max(0.001, Math.min(a.distanceTo(goal), lengthA + lengthB - 0.001));
           const along =
             (lengthA * lengthA - lengthB * lengthB + distance * distance) / (2 * distance);
-          const pole = new Vector3(side === 'left' ? 0.5 : -0.5, -1, 0);
+          const pole = new Vector3(side === 'left' ? 1 : -1, -1, 0);
           pole.addScaledVector(direction, -pole.dot(direction)).normalize();
           const elbow = a
             .clone()
@@ -648,7 +709,7 @@ export function mountStage(
           );
         }
       }
-      const grasp = rightGrip ? rightWeight : 0;
+      const grasp = rightGrip ? rightWeight * (browse > 0 ? 0.45 : 1) : 0;
       const quick = reduced.matches ? 1 : 1 - Math.exp(-delta * 24);
       const open = stretch;
       for (const side of ['left', 'right'] as const) {

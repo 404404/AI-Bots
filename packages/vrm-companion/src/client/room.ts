@@ -75,7 +75,7 @@ export function createRoom(seatHeight: number) {
     root.add(mesh);
     return mesh;
   };
-  const tableY = seatHeight + 0.3;
+  const tableY = seatHeight + 0.22;
   box(0, -0.06, 0, 4.4, 0.12, 3.6, wood);
   box(0, 2.88, -1.25, 4.4, 0.2, 0.12, dark);
   box(-2.15, 1.45, -0.25, 0.12, 2.9, 2.1, materials.plaster);
@@ -296,6 +296,8 @@ export function createRoom(seatHeight: number) {
   root.add(props.root);
   textures.push(...props.textures);
   const phoneHome = props.phone.position.clone();
+  const phoneRest = props.phone.quaternion.clone();
+  let noticeGlow = 0;
   const notice = createNotice(props.phone);
   root.add(notice.root);
   textures.push(...notice.textures);
@@ -306,7 +308,8 @@ export function createRoom(seatHeight: number) {
       phoneHome.y,
       phoneHome.z + frame.buzz * 0.002,
     );
-    props.phoneScreen.emissive.setHex(0x9fd4ff).multiplyScalar(frame.phone * 1.3);
+    noticeGlow = frame.phone * 1.3;
+    props.phoneScreen.emissive.setHex(0x9fd4ff).multiplyScalar(noticeGlow);
     return frame;
   };
   const detail = createDetail(surface, materials);
@@ -475,6 +478,11 @@ export function createRoom(seatHeight: number) {
     setWeather,
     setScreen: display.setMode,
     phone: props.phone,
+    phoneHome,
+    phoneRest,
+    phoneGlow(level: number) {
+      props.phoneScreen.emissive.setHex(0x9fd4ff).multiplyScalar(Math.max(noticeGlow, level));
+    },
     notice: notice.trigger,
     noticeStep: notify,
     get noticing() {

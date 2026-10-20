@@ -36,7 +36,7 @@ describe('idle micro-action scheduling', () => {
   });
 
   it('retreats smoothly when work, speech or movement interrupts', () => {
-    const idle = new IdleScheduler(sequence(0.5), 1, 1);
+    const idle = new IdleScheduler(sequence(0.4), 1, 1);
     run(idle, 2.2);
     expect(idle.action).toBeDefined();
     const before = idle.weight;
@@ -48,10 +48,13 @@ describe('idle micro-action scheduling', () => {
     expect(idle.weight).toBe(0);
   });
 
-  it('puts the cup down before letting go when a sip is interrupted', () => {
-    const idle = new IdleScheduler(sequence(0.7), 1, 1);
-    run(idle, 1 + IDLE_DURATION.sip * 0.4);
-    expect(idle.action).toBe('sip');
+  it.each([
+    ['sip', 0.6],
+    ['phone', 0.9],
+  ] as const)('puts the %s down before letting go when interrupted', (action, pick) => {
+    const idle = new IdleScheduler(sequence(pick), 1, 1);
+    run(idle, 1 + IDLE_DURATION[action] * 0.4);
+    expect(idle.action).toBe(action);
     const lifted = idle.progress;
     idle.step(0.2, false);
     expect(idle.progress).toBeGreaterThan(lifted);

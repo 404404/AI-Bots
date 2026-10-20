@@ -1,4 +1,4 @@
-export const IDLE_ACTIONS = ['window', 'stretch', 'chin', 'sip', 'glance'] as const;
+export const IDLE_ACTIONS = ['window', 'stretch', 'chin', 'sip', 'glance', 'phone'] as const;
 export type IdleAction = (typeof IDLE_ACTIONS)[number];
 
 export const IDLE_DURATION: Record<IdleAction, number> = {
@@ -7,6 +7,7 @@ export const IDLE_DURATION: Record<IdleAction, number> = {
   chin: 6,
   sip: 4.2,
   glance: 2.4,
+  phone: 6.5,
 };
 
 export interface IdleFrame {
@@ -40,7 +41,11 @@ export class IdleScheduler {
   step(delta: number, eligible: boolean): IdleFrame {
     if (this.action) {
       if (!eligible) this.#retreating = true;
-      if (this.#retreating && this.action === 'sip' && this.progress < PUT_DOWN) {
+      if (
+        this.#retreating &&
+        (this.action === 'sip' || this.action === 'phone') &&
+        this.progress < PUT_DOWN
+      ) {
         this.progress = Math.min(PUT_DOWN, this.progress + delta * PLAY_OUT);
       } else if (this.#retreating) {
         this.weight = Math.max(0, this.weight - delta * RETREAT);

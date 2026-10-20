@@ -8,7 +8,7 @@ import {
   messageGraphemeBoundaries,
   messagePreview,
 } from '../../../core/src/channels/message-preview.js';
-import { speechBeats, beatHold } from './companion-beats.js';
+import { speechBeats, beatHold, speechText } from './companion-beats.js';
 
 interface Source {
   addEventListener(name: string, listener: (event: Event) => void): void;
@@ -24,6 +24,7 @@ interface Output {
   hold: number;
 }
 const SPEECH_STALE_LIMIT = 10_000;
+const SPEECH_PAGE = 40;
 const decode = (event: Event): Record<string, unknown> | undefined => {
   if (!(event instanceof MessageEvent)) return;
   try {
@@ -185,14 +186,14 @@ export function createBotPresentation(
             if (seen.has(id)) return;
             seen.add(id);
             if (seen.size > 200) seen.delete(seen.values().next().value!);
-            const body = messagePreview(value.body);
+            const body = messagePreview(speechText(value.body));
             if (!body.trim()) return;
             const boundaries = messageGraphemeBoundaries(body);
             queue.push({
               id,
               body,
               boundaries,
-              beats: speechBeats(body, boundaries),
+              beats: speechBeats(body, boundaries, SPEECH_PAGE),
               shown: 0,
               start: 0,
               hold: 0,
