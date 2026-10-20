@@ -33,9 +33,7 @@ it('tells a new user what the computer needs and opens the site guide', async ()
   const openURL = vi.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   const view = await render();
   for (const step of t.pairGuide.steps) expect(view.textContent).toContain(step);
-  expect(t.pairGuide.url).toMatch(
-    /^https:\/\/deepseekbot\.botharness\.ai\/.*docs\/mobile-pairing\/$/u,
-  );
+  expect(t.pairGuide.url).toMatch(/^https:\/\/deepseekbot\.app\/(en\/)?docs\/mobile-pairing\/$/u);
 
   await act(async () =>
     view.querySelector<HTMLElement>('[data-testid="pair-guide-open"]')!.click(),
