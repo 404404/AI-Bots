@@ -8,7 +8,12 @@ export function alwaysNote(request: Pick<ApprovalRequest, 'toolName' | 'allowAlw
   return t.alwaysToolScope(request.toolName);
 }
 
-const HIGH_RISK = new Set(['secret_cli', 'secret_mcp_connect', 'bot_create']);
+const HIGH_RISK = new Set([
+  'secret_cli',
+  'secret_mcp_connect',
+  'bot_create',
+  'channel_attachment_open',
+]);
 
 export function highRisk(toolName: string): boolean {
   return HIGH_RISK.has(toolName);

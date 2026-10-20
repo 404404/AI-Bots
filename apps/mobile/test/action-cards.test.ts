@@ -290,6 +290,30 @@ describe('Tool approval detail in the DM', () => {
     expect(view.textContent).toContain(t.riskTool);
   });
 
+  it('reveals every line of a long diff before the Human decides', async () => {
+    const fake = host();
+    const lines = Array.from({ length: 45 }, (_, index) => `line ${index}`).join('\n');
+    fake.answers.set('channelTimeline', () =>
+      edited('write', { file_path: 'long.md', content: lines }),
+    );
+    const view = await render(card(connect(fake)));
+    await press(button(view, t.details));
+    const diff = () => view.querySelector('[data-testid="approval-diff"]')!.textContent;
+    expect(diff()).not.toContain('line 44');
+    await press(button(view, t.diffMore(5)));
+    expect(diff()).toContain('line 44');
+    expect(view.querySelector('[data-testid="approval-diff-more"]')).toBeNull();
+  });
+
+  it('puts the original attachment warning next to the buttons', async () => {
+    const fake = host();
+    fake.answers.set('channelTimeline', () =>
+      edited('channel_attachment_open', { attachment_id: 'a1' }),
+    );
+    const view = await render(card(connect(fake)));
+    expect(view.textContent).toContain(t.riskOriginal);
+  });
+
   it('puts the secret warning next to the buttons for secret_cli', async () => {
     const fake = host();
     fake.answers.set('channelTimeline', () =>
