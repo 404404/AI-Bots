@@ -14,7 +14,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     portal,
     children,
   }: {
-    label: string;
+    label: string | (() => string);
     delayMs?: number;
     focusDelayMs?: number;
     portal?: boolean;
@@ -23,7 +23,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     createElement(
       'span',
       {
-        'data-tooltip': label,
+        'data-tooltip': typeof label === 'function' ? label() : label,
         'data-delay': String(delayMs ?? 0),
         'data-focus-delay': String(focusDelayMs ?? 0),
         'data-portal': String(portal === true),
@@ -70,6 +70,24 @@ describe('panel header action tooltips', () => {
     expect(tooltip?.dataset.delay).toBe('0');
     expect(tooltip?.dataset.focusDelay).toBe('0');
     expect(tooltip?.dataset.portal).toBe('true');
+  });
+
+  it('explain on the panel title that it drags and hides, instead of a native title', () => {
+    act(() =>
+      root.render(
+        <PanelHeader
+          label="Messages"
+          onHide={() => {}}
+          hideLabel="Close Messages"
+          hideHint="Drag to move, click to hide the panel"
+        />,
+      ),
+    );
+    const tooltip = tooltipOf('Drag to move, click to hide the panel');
+    expect(tooltip?.querySelector('[data-panel-hide]')?.getAttribute('aria-label')).toBe(
+      'Close Messages',
+    );
+    expect(host.querySelector('[data-panel-label]')?.hasAttribute('title')).toBe(false);
   });
 
   it('keep the caller delay outside a header', () => {

@@ -334,6 +334,7 @@ function ChannelMessageContent(): ReactElement {
                 label={detailLabel}
                 onHide={closeDetail}
                 hideLabel={dock.t('dock.close', { label: detailLabel })}
+                hideHint={dock.t('dock.headHintHide')}
                 badge={
                   !filesOpen && DetailBadge && detailProps ? (
                     <DetailBadge key={entryScopeKey(detailProps)} {...detailProps} />
@@ -547,6 +548,7 @@ function DockPanelHeader({ entryId, panelId }: { entryId: string | undefined; pa
             panel.onTitleHide?.();
           }}
           hideLabel={closeLabel}
+          hideHint={dock.t('dock.headHint')}
           icon={<ChannelSidebarIcon name={panel.icon} />}
           label={HeaderTabs === undefined ? panel.title : (entry?.headerLabel ?? panel.title)}
           context={
