@@ -44,6 +44,7 @@ import type {
   MarketplaceTopic,
 } from '../marketplace/client.js';
 import type { AltchaChallenge } from '../marketplace/altcha.js';
+import type { MarketplaceLanguage } from '../marketplace/language.js';
 import type {
   ReleaseInfo,
   ReleaseInstall,
@@ -622,6 +623,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
         expectedDefaultRevision,
       }),
     );
+  }
+  introEvent(event: string, properties: Record<string, string | boolean> = {}): null {
+    return unwrap(this.methods.introEvent({ ...properties, event }));
   }
   modelPlanInherit(slug: string, expectedRevision: number): { revision: number } {
     return unwrap(this.methods.modelPlanInherit({ slug, expectedRevision }));
@@ -1760,8 +1764,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrapAsync(this.methods.marketplaceTopics());
   }
 
-  async marketplaceDetail(id: string): Promise<MarketplaceDetail> {
-    return unwrapAsync(this.methods.marketplaceDetail({ id }));
+  async marketplaceDetail(id: string, lang?: MarketplaceLanguage): Promise<MarketplaceDetail> {
+    return unwrapAsync(this.methods.marketplaceDetail(lang === undefined ? { id } : { id, lang }));
   }
 
   async releaseInfo(since?: string): Promise<ReleaseInfo> {
@@ -1871,6 +1875,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'tobHome',
   'onboarding',
   'onboardingModel',
+  'introEvent',
   'modelPlanInherit',
   'channelRetry',
   'botNewSession',
