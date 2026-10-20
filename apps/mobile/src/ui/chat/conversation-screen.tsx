@@ -57,7 +57,6 @@ import { botColor } from '../bot-color';
 import { ApprovalCard } from './approval-card';
 import { GrantRequestCard } from './grant-request-card';
 import { PrivateInputCard } from './private-input-card';
-import { fullClientParams } from '../../host/full-client';
 import { ActivityRow } from './activity-row';
 import type { BubbleGroup } from './bubble-shape';
 import { botBusy } from './bot-tone';
