@@ -35,12 +35,14 @@ With neither, the app builds without push.
 
 From the main checkout or any of its worktrees:
 
-```powershell
+```sh
 pnpm install
-cd apps\mobile
+cd apps/mobile
 npx expo prebuild --clean --platform android
 npx expo run:android --device
 ```
+
+On Windows PowerShell the commands are the same, with `cd apps\mobile`.
 
 `prebuild --clean` is needed once per checkout, and again after `app.config.js`, `app.json`, a
 native dependency or `.secrets/google-services.json` changes; an `android/` folder generated
@@ -55,9 +57,20 @@ repository's `.git` history (over 1 GB of PR media) and the archive can pass the
 (AAB for Play) and `store-test-apk` (sideloadable APK, signed with the upload key, so a phone
 must uninstall the Play copy before installing it).
 
+```sh
+cd apps/mobile
+EAS_NO_VCS=1 EAS_PROJECT_ROOT=../.. npx eas-cli build --platform android --profile store-test
+EAS_NO_VCS=1 EAS_PROJECT_ROOT=../.. npx eas-cli build --platform android --profile store-test-apk
+```
+
+In PowerShell, set the variables first: `$env:EAS_NO_VCS='1'; $env:EAS_PROJECT_ROOT='../..'`.
+
 ## Rules
 
 - Never commit these files, paste their contents into chat, a PR, an issue or a log, or copy
   them into a worktree. Pass paths, not values.
+- `prebuild` copies the Firebase config into `apps/mobile/android/app/google-services.json`.
+  `apps/mobile/.gitignore` ignores `android/`, so it stays out of git; delete `android/` before
+  sharing or archiving a checkout.
 - A new machine-local secret goes into `.secrets/` and gets a row in the table above in the same
   change that starts using it.
