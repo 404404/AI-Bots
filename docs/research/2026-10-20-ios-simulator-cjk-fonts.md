@@ -11,6 +11,8 @@
 
 **Bottom line.** No Apple release note or known issue names CJK fonts in the iOS 26 Simulator (§1.1). What Apple does acknowledge is a class of iOS 26.x **Simulator runtime** bugs where a system font is present but fails to load. Text then renders as blanks or boxes in the Simulator and SwiftUI Canvas, while a physical device renders it fine. An Apple DTS engineer called that a bug, and users confirmed that the iOS 26.4 runtime fixed the emoji case ([817957](https://developer.apple.com/forums/thread/817957)). Your symptoms fit that class (inference): system-wide, including the system keyboard, so not the app; tied to one runtime; and CoreText names the system Chinese UI face `.PingFangUITextSC` but cannot map glyphs from it. **Most likely cause: the 26.0 runtime image or its font data is broken or not loading on this Mac.** The less likely cause is a PingFang file that is downloaded on demand and missing (§1.3). **Fix, in order:** (1) create a fresh simulator on the newest iOS runtime, installed through Xcode, not a third-party tool; (2) erase the device and reinstall the 26.0 runtime; (3) add Chinese to the simulator's languages so the system fetches PingFang. Before blaming the app, check whether Safari in the same simulator also fails (§4).
 
+**Outcome (2026-10-20, verified on the QA Mac).** A fresh device on the iOS 26.0 (23A343) runtime stayed broken. A new device on the iOS 27.0 (24A434) runtime, installed through Xcode 27, rendered the 小测 Chats row title in light and dark and a Chinese Safari page, with zero `Unmapped` log lines. Fix 1 worked; QA now uses iOS 27.
+
 ## 1. Evidence
 
 ### 1.1 Apple release notes: nothing on CJK fonts
