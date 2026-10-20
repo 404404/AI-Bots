@@ -1264,11 +1264,13 @@ export function WorkspaceGrantsEntry({
               <div key={rule.id} className="bh-workspace-folder-row">
                 <div className="bh-workspace-folder-main">
                   <span className="bh-workspace-folder-toggle">
-                    {rule.kind === 'exact'
-                      ? t('approval.exactRule', { tool: rule.toolName })
-                      : rule.kind === 'secret-cli'
-                        ? t('approval.secretCliRule', secretCliRuleLabel(rule.input))
-                        : t('approval.allRule')}
+                    {rule.kind === 'tool'
+                      ? t('approval.toolRule', { tool: rule.toolName })
+                      : rule.kind === 'exact'
+                        ? t('approval.exactRule', { tool: rule.toolName })
+                        : rule.kind === 'secret-cli'
+                          ? t('approval.secretCliRule', secretCliRuleLabel(rule.input))
+                          : t('approval.allRule')}
                     {' · '}
                     {rule.role === 'assignment'
                       ? t('approval.assignment')
@@ -1300,7 +1302,7 @@ export function WorkspaceGrantsEntry({
                       {t('approval.externalCreator', { actor: rule.externalCreator.actorId })}
                     </div>
                   ) : null}
-                  {rule.kind !== 'all-opaque' ? (
+                  {rule.kind !== 'all-opaque' && rule.kind !== 'tool' ? (
                     <pre className="bh-tool-approval-input">{rule.input}</pre>
                   ) : null}
                 </details>

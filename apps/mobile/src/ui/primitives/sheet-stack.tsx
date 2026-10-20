@@ -2,11 +2,10 @@ import { useMemo, type ReactNode } from 'react';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useNavigation } from 'expo-router';
 import type { NativeStackHeaderProps } from 'expo-router/native-stack';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { space } from '../design/tokens';
-import { ChevronLeftIcon } from '../shell/icons';
 import { t } from '../strings';
-import { Text } from './text';
+import { DrawerHeader } from './drawer-header';
 
 import { useDesignTheme } from '../design/theme';
 import { SheetScreen } from './sheet-screen';
@@ -16,34 +15,16 @@ function SheetStackHeader({ back, navigation, options, route }: NativeStackHeade
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: space.x3,
-        minHeight: theme.touch + space.x4,
-        paddingHorizontal: space.x3,
+        paddingHorizontal: space.x5,
+        paddingTop: space.x3,
+        paddingBottom: space.x3,
         backgroundColor: theme.overlay.fill,
       }}
     >
-      {back === undefined ? (
-        options.headerLeft?.({ tintColor: theme.color.fg, canGoBack: false })
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.back}
-          onPress={() => navigation.goBack()}
-          style={{
-            minWidth: theme.touch,
-            minHeight: theme.touch,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ChevronLeftIcon color={theme.color.fg} size={theme.type.title.line} />
-        </Pressable>
-      )}
-      <Text accessibilityRole="header" variant="title" strong numberOfLines={1} style={{ flex: 1 }}>
-        {options.title ?? route.name}
-      </Text>
+      <DrawerHeader
+        title={typeof options.title === 'string' ? options.title : route.name}
+        {...(back === undefined ? {} : { onBack: () => navigation.goBack() })}
+      />
     </View>
   );
 }

@@ -47,6 +47,7 @@ import {
   type MarketplaceTopic,
 } from '../../../core/src/marketplace/client.js';
 import { parseChallenge, type AltchaChallenge } from '../../../core/src/marketplace/altcha.js';
+import type { MarketplaceLanguage } from '../../../core/src/marketplace/language.js';
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
 import type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
 export type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
@@ -990,6 +991,9 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
           }
         : undefined;
     toolApprovalRequest = {
+      ...(typeof request['allowAlways'] === 'boolean'
+        ? { allowAlways: request['allowAlways'] }
+        : {}),
       sessionId: request['sessionId'],
       callId: request['callId'],
       toolName: request['toolName'],
@@ -1361,6 +1365,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       author.kind !== 'human' ||
       typeof decision['requestMessageId'] !== 'string' ||
       (decision['outcome'] !== 'allowed-once' &&
+        decision['outcome'] !== 'allowed-always-tool' &&
         decision['outcome'] !== 'allowed-always-exact' &&
         decision['outcome'] !== 'allowed-always-all' &&
         decision['outcome'] !== 'rejected') ||
@@ -2005,8 +2010,11 @@ export async function loadMarketplacePage(
 export async function loadMarketplaceDetail(
   call: BridgeCall,
   id: string,
+  lang?: MarketplaceLanguage,
 ): Promise<MarketplaceDetail> {
-  const detail = parseMarketplaceDetail(await unwrap(call, 'marketplaceDetail', { id }));
+  const detail = parseMarketplaceDetail(
+    await unwrap(call, 'marketplaceDetail', lang === undefined ? { id } : { id, lang }),
+  );
   if (detail === undefined) throw new Error('invalid marketplaceDetail response');
   return detail;
 }
@@ -2994,7 +3002,7 @@ export interface ToolApprovalRuleView {
   botSlug: string;
   role: 'orchestrator' | 'assignment';
   scopeKey: string;
-  kind: 'exact' | 'all-opaque' | 'secret-cli';
+  kind: 'exact' | 'tool' | 'all-opaque' | 'secret-cli';
   toolName: string;
   input: string;
   createdAt: string;
@@ -3219,7 +3227,12 @@ export async function decideToolApproval(
   call: BridgeCall,
   channelId: string,
   messageId: string,
-  outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected',
+  outcome:
+    | 'allowed-once'
+    | 'allowed-always-tool'
+    | 'allowed-always-exact'
+    | 'allowed-always-all'
+    | 'rejected',
 ): Promise<void> {
   const response = asRecord(
     await unwrap(call, 'toolApprovalDecide', {
@@ -3375,6 +3388,28 @@ export async function readGroupWorkspaceGrant(
   const grants = result['grants'].map(parseWorkspaceGrant);
   if (grants.some((grant) => grant === undefined)) throw new Error('invalid scoped grant readback');
   return grants[0];
+}
+
+export async function approveWorkspaceGrantRequest(
+  call: BridgeCall,
+  slug: string,
+  channelId: string,
+  requestMessageId: string,
+  workspaceId: string,
+): Promise<WorkspaceGrantView> {
+  const value = asRecord(
+    await unwrap(call, 'grantRequestApprove', {
+      slug,
+      channelId,
+      requestMessageId,
+      workspaceId,
+      acknowledgeReadWrite: true,
+    }),
+  );
+  const grant = parseWorkspaceGrant(value?.['grant']);
+  if (!grant || grant.orchestratorWrite !== true)
+    throw new Error('Workspace write authorization could not be confirmed');
+  return grant;
 }
 
 export async function setWorkspaceGrantWrite(

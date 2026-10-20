@@ -56,7 +56,7 @@ Today: `DESIGN.md` requires native pull-down menus on iOS. The Host drawer's ⋯
 
 Build: SwiftUI `ContextMenu` around the item, or Expo Router `Link.Menu` / `Link.Preview` on a link. Android: long-press opens a Material dropdown or bottom sheet.
 
-Today: chat bubbles use the app-drawn Telegram-style message menu (reaction island + action card, `DESIGN.md` → Chat), a deliberate decision. Conversation rows: "long-press opens a native menu".
+Today: a chat bubble long-press opens a native SwiftUI `BottomSheet` (reaction row + grouped actions with leading SF Symbols, `DESIGN.md` → Chat). Conversation rows: "long-press opens a native menu".
 
 ## Sheets
 
@@ -82,7 +82,7 @@ Build: `SheetScreen` + `sheetScreenOptions` (`src/ui/primitives/sheet-screen.tsx
 
 Build: native stack headers and `NativeTabs` apply it automatically; React Native Screens exposes per-edge `scrollEdgeEffects` for a screen. Do not paint a solid or translucent background under a bar instead of using it.
 
-Today: chat turns all edges `hidden` and fades with `edgeFade` because a transparent native header dims the inverted list (`DESIGN.md` → Chat header). Other screens keep the system default.
+Today: chat keeps the automatic top edge effect under a transparent native header; its list runs top to bottom because an inverted list under that header dims on iOS 26 (`DESIGN.md` → Chat header). Other screens keep the system default.
 
 ## Tab bars
 
