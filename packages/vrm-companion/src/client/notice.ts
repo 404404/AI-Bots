@@ -135,8 +135,8 @@ export function createNotice(phone: Object3D) {
       const grow = frame.rise * (1 + Math.sin(frame.rise * Math.PI) * 0.25);
       phone.getWorldPosition(envelope.position);
       envelope.position.y +=
-        0.02 + frame.rise * 0.12 + (reduced ? 0 : Math.sin(age * 3.2) * 0.008 * frame.rise);
-      envelope.scale.setScalar(0.085 * grow);
+        0.03 + frame.rise * 0.17 + (reduced ? 0 : Math.sin(age * 3.2) * 0.008 * frame.rise);
+      envelope.scale.setScalar(0.13 * grow);
       envelope.material.rotation = reduced ? 0 : Math.sin(age * 2.4) * 0.08 * frame.rise;
       return frame;
     },

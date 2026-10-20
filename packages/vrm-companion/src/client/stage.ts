@@ -400,7 +400,11 @@ export function mountStage(
         Math.sin(Math.atan2(toCamera.x, toCamera.z) - motion.yaw),
         Math.cos(Math.atan2(toCamera.x, toCamera.z) - motion.yaw),
       );
-      const twist = Math.max(-1.1, Math.min(1.1, turn)) * attention;
+      const facingViewer = Math.max(
+        attention,
+        idleFrame.action === 'chin' ? idleFrame.weight * 0.7 : 0,
+      );
+      const twist = Math.max(-1.1, Math.min(1.1, turn)) * facingViewer;
       const doing = (action: IdleAction) => (idleFrame.action === action ? idleFrame.weight : 0);
       const outside = doing('window');
       const stretch = doing('stretch');
@@ -430,7 +434,7 @@ export function mountStage(
       pose('chest', 0, twist * 0.2, 0, blend);
       pose('neck', nodding * 0.4, twist * 0.18, 0, blend);
       pose('rightShoulder', 0, sip * drink.reach * 0.15 * (1 - drink.lift), 0, blend);
-      const looking = attention > 0.4 || talking || waiting || blocked || glance > 0.5;
+      const looking = facingViewer > 0.4 || talking || waiting || blocked || glance > 0.5;
       const desk = room?.tableY ?? 0.75;
       const inbox = latest?.inbox ?? 0;
       if (inboxSeen !== undefined && inbox > inboxSeen && live) room?.notice();
@@ -474,8 +478,8 @@ export function mountStage(
           stretch * 0.25 +
           chin * 0.06 -
           sip * drink.lift * 0.22,
-        Math.max(-0.35, Math.min(0.35, yaw * 0.4)) * (1 - attention) +
-          Math.max(-0.5, Math.min(0.5, (turn - twist * 0.6) * 0.8)) * attention +
+        Math.max(-0.35, Math.min(0.35, yaw * 0.4)) * (1 - facingViewer) +
+          Math.max(-0.5, Math.min(0.5, (turn - twist * 0.6) * 0.8)) * facingViewer +
           (waiting ? -0.1 : 0) -
           outside * 0.25,
         (talking ? Math.sin(phase * 5) * 0.025 : 0) - chin * 0.14,
