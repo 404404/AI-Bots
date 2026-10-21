@@ -1086,10 +1086,16 @@ deepseekbot connect-disable --host <host> --token-file <private-file>
 `connect-enable` 把主机名和 connector token 存进 DSH 凭据存储，开一个只把
 `/botharness-device/*` 转给 DSH 监听口的回环入口（其他路径一律 404），并以
 `cloudflared tunnel --no-autoupdate run` 运行隧道；token 只放在 `TUNNEL_TOKEN` 环境变量里，
-不出现在参数中。返回 JSON 的 `origin` 是隧道 ingress 要指向的地址。`cloudflared` 取自
-`DEEPSEEKBOT_CLOUDFLARED` 或 `PATH`。`connect-status` 返回 `connect.state`（`off`、`starting`、
-`connected`、`error`）及 `issue`（`cloudflared-missing`、`cloudflared-exited`、`origin-port-busy`、
-`credential-unavailable`）和手机路由列表；连上后，新的配对二维码会在 Tailscale 路由之后带上
+不出现在参数中。返回 JSON 的 `origin` 是隧道 ingress 要指向的地址。Host 运行固定版本的
+`cloudflared`（`packages/core/src/devices/cloudflared.json`），按顺序取第一个可用的：
+`DEEPSEEKBOT_CLOUDFLARED`；随 `deepseekbot` 安装的可选包 `@botharness/cloudflared-<平台>-<架构>`；
+`$DSH_HOME/botharness/cloudflared/<版本>/` 下的副本（从 cloudflared 的 GitHub 发布下载，SHA-256
+与固定值一致才保留）；最后是 `PATH` 上的 `cloudflared`。哈希不符的缓存或包内二进制会被拒绝，
+损坏的缓存会被删除并重新下载。`connect-status` 返回 `connect.state`（`off`、`starting`、
+`connected`、`error`）及 `issue`（`cloudflared-missing`、`cloudflared-exited`、
+`cloudflared-download-failed`、`cloudflared-hash-mismatch`、`origin-port-busy`、
+`credential-unavailable`）、`connect.cloudflared`（`env`、`package`、`cache`、`download` 或
+`path`，即实际运行的是哪个二进制）和手机路由列表。下载被拒绝后会退避重试；连上后，新的配对二维码会在 Tailscale 路由之后带上
 `https://<name>.deepseekbot.dev`。拒绝码：`connect-hostname-invalid`（只接受
 `deepseekbot.dev` 下一级）、`connect-token-invalid`、`credential-unavailable`。
 `connect-disable` 停掉隧道并删除已存的 token，已配对设备的凭据不受影响。
