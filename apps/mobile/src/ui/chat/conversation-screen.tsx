@@ -110,7 +110,7 @@ import { QuestionCard } from './question-card';
 import { WorkingStatus } from './working-status';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
-import { edgeFade, pullToCompose, radius, space } from '../design/tokens';
+import { edge, edgeFade, pullToCompose, radius, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
 import { fullClientParams, type FullClientTarget } from '../../host/full-client';
 import { leaveScreen } from '../shell/leave-screen';
@@ -1034,7 +1034,9 @@ function ChatConversation({
                 contentContainerStyle={{
                   minHeight: Math.max(
                     0,
-                    viewportHeight - (notice === undefined ? headerOverlap : 0),
+                    viewportHeight -
+                      (notice === undefined ? headerOverlap : 0) +
+                      (Platform.OS === 'android' ? edge.hairline : 0),
                   ),
                   justifyContent: 'flex-end',
                   paddingTop: space.x3 + listTop,
