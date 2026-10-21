@@ -36,8 +36,9 @@ import { HeaderSearch, HeaderSearchButton } from '../../../src/ui/shell/header-s
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { SettingsButton } from '../../../src/ui/shell/settings-button';
+import { ConversationPeek, conversationPeek } from '../../../src/ui/shell/conversation-peek';
 import { useFloatingTabInset } from '../../../src/ui/shell/floating-tab-inset';
-import { openConversation } from '../../../src/ui/shell/open-conversation';
+import { conversationHref, openConversation } from '../../../src/ui/shell/open-conversation';
 import { useChromeScroll, useScrollChrome } from '../../../src/ui/shell/scroll-chrome';
 import { t } from '../../../src/ui/strings';
 
@@ -354,11 +355,17 @@ const HomeContent = memo(function HomeContent({
                 }
                 renderItem={({ item }) =>
                   item.type === 'computer' ? (
-                    <ConversationRow
-                      row={item.conversation}
-                      now={new Date()}
-                      onPress={() => openConversation(router, item.conversation, saved?.hostId)}
-                    />
+                    conversationPeek ? (
+                      <ConversationPeek href={conversationHref(item.conversation, saved?.hostId)}>
+                        <ConversationRow row={item.conversation} now={new Date()} />
+                      </ConversationPeek>
+                    ) : (
+                      <ConversationRow
+                        row={item.conversation}
+                        now={new Date()}
+                        onPress={() => openConversation(router, item.conversation, saved?.hostId)}
+                      />
+                    )
                   ) : (
                     <CloudConversationRow
                       row={item.conversation}

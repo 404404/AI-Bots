@@ -7,6 +7,7 @@ import type { Admission, DevicePairing, DeviceRefusal, OfferRefusal } from './pa
 
 export const DEVICE_GATEWAY_PREFIX = '/botharness-device';
 export const DEVICE_PAIR_PATH = `${DEVICE_GATEWAY_PREFIX}/pair`;
+export const DEVICE_UNPAIR_PATH = `${DEVICE_GATEWAY_PREFIX}/unpair`;
 export const DEVICE_MUX_PATH = `${DEVICE_GATEWAY_PREFIX}/api/remote.mux`;
 export const DEVICE_WEB_PREFIX = `${DEVICE_GATEWAY_PREFIX}/web`;
 export const DEVICE_WEB_MUX_PATH = `${DEVICE_WEB_PREFIX}/api/remote.mux`;
@@ -232,6 +233,15 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
     );
   };
 
+  const unpair = (request: IncomingMessage, response: ServerResponse): void => {
+    if (request.method !== 'POST') return refuse(response, 404, 'not-found');
+    const admission = pairing.admit(header(request, 'authorization'));
+    if (!admission.ok) return refuse(response, 401, admission.code);
+    pairing.revoke(admission.device.id);
+    response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    response.end(JSON.stringify({ revoked: true }));
+  };
+
   const devicePush = async (
     request: IncomingMessage,
     response: ServerResponse,
@@ -359,6 +369,7 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
       const path = new URL(request.url ?? '/', 'http://device').pathname;
       if (crossOrigin(request)) return refuse(response, 403, 'origin-refused');
       if (path === DEVICE_PAIR_PATH) return pair(request, response);
+      if (path === DEVICE_UNPAIR_PATH) return unpair(request, response);
       if (
         options.push !== undefined &&
         (path === DEVICE_PUSH_PREFIX || path.startsWith(`${DEVICE_PUSH_PREFIX}/`))

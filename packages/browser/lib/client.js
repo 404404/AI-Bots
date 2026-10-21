@@ -582,6 +582,52 @@ window.__ModuleLoader__.load({
 				r: "10"
 			}], ["path", { d: "M4.929 4.929 19.07 19.071" }]],
 			x: [["path", { d: "M18 6 6 18" }], ["path", { d: "m6 6 12 12" }]],
+			"message-square": [["path", { d: "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" }]],
+			keyboard: [
+				["path", { d: "M10 8h.01" }],
+				["path", { d: "M12 12h.01" }],
+				["path", { d: "M14 8h.01" }],
+				["path", { d: "M16 12h.01" }],
+				["path", { d: "M18 8h.01" }],
+				["path", { d: "M6 8h.01" }],
+				["path", { d: "M7 16h10" }],
+				["path", { d: "M8 12h.01" }],
+				["rect", {
+					width: "20",
+					height: "16",
+					x: "2",
+					y: "4",
+					rx: "2"
+				}]
+			],
+			smartphone: [["rect", {
+				width: "14",
+				height: "20",
+				x: "5",
+				y: "2",
+				rx: "2",
+				ry: "2"
+			}], ["path", { d: "M12 18h.01" }]],
+			"sliders-horizontal": [
+				["path", { d: "M10 5H3" }],
+				["path", { d: "M12 19H3" }],
+				["path", { d: "M14 3v4" }],
+				["path", { d: "M16 17v4" }],
+				["path", { d: "M21 12h-9" }],
+				["path", { d: "M21 19h-5" }],
+				["path", { d: "M21 5h-7" }],
+				["path", { d: "M8 10v4" }],
+				["path", { d: "M8 12H3" }]
+			],
+			info: [
+				["circle", {
+					cx: "12",
+					cy: "12",
+					r: "10"
+				}],
+				["path", { d: "M12 16v-4" }],
+				["path", { d: "M12 8h.01" }]
+			],
 			check: [["path", { d: "M20 6 9 17l-5-5" }]]
 		};
 		function ChannelSidebarIcon({ name = "panels-top-left", size = 16 }) {
@@ -1479,6 +1525,18 @@ window.__ModuleLoader__.load({
 					] }, "viewer-chrome")
 				]
 			});
+		}
+		//#endregion
+		//#region packages/client/src/client/ds/tooltip.tsx
+		const shared = globalThis;
+		const InstantTooltips = shared[Symbol.for("botharness.instant-tooltips")] ??= (0, react.createContext)(false);
+		function Tooltip(props) {
+			return (0, react.useContext)(InstantTooltips) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				...props,
+				portal: true,
+				delayMs: 0,
+				focusDelayMs: 0
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { ...props });
 		}
 		//#endregion
 		//#region packages/client/src/client/sidebar-card.tsx
@@ -3417,7 +3475,7 @@ window.__ModuleLoader__.load({
 			const label = t(accessOn ? "entry.access.disable" : "entry.access.enable");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 				className: "bh-browser-access-control",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Tooltip, {
 					label: error ? t("entry.access.failed") + ": " + label : label,
 					side: "bottom",
 					delayMs: 500,

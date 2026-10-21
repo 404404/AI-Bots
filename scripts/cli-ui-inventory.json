@@ -58,14 +58,31 @@
     },
     {
       "id": "device-pairing",
-      "description": "Device list, offers, revoke and paired-device gateway authorization.",
+      "description": "Device list, offers, revoke and paired-device gateway authorization; the hosted Connect tunnel route has connect-status/enable/disable/sign-in/sign-out.",
       "scope": "Profile",
       "surfaces": [
-        "route:packages/core/src/devices/mount.ts:path in [ [DEVICES_PATH, ['GET']], [`${DEVICES_PATH}/offer`, ['POST']], [`${DEVICES_PATH}/revoke`, ['POST']], ] as const",
+        "route:packages/core/src/devices/mount.ts:path in [ [DEVICES_PATH, ['GET']], [`${DEVICES_PATH}/offer`, ['POST']], [`${DEVICES_PATH}/revoke`, ['POST']], [`${DEVICES_PATH}/connect`, ['POST']], ] as const",
         "setting:packages/client/src/client/paired-devices.tsx:{device.name}",
         "setting:packages/client/src/client/paired-devices.tsx:{t('devices.pair.title')}"
       ],
       "issue": "#2098"
+    },
+    {
+      "id": "device-connect",
+      "description": "Devices page hosted Connect account and tunnel state (ADR-0241).",
+      "scope": "Profile",
+      "surfaces": [
+        "setting:packages/client/src/client/paired-devices.tsx:{t('devices.connect.account')}",
+        "setting:packages/client/src/client/paired-devices.tsx:{t('devices.connect.tunnel')}"
+      ],
+      "commands": ["connect-status", "connect-sign-in", "connect-sign-out"]
+    },
+    {
+      "id": "phone-route",
+      "description": "Phone route status and the confirmed tailscale serve publish behind the Pair a phone stepper.",
+      "scope": "Profile",
+      "surfaces": ["route:packages/core/src/devices/mount.ts:DEVICES_SERVE_PATH"],
+      "commands": ["phone-route", "phone-route-publish"]
     },
     {
       "id": "profile-recovery",
@@ -258,6 +275,24 @@
         "setting:packages/client/src/client/telemetry-settings.tsx:{t('telemetry.row.title')}"
       ],
       "commands": ["telemetry-status", "telemetry-set"]
+    },
+    {
+      "id": "data-reset",
+      "description": "Clear all BotHarness data on this Host after a reviewed preview and a second confirmation.",
+      "scope": "Host",
+      "surfaces": [
+        "setting:packages/client/src/client/data-reset-settings.tsx:{t('dataReset.row.title')}"
+      ],
+      "commands": ["data-reset-preview", "data-reset-confirm"]
+    },
+    {
+      "id": "storage-cleanup",
+      "description": "Show storage used by chat media, messages and Memory, and clear reviewed chat media by chat, age and type.",
+      "scope": "Host",
+      "surfaces": [
+        "setting:packages/client/src/client/storage-settings.tsx:{t('storage.row.title')}"
+      ],
+      "commands": ["storage-usage", "storage-cleanup-preview", "storage-cleanup-confirm"]
     },
     {
       "id": "workspace-grants",

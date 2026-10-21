@@ -9,6 +9,12 @@ import type { HttpsFallback } from '../memory/clone.js';
 import type { PairingRequest, PairingReviewInput } from '../messaging/pairing.js';
 import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
+import type {
+  MediaCleanupPreview,
+  MediaCleanupResult,
+  StorageMediaKind,
+  StorageUsage,
+} from '../storage/media-cleanup.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import { LiveRefused } from '../channels/live-frames.js';
 import type { ChannelJournalPage, ChannelJournalRequest } from '../channels/timeline.js';
@@ -63,6 +69,7 @@ import type { ExternalSource } from '../messaging/inbound.js';
 import type { MessagingSnapshot, MessagingGrant, OutboxIntent } from '../messaging/outbound.js';
 import type { MessagingTarget } from '../messaging/provider.js';
 import type { PersonaBotDeletionPreview, PersonaBotDeletion } from '../bots/deletion.js';
+import type { DataResetPreview, DataResetResult } from '../data-reset/reset.js';
 import type { MemoryFileTarget } from '../memory/file-actions.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { UsageFilter, UsageQueryResult } from '../usage/query.js';
@@ -137,6 +144,7 @@ import type {
 import type { GitStatus } from '../memory/managed-git.js';
 import type { MemoryRecoveryCheckpoint } from '../memory/recovery.js';
 import type { WorkspaceGrant } from '../workspaces/grants.js';
+import type { FolderListing } from '../workspaces/folder-browse.js';
 import type { ToolApprovalRule } from '../workspaces/tool-approval-rules.js';
 import type {
   AssignmentAccessPreset,
@@ -810,6 +818,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.update({ slug, patch, expectedProfile }));
   }
 
+  dataResetPreview(): { preview: DataResetPreview } {
+    return unwrap(this.methods.dataResetPreview());
+  }
+  dataResetConfirm(token: string): { reset: DataResetResult } {
+    return unwrap(this.methods.dataResetConfirm({ token }));
+  }
   deletionPreview(slug: string): { preview: PersonaBotDeletionPreview } {
     return unwrap(this.methods.deletionPreview({ slug }));
   }
@@ -1133,6 +1147,37 @@ export class BotharnessBridgeService extends TypertRemoteService {
       }),
     );
   }
+  storageUsage(): StorageUsage {
+    return unwrap(this.methods.storageUsage({}));
+  }
+  storageCleanupPreview(
+    before: string,
+    channelIds?: string[],
+    kinds?: StorageMediaKind[],
+  ): MediaCleanupPreview {
+    return unwrap(
+      this.methods.storageCleanupPreview({
+        before,
+        ...(channelIds === undefined ? {} : { channelIds }),
+        ...(kinds === undefined ? {} : { kinds }),
+      }),
+    );
+  }
+  storageCleanupConfirm(
+    before: string,
+    channelIds: string[] | undefined,
+    kinds: StorageMediaKind[] | undefined,
+    token: string,
+  ): MediaCleanupResult {
+    return unwrap(
+      this.methods.storageCleanupConfirm({
+        before,
+        ...(channelIds === undefined ? {} : { channelIds }),
+        ...(kinds === undefined ? {} : { kinds }),
+        token,
+      }),
+    );
+  }
   channelPurgePreview(channelId: string, sourceEventIds: string[]): PurgePreview {
     return unwrap(this.methods.channelPurgePreview({ channelId, sourceEventIds }));
   }
@@ -1303,6 +1348,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     search?: string,
     unreadOnly?: boolean,
     queryVersion?: number,
+    dismissed?: boolean,
   ): HumanAttentionPage {
     return unwrap(
       this.methods.humanAttention({
@@ -1317,6 +1363,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
         search,
         unreadOnly,
         queryVersion,
+        dismissed,
       }),
     );
   }
@@ -1335,6 +1382,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
   humanAttentionDismiss(itemId: string, sourceKey: string): { accepted: boolean } {
     return unwrap(this.methods.humanAttentionDismiss({ itemId, sourceKey }));
+  }
+  humanAttentionRestore(itemId: string, sourceKey: string): { accepted: boolean } {
+    return unwrap(this.methods.humanAttentionRestore({ itemId, sourceKey }));
   }
   humanAttentionIgnore(sourceEventId: string): { accepted: boolean } {
     return unwrap(this.methods.humanAttentionIgnore({ sourceEventId }));
@@ -1377,6 +1427,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     fileId: string,
   ): { target: MemoryFileTarget } {
     return unwrap(this.methods.messageAttachmentTarget({ channelId, messageId, fileId }));
+  }
+
+  folderBrowse(path?: string): FolderListing {
+    return unwrap(this.methods.folderBrowse(path === undefined ? {} : { path }));
   }
 
   workspaceFileTarget(
@@ -1896,6 +1950,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'create',
   'createFromGit',
   'update',
+  'dataResetPreview',
+  'dataResetConfirm',
   'deletionPreview',
   'deletionConfirm',
   'deletionRetry',
@@ -1925,6 +1981,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelHistorySources',
   'channelPurgePreview',
   'channelPurgeConfirm',
+  'storageUsage',
+  'storageCleanupPreview',
+  'storageCleanupConfirm',
   'channelMessages',
   'channelTimeline',
   'channelReadPosition',
@@ -1947,6 +2006,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionStatus',
   'humanAttentionIgnore',
   'humanAttentionDismiss',
+  'humanAttentionRestore',
   'humanAttentionSnooze',
   'assignments',
   'channelAssignments',
@@ -1955,6 +2015,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'messageAttachmentTarget',
   'channelMediaTarget',
   'workspaceFileTarget',
+  'folderBrowse',
   'grants',
   'grantCreate',
   'grantRevoke',
