@@ -94,7 +94,7 @@ it('keeps an inherited image read-only and follows a later device default after 
         />,
       ),
     );
-    expect(host.textContent).toContain(t.chatBackground.inherited);
+    expect(host.textContent).toContain(t.chatBackground.inherited(t.chatBackground.image));
     expect(host.querySelector(`[aria-label="${t.chatBackground.fit}"]`)).toBeNull();
     expect(host.querySelector(`[aria-label="${t.chatBackground.fade}"]`)).toBeNull();
     expect(host.querySelector(`[aria-label="${t.chatBackground.center}"]`)).toBeNull();

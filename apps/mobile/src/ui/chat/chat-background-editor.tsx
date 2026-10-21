@@ -66,7 +66,15 @@ export function ChatBackgroundEditor({
         </Text>
         {scoped ? (
           <Text variant="meta" tone="muted">
-            {state.choice === undefined ? t.chatBackground.inherited : t.chatBackground.override}
+            {state.choice === undefined
+              ? t.chatBackground.inherited(
+                  {
+                    default: t.chatBackground.theme,
+                    color: t.chatBackground.solid,
+                    image: t.chatBackground.image,
+                  }[inherited.kind],
+                )
+              : t.chatBackground.override}
           </Text>
         ) : null}
         <Segmented
