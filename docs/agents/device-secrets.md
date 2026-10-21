@@ -9,12 +9,12 @@ without copying them.
 
 ## What lives in `.secrets/`
 
-| File                              | What it is                                                                              | Where it comes from                                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `google-services.json`            | Firebase config for `app.deepseekbot.mobile` and `ai.botharness.deepseekbot.dev` (push) | Firebase project `deepseekbot-d3e3a` → Project settings → General → either Android app → download     |
-| `fcm-v1-service-account.json`     | FCM V1 service account key, a backup of the one EAS holds                               | Firebase → Project settings → Service accounts → Generate new private key                             |
-| `workos/<env>/oauth.json`         | WorkOS social login clients (Google, Microsoft, GitHub, Apple) for `uat` and `prod`     | [WorkOS social login clients](workos-social-login.md)                                                 |
-| `workos/<env>/apple-AuthKey_*.p8` | Sign in with Apple private key for that environment                                     | Apple Developer → Keys (downloadable once), see [WorkOS social login clients](workos-social-login.md) |
+| File                                                                             | What it is                                                                              | Where it comes from                                                                                   |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `google-services.json`                                                           | Firebase config for `app.deepseekbot.mobile` and `ai.botharness.deepseekbot.dev` (push) | Firebase project `deepseekbot-d3e3a` → Project settings → General → either Android app → download     |
+| `fcm-v1-service-account.json`                                                    | FCM V1 service account key, a backup of the one EAS holds                               | Firebase → Project settings → Service accounts → Generate new private key                             |
+| `google-oauth.env`, `apple-oauth.env`, `microsoft-oauth.env`, `github-oauth.env` | WorkOS social login clients for UAT and Prod (`UAT`/`PROD` prefixes)                    | [WorkOS social login clients](workos-social-login.md)                                                 |
+| `apple-signin.p8`                                                                | Sign in with Apple private key                                                          | Apple Developer → Keys (downloadable once), see [WorkOS social login clients](workos-social-login.md) |
 
 `.secrets/` is listed in `.gitignore` and `.easignore`, so it never reaches a commit or an EAS
 upload. A fresh clone has no `.secrets/`: copy the folder from another machine over a private

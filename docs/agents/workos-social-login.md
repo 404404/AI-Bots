@@ -14,43 +14,21 @@ Hosted Connect and TOB sign in through TOB's WorkOS environments (ADR-0241). In 
 
 ## Where the values are stored
 
-Use the gitignored `.secrets/` folder at the root of the **main checkout**; see [machine-local secrets](device-secrets.md). Create the folders with mode 700 and the files with mode 600.
+Use the gitignored `.secrets/` folder at the root of the **main checkout**; see [machine-local secrets](device-secrets.md). Files are mode 600. There is one dotenv file per provider, holding both environments under `UAT`/`PROD` prefixes:
 
 ```text
-.secrets/workos/
-  uat/oauth.json
-  uat/apple-AuthKey_<KEY_ID>.p8
-  prod/oauth.json
-  prod/apple-AuthKey_<KEY_ID>.p8
+.secrets/
+  google-oauth.env      GOOGLE_OAUTH_{UAT,PROD}_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URI}, WORKOS_{UAT,PROD}_CLIENT_ID
+  apple-oauth.env       APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY_FILE,
+                        APPLE_{UAT,PROD}_{SERVICE_ID,REDIRECT_URI,OUTBOUND_EMAIL_DOMAIN}, WORKOS_{UAT,PROD}_CLIENT_ID
+  apple-signin.p8       Sign in with Apple private key (one key serves both Services IDs)
+  microsoft-oauth.env   MICROSOFT_OAUTH_{UAT,PROD}_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URI,SECRET_EXPIRES_AT}  (not registered yet)
+  github-oauth.env      GITHUB_OAUTH_{UAT,PROD}_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URI}                   (not registered yet)
 ```
 
-`oauth.json` (one per environment):
+Load a file with `set -a; . .secrets/google-oauth.env; set +a` and never echo its values. To check a file, print only its key names (`sed -E 's/=.*/=<set>/'`).
 
-```json
-{
-  "environment": "uat",
-  "workosEnvironmentId": "environment_…",
-  "workosClientId": "client_…",
-  "authDomain": "<the environment's AuthKit domain>",
-  "google": { "project": "…", "clientId": "…apps.googleusercontent.com", "clientSecret": "…" },
-  "microsoft": {
-    "tenant": "…",
-    "clientId": "…",
-    "clientSecret": "…",
-    "secretExpiresAt": "YYYY-MM-DD"
-  },
-  "github": { "owner": "…", "appType": "oauth-app", "clientId": "…", "clientSecret": "…" },
-  "apple": {
-    "teamId": "…",
-    "appId": "…",
-    "servicesId": "…",
-    "keyId": "…",
-    "privateKeyFile": "apple-AuthKey_<KEY_ID>.p8"
-  },
-  "redirectUris": { "google": "…", "microsoft": "…", "github": "…", "apple": "…" },
-  "updatedAt": "YYYY-MM-DDTHH:MMZ"
-}
-```
+Status on 2026-10-21: Google and Apple are registered for UAT and Prod, and Production Apple authorization was verified in the browser. Microsoft and GitHub are not registered.
 
 Client IDs and Redirect URIs are not secret, but they sit next to the secrets so one file describes the environment. Only the WorkOS client IDs belong in committed code. Today that is UAT's `client_01M54TZZAA0Y6A248NCFYD84A5`, which the relay publishes at `https://connect.botharness.ai/v1/config`.
 
@@ -73,7 +51,7 @@ Client IDs and Redirect URIs are not secret, but they sit next to the secrets so
      - Add a **Web** platform with the WorkOS Redirect URI.
      - Under Token configuration, add the optional claims `email`, `family_name` and `given_name`, accepting the Graph permission prompt.
      - Create a client secret and copy its **Value**, not its ID.
-   - Record `secretExpiresAt`. Secrets last at most 24 months; add a reminder to rotate.
+   - Record `SECRET_EXPIRES_AT`. Secrets last at most 24 months; add a reminder to rotate.
    - Enter the Application (client) ID and the secret in WorkOS.
 3. **GitHub** ([docs](https://workos.com/docs/integrations/github-oauth)):
    - Under the organization that should own it, create an **OAuth App** (one per environment, because an OAuth App has one callback).
@@ -88,13 +66,13 @@ Client IDs and Redirect URIs are not secret, but they sit next to the secrets so
      - enable Sign in with Apple and select that App ID;
      - add `api.workos.com` under Domains;
      - add the WorkOS Redirect URI under Return URLs.
-   - Under Keys, create a key with Sign in with Apple and download the `.p8` straight into `.secrets/workos/<env>/`. It can be downloaded only once.
+   - Under Keys, create a key with Sign in with Apple and download the `.p8` straight into `.secrets/apple-signin.p8`. It can be downloaded only once.
    - Under Services, open Sign in with Apple for Email Communication. Add the Outbound Email Domains that the WorkOS dialog lists, until each shows a green check.
    - In WorkOS, enter the Team ID, Services ID, Key ID and key file.
-5. **Write and check the file.**
-   - Write `oauth.json` with `chmod 600`.
-   - Validate it without printing values, for example `node -e` that reports which keys are present.
-   - Confirm `git status` and `git check-ignore -v .secrets/workos/uat/oauth.json` show it is ignored.
+5. **Write and check the files.**
+   - Write each provider's `.env` with `chmod 600`.
+   - Check that every expected key is set without printing values, for example `sed -E 's/=.*/=<set>/' .secrets/google-oauth.env`.
+   - Confirm `git check-ignore -v .secrets/google-oauth.env` shows it is ignored.
 
 ## Custom domains: not used
 
