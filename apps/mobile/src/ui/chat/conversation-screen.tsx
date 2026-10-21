@@ -471,7 +471,14 @@ function ChatConversation({
   const workingStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: workingAnchor.value - scroll.value }],
   }));
-  const latest = useFollowLatest(list, visible, followChange, headerOverlap, latestChange);
+  const latest = useFollowLatest(
+    list,
+    visible,
+    followChange,
+    headerOverlap,
+    snapshot.status === 'live' && visible.length === 0,
+    latestChange,
+  );
   const composerInput = useRef<ComposerInput>(null);
   const [typing, setTyping] = useState(false);
   const clipboard = useClipboardImage(typing && files.length < MAX_PICKED);
