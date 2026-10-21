@@ -35,7 +35,7 @@ Client IDs and Redirect URIs are not secret, but they sit next to the secrets so
 ## Steps, per environment (do UAT first, then Prod)
 
 0. **Identify the environment.**
-   - In the WorkOS Dashboard, switch to the environment (Staging for UAT, Production for Prod). Record its environment ID, client ID and AuthKit domain in `oauth.json`.
+   - In the WorkOS Dashboard, switch to the environment (Staging for UAT, Production for Prod). Record its client ID as `WORKOS_{UAT,PROD}_CLIENT_ID` in the provider files.
    - If Production has never been set up, stop and ask the Human. Activating it can involve billing and domain choices.
    - Don't change any other WorkOS setting (sign-up policy, sessions, redirect URIs of apps) unless this runbook says so.
 1. **Google** ([docs](https://workos.com/docs/integrations/google-oauth)):
