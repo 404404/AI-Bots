@@ -1854,15 +1854,17 @@ html[data-botharness-motion='reduce'] .bh-section-chevron {
   overscroll-behavior: contain;
   box-sizing: border-box;
 }
-.bh-market-panel-bar {
-  display: flex;
-  flex-direction: column;
-  gap: ${space.x3};
-  min-width: 0;
+.bh-market-panel > .bh-market-browse { flex-wrap: wrap; }
+.bh-market-panel > .bh-market-browse > :first-child { flex-basis: 160px; }
+.bh-market-panel > .bh-market-browse > button { flex-shrink: 0; }
+.bh-market-panel > .bh-market-browse > :last-child { max-width: 100%; overflow-x: auto; }
+.bh-market-panel > .bh-market-topics {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.bh-market-panel-bar > .bh-market-browse { flex-wrap: wrap; }
-.bh-market-panel-bar > .bh-market-browse > :first-child { flex-basis: 220px; }
-.bh-market-panel-bar > button { align-self: flex-start; }
+.bh-market-panel > .bh-market-topics > .bh-market-topic { flex-shrink: 0; white-space: nowrap; }
 .bh-market-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));

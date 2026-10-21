@@ -187,12 +187,15 @@ export function MarketPanelView({
   const { list, filters } = browse;
   return (
     <div className="bh-market-panel" ref={browse.mount} data-market-panel>
-      <div className="bh-market-panel-bar">
-        <MarketplaceBrowseControls browse={browse} t={t} />
-        <Button size="sm" variant="primary" onClick={() => setUploading(true)}>
-          {t('market.panel.upload')}
-        </Button>
-      </div>
+      <MarketplaceBrowseControls
+        browse={browse}
+        t={t}
+        action={
+          <Button variant="primary" onClick={() => setUploading(true)}>
+            {t('market.panel.upload')}
+          </Button>
+        }
+      />
       <MarketplaceListStatus browse={browse} t={t} />
       {list.status === 'ready' && list.bots.length > 0 ? (
         <div className="bh-market-grid" role="list" aria-label={t('market.title')}>
@@ -246,7 +249,7 @@ export function createMarketPanel(
     icon: 'store',
     scope: 'global',
     order: 500,
-    defaultPosition: { zone: 'center' },
+    defaultPosition: { zone: 'right' },
     component: () => <MarketPanelView actions={actions} registry={registry} t={t} />,
   };
 }

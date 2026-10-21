@@ -812,8 +812,11 @@ export class BotharnessBridgeService extends TypertRemoteService {
     gitUrl: string,
     roles?: string[],
     description?: string,
+    origin?: 'marketplace',
   ): Promise<{ bot: PersonaBotDetail; httpsFallback?: HttpsFallback }> {
-    return unwrapAsync(this.methods.createFromGit({ displayName, gitUrl, roles, description }));
+    return unwrapAsync(
+      this.methods.createFromGit({ displayName, gitUrl, roles, description, origin }),
+    );
   }
 
   update(

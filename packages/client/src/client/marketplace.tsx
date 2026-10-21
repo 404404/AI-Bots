@@ -5,6 +5,7 @@ import {
   useState,
   type KeyboardEvent,
   type ReactElement,
+  type ReactNode,
   type Ref,
 } from 'react';
 
@@ -573,9 +574,11 @@ export function useMarketplaceBrowse(
 export function MarketplaceBrowseControls({
   browse,
   t,
+  action,
 }: {
   browse: MarketplaceBrowse;
   t: BotHarnessTranslate;
+  action?: ReactNode;
 }): ReactElement {
   const sortId = useId();
   const { filters, topics } = browse;
@@ -597,6 +600,7 @@ export function MarketplaceBrowseControls({
             browse.search();
           }}
         />
+        {action}
         <SegmentedControl
           id={sortId}
           label={t('market.sort.label')}
