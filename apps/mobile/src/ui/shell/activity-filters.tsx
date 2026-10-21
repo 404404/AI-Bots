@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
-import { FlatList, Modal, Platform, Pressable, Switch, View } from 'react-native';
+import { FlatList, Modal, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { INBOX_SECTIONS, type InboxSection, type InboxSetAside } from '../../host/inbox';
 import { Sheet } from '../chat/sheet';
 import { useDesignTheme } from '../design/theme';
-import { edge, radius, space } from '../design/tokens';
+import { androidSettings, edge, radius, space } from '../design/tokens';
 import { DrawerHeader } from '../primitives/drawer-header';
+import { RadioMark } from '../primitives/radio-mark';
+import { segmentCorners } from '../design/segment-corners';
 import { Text } from '../primitives/text';
+import { Toggle } from '../primitives/toggle';
 import { CheckIcon } from './icons';
 import { t } from '../strings';
 
@@ -71,30 +74,7 @@ function Selection({ selected }: { selected: boolean }) {
   const theme = useDesignTheme();
   if (Platform.OS === 'ios')
     return selected ? <CheckIcon color={theme.color.accent} size={theme.type.body.line} /> : null;
-  return (
-    <View
-      style={{
-        width: theme.type.body.line,
-        height: theme.type.body.line,
-        borderRadius: radius.round,
-        borderWidth: edge.focus,
-        borderColor: selected ? theme.color.accent : theme.color.muted,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {selected ? (
-        <View
-          style={{
-            width: space.x3,
-            height: space.x3,
-            borderRadius: radius.round,
-            backgroundColor: theme.color.accent,
-          }}
-        />
-      ) : null}
-    </View>
-  );
+  return <RadioMark selected={selected} />;
 }
 
 function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose }: Props) {
@@ -224,16 +204,16 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
                   marginHorizontal: space.x5,
                   paddingHorizontal: space.x5,
                   paddingVertical: space.x3,
-                  borderRadius: ios ? radius.md : 0,
+                  borderRadius: ios ? radius.md : androidSettings.listRadius,
                   backgroundColor: theme.layer.raised.fill,
                 }}
               >
                 <Text style={{ flex: 1 }}>{t.activityUnreadOnly}</Text>
-                <Switch
-                  accessibilityLabel={t.activityUnreadOnly}
+                <Toggle
+                  label={t.activityUnreadOnly}
                   value={filter.unreadOnly === true}
-                  onValueChange={(unreadOnly) => onFilter({ ...filter, unreadOnly })}
-                  trackColor={{ true: theme.color.accent }}
+                  on="raised"
+                  onChange={(unreadOnly) => onFilter({ ...filter, unreadOnly })}
                 />
               </View>
             );
@@ -254,12 +234,20 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
                 marginHorizontal: space.x5,
                 paddingHorizontal: space.x5,
                 paddingVertical: space.x3,
-                borderTopLeftRadius: ios && first ? radius.md : 0,
-                borderTopRightRadius: ios && first ? radius.md : 0,
-                borderBottomLeftRadius: ios && last ? radius.md : 0,
-                borderBottomRightRadius: ios && last ? radius.md : 0,
-                borderBottomWidth: last ? 0 : edge.hairline,
-                borderBottomColor: theme.layer.raised.divider,
+                ...(ios
+                  ? {
+                      borderTopLeftRadius: first ? radius.md : 0,
+                      borderTopRightRadius: first ? radius.md : 0,
+                      borderBottomLeftRadius: last ? radius.md : 0,
+                      borderBottomRightRadius: last ? radius.md : 0,
+                      borderBottomWidth: last ? 0 : edge.hairline,
+                      borderBottomColor: theme.layer.raised.divider,
+                    }
+                  : {
+                      ...segmentCorners(first, last),
+                      marginTop: first ? 0 : androidSettings.segmentGap,
+                      overflow: 'hidden',
+                    }),
                 backgroundColor: pressed ? theme.layer.raised.pressed : theme.layer.raised.fill,
               })}
             >

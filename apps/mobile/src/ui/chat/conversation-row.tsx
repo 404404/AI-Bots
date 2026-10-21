@@ -20,6 +20,8 @@ import {
   type RowStatus,
 } from './conversations';
 import { RowStatusGlyph } from './row-status-glyph';
+import type { ConversationAction, ConversationActionKey } from './conversation-actions';
+import { ConversationSwipe } from './conversation-swipe';
 
 const AVATAR = 48;
 const RING = 6;
@@ -30,10 +32,14 @@ export function ConversationRow({
   row,
   now,
   onPress,
+  actions = [],
+  onAction,
 }: {
   row: Conversation;
   now: Date;
   onPress?: () => void;
+  actions?: readonly ConversationAction[];
+  onAction?: (key: ConversationActionKey) => void;
 }) {
   const title = titleOf(row);
   const status = rowStatus(row, now);
@@ -49,28 +55,33 @@ export function ConversationRow({
   const badge = countBadge(row);
   const time = shortTime(row.at, now);
   const label = rowLabel(row, title, status, preview);
+  const act = onAction ?? (() => undefined);
   return (
-    <ConversationRowFrame
-      testID={`conversation-row-${row.key}`}
-      title={title}
-      source="computer"
-      label={label}
-      preview={preview}
-      time={time}
-      status={status}
-      unread={row.unread > 0 && !row.muted}
-      badge={badge}
-      onPress={onPress}
-      avatar={
-        row.kind === 'bot' ? (
-          <AvatarSlot>
-            <BotAvatar bot={row.bot} size={AVATAR} corner={radius.md} ring={false} />
-          </AvatarSlot>
-        ) : (
-          <ConversationGroupAvatar avatar={row.channel.avatar} />
-        )
-      }
-    />
+    <ConversationSwipe actions={onAction ? actions : []} onAction={act}>
+      <ConversationRowFrame
+        testID={`conversation-row-${row.key}`}
+        actions={onAction ? actions : []}
+        onAction={act}
+        title={title}
+        source="computer"
+        label={label}
+        preview={preview}
+        time={time}
+        status={status}
+        unread={row.unread > 0 && !row.muted}
+        badge={badge}
+        onPress={onPress}
+        avatar={
+          row.kind === 'bot' ? (
+            <AvatarSlot>
+              <BotAvatar bot={row.bot} size={AVATAR} corner={radius.md} ring={false} />
+            </AvatarSlot>
+          ) : (
+            <ConversationGroupAvatar avatar={row.channel.avatar} />
+          )
+        }
+      />
+    </ConversationSwipe>
   );
 }
 
@@ -109,8 +120,12 @@ export function ConversationRowFrame({
   avatar,
   onPress,
   disabled = false,
+  actions = [],
+  onAction,
   testID,
 }: {
+  actions?: readonly ConversationAction[];
+  onAction?: (key: ConversationActionKey) => void;
   title: string;
   source: 'computer' | 'cloud';
   label: string;
@@ -132,6 +147,10 @@ export function ConversationRowFrame({
       disabled={disabled || onPress === undefined}
       accessibilityRole={onPress === undefined ? undefined : 'button'}
       accessibilityLabel={label}
+      accessibilityActions={actions.map((action) => ({ name: action.key, label: action.label }))}
+      onAccessibilityAction={(event) =>
+        onAction?.(event.nativeEvent.actionName as ConversationActionKey)
+      }
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',

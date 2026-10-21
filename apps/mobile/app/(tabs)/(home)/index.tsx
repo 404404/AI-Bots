@@ -1,7 +1,7 @@
 import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
 import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import {
   refreshQuietChannels,
@@ -19,6 +19,12 @@ import { cloudViewScope } from '../../../src/cloud/workspace-directory';
 import { cloudError } from '../../../src/cloud/client';
 import type { CloudConversation } from '../../../src/cloud/conversations';
 import { ConversationRow } from '../../../src/ui/chat/conversation-row';
+import {
+  conversationActions,
+  conversationChannelId,
+  runConversationAction,
+} from '../../../src/ui/chat/conversation-actions';
+import { showAppDialog } from '../../../src/ui/primitives/app-dialog';
 import { conversations, searchKey, type Conversation } from '../../../src/ui/chat/conversations';
 import { CloudConversationRow } from '../../../src/ui/chat/cloud-conversation-row';
 import { useConversationFilter } from '../../../src/host/native-conversation-filter';
@@ -41,6 +47,7 @@ import { useFloatingTabInset } from '../../../src/ui/shell/floating-tab-inset';
 import { conversationHref, openConversation } from '../../../src/ui/shell/open-conversation';
 import { useChromeScroll, useScrollChrome } from '../../../src/ui/shell/scroll-chrome';
 import { t } from '../../../src/ui/strings';
+import { LoadingIndicator } from '../../../src/ui/primitives/loading-indicator';
 
 type Row =
   | {
@@ -213,7 +220,7 @@ const HomeContent = memo(function HomeContent({
   if (saved === undefined || (!cloud.ready && !cloud.error))
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
+        <LoadingIndicator />
       </View>
     );
   if (saved === null && cloud.rows.length === 0)
@@ -346,7 +353,7 @@ const HomeContent = memo(function HomeContent({
                       environment.key === computerEnvironmentKey(saved.hostId)) &&
                     !snapshot.roster &&
                     snapshot.connection.status === 'connecting') ? (
-                    <ActivityIndicator />
+                    <LoadingIndicator />
                   ) : (
                     <Text tone="muted" style={{ padding: space.x6 }}>
                       {query ? t.searchNoMatch(query.trim()) : t.cloudChannels.empty}
@@ -364,6 +371,19 @@ const HomeContent = memo(function HomeContent({
                         row={item.conversation}
                         now={new Date()}
                         onPress={() => openConversation(router, item.conversation, saved?.hostId)}
+                        actions={conversationActions(item.conversation, {
+                          pinned: item.pinned,
+                          hostMuted:
+                            snapshot.roster?.arrangement?.muted?.includes(
+                              conversationChannelId(item.conversation) ?? '',
+                            ) === true,
+                        })}
+                        onAction={(key) => {
+                          if (client === undefined) return;
+                          runConversationAction(client, inbox, item.conversation, key).catch(() =>
+                            showAppDialog(t.rowActions.failed, undefined, [{ text: t.done }]),
+                          );
+                        }}
                       />
                     )
                   ) : (

@@ -48,6 +48,7 @@ export interface RosterBot {
   dmChannelId?: string;
   preview?: string;
   previewAt?: string;
+  latestMessageId?: string;
   previewAuthor?: WireAuthor;
 }
 
@@ -62,6 +63,7 @@ export interface RosterChannel {
   pendingJoins?: Array<{ id: string; botSlug: string }>;
   preview?: string;
   previewAt?: string;
+  latestMessageId?: string;
   previewAuthor?: WireAuthor;
 }
 
@@ -174,6 +176,7 @@ class Unreachable extends Error {}
 
 const UPLOAD_TOO_LARGE = 'The file is larger than the Host accepts.';
 const uploadTimeoutMs = 120_000;
+const OCTET_STREAM = 'application/octet-stream';
 
 export class MethodRefused extends Error {
   constructor(
@@ -208,6 +211,7 @@ function record(value: unknown): Record<string, unknown> {
 function previewOf(channel: ChannelListItem | undefined): {
   preview?: string;
   previewAt?: string;
+  latestMessageId?: string;
   previewAuthor?: WireAuthor;
 } {
   const message = channel?.latestMessage;
@@ -215,6 +219,7 @@ function previewOf(channel: ChannelListItem | undefined): {
   return {
     preview: message.body.replace(/\s+/gu, ' ').trim().slice(0, 140),
     previewAt: message.at,
+    latestMessageId: message.id,
     ...(message.author === undefined ? {} : { previewAuthor: message.author }),
   };
 }
@@ -432,8 +437,8 @@ export function createHostClient(options: HostClientOptions): HostClient {
         `${route}${DEVICE_PREFIX}/api/botharness/attachment/upload?${new URLSearchParams({ name })}`,
         {
           method: 'POST',
-          body: data,
-          headers: { ...authorization, 'content-type': 'application/octet-stream' },
+          body: data.type === OCTET_STREAM ? data : new Blob([data], { type: OCTET_STREAM }),
+          headers: { ...authorization, 'content-type': OCTET_STREAM },
           signal,
         },
       );

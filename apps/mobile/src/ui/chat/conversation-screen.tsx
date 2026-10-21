@@ -4,7 +4,6 @@ import { takeSharedFiles } from '../share/incoming-share';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   type NativeScrollEvent,
@@ -119,6 +118,7 @@ import { Text } from '../primitives/text';
 import { MarkdownViewportContext } from '../markdown-viewport';
 import { KeyboardChatFrame, useListBottomSafeArea } from '../primitives/keyboard-frame';
 import { t } from '../strings';
+import { LoadingIndicator } from '../primitives/loading-indicator';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
 const NO_DRAFTS: ConversationDraftReference[] = [];
@@ -827,6 +827,7 @@ function ChatConversation({
                         : undefined;
 
   const listTop = notice === undefined ? headerPadding : 0;
+  const composerCover = Math.max(0, composerHeight - space.x3 - space.x2);
   const fadeColor = background.kind === 'color' ? background.color : theme.color.base;
 
   return (
@@ -1087,7 +1088,7 @@ function ChatConversation({
                         gap: space.x2,
                       }}
                     >
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                       <Text variant="meta" tone="muted">
                         {t.olderLoading}
                       </Text>
@@ -1106,7 +1107,7 @@ function ChatConversation({
                 ListEmptyComponent={
                   snapshot.status === 'opening' ? (
                     <View style={{ padding: space.x6, alignItems: 'center' }}>
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                     </View>
                   ) : undefined
                 }
@@ -1123,8 +1124,9 @@ function ChatConversation({
           ) : null}
           <EdgeFade
             edge="bottom"
-            height={composerHeight + edgeFade.reach}
-            cover={composerHeight}
+            height={composerCover + edgeFade.bottom}
+            cover={composerCover}
+            solid={composerCover}
             color={fadeColor}
           />
           {composable && Platform.OS === 'ios' ? (
