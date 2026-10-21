@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PickSource, PickedFile } from '../../host/pick-files';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { edge, motion, radius, space } from '../design/tokens';
+import { HardwareSend } from '../primitives/hardware-send';
 import { Text } from '../primitives/text';
 import {
   ArrowUpIcon,
@@ -579,6 +580,7 @@ export function Composer({
       <Text
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
         onTextLayout={(event) => {
           const height = event.nativeEvent.lines[0]?.height;
           if (height !== undefined && height > 0)
@@ -617,14 +619,20 @@ export function Composer({
               </ScrollView>
             ) : null}
             <View style={{ padding: inset }}>
-              <View
+              <HardwareSend
+                enabled={actions.includes('send') && !listening}
+                enter
+                onSend={() => {
+                  haptic('send');
+                  onSend();
+                }}
                 style={{
                   flexDirection: 'row',
                   paddingRight: stacked || trailing.length === 0 ? 0 : button + space.x2,
                 }}
               >
                 {field}
-              </View>
+              </HardwareSend>
               {stacked && expand === null && trailing.length === 0 ? null : (
                 <View
                   pointerEvents="box-none"
@@ -645,15 +653,19 @@ export function Composer({
             </View>
           </View>
           {compactWidth > 0 ? (
-            <Text
-              variant="body"
+            <View
+              pointerEvents="none"
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
-              onLayout={(event) => setWraps(event.nativeEvent.layout.height > textLine * 1.5)}
               style={{ position: 'absolute', opacity: 0, width: compactWidth, left: 0, top: 0 }}
             >
-              {value === '' ? ' ' : value}
-            </Text>
+              <Text
+                variant="body"
+                onLayout={(event) => setWraps(event.nativeEvent.layout.height > textLine * 1.5)}
+              >
+                {value === '' ? ' ' : value}
+              </Text>
+            </View>
           ) : null}
         </Animated.View>
       </View>

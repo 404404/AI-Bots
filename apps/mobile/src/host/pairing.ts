@@ -133,6 +133,37 @@ export async function redeemPairing(options: {
   return { ok: false, code: 'unreachable' };
 }
 
+export async function revokePairing(options: {
+  host: SavedHost;
+  carrier: HostCarrier;
+  timeoutMs?: number;
+}): Promise<'revoked' | 'unreachable'> {
+  for (const route of options.host.routes) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 8000);
+    try {
+      const response = await options.carrier.request(`${route}${DEVICE_PREFIX}/unpair`, {
+        method: 'POST',
+        headers: { authorization: `Device ${options.host.credential}` },
+        body: '{}',
+        signal: controller.signal,
+      });
+      const body = record(JSON.parse(await response.text()));
+      if (response.status === 200 && body['revoked'] === true) return 'revoked';
+      if (
+        response.status === 401 &&
+        (body['code'] === 'device-revoked' || body['code'] === 'device-unknown')
+      )
+        return 'revoked';
+    } catch {
+      continue;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return 'unreachable';
+}
+
 export type PairingFailure = PairingRefusal | 'storage-failure' | 'cancelled' | 'unknown';
 
 export async function pairHost(options: {
