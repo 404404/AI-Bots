@@ -137,6 +137,16 @@ const workload: Record<Phase, (n: number) => void> = {
   search: (n) => store.setQuery('a'.repeat((n % 5) + 1)),
 };
 const FRAMES = 20;
+const LOAD_FRAMES = Number(process.env.BH_MAIN_BENCH_LOAD ?? 0);
+const collect = (globalThis as { gc?: () => void }).gc;
+const heapKb = (): number => {
+  collect?.();
+  return process.memoryUsage().heapUsed / 1024;
+};
+const load: Record<
+  string,
+  { frames: number; cpuMs: number; heapPeakKb: number; heapRetainedKb: number }
+> = {};
 const report: Record<
   string,
   {
@@ -173,7 +183,7 @@ describe('Bot main render benchmark', () => {
   });
   afterAll(() => {
     const out = process.env.BH_MAIN_BENCH_OUT;
-    if (out) writeFileSync(out, JSON.stringify({ frames: FRAMES, report }, null, 2));
+    if (out) writeFileSync(out, JSON.stringify({ frames: FRAMES, report, load }, null, 2));
     vi.unstubAllGlobals();
   });
 
@@ -232,6 +242,22 @@ describe('Bot main render benchmark', () => {
       for (let n = 0; n < FRAMES; n += 1) await act(async () => workload[name](n));
       chrome.counting = false;
       phase = undefined;
+      if (LOAD_FRAMES > 0) {
+        const heapBefore = heapKb();
+        let heapPeak = heapBefore;
+        const cpuBefore = process.cpuUsage();
+        for (let n = FRAMES; n < FRAMES + LOAD_FRAMES; n += 1) {
+          await act(async () => workload[name](n));
+          heapPeak = Math.max(heapPeak, process.memoryUsage().heapUsed / 1024);
+        }
+        const cpu = process.cpuUsage(cpuBefore);
+        load[name] = {
+          frames: LOAD_FRAMES,
+          cpuMs: Math.round((cpu.user + cpu.system) / 100) / 10,
+          heapPeakKb: Math.round(heapPeak - heapBefore),
+          heapRetainedKb: Math.round(heapKb() - heapBefore),
+        };
+      }
       report[name] = {
         panels: mounted,
         panelRenders: [...counts.values()].reduce((sum, value) => sum + value, 0),
