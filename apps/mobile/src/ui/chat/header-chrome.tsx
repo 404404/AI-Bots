@@ -90,11 +90,13 @@ export function EdgeFade({
   edge: side,
   height,
   cover = 0,
+  solid,
   color,
 }: {
   edge: 'top' | 'bottom';
   height: number;
   cover?: number;
+  solid?: number;
   color?: string;
 }) {
   const theme = useDesignTheme();
@@ -102,7 +104,7 @@ export function EdgeFade({
   const id = `fade-${useId().replace(/[^a-z0-9]/giu, '')}`;
   const top = side === 'top';
   const insets = useSafeAreaInsets();
-  const stops = edgeFadeStops(height, cover, top ? insets.top : insets.bottom);
+  const stops = edgeFadeStops(height, cover, solid ?? (top ? insets.top : insets.bottom));
   return (
     <View
       pointerEvents="none"

@@ -827,6 +827,7 @@ function ChatConversation({
                         : undefined;
 
   const listTop = notice === undefined ? headerPadding : 0;
+  const composerCover = Math.max(0, composerHeight - space.x3 - space.x2);
   const fadeColor = background.kind === 'color' ? background.color : theme.color.base;
 
   return (
@@ -1121,8 +1122,9 @@ function ChatConversation({
           ) : null}
           <EdgeFade
             edge="bottom"
-            height={composerHeight + edgeFade.reach}
-            cover={composerHeight}
+            height={composerCover + edgeFade.bottom}
+            cover={composerCover}
+            solid={composerCover}
             color={fadeColor}
           />
           {composable && Platform.OS === 'ios' ? (
