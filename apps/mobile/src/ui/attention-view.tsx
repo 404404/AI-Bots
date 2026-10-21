@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { ScrollView, View, type ViewInstance } from 'react-native';
+import { View, type ViewInstance } from 'react-native';
 
 import type { HumanAssignmentContext, HumanAttentionItem } from '../host/wire';
 import { ActionCard, CardButtons, CardLine, CardNote, DetailRow } from './chat/action-card';
@@ -8,6 +8,7 @@ import { radius, space } from './design/tokens';
 import { haptic } from './haptics';
 import { useMounted } from './mounted';
 import { Button } from './primitives/button';
+import { KeyboardFormScroll } from './primitives/keyboard-form';
 import { Text } from './primitives/text';
 import { TextField } from './primitives/text-field';
 import { errorText } from './request-parts';
@@ -15,14 +16,16 @@ import { t } from './strings';
 
 function Page({ children }: { children: ReactNode }) {
   const theme = useDesignTheme();
+  const button = Math.max(theme.touch, theme.type.body.line * theme.fontScale + space.x6);
   return (
-    <ScrollView
+    <KeyboardFormScroll
+      bottomOffset={button + space.x4 + space.x5 * 2 + space.x3}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{ paddingVertical: space.x5, gap: space.x5 }}
       style={{ backgroundColor: theme.layer.canvas.fill }}
     >
       {children}
-    </ScrollView>
+    </KeyboardFormScroll>
   );
 }
 
@@ -126,6 +129,65 @@ export function AutoRejectionView({
                 await port.allowOnce();
                 haptic('approve');
                 return t.autoRejectionAllowed;
+              })
+            }
+          />
+        </CardButtons>
+      </ActionCard>
+    </Page>
+  );
+}
+
+export interface RepairPort {
+  clear(): Promise<void>;
+}
+
+export function RepairView({
+  item,
+  botName,
+  port,
+  after,
+  onOpenChat,
+}: {
+  item: HumanAttentionItem;
+  botName: string;
+  port: RepairPort;
+  after?(): void;
+  onOpenChat?(): void;
+}) {
+  const { busy, error, done, run } = useAction(after);
+  const category = t.kind['bot-message-needs-repair']!;
+  if (done !== undefined) return <Done category={category} text={done} />;
+  return (
+    <Page>
+      <ActionCard
+        category={category}
+        status={t.needsYou}
+        title={t.repairTitle(botName)}
+        wide
+        {...(item.summary ? { preview: <Well>{item.summary}</Well> } : {})}
+        {...(error === undefined ? {} : { error })}
+      >
+        <CardNote>{t.repairHint}</CardNote>
+        <CardButtons stack>
+          {onOpenChat === undefined ? null : (
+            <Button
+              label={t.activityRow.openChat}
+              testID="repair-open"
+              tone="primary"
+              disabled={busy !== undefined}
+              onPress={onOpenChat}
+            />
+          )}
+          <Button
+            label={t.activityClear}
+            testID="repair-clear"
+            busy={busy === 'clear'}
+            onPress={() =>
+              void run('clear', async () => {
+                await port.clear();
+                haptic('submit');
+                return t.repairCleared;
               })
             }
           />
