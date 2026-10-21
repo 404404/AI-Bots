@@ -4,7 +4,6 @@ import { takeSharedFiles } from '../share/incoming-share';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   type NativeScrollEvent,
@@ -111,7 +110,7 @@ import { QuestionCard } from './question-card';
 import { WorkingStatus } from './working-status';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
-import { edgeFade, pullToCompose, radius, space } from '../design/tokens';
+import { edge, edgeFade, pullToCompose, radius, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
 import { fullClientParams, type FullClientTarget } from '../../host/full-client';
 import { leaveScreen } from '../shell/leave-screen';
@@ -119,6 +118,7 @@ import { Text } from '../primitives/text';
 import { MarkdownViewportContext } from '../markdown-viewport';
 import { KeyboardChatFrame, useListBottomSafeArea } from '../primitives/keyboard-frame';
 import { t } from '../strings';
+import { LoadingIndicator } from '../primitives/loading-indicator';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
 const NO_DRAFTS: ConversationDraftReference[] = [];
@@ -141,6 +141,8 @@ export function ConversationScreen({
   latestWindowOnly?: boolean;
 }) {
   const { client, saved } = useHostSession();
+  const [openedOn, setOpenedOn] = useState(saved?.hostId);
+  if (openedOn === undefined && saved?.hostId !== undefined) setOpenedOn(saved.hostId);
   const focused = useIsFocused();
   const roster = useHostSnapshot(client, focused).roster;
   const router = useRouter();
@@ -154,7 +156,8 @@ export function ConversationScreen({
   );
   const bot =
     place.kind === 'dm' ? roster?.bots.find((entry) => entry.slug === place.slug) : undefined;
-  if (expectedHostId && saved?.hostId !== expectedHostId) return <Text>{t.sourceChanged}</Text>;
+  const shownHostId = expectedHostId ?? openedOn;
+  if (shownHostId && saved?.hostId !== shownHostId) return <Text>{t.sourceChanged}</Text>;
   return (
     <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
       <MessageIdentities.Provider value={identities}>
@@ -827,6 +830,7 @@ function ChatConversation({
                         : undefined;
 
   const listTop = notice === undefined ? headerPadding : 0;
+  const composerCover = Math.max(0, composerHeight - space.x3 - space.x2);
   const fadeColor = background.kind === 'color' ? background.color : theme.color.base;
 
   return (
@@ -1030,7 +1034,9 @@ function ChatConversation({
                 contentContainerStyle={{
                   minHeight: Math.max(
                     0,
-                    viewportHeight - (notice === undefined ? headerOverlap : 0),
+                    viewportHeight -
+                      (notice === undefined ? headerOverlap : 0) +
+                      (Platform.OS === 'android' ? edge.hairline : 0),
                   ),
                   justifyContent: 'flex-end',
                   paddingTop: space.x3 + listTop,
@@ -1085,7 +1091,7 @@ function ChatConversation({
                         gap: space.x2,
                       }}
                     >
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                       <Text variant="meta" tone="muted">
                         {t.olderLoading}
                       </Text>
@@ -1104,7 +1110,7 @@ function ChatConversation({
                 ListEmptyComponent={
                   snapshot.status === 'opening' ? (
                     <View style={{ padding: space.x6, alignItems: 'center' }}>
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                     </View>
                   ) : undefined
                 }
@@ -1121,8 +1127,9 @@ function ChatConversation({
           ) : null}
           <EdgeFade
             edge="bottom"
-            height={composerHeight + edgeFade.reach}
-            cover={composerHeight}
+            height={composerCover + edgeFade.bottom}
+            cover={composerCover}
+            solid={composerCover}
             color={fadeColor}
           />
           {composable && Platform.OS === 'ios' ? (

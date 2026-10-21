@@ -8,8 +8,9 @@ import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 
 import { pressTint, useDesignTheme } from '../design/theme';
-import { radius, space } from '../design/tokens';
+import { androidSettings, space } from '../design/tokens';
 import { RadioMark } from './radio-mark';
+import { segmentCorners } from '../design/segment-corners';
 import type { SegmentedProps } from './segmented';
 import { Text } from './text';
 
@@ -46,11 +47,13 @@ export function Segmented<T extends string>({
     )
   )
     return (
-      <View accessibilityRole="radiogroup" accessibilityLabel={label} style={{ gap: space.x1 }}>
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={label}
+        style={{ gap: androidSettings.segmentGap }}
+      >
         {options.map((option, index) => {
           const selected = option.value === value;
-          const top = index === 0 ? radius.lg : radius.xs;
-          const bottom = index === options.length - 1 ? radius.lg : radius.xs;
           return (
             <Pressable
               key={option.value}
@@ -69,10 +72,7 @@ export function Segmented<T extends string>({
                 paddingHorizontal: space.x5,
                 paddingVertical: space.x3,
                 overflow: 'hidden',
-                borderTopLeftRadius: top,
-                borderTopRightRadius: top,
-                borderBottomLeftRadius: bottom,
-                borderBottomRightRadius: bottom,
+                ...segmentCorners(index === 0, index === options.length - 1),
                 backgroundColor: selected ? layer.chosen : layer.fill,
               }}
             >

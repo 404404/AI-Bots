@@ -62,6 +62,7 @@ vi.mock('@expo/ui/jetpack-compose', async () => {
       createElement('i', { 'data-testid': 'native-radio', 'data-selected': props.selected }),
   };
 });
+vi.mock('../src/ui/shell/icons', () => ({ ChevronRightIcon: () => null }));
 vi.mock('../src/ui/primitives/radio-mark', () => import('../src/ui/primitives/radio-mark.android'));
 vi.mock('@expo/ui/jetpack-compose/modifiers', () => ({ fillMaxWidth: () => ({}) }));
 

@@ -4,16 +4,16 @@ import type { SceneRendererProps } from 'react-native-tab-view';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useReducedMotion } from 'react-native-reanimated';
 import { useDesignTheme } from '../design/theme';
-import { edge, space, swipeRow, tabMotion } from '../design/tokens';
+import { edge, space, swipeRow, tabLabel, tabMotion } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
 import type { ActivitySection } from './activity-filters';
 import { ActivityIcon, ChatsIcon, PersonIcon } from './icons';
-import { tabLabelFit } from './tab-label-fit';
 
 export const ACTIVITY_TABS = [{ key: 'action' }, { key: 'replies' }, { key: 'unread' }] as const;
 export type ActivityTab = (typeof ACTIVITY_TABS)[number];
 const ICONS = { action: ActivityIcon, replies: PersonIcon, unread: ChatsIcon };
+
 export function ActivityTabs({
   selected,
   position,
@@ -147,7 +147,9 @@ export function ActivityTabs({
                   <Text
                     tone={selected === key ? 'fg' : 'muted'}
                     strong={selected === key}
-                    {...tabLabelFit()}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={tabLabel.minimumFontScale}
                     style={{ flexShrink: 1, textAlign: 'center' }}
                   >
                     {t.inboxSections[key]}
