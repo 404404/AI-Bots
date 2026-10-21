@@ -43,6 +43,7 @@ export const navigationBar = {
   },
 } as const;
 export const materialDrawer = { width: 360, scrimGutter: 56, addressMinScale: 0.6 } as const;
+export const loadingIndicator = { size: 48 } as const;
 export const swipeAction = { size: 56 } as const;
 export const environmentTab = { maxWidth: 220 } as const;
 export const modalRail = { maxWidth: 360 } as const;

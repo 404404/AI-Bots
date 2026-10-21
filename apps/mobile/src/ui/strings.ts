@@ -781,6 +781,7 @@ const en = {
   searchPlaceholder: 'Search Bots and Channels',
   searchNoMatch: (query: string) => `No Bot or Channel matches “${query}”.`,
   pinnedSection: 'Pinned',
+  loading: 'Loading',
   rowActions: {
     pin: 'Pin',
     unpin: 'Unpin',
@@ -1917,6 +1918,7 @@ const zh: typeof en = {
   searchPlaceholder: '搜索 Bot 和频道',
   searchNoMatch: (query: string) => `没有名称包含“${query}”的 Bot 或频道。`,
   pinnedSection: '已置顶',
+  loading: '正在加载',
   rowActions: {
     pin: '置顶',
     unpin: '取消置顶',

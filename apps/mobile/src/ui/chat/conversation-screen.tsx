@@ -4,7 +4,6 @@ import { takeSharedFiles } from '../share/incoming-share';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   type NativeScrollEvent,
@@ -119,6 +118,7 @@ import { Text } from '../primitives/text';
 import { MarkdownViewportContext } from '../markdown-viewport';
 import { KeyboardChatFrame, useListBottomSafeArea } from '../primitives/keyboard-frame';
 import { t } from '../strings';
+import { LoadingIndicator } from '../primitives/loading-indicator';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
 const NO_DRAFTS: ConversationDraftReference[] = [];
@@ -1085,7 +1085,7 @@ function ChatConversation({
                         gap: space.x2,
                       }}
                     >
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                       <Text variant="meta" tone="muted">
                         {t.olderLoading}
                       </Text>
@@ -1104,7 +1104,7 @@ function ChatConversation({
                 ListEmptyComponent={
                   snapshot.status === 'opening' ? (
                     <View style={{ padding: space.x6, alignItems: 'center' }}>
-                      <ActivityIndicator />
+                      <LoadingIndicator />
                     </View>
                   ) : undefined
                 }
