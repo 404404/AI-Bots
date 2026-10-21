@@ -60,6 +60,7 @@ Client IDs and Redirect URIs are not secret, but they sit next to the secrets so
    - In the WorkOS Dashboard, switch to the environment (Staging for UAT, Production for Prod). Record its environment ID, client ID and AuthKit domain in `oauth.json`.
    - If Production has never been set up, stop and ask the Human. Activating it can involve billing and domain choices.
    - Don't change any other WorkOS setting (sign-up policy, sessions, redirect URIs of apps) unless this runbook says so.
+   - **Prod only: custom domains first** (see [Custom domains](#custom-domains-prod-only)), because they change every provider's Redirect URI.
 1. **Google** ([docs](https://workos.com/docs/integrations/google-oauth)):
    - In WorkOS, go to Authentication → OAuth providers → Google → Manage and copy the Redirect URI.
    - In Google Cloud, use one project per environment.
@@ -86,7 +87,7 @@ Client IDs and Redirect URIs are not secret, but they sit next to the secrets so
    - This needs the Human's Apple Developer team.
    - Under Identifiers, reuse or create an App ID with Sign in with Apple enabled, then register a **Services ID** and configure it:
      - enable Sign in with Apple and select that App ID;
-     - add `api.workos.com` under Domains, or the custom auth domain if one is configured;
+     - add `api.workos.com` under Domains, or `auth.deepseekbot.app` in Prod once that custom domain is verified;
      - add the WorkOS Redirect URI under Return URLs.
    - Under Keys, create a key with Sign in with Apple and download the `.p8` straight into `.secrets/workos/<env>/`. It can be downloaded only once.
    - Under Services, open Sign in with Apple for Email Communication. Add the Outbound Email Domains that the WorkOS dialog lists, until each shows a green check.
@@ -95,6 +96,26 @@ Client IDs and Redirect URIs are not secret, but they sit next to the secrets so
    - Write `oauth.json` with `chmod 600`.
    - Validate it without printing values, for example `node -e` that reports which keys are present.
    - Confirm `git status` and `git check-ignore -v .secrets/workos/uat/oauth.json` show it is ignored.
+
+## Custom domains (Prod only)
+
+WorkOS supports custom domains only in the **Production** environment ([AuthKit](https://workos.com/docs/custom-domains/authkit), [Auth API](https://workos.com/docs/custom-domains/auth-api)). UAT stays on its generated `*-staging.authkit.app` domain and `api.workos.com`. Use **`deepseekbot.app`**. Don't use `deepseekbot.dev`: ADR-0241 reserves that zone for `<host-id>.deepseekbot.dev` tunnels, and no other service may live under it.
+
+| Domain                  | WorkOS setting                                                        | Effect                                                      |
+| ----------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `login.deepseekbot.app` | Domains → AuthKit domain                                              | Hosted sign-in page, replacing the generated AuthKit domain |
+| `auth.deepseekbot.app`  | Domains → Auth API domain; each OAuth provider's custom domain option | OAuth callbacks: new Redirect URIs start with this domain   |
+
+1. With **Production** selected in the WorkOS Dashboard, add each domain and read the exact CNAME target that WorkOS shows. Don't assume it.
+2. In the Cloudflare dashboard, zone `deepseekbot.app`, add each CNAME as **DNS only (grey cloud)**. Proxy it later only if WorkOS still verifies. The Connect API token in `~/.config/deepseekbot-connect/cloudflare.env` can't see this zone, by design: don't widen it.
+3. Wait until WorkOS shows the domain as verified and its certificate as issued. WorkOS retries for up to 72 hours.
+4. Register the Prod provider clients (steps 1–4) using the **new** Redirect URIs. Keep the old `api.workos.com` URI in each provider until a Prod sign-in through the new one works, then remove it.
+5. **Check the token issuer before changing any code.**
+   - Sign in once in Prod and decode the access token's `iss` claim locally. Don't print the token.
+   - Today the relay (`packages/connect-relay/src/auth.ts`), the Host (`packages/core/src/devices/connect-account.ts`, `packages/core/src/cloud/instance-contract.ts`), the phone (`apps/mobile/src/host/connect-account.ts`, `apps/mobile/src/cloud/instance-contract.ts`) and TOB all hard-code `https://api.workos.com/user_management/...` as the issuer and endpoints.
+   - If `iss` or the endpoints change with the Auth API domain, record it and open an issue. Switching Prod to the custom domain is then a code change, not only a dashboard change.
+
+Record both domains and their verification state in `.secrets/workos/prod/oauth.json` (`"customDomains": {"authkit": "login.deepseekbot.app", "authApi": "auth.deepseekbot.app", "verifiedAt": "…"}`).
 
 ## Verify
 
@@ -109,4 +130,4 @@ Client IDs and Redirect URIs are not secret, but they sit next to the secrets so
 
 - **Prod:** confirm which WorkOS environment Prod is. The relay and the phone use UAT's client today, so switching them to Prod is a separate change.
 - **Store app redirect:** the store app (`app.deepseekbot.mobile`) needs its own redirect URI, because the phone's code currently uses `ai.botharness.deepseekbot.dev:/oauth2redirect`. Decide this before Prod sign-in on store builds.
-- **Branding:** optionally, a custom auth domain (for example `auth.botharness.ai`) makes Google show our domain instead of `workos.com`. It changes every provider's Redirect URI, so set it up before registering the Prod clients.
+- **Custom domain cost:** check the WorkOS plan before enabling the Prod custom domains, because the docs don't state their price.
