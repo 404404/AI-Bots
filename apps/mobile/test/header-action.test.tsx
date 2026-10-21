@@ -12,6 +12,7 @@ vi.mock('@expo/ui/swift-ui/modifiers', () => ({
   accessibilityAddTraits: (traits: string[]) => ({ $type: 'accessibilityAddTraits', traits }),
   buttonStyle: (style: string) => ({ $type: 'buttonStyle', style }),
   buttonBorderShape: () => ({}),
+  dynamicTypeSize: () => ({}),
   font: () => ({}),
   foregroundStyle: () => ({}),
   frame: () => ({}),

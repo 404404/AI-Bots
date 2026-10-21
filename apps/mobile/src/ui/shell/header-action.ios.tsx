@@ -4,6 +4,7 @@ import {
   accessibilityLabel,
   buttonBorderShape,
   buttonStyle,
+  dynamicTypeSize,
   font,
   foregroundStyle,
   frame,
@@ -50,6 +51,7 @@ export function HeaderAction({ icon, label, testID, active = false, onPress }: H
           systemName={symbols[icon]}
           modifiers={[
             font({ textStyle: 'body', weight: 'medium' }),
+            dynamicTypeSize({ max: 'xxxLarge' }),
             frame({ width: theme.touch - space.x5, height: theme.touch - space.x5 }),
           ]}
         />
