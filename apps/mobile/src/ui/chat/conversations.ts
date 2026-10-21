@@ -5,7 +5,9 @@ import type {
   RosterView,
   TopOrderEntry,
 } from '../../host/client';
+import { approvalSummaryTool } from '../../host/requests';
 import type { HumanAttentionItem } from '../../host/wire';
+import { t } from '../strings';
 
 interface Attention {
   needsYou: number;
@@ -20,6 +22,63 @@ export type Conversation =
 export type UnreadCounts = Readonly<Record<string, number>>;
 
 export type CountBadgeState = { tone: 'needs-you' | 'unread' | 'muted'; count: number } | undefined;
+
+export type RowStatus =
+  | 'needs-you'
+  | 'blocked'
+  | 'working'
+  | 'paused'
+  | 'done-unread'
+  | 'done'
+  | 'none';
+
+export const DONE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export function rowStatus(row: Conversation, now: Date): RowStatus {
+  if (row.kind !== 'bot') return 'none';
+  const { bot } = row;
+  if (row.needsYou > 0 || bot.state === 'waiting') return 'needs-you';
+  if (bot.state === 'blocked') return 'blocked';
+  if (bot.state === 'thinking' || bot.state === 'working') return 'working';
+  if (bot.paused) return 'paused';
+  const author = bot.previewAuthor;
+  if (author?.kind !== 'bot' || author.slug !== bot.slug) return 'none';
+  if (row.unread > 0) return 'done-unread';
+  const at = Date.parse(bot.previewAt ?? '');
+  return Number.isFinite(at) && now.getTime() - at < DONE_WINDOW_MS ? 'done' : 'none';
+}
+
+export function previewText(preview: string): string {
+  const tool = approvalSummaryTool(preview);
+  return tool === undefined ? preview : t.approvalPreview(tool);
+}
+
+export function rowLabel(
+  row: Conversation,
+  title: string,
+  status: RowStatus,
+  preview: string,
+): string {
+  const spoken =
+    status === 'none' ||
+    t.rowStatus[status] === preview ||
+    (status === 'needs-you' && row.needsYou > 0)
+      ? undefined
+      : t.rowStatus[status];
+  return [
+    title,
+    spoken,
+    row.needsYou > 0 ? t.needsYouCount(row.needsYou) : undefined,
+    row.unread > 0
+      ? row.muted
+        ? t.mutedUnread(row.unread)
+        : t.unreadCount(row.unread)
+      : undefined,
+    preview === '' ? undefined : preview,
+  ]
+    .filter((part) => part !== undefined)
+    .join(', ');
+}
 
 export function countBadge(attention: Attention): CountBadgeState {
   if (attention.needsYou > 0) return { tone: 'needs-you', count: attention.needsYou };
@@ -234,13 +293,27 @@ export function searchConversations(
     .map(({ row }) => row);
 }
 
-export function shortTime(iso: string | undefined, now: Date, locale?: string): string {
+export function shortTime(
+  iso: string | undefined,
+  now: Date,
+  locale?: string,
+  yesterday: string = t.yesterday,
+): string {
   if (iso === undefined) return '';
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return '';
-  const sameDay = at.toDateString() === now.toDateString();
+  const startOfDay = (value: Date) =>
+    new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(at)) / 86_400_000);
+  if (days === 1) return yesterday;
   return new Intl.DateTimeFormat(
     locale,
-    sameDay ? { hour: 'numeric', minute: '2-digit' } : { month: 'numeric', day: 'numeric' },
+    days <= 0
+      ? { hour: 'numeric', minute: '2-digit' }
+      : days < 7
+        ? { weekday: 'short' }
+        : at.getFullYear() === now.getFullYear()
+          ? { month: 'numeric', day: 'numeric' }
+          : { year: 'numeric', month: 'numeric', day: 'numeric' },
   ).format(at);
 }

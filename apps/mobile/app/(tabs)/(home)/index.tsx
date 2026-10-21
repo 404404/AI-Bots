@@ -23,9 +23,7 @@ import { conversations, searchKey, type Conversation } from '../../../src/ui/cha
 import { CloudConversationRow } from '../../../src/ui/chat/cloud-conversation-row';
 import { useConversationFilter } from '../../../src/host/native-conversation-filter';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
-import { useDesignTheme } from '../../../src/ui/design/theme';
 import { space } from '../../../src/ui/design/tokens';
-import { BottomSearch, bottomSearchHeight } from '../../../src/ui/shell/bottom-search';
 import { EnvironmentPager } from '../../../src/ui/shell/environment-pager';
 import {
   conversationEnvironments,
@@ -34,11 +32,13 @@ import {
 } from '../../../src/host/conversation-environments';
 import { shownHostName } from '../../../src/ui/design/host-look';
 import { Text } from '../../../src/ui/primitives/text';
+import { HeaderSearch, HeaderSearchButton } from '../../../src/ui/shell/header-search';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { SettingsButton } from '../../../src/ui/shell/settings-button';
+import { ConversationPeek, conversationPeek } from '../../../src/ui/shell/conversation-peek';
 import { useFloatingTabInset } from '../../../src/ui/shell/floating-tab-inset';
-import { openConversation } from '../../../src/ui/shell/open-conversation';
+import { conversationHref, openConversation } from '../../../src/ui/shell/open-conversation';
 import { useChromeScroll, useScrollChrome } from '../../../src/ui/shell/scroll-chrome';
 import { t } from '../../../src/ui/strings';
 
@@ -101,10 +101,10 @@ const HomeContent = memo(function HomeContent({
   );
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
-  const onScroll = useChromeScroll(true, searching || query !== '');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const onScroll = useChromeScroll(true, searchFocused || query !== '');
   const chrome = useScrollChrome();
-  const theme = useDesignTheme();
-  const bottom = useFloatingTabInset() + bottomSearchHeight(theme.touch);
+  const bottom = useFloatingTabInset();
   const look = useHostLook(saved?.hostId);
   const cloud = useCloudSnapshot();
   const directory = useCloudConversations();
@@ -266,7 +266,35 @@ const HomeContent = memo(function HomeContent({
     <>
       <Stack.Screen options={{ title: t.allConversations, headerShown: false }} />
       <HostDrawerEdge>
-        <HomeHeader actions={<SettingsButton onPress={() => router.push('/settings')} />}>
+        <HomeHeader
+          search={
+            searching ? (
+              <HeaderSearch
+                value={query}
+                placeholder={t.searchPlaceholder}
+                onChangeText={setQuery}
+                onFocusChange={(next) => {
+                  setSearchFocused(next);
+                  if (!next && query === '') setSearching(false);
+                }}
+                onClose={() => {
+                  setSearchFocused(false);
+                  setSearching(false);
+                }}
+              />
+            ) : undefined
+          }
+          actions={
+            <>
+              <HeaderSearchButton
+                label={t.openSearch}
+                testID="search-button"
+                onPress={() => setSearching(true)}
+              />
+              <SettingsButton onPress={() => router.push('/settings')} />
+            </>
+          }
+        >
           <EnvironmentPager
             routes={filters}
             selected={effectiveFilter}
@@ -327,11 +355,17 @@ const HomeContent = memo(function HomeContent({
                 }
                 renderItem={({ item }) =>
                   item.type === 'computer' ? (
-                    <ConversationRow
-                      row={item.conversation}
-                      now={new Date()}
-                      onPress={() => openConversation(router, item.conversation, saved?.hostId)}
-                    />
+                    conversationPeek ? (
+                      <ConversationPeek href={conversationHref(item.conversation, saved?.hostId)}>
+                        <ConversationRow row={item.conversation} now={new Date()} />
+                      </ConversationPeek>
+                    ) : (
+                      <ConversationRow
+                        row={item.conversation}
+                        now={new Date()}
+                        onPress={() => openConversation(router, item.conversation, saved?.hostId)}
+                      />
+                    )
                   ) : (
                     <CloudConversationRow
                       row={item.conversation}
@@ -344,12 +378,6 @@ const HomeContent = memo(function HomeContent({
             )}
           />
         </HomeHeader>
-        <BottomSearch
-          value={query}
-          placeholder={t.searchPlaceholder}
-          onChangeText={setQuery}
-          onFocusChange={setSearching}
-        />
       </HostDrawerEdge>
     </>
   );

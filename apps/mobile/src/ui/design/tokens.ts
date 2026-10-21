@@ -24,6 +24,8 @@ export const edge = {
 } as const;
 
 export const sidebar = { inset: 8, radius: 44 } as const;
+export const stateRing = { width: 2, inset: 3, segment: 0.26, period: 1300 } as const;
+export const rowGlyph = { size: 16, period: 900 } as const;
 
 export const sheetHandle = { width: 32, height: 4 } as const;
 export const navigationBar = {
@@ -98,7 +100,6 @@ export const glass = {
 } as const;
 
 export const edgeFade = {
-  top: 24,
   bottom: 24,
   stops: [
     { offset: 0, opacity: 0.8 },
@@ -106,6 +107,9 @@ export const edgeFade = {
     { offset: 1, opacity: 0 },
   ],
   blur: ['cc', '59', '14', '00'],
+  reach: 48,
+  curve: 1.6,
+  samples: 8,
 } as const;
 
 export const pointer = {
@@ -119,6 +123,12 @@ export const motion = {
   lift: 500,
   menu: 160,
 } as const;
+
+export const pullToCompose = { threshold: 40, flick: 0.3 } as const;
+
+export const doubleTap = { window: 300, emoji: '👍' } as const;
+
+export const recentChats = { limit: 3 } as const;
 
 export const markdownTable = { minColumnWidth: 96, maxColumnWidth: 280 } as const;
 
@@ -138,6 +148,16 @@ export const tabMotion = {
 } as const;
 
 export const scrollChrome = { threshold: 12, top: 2, duration: 180 } as const;
+
+export const swipeRow = {
+  actionWidth: 80,
+  start: 12,
+  verticalFail: 12,
+  fullRatio: 0.55,
+  flick: 1200,
+} as const;
+
+export const undoBar = { duration: 5000 } as const;
 
 export const PRESS_TINT = 0.12;
 

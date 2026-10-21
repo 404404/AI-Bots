@@ -49,6 +49,14 @@ import {
   type PurgeSource,
   type PurgePreview,
 } from '../purge/contracts.js';
+import {
+  STORAGE_MEDIA_KINDS,
+  StorageCleanupError,
+  type MediaCleanupPreview,
+  type MediaCleanupResult,
+  type StorageCleanup,
+  type StorageUsage,
+} from '../storage/media-cleanup.js';
 import { pairingReviewInput, type PairingRequest } from '../messaging/pairing.js';
 import { senderAccessInput } from '../messaging/sender-access.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
@@ -103,6 +111,7 @@ import type {
   MarketplaceTopic,
 } from '../marketplace/client.js';
 import type { AltchaChallenge } from '../marketplace/altcha.js';
+import { MARKETPLACE_LANGUAGES, type MarketplaceLanguage } from '../marketplace/language.js';
 import {
   MAX_DESCRIPTOR_BIO_LENGTH,
   MAX_DESCRIPTOR_TAG_LENGTH,
@@ -196,6 +205,12 @@ import type {
   PersonaBotDeletionPreview,
   PersonaBotDeletion,
 } from '../bots/deletion.js';
+import {
+  DataResetError,
+  type DataReset,
+  type DataResetPreview,
+  type DataResetResult,
+} from '../data-reset/reset.js';
 import { isValidSlug } from '../bots/slug.js';
 import {
   memoryMoveTarget,
@@ -259,6 +274,11 @@ import {
   type WorkspaceGrant,
   type WorkspaceGrantStore,
 } from '../workspaces/grants.js';
+import {
+  FolderBrowseError,
+  type FolderBrowser,
+  type FolderListing,
+} from '../workspaces/folder-browse.js';
 import type { ChannelToolApproval } from '../workspaces/tool-approval.js';
 import type { ChannelUserQuestions } from '../channels/user-questions.js';
 import type { AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/types';
@@ -496,6 +516,7 @@ export interface BridgeMethods {
   onboarding(payload: unknown): Promise<BridgeResult<OnboardingSnapshot>>;
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
+  introEvent(payload: unknown): BridgeResult<null>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
   botNewSession(payload: unknown): Promise<BridgeResult<{ started: true }>>;
   botCompact(payload: unknown): Promise<BridgeResult<ManualCompactionResult>>;
@@ -580,6 +601,8 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<{ bot: PersonaBotDetail; httpsFallback?: HttpsFallback }>>;
   update(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  dataResetPreview(): BridgeResult<{ preview: DataResetPreview }>;
+  dataResetConfirm(payload: unknown): BridgeResult<{ reset: DataResetResult }>;
   deletionPreview(payload: unknown): BridgeResult<{ preview: PersonaBotDeletionPreview }>;
   deletionConfirm(payload: unknown): Promise<BridgeResult<{ deletion: PersonaBotDeletion }>>;
   deletionRetry(payload: unknown): Promise<BridgeResult<{ deletion: PersonaBotDeletion }>>;
@@ -618,6 +641,9 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ sources: PurgeSource[]; before?: string }>;
   channelPurgePreview(payload: unknown): BridgeResult<PurgePreview>;
+  storageUsage(payload?: unknown): BridgeResult<StorageUsage>;
+  storageCleanupPreview(payload: unknown): BridgeResult<MediaCleanupPreview>;
+  storageCleanupConfirm(payload: unknown): BridgeResult<MediaCleanupResult>;
   channelPurgeConfirm(
     payload: unknown,
   ): BridgeResult<{ accepted: number; cleanupPending?: number }>;
@@ -646,6 +672,7 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ channels: Array<{ channelId: string; unreadCount: number }> }>;
   humanAttentionDismiss(payload: unknown): BridgeResult<{ accepted: boolean }>;
+  humanAttentionRestore(payload: unknown): BridgeResult<{ accepted: boolean }>;
   humanAttentionIgnore(payload: unknown): BridgeResult<{ accepted: boolean }>;
   humanAttentionSnooze(payload: unknown): BridgeResult<{ accepted: boolean }>;
   assignments(payload: unknown): BridgeResult<{ assignments: AssignmentSummary[] }>;
@@ -657,6 +684,7 @@ export interface BridgeMethods {
   workspaceFileTarget(
     payload: unknown,
   ): BridgeResult<{ target: { path: string; relativePath: ''; kind: 'directory' } }>;
+  folderBrowse(payload: unknown): BridgeResult<FolderListing>;
   grants(payload: unknown): BridgeResult<{ grants: WorkspaceGrant[] }>;
   grantCreate(
     payload: unknown,
@@ -830,6 +858,24 @@ export interface IdleCompactionDeps {
   compactBot?(slug: string): Promise<ManualCompactionResult>;
 }
 
+const storageCleanupScope = z
+  .object({
+    before: z.iso.datetime(),
+    channelIds: z.array(z.string().min(1).max(200)).max(500).optional(),
+    kinds: z.array(z.enum(STORAGE_MEDIA_KINDS)).min(1).max(4).optional(),
+  })
+  .strict();
+
+function storageFailure(error: unknown, message: string): BridgeResult<never> {
+  return {
+    ok: false,
+    error:
+      error instanceof StorageCleanupError
+        ? { code: error.code, message: error.message }
+        : { code: 'storage-unavailable', message },
+  };
+}
+
 export interface BridgeMethodsDeps {
   idleCompaction?: IdleCompactionDeps;
   cloudConnections?: CloudConnections;
@@ -843,6 +889,8 @@ export interface BridgeMethodsDeps {
   approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
+  storage?: StorageCleanup;
+  dataReset?: DataReset;
   attachments?: AttachmentStore;
   modelPresets?: ModelPresetStore;
   modelCatalog?: ModelCatalog;
@@ -878,6 +926,7 @@ export interface BridgeMethodsDeps {
   humanAttention?: HumanAttentionQuery;
   humanAttentionDecisions?: HumanAttentionDecisions;
   grants?: WorkspaceGrantStore;
+  folders?: FolderBrowser;
   externalMessaging?: OutboundMessaging;
   toolApproval?: ChannelToolApproval;
   userQuestions?: ChannelUserQuestions;
@@ -940,6 +989,11 @@ function asSlug(payload: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
+function marketplaceLang(value: unknown): MarketplaceLanguage | undefined | false {
+  if (value === undefined) return undefined;
+  return MARKETPLACE_LANGUAGES.find((language) => language === value) ?? false;
+}
+
 function parseOptional(source: Record<string, unknown>, key: string): ParsedField<string> {
   const value = source[key];
   if (value === undefined) return { ok: true, value: undefined };
@@ -966,6 +1020,17 @@ function releaseUnavailable(): BridgeResult<never> {
     error: { code: 'release-unavailable', message: 'Release information is unavailable' },
   };
 }
+
+const INTRO_STEP_IDS = ['welcome', 'theme', 'model', 'community', 'start'];
+const INTRO_EVENTS: Record<string, Record<string, readonly string[] | 'boolean'>> = {
+  intro_shown: {},
+  intro_step_viewed: { step: INTRO_STEP_IDS },
+  intro_dismissed: { step: INTRO_STEP_IDS, via: ['skip', 'close'] },
+  intro_completed: { starter: ['botPrompt', 'firstRequest', 'exampleRequest', 'own'] },
+  intro_theme_changed: { setting: ['scheme', 'preset', 'wallpaper'] },
+  intro_model_saved: { advanced: 'boolean' },
+  intro_community_clicked: { target: ['github', 'discord', 'qq'] },
+};
 
 function telemetryUnavailable(): BridgeResult<never> {
   return {
@@ -1090,6 +1155,18 @@ function idleCompactionView(deps: IdleCompactionDeps): IdleCompactionView {
     minimumIdleSeconds: MIN_IDLE_MS / 1000,
     scheduled: deps.scheduler.scheduled(),
     routes: deps.scheduler.describe(deps.routes()),
+  };
+}
+
+function dataResetFailure(error: unknown): BridgeResult<never> {
+  if (error instanceof DataResetError)
+    return { ok: false, error: { code: error.code, message: error.message } };
+  return {
+    ok: false,
+    error: {
+      code: 'data-reset-failed',
+      message: error instanceof Error ? error.message : 'BotHarness data could not be cleared',
+    },
   };
 }
 
@@ -2004,6 +2081,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           asSlug(payload),
           action as TutorialAction | undefined,
         );
+        if (action !== undefined)
+          deps.telemetry?.capture?.('tutorial_action', { action: String(action) });
         const newsAvailable =
           (await deps
             .onboardingNews?.(asSlug(payload) ?? value.defaultBotSlug)
@@ -2027,6 +2106,28 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const result = deps.registry.inheritModel(slug, revision as number);
       if (!result.ok) return invalidInput('Bot model changed; reopen before saving');
       return { ok: true, value: { revision: result.record.modelPlanRevision ?? 0 } };
+    },
+    introEvent(payload) {
+      const source = asObject(payload);
+      const event = source['event'];
+      const shape =
+        typeof event === 'string' && Object.hasOwn(INTRO_EVENTS, event)
+          ? INTRO_EVENTS[event as keyof typeof INTRO_EVENTS]
+          : undefined;
+      if (shape === undefined) return invalidInput('Unknown intro event');
+      const properties: Record<string, string | boolean> = {};
+      for (const [key, allowed] of Object.entries(shape)) {
+        const value = source[key];
+        if (
+          allowed === 'boolean'
+            ? typeof value !== 'boolean'
+            : typeof value !== 'string' || !allowed.includes(value)
+        )
+          return invalidInput(`Invalid intro event ${key}`);
+        properties[key] = value as string | boolean;
+      }
+      deps.telemetry?.capture?.(event as string, properties);
+      return { ok: true, value: null };
     },
     async onboardingModel(payload) {
       if (deps.modelCatalog === undefined || deps.defaultModel === undefined) return unavailable();
@@ -2500,6 +2601,25 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(error instanceof Error ? error.message : String(error));
       }
     },
+    dataResetPreview() {
+      if (deps.dataReset === undefined) return unavailable();
+      try {
+        return { ok: true, value: { preview: deps.dataReset.preview() } };
+      } catch (error) {
+        return dataResetFailure(error);
+      }
+    },
+    dataResetConfirm(payload) {
+      const token = asObject(payload)['token'];
+      if (typeof token !== 'string' || token.length === 0 || token.length > 256)
+        return invalidInput('token is required');
+      if (deps.dataReset === undefined) return unavailable();
+      try {
+        return { ok: true, value: { reset: deps.dataReset.confirm(token) } };
+      } catch (error) {
+        return dataResetFailure(error);
+      }
+    },
     deletionPreview(payload) {
       const slug = asSlug(payload);
       if (slug === undefined) return invalidInput('slug is required');
@@ -2837,6 +2957,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return Promise.resolve(invalidInput('invalid sort'));
       }
       if (sort !== undefined) query.sort = sort;
+      const lang = marketplaceLang(source['lang']);
+      if (lang === false) return Promise.resolve(invalidInput('invalid lang'));
+      if (lang !== undefined) query.lang = lang;
       return marketplaceCall((client) => client.list(query));
     },
     marketplaceTopics() {
@@ -2893,11 +3016,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     marketplaceDetail(payload) {
-      const id = asObject(payload)['id'];
+      const { id, lang: langValue } = asObject(payload);
       if (typeof id !== 'string' || id.trim().length === 0) {
         return Promise.resolve(invalidInput('id is required'));
       }
-      return marketplaceCall((client) => client.detail(id.trim()));
+      const lang = marketplaceLang(langValue);
+      if (lang === false) return Promise.resolve(invalidInput('invalid lang'));
+      return marketplaceCall((client) => client.detail(id.trim(), lang));
     },
     marketplaceSubmit(payload) {
       const { url, altcha } = asObject(payload);
@@ -4087,6 +4212,38 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         };
       }
     },
+    storageUsage() {
+      if (!deps.storage) return unavailable();
+      try {
+        return { ok: true, value: deps.storage.usage() };
+      } catch (error) {
+        return storageFailure(error, 'Storage usage is unavailable');
+      }
+    },
+    storageCleanupPreview(payload) {
+      const input = storageCleanupScope.safeParse(payload);
+      if (!input.success) return invalidInput('Invalid storage cleanup scope');
+      if (!deps.storage) return unavailable();
+      try {
+        return { ok: true, value: deps.storage.preview(input.data) };
+      } catch (error) {
+        return storageFailure(error, 'Storage cleanup preview is unavailable');
+      }
+    },
+    storageCleanupConfirm(payload) {
+      const input = storageCleanupScope
+        .extend({ token: z.string().min(1).max(512) })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return invalidInput('Invalid storage cleanup confirmation');
+      if (!deps.storage) return unavailable();
+      const { token, ...scope } = input.data;
+      try {
+        return { ok: true, value: deps.storage.confirm(scope, token) };
+      } catch (error) {
+        return storageFailure(error, 'Storage cleanup could not complete');
+      }
+    },
     channelPurgeConfirm(payload) {
       const input = z
         .object({
@@ -4946,9 +5103,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const limit = source['limit'];
       const cursor = source['cursor'];
       const snoozed = source['snoozed'];
+      const dismissed = source['dismissed'];
       const kind = source['kind'];
       if (snoozed !== undefined && typeof snoozed !== 'boolean')
         return invalidInput('snoozed must be a boolean');
+      if (dismissed !== undefined && typeof dismissed !== 'boolean')
+        return invalidInput('dismissed must be a boolean');
+      if (snoozed === true && dismissed === true)
+        return invalidInput('snoozed and dismissed cannot be combined');
       if (kind !== undefined && kind !== 'auto-rejection')
         return invalidInput('kind must be auto-rejection');
       if (
@@ -5000,9 +5162,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
               ...(limit === undefined ? {} : { limit: limit as number }),
               ...(cursor === undefined ? {} : { cursor: cursor as string }),
               ...(snoozed === true ? { snoozed: true } : {}),
+              ...(dismissed === true ? { dismissed: true } : {}),
               ...(kind === undefined ? {} : { kind }),
             }) ?? { items: [] }),
             ...(source['queryVersion'] === 1 ? { queryVersion: 1 } : {}),
+            ...(dismissed === true ? { dismissed: true } : {}),
           },
         };
       } catch (error) {
@@ -5082,6 +5246,30 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           deps.humanAttentionDecisions?.dismiss(item) !== true
         )
           return invalidInput('Inbox item is no longer available');
+        return { ok: true, value: { accepted: true } };
+      } catch (error) {
+        return invalidInput(String(error));
+      }
+    },
+    humanAttentionRestore(payload) {
+      const source = asObject(payload);
+      const itemId = asNonBlank(source, 'itemId');
+      const sourceKey = source?.['sourceKey'];
+      if (
+        itemId === undefined ||
+        itemId.length > 350 ||
+        typeof sourceKey !== 'string' ||
+        sourceKey.length > 150
+      )
+        return invalidInput('itemId and sourceKey are required');
+      try {
+        const item = deps.humanAttention?.item(itemId, sourceKey);
+        if (
+          item === undefined ||
+          (item.sourceEventId ?? '') !== sourceKey ||
+          deps.humanAttentionDecisions?.restore(item) !== true
+        )
+          return invalidInput('Inbox item is not dismissed');
         return { ok: true, value: { accepted: true } };
       } catch (error) {
         return invalidInput(String(error));
@@ -5239,6 +5427,25 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
               message: error.message,
             },
           };
+        throw error;
+      }
+    },
+    folderBrowse(payload) {
+      const input = z
+        .object({ path: z.string().max(1024).optional() })
+        .strict()
+        .safeParse(payload ?? {});
+      if (!input.success) return invalidInput('path must be a folder path');
+      if (deps.folders === undefined)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Folder browsing is unavailable' },
+        };
+      try {
+        return { ok: true, value: deps.folders.list(input.data.path) };
+      } catch (error) {
+        if (error instanceof FolderBrowseError)
+          return { ok: false, error: { code: error.code, message: error.message } };
         throw error;
       }
     },
@@ -6240,7 +6447,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       }
     },
     profileActivity(payload) {
-      const scope = dmMemory(payload);
+      const scope = dmMemory(payload, true);
       if (!('botSlug' in scope)) return scope;
       const slug = scope.botSlug;
       const source = asObject(payload);
@@ -6267,7 +6474,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const beforeEnd = <T extends { at: string }>(entries: readonly T[]): T[] =>
         end === undefined ? [...entries] : entries.filter((entry) => new Date(entry.at) < end);
       const events = beforeEnd(deps.channels.admissionActivity?.(slug, since) ?? []);
-      const commits = beforeEnd(deps.memory?.activity?.(slug, since) ?? []);
+      let memoryActivity: Array<{ at: string }> = [];
+      try {
+        memoryActivity = deps.memory?.activity?.(slug, since) ?? [];
+      } catch (error) {
+        if (deps.registry.get(slug) !== undefined) throw error;
+      }
+      const commits = beforeEnd(memoryActivity);
       const usageRows = (deps.usage?.activity(slug, since) ?? []).filter(
         (row) => before === undefined || row.day < before,
       );
