@@ -3,13 +3,14 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import type { ConnectAccount, ConnectHost, ConnectRefusal } from '../host/connect-account';
+import { confirmDestructive } from './primitives/app-dialog';
 import { Button } from './primitives/button';
 import { Text } from './primitives/text';
 import { space } from './design/tokens';
 import { t } from './strings';
 
 export function AccountHosts(props: {
-  account: Pick<ConnectAccount, 'email' | 'signIn' | 'hosts' | 'signOut'>;
+  account: Pick<ConnectAccount, 'email' | 'signIn' | 'hosts' | 'signOut' | 'deleteAccount'>;
   busy: boolean;
   onPair(host: ConnectHost): void;
 }) {
@@ -59,6 +60,16 @@ export function AccountHosts(props: {
     setEmail(null);
     setHosts(undefined);
     setError(undefined);
+  };
+
+  const deleteAccount = async (): Promise<void> => {
+    setLoading(true);
+    setError(undefined);
+    const result = await account.deleteAccount();
+    setLoading(false);
+    if (!result.ok) return setError(result.code);
+    setEmail(null);
+    setHosts(undefined);
   };
 
   if (email === false) return null;
@@ -114,6 +125,19 @@ export function AccountHosts(props: {
               variant="text"
               disabled={loading || props.busy}
               onPress={() => void signOut()}
+            />
+            <Button
+              label={t.pairAccount.deleteAccount}
+              variant="text"
+              disabled={loading || props.busy}
+              onPress={() =>
+                confirmDestructive(
+                  t.pairAccount.deleteTitle,
+                  t.pairAccount.deleteMessage,
+                  t.pairAccount.deleteConfirm,
+                  deleteAccount,
+                )
+              }
             />
           </View>
         </>

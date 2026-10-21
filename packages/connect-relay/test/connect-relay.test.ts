@@ -7,6 +7,7 @@ import { createAccessTokenVerifier, type Jwk } from '../src/auth.js';
 import { createCloudflareApi, GATEWAY_PATH, type TunnelApi } from '../src/cloudflare.js';
 import type { D1Database, D1PreparedStatement, D1Value } from '../src/d1.js';
 import { createRelay, hmac, type RelayOptions } from '../src/relay.js';
+import { workosUserDeleter } from '../src/worker.js';
 
 const CLIENT_ID = 'client_01TEST';
 const ISSUER = `https://api.workos.com/user_management/${CLIENT_ID}`;
@@ -264,6 +265,74 @@ describe('Connect relay accounts', () => {
       ).status,
     ).toBe(404);
     expect((await call('DELETE', '/v1/hosts/haaaaaaaaaaab', { as: 'user_bob' })).status).toBe(404);
+  });
+
+  it('deletes an account with its Hosts, tunnels and WorkOS user', async () => {
+    const deleted: string[] = [];
+    let failUser = true;
+    const { call, tunnels } = await setup(['user_alice', 'user_bob'], {
+      deleteUser: async (account) => {
+        if (failUser) throw new Error('workos down');
+        deleted.push(account);
+      },
+    });
+    for (const name of ['Studio', 'Laptop'])
+      await call('POST', '/v1/hosts', { as: 'user_alice', body: { name } });
+    await call('POST', '/v1/hosts', { as: 'user_bob', body: { name: 'Bob' } });
+    for (const [id, as] of [
+      ['haaaaaaaaaaab', 'user_alice'],
+      ['haaaaaaaaaaad', 'user_bob'],
+    ] as const)
+      await call('POST', `/v1/hosts/${id}/tunnel`, { as, body: { originPort: 41001 } });
+    expect(await call('DELETE', '/v1/account')).toMatchObject({ status: 401 });
+    expect(await call('GET', '/v1/account', { as: 'user_alice' })).toMatchObject({ status: 405 });
+    expect(await call('DELETE', '/v1/account', { as: 'user_alice' })).toEqual({
+      status: 502,
+      body: { error: { code: 'upstream-unavailable' } },
+    });
+    failUser = false;
+    expect(await call('DELETE', '/v1/account', { as: 'user_alice' })).toEqual({
+      status: 200,
+      body: { deleted: true },
+    });
+    expect(deleted).toEqual(['user_alice']);
+    expect(await call('GET', '/v1/hosts', { as: 'user_alice' })).toMatchObject({ status: 401 });
+    expect(
+      await call('POST', '/v1/hosts', { as: 'user_alice', body: { name: 'Again' } }),
+    ).toMatchObject({ status: 401 });
+    expect([...tunnels.tunnels.values()].map((tunnel) => tunnel.name)).toEqual([
+      'dsb-haaaaaaaaaaad',
+    ]);
+    expect([...tunnels.records.values()].map((record) => record.name)).toEqual([
+      'haaaaaaaaaaad.deepseekbot.dev',
+    ]);
+    expect((await call('GET', '/v1/hosts', { as: 'user_bob' })).body['hosts']).toHaveLength(1);
+  });
+
+  it('refuses account deletion without a WorkOS API key', async () => {
+    const { call } = await setup();
+    await call('POST', '/v1/hosts', { as: 'user_alice', body: { name: 'Studio' } });
+    expect(await call('DELETE', '/v1/account', { as: 'user_alice' })).toEqual({
+      status: 503,
+      body: { error: { code: 'account-deletion-unavailable' } },
+    });
+    expect((await call('GET', '/v1/hosts', { as: 'user_alice' })).body['hosts']).toHaveLength(1);
+  });
+
+  it('deletes the WorkOS user with the API key and treats a missing user as deleted', async () => {
+    const calls: [string, RequestInit | undefined][] = [];
+    const statuses = [200, 404, 500];
+    const remove = workosUserDeleter('sk_test', (async (url: string, init?: RequestInit) => {
+      calls.push([url, init]);
+      return new Response(null, { status: statuses.shift()! });
+    }) as typeof fetch);
+    await remove('user_alice');
+    await remove('user_alice');
+    await expect(remove('user_alice')).rejects.toThrow('workos 500');
+    expect(calls[0]).toEqual([
+      'https://api.workos.com/user_management/users/user_alice',
+      { method: 'DELETE', headers: { authorization: 'Bearer sk_test' } },
+    ]);
   });
 });
 

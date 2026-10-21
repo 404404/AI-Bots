@@ -104,9 +104,9 @@ export function createConnectAccount(options: {
     body: new URLSearchParams(body).toString(),
   });
 
-  const relayCall = async (path: string, access: string, body?: unknown) => {
+  const relayCall = async (path: string, access: string, body?: unknown, method?: string) => {
     const reply = await call(`${relay}${path}`, {
-      method: body === undefined ? 'GET' : 'POST',
+      method: method ?? (body === undefined ? 'GET' : 'POST'),
       headers: {
         authorization: `Bearer ${access}`,
         ...(body === undefined ? {} : { 'content-type': 'application/json' }),
@@ -258,6 +258,12 @@ export function createConnectAccount(options: {
           expiresAt: body['expiresAt'],
           verifier,
         };
+      }),
+
+    deleteAccount: () =>
+      settle(async () => {
+        await relayCall('/v1/account', await access(), undefined, 'DELETE');
+        await save(undefined);
       }),
 
     signOut: () => serial(() => save(undefined)),

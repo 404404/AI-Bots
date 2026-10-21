@@ -9,14 +9,19 @@ const RELAY = 'https://relay.test';
 const REDIRECT = 'ai.botharness.deepseekbot.dev:/oauth2redirect';
 const challenge = async (value: string) => createHash('sha256').update(value).digest('base64url');
 
-function fakeRelay(options: { offline?: boolean; expired?: boolean } = {}) {
+function fakeRelay(options: { offline?: boolean; expired?: boolean; deletion?: number } = {}) {
   let stored: string | null = null;
   let randoms = 0;
-  const calls: { url: string; auth?: string; body?: string }[] = [];
+  const calls: { url: string; method?: string; auth?: string; body?: string }[] = [];
   const request = vi.fn(async (url: string, init?: RequestInit) => {
     const body = typeof init?.body === 'string' ? init.body : undefined;
     const auth = new Headers(init?.headers).get('authorization') ?? undefined;
-    calls.push({ url, ...(auth ? { auth } : {}), ...(body ? { body } : {}) });
+    calls.push({
+      url,
+      ...(init?.method ? { method: init.method } : {}),
+      ...(auth ? { auth } : {}),
+      ...(body ? { body } : {}),
+    });
     if (url === `${RELAY}/v1/config`) return Response.json({ clientId: 'client_01TEST' });
     if (url === 'https://api.workos.com/user_management/authenticate') {
       const form = new URLSearchParams(body);
@@ -47,6 +52,10 @@ function fakeRelay(options: { offline?: boolean; expired?: boolean } = {}) {
         host: { id: 'pairing-host', name: 'Studio Mac' },
       });
     }
+    if (url === `${RELAY}/v1/account` && init?.method === 'DELETE')
+      return options.deletion === undefined
+        ? Response.json({ deleted: true })
+        : Response.json({ error: { code: 'upstream-unavailable' } }, { status: options.deletion });
     return Response.json({}, { status: 404 });
   });
   const authorize = vi.fn(async (url: string) => {
@@ -170,5 +179,23 @@ describe('phone Connect account', () => {
     await forged.account.signIn();
     await forged.account.signOut();
     expect(await forged.account.email()).toBeNull();
+  });
+
+  it('deletes the account at the relay and forgets the session only when it succeeds', async () => {
+    const failing = fakeRelay({ deletion: 502 });
+    await failing.account.signIn();
+    expect(await failing.account.deleteAccount()).toEqual({ ok: false, code: 'relay-unavailable' });
+    expect(await failing.account.email()).toBe('alice@example.com');
+
+    const relay = fakeRelay();
+    await relay.account.signIn();
+    expect(await relay.account.deleteAccount()).toEqual({ ok: true, value: undefined });
+    expect(relay.calls.at(-1)).toEqual({
+      url: `${RELAY}/v1/account`,
+      method: 'DELETE',
+      auth: 'Bearer access-1',
+    });
+    expect(await relay.account.email()).toBeNull();
+    expect(relay.stored()).toBeNull();
   });
 });
