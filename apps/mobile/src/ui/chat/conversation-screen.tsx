@@ -882,7 +882,10 @@ function ChatConversation({
                 headerTitle: () => (
                   <View
                     key={`${theme.scheme}:${theme.fontScale}:${bot?.displayName ?? channel?.name ?? ''}`}
-                    style={{ maxWidth: windowWidth - (theme.touch + space.x5) * 3 }}
+                    style={{
+                      maxWidth: windowWidth - (theme.touch + space.x5) * 3,
+                      marginHorizontal: space.x3,
+                    }}
                   >
                     {title}
                   </View>
@@ -1111,14 +1114,14 @@ function ChatConversation({
           {listTop > 0 ? (
             <EdgeFade
               edge="top"
-              height={listTop + edgeFade.top}
+              height={listTop + edgeFade.reach}
               cover={listTop}
               color={fadeColor}
             />
           ) : null}
           <EdgeFade
             edge="bottom"
-            height={composerHeight + edgeFade.bottom}
+            height={composerHeight + edgeFade.reach}
             cover={composerHeight}
             color={fadeColor}
           />

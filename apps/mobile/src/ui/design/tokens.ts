@@ -100,7 +100,6 @@ export const glass = {
 } as const;
 
 export const edgeFade = {
-  top: 24,
   bottom: 24,
   stops: [
     { offset: 0, opacity: 0.8 },
@@ -108,7 +107,9 @@ export const edgeFade = {
     { offset: 1, opacity: 0 },
   ],
   blur: ['cc', '59', '14', '00'],
-  cover: 0.92,
+  reach: 48,
+  curve: 1.6,
+  samples: 8,
 } as const;
 
 export const pointer = {
