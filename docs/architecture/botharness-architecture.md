@@ -494,6 +494,8 @@ Orchestrator 的应用定义 channel_list 工具从当前 PersonaBot 的 Session
 
 [ADR-0199](../adr/0199-paired-devices-reach-the-host-through-a-same-listener-device-gateway.md) 已由 [#1652](https://github.com/BotHarness/DeepSeekBot/issues/1652) 实现：配对的手机不持有任何 DSH 凭据。应用定义的 Device Pairing 模块（`packages/core/src/devices/`）经 DSH 公开的 `webServer.register`／`registerUpgrade` 在同一 `dsh web` 监听器上提供设备网关：设备在 BotHarness 前缀下以 `Authorization: Device <id>.<secret>` 调用与 Web Client 相同的 unary 信封和 Remote stream mux 帧；模块每次按运维数据库中的设备记录（只存哈希）校验并更新最近使用时间，再用 Host 内存中经 `connection.authenticatedUrl()` 自行换取的 loopback cookie 转发至原生 `/api` 与 `/api/remote.mux`。DSH 签名 cookie 的密钥本就跨 Host 重启保留，但 cookie 不标识设备，且 stream 升级不经过 `connection/request`，故不能把 cookie 交给设备。撤销立即拒绝后续请求（编码 401：`device-revoked`／`device-unknown`／`device-credential-missing`），并关闭该设备已打开的 stream socket。配对邀请、列表与撤销只在已认证的 `/api` carrier 上提供给 Human：Web Client「设置 → 设备」显示一次性、10 分钟有效的二维码（即 `deepseekbot://pair?p=…` 深链接，携带 Host 标识与按序路由），列出设备的配对与最近使用时间，并可撤销。见 [#1644](https://github.com/BotHarness/DeepSeekBot/issues/1644)。
 
+托管 Connect（目标状态，尚未实现）：[ADR-0241](../adr/0241-hosted-connect-reaches-the-host-through-a-managed-tunnel.md)（[#2387](https://github.com/BotHarness/DeepSeekBot/issues/2387)）在路由列表里增加一条 Connect 路由，顺序为 局域网 → Tailscale HTTPS → Connect。账号复用 TOB 的 WorkOS 环境，只用于发现 Host 和经纪一次性配对凭据；本仓库新建的中继 Worker 为每台开启 Connect 的 Host 代管一条 Cloudflare Tunnel，ingress 只放行 `/botharness-device/*`，应用流量不经过 Worker。手机登录后无需在电脑上确认即可配对，新设备会在电脑和其他手机上提示并可一键吊销。先在中国大陆以外实现并验收，大陆可达性之后另找测试者验证，不阻塞实现。
+
 ### 手机推送
 
 [ADR-0202](../adr/0202-phone-push-is-a-content-free-projection-of-the-human-inbox.md)（[#1655](https://github.com/BotHarness/DeepSeekBot/issues/1655)）：应用定义的 Push delivery 模块（`packages/core/src/push/`）是 Human Inbox 的投影，不另设通知权威。Human Inbox 表或 PersonaBot 的审批、提问、私密输入计数变化时（以及每分钟一次的兜底扫描），模块读取 `action` 项与未读的 `replies` 项，对每台已登记的配对设备只发送一次新项，并经 Expo Push Service 投递；推送标题为频道名（`#名称`，私信为 PersonaBot 名称），正文为所需操作加上工具与主要参数、问题或消息的简短预览（折叠空白，最多 140 字符）；私密输入请求不含内容（[ADR-0213](../adr/0213-phone-push-shows-the-channel-and-a-short-preview.md)）。数据字段只含 Host 标识、Human Inbox 项标识、PersonaBot 标识与读取请求所需的 Channel／消息标识，并携带未处理 Human 操作数作为角标。设备经设备网关的 `/botharness-device/push` 登记 Expo push token、切换各类通知、发送测试通知；撤销设备或 Expo 回报 `DeviceNotRegistered` 时删除 token。发送失败有界重试，结果写入不含内容的 `push` 开发者日志。App 保存每台配对的 Host，点按通知先切换到对应 Host，再打开该审批、提问或私信。
@@ -1150,7 +1152,9 @@ External HTTPS images require a per-image click and load directly in the browser
 
 ## 原生 Panel Plugin 开发目标（ADR-0234）
 
-[ADR-0234](../adr/0234-panels-are-native-plugins-with-independent-binding.md) 记录已确认目标，运行实现尚待交付。第一方与独立作者的面板复用原生 Plugin/Fiber 和 Bundle/Profile 组合。领域 owner 的 Host Service 与具名实时 Cordis Event 独立于面板显隐；浏览器 Consumer 沿用认证后的 Typert/API Gateway 与支持的 stream。状态型展示需恢复当前状态，首版不建设通用离线事件补发。后续 Memory 观测要覆盖无对话时的外部工作树变化，保留既有 Observation/Admission owner，并与 Git commit 区分。
+首片实现入口见 [Panel Plugin 开发指南](../panel-plugin.md)：独立 VRM Bundle 消费 UI 提供的公开 `dockPanels` / `botPresentation` Service；Activity 仍由现有 ClientStore 投影维护，已提交 DM 输出由按 Bot 共享的文字时钟呈现，固定实例元数据扩展现有布局文档。
+
+[ADR-0234](../adr/0234-panels-are-native-plugins-with-independent-binding.md) 记录已确认目标；以下为整体目标，已实现的 T1 范围以首片指南与验收记录为准。第一方与独立作者的面板复用原生 Plugin/Fiber 和 Bundle/Profile 组合。领域 owner 的 Host Service 与具名实时 Cordis Event 独立于面板显隐；浏览器 Consumer 沿用认证后的 Typert/API Gateway 与支持的 stream。状态型展示需恢复当前状态，首版不建设通用离线事件补发。后续 Memory 观测要覆盖无对话时的外部工作树变化，保留既有 Observation/Admission owner，并与 Git commit 区分。
 
 实现、实例、绑定与工作区位置分开。普通实现允许多个实例，重复安装不重复创建。消息面板内的 Bot-bound Panel 跟随 PersonaBot 私聊；群聊不显示内容和打开入口，也不增加成员选择器。显式绑定的全局工作区实例保留并清楚标明所选 Bot/Channel；Group-channel-bound 复用 Channel 绑定并限制为群聊。现有频道子面板不因此获得跨工作区拖放，绑定不授予数据访问或代码隔离。
 
@@ -1160,7 +1164,7 @@ External HTTPS images require a per-image click and load directly in the browser
 
 [T2 #2223](https://github.com/BotHarness/DeepSeekBot/issues/2223) 将办公室切片改为无 Bot／Channel 绑定的 **全局 Task Kanban**，管理当前 Profile 内共享的 Task。Human 卡片操作与 Bot 查询／创建／更新工具使用同一授权 Service、持久记录和提交后通知；关闭面板不影响工具工作。演进 #1792 已有 to-do owner 并兼容旧记录，不增加第二份存储。Task 状态与进度独立于 Session 内计划和 Assignment 执行，创建、移动、完成或重开卡片不自动启动执行。验收重启／重开一致性、显式并发冲突及直接 CLI／工具 parity。
 
-[Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。尚未开始实现；T1 运行验证及 Human 反馈是扩展门槛。交付状态与依赖以工单为准：T2–T6 依赖 T1，T7 依赖 T6，迁移父票与 T8–T15 各自依赖 T1。迁移与 T2–T7 同属 T1 后的扩展分支，子票不等待协调父票完成，也不隐式等待 T7；并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
+[Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。T1 已进入首片实现与隔离 Host 验证；Human 验收尚待反馈，仍是扩展门槛。交付状态与依赖以工单为准：T2–T6 依赖 T1，T7 依赖 T6，迁移父票与 T8–T15 各自依赖 T1。迁移与 T2–T7 同属 T1 后的扩展分支，子票不等待协调父票完成，也不隐式等待 T7；并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
 
 T4 保留 ADR-0220 的 Sessions 范围：DM 中为 Bot 所有的 Sessions，Group 默认按原始 Source Event 查看 Assignments，并保留已有显式成员 Bot 筛选。群聊不显示 Bot-bound 面板不等于移除该筛选，也不改变 Session ownership。T5 的 Members 在 DM 消息内隐藏，但全局固定 Group 实例不受当前聊天切换影响。Panel Consumer 释放与卸载领域 Provider／整个 Bundle 分开；后者遵循原生生命周期，能力缺失须明确显示不可用。
 
