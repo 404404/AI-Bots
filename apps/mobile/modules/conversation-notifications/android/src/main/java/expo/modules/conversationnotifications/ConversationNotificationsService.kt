@@ -1,14 +1,11 @@
 package expo.modules.conversationnotifications
 
 import android.content.Context
-import android.os.Bundle
-import android.os.Parcel
-import android.os.Parcelable
-import expo.modules.notifications.notifications.interfaces.NotificationTrigger
 import expo.modules.notifications.notifications.model.Notification
 import expo.modules.notifications.notifications.model.NotificationBehaviorRecord
 import expo.modules.notifications.notifications.model.NotificationContent
 import expo.modules.notifications.notifications.model.NotificationRequest
+import expo.modules.notifications.notifications.triggers.ChannelAwareTrigger
 import expo.modules.notifications.service.NotificationsService
 import expo.modules.notifications.service.delegates.ExpoHandlingDelegate
 import expo.modules.notifications.service.delegates.ExpoPresentationDelegate
@@ -33,10 +30,15 @@ class ConversationPresentationDelegate(context: Context) : ExpoPresentationDeleg
   }
 }
 
+private const val REQUESTS_CHANNEL = "requests"
+
 /**
  * The Host sends Android pushes data-only, with the shown title and message inside the data, so the
  * system leaves them to the app (src/push/delivery.ts in packages/core). Expo only presents a
  * background data-only push that has a title or text, so this fills them in from the data first.
+ * The rebuilt request carries a ChannelAwareTrigger on the "requests" channel: the push names no
+ * channel the app can read, and Expo only hands JS the data (for taps and dismissing resolved
+ * requests) of a Firebase, scheduled or channel-aware trigger.
  */
 class ConversationHandlingDelegate(private val base: HandlingDelegate) : HandlingDelegate by base {
   override fun handleNotification(notification: Notification) {
@@ -67,39 +69,9 @@ class ConversationHandlingDelegate(private val base: HandlingDelegate) : Handlin
       }
       .build()
     return Notification(
-      NotificationRequest(request.identifier, filled, RequestsTrigger(request.trigger)),
+      NotificationRequest(request.identifier, filled, ChannelAwareTrigger(REQUESTS_CHANNEL)),
       notification.originDate
     )
   }
 }
 
-/**
- * A data-only push names no Android channel the app can read (Expo wraps the data into one JSON
- * field), so Bot notifications are pinned to the "requests" channel the app creates.
- */
-class RequestsTrigger(private val base: NotificationTrigger) : NotificationTrigger {
-  override fun getNotificationChannel(): String = REQUESTS
-
-  override fun toBundle(): Bundle = base.toBundle()
-
-  override fun describeContents(): Int = 0
-
-  override fun writeToParcel(dest: Parcel, flags: Int) {
-    dest.writeParcelable(base, flags)
-  }
-
-  companion object {
-    const val REQUESTS = "requests"
-
-    @JvmField
-    val CREATOR = object : Parcelable.Creator<RequestsTrigger> {
-      override fun createFromParcel(parcel: Parcel): RequestsTrigger =
-        RequestsTrigger(
-          parcel.readParcelable(RequestsTrigger::class.java.classLoader)
-            ?: throw IllegalArgumentException("RequestsTrigger needs its base trigger")
-        )
-
-      override fun newArray(size: Int) = arrayOfNulls<RequestsTrigger>(size)
-    }
-  }
-}
