@@ -15,14 +15,25 @@ export function useStoreSlice<S>(
   select: (state: ClientState) => S,
   equal: (a: S, b: S) => boolean = Object.is,
 ): S {
-  const memo = useRef<{ state: ClientState; select: typeof select; value: S }>();
+  const memo = useRef<{
+    state: ClientState;
+    select: typeof select;
+    equal: typeof equal;
+    value: S;
+  }>();
   const read = (): S => {
     const state = source.getSnapshot();
     const last = memo.current;
-    if (last !== undefined && last.state === state && last.select === select) return last.value;
+    if (
+      last !== undefined &&
+      last.state === state &&
+      last.select === select &&
+      last.equal === equal
+    )
+      return last.value;
     const next = select(state);
     const value = last !== undefined && equal(last.value, next) ? last.value : next;
-    memo.current = { state, select, value };
+    memo.current = { state, select, equal, value };
     return value;
   };
   return useSyncExternalStore(source.subscribe, read, read);
