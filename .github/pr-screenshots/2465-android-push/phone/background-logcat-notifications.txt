@@ -1,0 +1,16 @@
+10-21 17:45:19.618 12367  3363 I AlarmManager: setExactAndAllowWhileIdle [name: FcmRetry type: 2 triggerAtMillis: 4593966930]
+10-21 17:45:19.630 18118  3399 W FirebaseMessaging: Unable to log event: analytics library is missing
+10-21 17:45:19.648  2776  2776 D FocusPlugin: 0|app.deepseekbot.mobile|0|FCM-Notification:2337564876|10696 is not focus notification, isMedia: false
+10-21 17:45:19.650  2776  2776 D AlarmScheduler-fold: addAlarm, key=0|app.deepseekbot.mobile|0|FCM-Notification:2337564876|10696, triggerTime=4615446962
+10-21 17:45:19.650  2776  2776 D AlarmScheduler-TIMEOUT: addAlarm, key=0|app.deepseekbot.mobile|0|FCM-Notification:2337564876|10696, triggerTime=4853046963
+10-21 17:45:19.699  2776  2776 D AlertCoordinator: onViewBound, buzzBeep for 0|app.deepseekbot.mobile|0|FCM-Notification:2337564876|10696
+10-21 17:45:38.567 12367  3221 I AlarmManager: setExactAndAllowWhileIdle [name: FcmRetry type: 2 triggerAtMillis: 4593985878]
+10-21 17:45:38.578 18118  3399 W FirebaseMessaging: Unable to log event: analytics library is missing
+10-21 17:45:38.615  2776  2776 D FocusPlugin: 0|app.deepseekbot.mobile|0|FCM-Notification:2337583824|10696 is not focus notification, isMedia: false
+10-21 17:45:38.842  2776  2776 D AlarmScheduler-fold: addAlarm, key=0|app.deepseekbot.mobile|0|FCM-Notification:2337583824|10696, triggerTime=4615466154
+10-21 17:45:38.842  2776  2776 D AlarmScheduler-TIMEOUT: addAlarm, key=0|app.deepseekbot.mobile|0|FCM-Notification:2337583824|10696, triggerTime=4853066155
+10-21 17:45:38.919  2776  2776 D AlertCoordinator: onViewBound, buzzBeep for 0|app.deepseekbot.mobile|0|FCM-Notification:2337583824|10696
+10-21 17:45:38.929  2776  2776 W NotifRow: cancelAppearDrawing childKey: 0|app.deepseekbot.mobile|0|FCM-Notification:2337583824|10696 wasDrawing:false
+10-21 17:45:38.931  2776  2776 W NotifRow: cancelAppearDrawing childKey: 0|app.deepseekbot.mobile|0|FCM-Notification:2337564876|10696 wasDrawing:false
+10-21 17:46:26.113  1381  3786 E MetadataHelper: [operator()] [idx(1)] query MTK_3A_FEATURE_AE_VALID_EXPOSURE_NUM Fail !! (operator()){#2162:vendor/mediatek/proprietary/hardware/mtkcam-core/aaa/aaahal/source/Hal3AFlowCtrl/v1.0/metadata_helper/MetadataHelper.cpp}
+10-21 17:46:26.114  1381  3807 E MetadataHelper: [operator()] [idx(1)] query MTK_3A_FEATURE_AE_VALID_EXPOSURE_NUM Fail !! (operator()){#2162:vendor/mediatek/proprietary/hardware/mtkcam-core/aaa/aaahal/source/Hal3AFlowCtrl/v1.0/metadata_helper/MetadataHelper.cpp}
