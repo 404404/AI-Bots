@@ -475,4 +475,36 @@ describe('push registration with a real Host gateway', () => {
     expect(phone.state.badge).toBe(0);
     expect(phone.state.dismissed).toEqual(['n1']);
   });
+
+  it('clears an unpaired Host’s notifications, and the badge once no Host is left', async () => {
+    const phone = fakeNotifications('granted');
+    phone.state.badge = 3;
+    phone.state.presented = [
+      { id: 'n1', data: { v: 1, hostId: 'a', itemId: 'approval:1', kind: 'tool-approval' } },
+      { id: 'n2', data: { v: 1, hostId: 'b', itemId: 'reply:1', kind: 'channel-reply' } },
+      { id: 'n3', data: { v: 1, hostId: 'a', channelId: 'g1', kind: 'channel-reply' } },
+      { id: 'n4', data: { title: 'not ours' } },
+    ];
+    const unregistered: string[] = [];
+    const session = createPushSession({
+      notifications: phone.port,
+      hostPush: {
+        ...createHostPush(nodeCarrier()),
+        unregister: async (saved) => void unregistered.push(saved.hostId),
+      },
+      platform: 'ios',
+      locale: 'en',
+    });
+    await session.sync([host('a'), host('b')]);
+
+    await session.forget(host('a'));
+    expect(phone.state.dismissed).toEqual(['n1', 'n3']);
+    expect(phone.state.badge).toBe(3);
+    expect(unregistered).toEqual(['a']);
+
+    phone.state.presented = phone.state.presented.filter((n) => n.id === 'n2' || n.id === 'n4');
+    await session.forget(host('b'));
+    expect(phone.state.dismissed).toEqual(['n1', 'n3', 'n2']);
+    expect(phone.state.badge).toBe(0);
+  });
 });

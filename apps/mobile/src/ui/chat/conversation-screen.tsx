@@ -141,6 +141,7 @@ export function ConversationScreen({
   latestWindowOnly?: boolean;
 }) {
   const { client, saved } = useHostSession();
+  const [openedOn] = useState(saved?.hostId);
   const focused = useIsFocused();
   const roster = useHostSnapshot(client, focused).roster;
   const router = useRouter();
@@ -154,7 +155,8 @@ export function ConversationScreen({
   );
   const bot =
     place.kind === 'dm' ? roster?.bots.find((entry) => entry.slug === place.slug) : undefined;
-  if (expectedHostId && saved?.hostId !== expectedHostId) return <Text>{t.sourceChanged}</Text>;
+  const shownHostId = expectedHostId ?? openedOn;
+  if (shownHostId && saved?.hostId !== shownHostId) return <Text>{t.sourceChanged}</Text>;
   return (
     <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
       <MessageIdentities.Provider value={identities}>
