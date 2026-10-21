@@ -140,11 +140,15 @@ export function mountContentPurge(options: {
       contentPurge: { actor: fact.actor, at: fact.acceptedAt, reason: fact.reason },
     });
   };
-  const apply = (recover = true): number => {
-    const facts = ledger!.checkpoint().facts;
-    const cleanup = new Set(facts.flatMap((fact) => fact.managedFiles ?? []));
+  const apply = (recover = true, fresh?: ReadonlySet<string>): number => {
+    const all = ledger!.checkpoint().facts;
+    const facts = fresh ? all.filter((fact) => fresh.has(fact.sourceEventId)) : all;
+    const cleanup = new Set([
+      ...(fresh ? pendingFiles : []),
+      ...facts.flatMap((fact) => fact.managedFiles ?? []),
+    ]);
     port.read((db) => {
-      const accepted = new Set(facts.map((f) => f.sourceEventId));
+      const accepted = new Set(all.map((f) => f.sourceEventId));
       for (const row of db.prepare('SELECT source_event_id FROM messaging_purge_facts').all()) {
         if (!accepted.has(String(row.source_event_id)))
           throw new Error('Operational snapshot requires missing purge facts');
@@ -246,14 +250,13 @@ export function mountContentPurge(options: {
         if (Number(result?.busy) !== 0) throw new Error('Purge checkpoint is busy');
       });
     let pending = 0;
+    let retained: Set<string> | undefined;
+    const references = () => (retained ??= port.read((db) => retainedManagedFiles(db)));
     pendingFiles.clear();
     for (const id of cleanup) {
       options.faultInjector?.('during-file-cleanup');
       try {
-        if (
-          attachments.purgeReviewed(id, () => port.read((db) => retainedManagedFiles(db))) ===
-          'pending'
-        ) {
+        if (attachments.purgeReviewed(id, references) === 'pending') {
           pending++;
           pendingFiles.add(id);
         }
@@ -496,7 +499,7 @@ export function mountContentPurge(options: {
         })),
       });
       options.faultInjector?.('after-acceptance');
-      const cleanupPending = apply(false);
+      const cleanupPending = apply(false, new Set(rows.map((row) => row.source_event_id)));
       options.warn?.(`content-purge initiator=human phase=complete sources=${rows.length}`);
       return cleanupPending;
     } catch {
