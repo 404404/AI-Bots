@@ -27,6 +27,32 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', async () => {
   );
 });
 
+const chrome = vi.hoisted(() => ({ counting: false, titleBars: 0, containers: 0 }));
+
+vi.mock('../src/client/ds/panel-header.js', async (load) => {
+  const real = await load<typeof import('../src/client/ds/panel-header.js')>();
+  const { createElement: h } = await import('react');
+  return {
+    ...real,
+    PanelHeader: (props: Parameters<typeof real.PanelHeader>[0]) => {
+      if (chrome.counting) chrome.titleBars += 1;
+      return h(real.PanelHeader, props);
+    },
+  };
+});
+
+vi.mock('../src/client/entry-part.js', async (load) => {
+  const real = await load<typeof import('../src/client/entry-part.js')>();
+  const { createElement: h } = await import('react');
+  return {
+    ...real,
+    EntryPart: (props: Parameters<typeof real.EntryPart>[0]) => {
+      if (chrome.counting) chrome.containers += 1;
+      return h(real.EntryPart, props);
+    },
+  };
+});
+
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotMain } from '../src/client/bot-main.js';
 import { createChannelSidebarBuiltins } from '../src/client/channel-sidebar-builtins.js';
@@ -113,7 +139,14 @@ const workload: Record<Phase, (n: number) => void> = {
 const FRAMES = 20;
 const report: Record<
   string,
-  { panels: number; panelRenders: number; mainCommits: number; mainMs: number }
+  {
+    panels: number;
+    panelRenders: number;
+    titleBars: number;
+    containers: number;
+    mainCommits: number;
+    mainMs: number;
+  }
 > = {};
 
 describe('Bot main render benchmark', () => {
@@ -192,12 +225,18 @@ describe('Bot main render benchmark', () => {
       counts.clear();
       mainCommits = 0;
       mainMs = 0;
+      chrome.titleBars = 0;
+      chrome.containers = 0;
       phase = name;
+      chrome.counting = true;
       for (let n = 0; n < FRAMES; n += 1) await act(async () => workload[name](n));
+      chrome.counting = false;
       phase = undefined;
       report[name] = {
         panels: mounted,
         panelRenders: [...counts.values()].reduce((sum, value) => sum + value, 0),
+        titleBars: chrome.titleBars,
+        containers: chrome.containers,
         mainCommits,
         mainMs: Math.round(mainMs * 10) / 10,
       };
@@ -205,8 +244,11 @@ describe('Bot main render benchmark', () => {
     await act(async () => root.unmount());
     host.remove();
     expect(report['stream']!.panels).toBeGreaterThan(0);
-    for (const name of Object.keys(workload) as Phase[])
+    for (const name of Object.keys(workload) as Phase[]) {
       expect(report[name]!.panelRenders, name).toBe(0);
+      expect(report[name]!.titleBars, name).toBe(0);
+      expect(report[name]!.containers, name).toBe(0);
+    }
     expect(report['human-inbox']!.mainCommits).toBe(0);
     expect(report['search']!.mainCommits).toBe(0);
     expect(report['unrelated-activity']!.mainCommits).toBeLessThanOrEqual(1);
