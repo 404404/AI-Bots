@@ -9,11 +9,11 @@ import { Text } from '../primitives/text';
 import { t } from '../strings';
 import type { ActivitySection } from './activity-filters';
 import { ActivityIcon, ChatsIcon, PersonIcon } from './icons';
+import { tabLabelFit } from './tab-label-fit';
 
 export const ACTIVITY_TABS = [{ key: 'action' }, { key: 'replies' }, { key: 'unread' }] as const;
 export type ActivityTab = (typeof ACTIVITY_TABS)[number];
 const ICONS = { action: ActivityIcon, replies: PersonIcon, unread: ChatsIcon };
-
 export function ActivityTabs({
   selected,
   position,
@@ -147,6 +147,7 @@ export function ActivityTabs({
                   <Text
                     tone={selected === key ? 'fg' : 'muted'}
                     strong={selected === key}
+                    {...tabLabelFit()}
                     style={{ flexShrink: 1, textAlign: 'center' }}
                   >
                     {t.inboxSections[key]}
