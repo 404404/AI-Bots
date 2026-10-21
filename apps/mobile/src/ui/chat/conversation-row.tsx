@@ -165,9 +165,9 @@ export function ConversationRowFrame({
       >
         <View
           style={{
-            flexDirection: 'row',
+            flexDirection: theme.largeText ? 'column' : 'row',
             alignItems: theme.largeText ? 'flex-start' : 'center',
-            gap: space.x3,
+            gap: theme.largeText ? space.x1 : space.x3,
           }}
         >
           <SourceName name={title} source={source} />
