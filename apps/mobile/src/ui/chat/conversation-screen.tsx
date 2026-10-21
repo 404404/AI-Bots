@@ -1,10 +1,13 @@
 import { useSourceDraft } from '../../host/native-source-drafts';
 import { hostDraftKey } from '../../host/source-drafts';
+import { takeSharedFiles } from '../share/incoming-share';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   useWindowDimensions,
   View,
@@ -33,7 +36,13 @@ import {
 import type { Inbox } from '../../host/inbox';
 import type { WireAllBotPreview } from '../../host/wire';
 import { shareAttachment } from '../../host/share-attachment';
-import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../host/pick-files';
+import {
+  MAX_PICKED,
+  fromClipboardImage,
+  pickFiles,
+  type PickSource,
+  type PickedFile,
+} from '../../host/pick-files';
 import {
   useChannelConversation,
   useConversation,
@@ -46,6 +55,7 @@ import {
   answerInChat,
   answerQuestion,
   decideApproval,
+  handledHere,
   grantRequestPort,
   loadApproval,
   loadQuestion,
@@ -61,11 +71,20 @@ import type { BubbleGroup } from './bubble-shape';
 import { botBusy } from './bot-tone';
 import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
-import { Composer } from './composer';
-import { EdgeFade, HeaderBackButton } from './header-chrome';
-import { ScrollEdgeElement, nativeScrollEdge } from '../primitives/scroll-edge-element';
-import { barLabelStyle, glassHeader, useHeaderOverlap } from './native-header';
+import { Composer, type ComposerInput } from './composer';
+import { ClipboardImageOffer, useClipboardImage } from './clipboard-image';
+import { EdgeFade, HeaderBackButton, titleChipFill } from './header-chrome';
+import {
+  barLabelStyle,
+  floatingHeader,
+  glassHeader,
+  useHeaderOverlap,
+  useHeaderPadding,
+} from './native-header';
 import { useFollowLatest } from './follow-latest';
+import { usePullToCompose } from './pull-to-compose';
+import { chatHref, useRecentChat } from '../shell/recent-chats';
+import { PullToComposeHint } from './pull-to-compose-hint';
 import { useMarkRead } from './mark-read';
 import { useBotNames } from './use-bot-names';
 import { ImageViewer } from './image-viewer';
@@ -91,7 +110,7 @@ import { QuestionCard } from './question-card';
 import { WorkingStatus } from './working-status';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
-import { edgeFade, space } from '../design/tokens';
+import { edgeFade, pullToCompose, radius, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
 import { fullClientParams, type FullClientTarget } from '../../host/full-client';
 import { leaveScreen } from '../shell/leave-screen';
@@ -103,6 +122,8 @@ import { LoadingIndicator } from '../primitives/loading-indicator';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
 const NO_DRAFTS: ConversationDraftReference[] = [];
+
+type ScrollEvent = NativeSyntheticEvent<NativeScrollEvent>;
 
 export type ChatPlace =
   | { kind: 'dm'; slug: string | undefined }
@@ -232,6 +253,7 @@ const RequestCard = memo(function RequestCard({
         port={grant}
         botName={botName}
         resolved={card.resolved === true || resolution?.kind === 'grant'}
+        decidedHere={handledHere(ref)}
         focused={focused}
         group={group}
       />
@@ -241,7 +263,9 @@ const RequestCard = memo(function RequestCard({
       <ApprovalCard
         port={approval}
         {...subject}
+        {...(card.command === undefined ? {} : { command: card.command })}
         {...(resolution?.kind === 'tool-approval' ? { resolution } : {})}
+        decidedHere={handledHere(ref)}
         focused={focused}
         group={group}
       />
@@ -256,7 +280,7 @@ const RequestCard = memo(function RequestCard({
       group={group}
       replyInChat={replyInChat}
       expandInput
-      answeredHere={answeredHere}
+      answeredHere={answeredHere || handledHere(ref)}
     />
   );
 });
@@ -275,6 +299,7 @@ function ChatConversation({
   const theme = useDesignTheme();
   const router = useRouter();
   const headerOverlap = useHeaderOverlap();
+  const headerPadding = useHeaderPadding();
   const { width: windowWidth } = useWindowDimensions();
   const listSafeArea = useListBottomSafeArea();
   const { client, inbox, saved } = useHostSession();
@@ -320,17 +345,19 @@ function ChatConversation({
   const playback = useStreamPlayback(conversation, display.loaded && display.mode === 'streaming');
   const snapshot = useConversationTimelineSnapshot(conversation, playback);
   const shownDrafts = display.loaded && display.mode === 'streaming' ? snapshot.drafts : NO_DRAFTS;
-  const [draft, setDraft] = useSourceDraft(
-    hostDraftKey(
-      saved?.hostId ?? '',
-      place.kind,
-      (place.kind === 'dm' ? place.slug : place.channelId) ?? '',
-    ),
+  const draftKey = hostDraftKey(
+    saved?.hostId ?? '',
+    place.kind,
+    (place.kind === 'dm' ? place.slug : place.channelId) ?? '',
   );
+  const [draft, setDraft] = useSourceDraft(draftKey);
   const [mentions, setMentions] = useState<SelectedMention[]>([]);
   const [caret, setCaret] = useState(0);
   const [selection, setSelection] = useState<{ start: number; end: number }>();
-  const [allPreview, setAllPreview] = useState<{ key: string; preview: WireAllBotPreview }>();
+  const [allPreview, setAllPreview] = useState<{
+    key: string;
+    preview: WireAllBotPreview;
+  }>();
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const dictation = useDictation(setDraft);
@@ -388,7 +415,12 @@ function ChatConversation({
   const attachList = useCallback(
     (node: FlatList<Row> | null) => {
       list(node);
-      content(node?.getNativeScrollRef()?.getInnerViewRef() ?? null);
+      const scroll = node?.getNativeScrollRef?.();
+      content(
+        scroll !== null && scroll !== undefined && 'getInnerViewRef' in scroll
+          ? scroll.getInnerViewRef()
+          : null,
+      );
     },
     [list, content],
   );
@@ -404,18 +436,60 @@ function ChatConversation({
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
   const latest = useFollowLatest(list, visible, playback?.setFollowing, headerOverlap);
+  const composerInput = useRef<ComposerInput>(null);
+  const [typing, setTyping] = useState(false);
+  const clipboard = useClipboardImage(typing && files.length < MAX_PICKED);
+  const composable = !botDm && conversation !== undefined && host.connection.status === 'connected';
+  const { jumpToLatest } = latest;
+  const compose = useCallback(() => {
+    jumpToLatest();
+    composerInput.current?.focus();
+  }, [jumpToLatest]);
+  const pull = usePullToCompose({
+    enabled: composable,
+    threshold: pullToCompose.threshold,
+    flick: Platform.OS === 'android' ? pullToCompose.flick : undefined,
+    onCompose: compose,
+  });
   const markdownViewport = useMemo(
     () => ({ scroll, viewport, content, layout: viewportLayout, active: focused }),
     [scroll, viewport, content, viewportLayout, focused],
   );
   const readMount = useMarkRead(client, inbox, conversation, activeChannel, !latest.away);
+  const recentMount = useRecentChat(
+    botDm
+      ? undefined
+      : bot !== undefined
+        ? {
+            id: `dm:${saved?.hostId ?? ''}:${bot.slug}`,
+            title: bot.displayName,
+            href: chatHref(`/dm/${encodeURIComponent(bot.slug)}`, saved?.hostId),
+          }
+        : channel !== undefined
+          ? {
+              id: `channel:${saved?.hostId ?? ''}:${channel.id}`,
+              title: channel.name,
+              href: chatHref(`/channel/${encodeURIComponent(channel.id)}`, saved?.hostId),
+            }
+          : undefined,
+  );
+  const sharedMount = useCallback(
+    (node: unknown) => {
+      if (node === null) return;
+      const shared = takeSharedFiles(draftKey);
+      if (shared.length > 0) setFiles((current) => [...current, ...shared].slice(0, MAX_PICKED));
+    },
+    [draftKey],
+  );
   const mountRef = dictation.mountRef;
   const screenRef = useCallback(
     (node: unknown) => {
       mountRef(node);
       readMount(node);
+      recentMount(node);
+      sharedMount(node);
     },
-    [mountRef, readMount],
+    [mountRef, readMount, recentMount, sharedMount],
   );
 
   const asking = snapshot.messages.findLast(
@@ -686,6 +760,8 @@ function ChatConversation({
         minHeight: theme.touch,
         justifyContent: 'center',
         paddingHorizontal: theme.touch / 2,
+        borderRadius: radius.round,
+        ...titleChipFill(theme, false),
       }}
     >
       <Text strong numberOfLines={1} style={barLabelStyle}>
@@ -714,9 +790,11 @@ function ChatConversation({
         ? { kind: 'channel', channelId }
         : undefined;
   const trailing =
-    fullClient === undefined ? null : <OpenFullClientButton target={fullClient} bar />;
+    fullClient === undefined ? null : (
+      <OpenFullClientButton target={fullClient} bar plain={!floatingHeader} />
+    );
   const ios = Platform.OS === 'ios';
-  const back = <HeaderBackButton plain onPress={leave} />;
+  const back = <HeaderBackButton plain={!floatingHeader} onPress={leave} />;
   const titleItem = (
     <View style={{ maxWidth: windowWidth - (theme.touch + space.x5) * 3 }}>{title}</View>
   );
@@ -748,16 +826,22 @@ function ChatConversation({
                         ? t.dictationFailed
                         : undefined;
 
+  const listTop = notice === undefined ? headerPadding : 0;
+  const fadeColor = background.kind === 'color' ? background.color : theme.color.base;
+
   return (
     <>
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTransparent: ios,
-          headerStyle: ios ? {} : { backgroundColor: theme.color.base },
+          headerTransparent: ios || floatingHeader,
+          headerStyle: ios || floatingHeader ? {} : { backgroundColor: theme.color.base },
           headerShadowVisible: false,
           headerBackButtonDisplayMode: 'minimal',
           ...(ios && !glassHeader ? { headerBlurEffect: 'systemChromeMaterial' as const } : {}),
+          ...(glassHeader
+            ? { scrollEdgeEffects: { top: 'automatic' as const, bottom: 'hidden' as const } }
+            : {}),
           ...(ios
             ? {
                 title: '',
@@ -795,9 +879,19 @@ function ChatConversation({
               }
             : {
                 headerTitleAlign: 'left' as const,
-                headerTitle: () => title,
+                headerTitle: () => (
+                  <View
+                    key={`${theme.scheme}:${theme.fontScale}:${bot?.displayName ?? channel?.name ?? ''}`}
+                    style={{
+                      maxWidth: windowWidth - (theme.touch + space.x5) * 3,
+                      marginHorizontal: space.x3,
+                    }}
+                  >
+                    {title}
+                  </View>
+                ),
                 headerRight: () => trailing,
-                ...(canGoBack ? {} : { headerLeft: () => back }),
+                ...(canGoBack && !floatingHeader ? {} : { headerLeft: () => back }),
               }),
         }}
       />
@@ -811,55 +905,70 @@ function ChatConversation({
         }
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
-          <ScrollEdgeElement edge="bottom">
-            {botDm ? (
-              <View style={{ padding: space.x5, alignItems: 'center' }}>
-                <Text variant="meta" tone="muted">
-                  {t.activityRow.botDm}
-                </Text>
-              </View>
-            ) : (
-              <Composer
-                value={draft}
-                placeholder={
-                  bot !== undefined
-                    ? t.messageBot(bot.displayName)
-                    : channel !== undefined
-                      ? t.messageBot(`#${channel.name}`)
-                      : t.messagePlaceholder
-                }
-                disabled={conversation === undefined || host.connection.status !== 'connected'}
-                files={files}
-                canAttach={files.length < MAX_PICKED}
-                dictation={dictation.state.status}
-                canDictate={conversation !== undefined}
-                onChange={edit}
-                selection={selection}
-                onSelection={(next) => {
-                  setSelection(undefined);
-                  setCaret(next);
-                }}
-                {...(candidates.length === 0
-                  ? {}
-                  : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
-                onSend={send}
-                onPick={pick}
-                onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-                onDictate={() => {
-                  setAttachError(false);
-                  dictation.start();
-                }}
-                onStopDictation={dictation.stop}
-                onCancelDictation={dictation.cancel}
-              />
-            )}
-          </ScrollEdgeElement>
+          botDm ? (
+            <View style={{ padding: space.x5, alignItems: 'center' }}>
+              <Text variant="meta" tone="muted">
+                {t.activityRow.botDm}
+              </Text>
+            </View>
+          ) : (
+            <Composer
+              value={draft}
+              placeholder={
+                bot !== undefined
+                  ? t.messageBot(bot.displayName)
+                  : channel !== undefined
+                    ? t.messageBot(`#${channel.name}`)
+                    : t.messagePlaceholder
+              }
+              disabled={conversation === undefined || host.connection.status !== 'connected'}
+              files={files}
+              canAttach={files.length < MAX_PICKED}
+              dictation={dictation.state.status}
+              canDictate={conversation !== undefined}
+              onChange={edit}
+              selection={selection}
+              onSelection={(next) => {
+                setSelection(undefined);
+                setCaret(next);
+              }}
+              {...(candidates.length > 0
+                ? { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> }
+                : clipboard.offered
+                  ? {
+                      above: (
+                        <ClipboardImageOffer
+                          onUnreadable={clipboard.used}
+                          onPaste={(data) => {
+                            clipboard.used();
+                            setAttachError(false);
+                            setFiles((current) =>
+                              [...current, fromClipboardImage(data)].slice(0, MAX_PICKED),
+                            );
+                          }}
+                        />
+                      ),
+                    }
+                  : {})}
+              onSend={send}
+              onPick={pick}
+              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+              onDictate={() => {
+                setAttachError(false);
+                dictation.start();
+              }}
+              onStopDictation={dictation.stop}
+              onCancelDictation={dictation.cancel}
+              inputRef={composerInput}
+              onFocusChange={setTyping}
+            />
+          )
         }
       >
         {notice === undefined ? null : (
           <View
             style={{
-              marginTop: headerOverlap,
+              marginTop: headerOverlap + headerPadding,
               backgroundColor: theme.color.warningSoft,
               paddingHorizontal: space.x5,
               paddingVertical: space.x3,
@@ -924,7 +1033,7 @@ function ChatConversation({
                     viewportHeight - (notice === undefined ? headerOverlap : 0),
                   ),
                   justifyContent: 'flex-end',
-                  paddingTop: space.x3,
+                  paddingTop: space.x3 + listTop,
                   paddingBottom: composerHeight + edgeFade.bottom,
                 }}
                 data={rows}
@@ -948,6 +1057,18 @@ function ChatConversation({
                 {...(latest.ready ? { onStartReached: () => void conversation?.loadOlder() } : {})}
                 onStartReachedThreshold={0.5}
                 {...latest.listProps}
+                onScrollBeginDrag={(event: ScrollEvent) => {
+                  pull.onScrollBeginDrag(event);
+                  latest.listProps.onScrollBeginDrag();
+                }}
+                onScroll={(event: ScrollEvent) => {
+                  latest.listProps.onScroll(event);
+                  pull.onScroll(event);
+                }}
+                onScrollEndDrag={(event: ScrollEvent) => {
+                  latest.listProps.onScrollEndDrag(event);
+                  pull.onScrollEndDrag(event);
+                }}
                 onContentSizeChange={(width: number, height: number) => {
                   latest.listProps.onContentSizeChange(width, height);
                   jump();
@@ -990,9 +1111,27 @@ function ChatConversation({
               />
             </SpeakerStageContext.Provider>
           </MarkdownViewportContext.Provider>
-          {nativeScrollEdge ? null : (
-            <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
-          )}
+          {listTop > 0 ? (
+            <EdgeFade
+              edge="top"
+              height={listTop + edgeFade.reach}
+              cover={listTop}
+              color={fadeColor}
+            />
+          ) : null}
+          <EdgeFade
+            edge="bottom"
+            height={composerHeight + edgeFade.reach}
+            cover={composerHeight}
+            color={fadeColor}
+          />
+          {composable && Platform.OS === 'ios' ? (
+            <PullToComposeHint
+              progress={pull.progress}
+              ready={pull.ready}
+              bottom={composerHeight + space.x3}
+            />
+          ) : null}
           {latest.away ? (
             <View
               pointerEvents="box-none"

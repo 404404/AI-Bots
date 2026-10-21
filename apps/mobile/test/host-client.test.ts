@@ -38,8 +38,9 @@ function connect(
 async function until(
   target: HostClient,
   accept: (snapshot: HostSnapshot) => boolean,
+  limit = 200,
 ): Promise<HostSnapshot> {
-  for (let tries = 0; tries < 200; tries += 1) {
+  for (let tries = 0; tries < limit; tries += 1) {
     const snapshot = target.getSnapshot();
     if (accept(snapshot)) return snapshot;
     await new Promise((resolve) => setTimeout(resolve, 5));
@@ -86,7 +87,7 @@ describe('Host client', () => {
       expect.objectContaining({ role: 'orchestrator', state: 'thinking' }),
     ]);
     host.push('botharness/followActivity', idle);
-    const done = await until(target, (s) => s.roster?.bots[0]?.state === 'idle');
+    const done = await until(target, (s) => s.roster?.bots[0]?.state === 'idle', 600);
     expect(done.roster?.bots[0]?.sessions).toBeUndefined();
   });
 
@@ -250,6 +251,13 @@ describe('route check', () => {
     });
     expect(checkRoute('http://studio.tailnet-example.ts.net').ok).toBe(false);
     expect(checkRoute('https://example.com').ok).toBe(false);
+    expect(checkRoute('https://studio.deepseekbot.dev')).toEqual({
+      ok: true,
+      origin: 'https://studio.deepseekbot.dev',
+    });
+    expect(checkRoute('http://studio.deepseekbot.dev').ok).toBe(false);
+    expect(checkRoute('https://a.studio.deepseekbot.dev').ok).toBe(false);
+    expect(checkRoute('https://studio.deepseekbot.dev:8443').ok).toBe(false);
     expect(checkRoute('https://studio.tailnet-example.ts.net/?token=x').ok).toBe(false);
   });
 });

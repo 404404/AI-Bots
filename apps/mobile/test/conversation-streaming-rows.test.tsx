@@ -64,6 +64,10 @@ const stream = vi.hoisted(() => {
   };
 });
 
+vi.mock('../src/ui/shell/recent-chats', () => ({
+  chatHref: () => '',
+  useRecentChat: () => () => {},
+}));
 vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', () => {}] }));
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
@@ -134,8 +138,11 @@ vi.mock('../src/host/speech', () => ({
 vi.mock('../src/ui/chat/native-header', () => ({
   glassHeader: true,
   useHeaderOverlap: () => 80,
+  floatingHeader: false,
+  useHeaderPadding: () => 0,
 }));
 vi.mock('../src/ui/chat/header-chrome', () => ({
+  titleChipFill: () => ({}),
   HeaderBackButton: ({ onPress }: { onPress(): void }) => (
     <button type="button" onClick={onPress}>
       Header back
@@ -180,6 +187,12 @@ vi.mock('../src/ui/chat/chat-title', () => ({ ChatTitle: () => null }));
 vi.mock('../src/ui/chat/composer', () => ({ Composer: () => null }));
 vi.mock('../src/ui/chat/image-viewer', () => ({ ImageViewer: () => null }));
 vi.mock('../src/ui/chat/jump-to-latest', () => ({ JumpToLatest: () => null }));
+vi.mock('../src/ui/chat/pull-to-compose-hint', () => ({ PullToComposeHint: () => null }));
+vi.mock('../src/ui/chat/clipboard-image', () => ({
+  ClipboardImageOffer: () => null,
+  useClipboardImage: () => ({ offered: false, used: () => {} }),
+}));
+vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
 vi.mock('../src/ui/chat/message-actions', () => ({ MessageActions: () => null }));
 vi.mock('../src/ui/chat/message-bubble', async () => {
   const { memo, useCallback, useSyncExternalStore } = await import('react');

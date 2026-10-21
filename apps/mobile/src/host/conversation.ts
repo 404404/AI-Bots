@@ -1,5 +1,6 @@
 import type { HostClient, RemoteSource } from './client';
 import { activityOf, type ChannelActivity } from './channel-activity';
+import { approvalCommand } from './requests';
 import type {
   AttachmentRef,
   WireAllBotMention,
@@ -23,6 +24,7 @@ export interface MessageCard {
   kind: CardKind;
   channelId: string;
   subject?: string;
+  command?: string;
   resolved?: true;
 }
 
@@ -40,6 +42,7 @@ export interface MessageAttachment {
   size?: number;
   source?: RemoteSource;
   local: boolean;
+  cleared?: true;
 }
 
 export const LOCAL_HUMAN = 'local-human';
@@ -282,7 +285,15 @@ function field(value: unknown, key: string): unknown {
 function cardOf(channelId: string, message: ChannelWireMessage): MessageCard | undefined {
   if (message.toolApprovalRequest !== undefined) {
     const subject = text(field(message.toolApprovalRequest, 'toolName'));
-    return { kind: 'tool-approval', channelId, ...(subject === undefined ? {} : { subject }) };
+    const input = text(field(message.toolApprovalRequest, 'input'));
+    const command =
+      subject === undefined || input === undefined ? undefined : approvalCommand(subject, input);
+    return {
+      kind: 'tool-approval',
+      channelId,
+      ...(subject === undefined ? {} : { subject }),
+      ...(command === undefined ? {} : { command }),
+    };
   }
   if (message.userQuestionRequest !== undefined) {
     const questions = field(message.userQuestionRequest, 'questions');
@@ -383,7 +394,16 @@ function attachmentsOf(
         }),
     local: false,
   }));
-  return [...stored, ...bridged];
+  const cleared = (message.clearedAttachments ?? []).map((item, index): MessageAttachment => ({
+    key: `${message.id}:cleared:${index}`,
+    kind: 'file',
+    name: item.name,
+    mime: item.mime,
+    size: item.size,
+    local: false,
+    cleared: true,
+  }));
+  return [...stored, ...cleared, ...bridged];
 }
 
 function present(

@@ -1,3 +1,4 @@
+import { approvalShellCommand } from '../../../../packages/client/src/client/approval-diff';
 import {
   approveWorkspaceRequest,
   listHostFolders,
@@ -114,6 +115,20 @@ export async function loadApproval(client: HostClient, ref: RequestRef): Promise
   };
 }
 
+const handled = new Set<string>();
+
+function handledKey(ref: Pick<RequestRef, 'channelId' | 'messageId'>): string {
+  return `${ref.channelId}\n${ref.messageId}`;
+}
+
+export function handledHere(ref: Pick<RequestRef, 'channelId' | 'messageId'>): boolean {
+  return handled.has(handledKey(ref));
+}
+
+function markHandled(ref: RequestRef): void {
+  handled.add(handledKey(ref));
+}
+
 export async function decideApproval(
   client: HostClient,
   ref: RequestRef,
@@ -125,6 +140,7 @@ export async function decideApproval(
       messageId: ref.messageId,
       outcome,
     });
+    markHandled(ref);
     return 'accepted';
   } catch (error) {
     if (!(error instanceof MethodRefused)) throw error;
@@ -166,6 +182,7 @@ export async function decideGrantRequest(
       ref.messageId,
       workspaceId,
     );
+    markHandled(ref);
     return { result: 'accepted', grant };
   } catch (error) {
     if (!(error instanceof MethodRefused)) throw error;
@@ -228,6 +245,7 @@ export async function answerQuestion(
       messageId: ref.messageId,
       answer,
     });
+    markHandled(ref);
     return 'accepted';
   } catch (error) {
     if (!(error instanceof MethodRefused)) throw error;
@@ -304,6 +322,39 @@ export function buildAnswer(
       });
   }
   return { answers };
+}
+
+const HOST_APPROVAL_SUMMARY = '请求批准执行 ';
+
+export function approvalSummaryTool(summary: string): string | undefined {
+  if (!summary.startsWith(HOST_APPROVAL_SUMMARY)) return undefined;
+  const tool = summary.slice(HOST_APPROVAL_SUMMARY.length).trim();
+  return tool === '' ? undefined : tool;
+}
+
+function shellWord(word: string): string {
+  return /^[\w@%+=:,./-]+$/u.test(word) ? word : `'${word.replaceAll("'", `'\\''`)}'`;
+}
+
+export function secretCommand(toolName: string, input: string): string | undefined {
+  if (toolName !== 'secret_cli') return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return undefined;
+  const { program, args } = parsed as { program?: unknown; args?: unknown };
+  if (typeof program !== 'string' || program.trim() === '') return undefined;
+  const words = Array.isArray(args)
+    ? args.filter((arg): arg is string => typeof arg === 'string')
+    : [];
+  return [program, ...words].map(shellWord).join(' ');
+}
+
+export function approvalCommand(toolName: string, input: string): string | undefined {
+  return approvalShellCommand(toolName, input)?.command ?? secretCommand(toolName, input);
 }
 
 const PREVIEW_FIELDS = ['command', 'cmd', 'script', 'code', 'url', 'path', 'file_path'];

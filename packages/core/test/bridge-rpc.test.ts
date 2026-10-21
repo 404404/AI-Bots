@@ -391,7 +391,9 @@ describe('bridge typert service', () => {
       'search',
       'unreadOnly',
       'queryVersion',
+      'dismissed',
     ]);
+    expect(parameterNames(service.humanAttentionRestore)).toEqual(['itemId', 'sourceKey']);
     expect(() =>
       service.humanAttention(
         'replies',
@@ -565,6 +567,8 @@ describe('bridge typert service', () => {
       'create',
       'createFromGit',
       'update',
+      'dataResetPreview',
+      'dataResetConfirm',
       'deletionPreview',
       'deletionConfirm',
       'deletionRetry',
@@ -594,6 +598,9 @@ describe('bridge typert service', () => {
       'channelHistorySources',
       'channelPurgePreview',
       'channelPurgeConfirm',
+      'storageUsage',
+      'storageCleanupPreview',
+      'storageCleanupConfirm',
       'channelMessages',
       'channelTimeline',
       'channelReadPosition',
@@ -616,6 +623,7 @@ describe('bridge typert service', () => {
       'humanAttentionStatus',
       'humanAttentionIgnore',
       'humanAttentionDismiss',
+      'humanAttentionRestore',
       'humanAttentionSnooze',
       'assignments',
       'channelAssignments',
@@ -624,6 +632,7 @@ describe('bridge typert service', () => {
       'messageAttachmentTarget',
       'channelMediaTarget',
       'workspaceFileTarget',
+      'folderBrowse',
       'grants',
       'grantCreate',
       'grantRevoke',
