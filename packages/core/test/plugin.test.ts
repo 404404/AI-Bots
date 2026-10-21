@@ -534,6 +534,8 @@ describe('plugin entry', () => {
       'storageUsage',
       'storageCleanupPreview',
       'storageCleanupConfirm',
+      'storageMessagesCleanupPreview',
+      'storageMessagesCleanupConfirm',
       'channelMessages',
       'channelTimeline',
       'channelReadPosition',

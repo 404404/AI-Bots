@@ -48,6 +48,8 @@ import {
   type ChannelHistoryItem,
   type PurgeSource,
   type PurgePreview,
+  type TextCleanupPreview,
+  type TextCleanupResult,
 } from '../purge/contracts.js';
 import {
   STORAGE_MEDIA_KINDS,
@@ -644,6 +646,8 @@ export interface BridgeMethods {
   storageUsage(payload?: unknown): BridgeResult<StorageUsage>;
   storageCleanupPreview(payload: unknown): BridgeResult<MediaCleanupPreview>;
   storageCleanupConfirm(payload: unknown): BridgeResult<MediaCleanupResult>;
+  storageMessagesCleanupPreview(payload: unknown): BridgeResult<TextCleanupPreview>;
+  storageMessagesCleanupConfirm(payload: unknown): BridgeResult<TextCleanupResult>;
   channelPurgeConfirm(
     payload: unknown,
   ): BridgeResult<{ accepted: number; cleanupPending?: number }>;
@@ -865,6 +869,26 @@ const storageCleanupScope = z
     kinds: z.array(z.enum(STORAGE_MEDIA_KINDS)).min(1).max(4).optional(),
   })
   .strict();
+
+const storageMessagesScope = z
+  .object({
+    before: z.iso.datetime(),
+    channelIds: z.array(z.string().min(1).max(200)).max(500).optional(),
+  })
+  .strict();
+
+function purgeFailure(error: unknown, message: string): BridgeResult<never> {
+  return {
+    ok: false,
+    error:
+      error instanceof ContentPurgeError
+        ? {
+            code: error.code === 'purge-preview-stale' ? 'storage-preview-stale' : error.code,
+            message: error.message,
+          }
+        : { code: 'purge-unavailable', message },
+  };
+}
 
 function storageFailure(error: unknown, message: string): BridgeResult<never> {
   return {
@@ -4242,6 +4266,30 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return { ok: true, value: deps.storage.confirm(scope, token) };
       } catch (error) {
         return storageFailure(error, 'Storage cleanup could not complete');
+      }
+    },
+    storageMessagesCleanupPreview(payload) {
+      const input = storageMessagesScope.safeParse(payload);
+      if (!input.success) return invalidInput('Invalid message cleanup scope');
+      if (!deps.contentPurge) return unavailable();
+      try {
+        return { ok: true, value: deps.contentPurge.textPreview(input.data) };
+      } catch (error) {
+        return purgeFailure(error, 'Message cleanup preview is unavailable');
+      }
+    },
+    storageMessagesCleanupConfirm(payload) {
+      const input = storageMessagesScope
+        .extend({ token: z.string().min(1).max(512) })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return invalidInput('Invalid message cleanup confirmation');
+      if (!deps.contentPurge) return unavailable();
+      const { token, ...scope } = input.data;
+      try {
+        return { ok: true, value: deps.contentPurge.textConfirm(scope, token) };
+      } catch (error) {
+        return purgeFailure(error, 'Message cleanup could not complete');
       }
     },
     channelPurgeConfirm(payload) {
