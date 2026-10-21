@@ -439,7 +439,13 @@ function ChatConversation({
     }),
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
-  const latest = useFollowLatest(list, visible, playback?.setFollowing, headerOverlap);
+  const latest = useFollowLatest(
+    list,
+    visible,
+    playback?.setFollowing,
+    headerOverlap,
+    snapshot.status === 'live' && visible.length === 0,
+  );
   const composerInput = useRef<ComposerInput>(null);
   const [typing, setTyping] = useState(false);
   const clipboard = useClipboardImage(typing && files.length < MAX_PICKED);
