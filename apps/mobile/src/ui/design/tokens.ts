@@ -42,6 +42,7 @@ export const navigationBar = {
     dark: '0 2px 8px rgba(0, 0, 0, 0.12)',
   },
 } as const;
+export const materialDrawer = { width: 360, scrimGutter: 56, addressMinScale: 0.6 } as const;
 export const loadingIndicator = { size: 48 } as const;
 export const swipeAction = { size: 56 } as const;
 export const environmentTab = { widthRatio: 0.6 } as const;

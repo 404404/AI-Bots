@@ -5,6 +5,7 @@ import {
   AccessibilityInfo,
   BackHandler,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -50,6 +51,7 @@ import { ActionMenuButton, type MenuAction } from '../primitives/action-menu-but
 import { WorkspaceTabs, type WorkspaceTab } from './workspace-tabs';
 import { WorkspaceAddButton } from './workspace-add';
 import {
+  addressLines,
   createHostDrawer,
   drawerWidth,
   EDGE_WIDTH,
@@ -123,7 +125,7 @@ function clamp(value: number): number {
 }
 
 export function HostDrawerEdge({ children }: { children: ReactNode }) {
-  const width = drawerWidth(useWindowDimensions().width);
+  const width = drawerWidth(useWindowDimensions().width, Platform.OS);
   const reduced = useReducedMotion();
   const { hosts } = useHostSession();
   const pan = Gesture.Pan()
@@ -223,13 +225,26 @@ function openHostMenu(row: HostDrawerRow, name: string): void {
   );
 }
 
-function rowStyle(theme: DesignTheme, glass: boolean, active: boolean) {
+function rowStyle(theme: DesignTheme, glass: boolean, active: boolean, selected = false) {
+  if (!glass && Platform.OS === 'android')
+    return {
+      marginHorizontal: space.x4,
+      borderRadius: radius.round,
+      overflow: 'hidden' as const,
+      backgroundColor: selected
+        ? theme.layer.sheet.chosen
+        : active
+          ? theme.layer.sheet.pressed
+          : 'transparent',
+    };
   if (!glass)
-    return { backgroundColor: active ? theme.layer.sheet.pressed : theme.layer.sheet.fill };
+    return {
+      backgroundColor: active || selected ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+    };
   return {
     marginHorizontal: space.x3,
     borderRadius: radius.lg,
-    backgroundColor: active ? pressTint(theme.color.fg) : 'transparent',
+    backgroundColor: active || selected ? pressTint(theme.color.fg) : 'transparent',
   };
 }
 
@@ -259,6 +274,7 @@ function DrawerTile({ look, name, current }: { look: HostLook; name: string; cur
 function HostRow({ row, address }: { row: HostDrawerRow; address: string }) {
   const theme = useDesignTheme();
   const glass = useLiquidGlass();
+  const android = !glass && Platform.OS === 'android';
   const look = useHostLook(row.hostId);
   const name = shownHostName(look, row.hostName);
   const pending = row.glance.pending ?? 0;
@@ -275,7 +291,7 @@ function HostRow({ row, address }: { row: HostDrawerRow; address: string }) {
     <View
       style={[
         { flexDirection: 'row', alignItems: 'center', paddingRight: space.x2 },
-        glass ? rowStyle(theme, glass, row.current) : null,
+        glass || android ? rowStyle(theme, glass, false, row.current) : null,
       ]}
     >
       <Pressable
@@ -298,16 +314,20 @@ function HostRow({ row, address }: { row: HostDrawerRow; address: string }) {
           flexDirection: 'row',
           alignItems: 'center',
           gap: space.x4,
-          paddingLeft: glass ? space.x3 : space.x4,
+          paddingLeft: glass || android ? space.x3 : space.x4,
           paddingVertical: space.x3,
-          borderRadius: glass ? radius.lg : 0,
+          borderRadius: glass ? radius.lg : android ? radius.round : 0,
           backgroundColor: glass
             ? pressed
               ? pressTint(theme.color.fg)
               : 'transparent'
-            : pressed
-              ? theme.layer.sheet.pressed
-              : theme.layer.sheet.fill,
+            : android
+              ? pressed
+                ? pressTint(theme.color.fg)
+                : 'transparent'
+              : pressed
+                ? theme.layer.sheet.pressed
+                : theme.layer.sheet.fill,
         })}
       >
         <DrawerTile look={look} name={name} current={row.current} />
@@ -327,7 +347,9 @@ function HostRow({ row, address }: { row: HostDrawerRow; address: string }) {
             <Text
               variant="meta"
               tone="muted"
-              numberOfLines={theme.largeText ? undefined : 1}
+              {...(address
+                ? addressLines(theme.largeText, Platform.OS)
+                : { numberOfLines: theme.largeText ? undefined : 1 })}
               style={{ flexShrink: 1 }}
             >
               {address || status}
@@ -415,7 +437,7 @@ function CloudServiceRow({
         <Text strong numberOfLines={theme.largeText ? undefined : 1}>
           {name}
         </Text>
-        <Text variant="meta" tone="muted" numberOfLines={theme.largeText ? undefined : 1}>
+        <Text variant="meta" tone="muted" {...addressLines(theme.largeText, Platform.OS)}>
           {connectionAddress(server)}
         </Text>
       </View>
@@ -481,7 +503,7 @@ function WorkspaceRow({
         gap: space.x4,
         padding: space.x4,
         minHeight: theme.touch + space.x3,
-        ...rowStyle(theme, glass, pressed || selected),
+        ...rowStyle(theme, glass, pressed, selected),
       })}
     >
       <HostTile
@@ -511,7 +533,7 @@ export function HostDrawer() {
   const theme = useDesignTheme();
   const glass = useLiquidGlass();
   const insets = useSafeAreaInsets();
-  const width = drawerWidth(useWindowDimensions().width);
+  const width = drawerWidth(useWindowDimensions().width, Platform.OS);
   const reduced = useReducedMotion();
   const state = useSyncExternalStore(hostDrawer.subscribe, hostDrawer.getSnapshot);
   const { saved, hosts, client, inbox } = useHostSession();
