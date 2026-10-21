@@ -159,7 +159,10 @@ export function ConversationRowFrame({
           </View>
         )}
       </View>
-      <View style={{ flex: 1, minWidth: 0, gap: space.x1 }}>
+      <View
+        key={`${theme.scheme}:${theme.fontScale}:${title}`}
+        style={{ flex: 1, minWidth: 0, gap: space.x1 }}
+      >
         <View
           style={{
             flexDirection: 'row',
