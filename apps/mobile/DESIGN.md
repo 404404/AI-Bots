@@ -21,6 +21,8 @@ On both platforms the system's own design and components are the standard: Apple
 
 Older rules below that prescribe a custom surface where a native component exists describe the current implementation, not the target. Change them to the native component when the screen is next touched, and update the rule in the same change.
 
+Back closes the topmost surface before it leaves the screen: an in-screen surface that is not its own route, such as the composer's attach tray, holds the screen with Expo Router's `usePreventRemove` and closes itself; the full client steps back through its web history first, while its floating exit still leaves at once. Do not add `BackHandler` listeners for new surfaces. The predictive back preview does not run yet: React Native 0.86's `ReactActivity` registers an always-enabled `OnBackPressedCallback` on targetSdk 36, so the system has no back-to-home animation to show and JS screens do not follow the gesture progress. Do not claim predictive back until that callback is released when the root route cannot go back.
+
 ## Application dialogs
 
 - Application-owned confirmations and choice menus use `showAppDialog` (or `confirmDestructive` / `showActionMenu`) and the root `AppDialogHost`. Do not call React Native `Alert.alert` directly from a screen or feature. Per Native first, iOS shows system alerts (menus follow [iOS menus and native controls](#ios-menus-and-native-controls)), and Android shows the Material 3 `AlertDialog` from `@expo/ui/jetpack-compose`, themed by `seedColor` = accent. Operating-system permission prompts, photo pickers and the share sheet remain system-owned.
