@@ -47,11 +47,13 @@ export function useFollowLatest<Row>(
   messages: readonly ConversationMessage[],
   onFollowingChange?: (following: boolean) => void,
   start = 0,
+  empty = false,
 ) {
   const [following, setFollowing] = useState(true);
   const [away, setAway] = useState(false);
   const [anchor, setAnchor] = useState<string | undefined>();
   const [ready, setReady] = useState(false);
+  if (!ready && empty) setReady(true);
   const followingNow = useRef(true);
   const dragging = useRef(false);
   const latestId = useRef<string | undefined>(undefined);
@@ -189,6 +191,7 @@ export function useFollowLatest<Row>(
 
   const jumpToLatest = useCallback(() => {
     follow();
+    setReady(true);
     scrollToLatest(true);
   }, [scrollToLatest, follow]);
 
@@ -206,7 +209,7 @@ export function useFollowLatest<Row>(
       onMomentumScrollEnd,
       onContentSizeChange,
       onLayout,
-      maintainVisibleContentPosition: KEEP_VISIBLE,
+      maintainVisibleContentPosition: following ? undefined : KEEP_VISIBLE,
     },
   };
 }
