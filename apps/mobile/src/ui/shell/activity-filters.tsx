@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { FlatList, Modal, Platform, Pressable, Switch, View } from 'react-native';
+import { FlatList, Modal, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { INBOX_SECTIONS, type InboxSection, type InboxSetAside } from '../../host/inbox';
@@ -7,7 +7,9 @@ import { Sheet } from '../chat/sheet';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { DrawerHeader } from '../primitives/drawer-header';
+import { RadioMark } from '../primitives/radio-mark';
 import { Text } from '../primitives/text';
+import { Toggle } from '../primitives/toggle';
 import { CheckIcon } from './icons';
 import { t } from '../strings';
 
@@ -71,30 +73,7 @@ function Selection({ selected }: { selected: boolean }) {
   const theme = useDesignTheme();
   if (Platform.OS === 'ios')
     return selected ? <CheckIcon color={theme.color.accent} size={theme.type.body.line} /> : null;
-  return (
-    <View
-      style={{
-        width: theme.type.body.line,
-        height: theme.type.body.line,
-        borderRadius: radius.round,
-        borderWidth: edge.focus,
-        borderColor: selected ? theme.color.accent : theme.color.muted,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {selected ? (
-        <View
-          style={{
-            width: space.x3,
-            height: space.x3,
-            borderRadius: radius.round,
-            backgroundColor: theme.color.accent,
-          }}
-        />
-      ) : null}
-    </View>
-  );
+  return <RadioMark selected={selected} />;
 }
 
 function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose }: Props) {
@@ -229,11 +208,11 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
                 }}
               >
                 <Text style={{ flex: 1 }}>{t.activityUnreadOnly}</Text>
-                <Switch
-                  accessibilityLabel={t.activityUnreadOnly}
+                <Toggle
+                  label={t.activityUnreadOnly}
                   value={filter.unreadOnly === true}
-                  onValueChange={(unreadOnly) => onFilter({ ...filter, unreadOnly })}
-                  trackColor={{ true: theme.color.accent }}
+                  on="raised"
+                  onChange={(unreadOnly) => onFilter({ ...filter, unreadOnly })}
                 />
               </View>
             );

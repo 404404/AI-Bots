@@ -6,7 +6,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { frosted, pressTint, useDesignTheme, type DesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { DrawerMaterial, EdgeMaterial, useLiquidGlass } from '../primitives/drawer-material';
-import { ChevronLeftIcon } from '../shell/icons';
+import { BackIcon } from '../shell/back-icon';
 import { t } from '../strings';
 import { edgeFadeStops } from './edge-fade';
 
@@ -81,7 +81,7 @@ export function HeaderBackButton({ onPress, plain }: { onPress(): void; plain?: 
   const theme = useDesignTheme();
   return (
     <HeaderCircleButton label={t.back} onPress={onPress} plain={plain === true}>
-      <ChevronLeftIcon color={theme.color.fg} size={ICON} />
+      <BackIcon color={theme.color.fg} size={ICON} />
     </HeaderCircleButton>
   );
 }

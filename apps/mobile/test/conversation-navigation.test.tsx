@@ -28,6 +28,7 @@ vi.mock('../src/ui/shell/recent-chats', () => ({
 vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', () => {}] }));
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
+  usePreventRemove: () => {},
   Stack: {
     Screen: ({
       options,
