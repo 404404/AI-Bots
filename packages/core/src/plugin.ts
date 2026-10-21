@@ -1360,6 +1360,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const deviceWebUpgrade = mountDevicePairing(ctx, {
     database: core.operationalDatabase,
     dshHome,
+    packageAnchors: releaseAnchors,
     credentials: () => ctx.get('credentials'),
     push: {
       source: humanInboxPushSource(

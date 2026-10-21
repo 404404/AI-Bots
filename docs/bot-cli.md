@@ -1114,9 +1114,16 @@ deepseekbot connect-disable --host <host> --token-file <private-file>
 loopback origin that forwards only `/botharness-device/*` to the DSH listener (every other path is
 404), and runs `cloudflared tunnel --no-autoupdate run` with the token in `TUNNEL_TOKEN`, never in
 its arguments. The JSON reply's `origin` is the address the tunnel's ingress must target. The
-`cloudflared` binary comes from `DEEPSEEKBOT_CLOUDFLARED` or `PATH`. `connect-status` returns
-`connect.state` (`off`, `starting`, `connected`, `error`) with `issue` (`cloudflared-missing`,
-`cloudflared-exited`, `origin-port-busy`, `credential-unavailable`) and the phone route list; once
+Host runs a pinned `cloudflared` (`packages/core/src/devices/cloudflared.json`) and takes the
+first of: `DEEPSEEKBOT_CLOUDFLARED`; the optional `@botharness/cloudflared-<platform>-<arch>`
+package installed with `deepseekbot`; a copy under `$DSH_HOME/botharness/cloudflared/<version>/`,
+downloaded from the cloudflared GitHub release and kept only when its SHA-256 matches the pin; then
+`cloudflared` on `PATH`. A cached or packaged binary whose hash differs is refused, and a bad cached
+copy is deleted and downloaded again. `connect-status` returns `connect.state` (`off`,
+`starting`, `connected`, `error`) with `issue` (`cloudflared-missing`, `cloudflared-exited`,
+`cloudflared-download-failed`, `cloudflared-hash-mismatch`, `origin-port-busy`,
+`credential-unavailable`), `connect.cloudflared` (`env`, `package`, `cache`, `download` or `path`:
+which binary runs) and the phone route list. A refused download is retried with backoff; once
 connected, new pairing QR codes include `https://<name>.deepseekbot.dev` after any Tailscale route.
 Refusals: `connect-hostname-invalid` (only one label under `deepseekbot.dev`),
 `connect-token-invalid`, `credential-unavailable`. `connect-disable` stops the tunnel and deletes
