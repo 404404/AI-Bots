@@ -4,12 +4,14 @@ import type { TLSSocket } from 'node:tls';
 import type { Duplex } from 'node:stream';
 
 import type { Admission, DevicePairing, DeviceRefusal, OfferRefusal } from './pairing.js';
+import { phoneRoute } from './routes.js';
 
 export const DEVICE_GATEWAY_PREFIX = '/botharness-device';
 export const DEVICE_PAIR_PATH = `${DEVICE_GATEWAY_PREFIX}/pair`;
 export const DEVICE_UNPAIR_PATH = `${DEVICE_GATEWAY_PREFIX}/unpair`;
 export const DEVICE_REMOVE_PATH = `${DEVICE_GATEWAY_PREFIX}/devices/remove`;
 export const DEVICE_CONNECT_OFFER_PATH = `${DEVICE_GATEWAY_PREFIX}/connect/offer`;
+export const DEVICE_STREAM_TICKET_PATH = `${DEVICE_GATEWAY_PREFIX}/stream-ticket`;
 export const RELAY_SIGNATURE_HEADER = 'x-botharness-relay-signature';
 export const DEVICE_MUX_PATH = `${DEVICE_GATEWAY_PREFIX}/api/remote.mux`;
 export const DEVICE_WEB_PREFIX = `${DEVICE_GATEWAY_PREFIX}/web`;
@@ -22,6 +24,9 @@ export const DEVICE_SIGNALING_PATHS = [
 export const DEVICE_WEB_COOKIE = 'botharness-device-web';
 const WEB_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_WEB_SESSIONS = 256;
+const STREAM_TICKET_TTL_MS = 30_000;
+const MAX_STREAM_TICKETS = 256;
+const CORS_PATHS = new Set([DEVICE_PAIR_PATH, DEVICE_UNPAIR_PATH, DEVICE_STREAM_TICKET_PATH]);
 
 const PAIR_BODY_LIMIT = 4096;
 const COOKIE_LIFETIME_MS = 6 * 60 * 60 * 1000;
@@ -49,6 +54,7 @@ export type GatewayRefusal =
   | DeviceRefusal
   | OfferRefusal
   | 'origin-refused'
+  | 'ticket-invalid'
   | 'relay-signature-invalid'
   | 'host-session-unavailable'
   | 'not-found';
@@ -89,6 +95,27 @@ function crossOrigin(request: IncomingMessage): boolean {
   } catch {
     return true;
   }
+}
+
+function hostOrigin(request: IncomingMessage): string | undefined {
+  const origin = header(request, 'origin');
+  return origin === undefined || phoneRoute(origin) === undefined ? undefined : origin;
+}
+
+function corsPath(path: string): boolean {
+  return CORS_PATHS.has(path) || path.startsWith(`${DEVICE_GATEWAY_PREFIX}/api/`);
+}
+
+function preflight(request: IncomingMessage, response: ServerResponse): void {
+  response.writeHead(204, {
+    'access-control-allow-methods': 'GET, POST',
+    'access-control-allow-headers': 'authorization, content-type',
+    'access-control-max-age': '600',
+    ...(header(request, 'access-control-request-private-network') === 'true'
+      ? { 'access-control-allow-private-network': 'true' }
+      : {}),
+  });
+  response.end();
 }
 
 function refuse(response: ServerResponse, status: number, code: GatewayRefusal): void {
@@ -166,6 +193,7 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
       : await mint();
 
   const webSessions = new Map<string, { deviceId: string; expiresAt: number }>();
+  const streamTickets = new Map<string, { deviceId: string; expiresAt: number }>();
   const sessionKey = (value: string): string => createHash('sha256').update(value).digest('hex');
 
   const mintWebSession = (deviceId: string, secure: boolean): string => {
@@ -205,6 +233,35 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
       return { ok: false, code: 'device-credential-missing' };
     }
     return pairing.check(session.deviceId);
+  };
+
+  const streamTicket = (request: IncomingMessage, response: ServerResponse): void => {
+    if (request.method !== 'POST') return refuse(response, 404, 'not-found');
+    const admission = pairing.admit(header(request, 'authorization'));
+    if (!admission.ok) return refuse(response, 401, admission.code);
+    for (const [key, ticket] of streamTickets)
+      if (ticket.expiresAt <= now()) streamTickets.delete(key);
+    while (streamTickets.size >= MAX_STREAM_TICKETS)
+      streamTickets.delete(streamTickets.keys().next().value!);
+    const ticket = randomBytes(32).toString('base64url');
+    const expiresAt = now() + STREAM_TICKET_TTL_MS;
+    streamTickets.set(sessionKey(ticket), { deviceId: admission.device.id, expiresAt });
+    log('device-gateway phase=stream-ticket-issued');
+    response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    response.end(JSON.stringify({ ticket, expiresAt: new Date(expiresAt).toISOString() }));
+  };
+
+  const ticketAdmission = (
+    request: IncomingMessage,
+  ): Admission | { ok: false; code: 'ticket-invalid' } | undefined => {
+    const value = new URL(request.url ?? '/', 'http://device').searchParams.get('ticket');
+    if (value === null) return undefined;
+    const key = sessionKey(value);
+    const ticket = streamTickets.get(key);
+    streamTickets.delete(key);
+    if (ticket === undefined || ticket.expiresAt <= now())
+      return { ok: false, code: 'ticket-invalid' };
+    return pairing.check(ticket.deviceId);
   };
 
   const forwardHeaders = (request: IncomingMessage, session: string): Record<string, string> => {
@@ -413,8 +470,16 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
   return {
     async handle(request, response) {
       const path = new URL(request.url ?? '/', 'http://device').pathname;
-      if (crossOrigin(request)) return refuse(response, 403, 'origin-refused');
+      if (crossOrigin(request)) {
+        const origin = hostOrigin(request);
+        if (origin === undefined || !corsPath(path) || header(request, 'cookie') !== undefined)
+          return refuse(response, 403, 'origin-refused');
+        response.setHeader('access-control-allow-origin', origin);
+        response.setHeader('vary', 'origin');
+        if (request.method === 'OPTIONS') return preflight(request, response);
+      }
       if (path === DEVICE_PAIR_PATH) return pair(request, response);
+      if (path === DEVICE_STREAM_TICKET_PATH) return streamTicket(request, response);
       if (path === DEVICE_UNPAIR_PATH) return unpair(request, response);
       if (path === DEVICE_REMOVE_PATH) return remove(request, response);
       if (options.connectOffer !== undefined && path === DEVICE_CONNECT_OFFER_PATH)
@@ -448,12 +513,14 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
     },
 
     async upgrade(request, socket, head) {
-      if (crossOrigin(request)) return refuseUpgrade(socket, 403, 'origin-refused');
       const pathname = new URL(request.url ?? '/', 'http://device').pathname;
+      const ticketed = pathname === DEVICE_MUX_PATH ? ticketAdmission(request) : undefined;
+      if (crossOrigin(request) && (ticketed === undefined || hostOrigin(request) === undefined))
+        return refuseUpgrade(socket, 403, 'origin-refused');
       const web = pathname.startsWith(`${DEVICE_WEB_PREFIX}/`);
-      const admission = web
-        ? webAdmission(request, false)
-        : pairing.admit(header(request, 'authorization'));
+      const admission =
+        ticketed ??
+        (web ? webAdmission(request, false) : pairing.admit(header(request, 'authorization')));
       if (!admission.ok) return refuseUpgrade(socket, 401, admission.code);
       const target = web
         ? (request.url ?? '/').slice(DEVICE_WEB_PREFIX.length)

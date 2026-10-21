@@ -426,6 +426,18 @@
       "configurable": false
     },
     {
+      "id": "browser-computer-sources",
+      "description": "A browser's own pairings with other Computers and its selected channel-list Computer tab (#2500).",
+      "scope": "Client transport / transient state",
+      "surfaces": [
+        "storage:packages/client/src/client/computer-sources.ts:removeItem(COMPUTERS_STORAGE_KEY)",
+        "storage:packages/client/src/client/computer-sources.ts:setItem(COMPUTERS_STORAGE_KEY)",
+        "storage:packages/client/src/client/computer-sources.ts:setItem(COMPUTER_TAB_STORAGE_KEY)"
+      ],
+      "exemption": "Per-browser connections and the tab filter belong to that browser profile, not to any Host (spec #2178), so no Host CLI can read or set them. The other Computer's side is its existing device gateway: pair, unary calls, stream ticket and revoke.",
+      "configurable": false
+    },
+    {
       "id": "ui-community-stars",
       "description": "The intro's GitHub star count is cached on the device for offline display.",
       "scope": "Client transport / transient state",

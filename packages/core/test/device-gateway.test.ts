@@ -173,6 +173,91 @@ describe('device gateway', () => {
     expect([crossSite.status, await crossSite.json()]).toEqual([403, { code: 'origin-refused' }]);
   });
 
+  it('lets another Host’s browser pair and call with its device credential', async () => {
+    const host = await fakeDsh();
+    const browser = 'http://127.0.0.1:41000';
+    const preflight = await fetch(`${host.base}/botharness-device/api/botharness/list`, {
+      method: 'OPTIONS',
+      headers: {
+        origin: browser,
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'authorization, content-type',
+        'access-control-request-private-network': 'true',
+      },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('access-control-allow-origin')).toBe(browser);
+    expect(preflight.headers.get('access-control-allow-headers')).toBe(
+      'authorization, content-type',
+    );
+    expect(preflight.headers.get('access-control-allow-private-network')).toBe('true');
+
+    const paired = await fetch(`${host.base}/botharness-device/pair`, {
+      method: 'POST',
+      headers: { origin: browser, 'content-type': 'application/json' },
+      body: JSON.stringify({ offer: host.pairing.createOffer().offer, name: 'Studio browser' }),
+    });
+    expect(paired.headers.get('access-control-allow-origin')).toBe(browser);
+    const { credential } = (await paired.json()) as { credential: string };
+
+    const call = await fetch(`${host.base}/botharness-device/api/botharness/list`, {
+      method: 'POST',
+      headers: { origin: browser, authorization: `Device ${credential}` },
+      body: '{"type":"client-request"}',
+    });
+    expect(call.status).toBe(200);
+    expect(call.headers.get('access-control-allow-origin')).toBe(browser);
+    expect(host.state.seen.at(-1)!.origin).toBeUndefined();
+
+    const withCookie = await fetch(`${host.base}/botharness-device/api/botharness/list`, {
+      method: 'POST',
+      headers: { origin: browser, cookie: 'botharness-device-web=x' },
+    });
+    expect([withCookie.status, await withCookie.json()]).toEqual([403, { code: 'origin-refused' }]);
+    const web = await fetch(`${host.base}/botharness-device/web/`, {
+      headers: { origin: browser, authorization: `Device ${credential}` },
+    });
+    expect(web.status).toBe(403);
+  });
+
+  it('opens a browser stream with a one-time ticket instead of a header', async () => {
+    const host = await fakeDsh();
+    const browser = 'https://studio.tailnet.ts.net';
+    const paired = await pair(host.base, host.pairing.createOffer().offer);
+    const issue = async () => {
+      const response = await fetch(`${host.base}/botharness-device/stream-ticket`, {
+        method: 'POST',
+        headers: { origin: browser, authorization: `Device ${paired.body.credential}` },
+      });
+      expect(response.headers.get('access-control-allow-origin')).toBe(browser);
+      return ((await response.json()) as { ticket: string }).ticket;
+    };
+    const ticket = await issue();
+    const path = (value: string) => `/botharness-device/api/remote.mux?ticket=${value}`;
+
+    const open = await stream(host.port, { origin: browser }, path(ticket));
+    expect(open.status).toBe(101);
+    expect(await echo(open.socket!, 'frame-1')).toBe('frame-1');
+    expect(host.state.upgrades.at(-1)).toBe('/api/remote.mux');
+    open.socket!.destroy();
+
+    expect(await stream(host.port, { origin: browser }, path(ticket))).toEqual({
+      status: 401,
+      body: '{"code":"ticket-invalid"}',
+    });
+    expect((await stream(host.port, { origin: browser })).status).toBe(403);
+    expect(
+      (await stream(host.port, { origin: 'https://evil.example' }, path(await issue()))).status,
+    ).toBe(403);
+
+    const later = await issue();
+    host.pairing.revoke(paired.body.deviceId!);
+    expect(await stream(host.port, { origin: browser }, path(later))).toEqual({
+      status: 401,
+      body: '{"code":"device-revoked"}',
+    });
+  });
+
   it('splices the stream mux, closes it on revoke, and refuses the device afterwards', async () => {
     const host = await fakeDsh();
     const paired = await pair(host.base, host.pairing.createOffer().offer);
