@@ -358,6 +358,45 @@ describe('storage commands', () => {
   });
 });
 
+describe('storage message commands', () => {
+  it('previews old messages by age and deletes them with the piped preview', async () => {
+    const scope = { before: '2026-07-22T00:00:00.000Z', channelIds: ['dm-ada'] };
+    const preview = { token: 'messages-token', scope, messages: 3, more: false };
+    const live = await host((method) =>
+      ok(method === 'storageMessagesCleanupPreview' ? preview : { messages: 3, freedBytes: 4096 }),
+    );
+    expect(
+      (
+        await invoke(
+          ['storage-messages-cleanup-preview', '--before', scope.before, '--chat', 'dm-ada'],
+          live.url,
+        )
+      ).json,
+    ).toEqual(preview);
+    for (const [argv, stdin] of [
+      [['storage-messages-cleanup-preview', '--older-than-days', '9', '--media', 'image'], ''],
+      [['storage-messages-cleanup-confirm', '--confirmation-stdin'], JSON.stringify(preview)],
+    ] as const) {
+      const refused = await invoke([...argv], live.url, stdin);
+      expect(refused.code).not.toBe(0);
+      expect(refused.json.error.code).toBe('usage');
+    }
+    expect(
+      (
+        await invoke(
+          ['storage-messages-cleanup-confirm', '--confirmation-stdin', '--confirm'],
+          live.url,
+          JSON.stringify(preview),
+        )
+      ).json,
+    ).toEqual({ messages: 3, freedBytes: 4096 });
+    expect(live.calls).toEqual([
+      { method: 'storageMessagesCleanupPreview', args: scope },
+      { method: 'storageMessagesCleanupConfirm', args: { ...scope, token: 'messages-token' } },
+    ]);
+  });
+});
+
 describe('telemetry and Git commands', () => {
   it('reads and sets usage statistics and Git through the Host', async () => {
     const live = await host((method, args) =>

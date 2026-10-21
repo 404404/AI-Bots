@@ -8,7 +8,13 @@ import type { OnboardingSnapshot, TutorialAction } from '../onboarding/service.j
 import type { HttpsFallback } from '../memory/clone.js';
 import type { PairingRequest, PairingReviewInput } from '../messaging/pairing.js';
 import type { SenderAccessInput } from '../messaging/sender-access.js';
-import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
+import type {
+  ChannelHistoryItem,
+  PurgeSource,
+  PurgePreview,
+  TextCleanupPreview,
+  TextCleanupResult,
+} from '../purge/contracts.js';
 import type {
   MediaCleanupPreview,
   MediaCleanupResult,
@@ -1178,6 +1184,27 @@ export class BotharnessBridgeService extends TypertRemoteService {
       }),
     );
   }
+  storageMessagesCleanupPreview(before: string, channelIds?: string[]): TextCleanupPreview {
+    return unwrap(
+      this.methods.storageMessagesCleanupPreview({
+        before,
+        ...(channelIds === undefined ? {} : { channelIds }),
+      }),
+    );
+  }
+  storageMessagesCleanupConfirm(
+    before: string,
+    channelIds: string[] | undefined,
+    token: string,
+  ): TextCleanupResult {
+    return unwrap(
+      this.methods.storageMessagesCleanupConfirm({
+        before,
+        ...(channelIds === undefined ? {} : { channelIds }),
+        token,
+      }),
+    );
+  }
   channelPurgePreview(channelId: string, sourceEventIds: string[]): PurgePreview {
     return unwrap(this.methods.channelPurgePreview({ channelId, sourceEventIds }));
   }
@@ -1984,6 +2011,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'storageUsage',
   'storageCleanupPreview',
   'storageCleanupConfirm',
+  'storageMessagesCleanupPreview',
+  'storageMessagesCleanupConfirm',
   'channelMessages',
   'channelTimeline',
   'channelReadPosition',

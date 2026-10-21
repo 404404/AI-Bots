@@ -601,6 +601,8 @@ describe('bridge typert service', () => {
       'storageUsage',
       'storageCleanupPreview',
       'storageCleanupConfirm',
+      'storageMessagesCleanupPreview',
+      'storageMessagesCleanupConfirm',
       'channelMessages',
       'channelTimeline',
       'channelReadPosition',

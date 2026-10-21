@@ -686,6 +686,13 @@ This is the CLI form of **Settings → Data & privacy → Storage space**. `stor
 
 Clearing keeps every message and its text: each cleared attachment becomes a `clearedAttachments` entry (name, type, size, time) and its file is deleted when nothing else references it. Media mirrored from IM apps and Bot Memory are not touched. A Profile Backup taken earlier still holds the files.
 
+```bash
+deepseekbot storage-messages-cleanup-preview --older-than-days 365 [--chat <channel-id> …] \
+  | deepseekbot storage-messages-cleanup-confirm --confirmation-stdin --confirm
+```
+
+`storage-messages-cleanup-preview` deletes whole messages instead: it takes the same `--before` / `--older-than-days` and `--chat`, but not `--media`. It returns `messages`, `bytes` (their text), `files` that go with them, `chats` with a count each, `kept` counts (`bot-working`, `delivery-pending`, and `shared` for a message that also sits in a chat you did not pick), `memoryReferences` (Bot Memory that mentions them; Memory is not changed), `more` when over 2,000 messages match (clear again afterwards) and a ten-minute `token`. `storage-messages-cleanup-confirm` runs it through Content Purge: each message keeps its place as a tombstone with no text or files, Bot work started from it stops, and its files are deleted when nothing else uses them. It returns `messages` and `freedBytes` measured in the database after it is compacted. A changed selection or an expired token refuses with `storage-preview-stale`.
+
 ## IM application authorization
 
 Use the same live Host authentication described above. `im-apps` discovers compatible Feishu and WeChat flows; it does not expose account credentials. The isolated development launcher can install the qualified Provider with `--im-provider`.

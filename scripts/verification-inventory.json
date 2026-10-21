@@ -157,7 +157,7 @@
     },
     {
       "id": "desktop.storage.cleanup",
-      "label": "See storage used, preview and clear old chat media by chat, age and type",
+      "label": "See storage used, preview and clear old chat media by chat, age and type, and delete old messages by chat and age",
       "source": "packages/client/src/client/storage-settings.tsx",
       "guide": ".agents/skills/verify-deepseekbot/features/storage-cleanup.md",
       "task": 2430,

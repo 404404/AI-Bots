@@ -309,6 +309,41 @@ const en = {
     imageCacheHint: 'Images saved on this phone download again when you open them.',
     imageCacheDone: 'Image cache cleared.',
     imageCacheFailed: 'Could not clear the image cache. Try again.',
+    target: 'Clear',
+    targetMedia: 'Chat media',
+    targetMessages: 'Whole messages',
+    messages: {
+      heading: 'Clear old messages',
+      note: 'Deletes whole messages, including their text and files. Bot Memory is not changed.',
+      none: 'No chat messages yet.',
+      count: (count: number) => messageCount(count),
+      confirmTitle: 'Delete old messages?',
+      lead: (messages: number, chats: number, size: string) =>
+        `Deletes ${messageCount(messages)} from ${chats === 1 ? '1 chat' : `${chats} chats`}, about ${size}. This cannot be undone.`,
+      files: (files: number) =>
+        `${fileCount(files)} in them ${files === 1 ? 'is' : 'are'} deleted too.`,
+      memory: (count: number) =>
+        `Bot Memory mentions these messages ${count === 1 ? 'once' : `${count} times`}. Memory is not changed.`,
+      more: 'More old messages remain. Clear again after this one.',
+      kept: {
+        'bot-working': (messages: number) =>
+          messages === 1
+            ? '1 message is kept for now because a Bot is still working on it.'
+            : `${messages} messages are kept for now because a Bot is still working on them.`,
+        'delivery-pending': (messages: number) =>
+          messages === 1
+            ? '1 message is kept for now because it is still being sent.'
+            : `${messages} messages are kept for now because they are still being sent.`,
+        shared: (messages: number) =>
+          messages === 1
+            ? '1 message is kept because it also appears in a chat you did not choose.'
+            : `${messages} messages are kept because they also appear in chats you did not choose.`,
+      },
+      confirm: 'Delete',
+      nothing: 'Nothing matches. Choose an older range or more chats.',
+      done: (messages: number, size: string) =>
+        `Deleted ${messageCount(messages)} and freed ${size}.`,
+    },
   },
   activityCountSettings: {
     title: 'Activity count',
@@ -1463,6 +1498,29 @@ const zh: typeof en = {
     imageCacheHint: '保存在这台手机上的图片，下次打开时会重新下载。',
     imageCacheDone: '图片缓存已清除。',
     imageCacheFailed: '没能清除图片缓存，请重试。',
+    target: '清理内容',
+    targetMedia: '聊天媒体',
+    targetMessages: '整条消息',
+    messages: {
+      heading: '清理旧聊天记录',
+      note: '删除整条消息，包括文字和文件。Bot 的记忆不受影响。',
+      none: '还没有聊天消息。',
+      count: (count: number) => `${count} 条消息`,
+      confirmTitle: '删除旧消息？',
+      lead: (messages: number, chats: number, size: string) =>
+        `会删除 ${chats} 个聊天里的 ${messages} 条消息，约 ${size}。删除后无法恢复。`,
+      files: (files: number) => `其中的 ${files} 个文件也会一起删除。`,
+      memory: (count: number) => `有 ${count} 处 Bot 记忆提到了这些消息，记忆不会改动。`,
+      more: '还有更多旧消息，这次完成后再清理一次。',
+      kept: {
+        'bot-working': (messages: number) => `${messages} 条消息 Bot 还在处理，这次先保留。`,
+        'delivery-pending': (messages: number) => `${messages} 条消息还在发送中，这次先保留。`,
+        shared: (messages: number) => `${messages} 条消息也出现在你没选的聊天里，会保留。`,
+      },
+      confirm: '删除',
+      nothing: '没有符合条件的消息。可以选更早的时间或更多聊天。',
+      done: (messages: number, size: string) => `已删除 ${messages} 条消息，释放 ${size}。`,
+    },
   },
   activityCountSettings: {
     title: '活动数字',

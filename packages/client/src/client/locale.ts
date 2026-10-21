@@ -3983,7 +3983,8 @@ export const zh = {
   'dataReset.restartManual': '已开始清除。请手动重启 Host 来完成删除。',
   'dataReset.error': '清除失败，请重试。',
   'storage.row.title': '存储空间',
-  'storage.row.description': '查看聊天图片和文件、聊天记录、记忆各占多少空间，并清理旧的聊天媒体。',
+  'storage.row.description':
+    '查看聊天图片和文件、聊天记录、记忆各占多少空间，并清理旧的聊天媒体或聊天记录。',
   'storage.row.action': '管理…',
   'storage.title': '存储空间',
   'storage.loading': '正在统计占用空间…',
@@ -4020,6 +4021,25 @@ export const zh = {
   'storage.done': '已清理 {files} 个文件，释放 {size}。',
   'storage.stale': '内容有变化，请重新预览。',
   'storage.error': '操作失败，请重试。',
+  'storage.target': '清理内容',
+  'storage.target.media': '聊天媒体',
+  'storage.target.messages': '整条消息',
+  'storage.messages.heading': '清理旧聊天记录',
+  'storage.messages.note':
+    '删除整条消息，包括文字和文件，每条会显示为“已删除”。Bot 的记忆不受影响。',
+  'storage.messages.none': '还没有聊天消息。',
+  'storage.messages.count': '{count} 条消息',
+  'storage.messages.lead': '会删除 {chats} 个聊天里的 {messages} 条消息，约 {size}。',
+  'storage.messages.files': '其中的 {files} 个文件也会一起删除。',
+  'storage.messages.memory': '有 {count} 处 Bot 记忆提到了这些消息，记忆不会改动。',
+  'storage.messages.more': '还有更多旧消息，这次完成后再清理一次。',
+  'storage.messages.kept.botWorking': '{messages} 条消息 Bot 还在处理，这次先保留。',
+  'storage.messages.kept.deliveryPending': '{messages} 条消息还在发送中，这次先保留。',
+  'storage.messages.kept.shared': '{messages} 条消息也出现在你没选的聊天里，会保留。',
+  'storage.messages.nothing': '没有符合条件的消息。',
+  'storage.messages.acknowledge': '我了解这些消息会被永久删除',
+  'storage.messages.confirm': '删除',
+  'storage.messages.done': '已删除 {messages} 条消息，释放 {size}。',
   'message.attachment.cleared': '{size} · 已清理',
 } as const satisfies Record<string, string>;
 
@@ -8240,7 +8260,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'dataReset.error': 'Could not clear. Try again.',
   'storage.row.title': 'Storage',
   'storage.row.description':
-    'See how much space chat media, messages and Memory use, and clear old chat media.',
+    'See how much space chat media, messages and Memory use, and clear old chat media or messages.',
   'storage.row.action': 'Manage…',
   'storage.title': 'Storage',
   'storage.loading': 'Measuring storage…',
@@ -8280,6 +8300,29 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'storage.done': 'Cleared {files} files and freed {size}.',
   'storage.stale': 'Something changed. Preview again.',
   'storage.error': 'Something went wrong. Try again.',
+  'storage.target': 'Clear',
+  'storage.target.media': 'Chat media',
+  'storage.target.messages': 'Whole messages',
+  'storage.messages.heading': 'Clear old messages',
+  'storage.messages.note':
+    'Deletes whole messages, including their text and files. Each one shows as a deleted message. Bot Memory is not changed.',
+  'storage.messages.none': 'No chat messages yet.',
+  'storage.messages.count': 'Messages: {count}',
+  'storage.messages.lead': 'Messages to delete: {messages} · Chats: {chats} · About {size}',
+  'storage.messages.files': 'Files deleted with them: {files}',
+  'storage.messages.memory':
+    'Bot Memory mentions of these messages: {count}. Memory is not changed.',
+  'storage.messages.more': 'More old messages remain. Clear again after this one.',
+  'storage.messages.kept.botWorking':
+    'Kept for now because a Bot is still working on them: {messages}',
+  'storage.messages.kept.deliveryPending':
+    'Kept for now because they are still being sent: {messages}',
+  'storage.messages.kept.shared':
+    'Kept because they also appear in chats you did not choose: {messages}',
+  'storage.messages.nothing': 'No messages match.',
+  'storage.messages.acknowledge': 'I understand these messages are permanently deleted',
+  'storage.messages.confirm': 'Delete',
+  'storage.messages.done': 'Messages deleted: {messages} · Freed {size}',
   'message.attachment.cleared': '{size} · Cleared',
 } satisfies Record<BotHarnessKey, string>;
 
