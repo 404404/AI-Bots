@@ -79,12 +79,10 @@ export function ChatBackgroundEditor({
         ) : null}
         <Segmented
           label={t.chatBackground.type}
-          value={state.choice?.kind ?? 'default'}
+          value={state.choice?.kind ?? 'inherit'}
           options={[
-            {
-              value: 'default',
-              label: scoped ? t.chatBackground.useDefault : t.chatBackground.theme,
-            },
+            ...(scoped ? [{ value: 'inherit' as const, label: t.chatBackground.useDefault }] : []),
+            { value: 'default', label: t.chatBackground.theme },
             { value: 'color', label: t.chatBackground.solid },
             { value: 'image', label: t.chatBackground.image },
           ]}
@@ -95,9 +93,9 @@ export function ChatBackgroundEditor({
               edit.choose(
                 kind === 'color'
                   ? { kind: 'color', color: backgroundColors[0] }
-                  : scoped
-                    ? undefined
-                    : { kind: 'default' },
+                  : kind === 'default'
+                    ? { kind: 'default' }
+                    : undefined,
               );
           }}
         />
