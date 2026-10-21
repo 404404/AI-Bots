@@ -126,3 +126,13 @@ export function createHostDrawer(port: HostDrawerPort): HostDrawer {
     },
   };
 }
+
+export function addressLines(largeText: boolean, os: string) {
+  if (os === 'android')
+    return {
+      numberOfLines: 1,
+      adjustsFontSizeToFit: true,
+      minimumFontScale: materialDrawer.addressMinScale,
+    };
+  return largeText ? {} : { numberOfLines: 1 };
+}

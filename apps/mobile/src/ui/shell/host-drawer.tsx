@@ -51,6 +51,7 @@ import { ActionMenuButton, type MenuAction } from '../primitives/action-menu-but
 import { WorkspaceTabs, type WorkspaceTab } from './workspace-tabs';
 import { WorkspaceAddButton } from './workspace-add';
 import {
+  addressLines,
   createHostDrawer,
   drawerWidth,
   EDGE_WIDTH,
@@ -335,7 +336,9 @@ function HostRow({ row, address }: { row: HostDrawerRow; address: string }) {
             <Text
               variant="meta"
               tone="muted"
-              numberOfLines={theme.largeText ? undefined : 1}
+              {...(address
+                ? addressLines(theme.largeText, Platform.OS)
+                : { numberOfLines: theme.largeText ? undefined : 1 })}
               style={{ flexShrink: 1 }}
             >
               {address || status}
@@ -423,7 +426,7 @@ function CloudServiceRow({
         <Text strong numberOfLines={theme.largeText ? undefined : 1}>
           {name}
         </Text>
-        <Text variant="meta" tone="muted" numberOfLines={theme.largeText ? undefined : 1}>
+        <Text variant="meta" tone="muted" {...addressLines(theme.largeText, Platform.OS)}>
           {connectionAddress(server)}
         </Text>
       </View>

@@ -6,6 +6,7 @@ import type { SavedHost } from '../src/host/hosts';
 import type { InboxSnapshot } from '../src/host/inbox';
 import type { HumanAttentionItem } from '../src/host/wire';
 import {
+  addressLines,
   createHostDrawer,
   drawerWidth,
   hostDrawerRows,
@@ -261,5 +262,21 @@ describe('Host glances', () => {
     await Promise.resolve();
     expect(glances.getSnapshot()['tower']).toEqual({ status: 'checking' });
     expect(listener).toHaveBeenCalled();
+  });
+});
+
+describe('addressLines', () => {
+  it('keeps an Android address on one line and shrinks it instead of splitting the port', () => {
+    expect(addressLines(true, 'android')).toEqual({
+      numberOfLines: 1,
+      adjustsFontSizeToFit: true,
+      minimumFontScale: 0.6,
+    });
+    expect(addressLines(false, 'android').numberOfLines).toBe(1);
+  });
+
+  it('lets iOS wrap the address only at large text', () => {
+    expect(addressLines(false, 'ios')).toEqual({ numberOfLines: 1 });
+    expect(addressLines(true, 'ios')).toEqual({});
   });
 });
