@@ -53,6 +53,7 @@ vi.mock('react-native-reanimated', async () => {
 });
 vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
+vi.mock('expo-router', () => ({ usePreventRemove: () => {} }));
 vi.mock('expo-speech-recognition', () => ({
   ExpoSpeechRecognitionModule: {
     isRecognitionAvailable: () => speech.available,
@@ -294,6 +295,31 @@ describe('Holding the mic', () => {
     await emit('start');
     await grab(80);
     expect(speech.stop).toHaveBeenCalled();
+  });
+});
+
+describe('native compose bar', () => {
+  it('keeps + outside the field capsule and the mic or Send inside it', async () => {
+    const attach = button(t.attach)!;
+    const capsule = attach.nextElementSibling!;
+    expect(capsule.contains(field())).toBe(true);
+    expect(capsule.contains(button(t.dictate))).toBe(true);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        field(),
+        'Hello',
+      );
+      field().dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(capsule.contains(button(t.send))).toBe(true);
+    expect(button(t.attach)).toBe(attach);
+  });
+
+  it('puts cancel in the + slot while listening', async () => {
+    const slot = button(t.attach)!.parentElement!;
+    await press(t.dictate);
+    expect(button(t.attach)).toBeNull();
+    expect(button(t.cancelDictation)!.parentElement).toBe(slot);
   });
 });
 

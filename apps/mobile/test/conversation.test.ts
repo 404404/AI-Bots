@@ -165,7 +165,12 @@ describe('DM conversation', () => {
         id: 'ask-tool',
         author: bot,
         body: '请求批准执行 bash',
-        toolApprovalRequest: { toolName: 'bash', role: 'orchestrator', cwd: '/w', input: '{}' },
+        toolApprovalRequest: {
+          toolName: 'bash',
+          role: 'orchestrator',
+          cwd: '/w',
+          input: '{"command":"ls /w"}',
+        },
       } as never);
       channel.append({
         id: 'tool-decided',
@@ -186,7 +191,12 @@ describe('DM conversation', () => {
       } as never);
       const live = await until(open(host), (snapshot) => snapshot.status === 'live');
       const [tool, decided, ask, cancelled] = live.messages;
-      expect(tool?.card).toEqual({ kind: 'tool-approval', channelId: DM, subject: 'bash' });
+      expect(tool?.card).toEqual({
+        kind: 'tool-approval',
+        channelId: DM,
+        subject: 'bash',
+        command: 'ls /w',
+      });
       expect(decided?.resolves).toEqual({
         requestId: 'ask-tool',
         resolution: { kind: 'tool-approval', outcome },
@@ -198,6 +208,72 @@ describe('DM conversation', () => {
       });
     },
   );
+
+  it('marks folder requests as cards and hides the read/write answer behind them', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    const bot = { kind: 'bot' as const, slug: SLUG };
+    channel.append({
+      id: 'ask-folder',
+      author: bot,
+      body: 'I need your project folder.',
+      grantRequest: true,
+    } as never);
+    channel.append({
+      id: 'grant-resolution-ask-folder',
+      body: 'I authorized workspace “Project” for read/write. Continue the original task.',
+      replyTo: 'ask-folder',
+      grantRequestResolution: { requestMessageId: 'ask-folder', grantId: 'g1' },
+    } as never);
+    channel.append({
+      id: 'ask-old-folder',
+      author: bot,
+      body: 'Another folder.',
+      grantRequest: true,
+      grantRequestResolved: true,
+    } as never);
+    const live = await until(open(host), (snapshot) => snapshot.status === 'live');
+    const [ask, answered, old] = live.messages;
+    expect(ask?.card).toEqual({ kind: 'grant', channelId: DM });
+    expect(answered?.resolves).toEqual({ requestId: 'ask-folder', resolution: { kind: 'grant' } });
+    expect(old?.card).toEqual({ kind: 'grant', channelId: DM, resolved: true });
+    expect(live.messages.filter(shownInChat).map((message) => message.id)).toEqual([
+      'ask-folder',
+      'ask-old-folder',
+    ]);
+  });
+
+  it('marks private input requests as cards and hides their resolution', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    channel.append({
+      id: 'ask-key',
+      author: { kind: 'bot' as const, slug: SLUG },
+      body: 'I need the GitHub token.',
+      privateInputRequest: {
+        account: 'github',
+        purpose: 'Read the private repository',
+        fields: [{ id: 'token', label: 'Token', required: true }],
+      },
+    } as never);
+    channel.append({
+      id: 'private-resolution-ask-key',
+      body: 'Private input configured.',
+      privateInputResolution: { requestMessageId: 'ask-key', state: 'configured', references: {} },
+    } as never);
+    const live = await until(open(host), (snapshot) => snapshot.status === 'live');
+    const [ask, resolution] = live.messages;
+    expect(ask?.card).toEqual({
+      kind: 'private-input',
+      channelId: DM,
+      subject: 'Read the private repository',
+    });
+    expect(resolution?.resolves).toEqual({
+      requestId: 'ask-key',
+      resolution: { kind: 'private-input' },
+    });
+    expect(live.messages.filter(shownInChat).map((message) => message.id)).toEqual(['ask-key']);
+  });
 
   it('shows recognized activity while hiding the welcome and malformed empty notices', async () => {
     const host = new FakeHost();
@@ -555,6 +631,40 @@ describe('DM conversation', () => {
           headers,
         },
         local: false,
+      },
+    ]);
+  });
+
+  it('shows cleared media as a cleared file card without a download source', async () => {
+    const host = new FakeHost();
+    host.channel(DM).append(
+      {
+        id: 'old-1',
+        author: { kind: 'human' },
+        body: 'from January',
+        clearedAttachments: [
+          {
+            name: 'beach.png',
+            mime: 'image/png',
+            size: 4096,
+            clearedAt: '2026-10-20T00:00:00.000Z',
+          },
+        ],
+      },
+      false,
+    );
+    const target = open(host);
+    const live = await until(target, (s) => s.messages.length === 1);
+    expect(live.messages[0]?.body).toBe('from January');
+    expect(live.messages[0]?.attachments).toEqual([
+      {
+        key: 'old-1:cleared:0',
+        kind: 'file',
+        name: 'beach.png',
+        mime: 'image/png',
+        size: 4096,
+        local: false,
+        cleared: true,
       },
     ]);
   });

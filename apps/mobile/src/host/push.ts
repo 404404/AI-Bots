@@ -66,7 +66,7 @@ export type PushHref =
   | { pathname: '/activity' };
 
 const REPLIES = new Set(['channel-reply', 'channel-mention']);
-const CARDS = new Set(['tool-approval', 'user-question']);
+const CARDS = new Set(['tool-approval', 'user-question', 'workspace-grant-request']);
 
 function chatHref(
   botSlug: string,
@@ -95,6 +95,15 @@ export function cardHref(
     item.channelId === undefined
   )
     return undefined;
+  return chatHref(item.botSlug, item.channelId, dmChannelOf, isGroup, item.messageId);
+}
+
+export function messageHref(
+  item: { botSlug: string; channelId?: string; messageId?: string },
+  dmChannelOf: (slug: string) => string | undefined,
+  isGroup: (channelId: string) => boolean = () => false,
+): ChatHref | undefined {
+  if (item.channelId === undefined) return undefined;
   return chatHref(item.botSlug, item.channelId, dmChannelOf, isGroup, item.messageId);
 }
 

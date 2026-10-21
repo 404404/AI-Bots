@@ -10,6 +10,7 @@ export const HOST_ADMIN_OPTIONS = {
   query: { type: 'string' },
   topic: { type: 'string' },
   sort: { type: 'string' },
+  lang: { type: 'string' },
   reason: { type: 'string' },
   decision: { type: 'string' },
   capability: { type: 'string', multiple: true },
@@ -22,12 +23,14 @@ export interface HostAdminValues {
   query?: string;
   topic?: string;
   sort?: string;
+  lang?: string;
   cursor?: string;
   reason?: string;
   decision?: string;
   capability?: string[];
   role?: string[];
   confirm?: boolean;
+  'confirmation-stdin'?: boolean;
   enabled?: boolean;
   disabled?: boolean;
 }
@@ -53,6 +56,16 @@ export const HOST_ADMIN_COMMANDS = [
   {
     command: 'release-restart',
     description: 'restart the Host into an installed release; needs --confirm',
+  },
+  {
+    command: 'data-reset-preview',
+    description:
+      'list every BotHarness folder a full data reset removes, with its confirmation token',
+  },
+  {
+    command: 'data-reset-confirm',
+    description:
+      'clear all BotHarness data and restart the Host; needs --confirmation-stdin --confirm',
   },
   { command: 'telemetry-status', description: 'read the usage statistics choice' },
   { command: 'telemetry-set', description: 'turn usage statistics on or off' },
@@ -96,6 +109,8 @@ const POSITIONALS: Record<HostAdminCommand, number> = {
   'release-check': 0,
   'release-install': 1,
   'release-restart': 0,
+  'data-reset-preview': 0,
+  'data-reset-confirm': 0,
   'telemetry-status': 0,
   'telemetry-set': 0,
   'git-status': 0,
@@ -128,6 +143,12 @@ function validate(command: HostAdminCommand, rest: string[], values: HostAdminVa
     (command !== 'marketplace-list' || (values.sort !== 'updated' && values.sort !== 'stars'))
   )
     usage('--sort must be updated or stars, on marketplace-list.');
+  if (
+    values.lang !== undefined &&
+    ((command !== 'marketplace-list' && command !== 'marketplace-detail') ||
+      (values.lang !== 'zh' && values.lang !== 'en'))
+  )
+    usage('--lang must be zh or en, on marketplace-list or marketplace-detail.');
   if (command === 'marketplace-report' && values.reason !== undefined) {
     if (values.reason.trim().length > MAX_REPORT_REASON_LENGTH)
       usage(`--reason must be at most ${String(MAX_REPORT_REASON_LENGTH)} characters.`);
@@ -138,6 +159,12 @@ function validate(command: HostAdminCommand, rest: string[], values: HostAdminVa
         ? 'release-install replaces the installed DeepSeekBot. Pass --confirm to install.'
         : 'release-restart stops every running Bot turn on this Host. Pass --confirm to restart.',
     );
+  if (command === 'data-reset-confirm' && values.confirm !== true)
+    usage(
+      'data-reset-confirm removes every Bot and its data on this Host. Pass --confirm to clear.',
+    );
+  if (command === 'data-reset-confirm' && values['confirmation-stdin'] !== true)
+    usage('data-reset-confirm requires --confirmation-stdin.');
   if (command === 'telemetry-set' && values.enabled === values.disabled)
     usage('telemetry-set needs exactly one of --enabled or --disabled.');
   if (command !== 'pairing-review') return undefined;
@@ -212,15 +239,34 @@ async function messagingSnapshot(rpc: Rpc, slug: string) {
   return { pairings: list('pairings'), roles: list('roles') };
 }
 
+async function readResetToken(io: BotCreateCliIo): Promise<string> {
+  let input: unknown;
+  try {
+    input = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
+  } catch {
+    usage('Confirmation stdin must be JSON with a token string.');
+  }
+  const token = record(input)['token'];
+  if (
+    typeof token !== 'string' ||
+    !token.trim() ||
+    token.length > 256 ||
+    Object.keys(record(input)).some((key) => key !== 'token')
+  )
+    usage('Confirmation stdin must be JSON with only a token string from data-reset-preview.');
+  return token;
+}
+
 export async function runHostAdminCommand(
   command: HostAdminCommand,
   rest: string[],
   values: HostAdminValues,
-  _io: BotCreateCliIo,
+  io: BotCreateCliIo,
   host: { connect: () => Promise<Rpc>; signal: AbortSignal },
 ): Promise<unknown> {
   const review = validate(command, rest, values);
   const target = rest[0]?.trim() ?? '';
+  const resetToken = command === 'data-reset-confirm' ? await readResetToken(io) : undefined;
   const rpc = await host.connect();
   switch (command) {
     case 'pause':
@@ -242,12 +288,16 @@ export async function runHostAdminCommand(
           ...(values.topic === undefined ? {} : { topic: values.topic }),
           ...(values.sort === undefined ? {} : { sort: values.sort }),
           ...(values.cursor === undefined ? {} : { cursor: values.cursor }),
+          ...(values.lang === undefined ? {} : { lang: values.lang }),
         },
       });
     case 'marketplace-topics':
       return { topics: await rpc('marketplaceTopics', {}) };
     case 'marketplace-detail':
-      return rpc('marketplaceDetail', { id: target });
+      return rpc(
+        'marketplaceDetail',
+        values.lang === undefined ? { id: target } : { id: target, lang: values.lang },
+      );
     case 'marketplace-submit':
       return rpc('marketplaceSubmit', {
         url: target,
@@ -289,6 +339,10 @@ export async function runHostAdminCommand(
         );
       return result;
     }
+    case 'data-reset-preview':
+      return rpc('dataResetPreview', {});
+    case 'data-reset-confirm':
+      return rpc('dataResetConfirm', { token: resetToken });
     case 'telemetry-status':
       return rpc('telemetryStatus', {});
     case 'telemetry-set':

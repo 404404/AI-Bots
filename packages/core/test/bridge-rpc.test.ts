@@ -391,7 +391,9 @@ describe('bridge typert service', () => {
       'search',
       'unreadOnly',
       'queryVersion',
+      'dismissed',
     ]);
+    expect(parameterNames(service.humanAttentionRestore)).toEqual(['itemId', 'sourceKey']);
     expect(() =>
       service.humanAttention(
         'replies',
@@ -544,6 +546,7 @@ describe('bridge typert service', () => {
       'tobHome',
       'onboarding',
       'onboardingModel',
+      'introEvent',
       'modelPlanInherit',
       'channelRetry',
       'botNewSession',
@@ -564,6 +567,8 @@ describe('bridge typert service', () => {
       'create',
       'createFromGit',
       'update',
+      'dataResetPreview',
+      'dataResetConfirm',
       'deletionPreview',
       'deletionConfirm',
       'deletionRetry',
@@ -593,6 +598,9 @@ describe('bridge typert service', () => {
       'channelHistorySources',
       'channelPurgePreview',
       'channelPurgeConfirm',
+      'storageUsage',
+      'storageCleanupPreview',
+      'storageCleanupConfirm',
       'channelMessages',
       'channelTimeline',
       'channelReadPosition',
@@ -615,6 +623,7 @@ describe('bridge typert service', () => {
       'humanAttentionStatus',
       'humanAttentionIgnore',
       'humanAttentionDismiss',
+      'humanAttentionRestore',
       'humanAttentionSnooze',
       'assignments',
       'channelAssignments',
@@ -623,6 +632,7 @@ describe('bridge typert service', () => {
       'messageAttachmentTarget',
       'channelMediaTarget',
       'workspaceFileTarget',
+      'folderBrowse',
       'grants',
       'grantCreate',
       'grantRevoke',
@@ -795,7 +805,7 @@ describe('bridge typert service', () => {
     ]);
     expect(parameterNames(service.marketplaceList)).toEqual(['query']);
     expect(parameterNames(service.marketplaceTopics)).toEqual([]);
-    expect(parameterNames(service.marketplaceDetail)).toEqual(['id']);
+    expect(parameterNames(service.marketplaceDetail)).toEqual(['id', 'lang']);
     expect(parameterNames(service.marketplaceSubmit)).toEqual(['url', 'altcha']);
     expect(parameterNames(service.marketplaceChallenge)).toEqual([]);
     expect(parameterNames(service.marketplaceReport)).toEqual(['id', 'altcha', 'reason']);

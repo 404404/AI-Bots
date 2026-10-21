@@ -9,16 +9,24 @@ const FlatList = (props: {
   keyExtractor(row: unknown): string;
   renderItem(info: { item: unknown }): ReactNode;
   ListHeaderComponent?: ReactNode;
+  ListFooterComponent?: ReactNode;
   ListEmptyComponent?: ReactNode;
+  contentInset?: { bottom?: number };
+  keyboardDismissMode?: string;
 }) =>
   createElement(
     'div',
-    null,
+    {
+      'data-testid': 'chat-list',
+      'data-inset-bottom': props.contentInset?.bottom,
+      'data-dismiss': props.keyboardDismissMode,
+    },
     props.ListHeaderComponent ?? null,
     props.data.length === 0 ? (props.ListEmptyComponent ?? null) : null,
     ...props.data.map((row) =>
       createElement(Fragment, { key: props.keyExtractor(row) }, props.renderItem({ item: row })),
     ),
+    props.ListFooterComponent ?? null,
   );
 
 const View = (props: Props) => createElement('div', null, props.children);
@@ -34,9 +42,17 @@ export const useAnimatedScrollHandler = (handlers: unknown) => handlers;
 export const useScrollOffset = () => ({ value: 0 });
 export const useSharedValue = <T>(value: T) => ({ value });
 export const FadeOut = transition;
+export const FadeIn = transition;
+export const withSpring = <T>(value: T) => value;
+export const runOnJS =
+  <A extends unknown[]>(callback: (...args: A) => void) =>
+  (...args: A) =>
+    callback(...args);
 export const LinearTransition = transition;
 export const useReducedMotion = () => false;
 export const withTiming = <T>(value: T) => value;
+export const withRepeat = <T>(value: T) => value;
+export const useAnimatedProps = (worklet: () => object) => worklet();
 export const interpolateColor = (_value: number, _range: number[], colors: string[]) =>
   colors.at(-1);
 export const cancelAnimation = () => {};

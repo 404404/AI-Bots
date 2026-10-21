@@ -1,5 +1,6 @@
 import type { HostClient, RemoteSource } from './client';
 import { activityOf, type ChannelActivity } from './channel-activity';
+import { approvalCommand } from './requests';
 import type {
   AttachmentRef,
   WireAllBotMention,
@@ -23,11 +24,15 @@ export interface MessageCard {
   kind: CardKind;
   channelId: string;
   subject?: string;
+  command?: string;
+  resolved?: true;
 }
 
 export type CardResolution =
   | { kind: 'tool-approval'; outcome: ToolApprovalOutcome }
-  | { kind: 'user-question'; state: 'answered' | 'cancelled' };
+  | { kind: 'user-question'; state: 'answered' | 'cancelled' }
+  | { kind: 'grant' }
+  | { kind: 'private-input' };
 
 export interface MessageAttachment {
   key: string;
@@ -37,6 +42,7 @@ export interface MessageAttachment {
   size?: number;
   source?: RemoteSource;
   local: boolean;
+  cleared?: true;
 }
 
 export const LOCAL_HUMAN = 'local-human';
@@ -99,6 +105,8 @@ export function shownInChat(message: ConversationMessage): boolean {
   const resolution = message.resolves?.resolution;
   if (
     resolution?.kind === 'tool-approval' ||
+    resolution?.kind === 'grant' ||
+    resolution?.kind === 'private-input' ||
     (resolution?.kind === 'user-question' && resolution.state === 'cancelled')
   )
     return false;
@@ -257,7 +265,7 @@ interface Outgoing {
   error?: string;
 }
 
-function uuid(): string {
+export function uuid(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/gu, (c) => {
     const r = (Math.random() * 16) | 0;
     return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
@@ -277,15 +285,31 @@ function field(value: unknown, key: string): unknown {
 function cardOf(channelId: string, message: ChannelWireMessage): MessageCard | undefined {
   if (message.toolApprovalRequest !== undefined) {
     const subject = text(field(message.toolApprovalRequest, 'toolName'));
-    return { kind: 'tool-approval', channelId, ...(subject === undefined ? {} : { subject }) };
+    const input = text(field(message.toolApprovalRequest, 'input'));
+    const command =
+      subject === undefined || input === undefined ? undefined : approvalCommand(subject, input);
+    return {
+      kind: 'tool-approval',
+      channelId,
+      ...(subject === undefined ? {} : { subject }),
+      ...(command === undefined ? {} : { command }),
+    };
   }
   if (message.userQuestionRequest !== undefined) {
     const questions = field(message.userQuestionRequest, 'questions');
     const subject = Array.isArray(questions) ? text(field(questions[0], 'question')) : undefined;
     return { kind: 'user-question', channelId, ...(subject === undefined ? {} : { subject }) };
   }
-  if (message.privateInputRequest !== undefined) return { kind: 'private-input', channelId };
-  if (message.grantRequest === true) return { kind: 'grant', channelId };
+  if (message.privateInputRequest !== undefined) {
+    const subject = text(field(message.privateInputRequest, 'purpose'));
+    return { kind: 'private-input', channelId, ...(subject === undefined ? {} : { subject }) };
+  }
+  if (message.grantRequest === true)
+    return {
+      kind: 'grant',
+      channelId,
+      ...(message.grantRequestResolved === true ? { resolved: true as const } : {}),
+    };
   return undefined;
 }
 
@@ -311,6 +335,10 @@ function resolvesOf(message: ChannelWireMessage): ConversationMessage['resolves'
   const state = field(resolution, 'state');
   if (answered !== undefined && (state === 'answered' || state === 'cancelled'))
     return { requestId: answered, resolution: { kind: 'user-question', state } };
+  const granted = text(field(message.grantRequestResolution, 'requestMessageId'));
+  if (granted !== undefined) return { requestId: granted, resolution: { kind: 'grant' } };
+  const provided = text(field(message.privateInputResolution, 'requestMessageId'));
+  if (provided !== undefined) return { requestId: provided, resolution: { kind: 'private-input' } };
   return undefined;
 }
 
@@ -366,7 +394,16 @@ function attachmentsOf(
         }),
     local: false,
   }));
-  return [...stored, ...bridged];
+  const cleared = (message.clearedAttachments ?? []).map((item, index): MessageAttachment => ({
+    key: `${message.id}:cleared:${index}`,
+    kind: 'file',
+    name: item.name,
+    mime: item.mime,
+    size: item.size,
+    local: false,
+    cleared: true,
+  }));
+  return [...stored, ...cleared, ...bridged];
 }
 
 function present(

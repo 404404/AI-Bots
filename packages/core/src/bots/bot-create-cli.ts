@@ -194,6 +194,8 @@ Usage:
   deepseekbot marketplace-detail <owner/repo>
   deepseekbot marketplace-submit <github-repo-url>
   deepseekbot marketplace-report <owner/repo> [--reason <text>]
+  deepseekbot data-reset-preview
+  deepseekbot data-reset-confirm --confirmation-stdin --confirm
   deepseekbot telemetry-status
   deepseekbot telemetry-set (--enabled | --disabled)
   deepseekbot git-status
@@ -277,10 +279,11 @@ Usage:
   deepseekbot bot-sessions <id> [--limit <1-100>]
   deepseekbot bot-activity <id> [--limit <1-100>]
   deepseekbot inbox [--category action|info|unread|replies|handled] [--bot <id>] [--channel <id>]
-                    [--limit <1-100>] [--cursor <cursor>] [--sort newest|oldest] [--snoozed]
-                    [--kind auto-rejection]
+                    [--limit <1-100>] [--cursor <cursor>] [--sort newest|oldest]
+                    [--snoozed | --dismissed] [--kind auto-rejection]
   deepseekbot inbox-status
   deepseekbot inbox-dismiss <item-id> [--source-key <source-event-id>]
+  deepseekbot inbox-restore <item-id> [--source-key <source-event-id>]
   deepseekbot inbox-allow-once <autoreject:item-id>
   deepseekbot inbox-snooze <item-id> [--source-key <source-event-id>] (--until <ISO time> | --clear)
   deepseekbot inbox-ignore <source-event-id>
