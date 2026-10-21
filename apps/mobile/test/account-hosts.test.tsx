@@ -5,6 +5,18 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => import('./react-native-shim'));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+const confirmed = vi.hoisted(() => [] as string[]);
+vi.mock('../src/ui/primitives/app-dialog', () => ({
+  confirmDestructive: (
+    title: string,
+    _message: string,
+    _action: string,
+    onConfirm: () => unknown,
+  ) => {
+    confirmed.push(title);
+    return onConfirm();
+  },
+}));
 vi.mock('expo-router', () => ({
   useFocusEffect: (focus: () => void) => {
     useState(focus);
@@ -47,6 +59,7 @@ it('signs in, lists the account Hosts and pairs with the chosen one', async () =
     signOut: vi.fn(async () => {
       email = null;
     }),
+    deleteAccount: vi.fn(),
   };
   const onPair = vi.fn();
   host = document.createElement('div');
@@ -78,6 +91,7 @@ it('shows the account refusal and returns to sign-in when the session expired', 
     signIn: vi.fn(),
     hosts: vi.fn(async () => ({ ok: false as const, code: 'sign-in-required' as const })),
     signOut: vi.fn(),
+    deleteAccount: vi.fn(),
   };
   host = document.createElement('div');
   document.body.append(host);
@@ -88,4 +102,42 @@ it('shows the account refusal and returns to sign-in when the session expired', 
   await act(async () => undefined);
   expect(host.textContent).toContain(t.pairRefused['sign-in-required']);
   expect(host.querySelector(`button[aria-label="${t.pairAccount.signIn}"]`)).not.toBeNull();
+});
+
+it('deletes the account after confirmation and shows a refusal when the relay fails', async () => {
+  let email: string | null = 'alice@example.com';
+  const results = [
+    { ok: false as const, code: 'relay-unavailable' as const },
+    { ok: true as const, value: undefined },
+  ];
+  const account = {
+    email: vi.fn(async () => email),
+    signIn: vi.fn(),
+    hosts: vi.fn(async () => ({ ok: true as const, value: [studio] })),
+    signOut: vi.fn(),
+    deleteAccount: vi.fn(async () => {
+      const result = results.shift()!;
+      if (result.ok) email = null;
+      return result;
+    }),
+  };
+  host = document.createElement('div');
+  document.body.append(host);
+  root = createRoot(host);
+  await act(async () =>
+    root!.render(<AccountHosts account={account} busy={false} onPair={vi.fn()} />),
+  );
+  await act(async () => undefined);
+  const button = (label: string) =>
+    host!.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+
+  await act(async () => button(t.pairAccount.deleteAccount)!.click());
+  expect(confirmed).toEqual([t.pairAccount.deleteTitle]);
+  expect(host.textContent).toContain(t.pairRefused['relay-unavailable']);
+  expect(button(t.pairAccount.pairWith('Studio'))).not.toBeNull();
+
+  await act(async () => button(t.pairAccount.deleteAccount)!.click());
+  expect(account.deleteAccount).toHaveBeenCalledTimes(2);
+  expect(button(t.pairAccount.signIn)).not.toBeNull();
+  expect(button(t.pairAccount.pairWith('Studio'))).toBeNull();
 });

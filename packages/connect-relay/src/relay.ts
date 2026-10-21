@@ -13,6 +13,7 @@ export interface RelayOptions {
   maxTunnels: number;
   reclaimAfterMs: number;
   limit?: (account: string) => Promise<boolean>;
+  deleteUser?: (account: string) => Promise<void>;
   hostKey?: (hostId: string) => Promise<string>;
   fetchHost?: typeof fetch;
   now?: () => Date;
@@ -175,6 +176,27 @@ export function createRelay(options: RelayOptions) {
     };
   };
 
+  const unlink = async (row: HostRow) => {
+    if (row.tunnel_id !== null) await tunnels.deleteTunnel(row.tunnel_id);
+    if (row.dns_record_id !== null) await tunnels.deleteRecord(row.dns_record_id);
+    await db.prepare('DELETE FROM hosts WHERE id = ?').bind(row.id).run();
+  };
+
+  const deleteAccount = async (account: string) => {
+    if (options.deleteUser === undefined) return failure(503, 'account-deletion-unavailable');
+    const { results } = await db
+      .prepare('SELECT * FROM hosts WHERE account = ?')
+      .bind(account)
+      .all<HostRow>();
+    try {
+      for (const row of results) await unlink(row);
+      await options.deleteUser(account);
+    } catch {
+      return failure(502, 'upstream-unavailable');
+    }
+    return json(200, { deleted: true });
+  };
+
   const requestOffer = async (row: HostRow, account: string, request: Request) => {
     if (options.hostKey === undefined) return failure(503, 'offer-unavailable');
     const body = await readBody(request);
@@ -246,9 +268,15 @@ export function createRelay(options: RelayOptions) {
       });
     }
     const hostMatch = /^\/v1\/hosts\/([^/]+)(\/tunnel|\/offer)?$/u.exec(url.pathname);
-    if (url.pathname !== '/v1/hosts' && hostMatch === null) return failure(404, 'not-found');
+    if (url.pathname !== '/v1/hosts' && url.pathname !== '/v1/account' && hostMatch === null)
+      return failure(404, 'not-found');
     const account = await authorized(request);
     if (account instanceof Response) return account;
+
+    if (url.pathname === '/v1/account') {
+      if (request.method !== 'DELETE') return failure(405, 'method-not-allowed');
+      return deleteAccount(account);
+    }
 
     if (url.pathname === '/v1/hosts') {
       if (request.method === 'GET') {
@@ -300,12 +328,10 @@ export function createRelay(options: RelayOptions) {
 
     if (request.method !== 'DELETE') return failure(405, 'method-not-allowed');
     try {
-      if (row.tunnel_id !== null) await tunnels.deleteTunnel(row.tunnel_id);
-      if (row.dns_record_id !== null) await tunnels.deleteRecord(row.dns_record_id);
+      await unlink(row);
     } catch {
       return failure(502, 'upstream-unavailable');
     }
-    await db.prepare('DELETE FROM hosts WHERE id = ?').bind(row.id).run();
     return json(200, { deleted: true });
   };
 

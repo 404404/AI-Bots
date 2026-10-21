@@ -466,6 +466,11 @@ const en = {
     signIn: 'Sign in',
     signedIn: (email: string) => `Signed in as ${email}`,
     signOut: 'Sign out',
+    deleteAccount: 'Delete account',
+    deleteTitle: 'Delete your DeepSeekBot account?',
+    deleteMessage:
+      'This deletes the account and unlinks every computer signed in to it, so phones can no longer reach them through DeepSeekBot Connect. This cannot be undone.',
+    deleteConfirm: 'Delete account',
     empty:
       'No computer is linked to this account yet. On your computer, open Settings → Devices → DeepSeekBot Connect and sign in.',
     offline: 'Offline',
@@ -1685,6 +1690,11 @@ const zh: typeof en = {
     signIn: '登录',
     signedIn: (email: string) => `已登录 ${email}`,
     signOut: '退出登录',
+    deleteAccount: '删除账号',
+    deleteTitle: '删除 DeepSeekBot 账号？',
+    deleteMessage:
+      '账号会被删除，登录这个账号的电脑都会解除关联，手机将无法再通过 DeepSeekBot Connect 连到它们。删除后无法恢复。',
+    deleteConfirm: '删除账号',
     empty: '这个账号还没有关联电脑。请在电脑上打开设置 → 设备 → DeepSeekBot Connect，登录账号。',
     offline: '离线',
     pairWith: (name: string) => `与 ${name} 配对`,
