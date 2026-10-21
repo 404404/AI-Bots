@@ -296,7 +296,10 @@ describe('Connect relay accounts', () => {
       body: { deleted: true },
     });
     expect(deleted).toEqual(['user_alice']);
-    expect((await call('GET', '/v1/hosts', { as: 'user_alice' })).body['hosts']).toEqual([]);
+    expect(await call('GET', '/v1/hosts', { as: 'user_alice' })).toMatchObject({ status: 401 });
+    expect(
+      await call('POST', '/v1/hosts', { as: 'user_alice', body: { name: 'Again' } }),
+    ).toMatchObject({ status: 401 });
     expect([...tunnels.tunnels.values()].map((tunnel) => tunnel.name)).toEqual([
       'dsb-haaaaaaaaaaad',
     ]);

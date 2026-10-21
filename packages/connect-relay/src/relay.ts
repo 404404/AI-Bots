@@ -184,6 +184,10 @@ export function createRelay(options: RelayOptions) {
 
   const deleteAccount = async (account: string) => {
     if (options.deleteUser === undefined) return failure(503, 'account-deletion-unavailable');
+    await db
+      .prepare('INSERT OR IGNORE INTO deleted_accounts (account, deleted_at) VALUES (?, ?)')
+      .bind(account, now().toISOString())
+      .run();
     const { results } = await db
       .prepare('SELECT * FROM hosts WHERE account = ?')
       .bind(account)
@@ -251,6 +255,14 @@ export function createRelay(options: RelayOptions) {
     if (account === undefined) return failure(401, 'unauthorized');
     if (!allowAll && !options.allowedUsers.includes(account))
       return failure(403, 'account-not-allowed');
+    if (
+      new URL(request.url).pathname !== '/v1/account' &&
+      (await db
+        .prepare('SELECT 1 FROM deleted_accounts WHERE account = ?')
+        .bind(account)
+        .first()) !== null
+    )
+      return failure(401, 'unauthorized');
     if (request.method === 'POST' && options.limit !== undefined && !(await options.limit(account)))
       return failure(429, 'rate-limited');
     return account;
@@ -293,9 +305,17 @@ export function createRelay(options: RelayOptions) {
       const created = changes(
         await db
           .prepare(
-            'INSERT INTO hosts (id, account, name, created_at) SELECT ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM hosts WHERE account = ?) < ?',
+            'INSERT INTO hosts (id, account, name, created_at) SELECT ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM hosts WHERE account = ?) < ? AND NOT EXISTS (SELECT 1 FROM deleted_accounts WHERE account = ?)',
           )
-          .bind(id, account, body['name'].trim(), now().toISOString(), account, options.maxHosts)
+          .bind(
+            id,
+            account,
+            body['name'].trim(),
+            now().toISOString(),
+            account,
+            options.maxHosts,
+            account,
+          )
           .run(),
       );
       if (created === 0) return failure(409, 'host-limit');
