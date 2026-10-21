@@ -141,7 +141,8 @@ export function ConversationScreen({
   latestWindowOnly?: boolean;
 }) {
   const { client, saved } = useHostSession();
-  const [openedOn] = useState(saved?.hostId);
+  const [openedOn, setOpenedOn] = useState(saved?.hostId);
+  if (openedOn === undefined && saved?.hostId !== undefined) setOpenedOn(saved.hostId);
   const focused = useIsFocused();
   const roster = useHostSnapshot(client, focused).roster;
   const router = useRouter();
