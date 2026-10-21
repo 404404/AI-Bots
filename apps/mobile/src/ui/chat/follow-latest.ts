@@ -25,6 +25,16 @@ export function latestOffset(metrics: Omit<ListMetrics, 'offset'>, start: number
   return Math.max(0 - start, metrics.content - metrics.layout);
 }
 
+export function anchorStep(
+  anchor: number,
+  offset: number,
+  latest: number,
+  following: boolean,
+): number {
+  'worklet';
+  return following ? Math.min(latest, Math.max(anchor, offset)) : latest;
+}
+
 export function unseenSince(
   messages: readonly ConversationMessage[],
   anchor: string | undefined,
@@ -47,6 +57,7 @@ export function useFollowLatest<Row>(
   messages: readonly ConversationMessage[],
   onFollowingChange?: (following: boolean) => void,
   start = 0,
+  onLatestChange?: (offset: number) => void,
 ) {
   const [following, setFollowing] = useState(true);
   const [away, setAway] = useState(false);
@@ -60,6 +71,8 @@ export function useFollowLatest<Row>(
   hasRows.current = messages.length > 0;
   const startInset = useRef(start);
   startInset.current = start;
+  const latestChange = useRef(onLatestChange);
+  latestChange.current = onLatestChange;
   const metrics = useRef<ListMetrics>({ content: 0, layout: 0, offset: 0 });
   const frame = useRef<number | undefined>(undefined);
   const sizes = useRef(0);
@@ -122,6 +135,7 @@ export function useFollowLatest<Row>(
   }, []);
 
   const pin = useCallback(() => {
+    latestChange.current?.(latestOffset(metrics.current, startInset.current));
     if (frame.current !== undefined) return;
     if (!followingNow.current && settled.current) return;
     frame.current = requestAnimationFrame(() => {

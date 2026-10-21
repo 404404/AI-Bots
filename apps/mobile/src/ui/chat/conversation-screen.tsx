@@ -13,7 +13,13 @@ import {
   View,
   type ViewInstance,
 } from 'react-native';
-import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedReaction,
+  useAnimatedRef,
+  useAnimatedStyle,
+  useScrollOffset,
+  useSharedValue,
+} from 'react-native-reanimated';
 
 import {
   chatBackgrounds,
@@ -81,7 +87,7 @@ import {
   useHeaderOverlap,
   useHeaderPadding,
 } from './native-header';
-import { useFollowLatest } from './follow-latest';
+import { anchorStep, useFollowLatest } from './follow-latest';
 import { usePullToCompose } from './pull-to-compose';
 import { chatHref, useRecentChat } from '../shell/recent-chats';
 import { PullToComposeHint } from './pull-to-compose-hint';
@@ -439,7 +445,33 @@ function ChatConversation({
     }),
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
-  const latest = useFollowLatest(list, visible, playback?.setFollowing, headerOverlap);
+  const followingLatest = useSharedValue(true);
+  const latestEnd = useSharedValue(0);
+  const workingAnchor = useSharedValue(0);
+  const setPlaybackFollowing = playback?.setFollowing;
+  const followChange = useCallback(
+    (following: boolean) => {
+      followingLatest.value = following;
+      setPlaybackFollowing?.(following);
+    },
+    [followingLatest, setPlaybackFollowing],
+  );
+  const latestChange = useCallback(
+    (offset: number) => {
+      latestEnd.value = offset;
+    },
+    [latestEnd],
+  );
+  useAnimatedReaction(
+    () => [scroll.value, latestEnd.value, followingLatest.value] as const,
+    ([offset, end, following]) => {
+      workingAnchor.value = anchorStep(workingAnchor.value, offset, end, following);
+    },
+  );
+  const workingStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: workingAnchor.value - scroll.value }],
+  }));
+  const latest = useFollowLatest(list, visible, followChange, headerOverlap, latestChange);
   const composerInput = useRef<ComposerInput>(null);
   const [typing, setTyping] = useState(false);
   const clipboard = useClipboardImage(typing && files.length < MAX_PICKED);
@@ -1118,6 +1150,23 @@ function ChatConversation({
               />
             </SpeakerStageContext.Provider>
           </MarkdownViewportContext.Provider>
+          {working.length > 0 ? (
+            <Animated.View
+              pointerEvents="none"
+              onLayout={(event) => setWorkingHeight(event.nativeEvent.layout.height)}
+              style={[
+                {
+                  position: 'absolute',
+                  bottom: composerHeight + edgeFade.bottom,
+                  left: 0,
+                  right: 0,
+                },
+                workingStyle,
+              ]}
+            >
+              <WorkingStatus bots={working} />
+            </Animated.View>
+          ) : null}
           {listTop > 0 ? (
             <EdgeFade
               edge="top"
@@ -1133,20 +1182,6 @@ function ChatConversation({
             solid={composerCover}
             color={fadeColor}
           />
-          {working.length > 0 ? (
-            <View
-              pointerEvents="none"
-              onLayout={(event) => setWorkingHeight(event.nativeEvent.layout.height)}
-              style={{
-                position: 'absolute',
-                bottom: composerHeight + edgeFade.bottom,
-                left: 0,
-                right: 0,
-              }}
-            >
-              <WorkingStatus bots={working} />
-            </View>
-          ) : null}
           {composable && Platform.OS === 'ios' ? (
             <PullToComposeHint
               progress={pull.progress}
