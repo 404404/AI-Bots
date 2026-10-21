@@ -1,4 +1,10 @@
-import { WallpaperError, VIDEO_LIMIT, DEFAULT_CROP, validCrop } from './wallpaper-store.js';
+import {
+  WallpaperError,
+  VIDEO_LIMIT,
+  DEFAULT_CROP,
+  validCrop,
+  validRotation,
+} from './wallpaper-store.js';
 import type { Wallpaper } from './wallpaper.js';
 import { object } from './appearance.js';
 export function createWallpaperControl(owner: Wallpaper) {
@@ -32,11 +38,31 @@ export function createWallpaperControl(owner: Wallpaper) {
       }
       if (typeof expectedRevision !== 'string')
         throw new WallpaperError('wallpaper-revision-required');
+      if (command.item !== undefined && typeof command.item !== 'string')
+        throw new WallpaperError('wallpaper-missing');
+      const item = command.item as string | undefined;
       if (command.action === 'remove')
-        return { wallpaper: await owner.remove(expectedRevision, expiresAt) };
+        return { wallpaper: await owner.remove(expectedRevision, expiresAt, item) };
       if (command.action === 'crop') {
         if (!validCrop(command.crop)) throw new WallpaperError('wallpaper-crop-invalid');
-        return { wallpaper: await owner.crop(command.crop, expectedRevision, expiresAt) };
+        return { wallpaper: await owner.crop(command.crop, expectedRevision, expiresAt, item) };
+      }
+      if (command.action === 'select')
+        return { wallpaper: await owner.select(item, expectedRevision, expiresAt) };
+      if (command.action === 'rotation') {
+        const rotation = { interval: command.interval, shuffle: command.shuffle };
+        if (
+          (rotation.interval === undefined && rotation.shuffle === undefined) ||
+          !validRotation(rotation)
+        )
+          throw new WallpaperError('wallpaper-rotation-invalid');
+        return {
+          wallpaper: await owner.setRotation(
+            rotation as { interval?: number; shuffle?: boolean },
+            expectedRevision,
+            expiresAt,
+          ),
+        };
       }
       if (command.action === 'begin') {
         if (

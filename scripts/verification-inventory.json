@@ -4,6 +4,22 @@
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
+      "id": "desktop.approval.three-actions",
+      "label": "Remember only the current tool through three actions and keep Full Access permission management Human-only",
+      "source": "packages/core/src/workspaces/tool-approval.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/tool-approval-simple.md",
+      "task": 2080,
+      "gap": "Web/online CLI first slice; native mobile, IM new-rule authority and all Provider/recovery variants remain later qualification."
+    },
+    {
+      "id": "desktop.grants.request-write-continue",
+      "label": "Approve persistent workspace write authority and continue the original native-file task",
+      "source": "packages/core/src/workspaces/grant-requests.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/workspace-request-write.md",
+      "task": 2080,
+      "gap": "Mobile, full restart recovery and arbitrary native Provider isolation remain subsequent slices."
+    },
+    {
       "id": "messaging.im-dm-commands",
       "label": "Handle whole-text IM DM commands with current authority and canonical Outbox replies",
       "source": "packages/core/src/messaging/im-commands.ts",
@@ -129,6 +145,22 @@
       "source": "packages/core/src/workspaces/approval-templates.ts",
       "guide": ".agents/skills/verify-deepseekbot/features/approval-templates.md",
       "task": 1967,
+      "gap": null
+    },
+    {
+      "id": "desktop.data.reset",
+      "label": "Preview, confirm twice and clear all BotHarness data, then restart fresh",
+      "source": "packages/client/src/client/data-reset-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/data-reset.md",
+      "task": 2426,
+      "gap": null
+    },
+    {
+      "id": "desktop.storage.cleanup",
+      "label": "See storage used, preview and clear old chat media by chat, age and type",
+      "source": "packages/client/src/client/storage-settings.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/storage-cleanup.md",
+      "task": 2430,
       "gap": null
     },
     {
@@ -570,12 +602,28 @@
       "gap": "Native decoding/sharing remains queued; SVG is the bounded static subset, editor/file-card/mobile diff paths remain #2214."
     },
     {
+      "id": "desktop.vrm-companion",
+      "label": "Native VRM Panel follows live Activity and committed DM output with independent fixed-Bot instances",
+      "source": "packages/vrm-companion/src/client/index.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/vrm-companion.md",
+      "task": 2222,
+      "gap": "Human acceptance and native Desktop qualification remain separate from isolated Web evidence."
+    },
+    {
       "id": "desktop.window-zoom",
       "label": "Set and restore device-local primary-window zoom through Settings and exact-target CLI",
       "source": "packages/client/src/client/window-zoom.ts",
       "guide": ".agents/skills/verify-deepseekbot/features/desktop-window-zoom.md",
       "task": 2268,
       "gap": "Explicitly opted-in macOS0.2.1-rc.2 product composition qualified on representative input/popup/native guest paths; unknown versions/arbitrary pages are not qualified. Windows/Linux remain S3. CI and unmerged PR delivery are separate from runtime evidence."
+    },
+    {
+      "id": "client.global-search",
+      "label": "Open global search with Alt/Option+K and find conversations and Bot settings by pinyin or English",
+      "source": "packages/client/src/client/quick-switcher.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/global-search.md",
+      "task": 2360,
+      "gap": "Headless Web capture covers the search path; the native Desktop key path needs Human QA on macOS and Windows."
     },
     {
       "id": "desktop.local-appearance",
@@ -635,6 +683,22 @@
     }
   ],
   "scripts": [
+    {
+      "path": "scripts/e2e-tool-approval-simple.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.approval.three-actions"],
+      "reason": "Task-owned isolated Windows Host; real native pwsh requests, Web Always allow, changed inputs, other-tool/CLI/revoke checks and Full Access Human-only management.",
+      "task": 2080,
+      "sha256": "ae02a942c136a8b8875eb21e5cbc703931654c564bf1a1a0fbf0b891fb7f0d79"
+    },
+    {
+      "path": "scripts/e2e-workspace-request-write.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.grants.request-write-continue"],
+      "reason": "Task-owned isolated Host and temporary folder; real Web confirmation, authoritative Grant readback, native Orchestrator/Assignment file writes and same-task reply. No mobile or full recovery claim.",
+      "task": 2080,
+      "sha256": "3ca8a16e8efddeacfb82c601917884d2944a716c573447347d934f8fd22a0991"
+    },
     {
       "path": "scripts/e2e-bot-session-folders.mjs",
       "category": "mapped",
@@ -1476,6 +1540,14 @@
       "sha256": "014810503926fe7e38217f6cc522aa6fcbee8dd2eb36142e096d72787d66b5ef"
     },
     {
+      "path": "scripts/e2e-mobile-activity-swipe-web.mjs",
+      "category": "mapped",
+      "behaviors": ["phone.activity.rows"],
+      "reason": "Own task Host and Expo Web export; Activity swipe clear/snooze/undo, Cleared restore and an interrupted message (seeded in the Host database) in browser with a real model turn, no native gesture acceptance.",
+      "task": 1954,
+      "sha256": "d7b2a9d6aaf6848681085220c8d1116a56f20f94e9d14df3c86f32d7dbdd0793"
+    },
+    {
       "path": "scripts/e2e-mobile-follow-latest-web.mjs",
       "category": "historical-regression",
       "behaviors": ["phone.timeline"],
@@ -1546,6 +1618,14 @@
       "reason": "Own task Host and Expo Web export; real model usage fixture and visible totals; not native-device evidence.",
       "task": 1967,
       "sha256": "8f4c330494a2645f477b22141b77266c00ce8ef31144409c0160e22668eda251"
+    },
+    {
+      "path": "scripts/e2e-mobile-folder-browse-web.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.grants.request-write-continue"],
+      "reason": "Own task Host and Expo Web export; real model folder request, system-chooser refusal simulated at the phone proxy, phone browses Host folders and grants one; not native-device evidence.",
+      "task": 2080,
+      "sha256": "3493bdbcf12a110cd430f61d598a632d930989d020d48a12f0a2e4a8e93c1c62"
     },
     {
       "path": "scripts/e2e-mobile-working-web.mjs",
@@ -1729,7 +1809,7 @@
       "behaviors": ["desktop.grants.temporary-read-revoke"],
       "reason": "Dedicated temporary sample outside Host data; actual Web Grant authorization, direct attachment-import read, explicit CLI revocation, same-read denial and before/after visible evidence. No model/native file tool/Shell security claim.",
       "task": 1974,
-      "sha256": "4d06c35370b6a936c644e5f662d33644f30201a3203a92f6fbefebb0cefc0cf4"
+      "sha256": "eedc6f54d818cf732e4537965fde803a20a1375e5375f308c60e3f09abed4d03"
     },
     {
       "path": "scripts/e2e-bot-mode-exit.mjs",
@@ -1958,6 +2038,14 @@
       "sha256": "f781c109dba94abe6bae2b3a41b2db0d68a86e3dd3f6a0904ebe5dbf536c0391"
     },
     {
+      "path": "scripts/e2e-vrm-companion.mjs",
+      "sha256": "d71c22d6daeaa3e6814b50dae345a1f3ee721c1a32030536a4e81ac10c9181c5",
+      "category": "mapped",
+      "reason": "Isolated real Host journey for VRM loading, live speech, fixed bindings, refresh, Group gating and renderer disposal; native CLI uninstall/reinstall requires a task-owned Host restart.",
+      "task": 2222,
+      "behaviors": ["desktop.vrm-companion"]
+    },
+    {
       "path": "scripts/e2e-desktop-zoom-launch.mjs",
       "sha256": "7aa97d564aa93d76372e952e2d0a747a4cd9d310f54a49fb655e56642c319a9a",
       "category": "mapped",
@@ -1975,10 +2063,10 @@
     },
     {
       "path": "scripts/e2e-workspace-chrome.mjs",
-      "sha256": "12ff9ff097069a576e34de1c7aa0ad99f55fafa00ab3ee64ace1f76d2b136122",
+      "sha256": "cb3a9da48097f1640eb4f231aa2e49bfc890209fed08e1cc66398c209723f0b8",
       "category": "mapped",
-      "reason": "Production workspace corner CSS and coordinate owner across zoom, panel gaps, rail positions and platform/fullscreen exclusion; does not render native traffic lights.",
-      "task": 2268,
+      "reason": "Audited production corner CSS across 204 zoom/gap/rail/platform/fullscreen cases on Windows after using a portable file URL for Vite; excludes native caption pixel qualification.",
+      "task": 2270,
       "behaviors": ["desktop.window-zoom"]
     },
     {
@@ -1987,7 +2075,7 @@
       "behaviors": ["desktop.local-appearance"],
       "reason": "Runs actual scoped theme controls, local persistence and explicit Client-targeted CLI against an isolated Host; no model call.",
       "task": 2258,
-      "sha256": "d96263dc55463e905e5220c773f9c17fbc988be3d065fa9b83221880c3a58bb5"
+      "sha256": "3c537cae092c4ffbfc2f4138e92a541ed9f6249ae0032abf55c45e6e27c33d39"
     },
     {
       "path": "scripts/e2e-global-materials.mjs",
@@ -1995,7 +2083,7 @@
       "behaviors": ["desktop.global-materials"],
       "reason": "Real mode/material UI and CLI, reload, native isolation and controlled background pixel proof of blur.",
       "task": 2259,
-      "sha256": "2cbb7edf42ead539c8e23aa029b78353d5e514ac3a78210c4b715d7fb4f97be9"
+      "sha256": "3ce22699ec4b3373fca5e15be2c2062b8e49a4c98466eaf86349a7dfcc9741b1"
     },
     {
       "path": "scripts/e2e-panel-appearance.mjs",
@@ -2003,7 +2091,7 @@
       "behaviors": ["desktop.panel-appearance"],
       "reason": "Real Header menus, UI/CLI overrides, follow global, modes, close/reopen, content switch, reload and scoped reset.",
       "task": 2260,
-      "sha256": "504a472d36343156026b2f89fce57fb9e147ccf0af5c98dfcab8228049e60e32"
+      "sha256": "0f3a4d906880314ceacab68e14e2e2f2fb653f49a198ef5506865ad8874e06f9"
     },
     {
       "path": "scripts/e2e-nested-appearance.mjs",
@@ -2011,7 +2099,7 @@
       "behaviors": ["desktop.panel-appearance"],
       "reason": "Real nested Header menus, shared Memory detail identity, independent contribution lifetime and live Browser viewer without content recoloring.",
       "task": 2261,
-      "sha256": "3d3663e2b12634f34f456b3378c14adefa5a8db2b0cd89328b5f7e79d1f900c2"
+      "sha256": "68862553fe530c0ca95c0515726a2c6e2fa907b0c173895694e140434593d93d"
     },
     {
       "path": "scripts/e2e-image-wallpaper.mjs",
@@ -2019,7 +2107,7 @@
       "behaviors": ["desktop.image-wallpaper"],
       "reason": "Real upload/crop, original-byte persistence, resize, failure preservation, DSH isolation and directed CLI.",
       "task": 2262,
-      "sha256": "d28f8ca4636d1ed745ea3a3cb519309957ee87c179736f663c1e2a7c65135a75"
+      "sha256": "bcb665331b74fcd5b8a70401373f155039c76ae45cb56300eb98dad76b10fe45"
     },
     {
       "path": "scripts/e2e-video-wallpaper.mjs",
@@ -2027,7 +2115,7 @@
       "behaviors": ["desktop.video-wallpaper"],
       "reason": "Actual loop frames, background pause/resume, decode error and saved poster restoration, explicit Client CLI and exit cleanup.",
       "task": 2263,
-      "sha256": "797e435677bf35161bd314b80c57e229220d845d2c24910ba89b593ab299e6db"
+      "sha256": "fe7db6af55ee97f67c27aa7f123329f745251af8b333d0df31e1bc10a058601e"
     },
     {
       "path": "scripts/e2e-appearance-recovery.mjs",
@@ -2035,7 +2123,7 @@
       "behaviors": ["desktop.appearance-recovery"],
       "reason": "Real current-mode clear, confirmed image/video reset, failure preservation/partial retry, preview cleanup, CLI and independent Client isolation.",
       "task": 2264,
-      "sha256": "30f6f9fe940150bfd9f5eeb3804a6b59cf7ed420e2392e093ccc63e8cfb103f3"
+      "sha256": "cf63aed0226320827a79779565d51888a5a618f9f6dcf9734ba002423d9132b4"
     },
     {
       "path": "scripts/e2e-message-history-mask.mjs",
@@ -2052,6 +2140,14 @@
       "reason": "Isolated Host, visible DM composer, synthetic private input, native approval and actual Tool result with two live accepted IM sources; no production receiver or credential.",
       "task": 2290,
       "sha256": "a523ea1964d31850aa65b4e96ee2c37318d2c3c90b2b7feb86e8dfacfd4adce8"
+    },
+    {
+      "path": "scripts/e2e-desktop-zoom-windows.mjs",
+      "sha256": "cf08b5af77f660a47d033a5a7812acaf3d825c8512c073b6cb5b942ca126f1f8",
+      "category": "mapped",
+      "reason": "Audited explicit same-root Windows native lifecycle: exact executable/user-data/PID and loopback listener checks, immutable package checks, closed-app setup and fresh per-boot metadata. Readiness does not qualify keyboard, guests, DPI or Human QA.",
+      "task": 2270,
+      "behaviors": ["desktop.window-zoom"]
     }
   ],
   "native": [

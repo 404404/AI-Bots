@@ -106,6 +106,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
 
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotMain } from '../src/client/bot-main.js';
+import { WindowCompanions } from '../src/client/window-companions.js';
 import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
 import { store, type BotSummary, type ChannelSummary } from '../src/client/store.js';
 import { inertSubmissionActions } from './inert-submissions.js';
@@ -148,6 +149,7 @@ async function open(
   channel: ChannelSummary,
   bots: BotSummary[],
   from: 'bot' | 'channel' = 'bot',
+  companion?: WindowCompanions,
 ): Promise<HTMLElement> {
   await act(async () => {
     store.setRoster(bots, [channel]);
@@ -164,7 +166,11 @@ async function open(
     });
     store.setSessions({ status: 'ready', items: [], error: undefined });
     root.render(
-      createElement(BotMain, { actions, channelSidebar: createChannelSidebarRegistry() }),
+      createElement(BotMain, {
+        actions,
+        channelSidebar: createChannelSidebarRegistry(),
+        companion,
+      }),
     );
   });
   return container.querySelector<HTMLElement>('.bh-chat-body')!;
@@ -189,6 +195,7 @@ beforeEach(() => {
     IS_REACT_ACT_ENVIRONMENT: true,
     ResizeObserver: class {
       observe(): void {}
+      unobserve(): void {}
       disconnect(): void {}
     },
   });
@@ -283,6 +290,46 @@ describe('timeline working rows in the Channel body', () => {
     await setBots([bot('mira', 'Mira', 'working'), nova], group);
     expect(chat.scrollTop).toBe(100);
     expect(container.querySelector('.bh-timeline-new')).toBeNull();
+  });
+
+  it('keeps latest content clear of companions without moving history or waiting for transitions', async () => {
+    const companion = new WindowCompanions({
+      context: async () => ({ profileId: 'reading-space' }),
+      source: () => ({ addEventListener() {}, close() {} }),
+      update: async () => {},
+    });
+    await companion.start();
+    document.documentElement.dataset['botharnessMotion'] = 'reduce';
+    try {
+      const chat = await open(dm, [bot('mira', 'Mira', 'working')], 'bot', companion);
+      const pane = chat.closest<HTMLElement>('.bh-chat-pane')!;
+      expect(pane.style.getPropertyValue('--bh-companion-read-inset')).toBe('');
+      layout(chat, 1000);
+      chat.scrollTop = 600;
+      await act(async () => chat.dispatchEvent(new Event('scroll')));
+      layout(chat, 1112);
+      await act(async () => companion.select('mira'));
+      expect(pane.style.getPropertyValue('--bh-companion-read-inset')).toBe('112px');
+      expect(chat.scrollTop).toBe(1112);
+      expect(pane.dataset['activityConcealed']).toBe('true');
+      await setBots([bot('mira', 'Mira', 'idle')], dm);
+      expect(pane.style.getPropertyValue('--bh-companion-read-inset')).toBe('112px');
+      await act(async () => companion.select('nova'));
+      expect(pane.style.getPropertyValue('--bh-companion-read-inset')).toBe('112px');
+      chat.scrollTop = 100;
+      await act(async () => chat.dispatchEvent(new Event('scroll')));
+      await act(async () => {
+        companion.remove('mira');
+        companion.remove('nova');
+      });
+      expect(pane.style.getPropertyValue('--bh-companion-read-inset')).toBe('');
+      expect(chat.scrollTop).toBe(100);
+      await act(async () => companion.select('mira'));
+      expect(chat.scrollTop).toBe(100);
+    } finally {
+      companion.dispose();
+      delete document.documentElement.dataset['botharnessMotion'];
+    }
   });
 
   it('fades the composer status at the latest message and brings it back when scrolled up', async () => {

@@ -72,6 +72,7 @@ export const RULES = [
   none('apps/presentations/**', 'Slides embedded in the docs site', true),
   related('apps/mobile/{app,src,test,scripts}/**', 'Mobile app source, tests and scripts'),
   none('apps/mobile/modules/**', 'Local Expo modules, checked by Android native unit tests'),
+  none('apps/mobile/targets/**', 'Apple extension targets, built on a Mac by Expo prebuild'),
   related('apps/mobile/{app.json,app.config.js,eas.json,metro.config.js}', 'Mobile app config'),
   related('apps/mobile/locales/**', 'Translated iOS permission prompts'),
   related('apps/mobile/assets/**', 'Mobile app icons and bundled images'),
@@ -82,6 +83,8 @@ export const RULES = [
     'Mobile app prose, agent rules and ignores',
   ),
   related('scripts/test/**', 'Script tests'),
+  related('.github/workflows/readme-status.yml', 'README status collection and publication'),
+  related('docs/assets/readme/pixel/source/**', 'README renderer source geometry and licenses'),
   related('scripts/fixtures/**', 'Script test fixtures'),
   related('scripts/product-provider/**', 'Product provider scripts'),
   related('scripts/*', 'Repository scripts'),
@@ -101,7 +104,7 @@ export const RULES = [
   none('{prototype,dsh_research,design}/**', 'Prototypes and research notes'),
   none('*.md', 'Root prose'),
   none(
-    '{LICENSE,.gitignore,.gitattributes,.oxlintrc.json,.oxfmtrc.json,skills-lock.json,vps.local.example.env}',
+    '{LICENSE,.gitignore,.easignore,.gitattributes,.oxlintrc.json,.oxfmtrc.json,skills-lock.json,vps.local.example.env}',
     'Root metadata; lint and format always run',
   ),
 ];

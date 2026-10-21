@@ -15,7 +15,11 @@
     "./client": {
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./panels": {
+      "types": "./dist/panel-api.d.mts",
+      "default": "./dist/panel-api.mjs"
+    }
   },
   "dependencies": {
     "@botharness/botui-core": "0.3.0",
@@ -27,6 +31,7 @@
     "driver.js": "1.4.0",
     "html-to-image": "1.11.13",
     "morphicons": "1.7.1",
+    "pinyin-pro": "3.29.5",
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1"
   },

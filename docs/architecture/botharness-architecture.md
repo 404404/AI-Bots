@@ -1,5 +1,7 @@
 # BotHarness 架构与数据流
 
+#2080 第一条切片让 Web 请求卡与在线 CLI 共用 application-defined Workspace 请求批准命令。Grant owner 在 Channel owner 的现有提交事务内写入读写权限，规范决议与 Inbox Admission 同时提交；成功读回后再沿原运行时处理原任务。新目录与旧只读升级均需 Human 明确确认，不由 Client 串联多个独立成功动作。Orchestrator 与 Assignment 的原生文件写入都检查当前 Grant 写权限；Assignment 仍只使用其原 Grant 和单 cwd。普通目录设置、移动端交互和完整重启恢复矩阵仍按后续切片交付，不能从本次 Web/CLI 路径推定已完成。见 [ADR-0238](../adr/0238-workspace-request-approval-commits-write-authority-with-the-channel-decision.md)。
+
 #2053 的本地 Group 发送复核试点由 Channel owner 在正式 Source Event / placement 追加的同一事务内比较实际观察依据。
 #2054 复用该 owner：held 标出实际返回的同伴正式消息；Bot 可引用这些消息显式让话，或提交独立补充。Host 只核对引用是否真实观察且仍有效，不判断语义重复，也不自动结清 Inbox；让话依据随现有草稿 JSON 保存。
 待复核草稿保存在现有 Operational Database，仅正式提交进入 Channel/Inbox；仅 drop 不解决 Inbox；显式 `resolve_inbox_ids` 可在 drop 成功后结清所选事项，过期或重启不自动恢复。
@@ -492,6 +494,8 @@ Orchestrator 的应用定义 channel_list 工具从当前 PersonaBot 的 Session
 
 [ADR-0199](../adr/0199-paired-devices-reach-the-host-through-a-same-listener-device-gateway.md) 已由 [#1652](https://github.com/BotHarness/DeepSeekBot/issues/1652) 实现：配对的手机不持有任何 DSH 凭据。应用定义的 Device Pairing 模块（`packages/core/src/devices/`）经 DSH 公开的 `webServer.register`／`registerUpgrade` 在同一 `dsh web` 监听器上提供设备网关：设备在 BotHarness 前缀下以 `Authorization: Device <id>.<secret>` 调用与 Web Client 相同的 unary 信封和 Remote stream mux 帧；模块每次按运维数据库中的设备记录（只存哈希）校验并更新最近使用时间，再用 Host 内存中经 `connection.authenticatedUrl()` 自行换取的 loopback cookie 转发至原生 `/api` 与 `/api/remote.mux`。DSH 签名 cookie 的密钥本就跨 Host 重启保留，但 cookie 不标识设备，且 stream 升级不经过 `connection/request`，故不能把 cookie 交给设备。撤销立即拒绝后续请求（编码 401：`device-revoked`／`device-unknown`／`device-credential-missing`），并关闭该设备已打开的 stream socket。配对邀请、列表与撤销只在已认证的 `/api` carrier 上提供给 Human：Web Client「设置 → 设备」显示一次性、10 分钟有效的二维码（即 `deepseekbot://pair?p=…` 深链接，携带 Host 标识与按序路由），列出设备的配对与最近使用时间，并可撤销。见 [#1644](https://github.com/BotHarness/DeepSeekBot/issues/1644)。
 
+托管 Connect（目标状态，尚未实现）：[ADR-0241](../adr/0241-hosted-connect-reaches-the-host-through-a-managed-tunnel.md)（[#2387](https://github.com/BotHarness/DeepSeekBot/issues/2387)）在路由列表里增加一条 Connect 路由，顺序为 局域网 → Tailscale HTTPS → Connect。账号复用 TOB 的 WorkOS 环境，只用于发现 Host 和经纪一次性配对凭据；本仓库新建的中继 Worker 为每台开启 Connect 的 Host 代管一条 Cloudflare Tunnel，ingress 只放行 `/botharness-device/*`，应用流量不经过 Worker。手机登录后无需在电脑上确认即可配对，新设备会在电脑和其他手机上提示并可一键吊销。先在中国大陆以外实现并验收，大陆可达性之后另找测试者验证，不阻塞实现。
+
 ### 手机推送
 
 [ADR-0202](../adr/0202-phone-push-is-a-content-free-projection-of-the-human-inbox.md)（[#1655](https://github.com/BotHarness/DeepSeekBot/issues/1655)）：应用定义的 Push delivery 模块（`packages/core/src/push/`）是 Human Inbox 的投影，不另设通知权威。Human Inbox 表或 PersonaBot 的审批、提问、私密输入计数变化时（以及每分钟一次的兜底扫描），模块读取 `action` 项与未读的 `replies` 项，对每台已登记的配对设备只发送一次新项，并经 Expo Push Service 投递；推送标题为频道名（`#名称`，私信为 PersonaBot 名称），正文为所需操作加上工具与主要参数、问题或消息的简短预览（折叠空白，最多 140 字符）；私密输入请求不含内容（[ADR-0213](../adr/0213-phone-push-shows-the-channel-and-a-short-preview.md)）。数据字段只含 Host 标识、Human Inbox 项标识、PersonaBot 标识与读取请求所需的 Channel／消息标识，并携带未处理 Human 操作数作为角标。设备经设备网关的 `/botharness-device/push` 登记 Expo push token、切换各类通知、发送测试通知；撤销设备或 Expo 回报 `DeviceNotRegistered` 时删除 token。发送失败有界重试，结果写入不含内容的 `push` 开发者日志。App 保存每台配对的 Host，点按通知先切换到对应 Host，再打开该审批、提问或私信。
@@ -500,9 +504,15 @@ Orchestrator 的应用定义 channel_list 工具从当前 PersonaBot 的 Session
 
 Human 不负责创建或选择执行 Conversation。Human–PersonaBot DM 是 Human 与该 Bot 直接对话的入口：消息先成为 Source Event，经 Bot Inbox 交给 Orchestrator；Orchestrator 再决定直接回复，或在授权与 capacity 内创建、复用和管理多个 Assignment Session。普通 Orchestrator assistant final 只留在 DSH SessionPersistence；只有显式 Channel messaging command 才产生 Human-facing Channel message。该 command 从可信 Session ownership 推导 PersonaBot Actor，并验证目标 Channel membership，不接受模型自报 bot id 或 author。右侧「会话」只投影明确归属该 PersonaBot 的独立 DSH 根 Session，包括 Orchestrator 与 Assignment，不展示 Subagent；归属与角色来自 Session Ownership，标题、工作区及实时运行状态来自 DSH 原生 Session 目录，不以 cwd 推断归属（ADR-0072）。
 
-Workspace Grant 是 application-defined 的持久授权记录：Human 通过 DSH 的 Host 目录选择器或绝对路径输入添加一个现有文件夹，由 DSH Workspace registry 解析真实路径，再为 PersonaBot 创建 Grant。Orchestrator 的 cwd 始终是自己的 Memory Repository；它可读写 Memory，并可读取所有当前有效 Grant 的项目目录，只在 Human 为该 Grant 明确开启 Orchestrator 写入权限后可写项目目录，不能自行创建 Grant 或开启自己的写入权限。每个 Assignment 选择一个有效 Grant，固化 Grant ID、Workspace ID、单一 primary cwd 与权限快照，只能读写所选目录。撤销 Grant 会阻止两个角色后续的文件访问及该 Grant 的新事项创建、请求和恢复；历史 Session 不因重新授权而复活。授权列表中 Memory 是固定内部目录，项目目录可添加、撤销，撤销不会删除 DSH Workspace 或磁盘文件。DSH 原生 workspace-write 仅限制部分写入并不隔离读取，且可能允许临时目录写入。BotHarness 在最终 Tool guard 对 DSH 原生 read、read_image、write、edit、str_replace_editor、glob、grep 的路径按当前 Grant 校验：Orchestrator 可读 Memory 与所有有效 Grant、可写 Memory 与 Human 明确开启 Orchestrator 写入权限的 Grant；Assignment 只可读写固化的单一有效 Grant。Shell、terminal 等无法从参数证明文件范围的原生工具在 `tools/pre-execute` 暂停当前调用，经 DSH `approval/request` 在 PersonaBot DM 展示完整输入，由 Human 对这一次调用批准或拒绝；仅 Orchestrator 在真实 Memory 根目录运行字面量 `ls -la` 或 `pwd` 是可直接核对的只读目录检查，直接放行；批准不等于目录隔离，调用可能访问授权目录之外。缺少、取消或无法展示的审批均拒绝。批准后最终 guard 仍重查当前 Session 和 Grant，并消费仅属于这次调用的批准标记；撤销会让待审批卡立即失效且不能再批准，已开始执行的调用可能完成，撤销阻止之后的 Assignment 调用。Human 可在审批卡保存 Tool Approval Rule：精确规则匹配工具名与完整输入，宽规则只适用于同一 Bot、角色及有效 Grant 范围内的不透明原生工具；每次命中仍经 DSH `approval/request` 给出独立的 `allowed-once` 审计，撤销规则或改变 Grant 范围后不再命中。每个 PersonaBot 的 Assignment Access Preset 默认为 `workspace-write + ask`；Human 经二次风险确认可为**之后新建**的事项启用 `danger-full-access + never`。该模式不改变 Orchestrator 或已有事项，也不取消事项创建及后续调用所需的有效 Grant；它让危险事项在该前提下绕过路径与不透明工具审批（ADR-0067）。ADR-0205 修订：Shell 与插件工具现按 Session 自身的 DSH 沙箱模式与审批策略运行，BotHarness 不再逐次审批；DSH 自己发起的审批（例如 Shell 请求 `sandbox_permissions` 提权）会作为 Tool 审批卡出现在 Bot 频道。
+Workspace Grant 是 application-defined 的持久授权记录：Human 通过 DSH 的 Host 目录选择器或绝对路径输入添加一个现有文件夹，由 DSH Workspace registry 解析真实路径，再为 PersonaBot 创建 Grant。Orchestrator 的 cwd 始终是自己的 Memory Repository；它可读写 Memory，并可读取所有当前有效 Grant 的项目目录，只在 Human 为该 Grant 明确开启 Orchestrator 写入权限后可写项目目录，不能自行创建 Grant 或开启自己的写入权限。每个 Assignment 选择一个有效 Grant，固化 Grant ID、Workspace ID、单一 primary cwd 与权限快照，只能读写所选目录。撤销 Grant 会阻止两个角色后续的文件访问及该 Grant 的新事项创建、请求和恢复；历史 Session 不因重新授权而复活。授权列表中 Memory 是固定内部目录，项目目录可添加、撤销，撤销不会删除 DSH Workspace 或磁盘文件。DSH 原生 workspace-write 仅限制部分写入并不隔离读取，且可能允许临时目录写入。BotHarness 在最终 Tool guard 对 DSH 原生 read、read_image、write、edit、str_replace_editor、glob、grep 的路径按当前 Grant 校验：Orchestrator 可读 Memory 与所有有效 Grant、可写 Memory 与 Human 明确开启 Orchestrator 写入权限的 Grant；Assignment 只可读写固化的单一有效 Grant。Shell 与插件工具按 Session 自身的 DSH 沙箱模式与审批策略运行；DSH 发起的审批（例如 Shell 请求 `sandbox_permissions`）进入应用定义的 Channel Tool Approval owner。普通 Web 卡只有允许这次／始终允许／拒绝；新规则记住同一 Bot、根角色和当前授权范围内的当前工具，输入可变，旧精确与宽规则保持原义。每次原生询问仍获得独立的 `allowed-once` 审计；规则撤销或范围变化使其失效。工具批准不等于目录隔离，也不创建 Grant；Shell 可能触达目录之外，界面需说明。每个 PersonaBot 的 Access Preset 默认为 `workspace-write + ask`；Human 经既有风险确认可开启 `danger-full-access + ask`，按所选 scope 作用于当前 Orchestrator 和／或之后新建的 Assignment。已有 Assignment 保留其 mode／Grant／revision 快照；本次迁移只规范旧 Full Access 的 approval policy。Full Access 普通请求自动回答，识别出的权限／策略变更必须 Human 本次决定；撤销、当前身份和独立能力检查仍适用。详见下文三动作边界及 [ADR-0239](../adr/0239-three-action-tool-approval-and-full-access-use-native-ask.md)。
 
-当所需项目尚无有效 Grant 时，Orchestrator 可通过专用工具在自己的 DM 提交一条持久授权请求卡；该工具只能请求，不能发放 Grant，也不会预建 Assignment。Human 在卡上用 Host 目录选择器选定文件夹后，现有 Workspace Grant authority 校验并写入授权，再由 Human 的明确回复成为 DM Source Event，唤醒同一个 Orchestrator Session。回复携带经 Host 核验的请求消息 ID 与有效 Grant ID；Human Inbox 从请求和回复 Source Event 投影一条待办，普通回复不解除，授权回复解除。包括历史请求在内，仅有关联有效 Grant 的已提交结构化回复解除授权待办；原始文本保留，普通“已授权”文案不作为授权证明。Inbox 与来源 DM 复用同一目录选择及授权操作，提交事务重新核验请求与 Bot Grant，两窗口只能提交一条有效回应。Orchestrator 重新列出有效 Grant，随后才用选中的 Grant 创建 Assignment；卡片和授权记录是不同的持久事实。普通 Assignment Ask 仍先回到 Orchestrator。Orchestrator 遇到 Human 未指明的 Memory 分支选择时，调用 DSH 原生 `ask_user_question`；BotHarness 在该 Agent 作用域的 `user-questions/request` waterfall 中提交持久 Channel 提问卡，Human 的选项或自定义回答经同一 DM 回到原生 Service，使同一 Session 继续。卡片保留来源 Session，回答和取消各有持久消息；停止、重启或旧请求不得再次回答。明确目标直接切换，不提问。Assignment 不直接向 Human 使用此原生工具，仍通过 Orchestrator 转问。
+### Three-action tool approval and Full Access (#2080)
+
+Ordinary Web approval uses Allow once / Always allow / Reject. The application-defined Channel Tool Approval owner records `allowed-always-tool` with the Human decision, activates a revocable `tool` rule in the existing Operational Database, then returns DSH's native `allowed-once`. A tool rule matches the current Bot, root role, authority scope and tool name across changed inputs. Exact, all-opaque and Secret rules keep their old semantics; new ordinary cards do not mint all-tools authority. Current Grant/scope checks, execution guards and rule revocation remain authoritative. The Web Channel, Activity/companion reuse, online CLI and readable mobile history share that decision contract.
+
+Top-level Full Access composes its existing unconfined execution mode with native `ask`, replacing the earlier `never` combination. The same responder automatically answers ordinary requests only while current Full Access remains valid. Recognized permission/policy management always requires an individual Human decision and skips automatic rules and Reviewer; directory grants still use the authenticated Owner read/write command. Generation 104 preserves existing rules and updates only old Full Access Assignment approval snapshots, without changing mode, scope, Grant or preset revision. Delegated Subagent policy remains native `never`. This is application policy rather than an override of DSH's `never` semantics. See [ADR-0239](../adr/0239-three-action-tool-approval-and-full-access-use-native-ask.md).
+
+当所需项目尚无有效 Grant 时，Orchestrator 可通过专用工具在自己的 DM 提交一条持久授权请求卡；该工具只能请求，不能发放 Grant，也不会预建 Assignment。Human 在卡上明确确认文件夹读写后，认证 Owner 的共享命令核对当前身份与目录，在单个 Channel 事务中提交可写 Grant、关联 Human 决议和 Inbox Admission；提交并读回后才续接原任务。重复确认沿用已提交的决议，撤销后的旧请求不能重建权限。回复携带经 Host 核验的请求消息 ID 与有效 Grant ID；Human Inbox 从请求和回复 Source Event 投影一条待办，普通回复不解除，授权回复解除。包括历史请求在内，仅有关联有效 Grant 的已提交结构化回复解除授权待办；原始文本保留，普通“已授权”文案不作为授权证明。Inbox 与来源 DM 复用同一目录选择及授权操作，提交事务重新核验请求与 Bot Grant，两窗口只能提交一条有效回应。Orchestrator 重新列出有效 Grant，随后才用选中的 Grant 创建 Assignment；卡片和授权记录是不同的持久事实。普通 Assignment Ask 仍先回到 Orchestrator。Orchestrator 遇到 Human 未指明的 Memory 分支选择时，调用 DSH 原生 `ask_user_question`；BotHarness 在该 Agent 作用域的 `user-questions/request` waterfall 中提交持久 Channel 提问卡，Human 的选项或自定义回答经同一 DM 回到原生 Service，使同一 Session 继续。卡片保留来源 Session，回答和取消各有持久消息；停止、重启或旧请求不得再次回答。明确目标直接切换，不提问。Assignment 不直接向 Human 使用此原生工具，仍通过 Orchestrator 转问。
 
 右侧是 Channel sidebar（ADR-0053）：group Channel 显示成员与 Channel 管理 entries，Human–PersonaBot DM 显示该 PersonaBot 的 entries（会话、Memory、Bot Inbox、Computer 等）；entries 由统一注册 seam 提供、可折叠、按声明顺序排列，注册描述符可提供 Lucide 图标名称与标题操作；会话、Bot 收件箱和记忆演化的显示设置放在各自标题右侧的齿轮里，会话范围／布局保持 per-PersonaBot 浏览器偏好、记忆术语保持全局浏览器偏好，未注册或不可用时直接不显示而不是占位。Chat 始终是中间的 Channel body。「会话」把 Orchestrator 固定在顶部，Assignment 按状态分为可折叠的「进行中」与「空闲」，按最近更新倒序并平滑过渡位置；「全部」保留已停止的历史 Session；Human 可切换按状态或按工作区折叠分组，每个 Bot 的范围、布局与折叠选择仅保存在本浏览器。点击行使用 DSH 原生 `UiWorkspace.openSession` 打开对应 Session，而不是维护一份只读事项详情。归属该 Bot 的根 Session 可通过原生标题栏及 Session 菜单返回 Bot 私聊；空闲时左侧标题前显示 Bot 头像，运行状态及日程标记仍优先显示。Assignment Directory 继续持有 Grant、续接、报告、停止、并发及审计事实。
 
@@ -774,6 +784,8 @@ Registry 在 Generation 66 持久化不可恢复的身份关闭状态和确认�
 目录查询将 GitHub topics 与 `.botharness/bot.json` 的 tags（兼容旧 `roles`，存于 D1 的 `roles` 列）一起用于文字搜索、`topic` 筛选和 `/v1/topics` 统计；同一仓库的同名标签只计数一次，统计排除收录标记 `botharness-bot` 及未上架仓库。FTS5 同时索引两类标签，迁移会从已存数据重建索引。每小时刷新不依赖 push 即更新 GitHub topics；检测到 push 后重新读取 README 和 bot.json，并替换旧标签。
 
 [ADR-0131](../adr/0131-bot-marketplace-starts-as-a-github-indexed-catalog.md) 与 #18 让 Bot Marketplace 先作为 GitHub 索引目录上线：作者给公开仓库加 `botharness-bot` topic 即同意收录，也可在 Marketplace 贴链接立即抓取。独立的 Cloudflare Worker 与 D1 每日按 topic 切片发现、每小时用 GraphQL 批量刷新，README 进入 FTS5 索引；浏览用 keyset cursor，搜索只取前 200 条。harness 的 Marketplace modal 展示 README 详情；安装复用 #298 的 Git URL 创建路径，确认框显示最新提交并提示第三方仓库风险。贴链接与一键举报共用 ALTCHA 和限流。不建账号、不计下载。[ADR-0135](../adr/0135-a-bot-moves-between-people-as-a-zip-of-its-memory-files.md) 撤销了基于账号的第二阶段：把单个 Bot 交给别人或换设备，改为在 harness 里导出 Bot Zip（默认只含 Memory 文件和 `.botharness/bot.json`，整包导出时可选带 Git 历史），对方从创建菜单的「从 zip 导入」得到新的 PersonaBot。
+
+[ADR-0240](../adr/0240-marketplace-listings-localize-author-first-with-generated-summaries.md) 让列表按读者语言（中文/英文）显示：作者在仓库根目录放 `README.zh-CN.md`／`README.en.md`，在 `.botharness/bot.json` 的 `i18n` 里写翻译后的名称和简介；Worker 推送后一并抓取，`lang=zh|en` 时优先返回。某语言没有作者简介时，Worker 在每小时刷新后经 OpenCode Go 的免费模型按 README 生成一句简介（按输入哈希缓存、每轮限量，标记 `bioGenerated`），作者文本总是优先；README 正文不做机器翻译。Host 的 Marketplace modal 与 CLI 按界面语言传 `lang`。
 
 ## 7 · 关键边界
 
@@ -1140,7 +1152,9 @@ External HTTPS images require a per-image click and load directly in the browser
 
 ## 原生 Panel Plugin 开发目标（ADR-0234）
 
-[ADR-0234](../adr/0234-panels-are-native-plugins-with-independent-binding.md) 记录已确认目标，运行实现尚待交付。第一方与独立作者的面板复用原生 Plugin/Fiber 和 Bundle/Profile 组合。领域 owner 的 Host Service 与具名实时 Cordis Event 独立于面板显隐；浏览器 Consumer 沿用认证后的 Typert/API Gateway 与支持的 stream。状态型展示需恢复当前状态，首版不建设通用离线事件补发。后续 Memory 观测要覆盖无对话时的外部工作树变化，保留既有 Observation/Admission owner，并与 Git commit 区分。
+首片实现入口见 [Panel Plugin 开发指南](../panel-plugin.md)：独立 VRM Bundle 消费 UI 提供的公开 `dockPanels` / `botPresentation` Service；Activity 仍由现有 ClientStore 投影维护，已提交 DM 输出由按 Bot 共享的文字时钟呈现，固定实例元数据扩展现有布局文档。
+
+[ADR-0234](../adr/0234-panels-are-native-plugins-with-independent-binding.md) 记录已确认目标；以下为整体目标，已实现的 T1 范围以首片指南与验收记录为准。第一方与独立作者的面板复用原生 Plugin/Fiber 和 Bundle/Profile 组合。领域 owner 的 Host Service 与具名实时 Cordis Event 独立于面板显隐；浏览器 Consumer 沿用认证后的 Typert/API Gateway 与支持的 stream。状态型展示需恢复当前状态，首版不建设通用离线事件补发。后续 Memory 观测要覆盖无对话时的外部工作树变化，保留既有 Observation/Admission owner，并与 Git commit 区分。
 
 实现、实例、绑定与工作区位置分开。普通实现允许多个实例，重复安装不重复创建。消息面板内的 Bot-bound Panel 跟随 PersonaBot 私聊；群聊不显示内容和打开入口，也不增加成员选择器。显式绑定的全局工作区实例保留并清楚标明所选 Bot/Channel；Group-channel-bound 复用 Channel 绑定并限制为群聊。现有频道子面板不因此获得跨工作区拖放，绑定不授予数据访问或代码隔离。
 
@@ -1150,7 +1164,7 @@ External HTTPS images require a per-image click and load directly in the browser
 
 [T2 #2223](https://github.com/BotHarness/DeepSeekBot/issues/2223) 将办公室切片改为无 Bot／Channel 绑定的 **全局 Task Kanban**，管理当前 Profile 内共享的 Task。Human 卡片操作与 Bot 查询／创建／更新工具使用同一授权 Service、持久记录和提交后通知；关闭面板不影响工具工作。演进 #1792 已有 to-do owner 并兼容旧记录，不增加第二份存储。Task 状态与进度独立于 Session 内计划和 Assignment 执行，创建、移动、完成或重开卡片不自动启动执行。验收重启／重开一致性、显式并发冲突及直接 CLI／工具 parity。
 
-[Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。尚未开始实现；T1 运行验证及 Human 反馈是扩展门槛。交付状态与依赖以工单为准：T2–T6 依赖 T1，T7 依赖 T6，迁移父票与 T8–T15 各自依赖 T1。迁移与 T2–T7 同属 T1 后的扩展分支，子票不等待协调父票完成，也不隐式等待 T7；并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
+[Spec #2219](https://github.com/BotHarness/DeepSeekBot/issues/2219)、T1–T7、[T8–T15 迁移父工单 #2234](https://github.com/BotHarness/DeepSeekBot/issues/2234) 及其子工单统一规划在 [Panel Plugins Project #21](https://github.com/orgs/BotHarness/projects/21) 的 v2.0。T1 已进入首片实现与隔离 Host 验证；Human 验收尚待反馈，仍是扩展门槛。交付状态与依赖以工单为准：T2–T6 依赖 T1，T7 依赖 T6，迁移父票与 T8–T15 各自依赖 T1。迁移与 T2–T7 同属 T1 后的扩展分支，子票不等待协调父票完成，也不隐式等待 T7；并与 #1791／#1792 作者能力、#2096 布局 CLI 协调。
 
 T4 保留 ADR-0220 的 Sessions 范围：DM 中为 Bot 所有的 Sessions，Group 默认按原始 Source Event 查看 Assignments，并保留已有显式成员 Bot 筛选。群聊不显示 Bot-bound 面板不等于移除该筛选，也不改变 Session ownership。T5 的 Members 在 DM 消息内隐藏，但全局固定 Group 实例不受当前聊天切换影响。Panel Consumer 释放与卸载领域 Provider／整个 Bundle 分开；后者遵循原生生命周期，能力缺失须明确显示不可用。
 
@@ -1162,7 +1176,7 @@ Video wallpaper extends the same local media record with an original video and g
 
 Appearance recovery composes the existing local preference and media owners without a third store. Current-mode clear affects only its functional Panel map. Explicit full reset preflights both revisions, saves defaults, then deletes the atomic media record; partial media failure is reported and retryable rather than presented as a cross-store transaction. A transient resource generation invalidates previews on accepted media changes, including removal from an already-empty store (ADR-0236, #2264).
 
-### Desktop whole-window zoom (macOS)
+### Desktop whole-window zoom
 
 [ADR-0237](../adr/0237-desktop-window-zoom-is-client-owned.md) defines an application-owned Client
 zoom Service on the stable desktop origin. Settings, native Shortcut Registry commands and an
@@ -1172,10 +1186,14 @@ MIT-preserving downstream theme composition leases only the original font-shortc
 then returns it on disposal. The product build carries that licensed theme and a portable ESM
 schema module. Bundle patches retain the original `ui-theme` row and canonical Settings
 namespace. An explicit `deepseekbot-zoom-setup enable` command installs one Profile-local
-package link through the native package manager and requires a restart. It accepts only macOS
-and CLI 0.2.1-rc.2, refusing other overrides. `disable` removes only this dependency and its
-exact owned symlink, preserving font preferences; run it before product removal. Installing
-the Bundle alone does not activate compatibility. Windows/Linux remain unchanged.
+package link through the selected Desktop's bundled package manager and requires a restart.
+The macOS path and Windows candidate require Desktop 0.2.1-rc.2, refusing other overrides.
+Windows reads executable FileVersion, checks live processes with CIM, and validates owned
+junctions under the same Profile writer lock. The Client checks a matching platform lease
+before registering the same native Shortcut commands; Ctrl+0 restores the saved default.
+`disable` removes only this dependency and its exact owned link, preserving font preferences;
+run it before product removal. Installing the Bundle alone does not activate compatibility.
+Windows native qualification remains in #2270; Linux remains disabled.
 It does not edit the installed desktop shell. Ordinary Web zoom is unchanged. Native-input,
 packaged-install and Human QA evidence remain separate from source coverage; numberpad,
 broader reliability and other desktop platforms are tracked in #2269/#2270.

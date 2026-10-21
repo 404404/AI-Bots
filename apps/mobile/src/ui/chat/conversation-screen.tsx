@@ -1,8 +1,19 @@
 import { useSourceDraft } from '../../host/native-source-drafts';
 import { hostDraftKey } from '../../host/source-drafts';
+import { takeSharedFiles } from '../share/incoming-share';
 import { Stack, useIsFocused, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View, type ViewInstance } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  useWindowDimensions,
+  View,
+  type ViewInstance,
+} from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -26,7 +37,13 @@ import {
 import type { Inbox } from '../../host/inbox';
 import type { WireAllBotPreview } from '../../host/wire';
 import { shareAttachment } from '../../host/share-attachment';
-import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../host/pick-files';
+import {
+  MAX_PICKED,
+  fromClipboardImage,
+  pickFiles,
+  type PickSource,
+  type PickedFile,
+} from '../../host/pick-files';
 import {
   useChannelConversation,
   useConversation,
@@ -39,6 +56,8 @@ import {
   answerInChat,
   answerQuestion,
   decideApproval,
+  handledHere,
+  grantRequestPort,
   loadApproval,
   loadQuestion,
   type RequestRef,
@@ -46,14 +65,27 @@ import {
 import { useDictation } from '../../host/speech';
 import { botColor } from '../bot-color';
 import { ApprovalCard } from './approval-card';
+import { GrantRequestCard } from './grant-request-card';
+import { PrivateInputCard } from './private-input-card';
 import { ActivityRow } from './activity-row';
 import type { BubbleGroup } from './bubble-shape';
 import { botBusy } from './bot-tone';
 import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
-import { Composer } from './composer';
-import { ChatHeader, EdgeFade, HeaderBackButton, useChatHeaderHeight } from './header-chrome';
+import { Composer, type ComposerInput } from './composer';
+import { ClipboardImageOffer, useClipboardImage } from './clipboard-image';
+import { EdgeFade, HeaderBackButton, titleChipFill } from './header-chrome';
+import {
+  barLabelStyle,
+  floatingHeader,
+  glassHeader,
+  useHeaderOverlap,
+  useHeaderPadding,
+} from './native-header';
 import { useFollowLatest } from './follow-latest';
+import { usePullToCompose } from './pull-to-compose';
+import { chatHref, useRecentChat } from '../shell/recent-chats';
+import { PullToComposeHint } from './pull-to-compose-hint';
 import { useMarkRead } from './mark-read';
 import { useBotNames } from './use-bot-names';
 import { ImageViewer } from './image-viewer';
@@ -79,16 +111,19 @@ import { QuestionCard } from './question-card';
 import { WorkingStatus } from './working-status';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
-import { edgeFade, space } from '../design/tokens';
+import { edgeFade, pullToCompose, radius, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
+import { fullClientParams, type FullClientTarget } from '../../host/full-client';
 import { leaveScreen } from '../shell/leave-screen';
 import { Text } from '../primitives/text';
 import { MarkdownViewportContext } from '../markdown-viewport';
-import { KeyboardChatFrame } from '../primitives/keyboard-frame';
+import { KeyboardChatFrame, useListBottomSafeArea } from '../primitives/keyboard-frame';
 import { t } from '../strings';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
 const NO_DRAFTS: ConversationDraftReference[] = [];
+
+type ScrollEvent = NativeSyntheticEvent<NativeScrollEvent>;
 
 export type ChatPlace =
   | { kind: 'dm'; slug: string | undefined }
@@ -186,13 +221,51 @@ const RequestCard = memo(function RequestCard({
     }),
     [client, inbox, ref],
   );
+  const grant = useMemo(
+    () => grantRequestPort(client, ref, () => void inbox?.refresh()),
+    [client, inbox, ref],
+  );
+  const router = useRouter();
   const subject = card.subject === undefined ? {} : { subject: card.subject };
+  if (card.kind === 'private-input')
+    return (
+      <PrivateInputCard
+        botName={botName}
+        purpose={card.subject}
+        resolved={resolution?.kind === 'private-input'}
+        focused={focused}
+        group={group}
+        onFill={() =>
+          router.push({
+            pathname: '/full-client',
+            params: fullClientParams({
+              kind: 'private-input',
+              channelId: card.channelId,
+              messageId: message.id,
+            }),
+          })
+        }
+      />
+    );
+  if (card.kind === 'grant')
+    return (
+      <GrantRequestCard
+        port={grant}
+        botName={botName}
+        resolved={card.resolved === true || resolution?.kind === 'grant'}
+        decidedHere={handledHere(ref)}
+        focused={focused}
+        group={group}
+      />
+    );
   if (card.kind === 'tool-approval')
     return (
       <ApprovalCard
         port={approval}
         {...subject}
+        {...(card.command === undefined ? {} : { command: card.command })}
         {...(resolution?.kind === 'tool-approval' ? { resolution } : {})}
+        decidedHere={handledHere(ref)}
         focused={focused}
         group={group}
       />
@@ -207,7 +280,7 @@ const RequestCard = memo(function RequestCard({
       group={group}
       replyInChat={replyInChat}
       expandInput
-      answeredHere={answeredHere}
+      answeredHere={answeredHere || handledHere(ref)}
     />
   );
 });
@@ -225,7 +298,10 @@ function ChatConversation({
 }) {
   const theme = useDesignTheme();
   const router = useRouter();
-  const headerHeight = useChatHeaderHeight();
+  const headerOverlap = useHeaderOverlap();
+  const headerPadding = useHeaderPadding();
+  const { width: windowWidth } = useWindowDimensions();
+  const listSafeArea = useListBottomSafeArea();
   const { client, inbox, saved } = useHostSession();
   const host = useHostSnapshot(client, focused);
   const dm = place.kind === 'dm';
@@ -269,17 +345,19 @@ function ChatConversation({
   const playback = useStreamPlayback(conversation, display.loaded && display.mode === 'streaming');
   const snapshot = useConversationTimelineSnapshot(conversation, playback);
   const shownDrafts = display.loaded && display.mode === 'streaming' ? snapshot.drafts : NO_DRAFTS;
-  const [draft, setDraft] = useSourceDraft(
-    hostDraftKey(
-      saved?.hostId ?? '',
-      place.kind,
-      (place.kind === 'dm' ? place.slug : place.channelId) ?? '',
-    ),
+  const draftKey = hostDraftKey(
+    saved?.hostId ?? '',
+    place.kind,
+    (place.kind === 'dm' ? place.slug : place.channelId) ?? '',
   );
+  const [draft, setDraft] = useSourceDraft(draftKey);
   const [mentions, setMentions] = useState<SelectedMention[]>([]);
   const [caret, setCaret] = useState(0);
   const [selection, setSelection] = useState<{ start: number; end: number }>();
-  const [allPreview, setAllPreview] = useState<{ key: string; preview: WireAllBotPreview }>();
+  const [allPreview, setAllPreview] = useState<{
+    key: string;
+    preview: WireAllBotPreview;
+  }>();
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const dictation = useDictation(setDraft);
@@ -288,6 +366,7 @@ function ChatConversation({
   const [actionsFor, setActionsFor] = useState<MessageMenuTarget>();
   const [reactError, setReactError] = useState(false);
   const [composerHeight, setComposerHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
   const list = useAnimatedRef<FlatList<Row>>();
   const jumped = useRef<string | undefined>(undefined);
   const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set());
@@ -318,7 +397,6 @@ function ChatConversation({
       ),
     [visible, resolutions, dm, playback],
   );
-  const history = useMemo(() => [...chronological].reverse(), [chronological]);
   const [speakers] = useState(createSpeakerRegistry);
   const groups = useMemo(() => messageGroups(chronological), [chronological]);
   const groupOf = useMemo(() => new Map(groups.map((entry) => [entry.key, entry.group])), [groups]);
@@ -333,13 +411,18 @@ function ChatConversation({
   }, [speakers, groups, shownDrafts]);
   const scroll = useScrollOffset(list);
   const viewport = useAnimatedRef<ViewInstance>();
-  const invertedContent = useAnimatedRef<ViewInstance>();
+  const content = useAnimatedRef<ViewInstance>();
   const attachList = useCallback(
     (node: FlatList<Row> | null) => {
       list(node);
-      invertedContent(node?.getNativeScrollRef()?.getInnerViewRef() ?? null);
+      const scroll = node?.getNativeScrollRef?.();
+      content(
+        scroll !== null && scroll !== undefined && 'getInnerViewRef' in scroll
+          ? scroll.getInnerViewRef()
+          : null,
+      );
     },
-    [list, invertedContent],
+    [list, content],
   );
   const viewportLayout = useSharedValue(0);
   const stage = useMemo(
@@ -352,19 +435,61 @@ function ChatConversation({
     }),
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
-  const latest = useFollowLatest(list, visible, playback?.setFollowing);
+  const latest = useFollowLatest(list, visible, playback?.setFollowing, headerOverlap);
+  const composerInput = useRef<ComposerInput>(null);
+  const [typing, setTyping] = useState(false);
+  const clipboard = useClipboardImage(typing && files.length < MAX_PICKED);
+  const composable = !botDm && conversation !== undefined && host.connection.status === 'connected';
+  const { jumpToLatest } = latest;
+  const compose = useCallback(() => {
+    jumpToLatest();
+    composerInput.current?.focus();
+  }, [jumpToLatest]);
+  const pull = usePullToCompose({
+    enabled: composable,
+    threshold: pullToCompose.threshold,
+    flick: Platform.OS === 'android' ? pullToCompose.flick : undefined,
+    onCompose: compose,
+  });
   const markdownViewport = useMemo(
-    () => ({ scroll, viewport, invertedContent, layout: viewportLayout, active: focused }),
-    [scroll, viewport, invertedContent, viewportLayout, focused],
+    () => ({ scroll, viewport, content, layout: viewportLayout, active: focused }),
+    [scroll, viewport, content, viewportLayout, focused],
   );
   const readMount = useMarkRead(client, inbox, conversation, activeChannel, !latest.away);
+  const recentMount = useRecentChat(
+    botDm
+      ? undefined
+      : bot !== undefined
+        ? {
+            id: `dm:${saved?.hostId ?? ''}:${bot.slug}`,
+            title: bot.displayName,
+            href: chatHref(`/dm/${encodeURIComponent(bot.slug)}`, saved?.hostId),
+          }
+        : channel !== undefined
+          ? {
+              id: `channel:${saved?.hostId ?? ''}:${channel.id}`,
+              title: channel.name,
+              href: chatHref(`/channel/${encodeURIComponent(channel.id)}`, saved?.hostId),
+            }
+          : undefined,
+  );
+  const sharedMount = useCallback(
+    (node: unknown) => {
+      if (node === null) return;
+      const shared = takeSharedFiles(draftKey);
+      if (shared.length > 0) setFiles((current) => [...current, ...shared].slice(0, MAX_PICKED));
+    },
+    [draftKey],
+  );
   const mountRef = dictation.mountRef;
   const screenRef = useCallback(
     (node: unknown) => {
       mountRef(node);
       readMount(node);
+      recentMount(node);
+      sharedMount(node);
     },
-    [mountRef, readMount],
+    [mountRef, readMount, recentMount, sharedMount],
   );
 
   const asking = snapshot.messages.findLast(
@@ -373,14 +498,14 @@ function ChatConversation({
 
   const rows = useMemo<Row[]>(
     () => [
+      ...chronological,
       ...shownDrafts.map((entry): Row => ({
         kind: 'draft',
         key: `draft:${entry.draftId}`,
         draft: entry,
       })),
-      ...history,
     ],
-    [shownDrafts, history],
+    [shownDrafts, chronological],
   );
 
   const jump = () => {
@@ -388,6 +513,7 @@ function ChatConversation({
     const index = rows.findIndex((row) => row.kind === 'message' && row.message.id === focus);
     if (index >= 0) {
       jumped.current = focus;
+      latest.hold();
       list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
     } else if (latestWindowOnly && snapshot.status === 'live') jumped.current = focus;
     else if (snapshot.status === 'live' && snapshot.hasOlder && !snapshot.loadingOlder)
@@ -528,7 +654,7 @@ function ChatConversation({
             roster={roster}
             count={item.activityCount ?? 1}
             dmSlug={slug}
-            lifted={item.message.id === actionsFor?.message.id}
+            lifted={Platform.OS === 'web' && item.message.id === actionsFor?.message.id}
             onLongPress={(anchor, label, target) =>
               setActionsFor({
                 message: { ...item.message, body: label },
@@ -554,7 +680,10 @@ function ChatConversation({
       if (
         client !== undefined &&
         author !== undefined &&
-        (item.message.card?.kind === 'tool-approval' || item.message.card?.kind === 'user-question')
+        (item.message.card?.kind === 'tool-approval' ||
+          item.message.card?.kind === 'user-question' ||
+          item.message.card?.kind === 'grant' ||
+          item.message.card?.kind === 'private-input')
       )
         return (
           <RequestCard
@@ -582,7 +711,7 @@ function ChatConversation({
           onOpenImage={setViewing}
           onShare={share}
           onLongPress={openActions}
-          lifted={item.message.id === actionsFor?.message.id}
+          lifted={Platform.OS === 'web' && item.message.id === actionsFor?.message.id}
           {...(botDm ? {} : { onReact: react })}
           botName={botName}
           speaker={
@@ -618,6 +747,57 @@ function ChatConversation({
   const missing =
     host.roster !== undefined && (dm ? bot === undefined : channel === undefined && !botDm);
   const leave = () => leaveScreen(router);
+  const canGoBack = router.canGoBack();
+  const title = dm ? (
+    <ChatTitle
+      bot={bot}
+      fallback={slug ?? ''}
+      onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
+    />
+  ) : botDm ? (
+    <View
+      style={{
+        minHeight: theme.touch,
+        justifyContent: 'center',
+        paddingHorizontal: theme.touch / 2,
+        borderRadius: radius.round,
+        ...titleChipFill(theme, false),
+      }}
+    >
+      <Text strong numberOfLines={1} style={barLabelStyle}>
+        {channelDetails.members
+          .map(
+            (member) =>
+              roster?.bots.find((entry) => entry.slug === member)?.displayName ??
+              t.activityRow.unavailableBot,
+          )
+          .join('、')}
+      </Text>
+    </View>
+  ) : (
+    <ChannelTitle
+      channel={channel}
+      fallback={channelId ?? ''}
+      onPress={() =>
+        router.push({ pathname: '/group/[id]', params: { id: channel?.id ?? channelId } })
+      }
+    />
+  );
+  const fullClient: FullClientTarget | undefined =
+    slug !== undefined
+      ? { kind: 'dm', slug }
+      : channelId !== undefined
+        ? { kind: 'channel', channelId }
+        : undefined;
+  const trailing =
+    fullClient === undefined ? null : (
+      <OpenFullClientButton target={fullClient} bar plain={!floatingHeader} />
+    );
+  const ios = Platform.OS === 'ios';
+  const back = <HeaderBackButton plain={!floatingHeader} onPress={leave} />;
+  const titleItem = (
+    <View style={{ maxWidth: windowWidth - (theme.touch + space.x5) * 3 }}>{title}</View>
+  );
   const notice = hostRefused
     ? t.refused
     : snapshot.status === 'refused'
@@ -646,69 +826,149 @@ function ChatConversation({
                         ? t.dictationFailed
                         : undefined;
 
+  const listTop = notice === undefined ? headerPadding : 0;
+  const fadeColor = background.kind === 'color' ? background.color : theme.color.base;
+
   return (
     <>
       <Stack.Screen
         options={{
-          headerShown: false,
-          scrollEdgeEffects: { top: 'hidden', bottom: 'hidden', left: 'hidden', right: 'hidden' },
+          headerShown: true,
+          headerTransparent: ios || floatingHeader,
+          headerStyle: ios || floatingHeader ? {} : { backgroundColor: theme.color.base },
+          headerShadowVisible: false,
+          headerBackButtonDisplayMode: 'minimal',
+          ...(ios && !glassHeader ? { headerBlurEffect: 'systemChromeMaterial' as const } : {}),
+          ...(glassHeader
+            ? { scrollEdgeEffects: { top: 'automatic' as const, bottom: 'hidden' as const } }
+            : {}),
+          ...(ios
+            ? {
+                title: '',
+                headerTitle: '',
+                headerBackVisible: canGoBack,
+                unstable_headerLeftItems: () => [
+                  ...(canGoBack
+                    ? []
+                    : [
+                        {
+                          type: 'button' as const,
+                          label: t.back,
+                          icon: { type: 'sfSymbol' as const, name: 'chevron.left' as const },
+                          onPress: leave,
+                        },
+                      ]),
+                  { type: 'spacing' as const, spacing: 0 },
+                  { type: 'custom' as const, element: titleItem },
+                ],
+                unstable_headerRightItems: () =>
+                  fullClient === undefined
+                    ? []
+                    : [
+                        {
+                          type: 'button' as const,
+                          label: t.openFullClient,
+                          icon: { type: 'sfSymbol' as const, name: 'macwindow' as const },
+                          onPress: () =>
+                            router.push({
+                              pathname: '/full-client',
+                              params: fullClientParams(fullClient),
+                            }),
+                        },
+                      ],
+              }
+            : {
+                headerTitleAlign: 'left' as const,
+                headerTitle: () => (
+                  <View
+                    key={`${theme.scheme}:${theme.fontScale}:${bot?.displayName ?? channel?.name ?? ''}`}
+                    style={{
+                      maxWidth: windowWidth - (theme.touch + space.x5) * 3,
+                      marginHorizontal: space.x3,
+                    }}
+                  >
+                    {title}
+                  </View>
+                ),
+                headerRight: () => trailing,
+                ...(canGoBack && !floatingHeader ? {} : { headerLeft: () => back }),
+              }),
         }}
       />
       <KeyboardChatFrame
         onMount={screenRef}
-        backgroundColor={theme.color.base}
-        background={<ChatBackground choice={background} imageUri={backgroundImageUri} />}
+        backgroundColor={background.kind === 'color' ? background.color : theme.color.base}
+        background={
+          background.kind === 'image' ? (
+            <ChatBackground choice={background} imageUri={backgroundImageUri} />
+          ) : undefined
+        }
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
-          <View>
-            {botDm ? (
-              <View style={{ padding: space.x5, alignItems: 'center' }}>
-                <Text variant="meta" tone="muted">
-                  {t.activityRow.botDm}
-                </Text>
-              </View>
-            ) : (
-              <Composer
-                value={draft}
-                placeholder={
-                  bot !== undefined
-                    ? t.messageBot(bot.displayName)
-                    : channel !== undefined
-                      ? t.messageBot(`#${channel.name}`)
-                      : t.messagePlaceholder
-                }
-                disabled={conversation === undefined || host.connection.status !== 'connected'}
-                files={files}
-                canAttach={files.length < MAX_PICKED}
-                dictation={dictation.state.status}
-                canDictate={conversation !== undefined}
-                onChange={edit}
-                selection={selection}
-                onSelection={(next) => {
-                  setSelection(undefined);
-                  setCaret(next);
-                }}
-                {...(candidates.length === 0
-                  ? {}
-                  : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
-                onSend={send}
-                onPick={pick}
-                onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-                onDictate={() => {
-                  setAttachError(false);
-                  dictation.start();
-                }}
-                onStopDictation={dictation.stop}
-                onCancelDictation={dictation.cancel}
-              />
-            )}
-          </View>
+          botDm ? (
+            <View style={{ padding: space.x5, alignItems: 'center' }}>
+              <Text variant="meta" tone="muted">
+                {t.activityRow.botDm}
+              </Text>
+            </View>
+          ) : (
+            <Composer
+              value={draft}
+              placeholder={
+                bot !== undefined
+                  ? t.messageBot(bot.displayName)
+                  : channel !== undefined
+                    ? t.messageBot(`#${channel.name}`)
+                    : t.messagePlaceholder
+              }
+              disabled={conversation === undefined || host.connection.status !== 'connected'}
+              files={files}
+              canAttach={files.length < MAX_PICKED}
+              dictation={dictation.state.status}
+              canDictate={conversation !== undefined}
+              onChange={edit}
+              selection={selection}
+              onSelection={(next) => {
+                setSelection(undefined);
+                setCaret(next);
+              }}
+              {...(candidates.length > 0
+                ? { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> }
+                : clipboard.offered
+                  ? {
+                      above: (
+                        <ClipboardImageOffer
+                          onUnreadable={clipboard.used}
+                          onPaste={(data) => {
+                            clipboard.used();
+                            setAttachError(false);
+                            setFiles((current) =>
+                              [...current, fromClipboardImage(data)].slice(0, MAX_PICKED),
+                            );
+                          }}
+                        />
+                      ),
+                    }
+                  : {})}
+              onSend={send}
+              onPick={pick}
+              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+              onDictate={() => {
+                setAttachError(false);
+                dictation.start();
+              }}
+              onStopDictation={dictation.stop}
+              onCancelDictation={dictation.cancel}
+              inputRef={composerInput}
+              onFocusChange={setTyping}
+            />
+          )
         }
       >
         {notice === undefined ? null : (
           <View
             style={{
-              marginTop: headerHeight,
+              marginTop: headerOverlap + headerPadding,
               backgroundColor: theme.color.warningSoft,
               paddingHorizontal: space.x5,
               paddingVertical: space.x3,
@@ -752,25 +1012,33 @@ function ChatConversation({
           ref={viewport}
           collapsable={false}
           style={{ flex: 1 }}
-          onLayout={() => {
+          onLayout={(event) => {
             viewportLayout.value += 1;
+            setViewportHeight(event.nativeEvent.layout.height);
           }}
         >
           <MarkdownViewportContext.Provider value={markdownViewport}>
             <SpeakerStageContext.Provider value={dm ? undefined : stage}>
               <Animated.FlatList
                 ref={attachList}
-                inverted
                 removeClippedSubviews={false}
-                style={{ flex: 1 }}
+                style={{ flex: 1, opacity: latest.ready || rows.length === 0 ? 1 : 0 }}
+                contentInsetAdjustmentBehavior="automatic"
+                contentInset={{ bottom: -listSafeArea }}
+                automaticallyAdjustsScrollIndicatorInsets
+                scrollToOverflowEnabled
                 contentContainerStyle={{
-                  paddingTop: composerHeight + edgeFade.bottom,
-                  paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
+                  minHeight: Math.max(
+                    0,
+                    viewportHeight - (notice === undefined ? headerOverlap : 0),
+                  ),
+                  justifyContent: 'flex-end',
+                  paddingTop: space.x3 + listTop,
+                  paddingBottom: composerHeight + edgeFade.bottom,
                 }}
                 data={rows}
                 keyExtractor={(row) => row.key}
                 renderItem={renderItem}
-                onContentSizeChange={jump}
                 onScrollToIndexFailed={(info) => {
                   list.current?.scrollToOffset({
                     offset: info.averageItemLength * info.index,
@@ -786,14 +1054,29 @@ function ChatConversation({
                     100,
                   );
                 }}
-                onEndReached={() => void conversation?.loadOlder()}
-                onEndReachedThreshold={0.5}
+                {...(latest.ready ? { onStartReached: () => void conversation?.loadOlder() } : {})}
+                onStartReachedThreshold={0.5}
                 {...latest.listProps}
+                onScrollBeginDrag={(event: ScrollEvent) => {
+                  pull.onScrollBeginDrag(event);
+                  latest.listProps.onScrollBeginDrag();
+                }}
+                onScroll={(event: ScrollEvent) => {
+                  latest.listProps.onScroll(event);
+                  pull.onScroll(event);
+                }}
+                onScrollEndDrag={(event: ScrollEvent) => {
+                  latest.listProps.onScrollEndDrag(event);
+                  pull.onScrollEndDrag(event);
+                }}
+                onContentSizeChange={(width: number, height: number) => {
+                  latest.listProps.onContentSizeChange(width, height);
+                  jump();
+                }}
                 scrollEventThrottle={32}
-                keyboardDismissMode="interactive"
+                keyboardDismissMode={ios ? 'interactive' : 'on-drag'}
                 keyboardShouldPersistTaps="handled"
-                ListHeaderComponent={<WorkingStatus bots={working} />}
-                ListFooterComponent={
+                ListHeaderComponent={
                   snapshot.loadingOlder ? (
                     <View
                       style={{
@@ -817,6 +1100,7 @@ function ChatConversation({
                     </Text>
                   ) : undefined
                 }
+                ListFooterComponent={<WorkingStatus bots={working} />}
                 ListEmptyComponent={
                   snapshot.status === 'opening' ? (
                     <View style={{ padding: space.x6, alignItems: 'center' }}>
@@ -827,20 +1111,36 @@ function ChatConversation({
               />
             </SpeakerStageContext.Provider>
           </MarkdownViewportContext.Provider>
+          {listTop > 0 ? (
+            <EdgeFade
+              edge="top"
+              height={listTop + edgeFade.reach}
+              cover={listTop}
+              color={fadeColor}
+            />
+          ) : null}
           <EdgeFade
             edge="bottom"
-            height={composerHeight + edgeFade.bottom}
-            fade={edgeFade.bottom}
+            height={composerHeight + edgeFade.reach}
+            cover={composerHeight}
+            color={fadeColor}
           />
+          {composable && Platform.OS === 'ios' ? (
+            <PullToComposeHint
+              progress={pull.progress}
+              ready={pull.ready}
+              bottom={composerHeight + space.x3}
+            />
+          ) : null}
           {latest.away ? (
             <View
               pointerEvents="box-none"
               style={{
                 position: 'absolute',
-                bottom: composerHeight + space.x4,
+                bottom: composerHeight + space.x2,
                 left: 0,
-                right: 0,
-                alignItems: 'center',
+                right: space.x4,
+                alignItems: 'flex-end',
               }}
             >
               <JumpToLatest unseen={latest.unseen} onPress={latest.jumpToLatest} />
@@ -848,44 +1148,6 @@ function ChatConversation({
           ) : null}
         </Animated.View>
       </KeyboardChatFrame>
-      <EdgeFade edge="top" height={headerHeight + edgeFade.top} fade={edgeFade.top} />
-      <ChatHeader
-        left={<HeaderBackButton onPress={leave} />}
-        center={
-          dm ? (
-            <ChatTitle
-              bot={bot}
-              fallback={slug ?? ''}
-              onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
-            />
-          ) : botDm ? (
-            <Text strong numberOfLines={1} style={{ textAlign: 'center' }}>
-              {channelDetails.members
-                .map(
-                  (member) =>
-                    roster?.bots.find((entry) => entry.slug === member)?.displayName ??
-                    t.activityRow.unavailableBot,
-                )
-                .join('、')}
-            </Text>
-          ) : (
-            <ChannelTitle
-              channel={channel}
-              fallback={channelId ?? ''}
-              onPress={() =>
-                router.push({ pathname: '/group/[id]', params: { id: channel?.id ?? channelId } })
-              }
-            />
-          )
-        }
-        right={
-          slug !== undefined ? (
-            <OpenFullClientButton target={{ kind: 'dm', slug }} round />
-          ) : channelId !== undefined ? (
-            <OpenFullClientButton target={{ kind: 'channel', channelId }} round />
-          ) : null
-        }
-      />
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
       <MessageActions
         target={actionsFor}

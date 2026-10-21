@@ -545,7 +545,89 @@ window.__ModuleLoader__.load({
 					r: "1"
 				}]
 			],
+			star: [["path", { d: "M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" }]],
+			copy: [["rect", {
+				width: "14",
+				height: "14",
+				x: "8",
+				y: "8",
+				rx: "2",
+				ry: "2"
+			}], ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }]],
+			"external-link": [
+				["path", { d: "M15 3h6v6" }],
+				["path", { d: "M10 14 21 3" }],
+				["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }]
+			],
+			sun: [
+				["circle", {
+					cx: "12",
+					cy: "12",
+					r: "4"
+				}],
+				["path", { d: "M12 2v2" }],
+				["path", { d: "M12 20v2" }],
+				["path", { d: "m4.93 4.93 1.41 1.41" }],
+				["path", { d: "m17.66 17.66 1.41 1.41" }],
+				["path", { d: "M2 12h2" }],
+				["path", { d: "M20 12h2" }],
+				["path", { d: "m6.34 17.66-1.41 1.41" }],
+				["path", { d: "m19.07 4.93-1.41 1.41" }]
+			],
+			moon: [["path", { d: "M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" }]],
+			crop: [["path", { d: "M6 2v14a2 2 0 0 0 2 2h14" }], ["path", { d: "M18 22V8a2 2 0 0 0-2-2H2" }]],
+			ban: [["circle", {
+				cx: "12",
+				cy: "12",
+				r: "10"
+			}], ["path", { d: "M4.929 4.929 19.07 19.071" }]],
 			x: [["path", { d: "M18 6 6 18" }], ["path", { d: "m6 6 12 12" }]],
+			"message-square": [["path", { d: "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" }]],
+			keyboard: [
+				["path", { d: "M10 8h.01" }],
+				["path", { d: "M12 12h.01" }],
+				["path", { d: "M14 8h.01" }],
+				["path", { d: "M16 12h.01" }],
+				["path", { d: "M18 8h.01" }],
+				["path", { d: "M6 8h.01" }],
+				["path", { d: "M7 16h10" }],
+				["path", { d: "M8 12h.01" }],
+				["rect", {
+					width: "20",
+					height: "16",
+					x: "2",
+					y: "4",
+					rx: "2"
+				}]
+			],
+			smartphone: [["rect", {
+				width: "14",
+				height: "20",
+				x: "5",
+				y: "2",
+				rx: "2",
+				ry: "2"
+			}], ["path", { d: "M12 18h.01" }]],
+			"sliders-horizontal": [
+				["path", { d: "M10 5H3" }],
+				["path", { d: "M12 19H3" }],
+				["path", { d: "M14 3v4" }],
+				["path", { d: "M16 17v4" }],
+				["path", { d: "M21 12h-9" }],
+				["path", { d: "M21 19h-5" }],
+				["path", { d: "M21 5h-7" }],
+				["path", { d: "M8 10v4" }],
+				["path", { d: "M8 12H3" }]
+			],
+			info: [
+				["circle", {
+					cx: "12",
+					cy: "12",
+					r: "10"
+				}],
+				["path", { d: "M12 16v-4" }],
+				["path", { d: "M12 8h.01" }]
+			],
 			check: [["path", { d: "M20 6 9 17l-5-5" }]]
 		};
 		function ChannelSidebarIcon({ name = "panels-top-left", size = 16 }) {
@@ -1709,6 +1791,18 @@ window.__ModuleLoader__.load({
 			exporting: "entry.phase.exporting",
 			importing: "entry.phase.importing"
 		};
+		//#endregion
+		//#region packages/client/src/client/ds/tooltip.tsx
+		const shared = globalThis;
+		const InstantTooltips = shared[Symbol.for("botharness.instant-tooltips")] ??= (0, react.createContext)(false);
+		function Tooltip(props) {
+			return (0, react.useContext)(InstantTooltips) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				...props,
+				portal: true,
+				delayMs: 0,
+				focusDelayMs: 0
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { ...props });
+		}
 		//#endregion
 		//#region packages/client/src/client/sidebar-card.tsx
 		function SidebarCardList({ label, className, listRef, flush = false, children }) {
@@ -3403,7 +3497,7 @@ window.__ModuleLoader__.load({
 			const label = t(accessOn ? "entry.access.disable" : "entry.access.enable");
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 				className: "bh-computer-access-control",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Tooltip, {
 					label: error ? t("entry.access.failed") + ": " + label : label,
 					side: "bottom",
 					delayMs: 500,

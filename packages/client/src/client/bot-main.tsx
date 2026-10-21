@@ -1,6 +1,6 @@
 import { AppearanceContext } from './appearance-context.js';
 import type { Appearance } from './appearance.js';
-import { onboardingFor } from './onboarding.js';
+import { onboardingFor, type OnboardingViewState } from './onboarding.js';
 import { PointerMenu } from './ds/pointer-menu.js';
 import { useScopedRef, useScopedState } from './scoped-state.js';
 import { PanelEmptyState } from './ds/empty-state.js';
@@ -8,6 +8,8 @@ import { Workspace, type WorkspaceOptions } from './workspace.js';
 import { WorkspaceContext } from './workspace-context.js';
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
+import { BotIntro } from './bot-intro.js';
+import type { Wallpaper } from './wallpaper.js';
 import {
   ChannelMark,
   ChannelMenuCaret,
@@ -19,6 +21,7 @@ import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { useDmComposerContext } from './dm-composer-context.js';
 import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
+import { COMPANION_READ_INSET } from './companion-surface.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 import { ComposerSendKeyContext } from './composer-send-key.js';
@@ -45,8 +48,8 @@ import {
   IconPanelLeftOutlineRegular,
   IconUserOutlineRegular,
   Toast,
-  Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Tooltip } from './ds/tooltip.js';
 
 import type { BridgeActions } from './actions.js';
 import {
@@ -260,16 +263,27 @@ function authorLabel(
   }
 }
 
+const timeFormats = new Map<string, Intl.DateTimeFormat>();
+function timeFormat(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let format = timeFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale || undefined, options);
+    timeFormats.set(key, format);
+  }
+  return format;
+}
+
 function clockTime(at: string): string {
   const date = new Date(at);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return timeFormat('', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
 function fullTime(at: string, t: BotHarnessTranslate): string {
   const date = new Date(at);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(t('main.date.locale'), { dateStyle: 'full', timeStyle: 'short' });
+  return timeFormat(t('main.date.locale'), { dateStyle: 'full', timeStyle: 'short' }).format(date);
 }
 
 const messageStyles = stylex.create({
@@ -536,13 +550,17 @@ function MessageGroupView({
   onAvatarMenu?: ((botSlug: string, x: number, y: number) => void) | undefined;
   onReply?: ((message: ChannelMessage) => void) | undefined;
   onReact?: ((message: ChannelMessage, emoji: string, active: boolean) => void) | undefined;
-  onRestoreFailed(message: ChannelMessage): void;
+  onRestoreFailed?: ((message: ChannelMessage) => void) | undefined;
   onJumpReply(messageId: string): void;
   actions: BridgeActions;
   resolvedGrantRequests: ReadonlySet<string>;
   toolApprovalDecisions: ReadonlyMap<
     string,
-    'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected'
+    | 'allowed-once'
+    | 'allowed-always-tool'
+    | 'allowed-always-exact'
+    | 'allowed-always-all'
+    | 'rejected'
   >;
   userQuestionResolutions: ReadonlyMap<string, 'answered' | 'cancelled'>;
   t: BotHarnessTranslate;
@@ -737,7 +755,11 @@ function MessageGroupView({
               <div
                 className={`bh-bubble-surface${message.failed === undefined ? '' : ' bh-bubble-surface-failed'}`}
               >
-                {message.failed === undefined ? null : (
+                {message.failed === undefined ? null : onRestoreFailed === undefined ? (
+                  <span className="bh-bubble-failed-action" title={message.failed}>
+                    {t(message.unconfirmed === true ? 'message.unconfirmed' : 'message.failed')}
+                  </span>
+                ) : (
                   <button
                     type="button"
                     className="bh-bubble-failed-action"
@@ -1061,6 +1083,10 @@ function ConversationView({
   const dockPanelList = registeredDockPanels ?? dockEntryPanels;
   const dockChannelContext = resolveChannelSidebarContext(state);
   const dockChannelSummary = dockChannelContext?.channel;
+  const dockBotDeleted = state.bots.some(
+    (candidate) => candidate.slug === dockChannelContext?.botSlug && candidate.deleted === true,
+  );
+  const dockChannelBotSlug = dockBotDeleted ? undefined : dockChannelSummary?.botSlug;
   const dockChannel = useMemo<DockPanelChannel | undefined>(
     () =>
       dockChannelSummary === undefined
@@ -1068,11 +1094,11 @@ function ConversationView({
         : {
             id: dockChannelSummary.id,
             type: dockChannelSummary.type,
-            botSlug: dockChannelSummary.botSlug,
+            botSlug: dockChannelBotSlug,
           },
-    [dockChannelSummary?.id, dockChannelSummary?.type, dockChannelSummary?.botSlug],
+    [dockChannelSummary?.id, dockChannelSummary?.type, dockChannelBotSlug],
   );
-  const dockBotSlug = dockChannelContext?.botSlug;
+  const dockBotSlug = dockBotDeleted ? undefined : dockChannelContext?.botSlug;
   const dockInboxMount = useMountedResource<HTMLSpanElement>(() => {
     if (!inboxOpen || dockBotSlug === undefined) return;
     void actions.refreshBotInbox(dockBotSlug);
@@ -1087,7 +1113,7 @@ function ConversationView({
     () => channelSidebar.entries(settingsScope),
   );
   const settingsSections = channelSettingsSections(settingsEntries, state);
-  const hasChannelSettings = settingsSections.length > 0;
+  const hasChannelSettings = !dockBotDeleted && settingsSections.length > 0;
   const settingsAttentionIds = useSyncExternalStore(
     channelSettings.subscribe,
     () => channelSettings.attentionOf(resolveChannelSidebarContext(state)?.channel?.id),
@@ -1212,6 +1238,29 @@ function ConversationView({
     return true;
   };
   const followingLatest = useScopedRef(scopeKey, true);
+  const companionReadMount = useMountedResource<HTMLElement>(
+    (pane) => {
+      let visible: boolean | undefined;
+      const sync = () => {
+        const next = (companion?.getSnapshot().companions.length ?? 0) > 0;
+        if (visible === next) return;
+        visible = next;
+        if (next) pane.style.setProperty('--bh-companion-read-inset', COMPANION_READ_INSET + 'px');
+        else pane.style.removeProperty('--bh-companion-read-inset');
+        const timeline = pane.querySelector<HTMLElement>('.bh-chat-body');
+        if (
+          timeline &&
+          followingLatest.current &&
+          !store.getSnapshot().conversation.timeline.hasNewer
+        ) {
+          timeline.scrollTop = timeline.scrollHeight;
+        }
+      };
+      sync();
+      return companion?.subscribe(sync);
+    },
+    [companion, scopeKey],
+  );
   const activityOverlayPane = useScopedRef<HTMLElement | null>(scopeKey, null);
   const resizeActivityOverlay = useCallback(
     (height: number): void => {
@@ -1287,10 +1336,10 @@ function ConversationView({
       ? state.bots.find((candidate) => candidate.slug === selection.slug)
       : undefined;
   const botDm = isBotDmChannel(channel);
-  const readOnlyDm =
-    isHumanReadOnlyDmChannel(channel) ||
-    (channel?.type === 'dm' &&
-      state.bots.find((candidate) => candidate.slug === channel.botSlug)?.deleted === true);
+  const deletedBotDm =
+    channel?.type === 'dm' &&
+    state.bots.find((candidate) => candidate.slug === channel.botSlug)?.deleted === true;
+  const readOnlyDm = isHumanReadOnlyDmChannel(channel) || deletedBotDm;
   const profileBot =
     channel?.type === 'dm' && channel.botSlug !== undefined
       ? state.bots.find((candidate) => candidate.slug === channel.botSlug)
@@ -2364,6 +2413,7 @@ function ConversationView({
     dockBotSlug !== undefined && dockEntryProps !== undefined && inboxEntry !== undefined;
   const conversationPane = (
     <section
+      ref={companionReadMount}
       className="bh-chat-pane"
       data-activity-concealed={composerActivityConcealed ? 'true' : undefined}
       {...fileDrop.handlers}
@@ -2856,59 +2906,65 @@ function ConversationView({
                             if (channelId !== undefined)
                               void actions.openAround(channelId, messageId);
                           }}
-                          onRestoreFailed={(message) => {
-                            if (channelId === undefined) return;
-                            if (
-                              draft.length > 0 ||
-                              uploadItems.length > 0 ||
-                              conversation.sending
-                            ) {
-                              setRestoreBlocked(true);
-                              return;
-                            }
-                            if (message.unconfirmed === true) {
-                              setSubmissionNotice(t('composer.submissionChecking'));
-                              void actions.submissions
-                                .check(channelId, message.id)
-                                .then(async (status) => {
-                                  if (status === 'unknown') {
-                                    setSubmissionNotice(t('composer.submissionUncheckable'));
+                          onRestoreFailed={
+                            readOnlyDm
+                              ? undefined
+                              : (message) => {
+                                  if (channelId === undefined) return;
+                                  if (
+                                    draft.length > 0 ||
+                                    uploadItems.length > 0 ||
+                                    conversation.sending
+                                  ) {
+                                    setRestoreBlocked(true);
                                     return;
                                   }
-                                  await actions.submissions.reconcile(channelId);
-                                  setSubmissionNotice(
-                                    t(
-                                      status === 'committed'
-                                        ? 'composer.submissionDelivered'
-                                        : 'composer.submissionNotDelivered',
-                                    ),
+                                  if (message.unconfirmed === true) {
+                                    setSubmissionNotice(t('composer.submissionChecking'));
+                                    void actions.submissions
+                                      .check(channelId, message.id)
+                                      .then(async (status) => {
+                                        if (status === 'unknown') {
+                                          setSubmissionNotice(t('composer.submissionUncheckable'));
+                                          return;
+                                        }
+                                        await actions.submissions.reconcile(channelId);
+                                        setSubmissionNotice(
+                                          t(
+                                            status === 'committed'
+                                              ? 'composer.submissionDelivered'
+                                              : 'composer.submissionNotDelivered',
+                                          ),
+                                        );
+                                      })
+                                      .catch(() =>
+                                        setSubmissionNotice(t('composer.submissionUncheckable')),
+                                      );
+                                    return;
+                                  }
+                                  if (!actions.dismissFailedMessage(channelId, message.id)) return;
+                                  setDraft(message.body);
+                                  setMentionTokens(message.mentions ?? []);
+                                  setChannelRefTokens(message.channelRefs ?? []);
+                                  setUploadItems(
+                                    (message.attachments ?? []).map((ref) => ({
+                                      id: crypto.randomUUID(),
+                                      file: new File([], ref.name, { type: ref.mime }),
+                                      ref,
+                                      status: 'ready' as const,
+                                    })),
                                   );
-                                })
-                                .catch(() =>
-                                  setSubmissionNotice(t('composer.submissionUncheckable')),
-                                );
-                              return;
-                            }
-                            if (!actions.dismissFailedMessage(channelId, message.id)) return;
-                            setDraft(message.body);
-                            setMentionTokens(message.mentions ?? []);
-                            setChannelRefTokens(message.channelRefs ?? []);
-                            setUploadItems(
-                              (message.attachments ?? []).map((ref) => ({
-                                id: crypto.randomUUID(),
-                                file: new File([], ref.name, { type: ref.mime }),
-                                ref,
-                                status: 'ready' as const,
-                              })),
-                            );
-                            setReplyTarget(
-                              message.replyTo === undefined
-                                ? undefined
-                                : messages.find((candidate) => candidate.id === message.replyTo),
-                            );
-                            setRestoreBlocked(false);
-                            setRestoreFocusSignal((value) => value + 1);
-                          }}
+                                  setReplyTarget(
+                                    message.replyTo === undefined
+                                      ? undefined
+                                      : messages.find(
+                                          (candidate) => candidate.id === message.replyTo,
+                                        ),
+                                  );
+                                  setRestoreBlocked(false);
+                                  setRestoreFocusSignal((value) => value + 1);
+                                }
+                          }
                           t={t}
                         />
                       </OnboardingMemoryNavigation.Provider>
@@ -2993,7 +3049,9 @@ function ConversationView({
             />
           ) : null}
           {readOnlyDm && selectedIds === undefined ? (
-            <div className="bh-bot-dm-readonly">{t('botDm.readOnly')}</div>
+            <div className="bh-bot-dm-readonly">
+              {t(deletedBotDm ? 'deletion.readOnly' : 'botDm.readOnly')}
+            </div>
           ) : null}
           {readOnlyDm ? null : (
             <div
@@ -3370,9 +3428,13 @@ function ConversationView({
               closeLabel={t('dock.close', { label: t('entry.botInbox') })}
               onClose={() => setInboxOpen(false)}
               scroll
-              secondary={inboxEntry.headerAction && <inboxEntry.headerAction {...dockEntryProps} />}
+              secondary={
+                inboxEntry.headerAction && (
+                  <inboxEntry.headerAction key={dockBotSlug} {...dockEntryProps} />
+                )
+              }
             >
-              <inboxEntry.component {...dockEntryProps} flush />
+              <inboxEntry.component key={dockBotSlug} {...dockEntryProps} flush />
             </PanelDialog>
           )}
         </GeneratedFilesContext.Provider>
@@ -3468,6 +3530,18 @@ function BotMainContent({
 
 const subscribeWithoutPrefs = (): (() => void) => () => {};
 
+function releaseDeferred(state: OnboardingViewState): boolean {
+  return (
+    state.modelOpen ||
+    state.sendOpen ||
+    state.guideOpen ||
+    state.checklistOpen ||
+    state.sessionsTourOpen ||
+    state.intro !== undefined ||
+    (state.receipt === undefined && state.error === undefined)
+  );
+}
+
 export function BotMain({
   appearance,
   prefs,
@@ -3503,6 +3577,7 @@ export function BotMain({
 
 export function BotPanel({
   appearance,
+  wallpaper,
   onMobileBack,
   workspace,
   prefs,
@@ -3529,18 +3604,14 @@ export function BotPanel({
   releaseNotes?: ReleaseNotesController | undefined;
   telemetryNotice?: TelemetryNoticeController | undefined;
   appearance?: Appearance | undefined;
+  wallpaper?: Wallpaper | undefined;
   workspace?: WorkspaceOptions | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
   const onboarding = onboardingFor(actions);
-  const onboardingState = useSyncExternalStore(onboarding.subscribe, onboarding.getSnapshot);
-  const deferRelease =
-    onboardingState.modelOpen ||
-    onboardingState.sendOpen ||
-    onboardingState.guideOpen ||
-    onboardingState.checklistOpen ||
-    onboardingState.sessionsTourOpen ||
-    (onboardingState.receipt === undefined && onboardingState.error === undefined);
+  const deferRelease = useSyncExternalStore(onboarding.subscribe, () =>
+    releaseDeferred(onboarding.getSnapshot()),
+  );
   const modeMount = useMountedResource<HTMLSpanElement>(() => {
     store.setMode('bot');
     return () => {
@@ -3551,6 +3622,7 @@ export function BotPanel({
     <>
       <span ref={modeMount} hidden aria-hidden="true" />
       <OnboardingOverlay actions={actions} companion={companion} t={t} />
+      <BotIntro actions={actions} appearance={appearance} wallpaper={wallpaper} t={t} />
       {releaseNotes === undefined ? null : (
         <ReleaseNotesAnnouncement controller={releaseNotes} t={t} deferred={deferRelease} />
       )}

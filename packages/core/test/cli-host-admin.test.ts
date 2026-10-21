@@ -55,14 +55,14 @@ async function host(
   return { url: `http://127.0.0.1:${address.port}`, calls };
 }
 
-async function invoke(argv: string[], url: string) {
+async function invoke(argv: string[], url: string, stdin = '') {
   const stdout: string[] = [];
   const stderr: string[] = [];
   const code = await runBotCreateCli(argv, {
     env: { DEEPSEEKBOT_HOST: url, DEEPSEEKBOT_HOST_TOKEN: 'private-test-token' },
     stdout: (text) => stdout.push(text),
     stderr: (text) => stderr.push(text),
-    readStdin: async () => '',
+    readStdin: async () => stdin,
   });
   expect(stdout).toHaveLength(1);
   expect(stdout.join('') + stderr.join('')).not.toContain('private-test-token');
@@ -92,6 +92,8 @@ describe('Bot Marketplace commands', () => {
         'stars',
         '--cursor',
         'c2',
+        '--lang',
+        'zh',
       ],
       live.url,
     );
@@ -99,14 +101,16 @@ describe('Bot Marketplace commands', () => {
       topics: [{ topic: 'writing', count: 2 }],
     });
     await invoke(['marketplace-detail', 'owner/repo'], live.url);
+    await invoke(['marketplace-detail', 'owner/repo', '--lang', 'en'], live.url);
     expect(live.calls).toEqual([
       { method: 'marketplaceList', args: { query: {} } },
       {
         method: 'marketplaceList',
-        args: { query: { q: '翻译', topic: 'writing', sort: 'stars', cursor: 'c2' } },
+        args: { query: { q: '翻译', topic: 'writing', sort: 'stars', cursor: 'c2', lang: 'zh' } },
       },
       { method: 'marketplaceTopics', args: {} },
       { method: 'marketplaceDetail', args: { id: 'owner/repo' } },
+      { method: 'marketplaceDetail', args: { id: 'owner/repo', lang: 'en' } },
     ]);
   });
 
@@ -117,6 +121,8 @@ describe('Bot Marketplace commands', () => {
       ['marketplace-list', 'extra'],
       ['marketplace-detail'],
       ['marketplace-topics', '--sort', 'stars'],
+      ['marketplace-list', '--lang', 'fr'],
+      ['marketplace-topics', '--lang', 'zh'],
       ['marketplace-report', 'owner/repo', '--reason', 'x'.repeat(501)],
     ])
       expect((await invoke(argv, live.url)).json.error.code).toBe('usage');
@@ -253,6 +259,102 @@ describe('release commands', () => {
     expect(install.json.error.message).toContain('registry timed out');
     const restart = await invoke(['release-restart', '--confirm'], live.url);
     expect(restart.json.error.code).toBe('release-not-pending');
+  });
+});
+
+describe('data reset commands', () => {
+  it('previews, then clears only with --confirmation-stdin --confirm and a token', async () => {
+    const preview = {
+      token: 'reset-token',
+      expiresAt: '2026-10-20T18:00:00.000Z',
+      bots: 2,
+      targets: [{ kind: 'data', path: '/home/a/.dsh/botharness', bytes: 10, files: 1 }],
+      kept: [{ kind: 'credentials', path: '/home/a/.dsh/.credentials.yaml' }],
+      restartable: true,
+    };
+    const live = await host((method) =>
+      ok(method === 'dataResetPreview' ? { preview } : { reset: { status: 'restarting' } }),
+    );
+    expect((await invoke(['data-reset-preview'], live.url)).json).toEqual({ preview });
+    const token = JSON.stringify({ token: 'reset-token' });
+    for (const [argv, stdin] of [
+      [['data-reset-confirm', '--confirmation-stdin'], token],
+      [['data-reset-confirm', '--confirm'], token],
+      [['data-reset-confirm', '--confirmation-stdin', '--confirm'], ''],
+      [['data-reset-confirm', '--confirmation-stdin', '--confirm'], '{"token":"t","extra":1}'],
+      [['data-reset-preview', 'extra'], ''],
+    ] as const) {
+      const refused = await invoke([...argv], live.url, stdin);
+      expect(refused.code).not.toBe(0);
+      expect(refused.json.error.code).toBe('usage');
+    }
+    expect(
+      (await invoke(['data-reset-confirm', '--confirmation-stdin', '--confirm'], live.url, token))
+        .json,
+    ).toEqual({ reset: { status: 'restarting' } });
+    expect(live.calls).toEqual([
+      { method: 'dataResetPreview', args: {} },
+      { method: 'dataResetConfirm', args: { token: 'reset-token' } },
+    ]);
+  });
+});
+
+describe('storage commands', () => {
+  it('shows usage, previews by age and confirms with the piped preview', async () => {
+    const scope = { before: '2026-07-22T00:00:00.000Z', channelIds: ['dm-ada'], kinds: ['image'] };
+    const preview = { token: 'storage-token', scope, files: 2, freedBytes: 2048 };
+    const live = await host((method) =>
+      ok(
+        method === 'storageUsage'
+          ? { totalBytes: 4096, parts: [], chats: [] }
+          : method === 'storageCleanupPreview'
+            ? preview
+            : { messages: 1, files: 2, freedBytes: 2048 },
+      ),
+    );
+    expect((await invoke(['storage-usage'], live.url)).json.totalBytes).toBe(4096);
+    expect(
+      (
+        await invoke(
+          [
+            'storage-cleanup-preview',
+            '--before',
+            scope.before,
+            '--chat',
+            'dm-ada',
+            '--media',
+            'image',
+          ],
+          live.url,
+        )
+      ).json,
+    ).toEqual(preview);
+    for (const [argv, stdin] of [
+      [['storage-cleanup-preview'], ''],
+      [['storage-cleanup-preview', '--older-than-days', '-1'], ''],
+      [['storage-cleanup-preview', '--older-than-days', '9', '--media', 'sticker'], ''],
+      [['storage-cleanup-confirm', '--confirmation-stdin'], JSON.stringify(preview)],
+      [['storage-cleanup-confirm', '--confirm'], JSON.stringify(preview)],
+      [['storage-cleanup-confirm', '--confirmation-stdin', '--confirm'], 'not json'],
+    ] as const) {
+      const refused = await invoke([...argv], live.url, stdin);
+      expect(refused.code).not.toBe(0);
+      expect(refused.json.error.code).toBe('usage');
+    }
+    expect(
+      (
+        await invoke(
+          ['storage-cleanup-confirm', '--confirmation-stdin', '--confirm'],
+          live.url,
+          JSON.stringify(preview),
+        )
+      ).json,
+    ).toEqual({ messages: 1, files: 2, freedBytes: 2048 });
+    expect(live.calls).toEqual([
+      { method: 'storageUsage', args: {} },
+      { method: 'storageCleanupPreview', args: scope },
+      { method: 'storageCleanupConfirm', args: { ...scope, token: 'storage-token' } },
+    ]);
   });
 });
 

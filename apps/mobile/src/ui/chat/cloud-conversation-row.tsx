@@ -13,6 +13,7 @@ export function CloudConversationRow({
 }) {
   return (
     <ConversationRowFrame
+      testID={`conversation-row-cloud:${row.channel.channelId}`}
       title={row.channel.name}
       source="cloud"
       label={`${row.channel.name}, ${t.cloudChannels.cloudChannel}`}

@@ -227,6 +227,7 @@ export interface WindowCompanionViewProps {
   openSettings?(): void;
   sound?: CompanionSound | undefined;
   actions?: BridgeActions | undefined;
+  dropIn?: boolean | undefined;
 }
 export function WindowCompanionView({
   companion,
@@ -240,6 +241,7 @@ export function WindowCompanionView({
   openSettings,
   sound,
   actions,
+  dropIn = false,
 }: WindowCompanionViewProps): ReactElement | null {
   const view = useSyncExternalStore(companion.subscribe, companion.getSnapshot);
   const latest = useRef(view);
@@ -383,6 +385,12 @@ export function WindowCompanionView({
         obstacles = [...document.querySelectorAll<HTMLElement>('[data-companion-avoid]')].flatMap(
           (element) => {
             const box = element.getBoundingClientRect();
+            const inset = Math.max(
+              0,
+              Number.parseFloat(
+                getComputedStyle(element).getPropertyValue('--bh-companion-avoid-inset'),
+              ) || 0,
+            );
             return box.width === 0 ||
               box.top >= stage.bottom ||
               box.bottom <= stage.bottom - CHARACTER_SIZE
@@ -391,7 +399,7 @@ export function WindowCompanionView({
                   {
                     left: box.left - stage.left,
                     right: box.right - stage.left,
-                    height: stage.bottom - box.top + 4,
+                    height: stage.bottom - box.top + inset + 4,
                   },
                 ];
           },
@@ -461,13 +469,14 @@ export function WindowCompanionView({
           bottom: box.bottom,
           height: box.height || window.innerHeight,
         };
-        const next = measured
+        let next = measured
           ? motion.resize(width, viewport.current.height)
           : motion.measure(
               width,
               viewport.current.height,
               latest.current.selection?.position ?? 0.75,
             );
+        if (!measured && dropIn && !reducedMotion()) next = motion.drop();
         measured = true;
         const drag = pointer.current;
         if (drag) {

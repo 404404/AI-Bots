@@ -1,3 +1,5 @@
+import { readChannelDock, writeChannelDock } from './channel-dock-layout.js';
+import { createBotPresentation } from './bot-presentation.js';
 import { mountWindowZoomControl } from './window-zoom-control.js';
 import { mountWindowZoom, type ZoomCompatibility } from './window-zoom-mount.js';
 import { Wallpaper } from './wallpaper.js';
@@ -63,6 +65,8 @@ import {
   BotSettingsView,
   botSettingsSectionSource,
 } from './bot-settings.js';
+import type { QuickSwitcherSettings } from './quick-switcher.js';
+import { searchSettings } from './settings-search.js';
 import { DshBotSettingsItem } from './dsh-bot-settings-item.js';
 import { createImApps, ImAppsSection } from './im-apps-section.js';
 import {
@@ -96,6 +100,7 @@ import {
 } from './channel-sidebar-builtins.js';
 import { webShortcutBlocked, webModalOpen, webShortcutHelpQuestion } from './channel-shortcuts.js';
 import { ShortcutBindings } from './shortcut-bindings.js';
+import { mountSettingsShortcut } from './settings-shortcut.js';
 import {
   browserNotificationApi,
   DesktopNotificationPrefs,
@@ -284,7 +289,6 @@ export function apply(ctx: ClientContext): void {
   const companion = new WindowCompanions({
     storage,
     exists: (botId) => botExists(call, botId),
-    onActivity: (snapshot) => store.applyActivity(snapshot),
     context: profileContext,
     source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
@@ -299,23 +303,7 @@ export function apply(ctx: ClientContext): void {
   });
   ctx.effect(() => {
     void companion.start();
-    let mirrored: 'live' | 'stale' | undefined;
-    const off = companion.subscribe(() => {
-      const value = companion.getSnapshot();
-      if (!value.companions.length && mirrored === undefined) return;
-      const sync = !value.companions.length || value.sync === 'live' ? 'live' : 'stale';
-      if (sync === mirrored) return;
-      mirrored = value.companions.length ? sync : undefined;
-      store.setActivitySync(sync);
-      if (typeof document !== 'undefined') {
-        if (sync === 'stale') document.documentElement.dataset['botharnessActivity'] = 'stale';
-        else delete document.documentElement.dataset['botharnessActivity'];
-      }
-    });
-    return () => {
-      off();
-      companion.dispose();
-    };
+    return () => companion.dispose();
   }, 'botharness: independent Window Companion owner');
   const prefs = new BotModePrefs(storage);
   ctx.effect(
@@ -367,6 +355,7 @@ export function apply(ctx: ClientContext): void {
           companion,
           prefs,
           actions,
+          dropIn: true,
           openDm: (botId: string) => {
             ctx.layout.selectPanel(PANEL_ID);
             void actions.openBot(botId);
@@ -388,6 +377,10 @@ export function apply(ctx: ClientContext): void {
     ),
   );
   const botSettingsSections = botSettingsSectionSource(ctx);
+  const quickSwitcherSettings: QuickSwitcherSettings = {
+    search: (query) => searchSettings(botSettingsSections.getSnapshot(), query, t),
+    open: (result) => botSettings.open(result.section, result.target),
+  };
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
       {
@@ -462,7 +455,17 @@ export function apply(ctx: ClientContext): void {
       visibility.dispose();
     };
   }, 'botharness: Bot Session visibility');
-  const dockPanels = createDockPanelRegistry();
+  const presentation = createBotPresentation(store);
+  ctx.provide('botPresentation', presentation);
+  ctx.effect(() => () => presentation.dispose());
+  const dockPanels = createDockPanelRegistry({
+    instances: readChannelDock()?.instances ?? [],
+    saveInstances(instances) {
+      const current = readChannelDock();
+      if (!current || !writeChannelDock({ ...current, instances }))
+        throw new Error('panel_layout_unavailable');
+    },
+  });
   ctx.provide('dockPanels', dockPanels);
   ctx.effect(() =>
     appearance.setTargetSource(() => [
@@ -496,6 +499,7 @@ export function apply(ctx: ClientContext): void {
       ),
     exitBotMode: () => ctx.layout.selectPanel(null),
     openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+    quickSwitcherSettings,
   };
 
   ctx.effect(() =>
@@ -617,6 +621,15 @@ export function apply(ctx: ClientContext): void {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, 'botharness: keyboard shortcut list');
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    return mountSettingsShortcut({
+      document,
+      bindings: shortcutBindings,
+      botSettings,
+      active: () => store.getSnapshot().mode === 'bot',
+    });
+  }, 'botharness: Bot settings keyboard shortcut');
   ctx.effect(() => {
     if (typeof document === 'undefined') return () => {};
     return mountTabTitle(store, document);
@@ -746,11 +759,7 @@ export function apply(ctx: ClientContext): void {
     };
   }, 'botharness: live streams on the native Remote stream carrier');
   ctx.effect(
-    () =>
-      mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal), {
-        enabled: () => companion.getSnapshot().companions.length === 0,
-        subscribe: companion.subscribe,
-      }),
+    () => mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal)),
     'botharness: PersonaBot activity subscription',
   );
   ctx.effect(() => {
@@ -1067,6 +1076,7 @@ export function apply(ctx: ClientContext): void {
           dockPanels,
           profileCards,
           appearance,
+          wallpaper,
           nativeChatT,
           nativeSessions,
           prefs,
@@ -1076,6 +1086,7 @@ export function apply(ctx: ClientContext): void {
           ...botModePrefsFace(prefs),
           exitBotMode: () => ctx.layout.selectPanel(null),
           openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+          quickSwitcherSettings,
         }),
       },
       MobileBotPanel,
@@ -1162,6 +1173,7 @@ export function apply(ctx: ClientContext): void {
             exitBotMode: () => ctx.layout.selectPanel(null),
             toggleSidebar: () => ctx.layout.toggleSidebar(),
             openBotSettings: (sectionId?: string) => botSettings.open(sectionId),
+            quickSwitcherSettings,
           }),
         },
         BotModeSidebar,

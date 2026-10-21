@@ -46,6 +46,11 @@ const cli = async (command, args = [], patch) => {
 };
 const click = (name) => page.locator(`::-p-aria(${name}[role="button"])`).click();
 const select = async (name, value) => {
+  if (await page.$(`[role="radiogroup"][aria-label="${name}"]`)) {
+    await page.locator(`::-p-aria(${value}[role="radio"])`).click();
+    await pause();
+    return;
+  }
   await click(name);
   await page.locator(`::-p-aria(${value}[role="menuitem"])`).click();
   await pause();
@@ -112,23 +117,32 @@ const dbRead = () =>
         r.onerror = () => reject(Error('database'));
         r.onsuccess = () => {
           const db = r.result,
-            tx = db.transaction('assets');
-          const q = tx.objectStore('assets').get('current');
-          q.onsuccess = async () => {
-            const v = q.result;
-            resolve(
-              v
-                ? {
-                    revision: v.revision,
-                    crop: v.crop,
-                    width: v.width,
-                    height: v.height,
-                    size: v.blob.size,
-                    bytes: Array.from(new Uint8Array(await v.blob.arrayBuffer())),
-                  }
-                : null,
-            );
-            db.close();
+            store = db.transaction('assets').objectStore('assets');
+          const index = store.get('library');
+          index.onsuccess = () => {
+            const id = index.result?.active;
+            if (!id) {
+              resolve(null);
+              db.close();
+              return;
+            }
+            const q = store.get('item:' + id);
+            q.onsuccess = async () => {
+              const v = q.result;
+              resolve(
+                v
+                  ? {
+                      revision: v.revision,
+                      crop: v.crop,
+                      width: v.width,
+                      height: v.height,
+                      size: v.blob.size,
+                      bytes: Array.from(new Uint8Array(await v.blob.arrayBuffer())),
+                    }
+                  : null,
+              );
+              db.close();
+            };
           };
         };
       }),
@@ -193,16 +207,16 @@ try {
     await page.keyboard.press('Escape');
     await screenshot('before-workspace');
   } else {
-    await page.waitForSelector('input[aria-label="Upload image or video"]');
+    await page.waitForSelector('input[aria-label="Add wallpaper"]');
     await screenshot('after-settings-empty');
     const bytes = Buffer.concat([await imageBytes(), Buffer.alloc(450000)]);
     writeFileSync(asset, bytes);
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(asset);
-    await page.waitForSelector('[data-wallpaper-preview]');
-    await screenshot('crop-preview');
-    await click('Cancel');
-    assert.equal(await dbRead(), null);
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(asset);
+    await (await page.$('input[aria-label="Add wallpaper"]')).uploadFile(asset);
+    await page.waitForSelector('[data-wallpaper-item]');
+    await page.waitForSelector('[data-bh-wallpaper]');
+    assert.deepEqual((await dbRead()).crop, { x: 0.5, y: 0.5, zoom: 1 });
+    await screenshot('library-added');
+    await click('Adjust crop · Wallpaper 1');
     await page.waitForSelector('[data-wallpaper-preview]');
     await page.$eval('input[aria-label="Zoom"]', (n) => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(n, '1.8');
@@ -211,6 +225,7 @@ try {
     });
     await pause();
     const box = await page.$eval('[data-wallpaper-preview]', (n) => {
+      n.scrollIntoView({ block: 'center' });
       const r = n.getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
@@ -219,7 +234,8 @@ try {
     await page.mouse.move(box.x - 60, box.y + 30, { steps: 8 });
     await page.mouse.up();
     await screenshot('crop-adjusted');
-    await click('Use');
+    await click('Save');
+    await page.waitForFunction(() => !document.querySelector('[data-wallpaper-preview]'));
     await page.waitForSelector('[data-bh-wallpaper]');
     const saved = await dbRead();
     assert.deepEqual(Buffer.from(saved.bytes), bytes);
@@ -268,19 +284,17 @@ try {
     await patch({ preference: 'light' });
     assert.deepEqual((await read()).modes, prefs.modes);
     await settings();
-    await click('Adjust crop');
+    await click('Adjust crop · Wallpaper 1');
     await page.waitForSelector('[data-wallpaper-preview]');
     await click('Cancel');
     assert.deepEqual(await dbRead(), saved);
     const invalid = resolve(out, 'invalid.png');
     writeFileSync(invalid, 'not an image');
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(invalid);
-    await page.locator('::-p-text(The media could not be decoded or saved)').wait();
+    await (await page.$('input[aria-label="Add wallpaper"]')).uploadFile(invalid);
+    await page.locator('::-p-text(Could not add or save)').wait();
     assert.deepEqual(await dbRead(), saved);
     await screenshot('decode-failure');
     writeFileSync(asset, bytes);
-    await (await page.$('input[aria-label="Upload image or video"]')).uploadFile(asset);
-    await page.waitForSelector('[data-wallpaper-preview]');
     await page.evaluate(() => {
       window.restoreWallpaperPut = IDBObjectStore.prototype.put;
       IDBObjectStore.prototype.put = function () {
@@ -289,21 +303,23 @@ try {
         return window.restoreWallpaperPut.apply(this, arguments);
       };
     });
-    await click('Use');
-    await pause();
+    await (await page.$('input[aria-label="Add wallpaper"]')).uploadFile(asset);
+    await page.locator('::-p-text(Could not add or save)').wait();
     assert.deepEqual(await dbRead(), saved);
+    assert.equal((await page.$$('[data-wallpaper-item]')).length, 1);
     await screenshot('storage-failure');
     await page.evaluate(() => {
       IDBObjectStore.prototype.put = window.restoreWallpaperPut;
       delete window.restoreWallpaperPut;
     });
-    await click('Cancel');
     await page.keyboard.press('Escape');
     await media('wallpaper-crop', ['--patch-stdin'], { x: 0.7, y: 0.3, zoom: 1.2 });
     assert.deepEqual((await dbRead()).crop, { x: 0.7, y: 0.3, zoom: 1.2 });
     await media('wallpaper-import', ['--file', asset]);
     assert.deepEqual(Buffer.from((await dbRead()).bytes), bytes);
     const beforeRemove = await read();
+    await media('wallpaper-remove');
+    assert.notEqual(await dbRead(), null);
     await media('wallpaper-remove');
     assert.equal(await dbRead(), null);
     assert.equal(await page.$('[data-bh-wallpaper]'), null);

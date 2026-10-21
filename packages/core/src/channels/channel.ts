@@ -1,7 +1,12 @@
 import { parseToolApprovalActor } from '../workspaces/tool-approval-actor.js';
 import { createHash } from 'node:crypto';
 
-import { isChannelAttachmentRef, type ChannelAttachmentRef } from '../attachments/ref.js';
+import {
+  isChannelAttachmentRef,
+  isChannelClearedAttachment,
+  type ChannelAttachmentRef,
+  type ChannelClearedAttachment,
+} from '../attachments/ref.js';
 import type { ToolApprovalDecision, ToolApprovalRequestCard } from '../workspaces/tool-approval.js';
 import type { ChannelQuestionRequest, ChannelQuestionResolution } from './user-questions.js';
 import {
@@ -316,6 +321,7 @@ export interface ChannelMessage {
   botCausation?: BotMessageCausation;
 
   grantRequest?: true;
+  grantRequestOwner?: string;
   grantRequestResolved?: boolean;
   assignmentReply?: { sessionId: string; sourceEventId: string };
 
@@ -333,6 +339,7 @@ export interface ChannelMessage {
   privateInputRequest?: PrivateInputCard;
   privateInputResolution?: PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
+  clearedAttachments?: ChannelClearedAttachment[];
   bridgeMedia?: {
     voice?: Pick<import('../messaging/provider.js').MessagingVoice, 'transcript' | 'durationMs'>;
     items: { id: string; kind: 'image' | 'file' | 'audio'; name: string; sizeBytes?: number }[];
@@ -547,6 +554,13 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       (message['author'] as ChannelMessageAuthor).kind !== 'bot')
   )
     return false;
+  if (
+    message['grantRequestOwner'] !== undefined &&
+    (message['grantRequest'] !== true ||
+      typeof message['grantRequestOwner'] !== 'string' ||
+      !message['grantRequestOwner'])
+  )
+    return false;
   const grantResolution = message['grantRequestResolution'];
   const assignmentReply = message['assignmentReply'];
   if (assignmentReply !== undefined) {
@@ -651,6 +665,7 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     if (
       typeof decision['requestMessageId'] !== 'string' ||
       (decision['outcome'] !== 'allowed-once' &&
+        decision['outcome'] !== 'allowed-always-tool' &&
         decision['outcome'] !== 'allowed-always-exact' &&
         decision['outcome'] !== 'allowed-always-all' &&
         decision['outcome'] !== 'rejected') ||
@@ -900,6 +915,12 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     (!Array.isArray(attachments) ||
       attachments.length > 10 ||
       !attachments.every(isChannelAttachmentRef))
+  )
+    return false;
+  const cleared = message['clearedAttachments'];
+  if (
+    cleared !== undefined &&
+    (!Array.isArray(cleared) || cleared.length > 10 || !cleared.every(isChannelClearedAttachment))
   )
     return false;
   if (!isChannelMessageAuthor(message['author'])) return false;

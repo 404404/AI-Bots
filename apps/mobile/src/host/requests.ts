@@ -1,3 +1,11 @@
+import { approvalShellCommand } from '../../../../packages/client/src/client/approval-diff';
+import {
+  approveWorkspaceRequest,
+  listHostFolders,
+  loadWorkspaceOptions,
+  resolveWorkspaceFolder,
+  type WorkspaceGrant,
+} from './bot-settings';
 import { MethodRefused, type HostClient } from './client';
 import type {
   HumanAttentionItem,
@@ -23,9 +31,19 @@ export interface ApprovalRequest extends RequestRef {
   role: 'orchestrator' | 'assignment';
   cwd: string;
   input: string;
+  allowAlways: boolean;
   status: RequestStatus;
   outcome?: ToolApprovalOutcome;
+  expiresAt?: string;
+  execution?: ApprovalExecution;
 }
+
+export type ApprovalExecution =
+  | 'waiting-human'
+  | 'waiting-capacity'
+  | 'running'
+  | 'settled'
+  | 'needs-repair';
 
 export interface QuestionRequest extends RequestRef {
   questions: QuestionItem[];
@@ -34,11 +52,7 @@ export interface QuestionRequest extends RequestRef {
 
 export type DecisionResult = 'accepted' | 'decided' | 'expired';
 
-export type ApprovalChoice = 'allowed-once' | 'allowed-always-exact' | 'rejected';
-
-export function offersAlwaysAllow(toolName: string): boolean {
-  return toolName !== 'secret_cli';
-}
+export type ApprovalChoice = 'allowed-once' | 'allowed-always-tool' | 'rejected';
 
 export function requestRef(item: HumanAttentionItem): RequestRef | undefined {
   if (item.channelId === undefined || item.messageId === undefined) return undefined;
@@ -71,9 +85,13 @@ async function readRequest(
 }
 
 export async function loadApproval(client: HostClient, ref: RequestRef): Promise<ApprovalRequest> {
-  const [{ request, later }, { status }] = await Promise.all([
+  const [{ request, later }, { status, expiresAt, execution }] = await Promise.all([
     readRequest(client, ref),
-    client.call<{ status: ToolApprovalStatus }>('toolApprovalStatus', {
+    client.call<{
+      status: ToolApprovalStatus;
+      expiresAt?: string;
+      execution?: ApprovalExecution;
+    }>('toolApprovalStatus', {
       channelId: ref.channelId,
       messageId: ref.messageId,
     }),
@@ -89,9 +107,26 @@ export async function loadApproval(client: HostClient, ref: RequestRef): Promise
     role: card.role,
     cwd: card.cwd,
     input: card.input,
+    allowAlways: card.allowAlways === true,
     status: decision !== undefined ? 'decided' : status === 'pending' ? 'pending' : 'expired',
     ...(decision === undefined ? {} : { outcome: decision.outcome }),
+    ...(decision === undefined && typeof expiresAt === 'string' ? { expiresAt } : {}),
+    ...(execution === undefined ? {} : { execution }),
   };
+}
+
+const handled = new Set<string>();
+
+function handledKey(ref: Pick<RequestRef, 'channelId' | 'messageId'>): string {
+  return `${ref.channelId}\n${ref.messageId}`;
+}
+
+export function handledHere(ref: Pick<RequestRef, 'channelId' | 'messageId'>): boolean {
+  return handled.has(handledKey(ref));
+}
+
+function markHandled(ref: RequestRef): void {
+  handled.add(handledKey(ref));
 }
 
 export async function decideApproval(
@@ -105,6 +140,7 @@ export async function decideApproval(
       messageId: ref.messageId,
       outcome,
     });
+    markHandled(ref);
     return 'accepted';
   } catch (error) {
     if (!(error instanceof MethodRefused)) throw error;
@@ -112,6 +148,62 @@ export async function decideApproval(
     if (now.status === 'pending') throw error;
     return now.status;
   }
+}
+
+export interface GrantRequest extends RequestRef {
+  reason: string;
+  status: 'pending' | 'decided';
+}
+
+export async function loadGrantRequest(client: HostClient, ref: RequestRef): Promise<GrantRequest> {
+  const { request, later } = await readRequest(client, ref);
+  if (
+    request.grantRequest !== true ||
+    (request.author !== undefined &&
+      (request.author.kind !== 'bot' || request.author.slug !== ref.botSlug))
+  )
+    throw new Error('This message is not a folder request.');
+  const decided =
+    request.grantRequestResolved === true ||
+    later.some((entry) => entry.grantRequestResolution?.requestMessageId === ref.messageId);
+  return { ...ref, reason: request.body, status: decided ? 'decided' : 'pending' };
+}
+
+export async function decideGrantRequest(
+  client: HostClient,
+  ref: RequestRef,
+  workspaceId: string,
+): Promise<{ result: DecisionResult; grant?: WorkspaceGrant }> {
+  try {
+    const grant = await approveWorkspaceRequest(
+      client,
+      ref.botSlug,
+      ref.channelId,
+      ref.messageId,
+      workspaceId,
+    );
+    markHandled(ref);
+    return { result: 'accepted', grant };
+  } catch (error) {
+    if (!(error instanceof MethodRefused)) throw error;
+    const now = await loadGrantRequest(client, ref).catch(() => undefined);
+    if (now?.status !== 'decided') throw error;
+    return { result: 'decided' };
+  }
+}
+
+export function grantRequestPort(client: HostClient, ref: RequestRef, after?: () => void) {
+  return {
+    load: () => loadGrantRequest(client, ref),
+    approve: async (workspaceId: string) => {
+      const { result } = await decideGrantRequest(client, ref, workspaceId);
+      after?.();
+      return result;
+    },
+    listFolders: (path?: string) => listHostFolders(client, path),
+    loadWorkspaceOptions: () => loadWorkspaceOptions(client),
+    resolveFolder: (path: string) => resolveWorkspaceFolder(client, path),
+  };
 }
 
 function questionStatus(status: UserQuestionStatus, resolved: boolean): RequestStatus {
@@ -153,6 +245,7 @@ export async function answerQuestion(
       messageId: ref.messageId,
       answer,
     });
+    markHandled(ref);
     return 'accepted';
   } catch (error) {
     if (!(error instanceof MethodRefused)) throw error;
@@ -229,6 +322,39 @@ export function buildAnswer(
       });
   }
   return { answers };
+}
+
+const HOST_APPROVAL_SUMMARY = '请求批准执行 ';
+
+export function approvalSummaryTool(summary: string): string | undefined {
+  if (!summary.startsWith(HOST_APPROVAL_SUMMARY)) return undefined;
+  const tool = summary.slice(HOST_APPROVAL_SUMMARY.length).trim();
+  return tool === '' ? undefined : tool;
+}
+
+function shellWord(word: string): string {
+  return /^[\w@%+=:,./-]+$/u.test(word) ? word : `'${word.replaceAll("'", `'\\''`)}'`;
+}
+
+export function secretCommand(toolName: string, input: string): string | undefined {
+  if (toolName !== 'secret_cli') return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return undefined;
+  const { program, args } = parsed as { program?: unknown; args?: unknown };
+  if (typeof program !== 'string' || program.trim() === '') return undefined;
+  const words = Array.isArray(args)
+    ? args.filter((arg): arg is string => typeof arg === 'string')
+    : [];
+  return [program, ...words].map(shellWord).join(' ');
+}
+
+export function approvalCommand(toolName: string, input: string): string | undefined {
+  return approvalShellCommand(toolName, input)?.command ?? secretCommand(toolName, input);
 }
 
 const PREVIEW_FIELDS = ['command', 'cmd', 'script', 'code', 'url', 'path', 'file_path'];

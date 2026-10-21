@@ -1,5 +1,6 @@
 {
   "bridge": {
+    "introEvent": "UI-only: anonymous usage event from the first-entry intro modal; nothing for a CLI user to drive",
     "channelAllBotPreview": "UI-only: Web composer preview of who an @all mention would wake",
     "channelReadPosition": "UI-only: Web unread divider position for one viewer",
     "composerIdentity": "UI-only: names the identity the Web composer shows; send already posts as the Host owner",
@@ -22,7 +23,6 @@
     "memory_continue_from_commit": "Coordinates the Memory working tree with the running Orchestrator turn; the Human Memory commands cover it (#1693).",
     "memory_switch_branch": "Coordinates the Memory working tree with the running Orchestrator turn; the Human Memory commands cover it (#1693).",
     "report_to_orchestrator": "Assignment-turn tool whose report identity is the running Assignment Turn.",
-    "request_workspace_grant": "The Human decision on its card resumes the requesting Orchestrator Session; grant-create grants the folder without the model.",
     "secret_mcp_disconnect": "Stops MCP servers attached to the calling Agent; bound to a running Agent.",
     "send_assignment_request": "Its report returns to the calling Orchestrator Session, which only exists during a Bot turn.",
     "subagent": "DSH native Subagent spawned from the calling Agent; there is no parent Agent outside a Bot turn.",

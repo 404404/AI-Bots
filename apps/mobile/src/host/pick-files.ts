@@ -47,6 +47,29 @@ function fromDocument(asset: DocumentPicker.DocumentPickerAsset): PickedFile {
   };
 }
 
+export function fromClipboardImage(data: string): PickedFile {
+  picked += 1;
+  const mime = /^data:([^;,]+)/u.exec(data)?.[1];
+  return {
+    id: `pick-${picked}`,
+    kind: 'image',
+    uri: data,
+    name: `pasted-${picked}${extension(mime)}`,
+    read: readUri(data),
+  };
+}
+
+export function fromSharedFile(uri: string, name: string | null, mime: string | null): PickedFile {
+  picked += 1;
+  return {
+    id: `pick-${picked}`,
+    kind: mime?.startsWith('image/') === true ? 'image' : 'file',
+    uri,
+    name: name ?? `shared-${picked}${extension(mime ?? undefined)}`,
+    read: readUri(uri),
+  };
+}
+
 export async function pickFiles(source: PickSource, limit: number): Promise<PickedFile[]> {
   if (limit <= 0) return [];
   if (source === 'file') {

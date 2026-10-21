@@ -79,6 +79,10 @@ The dev VPS lives on the Human's Tailscale tailnet. Per-machine values (SSH host
 
 Native checks for `apps/mobile` share devices and QA Hosts among coding agents. Before booting an emulator/Simulator, building the app, starting a Host or touching a phone, follow [shared device QA](docs/agents/device-qa.md): choose the Mac/iOS or Windows/Android queue, submit to its owner-cut batch, use the dedicated QA Host, and report redacted results. Windows emulator and USB-phone checks use the shared `android-qa.ps1` lease and scrcpy capture workflow.
 
+### Machine-local secrets (AX)
+
+Files that device QA and store builds need but git must never hold (Firebase `google-services.json`, FCM and Play keys) live in the gitignored `.secrets/` folder of each machine's main checkout; every worktree resolves to the same folder. Read [machine-local secrets](docs/agents/device-secrets.md) for the file list, how the app finds them, local push builds and clean-clone EAS builds.
+
 ### SEO research and tracking (AX)
 
 Before SEO research, blog planning, channel adaptation, or ranking tracking, read [the SEO AX adapter](docs/agents/seo-ax.md). It routes agents to the canonical bot-seo shared-VPS workflow; do not substitute a machine-local OpenSEO instance or treat multi-agent capacity as publishing permission.
@@ -121,7 +125,7 @@ verified.
 
 When creating or updating a PR, use the `visual-pr` skill to write the description: one-sentence "why", `/show-me`-style change outline, saved under `.humanlayer/tasks/` and applied with `gh pr edit --body-file`.
 For every PR, follow [merge-risk classification](docs/agents/pr-merge-risk.md) and summarize reversibility, blast radius, and review focus in one `Special things to note` bullet.
-For every PR that changes visible UI or user interactions, embed GitHub-rendered before/after screenshots in the PR `Change outline` and verify they render; follow [UI/UX PR visual evidence](docs/agents/pr-ui-visual-evidence.md) for capture, exceptions and the required `<img src=".../raw/<sha>/...">` reference format.
+For every PR that changes visible UI or user interactions, embed GitHub-rendered before/after screenshots in the PR `Change outline` and verify they render; follow [UI/UX PR visual evidence](docs/agents/pr-ui-visual-evidence.md) for capture, exceptions and the required `<img src=".../raw/<sha>/...">` reference format. Keep each image URL at 150 characters or fewer (12-character SHA, short file names): longer URLs written through the GitHub MCP tools come back wrapped in backticks and show as raw text; read the body back after every write.
 
 Pull requests run only the tests their diff can reach; see [CI test plan](docs/agents/development-scripts.md#ci-test-plan) for the rules and `node scripts/ci-plan.mjs --base origin/main` to preview them. Add the `ci:full` label to force a full run on a risky change. When a PR adds a kind of file or test input that the plan misses, update `RULES` in `scripts/ci-plan.mjs` in the same PR; `pnpm lint` fails until it does.
 

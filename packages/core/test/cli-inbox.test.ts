@@ -207,6 +207,27 @@ describe('Human Inbox, assignment, Session and approval-rule commands', () => {
     ]);
   });
 
+  it('lists dismissed Human Inbox items and brings one back', async () => {
+    const live = await host((method, args) =>
+      method === 'humanAttention'
+        ? { ok: true, value: { items: [], dismissed: args['dismissed'] } }
+        : echo(method, args),
+    );
+    await invoke(['inbox', '--category', 'replies', '--dismissed'], live.url);
+    await invoke(['inbox-restore', 'reply:src-1', '--source-key', 'src-1'], live.url);
+    expect((await invoke(['inbox', '--snoozed', '--dismissed'], live.url)).json.error.code).toBe(
+      'usage',
+    );
+    expect(live.calls).toEqual([
+      { method: 'humanAttention', args: { category: 'replies', dismissed: true } },
+      { method: 'humanAttentionRestore', args: { itemId: 'reply:src-1', sourceKey: 'src-1' } },
+    ]);
+    const legacy = await host(() => ({ ok: true, value: { items: [] } }));
+    expect(
+      (await invoke(['inbox', '--category', 'replies', '--dismissed'], legacy.url)).json.error.code,
+    ).toBe('host-query-unsupported');
+  });
+
   it('lists auto-rejected calls and allows one once anyway', async () => {
     const live = await host(echo);
     await invoke(['inbox', '--category', 'action', '--kind', 'auto-rejection'], live.url);
@@ -292,6 +313,34 @@ describe('Human Inbox, assignment, Session and approval-rule commands', () => {
       { method: 'sessionOwner', args: { sessionId: 'sess-1' } },
       { method: 'sessionArchiveSet', args: { slug: 'ada', sessionId: 'sess-1', archived: true } },
       { method: 'sessionArchiveSet', args: { slug: 'ada', sessionId: 'sess-1', archived: false } },
+    ]);
+  });
+
+  it('approves directory requests through the shared Host command only with explicit confirmation', async () => {
+    const live = await host(echo);
+    const args = [
+      'grant-request-approve',
+      'ada',
+      '--channel',
+      'dm-ada',
+      '--request',
+      'r1',
+      '--workspace',
+      'w1',
+    ];
+    expect((await invoke(args, live.url)).json.error.code).toBe('usage');
+    await invoke([...args, '--confirm'], live.url);
+    expect(live.calls).toEqual([
+      {
+        method: 'grantRequestApprove',
+        args: {
+          slug: 'ada',
+          channelId: 'dm-ada',
+          requestMessageId: 'r1',
+          workspaceId: 'w1',
+          acknowledgeReadWrite: true,
+        },
+      },
     ]);
   });
 
