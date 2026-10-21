@@ -21,6 +21,10 @@ const state = vi.hoisted(() => ({
   display: { mode: 'streaming', loaded: true },
 }));
 
+vi.mock('../src/ui/shell/recent-chats', () => ({
+  chatHref: () => '',
+  useRecentChat: () => () => {},
+}));
 vi.mock('../src/host/native-source-drafts', () => ({ useSourceDraft: () => ['', () => {}] }));
 vi.mock('expo-router', () => ({
   useIsFocused: () => true,
@@ -100,8 +104,11 @@ vi.mock('../src/ui/chat/native-header', () => ({
   glassHeader: true,
   barLabelStyle: {},
   useHeaderOverlap: () => 80,
+  floatingHeader: false,
+  useHeaderPadding: () => 0,
 }));
 vi.mock('../src/ui/chat/header-chrome', () => ({
+  titleChipFill: () => ({}),
   HeaderBackButton: ({ onPress }: { onPress(): void }) => (
     <button type="button" onClick={onPress}>
       Header back
@@ -146,6 +153,12 @@ vi.mock('../src/ui/chat/chat-title', () => ({ ChatTitle: () => null }));
 vi.mock('../src/ui/chat/composer', () => ({ Composer: () => null }));
 vi.mock('../src/ui/chat/image-viewer', () => ({ ImageViewer: () => null }));
 vi.mock('../src/ui/chat/jump-to-latest', () => ({ JumpToLatest: () => null }));
+vi.mock('../src/ui/chat/pull-to-compose-hint', () => ({ PullToComposeHint: () => null }));
+vi.mock('../src/ui/chat/clipboard-image', () => ({
+  ClipboardImageOffer: () => null,
+  useClipboardImage: () => ({ offered: false, used: () => {} }),
+}));
+vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
 vi.mock('../src/ui/chat/message-actions', () => ({ MessageActions: () => null }));
 vi.mock('../src/ui/chat/message-bubble', () => ({
   PlaybackBubble: ({ message }: { message?: { body: string } }) =>
@@ -204,7 +217,7 @@ it('keeps the bottom fade at the message viewport edge beneath the composer cont
   const controls = view.querySelector('[data-testid="chat-controls"]')!;
   const fade = content.querySelector('[data-edge="bottom"]');
   expect(fade).not.toBeNull();
-  expect(fade?.getAttribute('data-height')).toBe(String(edgeFade.bottom));
+  expect(fade?.getAttribute('data-height')).toBe(String(edgeFade.reach));
   expect(controls.querySelector('[data-edge]')).toBeNull();
   expect(fade!.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
 });

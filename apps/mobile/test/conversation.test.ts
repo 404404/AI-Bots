@@ -165,7 +165,12 @@ describe('DM conversation', () => {
         id: 'ask-tool',
         author: bot,
         body: '请求批准执行 bash',
-        toolApprovalRequest: { toolName: 'bash', role: 'orchestrator', cwd: '/w', input: '{}' },
+        toolApprovalRequest: {
+          toolName: 'bash',
+          role: 'orchestrator',
+          cwd: '/w',
+          input: '{"command":"ls /w"}',
+        },
       } as never);
       channel.append({
         id: 'tool-decided',
@@ -186,7 +191,12 @@ describe('DM conversation', () => {
       } as never);
       const live = await until(open(host), (snapshot) => snapshot.status === 'live');
       const [tool, decided, ask, cancelled] = live.messages;
-      expect(tool?.card).toEqual({ kind: 'tool-approval', channelId: DM, subject: 'bash' });
+      expect(tool?.card).toEqual({
+        kind: 'tool-approval',
+        channelId: DM,
+        subject: 'bash',
+        command: 'ls /w',
+      });
       expect(decided?.resolves).toEqual({
         requestId: 'ask-tool',
         resolution: { kind: 'tool-approval', outcome },
@@ -621,6 +631,40 @@ describe('DM conversation', () => {
           headers,
         },
         local: false,
+      },
+    ]);
+  });
+
+  it('shows cleared media as a cleared file card without a download source', async () => {
+    const host = new FakeHost();
+    host.channel(DM).append(
+      {
+        id: 'old-1',
+        author: { kind: 'human' },
+        body: 'from January',
+        clearedAttachments: [
+          {
+            name: 'beach.png',
+            mime: 'image/png',
+            size: 4096,
+            clearedAt: '2026-10-20T00:00:00.000Z',
+          },
+        ],
+      },
+      false,
+    );
+    const target = open(host);
+    const live = await until(target, (s) => s.messages.length === 1);
+    expect(live.messages[0]?.body).toBe('from January');
+    expect(live.messages[0]?.attachments).toEqual([
+      {
+        key: 'old-1:cleared:0',
+        kind: 'file',
+        name: 'beach.png',
+        mime: 'image/png',
+        size: 4096,
+        local: false,
+        cleared: true,
       },
     ]);
   });

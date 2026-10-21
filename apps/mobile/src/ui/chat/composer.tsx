@@ -1,5 +1,5 @@
 import { TextInput } from '../primitives/system-text';
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ComponentRef, type ReactNode, type Ref } from 'react';
 import {
   Image,
   Keyboard,
@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PickSource, PickedFile } from '../../host/pick-files';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { edge, motion, radius, space } from '../design/tokens';
+import { HardwareSend } from '../primitives/hardware-send';
 import { Text } from '../primitives/text';
 import {
   ArrowUpIcon,
@@ -347,6 +348,8 @@ function AttachMenu({ onPick }: { onPick(source: PickSource): void }) {
   );
 }
 
+export type ComposerInput = ComponentRef<typeof TextInput>;
+
 export function Composer({
   value,
   placeholder,
@@ -366,6 +369,8 @@ export function Composer({
   above,
   selection,
   onSelection,
+  inputRef,
+  onFocusChange,
 }: {
   value: string;
   placeholder: string;
@@ -385,6 +390,8 @@ export function Composer({
   above?: ReactNode;
   selection?: { start: number; end: number } | undefined;
   onSelection?(caret: number): void;
+  inputRef?: Ref<ComposerInput>;
+  onFocusChange?(focused: boolean): void;
 }) {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
@@ -462,6 +469,7 @@ export function Composer({
   const field = (
     <TextInput
       key="field"
+      ref={inputRef}
       testID="composer-input"
       value={value}
       onChangeText={onChange}
@@ -472,7 +480,11 @@ export function Composer({
             onSelectionChange: (event: { nativeEvent: { selection: { end: number } } }) =>
               onSelection(event.nativeEvent.selection.end),
           })}
-      onFocus={() => setMenu(false)}
+      onFocus={() => {
+        setMenu(false);
+        onFocusChange?.(true);
+      }}
+      onBlur={() => onFocusChange?.(false)}
       placeholder={
         held
           ? t.dictationHoldHint
@@ -568,6 +580,7 @@ export function Composer({
       <Text
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
         onTextLayout={(event) => {
           const height = event.nativeEvent.lines[0]?.height;
           if (height !== undefined && height > 0)
@@ -606,14 +619,20 @@ export function Composer({
               </ScrollView>
             ) : null}
             <View style={{ padding: inset }}>
-              <View
+              <HardwareSend
+                enabled={actions.includes('send') && !listening}
+                enter
+                onSend={() => {
+                  haptic('send');
+                  onSend();
+                }}
                 style={{
                   flexDirection: 'row',
                   paddingRight: stacked || trailing.length === 0 ? 0 : button + space.x2,
                 }}
               >
                 {field}
-              </View>
+              </HardwareSend>
               {stacked && expand === null && trailing.length === 0 ? null : (
                 <View
                   pointerEvents="box-none"
@@ -634,15 +653,19 @@ export function Composer({
             </View>
           </View>
           {compactWidth > 0 ? (
-            <Text
-              variant="body"
+            <View
+              pointerEvents="none"
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
-              onLayout={(event) => setWraps(event.nativeEvent.layout.height > textLine * 1.5)}
               style={{ position: 'absolute', opacity: 0, width: compactWidth, left: 0, top: 0 }}
             >
-              {value === '' ? ' ' : value}
-            </Text>
+              <Text
+                variant="body"
+                onLayout={(event) => setWraps(event.nativeEvent.layout.height > textLine * 1.5)}
+              >
+                {value === '' ? ' ' : value}
+              </Text>
+            </View>
           ) : null}
         </Animated.View>
       </View>
