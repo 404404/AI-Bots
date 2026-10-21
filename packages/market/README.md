@@ -120,7 +120,7 @@ An optional descriptor in the Bot repository. Every field is optional; an invali
 | `0 3 * * *`  | Discovery: full `topic:botharness-bot` search sliced by creation date (every slice under the 1,000-result cap), adds new repositories and hides listed ones that no longer match after a complete scan                                                                                   |
 | `17 * * * *` | Refresh: GraphQL `nodes` in batches of 100 for stars, push time, topics, description, visibility, archived state and head commit; README, localized READMEs and bot.json are refetched only after a push, then summaries are brought up to date; a failed batch keeps the last good rows |
 
-Each run logs one JSON line (`module: marketplace-worker`, `phase`, counts, `durationMs`), and a refresh with summaries on logs a second one (`phase: summaries`, `model`, `checked`, `generated`, `failed`). GraphQL refresh needs `GITHUB_TOKEN`. Trigger a run locally with `wrangler dev --test-scheduled` and `curl "http://127.0.0.1:8787/__scheduled?cron=0+3+*+*+*"`.
+Each run logs one JSON line (`module: marketplace-worker`, `phase`, counts, `durationMs`), and a refresh logs a second one (`phase: summaries`, `model`, `checked`, `generated`, `failed`), or `skipped: missing-summary-api-key` when `SUMMARY_API_KEY` is unset or empty. Set the key with `wrangler secret put SUMMARY_API_KEY` and paste it at the prompt: piping an unset shell variable stores an empty secret. GraphQL refresh needs `GITHUB_TOKEN`. Trigger a run locally with `wrangler dev --test-scheduled` and `curl "http://127.0.0.1:8787/__scheduled?cron=0+3+*+*+*"`.
 
 ## Local development
 
