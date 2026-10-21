@@ -42,7 +42,7 @@ export const navigationBar = {
     dark: '0 2px 8px rgba(0, 0, 0, 0.12)',
   },
 } as const;
-export const environmentTab = { maxWidth: 220 } as const;
+export const environmentTab = { widthRatio: 0.6 } as const;
 export const modalRail = { maxWidth: 360 } as const;
 export const messageSheet = { textHeightRatio: 0.4 } as const;
 export const pairingScan = { maxSize: 200, widthRatio: 0.5 } as const;

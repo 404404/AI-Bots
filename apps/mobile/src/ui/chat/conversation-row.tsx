@@ -166,7 +166,7 @@ export function ConversationRowFrame({
         <View
           style={{
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: theme.largeText ? 'flex-start' : 'center',
             gap: space.x3,
           }}
         >
@@ -178,7 +178,12 @@ export function ConversationRowFrame({
           )}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
-          <Text variant="meta" tone={unread ? 'fg' : 'muted'} numberOfLines={1} style={{ flex: 1 }}>
+          <Text
+            variant="meta"
+            tone={unread ? 'fg' : 'muted'}
+            numberOfLines={theme.largeText ? 2 : 1}
+            style={{ flex: 1 }}
+          >
             {preview}
           </Text>
           <RowStatusGlyph status={status} />
