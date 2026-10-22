@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
+import { classifyComputerToolError } from './classify-computer-tool-error.mjs';
 import {
   classifyChromiumStartupOutput,
   summarizeChromiumDiagnosticLogs,
@@ -79,32 +80,6 @@ function readDevtoolsEndpoint(userDataDir) {
   } catch {
     return;
   }
-}
-
-function classifyComputerToolError(result) {
-  const details = [
-    result.structuredContent?.error?.code,
-    result.structuredContent?.code,
-    ...(result.content ?? []).map((item) => (item.type === 'text' ? item.text : '')),
-  ]
-    .filter((value) => typeof value === 'string')
-    .join(' ')
-    .toLowerCase();
-  if (/stale[_ -]?(?:element|snapshot)|stale_element_token/u.test(details)) return 'stale-element';
-  if (
-    /window[_ -]?(?:id[_ -]?)?not[_ -]?found|window_owner_pid_mismatch|no windows? found/u.test(
-      details,
-    )
-  )
-    return 'window-not-found';
-  if (/at[_ -]?spi|accessibility|ax[_ -]window[_ -]unresolved/u.test(details))
-    return 'accessibility-unavailable';
-  if (/point[_ -]outside[_ -]window|invalid[_ -]coordinate/u.test(details))
-    return 'invalid-coordinate';
-  if (/background[_ -]unavailable|permission[_ -]denied|not permitted/u.test(details))
-    return 'input-unavailable';
-  if (/timed? ?out|timeout/u.test(details)) return 'timeout';
-  return 'tool-error';
 }
 
 try {
@@ -299,10 +274,16 @@ try {
   process.stdout.write('PASS: Computer sees Browser Chromium on the shared display.\n');
   stage = 'computer-window-state';
   const windowArgs = { pid: fixtureWindow.pid, window_id: fixtureWindow.window_id };
-  const windowState = await client.callTool({
-    name: 'get_window_state',
-    arguments: { ...windowArgs, include_screenshot: false },
-  });
+  let windowState;
+  try {
+    windowState = await client.callTool({
+      name: 'get_window_state',
+      arguments: { ...windowArgs, include_screenshot: false },
+    });
+  } catch (error) {
+    computerInputRoundTrip.windowStateErrorClass = classifyComputerToolError(error);
+    throw new Error('Computer could not inspect the fixture controls.');
+  }
   if (windowState.isError) {
     computerInputRoundTrip.windowStateErrorClass = classifyComputerToolError(windowState);
     throw new Error('Computer could not inspect the fixture controls.');

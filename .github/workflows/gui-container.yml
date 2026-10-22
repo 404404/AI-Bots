@@ -57,6 +57,8 @@ jobs:
         run: node --test deploy/chromium-userns-seccomp.test.mjs
       - name: Test sanitized Chromium seccomp diagnostics
         run: node --test deploy/summarize-chromium-seccomp-trace.test.mjs
+      - name: Test sanitized Computer tool error diagnostics
+        run: node --test deploy/classify-computer-tool-error.test.mjs
       - name: Validate Compose files
         env:
           IMAGE_REF: ghcr.io/404404/ai-bots@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
