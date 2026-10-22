@@ -55,6 +55,8 @@ jobs:
         run: node --test deploy/cli-host-target.test.mjs
       - name: Verify the Chromium user-namespace seccomp extension
         run: node --test deploy/chromium-userns-seccomp.test.mjs
+      - name: Test sanitized Chromium seccomp diagnostics
+        run: node --test deploy/summarize-chromium-seccomp-trace.test.mjs
       - name: Validate Compose files
         env:
           IMAGE_REF: ghcr.io/404404/ai-bots@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -149,7 +151,7 @@ jobs:
               sleep 0.1
             done
             if [ -n "$trace_pid" ]; then
-              if timeout 12s sudo strace -f -qq -e status=failed -s 0 \
+              if timeout 12s sudo strace -f -qq -e signal=SIGTRAP -e status=failed -s 0 \
                 -p "$trace_pid" -o "$trace_file" >/dev/null 2>&1; then
                 trace_attached=true
               else
@@ -157,24 +159,8 @@ jobs:
                 if [ "$trace_exit" -eq 124 ]; then trace_attached=true; fi
               fi
             fi
-            node -e '
-              import fs from "node:fs";
-              const input = fs.existsSync(process.argv[1]) ? fs.readFileSync(process.argv[1], "utf8") : "";
-              const counts = new Map();
-              const pattern = /^\s*(?:\d+\s+)?([A-Za-z_][A-Za-z0-9_]*)\(.*\)\s+=\s+-1\s+([A-Z][A-Z0-9]+)\b/gmu;
-              for (const match of input.matchAll(pattern)) {
-                const key = `${match[1]}:${match[2]}`;
-                counts.set(key, (counts.get(key) ?? 0) + 1);
-              }
-              const failedSyscalls = [...counts.entries()]
-                .map(([key, count]) => {
-                  const [name, errno] = key.split(":");
-                  return { name, errno, count };
-                })
-                .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-                .slice(0, 20);
-              process.stdout.write(`${JSON.stringify({ schemaVersion: 1, traceAttached: process.argv[2] === "true", failedSyscalls })}\n`);
-            ' "$trace_file" "$trace_attached"
+            node "$GITHUB_WORKSPACE/deploy/summarize-chromium-seccomp-trace.mjs" \
+              "$trace_file" "$trace_attached"
             rm -f "$trace_file"
             echo 'RUN: one-variable diagnostic control with Docker outer seccomp unconfined; Chromium sandbox remains enabled and this container is never published.'
             mkdir -p "$RUNNER_TEMP/dsh-gui-ci-unconfined"

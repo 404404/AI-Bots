@@ -49,6 +49,12 @@ let sandboxPageLoaded = false;
 let namespaceSandboxStatus = 'not-checked';
 let seccompBpfStatus = 'not-checked';
 let computerWindowDiscovery;
+const computerInputRoundTrip = {
+  inputClickSucceeded: false,
+  typingSucceeded: false,
+  submitClickSucceeded: false,
+  browserObservedText: false,
+};
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
 
 function readDevtoolsEndpoint(userDataDir) {
@@ -251,28 +257,35 @@ try {
   )
     throw new Error('Computer did not return stable process and window IDs for Browser Chromium.');
   process.stdout.write('PASS: Computer sees Browser Chromium on the shared display.\n');
-  stage = 'computer-input-roundtrip';
+  stage = 'computer-click-input';
   const windowArgs = { pid: fixtureWindow.pid, window_id: fixtureWindow.window_id };
   const clickedInput = await client.callTool({
     name: 'click',
     arguments: { ...windowArgs, x: 260, y: 110 },
   });
   if (clickedInput.isError) throw new Error('Computer could not focus the fixture input.');
+  computerInputRoundTrip.inputClickSucceeded = true;
+  stage = 'computer-type-input';
   const typed = await client.callTool({
     name: 'type_text',
     arguments: { ...windowArgs, text: 'computer-input-confirmed' },
   });
   if (typed.isError) throw new Error('Computer could not type into the fixture input.');
+  computerInputRoundTrip.typingSucceeded = true;
+  stage = 'computer-click-submit';
   const clickedSubmit = await client.callTool({
     name: 'click',
     arguments: { ...windowArgs, x: 510, y: 110 },
   });
   if (clickedSubmit.isError) throw new Error('Computer could not submit the fixture form.');
+  computerInputRoundTrip.submitClickSucceeded = true;
+  stage = 'browser-observe-input';
   await page.waitForFunction(
     () => document.querySelector('#fixture-result')?.textContent === 'computer-input-confirmed',
     undefined,
     { timeout: 10_000 },
   );
+  computerInputRoundTrip.browserObservedText = true;
   process.stdout.write('PASS: Browser observed the Computer click and typed input.\n');
   stage = 'computer-screenshot';
   const desktop = await client.callTool({ name: 'get_desktop_state', arguments: {} });
@@ -376,6 +389,9 @@ try {
             namespaceSandbox: namespaceSandboxStatus,
             seccompBpf: seccompBpfStatus,
             ...(computerWindowDiscovery ? { computerWindowDiscovery } : {}),
+            ...(stage.startsWith('computer-') || stage === 'browser-observe-input'
+              ? { computerInputRoundTrip }
+              : {}),
             chromiumProcessExited,
             chromiumExitSignal: chromiumExitSignal ?? null,
             stdoutBytes: chromiumStdoutBytes,
