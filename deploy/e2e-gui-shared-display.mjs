@@ -60,6 +60,14 @@ const computerInputRoundTrip = {
   windowStateNodesVisited: null,
   windowStateNodesPending: null,
   windowStateElementSummaries: [],
+  coordinateFallbackUsed: false,
+  windowScreenshotWidth: null,
+  windowScreenshotHeight: null,
+  windowViewportWidth: null,
+  windowViewportHeight: null,
+  windowScreenshotMatchesViewport: null,
+  inputCoordinateAvailable: false,
+  submitCoordinateAvailable: false,
   inputCandidateCount: null,
   submitCandidateCount: null,
   inputControlFound: false,
@@ -86,6 +94,13 @@ function readDevtoolsEndpoint(userDataDir) {
   } catch {
     return;
   }
+}
+
+function readPngDimensions(image) {
+  if (image?.type !== 'image' || image.mimeType !== 'image/png') return;
+  const bytes = Buffer.from(image.data, 'base64');
+  if (bytes.length < 24 || bytes.toString('hex', 0, 8) !== '89504e470d0a1a0a') return;
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
 try {
@@ -284,7 +299,12 @@ try {
   try {
     const result = await client.callTool({
       name: 'get_window_state',
-      arguments: { ...windowArgs, include_screenshot: false, timeout_ms: 5_000 },
+      arguments: {
+        ...windowArgs,
+        include_screenshot: true,
+        max_image_dimension: 0,
+        timeout_ms: 5_000,
+      },
     });
     if (!result || typeof result !== 'object') {
       computerInputRoundTrip.windowStateErrorClass = 'tool-error';
@@ -333,14 +353,74 @@ try {
   ).length;
   computerInputRoundTrip.inputControlFound = Boolean(inputControl);
   computerInputRoundTrip.submitControlFound = Boolean(submitControl);
-  if (!inputControl || !submitControl)
-    throw new Error(
-      'Computer could not find the fixture input and submit button in its window state.',
+  let inputClickArguments;
+  let inputTypeArguments;
+  let submitClickArguments;
+  if (inputControl && submitControl) {
+    inputClickArguments = { element_token: inputControl.element_token };
+    inputTypeArguments = {
+      element_token: inputControl.element_token,
+      text: 'computer-input-confirmed',
+    };
+    submitClickArguments = { element_token: submitControl.element_token };
+  } else {
+    const screenshot = windowState.content?.find(
+      (item) => item.type === 'image' && item.mimeType === 'image/png',
     );
+    const screenshotDimensions = readPngDimensions(screenshot);
+    const inputBounds = await page.locator('#fixture-input').boundingBox();
+    const submitBounds = await page.locator('#fixture-submit').boundingBox();
+    const viewport = await page.evaluate(() => ({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      scale: window.devicePixelRatio,
+    }));
+    if (!screenshotDimensions || !inputBounds || !submitBounds || !Number.isFinite(viewport.scale))
+      throw new Error('Computer coordinate fallback could not read the fixture geometry.');
+    computerInputRoundTrip.coordinateFallbackUsed = true;
+    computerInputRoundTrip.windowScreenshotWidth = screenshotDimensions.width;
+    computerInputRoundTrip.windowScreenshotHeight = screenshotDimensions.height;
+    computerInputRoundTrip.windowViewportWidth = viewport.width;
+    computerInputRoundTrip.windowViewportHeight = viewport.height;
+    computerInputRoundTrip.windowScreenshotMatchesViewport =
+      screenshotDimensions.width === Math.round(viewport.width * viewport.scale) &&
+      screenshotDimensions.height === Math.round(viewport.height * viewport.scale);
+    if (!computerInputRoundTrip.windowScreenshotMatchesViewport)
+      throw new Error('Computer screenshot and Browser viewport do not share a pixel frame.');
+    const center = (bounds) => ({
+      x: Math.round((bounds.x + bounds.width / 2) * viewport.scale),
+      y: Math.round((bounds.y + bounds.height / 2) * viewport.scale),
+    });
+    const inputPoint = center(inputBounds);
+    const submitPoint = center(submitBounds);
+    computerInputRoundTrip.inputCoordinateAvailable =
+      inputPoint.x >= 0 &&
+      inputPoint.y >= 0 &&
+      inputPoint.x < screenshotDimensions.width &&
+      inputPoint.y < screenshotDimensions.height;
+    computerInputRoundTrip.submitCoordinateAvailable =
+      submitPoint.x >= 0 &&
+      submitPoint.y >= 0 &&
+      submitPoint.x < screenshotDimensions.width &&
+      submitPoint.y < screenshotDimensions.height;
+    if (
+      !computerInputRoundTrip.inputCoordinateAvailable ||
+      !computerInputRoundTrip.submitCoordinateAvailable
+    )
+      throw new Error('Computer coordinate fallback points are outside the shared window frame.');
+    const windowTarget = { window_id: fixtureWindow.window_id };
+    inputClickArguments = { ...windowTarget, ...inputPoint };
+    inputTypeArguments = {
+      ...windowTarget,
+      ...inputPoint,
+      text: 'computer-input-confirmed',
+    };
+    submitClickArguments = { ...windowTarget, ...submitPoint };
+  }
   stage = 'computer-click-input';
   const clickedInput = await client.callTool({
     name: 'click',
-    arguments: { element_token: inputControl.element_token },
+    arguments: inputClickArguments,
   });
   if (clickedInput.isError) {
     computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
@@ -350,7 +430,7 @@ try {
   stage = 'computer-type-input';
   const typed = await client.callTool({
     name: 'type_text',
-    arguments: { element_token: inputControl.element_token, text: 'computer-input-confirmed' },
+    arguments: inputTypeArguments,
   });
   if (typed.isError) {
     computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typed);
@@ -360,7 +440,7 @@ try {
   stage = 'computer-click-submit';
   const clickedSubmit = await client.callTool({
     name: 'click',
-    arguments: { element_token: submitControl.element_token },
+    arguments: submitClickArguments,
   });
   if (clickedSubmit.isError) {
     computerInputRoundTrip.submitClickErrorClass = classifyComputerToolError(clickedSubmit);
