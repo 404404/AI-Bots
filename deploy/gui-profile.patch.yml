@@ -2,7 +2,7 @@
   name: '@botharness/browser'
   config:
     headless: false
-    browserPath: /usr/bin/chromium
+    browserPath: /usr/local/bin/deepseekbot-chromium
 - id: botharness-computer
   name: '@botharness/computer'
   config:

@@ -75,7 +75,7 @@ try {
   stage = 'chromium-startup';
   const userDataDir = join(directory, 'browser-profile');
   chromiumProcess = spawn(
-    '/usr/bin/chromium',
+    '/usr/local/bin/deepseekbot-chromium',
     [
       `--user-data-dir=${userDataDir}`,
       '--remote-debugging-port=0',
@@ -145,6 +145,10 @@ try {
   stage = 'chromium-sandbox';
   await page.goto('chrome://sandbox/', { waitUntil: 'domcontentloaded', timeout: 20_000 });
   const sandboxText = await page.locator('body').innerText();
+  const namespaceLine = sandboxText.split('\n').find((line) => /Namespace Sandbox/iu.test(line));
+  if (!namespaceLine || !/\byes\b/iu.test(namespaceLine))
+    throw new Error('Chromium did not report its user-namespace sandbox as enabled.');
+  process.stdout.write('PASS: chrome://sandbox reports the user-namespace sandbox enabled.\n');
   const sandboxLine = sandboxText.split('\n').find((line) => /Seccomp-BPF sandbox/iu.test(line));
   if (!sandboxLine || !/\byes\b/iu.test(sandboxLine))
     throw new Error('Chromium did not report its Seccomp-BPF sandbox as enabled.');
@@ -233,6 +237,8 @@ try {
   const launchArgs = argumentsText.split('\0');
   if (launchArgs.includes('--no-sandbox'))
     throw new Error('Chromium was launched with --no-sandbox.');
+  if (!launchArgs.includes('--disable-setuid-sandbox'))
+    throw new Error('Chromium was not explicitly configured for the user-namespace sandbox.');
   const statusText = chromiumProcess.pid
     ? readFileSync(`/proc/${chromiumProcess.pid}/status`, 'utf8')
     : '';

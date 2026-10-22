@@ -62,6 +62,7 @@ COPY --from=build --chown=0:0 /opt/app/deploy /opt/app/deploy
 COPY --from=build --chown=0:0 /opt/dsh-seed/profiles /opt/dsh-seed/profiles
 COPY --from=build --chown=0:0 /opt/cua-driver /opt/cua-driver
 COPY --chown=0:0 deploy/container-entrypoint.mjs deploy/container-healthcheck.mjs deploy/gui-profile.patch.yml /opt/app/deploy/
+COPY --chmod=0555 deploy/chromium-wrapper.sh /usr/local/bin/deepseekbot-chromium
 RUN rm -rf \
     /opt/app/deploy/copy-profile-seed.test.mjs \
     /opt/app/deploy/loopback-host-proxy.test.mjs \

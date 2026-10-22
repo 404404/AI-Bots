@@ -41,3 +41,11 @@ test('Chromium user namespace extension preserves Docker default-deny seccomp', 
     }
   }
 });
+
+test('GUI Chromium wrapper selects the user namespace sandbox without disabling sandboxing', () => {
+  const wrapper = readFileSync(new URL('./chromium-wrapper.sh', import.meta.url), 'utf8');
+  const profilePatch = readFileSync(new URL('./gui-profile.patch.yml', import.meta.url), 'utf8');
+  assert.match(wrapper, /--disable-setuid-sandbox/u);
+  assert.doesNotMatch(wrapper, /--no-sandbox/u);
+  assert.match(profilePatch, /browserPath:\s*\/usr\/local\/bin\/deepseekbot-chromium/u);
+});

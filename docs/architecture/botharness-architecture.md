@@ -1207,7 +1207,7 @@ and returns focus after dismissal. No second shortcut router or Panel state is i
 
 ## Linux GUI container runtime
 
-GK50 Linux GUI PoC 在一个非 root 容器中运行 DSH Host、DeepSeekBot、可见 Chromium、Browser 与 Computer。一个 Xvfb display、Xauthority cookie 和 D-Bus session 供 Host 及两个本地工具运行时共用；Browser 可见地启动 Chromium，Computer 使用同一个本地 display。容器不挂载宿主 display 或 Docker socket，也不请求特权模式、host network、额外 capability 或关闭 Chromium sandbox。Compose 保留 Docker 默认 seccomp deny policy，只允许 `clone`/`unshare` 参数包含 `CLONE_NEWUSER` 的请求，以便 Chromium 使用非特权 user namespace。
+GK50 Linux GUI PoC 在一个非 root 容器中运行 DSH Host、DeepSeekBot、可见 Chromium、Browser 与 Computer。一个 Xvfb display、Xauthority cookie 和 D-Bus session 供 Host 及两个本地工具运行时共用；Browser 可见地启动 Chromium，Computer 使用同一个本地 display。容器不挂载宿主 display 或 Docker socket，也不请求特权模式、host network、额外 capability 或关闭 Chromium sandbox。Chromium wrapper 禁用 setuid sandbox 变体并使用非特权 user namespace sandbox；Compose 保留 Docker 默认 seccomp deny policy，只允许 `clone`/`unshare` 参数包含 `CLONE_NEWUSER` 的请求。验收要求 `chrome://sandbox` 的 Namespace Sandbox 和 Seccomp-BPF 都报告启用。
 
 绑定挂载的 `/data/dsh` 仍是 DSH Home，也是 Profile、Bot、Session、Assignment、Channel、凭据和运行状态唯一的持久化权威。容器不增加 DevBoard 数据库或无认证 API。Compose 只在 loopback 发布 Host；远程访问使用 SSH 隧道和 DSH launch token 交换。在线 CLI 继续通过已认证的 DSH Host RPC 读取数据。Bot 摘要、Session 分页、Channel Timeline、Activity 和 Assignment 读取保留稳定 ID、时间戳、revision 与不透明游标，并以机器可解析格式返回拒绝码。
 
