@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": 39862473698,
+    "url": "https://github.com/404404/AI-Bots/actions/runs/39862473698",
+    "commit": "9ffc8cb237927549f715a9fd54b3054d6a9326f1",
+    "tag": "gui-container-2026-10-23-9ffc8cb2"
+  },
+  "image": {
+    "build": "passed",
+    "trivy": "passed",
+    "published": false
+  },
+  "fixture": {
+    "botId": "bot-aa05486a4216434cafbbd268f7dde1a3",
+    "channelId": "dm-bot-aa05486a4216434cafbbd268f7dde1a3"
+  },
+  "onlineCli": {
+    "beforeRestart": {
+      "authenticated": true,
+      "botIds": ["bot-aa05486a4216434cafbbd268f7dde1a3"],
+      "botCount": 1
+    },
+    "readOnly": {
+      "status": "passed",
+      "checks": [
+        { "name": "bot-list", "exitCode": 0 },
+        { "name": "bot-detail", "exitCode": 0 },
+        { "name": "sessions", "exitCode": 0 },
+        { "name": "assignments", "exitCode": 0 },
+        { "name": "assignment-detail", "status": "skipped-empty" },
+        { "name": "activity", "exitCode": 0 },
+        { "name": "channel-timeline", "exitCode": 0 },
+        { "name": "coded-error", "exitCode": 1, "errorCode": "not-found" },
+        { "name": "invalid-cursor", "exitCode": 1, "errorCode": "invalid-cursor" }
+      ],
+      "sample": {
+        "botList": {
+          "bots": [
+            {
+              "slug": "bot-aa05486a4216434cafbbd268f7dde1a3",
+              "createdAt": "2026-10-22T22:21:05.972Z"
+            }
+          ]
+        },
+        "botDetail": {
+          "bot": {
+            "slug": "bot-aa05486a4216434cafbbd268f7dde1a3",
+            "displayName": "GUI Container CLI Acceptance",
+            "createdAt": "2026-10-22T22:21:05.972Z"
+          }
+        },
+        "sessions": { "total": 0, "sessions": [] },
+        "assignments": { "total": 0, "assignments": [] },
+        "activity": {
+          "generation": "18855374-df41-4cc8-8041-f958180f8539",
+          "revision": 0,
+          "bot": {
+            "slug": "bot-aa05486a4216434cafbbd268f7dde1a3",
+            "state": "idle",
+            "sessions": []
+          }
+        },
+        "channelTimeline": {
+          "channelId": "dm-bot-aa05486a4216434cafbbd268f7dde1a3",
+          "revision": 0,
+          "entries": [],
+          "olderCursor": null,
+          "newerCursor": null,
+          "hasOlder": false,
+          "hasNewer": false
+        }
+      }
+    },
+    "hostRestart": {
+      "healthRecovered": true,
+      "oldTokenErrorCode": "host-unauthorized",
+      "refreshedTokenAuthenticated": true,
+      "sameBotId": true,
+      "readOnlySuiteAfterRestart": "passed"
+    }
+  },
+  "chromium": {
+    "productionSeccomp": {
+      "containerHealthy": true,
+      "userNamespaceProbe": "passed",
+      "dbusSessionAvailable": true,
+      "atSpiBusAddressAvailable": true,
+      "status": "failed",
+      "failedAt": "chromium-startup",
+      "exitSignal": "SIGTRAP",
+      "diagnosticClasses": ["fatal-check", "zygote", "crashpad"],
+      "devtoolsStarted": false,
+      "sandboxPageReached": false
+    },
+    "chrootOnlyDiagnostic": {
+      "published": false,
+      "status": "failed",
+      "failedAt": "chromium-startup",
+      "processExited": false,
+      "devtoolsLogSignal": true,
+      "devtoolsPortFileReady": false,
+      "sandboxPageReached": false
+    },
+    "productionSeccompTrace": {
+      "traceAttached": true,
+      "retryUsedDbusSession": false,
+      "sigtrapContexts": [],
+      "chrootEpermObserved": false,
+      "failedSyscalls": [
+        { "name": "futex", "errno": "EAGAIN", "count": 194 },
+        { "name": "statx", "errno": "ENOENT", "count": 94 },
+        { "name": "ioctl", "errno": "ENOTTY", "count": 21 },
+        { "name": "openat", "errno": "ENOENT", "count": 18 },
+        { "name": "fcntl", "errno": "EBADF", "count": 14 },
+        { "name": "clone3", "errno": "ENOSYS", "count": 7 },
+        { "name": "readlink", "errno": "EINVAL", "count": 6 },
+        { "name": "access", "errno": "ENOENT", "count": 3 },
+        { "name": "io_uring_setup", "errno": "EPERM", "count": 3 },
+        { "name": "execve", "errno": "ENOENT", "count": 2 },
+        { "name": "unlink", "errno": "EISDIR", "count": 1 },
+        { "name": "wait4", "errno": "ECHILD", "count": 1 }
+      ]
+    }
+  },
+  "notes": [
+    "The CI-only seccomp diagnostic added only an unconditional chroot allow to the production profile; it did not change the production profile and was never published.",
+    "The fixture had no model credential, so Session and Assignment collections were empty and Assignment detail was skipped. The JSON reports contain no credentials, tokens, or message bodies.",
+    "The earlier chroot:EPERM trace is not confirmed as the root cause; the latest trace retry lacked the D-Bus wrapper, had no SIGTRAP context, and the chroot-only diagnostic still failed startup. The next CI candidate matches the D-Bus startup path during trace capture."
+  ]
+}

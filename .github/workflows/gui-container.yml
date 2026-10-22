@@ -107,6 +107,44 @@ jobs:
             -v "$RUNNER_TEMP/dsh-gui-ci:/data/dsh" \
             -v "$RUNNER_TEMP/dsh-cli-artifacts:/tmp/dsh-cli-artifacts" \
             ai-bots-gui:ci
+          capture_chromium_seccomp_trace() {
+            local container_name=$1
+            local trace_label=$2
+            if ! command -v strace >/dev/null 2>&1; then
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq strace
+            fi
+            local trace_file="$RUNNER_TEMP/chromium-seccomp-$trace_label.log"
+            local trace_attached=false
+            : > "$trace_file"
+            docker exec --user 10001:10001 \
+              -e DISPLAY=:99 \
+              -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
+              "$container_name" sh -c \
+              'sleep 8; exec dbus-run-session -- node /opt/app/deploy/e2e-gui-shared-display.mjs >/dev/null 2>&1' \
+              >/dev/null 2>&1 &
+            local trace_exec_pid=$!
+            local trace_pid=''
+            for attempt in $(seq 1 20); do
+              trace_pid=$(docker top "$container_name" -eo pid,args 2>/dev/null | \
+                awk '$0 ~ /sh -c sleep 8/ { print $1; exit }')
+              [ -n "$trace_pid" ] && break
+              sleep 0.1
+            done
+            if [ -n "$trace_pid" ]; then
+              if timeout 12s sudo strace -f -qq -e signal=SIGTRAP -e status=failed -s 0 \
+                -p "$trace_pid" -o "$trace_file" >/dev/null 2>&1; then
+                trace_attached=true
+              else
+                local trace_exit=$?
+                if [ "$trace_exit" -eq 124 ]; then trace_attached=true; fi
+              fi
+            fi
+            if wait "$trace_exec_pid"; then :; fi
+            node "$GITHUB_WORKSPACE/deploy/summarize-chromium-seccomp-trace.mjs" \
+              "$trace_file" "$trace_attached"
+            rm -f "$trace_file"
+          }
           cleanup() {
             docker rm -f dsh-gui-ci-chroot-diagnostic >/dev/null 2>&1 || true
             docker rm -f dsh-gui-ci >/dev/null 2>&1 || true
@@ -139,37 +177,8 @@ jobs:
             cat "$RUNNER_TEMP/gui-hardened.json"
           fi
           if [ "$gui_hardened_status" -ne 0 ]; then
-            echo 'RUN: collect syscall names and errno values from a retry under the unchanged production seccomp profile.'
-            if ! command -v strace >/dev/null 2>&1; then
-              sudo apt-get update -qq
-              sudo apt-get install -y -qq strace
-            fi
-            trace_file="$RUNNER_TEMP/chromium-seccomp-trace.log"
-            trace_attached=false
-            docker exec -d --user 10001:10001 \
-              -e DISPLAY=:99 \
-              -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
-              dsh-gui-ci sh -c \
-              'sleep 8; exec node /opt/app/deploy/e2e-gui-shared-display.mjs >/dev/null 2>&1'
-            trace_pid=''
-            for attempt in $(seq 1 20); do
-              trace_pid=$(docker top dsh-gui-ci -eo pid,args 2>/dev/null | \
-                awk '$0 ~ /sh -c sleep 8/ { print $1; exit }')
-              [ -n "$trace_pid" ] && break
-              sleep 0.1
-            done
-            if [ -n "$trace_pid" ]; then
-              if timeout 12s sudo strace -f -qq -e signal=SIGTRAP -e status=failed -s 0 \
-                -p "$trace_pid" -o "$trace_file" >/dev/null 2>&1; then
-                trace_attached=true
-              else
-                trace_exit=$?
-                if [ "$trace_exit" -eq 124 ]; then trace_attached=true; fi
-              fi
-            fi
-            node "$GITHUB_WORKSPACE/deploy/summarize-chromium-seccomp-trace.mjs" \
-              "$trace_file" "$trace_attached"
-            rm -f "$trace_file"
+            echo 'RUN: collect syscall names and errno values from a D-Bus-matched retry under the unchanged production seccomp profile.'
+            capture_chromium_seccomp_trace dsh-gui-ci production
             echo 'RUN: one-variable diagnostic control with only chroot added to the outer seccomp profile; Chromium sandbox remains enabled and this container is never published.'
             diagnostic_profile="$RUNNER_TEMP/chromium-chroot-diagnostic-seccomp.json"
             node "$GITHUB_WORKSPACE/deploy/chromium-chroot-diagnostic-profile.mjs" \
@@ -194,6 +203,8 @@ jobs:
             done
             chroot_diagnostic_status=1
             if [ "$chroot_diagnostic_health" = healthy ]; then
+              echo 'RUN: collect syscall names and errno values from a D-Bus-matched retry under the chroot-only seccomp profile.'
+              capture_chromium_seccomp_trace dsh-gui-ci-chroot-diagnostic chroot-only
               if docker exec --user 10001:10001 \
                 -e DISPLAY=:99 \
                 -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \

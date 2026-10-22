@@ -2,6 +2,8 @@
 
 This Compose project runs the DSH Web Host, DeepSeekBot, a visible Chromium Bot Browser, and the local Computer desktop in one container. DSH continues to own the Profile, Bot, Session, Assignment, Channel, Activity, credentials, and runtime state. The image adds no DevBoard database and exposes no unauthenticated API.
 
+**Release gate is currently blocked.** As of 2026-10-23, the latest immutable candidate [run 39862473698](https://github.com/404404/AI-Bots/actions/runs/39862473698) built and passed Trivy, but Chromium failed startup under the production seccomp profile. No image was published. Treat this file and the Compose files as deployment samples only; wait for an accepted immutable GHCR digest before pulling or deploying. See the [acceptance record](gui-container-acceptance.md) for the current evidence.
+
 ## Before starting
 
 - Use the exact GHCR image digest printed by the release workflow, in the form `ghcr.io/404404/ai-bots@sha256:<digest>`. Do not use `latest` or another moving tag.

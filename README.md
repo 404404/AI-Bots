@@ -47,7 +47,7 @@ DeepSeekBot（简称 **DSB**，是 DeepSeekBot 的缩写，才不是“大啥比
 
 命令行安装、版本说明和常见问题见[官网安装指南](https://deepseekbot.app/docs/installation/)。
 
-也可以在 Linux 主机上用 Docker Compose 运行带可见 Chromium/X11 桌面的 DeepSeekBot GUI Host，Browser 和 Computer 共用同一个桌面；Compose 使用受限的 Chromium user-namespace seccomp 配置并要求 Namespace 与 Seccomp-BPF sandbox 都通过。请使用 [GK50 部署指南](docs/deployment-gk50.md)中的 GHCR digest、loopback 端口和持久化 DSH Home 配置；Synology 示例及设备验收状态见[这里](docs/deployment-synology.md)。
+仓库提供 Linux GUI Host 的 Docker Compose 实验样例，目标是在共享 X11 display 上运行可见 Chromium、Browser 和 Computer，并保留 DSH Home 作为唯一数据权威。当前 GHCR 发布门禁尚未通过：生产 seccomp 下 Chromium 启动失败，尚无可部署镜像；不要把 Compose 样例视为已验收发布版。最新结果、CLI 重启验收、GK50 部署门槛和未完成的 DSM/Codex 验收见[验收记录](docs/gui-container-acceptance.md)与[部署指南](docs/deployment-gk50.md)。
 
 <a id="features"></a>
 
