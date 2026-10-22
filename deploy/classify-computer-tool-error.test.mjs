@@ -30,4 +30,8 @@ test('classifies thrown tool errors without returning their message', () => {
 
 test('uses tool-error for unknown failures', () => {
   assert.equal(classifyComputerToolError(new Error('opaque driver failure')), 'tool-error');
+  assert.equal(
+    classifyComputerToolError({ message: 'opaque driver failure', content: 'not-an-array' }),
+    'tool-error',
+  );
 });

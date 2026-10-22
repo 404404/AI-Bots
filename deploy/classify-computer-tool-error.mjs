@@ -1,4 +1,5 @@
 export function classifyComputerToolError(result) {
+  const content = Array.isArray(result?.content) ? result.content : [];
   const details = [
     result?.structuredContent?.error?.code,
     result?.structuredContent?.code,
@@ -6,7 +7,7 @@ export function classifyComputerToolError(result) {
     result?.code,
     result?.name,
     result?.message,
-    ...(result?.content ?? []).map((item) => (item.type === 'text' ? item.text : '')),
+    ...content.map((item) => (item.type === 'text' ? item.text : '')),
   ]
     .filter((value) => typeof value === 'string')
     .join(' ')

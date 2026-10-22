@@ -276,16 +276,21 @@ try {
   const windowArgs = { pid: fixtureWindow.pid, window_id: fixtureWindow.window_id };
   let windowState;
   try {
-    windowState = await client.callTool({
+    const result = await client.callTool({
       name: 'get_window_state',
       arguments: { ...windowArgs, include_screenshot: false },
     });
+    if (!result || typeof result !== 'object') {
+      computerInputRoundTrip.windowStateErrorClass = 'tool-error';
+      throw new Error('Computer returned an invalid tool result.');
+    }
+    if (result.isError) {
+      computerInputRoundTrip.windowStateErrorClass = classifyComputerToolError(result);
+      throw new Error('Computer could not inspect the fixture controls.');
+    }
+    windowState = result;
   } catch (error) {
-    computerInputRoundTrip.windowStateErrorClass = classifyComputerToolError(error);
-    throw new Error('Computer could not inspect the fixture controls.');
-  }
-  if (windowState.isError) {
-    computerInputRoundTrip.windowStateErrorClass = classifyComputerToolError(windowState);
+    computerInputRoundTrip.windowStateErrorClass ??= classifyComputerToolError(error);
     throw new Error('Computer could not inspect the fixture controls.');
   }
   computerInputRoundTrip.windowStateSucceeded = true;
