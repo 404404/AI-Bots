@@ -47,7 +47,7 @@ In the DeepSeek Harness desktop app, go to **Plugins → Add plugin**, enter `de
 
 For command-line install, version notes and troubleshooting, see the [installation guide](https://deepseekbot.app/en/docs/installation/).
 
-You can also run a Linux GUI Host with visible Chromium/X11 in Docker Compose. Browser and Computer use the same desktop. Follow the [GK50 deployment guide](docs/deployment-gk50.md) for a digest-pinned GHCR image, loopback-only port and persistent DSH Home. The [Synology example and device acceptance status](docs/deployment-synology.md) are documented separately.
+The repository also contains experimental Docker Compose samples for a Linux GUI Host where Browser and Computer share one visible Chromium/X11 desktop, while DSH remains the single data authority. The production Chromium sandbox gate has not passed, so no GHCR image is released and the sample is not ready to deploy. See the [acceptance record](docs/gui-container-acceptance.md), [GK50 preflight](docs/gk50-preflight.md), [GK50 deployment guide](docs/deployment-gk50.md) and [Synology compatibility notes](docs/deployment-synology.md) for current status.
 
 <a id="features"></a>
 
