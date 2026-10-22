@@ -99,6 +99,7 @@ const computerInputRoundTrip = {
   typingForegroundFallbackUsed: false,
   submitClickSucceeded: false,
   submitClickErrorClass: null,
+  submitClickForegroundFallbackUsed: false,
   browserObservedText: false,
 };
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
@@ -381,7 +382,7 @@ try {
     }
     return result;
   };
-  const clickInputAtCoordinates = async (point) => {
+  const clickWindowAtCoordinates = async (point) => {
     let result = await client.callTool({
       name: 'click',
       arguments: {
@@ -391,6 +392,7 @@ try {
         session: computerSession,
       },
     });
+    let foregroundFallbackUsed = false;
     if (result.isError && classifyComputerToolError(result) === 'background-unavailable') {
       result = await client.callTool({
         name: 'click',
@@ -402,14 +404,9 @@ try {
           delivery_mode: 'foreground',
         },
       });
-      if (!result.isError) computerInputRoundTrip.inputClickForegroundFallbackUsed = true;
+      foregroundFallbackUsed = !result.isError;
     }
-    if (result.isError) {
-      computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(result);
-      return result;
-    }
-    computerInputRoundTrip.inputClickSucceeded = true;
-    return result;
+    return { result, foregroundFallbackUsed };
   };
   const typeFocusedInput = async () => {
     let result = await client.callTool({
@@ -554,14 +551,17 @@ try {
   }
   stage = 'computer-click-input';
   if (inputClickArguments) {
-    const clickedInput = computerInputRoundTrip.typingCoordinateFallbackUsed
-      ? await clickInputAtCoordinates(inputClickArguments)
-      : await client.callTool({ name: 'click', arguments: inputClickArguments });
+    const coordinateClick = computerInputRoundTrip.typingCoordinateFallbackUsed
+      ? await clickWindowAtCoordinates(inputClickArguments)
+      : { result: await client.callTool({ name: 'click', arguments: inputClickArguments }) };
+    const clickedInput = coordinateClick.result;
     if (clickedInput.isError) {
-      computerInputRoundTrip.inputClickErrorClass ??= classifyComputerToolError(clickedInput);
+      computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
       throw new Error('Computer could not focus the fixture input.');
     }
     computerInputRoundTrip.inputClickSucceeded = true;
+    computerInputRoundTrip.inputClickForegroundFallbackUsed =
+      coordinateClick.foregroundFallbackUsed === true;
   }
   if (
     computerInputRoundTrip.typingCoordinateFallbackUsed &&
@@ -673,10 +673,15 @@ try {
       }
       computerInputRoundTrip.coordinateFallbackUsed = true;
       computerInputRoundTrip.typingCoordinateFallbackUsed = true;
-      const clickedInput = await clickInputAtCoordinates(inputPoint);
+      const coordinateClick = await clickWindowAtCoordinates(inputPoint);
+      const clickedInput = coordinateClick.result;
       if (clickedInput.isError) {
+        computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
         throw new Error('Computer could not focus the fixture input by coordinates.');
       }
+      computerInputRoundTrip.inputClickSucceeded = true;
+      computerInputRoundTrip.inputClickForegroundFallbackUsed =
+        coordinateClick.foregroundFallbackUsed;
       stage = 'computer-refresh-after-coordinate-focus';
       try {
         await readWindowState();
@@ -762,15 +767,17 @@ try {
     computerInputRoundTrip.submitCoordinateFallbackUsed = true;
   }
   stage = 'computer-click-submit';
-  const clickedSubmit = await client.callTool({
-    name: 'click',
-    arguments: submitClickArguments,
-  });
+  const submitClick = computerInputRoundTrip.submitCoordinateFallbackUsed
+    ? await clickWindowAtCoordinates(submitClickArguments)
+    : { result: await client.callTool({ name: 'click', arguments: submitClickArguments }) };
+  const clickedSubmit = submitClick.result;
   if (clickedSubmit.isError) {
     computerInputRoundTrip.submitClickErrorClass = classifyComputerToolError(clickedSubmit);
     throw new Error('Computer could not submit the fixture form.');
   }
   computerInputRoundTrip.submitClickSucceeded = true;
+  computerInputRoundTrip.submitClickForegroundFallbackUsed =
+    submitClick.foregroundFallbackUsed === true;
   stage = 'browser-observe-input';
   await page.waitForFunction(
     () => document.querySelector('#fixture-result')?.textContent === 'computer-input-confirmed',
