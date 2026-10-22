@@ -163,6 +163,7 @@ try {
         if (match) {
           const login = new URL(match[0]);
           const internalUrl = new URL(login);
+          internalUrl.protocol = 'http:';
           internalUrl.hostname = address;
           internalUrl.port = String(port);
           writeFileSync(

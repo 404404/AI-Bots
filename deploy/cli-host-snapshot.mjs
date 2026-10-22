@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { startLoopbackHostProxy } from './loopback-host-proxy.mjs';
 
 async function input() {
   return new Promise((resolve, reject) => {
@@ -20,26 +21,45 @@ try {
     ? JSON.parse(await input())
     : JSON.parse(readFileSync(process.argv[process.argv.indexOf('--launch') + 1], 'utf8'));
   const login = new URL(launch.internalUrl ?? launch.url);
-  if (fromStdin) {
-    login.hostname = readFileSync('/tmp/dsh-runtime/listen-address', 'utf8').trim();
-    login.port = process.env['DSH_PORT'] ?? '3080';
-  }
   const token = login.searchParams.get('token');
   if (!token) throw new Error('missing token');
-  const result = spawnSync(
-    process.execPath,
-    ['/opt/app/packages/deepseekbot/dist/deepseekbot.mjs', 'list', '--compact'],
-    {
-      env: { ...process.env, DEEPSEEKBOT_HOST: login.origin, DEEPSEEKBOT_HOST_TOKEN: token },
-      encoding: 'utf8',
-      timeout: 30_000,
-      maxBuffer: 2 * 1024 * 1024,
-    },
-  );
-  if (result.error) throw new Error('CLI execution failed');
+  const address = readFileSync('/tmp/dsh-runtime/listen-address', 'utf8').trim();
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(address)) throw new Error('invalid Host address');
+  const port = process.env['DSH_PORT'] ?? '3080';
+  if (!/^\d{1,5}$/u.test(port) || Number(port) < 1 || Number(port) > 65535)
+    throw new Error('invalid Host port');
+  const proxy = await startLoopbackHostProxy(`http://${address}:${port}`);
+  let result;
+  try {
+    result = await new Promise((resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        ['/opt/app/packages/deepseekbot/dist/deepseekbot.mjs', 'list', '--compact'],
+        {
+          env: {
+            ...process.env,
+            DEEPSEEKBOT_HOST: proxy.origin,
+            DEEPSEEKBOT_HOST_TOKEN: token,
+          },
+          stdio: ['ignore', 'pipe', 'ignore'],
+          timeout: 30_000,
+        },
+      );
+      let stdout = '';
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk;
+        if (stdout.length > 2 * 1024 * 1024) child.kill('SIGTERM');
+      });
+      child.once('error', reject);
+      child.once('close', (status) => resolve({ stdout, status }));
+    });
+  } finally {
+    await proxy.close();
+  }
   let value;
   try {
-    value = JSON.parse(result.stdout ?? '');
+    value = JSON.parse(result.stdout);
   } catch {
     throw new Error('CLI did not return JSON');
   }

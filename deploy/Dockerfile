@@ -64,6 +64,7 @@ COPY --from=build --chown=0:0 /opt/cua-driver /opt/cua-driver
 COPY --chown=0:0 deploy/container-entrypoint.mjs deploy/container-healthcheck.mjs deploy/gui-profile.patch.yml /opt/app/deploy/
 RUN rm -rf \
     /opt/app/deploy/copy-profile-seed.test.mjs \
+    /opt/app/deploy/loopback-host-proxy.test.mjs \
     /opt/app/node_modules/.pnpm/@typescript+typescript-linux-x64@* \
     /opt/app/node_modules/.pnpm/typescript@* \
     /opt/app/node_modules/.pnpm/node_modules/@typescript/typescript-linux-x64 \

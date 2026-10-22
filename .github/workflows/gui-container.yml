@@ -49,6 +49,8 @@ jobs:
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Test first-start profile seed copy permissions
         run: node --test deploy/copy-profile-seed.test.mjs
+      - name: Test loopback forwarding for authenticated online CLI
+        run: node --test deploy/loopback-host-proxy.test.mjs
       - name: Validate Compose files
         env:
           IMAGE_REF: ghcr.io/404404/ai-bots@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
