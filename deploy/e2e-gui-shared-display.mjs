@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { classifyComputerToolError } from './classify-computer-tool-error.mjs';
+import { summarizeComputerWindowState } from './summarize-computer-window-state.mjs';
 import {
   classifyChromiumStartupOutput,
   summarizeChromiumDiagnosticLogs,
@@ -54,6 +55,11 @@ const computerInputRoundTrip = {
   windowStateSucceeded: false,
   windowStateErrorClass: null,
   windowStateElementCount: null,
+  windowStateElementsComplete: null,
+  windowStateTruncated: null,
+  windowStateNodesVisited: null,
+  windowStateNodesPending: null,
+  windowStateElementSummaries: [],
   inputCandidateCount: null,
   submitCandidateCount: null,
   inputControlFound: false,
@@ -278,7 +284,7 @@ try {
   try {
     const result = await client.callTool({
       name: 'get_window_state',
-      arguments: { ...windowArgs, include_screenshot: false },
+      arguments: { ...windowArgs, include_screenshot: false, timeout_ms: 5_000 },
     });
     if (!result || typeof result !== 'object') {
       computerInputRoundTrip.windowStateErrorClass = 'tool-error';
@@ -294,8 +300,9 @@ try {
     throw new Error('Computer could not inspect the fixture controls.');
   }
   computerInputRoundTrip.windowStateSucceeded = true;
-  const elements = windowState.structuredContent?.elements;
-  computerInputRoundTrip.windowStateElementCount = Array.isArray(elements) ? elements.length : null;
+  const windowStateData = windowState.structuredContent ?? {};
+  Object.assign(computerInputRoundTrip, summarizeComputerWindowState(windowStateData));
+  const elements = windowStateData.elements;
   const controls = Array.isArray(elements)
     ? elements.map((element) => {
         const role = typeof element.role === 'string' ? element.role.toLowerCase() : '';
