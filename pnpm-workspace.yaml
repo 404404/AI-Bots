@@ -22,6 +22,7 @@ overrides:
   '@modelcontextprotocol/sdk': 1.32.0
   dockview: 8.4.1
   dockview-core: 8.4.1
+  dompurify: 3.4.17
   '@deepseek-ai/dsh-authorization': 0.2.1-rc.2
   '@deepseek-ai/dsh-brand': 0.2.1-rc.2
   '@deepseek-ai/dsh-credentials': 0.2.1-rc.2
