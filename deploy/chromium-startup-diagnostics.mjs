@@ -17,6 +17,17 @@ export function classifyChromiumStartupOutput(...streams) {
   return DIAGNOSTIC_PATTERNS.filter(([, pattern]) => pattern.test(output)).map(([code]) => code);
 }
 
+export function summarizeChromiumSandboxStatus(text) {
+  const status = (pattern) => {
+    const line = text.split(/\r?\n/u).find((entry) => pattern.test(entry));
+    return !line ? 'missing' : /\byes\b/iu.test(line) ? 'yes' : 'no';
+  };
+  return {
+    namespaceSandbox: status(/Namespace Sandbox/iu),
+    seccompBpf: status(/Seccomp-BPF sandbox/iu),
+  };
+}
+
 export function summarizeChromiumDiagnosticLogs(...streams) {
   return streams
     .join('\n')

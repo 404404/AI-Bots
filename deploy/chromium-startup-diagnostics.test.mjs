@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   classifyChromiumStartupOutput,
   summarizeChromiumDiagnosticLogs,
+  summarizeChromiumSandboxStatus,
 } from './chromium-startup-diagnostics.mjs';
 
 test('Chromium diagnostics retain only bounded category codes', () => {
@@ -63,4 +64,15 @@ test('Crashpad file-open diagnostics retain only an allowlisted sysfs error clas
   ]);
   assert.equal(JSON.stringify(summaries).includes('/sys/devices'), false);
   assert.equal(JSON.stringify(summaries).includes('/private/profile/secret'), false);
+});
+
+test('Chromium sandbox diagnostics report only yes, no, or missing statuses', () => {
+  assert.deepEqual(
+    summarizeChromiumSandboxStatus('Namespace Sandbox: No\nSeccomp-BPF sandbox: Yes'),
+    { namespaceSandbox: 'no', seccompBpf: 'yes' },
+  );
+  assert.deepEqual(summarizeChromiumSandboxStatus('empty diagnostic page'), {
+    namespaceSandbox: 'missing',
+    seccompBpf: 'missing',
+  });
 });

@@ -9,6 +9,7 @@ import { createServer } from 'node:http';
 import {
   classifyChromiumStartupOutput,
   summarizeChromiumDiagnosticLogs,
+  summarizeChromiumSandboxStatus,
 } from './chromium-startup-diagnostics.mjs';
 
 const requireBrowser = createRequire(new URL('../packages/browser/package.json', import.meta.url));
@@ -42,6 +43,11 @@ let chromiumStderrBytes = 0;
 let devtoolsEndpoint;
 let devtoolsLogSignal = false;
 let devtoolsPortFileReady = false;
+let browserConnected = false;
+let browserFixtureOpened = false;
+let sandboxPageLoaded = false;
+let namespaceSandboxStatus = 'not-checked';
+let seccompBpfStatus = 'not-checked';
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
 
 function readDevtoolsEndpoint(userDataDir) {
@@ -139,6 +145,7 @@ try {
   });
   if (!devtoolsEndpoint) throw new Error('Chromium did not report its DevTools endpoint.');
   browser = await chromium.connectOverCDP(devtoolsEndpoint);
+  browserConnected = true;
   const page = browser.contexts()[0]?.pages()[0];
   if (!page) throw new Error('Chromium did not open its initial Browser page.');
   server = createServer((request, response) => {
@@ -166,16 +173,19 @@ try {
   await page.goto(fixture, { waitUntil: 'domcontentloaded', timeout: 20_000 });
   if ((await page.title()) !== marker)
     throw new Error('Visible Chromium did not open the fixture page.');
+  browserFixtureOpened = true;
   process.stdout.write('PASS: visible Browser Chromium opened the fixture.\n');
   stage = 'chromium-sandbox';
   await page.goto('chrome://sandbox/', { waitUntil: 'domcontentloaded', timeout: 20_000 });
+  sandboxPageLoaded = true;
   const sandboxText = await page.locator('body').innerText();
-  const namespaceLine = sandboxText.split('\n').find((line) => /Namespace Sandbox/iu.test(line));
-  if (!namespaceLine || !/\byes\b/iu.test(namespaceLine))
+  const sandboxStatus = summarizeChromiumSandboxStatus(sandboxText);
+  namespaceSandboxStatus = sandboxStatus.namespaceSandbox;
+  seccompBpfStatus = sandboxStatus.seccompBpf;
+  if (namespaceSandboxStatus !== 'yes')
     throw new Error('Chromium did not report its user-namespace sandbox as enabled.');
   process.stdout.write('PASS: chrome://sandbox reports the user-namespace sandbox enabled.\n');
-  const sandboxLine = sandboxText.split('\n').find((line) => /Seccomp-BPF sandbox/iu.test(line));
-  if (!sandboxLine || !/\byes\b/iu.test(sandboxLine))
+  if (seccompBpfStatus !== 'yes')
     throw new Error('Chromium did not report its Seccomp-BPF sandbox as enabled.');
   process.stdout.write('PASS: chrome://sandbox reports Seccomp-BPF enabled.\n');
   await page.goto(fixture, { waitUntil: 'domcontentloaded', timeout: 20_000 });
@@ -280,7 +290,8 @@ try {
     computerScreenshot: 'returned',
     ...(process.env['GUI_ACCEPTANCE_SCREENSHOT'] ? { screenshot: 'saved' } : {}),
     chromiumNoSandboxFlag: false,
-    chromeSandbox: sandboxLine.trim(),
+    namespaceSandbox: namespaceSandboxStatus,
+    seccompBpf: seccompBpfStatus,
     chromiumSeccompMode: seccompMode,
   };
 } catch {
@@ -328,6 +339,29 @@ try {
             devtoolsStarted: devtoolsLogSignal || devtoolsPortFileReady,
             devtoolsLogSignal,
             devtoolsPortFileReady,
+          },
+        }
+      : {}),
+    ...(stage !== 'chromium-startup'
+      ? {
+          chromiumRuntimeSignals: {
+            browserConnected,
+            browserFixtureOpened,
+            sandboxPageLoaded,
+            namespaceSandbox: namespaceSandboxStatus,
+            seccompBpf: seccompBpfStatus,
+            chromiumProcessExited,
+            chromiumExitSignal: chromiumExitSignal ?? null,
+            stdoutBytes: chromiumStdoutBytes,
+            stderrBytes: chromiumStderrBytes,
+            diagnosticCategories: classifyChromiumStartupOutput(
+              chromiumStdoutOutput,
+              chromiumStderrOutput,
+            ),
+            diagnosticLogs: summarizeChromiumDiagnosticLogs(
+              chromiumStdoutOutput,
+              chromiumStderrOutput,
+            ),
           },
         }
       : {}),
