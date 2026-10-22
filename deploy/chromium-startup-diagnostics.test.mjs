@@ -41,3 +41,26 @@ test('Chromium log summaries retain source and fixed classes without message tex
   ]);
   assert.equal(JSON.stringify(summaries).includes('private-value'), false);
 });
+
+test('Crashpad file-open diagnostics retain only an allowlisted sysfs error class', () => {
+  const summaries = summarizeChromiumDiagnosticLogs(
+    '[17:21:1022/120000.000000:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)',
+    '[17:21:1022/120000.000001:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /private/profile/secret: Permission denied (13)',
+  );
+  assert.deepEqual(summaries, [
+    {
+      severity: 'ERROR',
+      source: 'file_io_posix.cc',
+      line: 145,
+      messageClass: 'optional-cpu-frequency-file-missing',
+    },
+    {
+      severity: 'ERROR',
+      source: 'file_io_posix.cc',
+      line: 145,
+      messageClass: 'crashpad-file-open-error',
+    },
+  ]);
+  assert.equal(JSON.stringify(summaries).includes('/sys/devices'), false);
+  assert.equal(JSON.stringify(summaries).includes('/private/profile/secret'), false);
+});

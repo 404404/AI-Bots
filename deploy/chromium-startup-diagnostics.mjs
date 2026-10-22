@@ -26,23 +26,30 @@ export function summarizeChromiumDiagnosticLogs(...streams) {
       if (!location) return [];
 
       const message = location[5];
-      const messageClass = /failed sending zygote boot message/iu.test(message)
-        ? 'zygote-boot-message-send-failed'
-        : /zygote process exited prematurely/iu.test(message)
-          ? 'zygote-exited-before-ready'
-          : /failed to receive (?:hello|boot) message from zygote/iu.test(message)
-            ? 'zygote-message-receive-failed'
-            : /no usable sandbox/iu.test(message)
-              ? 'no-usable-sandbox'
-              : /operation not permitted|permission denied|\bEPERM\b/iu.test(message)
-                ? 'permission-denied'
-                : /sandbox|seccomp/iu.test(message)
-                  ? 'sandbox-error'
-                  : /crashpad/iu.test(message)
-                    ? 'crashpad-error'
-                    : location[1] === 'FATAL'
-                      ? 'other-fatal'
-                      : 'other-error';
+      const messageClass =
+        /open \/sys\/devices\/system\/cpu\/cpu\d+\/cpufreq\/scaling_(?:cur|max)_freq: No such file or directory \(2\)/iu.test(
+          message,
+        )
+          ? 'optional-cpu-frequency-file-missing'
+          : /file_io_posix\.cc$/iu.test(location[2])
+            ? 'crashpad-file-open-error'
+            : /failed sending zygote boot message/iu.test(message)
+              ? 'zygote-boot-message-send-failed'
+              : /zygote process exited prematurely/iu.test(message)
+                ? 'zygote-exited-before-ready'
+                : /failed to receive (?:hello|boot) message from zygote/iu.test(message)
+                  ? 'zygote-message-receive-failed'
+                  : /no usable sandbox/iu.test(message)
+                    ? 'no-usable-sandbox'
+                    : /operation not permitted|permission denied|\bEPERM\b/iu.test(message)
+                      ? 'permission-denied'
+                      : /sandbox|seccomp/iu.test(message)
+                        ? 'sandbox-error'
+                        : /crashpad/iu.test(message)
+                          ? 'crashpad-error'
+                          : location[1] === 'FATAL'
+                            ? 'other-fatal'
+                            : 'other-error';
       const exitCode = /exit code (\d+)/iu.exec(message)?.[1];
 
       return [

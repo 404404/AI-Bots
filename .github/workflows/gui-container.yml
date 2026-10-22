@@ -91,7 +91,10 @@ jobs:
             -e PUBLIC_URL=http://127.0.0.1:20443 \
             -v "$RUNNER_TEMP/dsh-gui-ci:/data/dsh" \
             ai-bots-gui:ci
-          cleanup() { docker rm -f dsh-gui-ci >/dev/null 2>&1 || true; }
+          cleanup() {
+            docker rm -f dsh-gui-ci-unconfined >/dev/null 2>&1 || true
+            docker rm -f dsh-gui-ci >/dev/null 2>&1 || true
+          }
           trap cleanup EXIT
           for attempt in $(seq 1 90); do
             status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dsh-gui-ci 2>/dev/null || true)
@@ -104,6 +107,60 @@ jobs:
           docker exec --user 10001:10001 dsh-gui-ci \
             unshare --user --map-root-user sh -c '[ "$(id -u)" -eq 0 ]'
           echo 'PASS: Chromium unprivileged user namespace is available with the default container AppArmor profile.'
+          umask 077
+          echo 'RUN: Browser/Computer shared display and Chromium sandbox acceptance with the production seccomp profile.'
+          gui_hardened_status=0
+          if docker exec --user 10001:10001 \
+            -e DISPLAY=:99 \
+            -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
+            dsh-gui-ci node /opt/app/deploy/e2e-gui-shared-display.mjs \
+            > "$RUNNER_TEMP/gui-hardened.json" 2> "$RUNNER_TEMP/gui-hardened.stderr"; then
+            echo 'PASS: hardened Browser/Computer shared display and Chromium sandbox acceptance.'
+            cat "$RUNNER_TEMP/gui-hardened.json"
+          else
+            gui_hardened_status=$?
+            echo 'FAIL: hardened Browser/Computer shared display and Chromium sandbox acceptance; sanitized report follows.'
+            cat "$RUNNER_TEMP/gui-hardened.json"
+          fi
+          if [ "$gui_hardened_status" -ne 0 ]; then
+            echo 'RUN: one-variable diagnostic control with Docker outer seccomp unconfined; Chromium sandbox remains enabled and this container is never published.'
+            mkdir -p "$RUNNER_TEMP/dsh-gui-ci-unconfined"
+            sudo chown 10001:10001 "$RUNNER_TEMP/dsh-gui-ci-unconfined"
+            docker run -d --name dsh-gui-ci-unconfined \
+              --user 10001:10001 \
+              --shm-size 512m \
+              --memory 2g --cpus 1.5 --pids-limit 512 \
+              --security-opt no-new-privileges:true --cap-drop ALL \
+              --security-opt seccomp=unconfined \
+              -e PUBLIC_URL=http://127.0.0.1:20443 \
+              -v "$RUNNER_TEMP/dsh-gui-ci-unconfined:/data/dsh" \
+              ai-bots-gui:ci >/dev/null
+            unconfined_health=starting
+            for attempt in $(seq 1 90); do
+              unconfined_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dsh-gui-ci-unconfined 2>/dev/null || true)
+              [ "$unconfined_health" = healthy ] && break
+              [ "$unconfined_health" = unhealthy ] && break
+              sleep 2
+            done
+            unconfined_status=1
+            if [ "$unconfined_health" = healthy ]; then
+              if docker exec --user 10001:10001 \
+                -e DISPLAY=:99 \
+                -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
+                dsh-gui-ci-unconfined node /opt/app/deploy/e2e-gui-shared-display.mjs \
+                > "$RUNNER_TEMP/gui-unconfined.json" 2> "$RUNNER_TEMP/gui-unconfined.stderr"; then
+                unconfined_status=0
+                echo 'PASS: diagnostic control Browser/Computer shared display and Chromium sandbox acceptance.'
+              else
+                echo 'FAIL: diagnostic control Browser/Computer shared display and Chromium sandbox acceptance.'
+              fi
+              cat "$RUNNER_TEMP/gui-unconfined.json"
+            else
+              echo "FAIL: diagnostic control container health status was $unconfined_health."
+            fi
+            echo "A/B result: production seccomp status=$gui_hardened_status; outer-seccomp-unconfined diagnostic status=$unconfined_status."
+            docker rm -f dsh-gui-ci-unconfined >/dev/null 2>&1 || true
+          fi
           umask 077
           echo 'RUN: authenticated online CLI before Host restart.'
           if docker exec --user 10001:10001 dsh-gui-ci \
@@ -186,11 +243,10 @@ jobs:
             cat "$RUNNER_TEMP/cli-after-restart.json"
           } >> "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/old-launch.json" "$RUNNER_TEMP/cli-stale-token.json"
-          echo 'RUN: Browser/Computer shared display and Chromium sandbox acceptance.'
-          docker exec --user 10001:10001 \
-            -e DISPLAY=:99 \
-            -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
-            dsh-gui-ci node /opt/app/deploy/e2e-gui-shared-display.mjs
+          if [ "$gui_hardened_status" -ne 0 ]; then
+            echo 'FAIL: production Docker seccomp profile did not pass the GUI sandbox gate; the unconfined control is diagnostic only.'
+            exit "$gui_hardened_status"
+          fi
 
   publish:
     needs: build-check
