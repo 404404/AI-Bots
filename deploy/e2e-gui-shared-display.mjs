@@ -486,13 +486,13 @@ try {
       window_id: fixtureWindow.window_id,
       session: computerSession,
     };
-    inputClickArguments = null;
+    inputClickArguments = { ...windowTarget, ...inputPoint };
     inputTypeArguments = {
       ...windowTarget,
-      ...inputPoint,
-      session: computerSession,
       text: 'computer-input-confirmed',
     };
+    computerInputRoundTrip.coordinateFallbackUsed = true;
+    computerInputRoundTrip.typingCoordinateFallbackUsed = true;
     submitClickArguments = { ...windowTarget, ...submitPoint };
   }
   stage = 'computer-click-input';
@@ -506,6 +506,19 @@ try {
       throw new Error('Computer could not focus the fixture input.');
     }
     computerInputRoundTrip.inputClickSucceeded = true;
+  }
+  if (
+    computerInputRoundTrip.typingCoordinateFallbackUsed &&
+    !computerInputRoundTrip.elementTypeTargetUsed
+  ) {
+    stage = 'computer-refresh-after-coordinate-focus';
+    try {
+      await readWindowState();
+    } catch (error) {
+      computerInputRoundTrip.typingRefreshErrorClass =
+        error.computerErrorClass ?? classifyComputerToolError(error);
+      throw new Error('Computer could not refresh the fixture after focusing its input.');
+    }
   }
   stage = 'computer-type-input';
   const typed = await client.callTool({
@@ -555,7 +568,7 @@ try {
         computerInputRoundTrip.typingErrorClass = retryErrorClass;
         throw new Error('Computer could not type into the fixture input after refreshing it.');
       }
-      stage = 'computer-refresh-before-coordinate-typing';
+      stage = 'computer-refresh-before-coordinate-click';
       try {
         freshState = await readWindowState();
       } catch (error) {
@@ -605,20 +618,41 @@ try {
       }
       computerInputRoundTrip.coordinateFallbackUsed = true;
       computerInputRoundTrip.typingCoordinateFallbackUsed = true;
-      typingResult = await client.callTool({
-        name: 'type_text',
+      const clickedInput = await client.callTool({
+        name: 'click',
         arguments: {
           pid: fixtureWindow.pid,
           window_id: fixtureWindow.window_id,
           x: inputPoint.x,
           y: inputPoint.y,
           session: computerSession,
+        },
+      });
+      if (clickedInput.isError) {
+        computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
+        throw new Error('Computer could not focus the fixture input by coordinates.');
+      }
+      computerInputRoundTrip.inputClickSucceeded = true;
+      stage = 'computer-refresh-after-coordinate-focus';
+      try {
+        await readWindowState();
+      } catch (error) {
+        computerInputRoundTrip.typingRefreshErrorClass =
+          error.computerErrorClass ?? classifyComputerToolError(error);
+        throw new Error('Computer could not refresh the fixture after focusing its input.');
+      }
+      typingResult = await client.callTool({
+        name: 'type_text',
+        arguments: {
+          pid: fixtureWindow.pid,
+          window_id: fixtureWindow.window_id,
+          session: computerSession,
           text: 'computer-input-confirmed',
         },
       });
       if (typingResult.isError) {
         computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typingResult);
-        throw new Error('Computer could not type into the fixture input by coordinates.');
+        throw new Error('Computer could not type into the focused fixture input.');
       }
     }
     computerInputRoundTrip.typingRecoveredAfterFreshSnapshot = true;
