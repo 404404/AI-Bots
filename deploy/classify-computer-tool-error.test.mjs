@@ -16,6 +16,16 @@ test('classifies sanitized MCP tool errors', () => {
     }),
     'accessibility-unavailable',
   );
+  assert.equal(
+    classifyComputerToolError({
+      isError: true,
+      structuredContent: {
+        status: 'refused',
+        refusal: { code: 'snapshot_id_required', message: 'fresh snapshot required' },
+      },
+    }),
+    'snapshot-required',
+  );
 });
 
 test('classifies thrown tool errors without returning their message', () => {
