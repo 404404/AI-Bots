@@ -98,9 +98,20 @@ jobs:
           echo 'PASS: GUI container became healthy.'
           umask 077
           echo 'RUN: authenticated online CLI before Host restart.'
-          docker exec --user 10001:10001 dsh-gui-ci \
+          if docker exec --user 10001:10001 dsh-gui-ci \
             node /opt/app/deploy/cli-host-snapshot.mjs --launch /tmp/dsh-runtime/launch.json \
-            > "$RUNNER_TEMP/cli-before-restart.json"
+            > "$RUNNER_TEMP/cli-before-restart.json"; then
+            :
+          else
+            result=$?
+            echo 'FAIL: authenticated online CLI before Host restart; sanitized result follows.'
+            if [ -s "$RUNNER_TEMP/cli-before-restart.json" ]; then
+              cat "$RUNNER_TEMP/cli-before-restart.json"
+            else
+              echo '{"schemaVersion":1,"authenticated":false,"errorCode":"no-sanitized-result"}'
+            fi
+            exit "$result"
+          fi
           node --input-type=module -e '
             import fs from "node:fs";
             const result = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
@@ -137,9 +148,20 @@ jobs:
           echo 'PASS: old launch token rejected; sanitized error follows.'
           cat "$RUNNER_TEMP/cli-stale-token.json"
           echo 'RUN: authenticate with the refreshed launch token after restart.'
-          docker exec --user 10001:10001 dsh-gui-ci \
+          if docker exec --user 10001:10001 dsh-gui-ci \
             node /opt/app/deploy/cli-host-snapshot.mjs --launch /tmp/dsh-runtime/launch.json \
-            > "$RUNNER_TEMP/cli-after-restart.json"
+            > "$RUNNER_TEMP/cli-after-restart.json"; then
+            :
+          else
+            result=$?
+            echo 'FAIL: refreshed launch token after Host restart; sanitized result follows.'
+            if [ -s "$RUNNER_TEMP/cli-after-restart.json" ]; then
+              cat "$RUNNER_TEMP/cli-after-restart.json"
+            else
+              echo '{"schemaVersion":1,"authenticated":false,"errorCode":"no-sanitized-result"}'
+            fi
+            exit "$result"
+          fi
           node --input-type=module -e '
             import fs from "node:fs";
             const before = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
