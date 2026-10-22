@@ -20,9 +20,8 @@ on:
     inputs:
       publish_image:
         description: Publish the current commit to GHCR after the image build succeeds
-        type: choice
-        options: [no, yes]
-        default: no
+        type: boolean
+        default: false
         required: true
       confirmation:
         description: Type PUBLISH_GUI_IMAGE to authorize the GHCR write
@@ -376,7 +375,7 @@ jobs:
 
   publish:
     needs: build-check
-    if: (github.event_name == 'workflow_dispatch' && inputs.publish_image == 'yes') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/gui-container-'))
+    if: (github.event_name == 'workflow_dispatch' && inputs.publish_image) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/gui-container-'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
