@@ -48,6 +48,7 @@ let browserFixtureOpened = false;
 let sandboxPageLoaded = false;
 let namespaceSandboxStatus = 'not-checked';
 let seccompBpfStatus = 'not-checked';
+let computerWindowDiscovery;
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
 
 function readDevtoolsEndpoint(userDataDir) {
@@ -102,7 +103,8 @@ try {
       settled = true;
       clearTimeout(timer);
       clearInterval(activePortPoll);
-      error ? reject(error) : resolve();
+      if (error) reject(error);
+      else resolve();
     };
     const timer = setTimeout(
       () => finish(new Error('Chromium DevTools endpoint timed out.')),
@@ -213,9 +215,29 @@ try {
   const windowResult = await client.callTool({ name: 'list_windows', arguments: {} });
   const windowPayload = windowResult.structuredContent ?? windowResult.content ?? [];
   const windowText = JSON.stringify(windowPayload);
+  const windows = windowResult.structuredContent?.windows;
+  computerWindowDiscovery = {
+    toolError: windowResult.isError === true,
+    markerInPayload: windowText.includes(marker),
+    structuredWindows: Array.isArray(windows),
+    windowCount: Array.isArray(windows) ? windows.length : null,
+    windowSummaries: Array.isArray(windows)
+      ? windows.slice(0, 8).map((window) => ({
+          titleClass:
+            window.title === marker
+              ? 'fixture'
+              : typeof window.title === 'string' && /chromium/iu.test(window.title)
+                ? 'chromium-other'
+                : typeof window.title === 'string' && window.title.length > 0
+                  ? 'other'
+                  : 'empty',
+          pid: Number.isSafeInteger(window.pid) ? window.pid : null,
+          windowId: Number.isSafeInteger(window.window_id) ? window.window_id : null,
+        }))
+      : [],
+  };
   if (windowResult.isError || !windowText.includes(marker))
     throw new Error('Computer did not see Browser Chromium on its desktop.');
-  const windows = windowResult.structuredContent?.windows;
   const fixtureWindow = Array.isArray(windows)
     ? windows.find((window) => window.title === marker)
     : undefined;
@@ -350,6 +372,7 @@ try {
             sandboxPageLoaded,
             namespaceSandbox: namespaceSandboxStatus,
             seccompBpf: seccompBpfStatus,
+            ...(computerWindowDiscovery ? { computerWindowDiscovery } : {}),
             chromiumProcessExited,
             chromiumExitSignal: chromiumExitSignal ?? null,
             stdoutBytes: chromiumStdoutBytes,
