@@ -7,14 +7,34 @@ import {
   readlinkSync,
   symlinkSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 /** Copy a read-only profile seed into a private tree owned by the current user. */
 export function copyProfileSeed(source, destination) {
+  copyEntry(resolve(source), resolve(destination), resolve(source), resolve(destination));
+}
+
+function copyEntry(source, destination, sourceRoot, destinationRoot) {
   const info = lstatSync(source);
 
   if (info.isSymbolicLink()) {
-    symlinkSync(readlinkSync(source), destination);
+    const linkTarget = readlinkSync(source);
+    const targetPath = isAbsolute(linkTarget)
+      ? resolve(linkTarget)
+      : resolve(dirname(source), linkTarget);
+    const relativeToRoot = relative(sourceRoot, targetPath);
+    const pointsInsideSeed =
+      relativeToRoot === '' ||
+      (relativeToRoot !== '..' &&
+        !relativeToRoot.startsWith(`..${sep}`) &&
+        !isAbsolute(relativeToRoot));
+    const mappedTarget = pointsInsideSeed
+      ? resolve(destinationRoot, relativeToRoot)
+      : targetPath;
+    const target = pointsInsideSeed
+      ? relative(dirname(destination), mappedTarget) || '.'
+      : mappedTarget;
+    symlinkSync(target, destination);
     return;
   }
 
@@ -22,7 +42,7 @@ export function copyProfileSeed(source, destination) {
     mkdirSync(destination, { mode: 0o700 });
     chmodSync(destination, 0o700);
     for (const entry of readdirSync(source))
-      copyProfileSeed(join(source, entry), join(destination, entry));
+      copyEntry(join(source, entry), join(destination, entry), sourceRoot, destinationRoot);
     return;
   }
 
