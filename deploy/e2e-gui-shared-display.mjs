@@ -68,10 +68,13 @@ const computerInputRoundTrip = {
   coordinateTypeFocusedField: false,
   elementTypeTargetUsed: false,
   typingInitialErrorClass: null,
+  typingRetryErrorClass: null,
   typingRetriedAfterFreshSnapshot: false,
   typingRecoveredAfterFreshSnapshot: false,
+  typingCoordinateFallbackUsed: false,
   typingRefreshErrorClass: null,
   submitSnapshotRefreshed: false,
+  submitCoordinateFallbackUsed: false,
   windowScreenshotWidth: null,
   windowScreenshotHeight: null,
   windowViewportWidth: null,
@@ -452,7 +455,11 @@ try {
       !computerInputRoundTrip.submitCoordinateAvailable
     )
       throw new Error('Computer coordinate fallback points are outside the shared window frame.');
-    const windowTarget = { window_id: fixtureWindow.window_id };
+    const windowTarget = {
+      pid: fixtureWindow.pid,
+      window_id: fixtureWindow.window_id,
+      session: computerSession,
+    };
     inputClickArguments = null;
     inputTypeArguments = {
       ...windowTarget,
@@ -516,8 +523,66 @@ try {
       },
     });
     if (typingResult.isError) {
-      computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typingResult);
-      throw new Error('Computer could not type into the fixture input after refreshing it.');
+      const retryErrorClass = classifyComputerToolError(typingResult);
+      computerInputRoundTrip.typingRetryErrorClass = retryErrorClass;
+      if (retryErrorClass !== 'stale-element') {
+        computerInputRoundTrip.typingErrorClass = retryErrorClass;
+        throw new Error('Computer could not type into the fixture input after refreshing it.');
+      }
+      stage = 'computer-refresh-before-coordinate-typing';
+      try {
+        freshState = await readWindowState();
+      } catch (error) {
+        computerInputRoundTrip.typingRefreshErrorClass =
+          error.computerErrorClass ?? classifyComputerToolError(error);
+        throw new Error('Computer could not refresh the fixture before coordinate typing.');
+      }
+      const freshScreenshot = freshState.content?.find(
+        (item) => item.type === 'image' && item.mimeType === 'image/png',
+      );
+      const freshDimensions = readPngDimensions(freshScreenshot);
+      const inputBounds = await page.locator('#fixture-input').boundingBox();
+      const viewport = await page.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scale: window.devicePixelRatio,
+      }));
+      if (!freshDimensions || !inputBounds || !Number.isFinite(viewport.scale)) {
+        computerInputRoundTrip.typingRefreshErrorClass = 'input-unavailable';
+        throw new Error('Computer could not locate the fixture input in the refreshed screenshot.');
+      }
+      const inputPoint = {
+        x: Math.round((inputBounds.x + inputBounds.width / 2) * viewport.scale),
+        y: Math.round((inputBounds.y + inputBounds.height / 2) * viewport.scale),
+      };
+      if (
+        freshDimensions.width !== Math.round(viewport.width * viewport.scale) ||
+        freshDimensions.height !== Math.round(viewport.height * viewport.scale) ||
+        inputPoint.x < 0 ||
+        inputPoint.y < 0 ||
+        inputPoint.x >= freshDimensions.width ||
+        inputPoint.y >= freshDimensions.height
+      ) {
+        computerInputRoundTrip.typingRefreshErrorClass = 'invalid-coordinate';
+        throw new Error('Computer input target left the refreshed Browser frame.');
+      }
+      computerInputRoundTrip.coordinateFallbackUsed = true;
+      computerInputRoundTrip.typingCoordinateFallbackUsed = true;
+      typingResult = await client.callTool({
+        name: 'type_text',
+        arguments: {
+          pid: fixtureWindow.pid,
+          window_id: fixtureWindow.window_id,
+          x: inputPoint.x,
+          y: inputPoint.y,
+          session: computerSession,
+          text: 'computer-input-confirmed',
+        },
+      });
+      if (typingResult.isError) {
+        computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typingResult);
+        throw new Error('Computer could not type into the fixture input by coordinates.');
+      }
     }
     computerInputRoundTrip.typingRecoveredAfterFreshSnapshot = true;
   }
@@ -537,7 +602,10 @@ try {
   }
   const submitStateData = submitState.structuredContent ?? {};
   const freshSubmit = findFixtureControls(submitStateData).submitControl;
-  if (computerInputRoundTrip.elementTypeTargetUsed) {
+  if (
+    computerInputRoundTrip.elementTypeTargetUsed &&
+    !computerInputRoundTrip.typingCoordinateFallbackUsed
+  ) {
     if (
       !freshSubmit ||
       typeof submitStateData.snapshot_id !== 'string' ||
@@ -578,11 +646,13 @@ try {
     )
       throw new Error('Computer Submit target left the refreshed Browser frame.');
     submitClickArguments = {
+      pid: fixtureWindow.pid,
       window_id: fixtureWindow.window_id,
       ...point,
       session: computerSession,
     };
     computerInputRoundTrip.submitSnapshotRefreshed = true;
+    computerInputRoundTrip.submitCoordinateFallbackUsed = true;
   }
   stage = 'computer-click-submit';
   const clickedSubmit = await client.callTool({
