@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   classifyChromiumStartupOutput,
+  hasSandboxedChromiumRenderer,
   summarizeChromiumDiagnosticLogs,
   summarizeChromiumSandboxStatus,
 } from './chromium-startup-diagnostics.mjs';
@@ -83,4 +84,22 @@ test('Chromium sandbox diagnostics report only yes, no, or missing statuses', ()
     namespaceSandbox: 'missing',
     seccompBpf: 'missing',
   });
+});
+
+test('requires a renderer process to have seccomp filtering', () => {
+  assert.equal(
+    hasSandboxedChromiumRenderer([
+      { cmdline: '/usr/bin/chromium\0', status: 'Seccomp:\t0\n' },
+      { cmdline: '/usr/bin/chromium\0--type=renderer\0', status: 'Seccomp:\t2\n' },
+    ]),
+    true,
+  );
+  assert.equal(
+    hasSandboxedChromiumRenderer([
+      { cmdline: '/usr/bin/chromium\0--type=utility\0', status: 'Seccomp:\t2\n' },
+      { cmdline: '/usr/bin/chromium\0--type=renderer\0', status: 'Seccomp:\t0\n' },
+    ]),
+    false,
+  );
+  assert.equal(hasSandboxedChromiumRenderer(undefined), false);
 });

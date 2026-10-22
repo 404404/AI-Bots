@@ -10,6 +10,7 @@ import { classifyComputerToolError } from './classify-computer-tool-error.mjs';
 import { summarizeComputerWindowState } from './summarize-computer-window-state.mjs';
 import {
   classifyChromiumStartupOutput,
+  hasSandboxedChromiumRenderer,
   summarizeChromiumDiagnosticLogs,
   summarizeChromiumSandboxStatus,
 } from './chromium-startup-diagnostics.mjs';
@@ -51,6 +52,7 @@ let browserFixtureOpened = false;
 let sandboxPageLoaded = false;
 let namespaceSandboxStatus = 'not-checked';
 let seccompBpfStatus = 'not-checked';
+let chromiumSandboxedRenderer = false;
 let computerWindowDiscovery;
 const computerInputRoundTrip = {
   windowStateSucceeded: false,
@@ -814,12 +816,33 @@ try {
     throw new Error('Chromium was launched with --no-sandbox.');
   if (!launchArgs.includes('--disable-setuid-sandbox'))
     throw new Error('Chromium was not explicitly configured for the user-namespace sandbox.');
-  const statusText = chromiumProcess.pid
-    ? readFileSync(`/proc/${chromiumProcess.pid}/status`, 'utf8')
-    : '';
-  const seccompMode = Number(statusText.match(/^Seccomp:\s+(\d+)/mu)?.[1] ?? 0);
-  if (seccompMode < 2)
-    throw new Error('Chromium browser process is not running with seccomp filtering.');
+  const processQueue = chromiumProcess.pid ? [chromiumProcess.pid] : [];
+  const visitedPids = new Set();
+  const chromiumProcesses = [];
+  while (processQueue.length > 0 && visitedPids.size < 512) {
+    const pid = processQueue.shift();
+    if (!Number.isSafeInteger(pid) || visitedPids.has(pid)) continue;
+    visitedPids.add(pid);
+    let cmdline;
+    let statusText;
+    try {
+      cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+      statusText = readFileSync(`/proc/${pid}/status`, 'utf8');
+    } catch {
+      continue;
+    }
+    chromiumProcesses.push({ cmdline, status: statusText });
+    try {
+      const children = readFileSync(`/proc/${pid}/task/${pid}/children`, 'utf8').trim();
+      for (const child of children.split(/\s+/u)) {
+        const childPid = Number(child);
+        if (Number.isSafeInteger(childPid) && childPid > 0) processQueue.push(childPid);
+      }
+    } catch {}
+  }
+  chromiumSandboxedRenderer = hasSandboxedChromiumRenderer(chromiumProcesses);
+  if (!chromiumSandboxedRenderer)
+    throw new Error('Chromium renderer process is not running with seccomp filtering.');
   report = {
     schemaVersion: 1,
     status: 'passed',
@@ -832,9 +855,9 @@ try {
     computerScreenshot: 'returned',
     ...(process.env['GUI_ACCEPTANCE_SCREENSHOT'] ? { screenshot: 'saved' } : {}),
     chromiumNoSandboxFlag: false,
+    sandboxedRenderer: chromiumSandboxedRenderer,
     namespaceSandbox: namespaceSandboxStatus,
     seccompBpf: seccompBpfStatus,
-    chromiumSeccompMode: seccompMode,
   };
 } catch {
   const sandboxStartupFailure =
@@ -894,6 +917,7 @@ try {
             sandboxPageLoaded,
             namespaceSandbox: namespaceSandboxStatus,
             seccompBpf: seccompBpfStatus,
+            sandboxedRenderer: chromiumSandboxedRenderer,
             ...(computerWindowDiscovery ? { computerWindowDiscovery } : {}),
             ...(stage.startsWith('computer-') || stage === 'browser-observe-input'
               ? { computerInputRoundTrip }

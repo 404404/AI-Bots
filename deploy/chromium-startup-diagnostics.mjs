@@ -46,6 +46,18 @@ export function summarizeChromiumSandboxStatus(text) {
   };
 }
 
+export function hasSandboxedChromiumRenderer(processes) {
+  if (!Array.isArray(processes)) return false;
+  return processes.some((process) => {
+    if (!process || typeof process !== 'object') return false;
+    const { cmdline, status } = process;
+    if (typeof cmdline !== 'string' || typeof status !== 'string') return false;
+    const args = cmdline.split('\0');
+    if (!args.includes('--type=renderer')) return false;
+    return Number(status.match(/^Seccomp:\s+(\d+)/mu)?.[1] ?? 0) >= 2;
+  });
+}
+
 export function summarizeChromiumDiagnosticLogs(...streams) {
   return streams
     .join('\n')

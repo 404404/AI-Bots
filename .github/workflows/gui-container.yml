@@ -57,6 +57,10 @@ jobs:
         run: node --test deploy/chromium-userns-seccomp.test.mjs
       - name: Test sanitized Chromium seccomp diagnostics
         run: node --test deploy/summarize-chromium-seccomp-trace.test.mjs
+      - name: Test sanitized Chromium startup and sandbox diagnostics
+        run: node --test deploy/chromium-startup-diagnostics.test.mjs
+      - name: Test the CI-only Chromium chroot diagnostic profile
+        run: node --test deploy/chromium-chroot-diagnostic-profile.test.mjs
       - name: Test sanitized Computer tool error diagnostics
         run: node --test deploy/classify-computer-tool-error.test.mjs
       - name: Test sanitized Computer window-state diagnostics
@@ -104,7 +108,7 @@ jobs:
             -v "$RUNNER_TEMP/dsh-cli-artifacts:/tmp/dsh-cli-artifacts" \
             ai-bots-gui:ci
           cleanup() {
-            docker rm -f dsh-gui-ci-unconfined >/dev/null 2>&1 || true
+            docker rm -f dsh-gui-ci-chroot-diagnostic >/dev/null 2>&1 || true
             docker rm -f dsh-gui-ci >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
@@ -166,43 +170,46 @@ jobs:
             node "$GITHUB_WORKSPACE/deploy/summarize-chromium-seccomp-trace.mjs" \
               "$trace_file" "$trace_attached"
             rm -f "$trace_file"
-            echo 'RUN: one-variable diagnostic control with Docker outer seccomp unconfined; Chromium sandbox remains enabled and this container is never published.'
-            mkdir -p "$RUNNER_TEMP/dsh-gui-ci-unconfined"
-            sudo chown 10001:10001 "$RUNNER_TEMP/dsh-gui-ci-unconfined"
-            docker run -d --name dsh-gui-ci-unconfined \
+            echo 'RUN: one-variable diagnostic control with only chroot added to the outer seccomp profile; Chromium sandbox remains enabled and this container is never published.'
+            diagnostic_profile="$RUNNER_TEMP/chromium-chroot-diagnostic-seccomp.json"
+            node "$GITHUB_WORKSPACE/deploy/chromium-chroot-diagnostic-profile.mjs" \
+              "$GITHUB_WORKSPACE/deploy/chromium-userns-seccomp.json" "$diagnostic_profile"
+            mkdir -p "$RUNNER_TEMP/dsh-gui-ci-chroot-diagnostic"
+            sudo chown 10001:10001 "$RUNNER_TEMP/dsh-gui-ci-chroot-diagnostic"
+            docker run -d --name dsh-gui-ci-chroot-diagnostic \
               --user 10001:10001 \
               --shm-size 512m \
               --memory 2g --cpus 1.5 --pids-limit 512 \
               --security-opt no-new-privileges:true --cap-drop ALL \
-              --security-opt seccomp=unconfined \
+              --security-opt "seccomp=$diagnostic_profile" \
               -e PUBLIC_URL=http://127.0.0.1:20443 \
-              -v "$RUNNER_TEMP/dsh-gui-ci-unconfined:/data/dsh" \
+              -v "$RUNNER_TEMP/dsh-gui-ci-chroot-diagnostic:/data/dsh" \
               ai-bots-gui:ci >/dev/null
-            unconfined_health=starting
+            chroot_diagnostic_health=starting
             for attempt in $(seq 1 90); do
-              unconfined_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dsh-gui-ci-unconfined 2>/dev/null || true)
-              [ "$unconfined_health" = healthy ] && break
-              [ "$unconfined_health" = unhealthy ] && break
+              chroot_diagnostic_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dsh-gui-ci-chroot-diagnostic 2>/dev/null || true)
+              [ "$chroot_diagnostic_health" = healthy ] && break
+              [ "$chroot_diagnostic_health" = unhealthy ] && break
               sleep 2
             done
-            unconfined_status=1
-            if [ "$unconfined_health" = healthy ]; then
+            chroot_diagnostic_status=1
+            if [ "$chroot_diagnostic_health" = healthy ]; then
               if docker exec --user 10001:10001 \
                 -e DISPLAY=:99 \
                 -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
-                dsh-gui-ci-unconfined dbus-run-session -- bash /opt/app/deploy/run-gui-acceptance-session.sh \
-                > "$RUNNER_TEMP/gui-unconfined.json" 2> "$RUNNER_TEMP/gui-unconfined.stderr"; then
-                unconfined_status=0
-                echo 'PASS: diagnostic control Browser/Computer shared display and Chromium sandbox acceptance.'
+                dsh-gui-ci-chroot-diagnostic dbus-run-session -- bash /opt/app/deploy/run-gui-acceptance-session.sh \
+                > "$RUNNER_TEMP/gui-chroot-diagnostic.json" 2> "$RUNNER_TEMP/gui-chroot-diagnostic.stderr"; then
+                chroot_diagnostic_status=0
+                echo 'PASS: chroot-only diagnostic Browser/Computer shared display and Chromium sandbox acceptance.'
               else
-                echo 'FAIL: diagnostic control Browser/Computer shared display and Chromium sandbox acceptance.'
+                echo 'FAIL: chroot-only diagnostic Browser/Computer shared display and Chromium sandbox acceptance.'
               fi
-              cat "$RUNNER_TEMP/gui-unconfined.json"
+              cat "$RUNNER_TEMP/gui-chroot-diagnostic.json"
             else
-              echo "FAIL: diagnostic control container health status was $unconfined_health."
+              echo "FAIL: chroot-only diagnostic container health status was $chroot_diagnostic_health."
             fi
-            echo "A/B result: production seccomp status=$gui_hardened_status; outer-seccomp-unconfined diagnostic status=$unconfined_status."
-            docker rm -f dsh-gui-ci-unconfined >/dev/null 2>&1 || true
+            echo "A/B result: production seccomp status=$gui_hardened_status; chroot-only diagnostic status=$chroot_diagnostic_status."
+            docker rm -f dsh-gui-ci-chroot-diagnostic >/dev/null 2>&1 || true
           fi
           umask 077
           echo 'RUN: seed a disposable Bot and DM through the authenticated DSH Host RPC for read-only CLI acceptance.'
@@ -352,7 +359,7 @@ jobs:
             "$RUNNER_TEMP/cli-fixture.json" "$RUNNER_TEMP/cli-readonly-before.json" \
             "$RUNNER_TEMP/cli-readonly-after.json"
           if [ "$gui_hardened_status" -ne 0 ]; then
-            echo 'FAIL: production Docker seccomp profile did not pass the GUI sandbox gate; the unconfined control is diagnostic only.'
+            echo 'FAIL: production Docker seccomp profile did not pass the GUI sandbox gate; the chroot-only control is diagnostic only.'
             exit "$gui_hardened_status"
           fi
 
