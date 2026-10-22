@@ -112,11 +112,6 @@ process.on('SIGINT', () => stop('SIGINT'));
 try {
   await delay(600);
   if (xvfb.exitCode !== null) throw new Error('Xvfb exited during GUI startup.');
-  const openboxPid = Number(readFileSync(`${runtimeDir}/openbox.pid`, 'utf8'));
-  if (!Number.isSafeInteger(openboxPid) || openboxPid < 2) {
-    throw new Error('Openbox did not start inside the D-Bus session.');
-  }
-  process.kill(openboxPid, 0);
   const dsh = '/opt/app/node_modules/@deepseek-ai/dsh/lib/bin.js';
   const args = [
     dsh,
@@ -187,6 +182,23 @@ try {
       }
     });
   }
+  let openboxPid;
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (xvfb.exitCode !== null) throw new Error('Xvfb exited during GUI startup.');
+    if (command.exitCode !== null)
+      throw new Error('DSH GUI Host exited before Openbox became ready.');
+    try {
+      openboxPid = Number(readFileSync(`${runtimeDir}/openbox.pid`, 'utf8'));
+      if (Number.isSafeInteger(openboxPid) && openboxPid > 1) {
+        process.kill(openboxPid, 0);
+        break;
+      }
+    } catch {
+      openboxPid = undefined;
+    }
+    await delay(100);
+  }
+  if (!openboxPid) throw new Error('Openbox did not start inside the D-Bus session.');
   const exit = await new Promise((resolve) => command.on('close', resolve));
   if (!stopping) process.exitCode = exit ?? 1;
 } finally {
