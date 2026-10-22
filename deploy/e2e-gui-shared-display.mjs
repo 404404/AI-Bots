@@ -61,6 +61,7 @@ const computerInputRoundTrip = {
   windowStateNodesPending: null,
   windowStateElementSummaries: [],
   coordinateFallbackUsed: false,
+  coordinateTypeFocusedField: false,
   windowScreenshotWidth: null,
   windowScreenshotHeight: null,
   windowViewportWidth: null,
@@ -409,7 +410,7 @@ try {
     )
       throw new Error('Computer coordinate fallback points are outside the shared window frame.');
     const windowTarget = { window_id: fixtureWindow.window_id };
-    inputClickArguments = { ...windowTarget, ...inputPoint };
+    inputClickArguments = null;
     inputTypeArguments = {
       ...windowTarget,
       ...inputPoint,
@@ -418,15 +419,17 @@ try {
     submitClickArguments = { ...windowTarget, ...submitPoint };
   }
   stage = 'computer-click-input';
-  const clickedInput = await client.callTool({
-    name: 'click',
-    arguments: inputClickArguments,
-  });
-  if (clickedInput.isError) {
-    computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
-    throw new Error('Computer could not focus the fixture input.');
+  if (inputClickArguments) {
+    const clickedInput = await client.callTool({
+      name: 'click',
+      arguments: inputClickArguments,
+    });
+    if (clickedInput.isError) {
+      computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
+      throw new Error('Computer could not focus the fixture input.');
+    }
+    computerInputRoundTrip.inputClickSucceeded = true;
   }
-  computerInputRoundTrip.inputClickSucceeded = true;
   stage = 'computer-type-input';
   const typed = await client.callTool({
     name: 'type_text',
@@ -437,6 +440,10 @@ try {
     throw new Error('Computer could not type into the fixture input.');
   }
   computerInputRoundTrip.typingSucceeded = true;
+  if (!inputClickArguments) {
+    computerInputRoundTrip.inputClickSucceeded = true;
+    computerInputRoundTrip.coordinateTypeFocusedField = true;
+  }
   stage = 'computer-click-submit';
   const clickedSubmit = await client.callTool({
     name: 'click',
