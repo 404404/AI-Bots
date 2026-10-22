@@ -20,13 +20,8 @@ allowBuilds:
 overrides:
   '@modelcontextprotocol/client': 2.2.0
   '@modelcontextprotocol/sdk': 1.32.0
-  'brace-expansion@^1': 1.1.20
-  'brace-expansion@^2': 2.1.7
-  'brace-expansion@^3': 3.0.8
-  'brace-expansion@^5': 5.0.12
   dockview: 8.4.1
   dockview-core: 8.4.1
-  ip-address: 10.7.2
   '@deepseek-ai/dsh-authorization': 0.2.1-rc.2
   '@deepseek-ai/dsh-brand': 0.2.1-rc.2
   '@deepseek-ai/dsh-credentials': 0.2.1-rc.2
@@ -37,10 +32,7 @@ overrides:
   '@deepseek-ai/dsh-util-values': 0.2.1-rc.2
   sharp: 0.35.5
   source-map-js: 1.2.2
-  tar: 7.5.21
-  'undici@^6': 6.28.1
   'undici@^7': 7.29.1
-  'undici@^8': 8.11.2
   vite: 8.3.3
 
 packageExtensions:

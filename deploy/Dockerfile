@@ -38,6 +38,8 @@ RUN apt-get update \
     libcups2 libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 libnss3 libx11-xcb1 libxcomposite1 \
     libxdamage1 libxfixes3 libxkbcommon0 libxrandr2 libxshmfence1 libxss1 libxtst6 \
     curl openbox tini x11-utils xauth xvfb iproute2 util-linux \
+ && npm install --global --ignore-scripts --no-audit --no-fund npm@12.2.1 \
+ && npm --version | grep -Fx '12.2.1' \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /data/dsh \
  && groupadd --gid 10001 dsh \
