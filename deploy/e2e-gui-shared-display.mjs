@@ -50,9 +50,15 @@ let namespaceSandboxStatus = 'not-checked';
 let seccompBpfStatus = 'not-checked';
 let computerWindowDiscovery;
 const computerInputRoundTrip = {
+  windowStateSucceeded: false,
+  inputControlFound: false,
+  submitControlFound: false,
   inputClickSucceeded: false,
+  inputClickErrorClass: null,
   typingSucceeded: false,
+  typingErrorClass: null,
   submitClickSucceeded: false,
+  submitClickErrorClass: null,
   browserObservedText: false,
 };
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
@@ -69,6 +75,26 @@ function readDevtoolsEndpoint(userDataDir) {
   } catch {
     return;
   }
+}
+
+function classifyComputerToolError(result) {
+  const details = [
+    result.structuredContent?.error?.code,
+    result.structuredContent?.code,
+    ...(result.content ?? []).map((item) => (item.type === 'text' ? item.text : '')),
+  ]
+    .filter((value) => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+  if (/stale[_ -]?(?:element|snapshot)|stale_element_token/u.test(details)) return 'stale-element';
+  if (/window[_ -]?(?:id[_ -]?)?not[_ -]?found|no windows? found/u.test(details))
+    return 'window-not-found';
+  if (/point[_ -]outside[_ -]window|invalid[_ -]coordinate/u.test(details))
+    return 'invalid-coordinate';
+  if (/background[_ -]unavailable|permission[_ -]denied|not permitted/u.test(details))
+    return 'input-unavailable';
+  if (/timed? ?out|timeout/u.test(details)) return 'timeout';
+  return 'tool-error';
 }
 
 try {
@@ -213,7 +239,11 @@ try {
   process.stdout.write('PASS: Computer MCP driver connected.\n');
   const tools = await client.listTools();
   const names = tools.tools.map((tool) => tool.name);
-  if (!names.includes('list_windows') || !names.includes('get_desktop_state'))
+  if (
+    !names.includes('list_windows') ||
+    !names.includes('get_window_state') ||
+    !names.includes('get_desktop_state')
+  )
     throw new Error(
       'The pinned Computer driver did not expose the expected read-only desktop tools.',
     );
@@ -257,27 +287,72 @@ try {
   )
     throw new Error('Computer did not return stable process and window IDs for Browser Chromium.');
   process.stdout.write('PASS: Computer sees Browser Chromium on the shared display.\n');
-  stage = 'computer-click-input';
+  stage = 'computer-window-state';
   const windowArgs = { pid: fixtureWindow.pid, window_id: fixtureWindow.window_id };
+  const windowState = await client.callTool({
+    name: 'get_window_state',
+    arguments: { ...windowArgs, include_screenshot: false },
+  });
+  if (windowState.isError) throw new Error('Computer could not inspect the fixture controls.');
+  computerInputRoundTrip.windowStateSucceeded = true;
+  const elements = windowState.structuredContent?.elements;
+  const controls = Array.isArray(elements)
+    ? elements.map((element) => {
+        const role = typeof element.role === 'string' ? element.role.toLowerCase() : '';
+        const label = [element.label, element.name, element.value]
+          .filter((value) => typeof value === 'string')
+          .join(' ')
+          .toLowerCase();
+        return { element, role, label };
+      })
+    : [];
+  const inputControl = controls.find(
+    ({ element, role, label }) =>
+      typeof element.element_token === 'string' &&
+      /(?:text|entry|input)/u.test(role) &&
+      label.includes('input'),
+  )?.element;
+  const submitControl = controls.find(
+    ({ element, role, label }) =>
+      typeof element.element_token === 'string' &&
+      /(?:button|push button)/u.test(role) &&
+      label.includes('submit'),
+  )?.element;
+  computerInputRoundTrip.inputControlFound = Boolean(inputControl);
+  computerInputRoundTrip.submitControlFound = Boolean(submitControl);
+  if (!inputControl || !submitControl)
+    throw new Error(
+      'Computer could not find the fixture input and submit button in its window state.',
+    );
+  stage = 'computer-click-input';
   const clickedInput = await client.callTool({
     name: 'click',
-    arguments: { ...windowArgs, x: 260, y: 110 },
+    arguments: { element_token: inputControl.element_token },
   });
-  if (clickedInput.isError) throw new Error('Computer could not focus the fixture input.');
+  if (clickedInput.isError) {
+    computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
+    throw new Error('Computer could not focus the fixture input.');
+  }
   computerInputRoundTrip.inputClickSucceeded = true;
   stage = 'computer-type-input';
   const typed = await client.callTool({
     name: 'type_text',
-    arguments: { ...windowArgs, text: 'computer-input-confirmed' },
+    arguments: { element_token: inputControl.element_token, text: 'computer-input-confirmed' },
   });
-  if (typed.isError) throw new Error('Computer could not type into the fixture input.');
+  if (typed.isError) {
+    computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typed);
+    throw new Error('Computer could not type into the fixture input.');
+  }
   computerInputRoundTrip.typingSucceeded = true;
   stage = 'computer-click-submit';
   const clickedSubmit = await client.callTool({
     name: 'click',
-    arguments: { ...windowArgs, x: 510, y: 110 },
+    arguments: { element_token: submitControl.element_token },
   });
-  if (clickedSubmit.isError) throw new Error('Computer could not submit the fixture form.');
+  if (clickedSubmit.isError) {
+    computerInputRoundTrip.submitClickErrorClass = classifyComputerToolError(clickedSubmit);
+    throw new Error('Computer could not submit the fixture form.');
+  }
   computerInputRoundTrip.submitClickSucceeded = true;
   stage = 'browser-observe-input';
   await page.waitForFunction(
