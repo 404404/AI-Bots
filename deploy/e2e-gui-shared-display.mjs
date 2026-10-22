@@ -53,6 +53,12 @@ let sandboxPageLoaded = false;
 let namespaceSandboxStatus = 'not-checked';
 let seccompBpfStatus = 'not-checked';
 let chromiumSandboxedRenderer = false;
+const chromiumLaunchSecuritySummary = {
+  processIdAvailable: false,
+  wrapperRead: false,
+  noSandboxFlag: false,
+  userNamespaceSandboxFlag: false,
+};
 let chromiumRendererSandboxSummary;
 let chromiumProcessScanSummary = {
   visitedProcessCount: 0,
@@ -815,13 +821,17 @@ try {
     );
   }
   stage = 'chromium-seccomp-process';
-  const argumentsText = chromiumProcess.pid
-    ? readFileSync(`/proc/${chromiumProcess.pid}/cmdline`, 'utf8')
-    : '';
-  const launchArgs = argumentsText.split('\0');
-  if (launchArgs.includes('--no-sandbox'))
+  chromiumLaunchSecuritySummary.processIdAvailable = Number.isSafeInteger(chromiumProcess?.pid);
+  const launchArgs = Array.isArray(chromiumProcess?.spawnargs) ? chromiumProcess.spawnargs : [];
+  const wrapperSource = readFileSync('/usr/local/bin/deepseekbot-chromium', 'utf8');
+  chromiumLaunchSecuritySummary.wrapperRead = true;
+  chromiumLaunchSecuritySummary.noSandboxFlag =
+    launchArgs.includes('--no-sandbox') || /(?:^|\s)--no-sandbox(?:\s|$)/mu.test(wrapperSource);
+  chromiumLaunchSecuritySummary.userNamespaceSandboxFlag =
+    /(?:^|\s)--disable-setuid-sandbox(?:\s|$)/mu.test(wrapperSource);
+  if (chromiumLaunchSecuritySummary.noSandboxFlag)
     throw new Error('Chromium was launched with --no-sandbox.');
-  if (!launchArgs.includes('--disable-setuid-sandbox'))
+  if (!chromiumLaunchSecuritySummary.userNamespaceSandboxFlag)
     throw new Error('Chromium was not explicitly configured for the user-namespace sandbox.');
   const processQueue = chromiumProcess.pid ? [chromiumProcess.pid] : [];
   const visitedPids = new Set();
@@ -868,6 +878,7 @@ try {
     computerScreenshot: 'returned',
     ...(process.env['GUI_ACCEPTANCE_SCREENSHOT'] ? { screenshot: 'saved' } : {}),
     chromiumNoSandboxFlag: false,
+    chromiumLaunchSecurity: chromiumLaunchSecuritySummary,
     sandboxedRenderer: chromiumSandboxedRenderer,
     chromiumProcessScan: chromiumProcessScanSummary,
     chromiumRendererSandbox: chromiumRendererSandboxSummary,
@@ -932,6 +943,7 @@ try {
             sandboxPageLoaded,
             namespaceSandbox: namespaceSandboxStatus,
             seccompBpf: seccompBpfStatus,
+            chromiumLaunchSecurity: chromiumLaunchSecuritySummary,
             sandboxedRenderer: chromiumSandboxedRenderer,
             chromiumProcessScan: chromiumProcessScanSummary,
             ...(chromiumRendererSandboxSummary

@@ -24,6 +24,10 @@ test('Chromium seccomp trace reports bounded syscall and SIGTRAP context without
       { name: 'io_uring_setup', errno: 'EPERM', count: 1 },
       { name: 'openat', errno: 'ENOENT', count: 1 },
     ],
+    failedCloneCalls: [
+      { syscall: 'clone', errno: 'EPERM', namespaceFlags: ['CLONE_NEWPID'], count: 1 },
+      { syscall: 'clone3', errno: 'ENOSYS', namespaceFlags: ['CLONE_NEWUSER'], count: 1 },
+    ],
     sigtrapContexts: [
       {
         processIndex: 1,

@@ -29,6 +29,7 @@ function summarizeCloneCall(line, syscall, errno) {
 
 export function summarizeChromiumSeccompTrace(input, traceAttached = false) {
   const counts = new Map();
+  const failedCloneCalls = new Map();
   const processIndexes = new Map();
   const recentFailures = new Map();
   const recentCloneCalls = new Map();
@@ -53,6 +54,8 @@ export function summarizeChromiumSeccompTrace(input, traceAttached = false) {
       recentFailures.set(pid, entries.slice(-8));
       const cloneCall = summarizeCloneCall(line, name, errno);
       if (cloneCall) {
+        const cloneKey = `${cloneCall.syscall}:${cloneCall.errno}:${cloneCall.namespaceFlags.join(',')}`;
+        failedCloneCalls.set(cloneKey, (failedCloneCalls.get(cloneKey) ?? 0) + 1);
         const cloneCalls = recentCloneCalls.get(pid) ?? [];
         cloneCalls.push(cloneCall);
         recentCloneCalls.set(pid, cloneCalls.slice(-8));
@@ -88,6 +91,18 @@ export function summarizeChromiumSeccompTrace(input, traceAttached = false) {
     schemaVersion: 1,
     traceAttached,
     failedSyscalls,
+    failedCloneCalls: [...failedCloneCalls.entries()]
+      .map(([key, count]) => {
+        const [syscall, errno, namespaceFlags] = key.split(':');
+        return {
+          syscall,
+          errno,
+          namespaceFlags: namespaceFlags ? namespaceFlags.split(',') : [],
+          count,
+        };
+      })
+      .sort((a, b) => b.count - a.count || a.syscall.localeCompare(b.syscall))
+      .slice(0, 8),
     sigtrapContexts: sigtrapContexts.slice(-8),
   };
 }
