@@ -4,10 +4,34 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const CLONE_NAMESPACE_FLAGS = [
+  'CLONE_NEWCGROUP',
+  'CLONE_NEWIPC',
+  'CLONE_NEWNET',
+  'CLONE_NEWNS',
+  'CLONE_NEWPID',
+  'CLONE_NEWTIME',
+  'CLONE_NEWUSER',
+  'CLONE_NEWUTS',
+];
+
+function summarizeCloneCall(line, syscall, errno) {
+  if (syscall !== 'clone' && syscall !== 'clone3') return undefined;
+  const flagsText = /\bflags=([^,})]+)/u.exec(line)?.[1];
+  if (!flagsText) return undefined;
+  const flagNames = new Set(flagsText.split(/[^A-Z0-9_]+/u));
+  return {
+    syscall,
+    errno,
+    namespaceFlags: CLONE_NAMESPACE_FLAGS.filter((name) => flagNames.has(name)),
+  };
+}
+
 export function summarizeChromiumSeccompTrace(input, traceAttached = false) {
   const counts = new Map();
   const processIndexes = new Map();
   const recentFailures = new Map();
+  const recentCloneCalls = new Map();
   const sigtrapContexts = [];
   const processIndex = (pid) => {
     if (!processIndexes.has(pid)) processIndexes.set(pid, processIndexes.size + 1);
@@ -27,6 +51,12 @@ export function summarizeChromiumSeccompTrace(input, traceAttached = false) {
       const entries = recentFailures.get(pid) ?? [];
       entries.push(key);
       recentFailures.set(pid, entries.slice(-8));
+      const cloneCall = summarizeCloneCall(line, name, errno);
+      if (cloneCall) {
+        const cloneCalls = recentCloneCalls.get(pid) ?? [];
+        cloneCalls.push(cloneCall);
+        recentCloneCalls.set(pid, cloneCalls.slice(-8));
+      }
     }
 
     const pidMatch = /^\s*(?:\[pid\s+(\d+)\]|(\d+))\s+/u.exec(line);
@@ -41,6 +71,7 @@ export function summarizeChromiumSeccompTrace(input, traceAttached = false) {
         processIndex: processIndex(pid),
         signal,
         precedingFailedSyscalls: recentFailures.get(pid) ?? [],
+        precedingCloneCalls: recentCloneCalls.get(pid) ?? [],
       });
     }
   }

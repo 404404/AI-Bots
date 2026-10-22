@@ -22,6 +22,18 @@ test('diagnostic profile preserves default deny and adds only an unconditional c
   assert.equal(JSON.stringify(productionProfile), original);
 });
 
+test('CI clone diagnostic profile adds exactly chroot and clone without changing other policy', () => {
+  const diagnostic = createChromiumChrootDiagnosticProfile(productionProfile, ['clone']);
+
+  assert.equal(diagnostic.defaultAction, 'SCMP_ACT_ERRNO');
+  assert.deepEqual(diagnostic.archMap, productionProfile.archMap);
+  assert.deepEqual(diagnostic.syscalls.slice(0, -2), productionProfile.syscalls);
+  assert.deepEqual(diagnostic.syscalls.slice(-2), [
+    { names: ['chroot'], action: 'SCMP_ACT_ALLOW' },
+    { names: ['clone'], action: 'SCMP_ACT_ALLOW' },
+  ]);
+});
+
 test('diagnostic profile rejects anything other than the default-deny policy shape', () => {
   assert.throws(
     () => createChromiumChrootDiagnosticProfile({ defaultAction: 'SCMP_ACT_ALLOW', syscalls: [] }),
@@ -30,5 +42,9 @@ test('diagnostic profile rejects anything other than the default-deny policy sha
   assert.throws(
     () => createChromiumChrootDiagnosticProfile({ defaultAction: 'SCMP_ACT_ERRNO' }),
     /default-deny/u,
+  );
+  assert.throws(
+    () => createChromiumChrootDiagnosticProfile(productionProfile, ['mount']),
+    /Only the CI diagnostic clone syscall/u,
   );
 });
