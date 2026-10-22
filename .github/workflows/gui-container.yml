@@ -51,6 +51,8 @@ jobs:
         run: node --test deploy/copy-profile-seed.test.mjs
       - name: Test loopback forwarding for authenticated online CLI
         run: node --test deploy/loopback-host-proxy.test.mjs
+      - name: Verify the Chromium user-namespace seccomp extension
+        run: node --test deploy/chromium-userns-seccomp.test.mjs
       - name: Validate Compose files
         env:
           IMAGE_REF: ghcr.io/404404/ai-bots@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -85,6 +87,7 @@ jobs:
             --shm-size 512m \
             --memory 2g --cpus 1.5 --pids-limit 512 \
             --security-opt no-new-privileges:true --cap-drop ALL \
+            --security-opt "seccomp=$GITHUB_WORKSPACE/deploy/chromium-userns-seccomp.json" \
             -e PUBLIC_URL=http://127.0.0.1:20443 \
             -v "$RUNNER_TEMP/dsh-gui-ci:/data/dsh" \
             ai-bots-gui:ci
@@ -98,6 +101,9 @@ jobs:
           done
           [ "$(docker inspect --format '{{.State.Health.Status}}' dsh-gui-ci)" = healthy ] || { docker logs dsh-gui-ci; exit 1; }
           echo 'PASS: GUI container became healthy.'
+          docker exec --user 10001:10001 dsh-gui-ci \
+            unshare --user --map-root-user sh -c '[ "$(id -u)" -eq 0 ]'
+          echo 'PASS: Chromium unprivileged user namespace is available with the default container AppArmor profile.'
           umask 077
           echo 'RUN: authenticated online CLI before Host restart.'
           if docker exec --user 10001:10001 dsh-gui-ci \

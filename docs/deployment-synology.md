@@ -1,12 +1,13 @@
 # Synology DSM deployment sample
 
-The repository includes [`deploy/compose.synology.yml`](../deploy/compose.synology.yml) for DSM Container Manager. It keeps the DSH Home under one bind-mounted `/volume1/docker/deepseekbot/data` directory and binds the service to loopback, so remote browser access requires an SSH tunnel. Set the share owner in `.env` with the matching `PUID` and `PGID`, and use a verified free port from `20443`, `21443`, or `22443`.
+The repository includes [`deploy/compose.synology.yml`](../deploy/compose.synology.yml) and its [`chromium-userns-seccomp.json`](../deploy/chromium-userns-seccomp.json) profile for DSM Container Manager. Keep both files in the Compose project directory so Docker can load the profile. It keeps the DSH Home under one bind-mounted `/volume1/docker/deepseekbot/data` directory and binds the service to loopback, so remote browser access requires an SSH tunnel. Set the share owner in `.env` with the matching `PUID` and `PGID`, and use a verified free port from `20443`, `21443`, or `22443`.
 
 Example folder layout:
 
 ```text
 /volume1/docker/deepseekbot/
   compose.synology.yml
+  chromium-userns-seccomp.json
   .env
   data/                 # persistent DSH Home; do not replace on upgrade
 ```
@@ -17,6 +18,6 @@ Codex Browser login uses the loopback callback on port `1455`; forward it only t
 
 ## Device verification status
 
-**Not Tested on DSM.** This environment does not have access to a Synology DSM/Container Manager host. Therefore there is no claim that Chromium's user namespace or setuid sandbox works on DSM, that DSM accepts the Compose capability policy, or that Browser and Computer share the display correctly there. Do not disable Chromium's sandbox or relax DSM-wide security settings to make the sample start. Follow the acceptance checklist in [`gui-container-acceptance.md`](gui-container-acceptance.md) on the target DSM device and record its model, DSM/Container Manager versions, image digest and observed results before treating this sample as supported.
+**Not Tested on DSM.** This environment does not have access to a Synology DSM/Container Manager host. Therefore there is no claim that Chromium's user-namespace sandbox works on DSM, that DSM Container Manager accepts the custom Compose seccomp profile, or that Browser and Computer share the display correctly there. Do not disable Chromium's sandbox or relax DSM-wide security settings to make the sample start. Follow the acceptance checklist in [`gui-container-acceptance.md`](gui-container-acceptance.md) on the target DSM device and record its model, DSM/Container Manager versions, image digest and observed results before treating this sample as supported.
 
 The sample binds the Web Host to loopback but does not filter container egress. Treat it as a trusted, single-user proof of concept; do not expose untrusted Bots or pages to network services reachable from the NAS. Production use needs a reviewed policy for LAN, link-local and cloud-metadata destinations.
