@@ -25,6 +25,7 @@ let client;
 let transport;
 let server;
 let report;
+let stage = 'fixture-server';
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
 
 try {
@@ -48,7 +49,9 @@ try {
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Fixture listener did not bind.');
   const fixture = `http://127.0.0.1:${address.port}/fixture`;
+  process.stdout.write('PASS: local Browser fixture is ready.\n');
 
+  stage = 'chromium-startup';
   const userDataDir = join(directory, 'browser-profile');
   chromiumProcess = spawn(
     '/usr/bin/chromium',
@@ -87,16 +90,21 @@ try {
   browser = await chromium.connectOverCDP(devtoolsEndpoint);
   const page = browser.contexts()[0]?.pages()[0];
   if (!page) throw new Error('Chromium did not open its initial Browser page.');
+  stage = 'browser-fixture';
   await page.goto(fixture, { waitUntil: 'domcontentloaded', timeout: 20_000 });
   if ((await page.title()) !== marker)
     throw new Error('Visible Chromium did not open the fixture page.');
+  process.stdout.write('PASS: visible Browser Chromium opened the fixture.\n');
+  stage = 'chromium-sandbox';
   await page.goto('chrome://sandbox/', { waitUntil: 'domcontentloaded', timeout: 20_000 });
   const sandboxText = await page.locator('body').innerText();
   const sandboxLine = sandboxText.split('\n').find((line) => /Seccomp-BPF sandbox/iu.test(line));
   if (!sandboxLine || !/\byes\b/iu.test(sandboxLine))
     throw new Error('Chromium did not report its Seccomp-BPF sandbox as enabled.');
+  process.stdout.write('PASS: chrome://sandbox reports Seccomp-BPF enabled.\n');
   await page.goto(fixture, { waitUntil: 'domcontentloaded', timeout: 20_000 });
 
+  stage = 'computer-driver-connect';
   transport = new StdioClientTransport({
     command: driver,
     args: ['mcp', '--direct', '--embedded'],
@@ -108,12 +116,14 @@ try {
     { capabilities: {} },
   );
   await client.connect(transport);
+  process.stdout.write('PASS: Computer MCP driver connected.\n');
   const tools = await client.listTools();
   const names = tools.tools.map((tool) => tool.name);
   if (!names.includes('list_windows') || !names.includes('get_desktop_state'))
     throw new Error(
       'The pinned Computer driver did not expose the expected read-only desktop tools.',
     );
+  stage = 'computer-window-discovery';
   const windowResult = await client.callTool({ name: 'list_windows', arguments: {} });
   const windowPayload = windowResult.structuredContent ?? windowResult.content ?? [];
   const windowText = JSON.stringify(windowPayload);
@@ -129,6 +139,8 @@ try {
     typeof fixtureWindow.window_id !== 'number'
   )
     throw new Error('Computer did not return stable process and window IDs for Browser Chromium.');
+  process.stdout.write('PASS: Computer sees Browser Chromium on the shared display.\n');
+  stage = 'computer-input-roundtrip';
   const windowArgs = { pid: fixtureWindow.pid, window_id: fixtureWindow.window_id };
   const clickedInput = await client.callTool({
     name: 'click',
@@ -150,11 +162,14 @@ try {
     undefined,
     { timeout: 10_000 },
   );
+  process.stdout.write('PASS: Browser observed the Computer click and typed input.\n');
+  stage = 'computer-screenshot';
   const desktop = await client.callTool({ name: 'get_desktop_state', arguments: {} });
   const screenshot = desktop.content?.find(
     (item) => item.type === 'image' && item.mimeType === 'image/png',
   );
   if (!screenshot) throw new Error('Computer did not return a desktop screenshot.');
+  process.stdout.write('PASS: Computer returned a desktop screenshot.\n');
   if (process.env['GUI_ACCEPTANCE_SCREENSHOT']) {
     writeFileSync(
       process.env['GUI_ACCEPTANCE_SCREENSHOT'],
@@ -164,6 +179,7 @@ try {
       },
     );
   }
+  stage = 'chromium-seccomp-process';
   const argumentsText = chromiumProcess.pid
     ? readFileSync(`/proc/${chromiumProcess.pid}/cmdline`, 'utf8')
     : '';
@@ -192,9 +208,10 @@ try {
   report = {
     schemaVersion: 1,
     status: 'failed',
-    errorCode: error?.message?.includes('sandbox')
+    errorCode: /sandbox|seccomp/iu.test(stage)
       ? 'chromium-sandbox-failed'
       : 'shared-display-failed',
+    failedAt: stage,
   };
   process.exitCode = 1;
 } finally {
