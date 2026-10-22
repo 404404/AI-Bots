@@ -25,6 +25,7 @@ const { StdioClientTransport } = requireComputer('@modelcontextprotocol/client/s
 if (process.env['DISPLAY'] !== ':99' || !process.env['XAUTHORITY'])
   throw new Error('The GUI acceptance must run in the container Host desktop environment.');
 const driver = `${process.env['HOME']}/.botharness/cua-driver/0.31.0/linux-x86_64/cua-driver`;
+const computerSession = 'dsh-gui-acceptance';
 const marker = `DSH-GUI-SHARED-DISPLAY-${Date.now()}`;
 let browser;
 let chromiumProcess;
@@ -62,6 +63,7 @@ const computerInputRoundTrip = {
   windowStateElementSummaries: [],
   windowStateSnapshotIdAvailable: false,
   inputTokenMatchesSnapshot: false,
+  computerSessionFieldSupported: false,
   coordinateFallbackUsed: false,
   coordinateTypeFocusedField: false,
   elementTypeTargetUsed: false,
@@ -290,11 +292,20 @@ try {
   if (
     !names.includes('list_windows') ||
     !names.includes('get_window_state') ||
-    !names.includes('get_desktop_state')
+    !names.includes('get_desktop_state') ||
+    !names.includes('click') ||
+    !names.includes('type_text')
   )
-    throw new Error(
-      'The pinned Computer driver did not expose the expected read-only desktop tools.',
-    );
+    throw new Error('The pinned Computer driver did not expose the required desktop tools.');
+  const sessionToolNames = ['get_window_state', 'get_desktop_state', 'click', 'type_text'];
+  computerInputRoundTrip.computerSessionFieldSupported = sessionToolNames.every((name) => {
+    const tool = tools.tools.find((candidate) => candidate.name === name);
+    return Object.hasOwn(tool?.inputSchema?.properties ?? {}, 'session');
+  });
+  if (!computerInputRoundTrip.computerSessionFieldSupported) {
+    stage = 'computer-session-contract';
+    throw new Error('The pinned Computer driver does not expose explicit session fields.');
+  }
   stage = 'computer-window-discovery';
   const windowResult = await client.callTool({ name: 'list_windows', arguments: {} });
   const windowPayload = windowResult.structuredContent ?? windowResult.content ?? [];
@@ -342,6 +353,7 @@ try {
       name: 'get_window_state',
       arguments: {
         ...windowArgs,
+        session: computerSession,
         include_screenshot: true,
         max_image_dimension: 0,
         timeout_ms: 5_000,
@@ -390,6 +402,7 @@ try {
     inputClickArguments = null;
     inputTypeArguments = {
       element_token: inputControl.element_token,
+      session: computerSession,
       text: 'computer-input-confirmed',
     };
     submitClickArguments = { element_token: submitControl.element_token };
@@ -444,6 +457,7 @@ try {
     inputTypeArguments = {
       ...windowTarget,
       ...inputPoint,
+      session: computerSession,
       text: 'computer-input-confirmed',
     };
     submitClickArguments = { ...windowTarget, ...submitPoint };
@@ -497,6 +511,7 @@ try {
       name: 'type_text',
       arguments: {
         element_token: freshInput.element_token,
+        session: computerSession,
         text: 'computer-input-confirmed',
       },
     });
@@ -531,7 +546,10 @@ try {
       computerInputRoundTrip.typingRefreshErrorClass = 'stale-element';
       throw new Error('Computer could not resolve Submit from the latest observation.');
     }
-    submitClickArguments = { element_token: freshSubmit.element_token };
+    submitClickArguments = {
+      element_token: freshSubmit.element_token,
+      session: computerSession,
+    };
     computerInputRoundTrip.submitSnapshotRefreshed = true;
   } else {
     const freshScreenshot = submitState.content?.find(
@@ -559,7 +577,11 @@ try {
       point.y >= freshDimensions.height
     )
       throw new Error('Computer Submit target left the refreshed Browser frame.');
-    submitClickArguments = { window_id: fixtureWindow.window_id, ...point };
+    submitClickArguments = {
+      window_id: fixtureWindow.window_id,
+      ...point,
+      session: computerSession,
+    };
     computerInputRoundTrip.submitSnapshotRefreshed = true;
   }
   stage = 'computer-click-submit';
@@ -581,7 +603,10 @@ try {
   computerInputRoundTrip.browserObservedText = true;
   process.stdout.write('PASS: Browser observed the Computer click and typed input.\n');
   stage = 'computer-screenshot';
-  const desktop = await client.callTool({ name: 'get_desktop_state', arguments: {} });
+  const desktop = await client.callTool({
+    name: 'get_desktop_state',
+    arguments: { session: computerSession },
+  });
   const screenshot = desktop.content?.find(
     (item) => item.type === 'image' && item.mimeType === 'image/png',
   );
