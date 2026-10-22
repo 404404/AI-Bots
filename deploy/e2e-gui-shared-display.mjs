@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
+import { execFileSync, spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
-import { spawn } from 'node:child_process';
+import { classifyChromiumStartupOutput } from './chromium-startup-diagnostics.mjs';
 
 const requireBrowser = createRequire(new URL('../packages/browser/package.json', import.meta.url));
 const requireComputer = createRequire(
@@ -30,6 +31,11 @@ let server;
 let report;
 let stage = 'fixture-server';
 let chromiumStartupOutput = '';
+let chromiumStdoutOutput = '';
+let chromiumStderrOutput = '';
+let chromiumVersion = 'unavailable';
+let chromiumStdoutBytes = 0;
+let chromiumStderrBytes = 0;
 let devtoolsEndpoint;
 let devtoolsLogSignal = false;
 let devtoolsPortFileReady = false;
@@ -50,29 +56,17 @@ function readDevtoolsEndpoint(userDataDir) {
 }
 
 try {
-  server = createServer((request, response) => {
-    if (request.url !== '/fixture') {
-      response.writeHead(404).end();
-      return;
-    }
-    response.writeHead(200, {
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'no-store',
-    });
-    response.end(
-      `<!doctype html><html><head><title>${marker}</title><style>body{font:24px sans-serif}main{position:absolute;left:100px;top:40px}h1{margin:0 0 16px}input,button{font:24px sans-serif;height:56px}input{width:320px}button{width:180px}</style></head><body><main><h1>${marker}</h1><label>Input <input id="fixture-input" autocomplete="off"></label><button id="fixture-submit" type="button" onclick="document.querySelector('#fixture-result').textContent=document.querySelector('#fixture-input').value">Submit</button><output id="fixture-result"></output></main></body></html>`,
-    );
-  });
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
-  });
-  const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Fixture listener did not bind.');
-  const fixture = `http://127.0.0.1:${address.port}/fixture`;
-  process.stdout.write('PASS: local Browser fixture is ready.\n');
-
   stage = 'chromium-startup';
+  try {
+    const version = execFileSync('/usr/bin/chromium', ['--version'], {
+      encoding: 'utf8',
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 5_000,
+    }).trim();
+    const match = /^Chromium \d+(?:\.\d+){1,3}/u.exec(version);
+    if (match) chromiumVersion = match[0];
+  } catch {}
   const userDataDir = join(directory, 'browser-profile');
   chromiumProcess = spawn(
     '/usr/local/bin/deepseekbot-chromium',
@@ -111,7 +105,14 @@ try {
       devtoolsPortFileReady = true;
       finish();
     }, 100);
-    const onOutput = (chunk) => {
+    const onOutput = (stream) => (chunk) => {
+      if (stream === 'stdout') {
+        chromiumStdoutOutput = `${chromiumStdoutOutput}${chunk}`.slice(-65_536);
+        chromiumStdoutBytes += Buffer.byteLength(chunk);
+      } else {
+        chromiumStderrOutput = `${chromiumStderrOutput}${chunk}`.slice(-65_536);
+        chromiumStderrBytes += Buffer.byteLength(chunk);
+      }
       chromiumStartupOutput = `${chromiumStartupOutput}${chunk}`.slice(-65_536);
       const match = /DevTools listening on (ws:\/\/[^\s]+)/u.exec(chromiumStartupOutput);
       if (!match) return;
@@ -125,18 +126,39 @@ try {
         : 'other';
       finish(error);
     });
-    chromiumProcess.once('exit', (_code, signal) => {
+    chromiumProcess.once('close', (_code, signal) => {
       chromiumProcessExited = true;
       chromiumExitSignal = signal ?? undefined;
       finish(new Error('Chromium exited during startup.'));
     });
-    chromiumProcess.stdout.on('data', onOutput);
-    chromiumProcess.stderr.on('data', onOutput);
+    chromiumProcess.stdout.on('data', onOutput('stdout'));
+    chromiumProcess.stderr.on('data', onOutput('stderr'));
   });
   if (!devtoolsEndpoint) throw new Error('Chromium did not report its DevTools endpoint.');
   browser = await chromium.connectOverCDP(devtoolsEndpoint);
   const page = browser.contexts()[0]?.pages()[0];
   if (!page) throw new Error('Chromium did not open its initial Browser page.');
+  server = createServer((request, response) => {
+    if (request.url !== '/fixture') {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+    });
+    response.end(
+      `<!doctype html><html><head><title>${marker}</title><style>body{font:24px sans-serif}main{position:absolute;left:100px;top:40px}h1{margin:0 0 16px}input,button{font:24px sans-serif;height:56px}input{width:320px}button{width:180px}</style></head><body><main><h1>${marker}</h1><label>Input <input id="fixture-input" autocomplete="off"></label><button id="fixture-submit" type="button" onclick="document.querySelector('#fixture-result').textContent=document.querySelector('#fixture-input').value">Submit</button><output id="fixture-result"></output></main></body></html>`,
+    );
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Fixture listener did not bind.');
+  const fixture = `http://127.0.0.1:${address.port}/fixture`;
+  process.stdout.write('PASS: local Browser fixture is ready.\n');
   stage = 'browser-fixture';
   await page.goto(fixture, { waitUntil: 'domcontentloaded', timeout: 20_000 });
   if ((await page.title()) !== marker)
@@ -248,6 +270,7 @@ try {
   report = {
     schemaVersion: 1,
     status: 'passed',
+    chromiumVersion,
     display: process.env['DISPLAY'],
     browserTitleSeenByComputer: true,
     computerClickAndTypingObservedByBrowser: true,
@@ -276,6 +299,13 @@ try {
       ? {
           chromiumStartupSignals: {
             processExited: chromiumProcessExited,
+            chromiumVersion,
+            stdoutBytes: chromiumStdoutBytes,
+            stderrBytes: chromiumStderrBytes,
+            diagnosticCategories: classifyChromiumStartupOutput(
+              chromiumStdoutOutput,
+              chromiumStderrOutput,
+            ),
             exitCode:
               typeof chromiumProcess?.exitCode === 'number' ? chromiumProcess.exitCode : null,
             exitSignal: chromiumExitSignal ?? null,
