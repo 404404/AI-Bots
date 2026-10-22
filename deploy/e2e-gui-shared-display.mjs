@@ -21,13 +21,33 @@ const driver = `${process.env['HOME']}/.botharness/cua-driver/0.31.0/linux-x86_6
 const marker = `DSH-GUI-SHARED-DISPLAY-${Date.now()}`;
 let browser;
 let chromiumProcess;
+let chromiumProcessExited = false;
+let chromiumExitSignal;
+let chromiumSpawnErrorCode;
 let client;
 let transport;
 let server;
 let report;
 let stage = 'fixture-server';
 let chromiumStartupOutput = '';
+let devtoolsEndpoint;
+let devtoolsLogSignal = false;
+let devtoolsPortFileReady = false;
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
+
+function readDevtoolsEndpoint(userDataDir) {
+  try {
+    const [portLine, browserPath] = readFileSync(join(userDataDir, 'DevToolsActivePort'), 'utf8')
+      .trim()
+      .split(/\r?\n/u);
+    const port = Number(portLine);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return;
+    if (!/^\/devtools\/browser\/[A-Za-z0-9-]+$/u.test(browserPath ?? '')) return;
+    return `ws://127.0.0.1:${port}${browserPath}`;
+  } catch {
+    return;
+  }
+}
 
 try {
   server = createServer((request, response) => {
@@ -59,6 +79,8 @@ try {
     [
       `--user-data-dir=${userDataDir}`,
       '--remote-debugging-port=0',
+      '--remote-debugging-address=127.0.0.1',
+      '--enable-logging=stderr',
       '--disable-blink-features=AutomationControlled',
       '--no-first-run',
       '--no-default-browser-check',
@@ -66,25 +88,50 @@ try {
       '--new-window',
       'about:blank',
     ],
-    { env: process.env, stdio: ['ignore', 'ignore', 'pipe'] },
+    { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] },
   );
+  chromiumProcess.stdout.setEncoding('utf8');
   chromiumProcess.stderr.setEncoding('utf8');
-  let devtoolsEndpoint;
   await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearInterval(activePortPoll);
+      error ? reject(error) : resolve();
+    };
     const timer = setTimeout(
-      () => reject(new Error('Chromium DevTools endpoint timed out.')),
+      () => finish(new Error('Chromium DevTools endpoint timed out.')),
       20_000,
     );
-    chromiumProcess.once('error', reject);
-    chromiumProcess.once('exit', () => reject(new Error('Chromium exited during startup.')));
-    chromiumProcess.stderr.on('data', (chunk) => {
-      chromiumStartupOutput += chunk;
+    const activePortPoll = setInterval(() => {
+      devtoolsEndpoint = readDevtoolsEndpoint(userDataDir);
+      if (!devtoolsEndpoint) return;
+      devtoolsPortFileReady = true;
+      finish();
+    }, 100);
+    const onOutput = (chunk) => {
+      chromiumStartupOutput = `${chromiumStartupOutput}${chunk}`.slice(-65_536);
       const match = /DevTools listening on (ws:\/\/[^\s]+)/u.exec(chromiumStartupOutput);
       if (!match) return;
       devtoolsEndpoint = match[1];
-      clearTimeout(timer);
-      resolve();
+      devtoolsLogSignal = true;
+      finish();
+    };
+    chromiumProcess.once('error', (error) => {
+      chromiumSpawnErrorCode = ['EACCES', 'EIO', 'ENOENT', 'ENOMEM', 'UNKNOWN'].includes(error.code)
+        ? error.code
+        : 'other';
+      finish(error);
     });
+    chromiumProcess.once('exit', (_code, signal) => {
+      chromiumProcessExited = true;
+      chromiumExitSignal = signal ?? undefined;
+      finish(new Error('Chromium exited during startup.'));
+    });
+    chromiumProcess.stdout.on('data', onOutput);
+    chromiumProcess.stderr.on('data', onOutput);
   });
   if (!devtoolsEndpoint) throw new Error('Chromium did not report its DevTools endpoint.');
   browser = await chromium.connectOverCDP(devtoolsEndpoint);
@@ -222,10 +269,11 @@ try {
     ...(stage === 'chromium-startup'
       ? {
           chromiumStartupSignals: {
-            processExited:
-              chromiumProcess?.exitCode !== null && chromiumProcess?.exitCode !== undefined,
+            processExited: chromiumProcessExited,
             exitCode:
               typeof chromiumProcess?.exitCode === 'number' ? chromiumProcess.exitCode : null,
+            exitSignal: chromiumExitSignal ?? null,
+            spawnErrorCode: chromiumSpawnErrorCode ?? null,
             noUsableSandbox: sandboxStartupFailure,
             namespaceOrSeccompError: /namespace|operation not permitted|seccomp/iu.test(
               chromiumStartupOutput,
@@ -234,7 +282,9 @@ try {
               /cannot open display|failed to connect to the x server|authorization required|xauthority|x11/iu.test(
                 chromiumStartupOutput,
               ),
-            devtoolsStarted: /DevTools listening on/iu.test(chromiumStartupOutput),
+            devtoolsStarted: devtoolsLogSignal || devtoolsPortFileReady,
+            devtoolsLogSignal,
+            devtoolsPortFileReady,
           },
         }
       : {}),
