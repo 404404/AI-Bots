@@ -2,12 +2,12 @@
 
 This Compose project runs the DSH Web Host, DeepSeekBot, a visible Chromium Bot Browser, and the local Computer desktop in one container. DSH continues to own the Profile, Bot, Session, Assignment, Channel, Activity, credentials, and runtime state. The image adds no DevBoard database and exposes no unauthenticated API.
 
-**Release gate is currently blocked.** As of 2026-10-23, the latest CI candidate [run 39865346040](https://github.com/404404/AI-Bots/actions/runs/39865346040) built and passed Trivy, but Chromium failed under the production seccomp profile (`chroot:EPERM` before `SIGTRAP`). A CI-only chroot control then exposed `clone:EPERM`; no image was published. Treat this file and the Compose files as deployment samples only; wait for an accepted immutable GHCR digest before pulling or deploying. See the [acceptance record](gui-container-acceptance.md) for the current evidence.
+**Release gate is currently blocked.** The latest CI candidate [run 39867953548](https://github.com/404404/AI-Bots/actions/runs/39867953548) built and passed Trivy, but production Chromium stopped before DevTools after `chroot:EPERM`. The unpublished CI-only chroot+clone diagnostic verified Browser/Computer shared-display interaction and reported Namespace Sandbox plus Seccomp-BPF enabled, but the renderer process seccomp check failed. No image was published. Treat this file and the Compose files as deployment samples only; wait for an accepted immutable GHCR digest before pulling or deploying. See the [acceptance record](gui-container-acceptance.md) for current evidence.
 
 ## Before starting
 
 - Use the exact GHCR image digest printed by the release workflow, in the form `ghcr.io/404404/ai-bots@sha256:<digest>`. Do not use `latest` or another moving tag.
-- Check `20443`, then `21443`, then `22443` on GK50. Set `HOST_PORT` and `PUBLIC_URL` to the first unused port. Current availability was not verified because this run stopped at SSH host-key verification.
+- Check `20443`, then `21443`, then `22443` on GK50. Set `HOST_PORT` and `PUBLIC_URL` to the first unused port. Current availability was not checked because deployment has not started.
 - Set the data directory owner to the UID/GID that Compose runs as. Use `id -u` and `id -g` on the host where you deploy.
 - Allow at least 2 GB RAM for the container and keep free space for DSH Home, Browser profiles and backups.
 
