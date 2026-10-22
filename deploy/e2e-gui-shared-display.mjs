@@ -26,6 +26,7 @@ let transport;
 let server;
 let report;
 let stage = 'fixture-server';
+let chromiumStartupOutput = '';
 const directory = mkdtempSync(join(tmpdir(), 'dsh-gui-smoke-'));
 
 try {
@@ -68,7 +69,6 @@ try {
     { env: process.env, stdio: ['ignore', 'ignore', 'pipe'] },
   );
   chromiumProcess.stderr.setEncoding('utf8');
-  let startupOutput = '';
   let devtoolsEndpoint;
   await new Promise((resolve, reject) => {
     const timer = setTimeout(
@@ -78,8 +78,8 @@ try {
     chromiumProcess.once('error', reject);
     chromiumProcess.once('exit', () => reject(new Error('Chromium exited during startup.')));
     chromiumProcess.stderr.on('data', (chunk) => {
-      startupOutput += chunk;
-      const match = /DevTools listening on (ws:\/\/[^\s]+)/u.exec(startupOutput);
+      chromiumStartupOutput += chunk;
+      const match = /DevTools listening on (ws:\/\/[^\s]+)/u.exec(chromiumStartupOutput);
       if (!match) return;
       devtoolsEndpoint = match[1];
       clearTimeout(timer);
@@ -204,14 +204,40 @@ try {
     chromeSandbox: sandboxLine.trim(),
     chromiumSeccompMode: seccompMode,
   };
-} catch (error) {
+} catch {
+  const sandboxStartupFailure =
+    /no usable sandbox|sandbox.{0,80}(?:failed|error|disabled)|failed to move to (?:the )?new namespace/iu.test(
+      chromiumStartupOutput,
+    );
   report = {
     schemaVersion: 1,
     status: 'failed',
-    errorCode: /sandbox|seccomp/iu.test(stage)
-      ? 'chromium-sandbox-failed'
-      : 'shared-display-failed',
+    errorCode:
+      /sandbox|seccomp/iu.test(stage) || sandboxStartupFailure
+        ? 'chromium-sandbox-failed'
+        : stage === 'chromium-startup'
+          ? 'chromium-startup-failed'
+          : 'shared-display-failed',
     failedAt: stage,
+    ...(stage === 'chromium-startup'
+      ? {
+          chromiumStartupSignals: {
+            processExited:
+              chromiumProcess?.exitCode !== null && chromiumProcess?.exitCode !== undefined,
+            exitCode:
+              typeof chromiumProcess?.exitCode === 'number' ? chromiumProcess.exitCode : null,
+            noUsableSandbox: sandboxStartupFailure,
+            namespaceOrSeccompError: /namespace|operation not permitted|seccomp/iu.test(
+              chromiumStartupOutput,
+            ),
+            x11OrAuthorityError:
+              /cannot open display|failed to connect to the x server|authorization required|xauthority|x11/iu.test(
+                chromiumStartupOutput,
+              ),
+            devtoolsStarted: /DevTools listening on/iu.test(chromiumStartupOutput),
+          },
+        }
+      : {}),
   };
   process.exitCode = 1;
 } finally {
