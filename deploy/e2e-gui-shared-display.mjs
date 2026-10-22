@@ -93,8 +93,10 @@ const computerInputRoundTrip = {
   submitControlFound: false,
   inputClickSucceeded: false,
   inputClickErrorClass: null,
+  inputClickForegroundFallbackUsed: false,
   typingSucceeded: false,
   typingErrorClass: null,
+  typingForegroundFallbackUsed: false,
   submitClickSucceeded: false,
   submitClickErrorClass: null,
   browserObservedText: false,
@@ -379,6 +381,61 @@ try {
     }
     return result;
   };
+  const clickInputAtCoordinates = async (point) => {
+    let result = await client.callTool({
+      name: 'click',
+      arguments: {
+        pid: fixtureWindow.pid,
+        window_id: fixtureWindow.window_id,
+        ...point,
+        session: computerSession,
+      },
+    });
+    if (result.isError && classifyComputerToolError(result) === 'background-unavailable') {
+      result = await client.callTool({
+        name: 'click',
+        arguments: {
+          pid: fixtureWindow.pid,
+          window_id: fixtureWindow.window_id,
+          ...point,
+          session: computerSession,
+          delivery_mode: 'foreground',
+        },
+      });
+      if (!result.isError) computerInputRoundTrip.inputClickForegroundFallbackUsed = true;
+    }
+    if (result.isError) {
+      computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(result);
+      return result;
+    }
+    computerInputRoundTrip.inputClickSucceeded = true;
+    return result;
+  };
+  const typeFocusedInput = async () => {
+    let result = await client.callTool({
+      name: 'type_text',
+      arguments: {
+        pid: fixtureWindow.pid,
+        window_id: fixtureWindow.window_id,
+        session: computerSession,
+        text: 'computer-input-confirmed',
+      },
+    });
+    if (result.isError && classifyComputerToolError(result) === 'background-unavailable') {
+      result = await client.callTool({
+        name: 'type_text',
+        arguments: {
+          pid: fixtureWindow.pid,
+          window_id: fixtureWindow.window_id,
+          session: computerSession,
+          text: 'computer-input-confirmed',
+          delivery_mode: 'foreground',
+        },
+      });
+      if (!result.isError) computerInputRoundTrip.typingForegroundFallbackUsed = true;
+    }
+    return result;
+  };
   let windowState;
   try {
     windowState = await readWindowState();
@@ -497,12 +554,11 @@ try {
   }
   stage = 'computer-click-input';
   if (inputClickArguments) {
-    const clickedInput = await client.callTool({
-      name: 'click',
-      arguments: inputClickArguments,
-    });
+    const clickedInput = computerInputRoundTrip.typingCoordinateFallbackUsed
+      ? await clickInputAtCoordinates(inputClickArguments)
+      : await client.callTool({ name: 'click', arguments: inputClickArguments });
     if (clickedInput.isError) {
-      computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
+      computerInputRoundTrip.inputClickErrorClass ??= classifyComputerToolError(clickedInput);
       throw new Error('Computer could not focus the fixture input.');
     }
     computerInputRoundTrip.inputClickSucceeded = true;
@@ -521,10 +577,9 @@ try {
     }
   }
   stage = 'computer-type-input';
-  const typed = await client.callTool({
-    name: 'type_text',
-    arguments: inputTypeArguments,
-  });
+  const typed = computerInputRoundTrip.typingCoordinateFallbackUsed
+    ? await typeFocusedInput()
+    : await client.callTool({ name: 'type_text', arguments: inputTypeArguments });
   let typingResult = typed;
   if (typingResult.isError) {
     const errorClass = classifyComputerToolError(typingResult);
@@ -618,21 +673,10 @@ try {
       }
       computerInputRoundTrip.coordinateFallbackUsed = true;
       computerInputRoundTrip.typingCoordinateFallbackUsed = true;
-      const clickedInput = await client.callTool({
-        name: 'click',
-        arguments: {
-          pid: fixtureWindow.pid,
-          window_id: fixtureWindow.window_id,
-          x: inputPoint.x,
-          y: inputPoint.y,
-          session: computerSession,
-        },
-      });
+      const clickedInput = await clickInputAtCoordinates(inputPoint);
       if (clickedInput.isError) {
-        computerInputRoundTrip.inputClickErrorClass = classifyComputerToolError(clickedInput);
         throw new Error('Computer could not focus the fixture input by coordinates.');
       }
-      computerInputRoundTrip.inputClickSucceeded = true;
       stage = 'computer-refresh-after-coordinate-focus';
       try {
         await readWindowState();
@@ -641,15 +685,7 @@ try {
           error.computerErrorClass ?? classifyComputerToolError(error);
         throw new Error('Computer could not refresh the fixture after focusing its input.');
       }
-      typingResult = await client.callTool({
-        name: 'type_text',
-        arguments: {
-          pid: fixtureWindow.pid,
-          window_id: fixtureWindow.window_id,
-          session: computerSession,
-          text: 'computer-input-confirmed',
-        },
-      });
+      typingResult = await typeFocusedInput();
       if (typingResult.isError) {
         computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typingResult);
         throw new Error('Computer could not type into the focused fixture input.');

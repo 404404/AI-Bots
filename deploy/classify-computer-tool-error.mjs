@@ -31,8 +31,8 @@ export function classifyComputerToolError(result) {
     return 'accessibility-unavailable';
   if (/point[_ -]outside[_ -]window|invalid[_ -]coordinate/u.test(details))
     return 'invalid-coordinate';
-  if (/background[_ -]unavailable|permission[_ -]denied|not permitted/u.test(details))
-    return 'input-unavailable';
+  if (/background[_ -]unavailable/u.test(details)) return 'background-unavailable';
+  if (/permission[_ -]denied|not permitted/u.test(details)) return 'permission-denied';
   if (/timed? ?out|timeout/u.test(details)) return 'timeout';
   return 'tool-error';
 }

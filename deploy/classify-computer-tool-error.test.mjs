@@ -38,6 +38,17 @@ test('classifies thrown tool errors without returning their message', () => {
   assert.equal(JSON.stringify({ classification }).includes(secretLikeDetail), false);
 });
 
+test('keeps explicit background refusal distinct from permission denial', () => {
+  assert.equal(
+    classifyComputerToolError({ structuredContent: { code: 'background_unavailable' } }),
+    'background-unavailable',
+  );
+  assert.equal(
+    classifyComputerToolError({ structuredContent: { code: 'permission_denied' } }),
+    'permission-denied',
+  );
+});
+
 test('uses tool-error for unknown failures', () => {
   assert.equal(classifyComputerToolError(new Error('opaque driver failure')), 'tool-error');
   assert.equal(
