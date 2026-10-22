@@ -80,6 +80,11 @@ const computerInputRoundTrip = {
   windowViewportWidth: null,
   windowViewportHeight: null,
   windowScreenshotMatchesViewport: null,
+  typingCoordinateScreenshotAvailable: false,
+  typingCoordinateScreenshotReused: false,
+  typingCoordinateBoundsAvailable: false,
+  typingCoordinateScaleAvailable: false,
+  typingCoordinateFrameMatchesViewport: false,
   inputCoordinateAvailable: false,
   submitCoordinateAvailable: false,
   inputCandidateCount: null,
@@ -385,6 +390,27 @@ try {
   computerInputRoundTrip.windowStateSucceeded = true;
   const windowStateData = windowState.structuredContent ?? {};
   Object.assign(computerInputRoundTrip, summarizeComputerWindowState(windowStateData));
+  const initialWindowScreenshot = windowState.content?.find(
+    (item) => item.type === 'image' && item.mimeType === 'image/png',
+  );
+  const initialWindowDimensions = readPngDimensions(initialWindowScreenshot);
+  const initialViewport = await page.evaluate(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    scale: window.devicePixelRatio,
+  }));
+  if (initialWindowDimensions) {
+    computerInputRoundTrip.windowScreenshotWidth = initialWindowDimensions.width;
+    computerInputRoundTrip.windowScreenshotHeight = initialWindowDimensions.height;
+  }
+  computerInputRoundTrip.windowViewportWidth = initialViewport.width;
+  computerInputRoundTrip.windowViewportHeight = initialViewport.height;
+  computerInputRoundTrip.windowScreenshotMatchesViewport = Boolean(
+    initialWindowDimensions &&
+    Number.isFinite(initialViewport.scale) &&
+    initialWindowDimensions.width === Math.round(initialViewport.width * initialViewport.scale) &&
+    initialWindowDimensions.height === Math.round(initialViewport.height * initialViewport.scale),
+  );
   computerInputRoundTrip.windowStateSnapshotIdAvailable =
     typeof windowStateData.snapshot_id === 'string' && windowStateData.snapshot_id.length > 0;
   const { inputControl, submitControl, inputCandidateCount, submitCandidateCount } =
@@ -540,13 +566,25 @@ try {
       const freshScreenshot = freshState.content?.find(
         (item) => item.type === 'image' && item.mimeType === 'image/png',
       );
-      const freshDimensions = readPngDimensions(freshScreenshot);
+      const observedDimensions = readPngDimensions(freshScreenshot);
+      const freshDimensions = observedDimensions ?? initialWindowDimensions;
       const inputBounds = await page.locator('#fixture-input').boundingBox();
       const viewport = await page.evaluate(() => ({
         width: window.innerWidth,
         height: window.innerHeight,
         scale: window.devicePixelRatio,
       }));
+      computerInputRoundTrip.typingCoordinateScreenshotAvailable = Boolean(freshDimensions);
+      computerInputRoundTrip.typingCoordinateScreenshotReused =
+        Boolean(freshDimensions) && !observedDimensions;
+      computerInputRoundTrip.typingCoordinateBoundsAvailable = Boolean(inputBounds);
+      computerInputRoundTrip.typingCoordinateScaleAvailable = Number.isFinite(viewport.scale);
+      computerInputRoundTrip.typingCoordinateFrameMatchesViewport = Boolean(
+        freshDimensions &&
+        Number.isFinite(viewport.scale) &&
+        freshDimensions.width === Math.round(viewport.width * viewport.scale) &&
+        freshDimensions.height === Math.round(viewport.height * viewport.scale),
+      );
       if (!freshDimensions || !inputBounds || !Number.isFinite(viewport.scale)) {
         computerInputRoundTrip.typingRefreshErrorClass = 'input-unavailable';
         throw new Error('Computer could not locate the fixture input in the refreshed screenshot.');
@@ -556,8 +594,7 @@ try {
         y: Math.round((inputBounds.y + inputBounds.height / 2) * viewport.scale),
       };
       if (
-        freshDimensions.width !== Math.round(viewport.width * viewport.scale) ||
-        freshDimensions.height !== Math.round(viewport.height * viewport.scale) ||
+        !computerInputRoundTrip.typingCoordinateFrameMatchesViewport ||
         inputPoint.x < 0 ||
         inputPoint.y < 0 ||
         inputPoint.x >= freshDimensions.width ||
