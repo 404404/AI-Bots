@@ -6,7 +6,10 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
-import { classifyChromiumStartupOutput } from './chromium-startup-diagnostics.mjs';
+import {
+  classifyChromiumStartupOutput,
+  summarizeChromiumFatalOutput,
+} from './chromium-startup-diagnostics.mjs';
 
 const requireBrowser = createRequire(new URL('../packages/browser/package.json', import.meta.url));
 const requireComputer = createRequire(
@@ -306,6 +309,7 @@ try {
               chromiumStdoutOutput,
               chromiumStderrOutput,
             ),
+            fatalSummary: summarizeChromiumFatalOutput(chromiumStdoutOutput, chromiumStderrOutput),
             exitCode:
               typeof chromiumProcess?.exitCode === 'number' ? chromiumProcess.exitCode : null,
             exitSignal: chromiumExitSignal ?? null,
