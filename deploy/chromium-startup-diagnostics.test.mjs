@@ -4,6 +4,7 @@ import {
   classifyChromiumStartupOutput,
   hasSandboxedChromiumRenderer,
   summarizeChromiumDiagnosticLogs,
+  summarizeChromiumRendererSandbox,
   summarizeChromiumSandboxStatus,
 } from './chromium-startup-diagnostics.mjs';
 
@@ -102,4 +103,20 @@ test('requires a renderer process to have seccomp filtering', () => {
     false,
   );
   assert.equal(hasSandboxedChromiumRenderer(undefined), false);
+});
+
+test('renderer sandbox summaries expose aggregate counts without process details', () => {
+  const summary = summarizeChromiumRendererSandbox([
+    { cmdline: '/usr/bin/chromium\0', status: 'Seccomp:\t0\n' },
+    { cmdline: '/usr/bin/chromium\0--type=renderer\0', status: 'Seccomp:\t2\n' },
+    { cmdline: '/usr/bin/chromium\0--type=renderer\0', status: 'Seccomp:\t0\n' },
+    { cmdline: '/usr/bin/chromium\0--type=renderer\0', status: 'NoNewPrivs:\t1\n' },
+  ]);
+  assert.deepEqual(summary, {
+    rendererProcessCount: 3,
+    rendererSeccompFilterCount: 1,
+    rendererSeccompUnfilteredCount: 1,
+    rendererSeccompStatusMissingCount: 1,
+  });
+  assert.equal(JSON.stringify(summary).includes('/usr/bin/chromium'), false);
 });

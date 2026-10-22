@@ -46,16 +46,30 @@ export function summarizeChromiumSandboxStatus(text) {
   };
 }
 
-export function hasSandboxedChromiumRenderer(processes) {
-  if (!Array.isArray(processes)) return false;
-  return processes.some((process) => {
-    if (!process || typeof process !== 'object') return false;
+export function summarizeChromiumRendererSandbox(processes) {
+  const summary = {
+    rendererProcessCount: 0,
+    rendererSeccompFilterCount: 0,
+    rendererSeccompUnfilteredCount: 0,
+    rendererSeccompStatusMissingCount: 0,
+  };
+  if (!Array.isArray(processes)) return summary;
+  for (const process of processes) {
+    if (!process || typeof process !== 'object') continue;
     const { cmdline, status } = process;
-    if (typeof cmdline !== 'string' || typeof status !== 'string') return false;
-    const args = cmdline.split('\0');
-    if (!args.includes('--type=renderer')) return false;
-    return Number(status.match(/^Seccomp:\s+(\d+)/mu)?.[1] ?? 0) >= 2;
-  });
+    if (typeof cmdline !== 'string' || typeof status !== 'string') continue;
+    if (!cmdline.split('\0').includes('--type=renderer')) continue;
+    summary.rendererProcessCount += 1;
+    const seccomp = status.match(/^Seccomp:\s+(\d+)/mu)?.[1];
+    if (seccomp === undefined) summary.rendererSeccompStatusMissingCount += 1;
+    else if (Number(seccomp) >= 2) summary.rendererSeccompFilterCount += 1;
+    else summary.rendererSeccompUnfilteredCount += 1;
+  }
+  return summary;
+}
+
+export function hasSandboxedChromiumRenderer(processes) {
+  return summarizeChromiumRendererSandbox(processes).rendererSeccompFilterCount > 0;
 }
 
 export function summarizeChromiumDiagnosticLogs(...streams) {
