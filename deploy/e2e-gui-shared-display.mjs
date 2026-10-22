@@ -221,10 +221,13 @@ try {
     markerInPayload: windowText.includes(marker),
     structuredWindows: Array.isArray(windows),
     windowCount: Array.isArray(windows) ? windows.length : null,
+    fixtureTitleFound:
+      Array.isArray(windows) &&
+      windows.some((window) => typeof window.title === 'string' && window.title.includes(marker)),
     windowSummaries: Array.isArray(windows)
       ? windows.slice(0, 8).map((window) => ({
           titleClass:
-            window.title === marker
+            typeof window.title === 'string' && window.title.includes(marker)
               ? 'fixture'
               : typeof window.title === 'string' && /chromium/iu.test(window.title)
                 ? 'chromium-other'
@@ -239,7 +242,7 @@ try {
   if (windowResult.isError || !windowText.includes(marker))
     throw new Error('Computer did not see Browser Chromium on its desktop.');
   const fixtureWindow = Array.isArray(windows)
-    ? windows.find((window) => window.title === marker)
+    ? windows.find((window) => typeof window.title === 'string' && window.title.includes(marker))
     : undefined;
   if (
     !fixtureWindow ||

@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "workflowRun": 39804904617,
+  "sourceCommit": "823445ca1f6ae58a2857d36ba6a56a0f9ad47817",
+  "beforeRestart": {
+    "schemaVersion": 1,
+    "startedAt": "2026-10-22T15:38:51.471Z",
+    "host": "authenticated-local-dsh-host",
+    "botId": "bot-1f8ede26149b4ef7835d77901c264090",
+    "checks": [
+      {
+        "name": "bot-list",
+        "exitCode": 0
+      },
+      {
+        "name": "bot-detail",
+        "exitCode": 0
+      },
+      {
+        "name": "sessions",
+        "exitCode": 0
+      },
+      {
+        "name": "assignments",
+        "exitCode": 0
+      },
+      {
+        "name": "assignment-detail",
+        "status": "skipped-empty"
+      },
+      {
+        "name": "activity",
+        "exitCode": 0
+      },
+      {
+        "name": "channel-timeline",
+        "exitCode": 0
+      },
+      {
+        "name": "coded-error",
+        "exitCode": 1,
+        "errorCode": "not-found"
+      },
+      {
+        "name": "invalid-cursor",
+        "exitCode": 1,
+        "errorCode": "invalid-cursor"
+      }
+    ],
+    "sample": {
+      "botList": {
+        "bots": [
+          {
+            "slug": "bot-1f8ede26149b4ef7835d77901c264090",
+            "createdAt": "2026-10-22T15:38:50.855Z"
+          }
+        ]
+      },
+      "botDetail": {
+        "bot": {
+          "slug": "bot-1f8ede26149b4ef7835d77901c264090",
+          "displayName": "GUI Container CLI Acceptance",
+          "createdAt": "2026-10-22T15:38:50.855Z"
+        },
+        "profileFingerprint": "a3163a1445fcf52c3cff28d8e309319d1b89cac90dfde6fa68fb8e8b4233d468"
+      },
+      "sessions": {
+        "total": 0,
+        "sessions": []
+      },
+      "assignments": {
+        "total": 0,
+        "assignments": []
+      },
+      "activity": {
+        "generation": "9193de7d-fcc6-4124-9823-e0d7dc979589",
+        "revision": 0,
+        "bot": {
+          "slug": "bot-1f8ede26149b4ef7835d77901c264090",
+          "state": "idle",
+          "sessions": []
+        }
+      },
+      "channelTimeline": {
+        "channelId": "dm-bot-1f8ede26149b4ef7835d77901c264090",
+        "revision": 0,
+        "entries": [],
+        "olderCursor": null,
+        "newerCursor": null,
+        "hasOlder": false,
+        "hasNewer": false
+      }
+    },
+    "finishedAt": "2026-10-22T15:38:53.189Z",
+    "status": "passed"
+  },
+  "afterRestart": {
+    "schemaVersion": 1,
+    "startedAt": "2026-10-22T15:39:00.346Z",
+    "host": "authenticated-local-dsh-host",
+    "botId": "bot-1f8ede26149b4ef7835d77901c264090",
+    "checks": [
+      {
+        "name": "bot-list",
+        "exitCode": 0
+      },
+      {
+        "name": "bot-detail",
+        "exitCode": 0
+      },
+      {
+        "name": "sessions",
+        "exitCode": 0
+      },
+      {
+        "name": "assignments",
+        "exitCode": 0
+      },
+      {
+        "name": "assignment-detail",
+        "status": "skipped-empty"
+      },
+      {
+        "name": "activity",
+        "exitCode": 0
+      },
+      {
+        "name": "channel-timeline",
+        "exitCode": 0
+      },
+      {
+        "name": "coded-error",
+        "exitCode": 1,
+        "errorCode": "not-found"
+      },
+      {
+        "name": "invalid-cursor",
+        "exitCode": 1,
+        "errorCode": "invalid-cursor"
+      }
+    ],
+    "sample": {
+      "botList": {
+        "bots": [
+          {
+            "slug": "bot-1f8ede26149b4ef7835d77901c264090",
+            "createdAt": "2026-10-22T15:38:50.855Z"
+          }
+        ]
+      },
+      "botDetail": {
+        "bot": {
+          "slug": "bot-1f8ede26149b4ef7835d77901c264090",
+          "displayName": "GUI Container CLI Acceptance",
+          "createdAt": "2026-10-22T15:38:50.855Z"
+        },
+        "profileFingerprint": "a3163a1445fcf52c3cff28d8e309319d1b89cac90dfde6fa68fb8e8b4233d468"
+      },
+      "sessions": {
+        "total": 0,
+        "sessions": []
+      },
+      "assignments": {
+        "total": 0,
+        "assignments": []
+      },
+      "activity": {
+        "generation": "cf14dade-8297-4bd3-8b63-692f7fae3d9e",
+        "revision": 0,
+        "bot": {
+          "slug": "bot-1f8ede26149b4ef7835d77901c264090",
+          "state": "idle",
+          "sessions": []
+        }
+      },
+      "channelTimeline": {
+        "channelId": "dm-bot-1f8ede26149b4ef7835d77901c264090",
+        "revision": 0,
+        "entries": [],
+        "olderCursor": null,
+        "newerCursor": null,
+        "hasOlder": false,
+        "hasNewer": false
+      }
+    },
+    "hostRestartRecovery": {
+      "sameBotId": true,
+      "currentBotId": "bot-1f8ede26149b4ef7835d77901c264090"
+    },
+    "finishedAt": "2026-10-22T15:39:01.994Z",
+    "status": "passed"
+  }
+}
