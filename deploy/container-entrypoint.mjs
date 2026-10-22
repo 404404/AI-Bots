@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
+import { copyProfileSeed } from './copy-profile-seed.mjs';
 
 const dataHome = process.env['DSH_HOME'] ?? '/data/dsh';
 const runtimeDir = '/tmp/dsh-runtime';
@@ -24,10 +25,7 @@ if (!existsSync(profileDir)) {
         'This Compose data directory already contains DSH profiles; refusing to seed over user data. Choose an empty directory or provision the gui profile explicitly.',
       );
   }
-  cpSync('/opt/dsh-seed/profiles', `${dataHome}/profiles`, {
-    recursive: true,
-    preserveTimestamps: true,
-  });
+  copyProfileSeed('/opt/dsh-seed/profiles', `${dataHome}/profiles`);
 }
 if (!existsSync(`${profileDir}/package.json`))
   throw new Error('The persistent DSH Home does not contain the seeded gui profile.');

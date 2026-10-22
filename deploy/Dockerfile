@@ -13,11 +13,11 @@ RUN mkdir -p /opt/cua-driver/0.31.0/linux-x86_64 \
  && printf '%s  %s\n' b59170779e14c08ef9e69c545bd4c6d7a31781fad421c668374d83cdd6721b98 /opt/cua-driver/0.31.0/linux-x86_64/cua-driver | sha256sum -c - \
  && chmod 0555 /opt/cua-driver/0.31.0/linux-x86_64/cua-driver \
  && rm /tmp/cua-driver.tar.gz
-# The first-start seed is copied by UID 10001 into the persistent DSH Home.
+# Runtime UID 10001 copies this seed into persistent DSH Home; it only needs read access.
 RUN mkdir -p /opt/dsh-seed \
  && DSH_HOME=/opt/dsh-seed node deploy/prepare-gui-profile.mjs \
  && DSH_HOME=/opt/dsh-seed pnpm --dir /opt/dsh-seed/profiles/gui install \
- && chmod -R u+w /opt/dsh-seed/profiles
+ && chmod -R a+rX /opt/dsh-seed/profiles
 
 FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production \
