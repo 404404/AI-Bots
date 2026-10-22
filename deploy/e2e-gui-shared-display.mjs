@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { createServer } from 'node:http';
 import {
   classifyChromiumStartupOutput,
-  summarizeChromiumFatalOutput,
+  summarizeChromiumDiagnosticLogs,
 } from './chromium-startup-diagnostics.mjs';
 
 const requireBrowser = createRequire(new URL('../packages/browser/package.json', import.meta.url));
@@ -309,7 +309,10 @@ try {
               chromiumStdoutOutput,
               chromiumStderrOutput,
             ),
-            fatalSummary: summarizeChromiumFatalOutput(chromiumStdoutOutput, chromiumStderrOutput),
+            diagnosticLogs: summarizeChromiumDiagnosticLogs(
+              chromiumStdoutOutput,
+              chromiumStderrOutput,
+            ),
             exitCode:
               typeof chromiumProcess?.exitCode === 'number' ? chromiumProcess.exitCode : null,
             exitSignal: chromiumExitSignal ?? null,

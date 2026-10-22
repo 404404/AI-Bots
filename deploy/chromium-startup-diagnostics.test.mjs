@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   classifyChromiumStartupOutput,
-  summarizeChromiumFatalOutput,
+  summarizeChromiumDiagnosticLogs,
 } from './chromium-startup-diagnostics.mjs';
 
 test('Chromium diagnostics retain only bounded category codes', () => {
@@ -19,14 +19,25 @@ test('Chromium diagnostics retain only bounded category codes', () => {
   );
 });
 
-test('Chromium fatal summary emits only a source location and fixed message class', () => {
-  const summary = summarizeChromiumFatalOutput(
-    '[17:21:1022/120000.000000:FATAL:zygote_host/zygote_host_impl_linux.cc(241)] Check failed: private-value.',
+test('Chromium log summaries retain source and fixed classes without message text', () => {
+  const summaries = summarizeChromiumDiagnosticLogs(
+    '[17:21:1022/120000.000000:ERROR:zygote_main_linux.cc(197)] Failed sending zygote boot message: private-value.',
+    '[17:21:1022/120000.000001:FATAL:zygote_host/zygote_host_impl_linux.cc:251] Zygote process exited prematurely with exit code 1.',
   );
-  assert.deepEqual(summary, {
-    source: 'zygote_host_impl_linux.cc',
-    line: 241,
-    messageClass: 'check-failed',
-  });
-  assert.equal(JSON.stringify(summary).includes('private-value'), false);
+  assert.deepEqual(summaries, [
+    {
+      severity: 'ERROR',
+      source: 'zygote_main_linux.cc',
+      line: 197,
+      messageClass: 'zygote-boot-message-send-failed',
+    },
+    {
+      severity: 'FATAL',
+      source: 'zygote_host_impl_linux.cc',
+      line: 251,
+      messageClass: 'zygote-exited-before-ready',
+      exitCode: 1,
+    },
+  ]);
+  assert.equal(JSON.stringify(summaries).includes('private-value'), false);
 });

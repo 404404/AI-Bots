@@ -17,34 +17,43 @@ export function classifyChromiumStartupOutput(...streams) {
   return DIAGNOSTIC_PATTERNS.filter(([, pattern]) => pattern.test(output)).map(([code]) => code);
 }
 
-export function summarizeChromiumFatalOutput(...streams) {
-  const fatalLine = streams
+export function summarizeChromiumDiagnosticLogs(...streams) {
+  return streams
     .join('\n')
     .split(/\r?\n/u)
-    .find((line) => /\bFATAL:/iu.test(line));
-  if (!fatalLine) return null;
+    .flatMap((line) => {
+      const location = /\b(ERROR|FATAL):([^\s()[\]]+?)(?:\((\d+)\)|:(\d+))?\]\s*(.*)$/iu.exec(line);
+      if (!location) return [];
 
-  const location = /\bFATAL:([^\s()[\]]+)(?:\((\d+)\))?\]/iu.exec(fatalLine);
-  const message = location ? fatalLine.slice(location.index + location[0].length) : fatalLine;
-  const messageClass = /no usable sandbox/iu.test(message)
-    ? 'no-usable-sandbox'
-    : /operation not permitted|permission denied|\bEPERM\b/iu.test(message)
-      ? 'permission-denied'
-      : /zygote.{0,60}(?:exited|failed)|(?:exited|failed).{0,60}zygote/iu.test(message)
-        ? 'zygote-startup-failure'
-        : /check failed/iu.test(message)
-          ? 'check-failed'
-          : /crashpad/iu.test(message)
-            ? 'crashpad-failure'
-            : 'other-fatal';
+      const message = location[5];
+      const messageClass = /failed sending zygote boot message/iu.test(message)
+        ? 'zygote-boot-message-send-failed'
+        : /zygote process exited prematurely/iu.test(message)
+          ? 'zygote-exited-before-ready'
+          : /failed to receive (?:hello|boot) message from zygote/iu.test(message)
+            ? 'zygote-message-receive-failed'
+            : /no usable sandbox/iu.test(message)
+              ? 'no-usable-sandbox'
+              : /operation not permitted|permission denied|\bEPERM\b/iu.test(message)
+                ? 'permission-denied'
+                : /sandbox|seccomp/iu.test(message)
+                  ? 'sandbox-error'
+                  : /crashpad/iu.test(message)
+                    ? 'crashpad-error'
+                    : location[1] === 'FATAL'
+                      ? 'other-fatal'
+                      : 'other-error';
+      const exitCode = /exit code (\d+)/iu.exec(message)?.[1];
 
-  return {
-    ...(location
-      ? {
-          source: location[1].split(/[\\/]/u).at(-1),
-          ...(location[2] ? { line: Number(location[2]) } : {}),
-        }
-      : {}),
-    messageClass,
-  };
+      return [
+        {
+          severity: location[1],
+          source: location[2].split(/[\\/]/u).at(-1),
+          ...((location[3] ?? location[4]) ? { line: Number(location[3] ?? location[4]) } : {}),
+          messageClass,
+          ...(exitCode ? { exitCode: Number(exitCode) } : {}),
+        },
+      ];
+    })
+    .slice(0, 8);
 }
