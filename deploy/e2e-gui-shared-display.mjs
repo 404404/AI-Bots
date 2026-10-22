@@ -105,6 +105,9 @@ function readPngDimensions(image) {
 }
 
 try {
+  stage = 'desktop-session';
+  if (!process.env['DBUS_SESSION_BUS_ADDRESS'])
+    throw new Error('The GUI acceptance requires the shared desktop D-Bus session.');
   stage = 'chromium-startup';
   try {
     const version = execFileSync('/usr/bin/chromium', ['--version'], {
@@ -496,6 +499,8 @@ try {
   report = {
     schemaVersion: 1,
     status: 'passed',
+    dbusSessionAvailable: Boolean(process.env['DBUS_SESSION_BUS_ADDRESS']),
+    atSpiBusAddressAvailable: Boolean(process.env['AT_SPI_BUS_ADDRESS']),
     chromiumVersion,
     display: process.env['DISPLAY'],
     browserTitleSeenByComputer: true,
@@ -515,6 +520,8 @@ try {
   report = {
     schemaVersion: 1,
     status: 'failed',
+    dbusSessionAvailable: Boolean(process.env['DBUS_SESSION_BUS_ADDRESS']),
+    atSpiBusAddressAvailable: Boolean(process.env['AT_SPI_BUS_ADDRESS']),
     errorCode:
       /sandbox|seccomp/iu.test(stage) || sandboxStartupFailure
         ? 'chromium-sandbox-failed'

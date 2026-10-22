@@ -125,7 +125,7 @@ jobs:
           if docker exec --user 10001:10001 \
             -e DISPLAY=:99 \
             -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
-            dsh-gui-ci node /opt/app/deploy/e2e-gui-shared-display.mjs \
+            dsh-gui-ci dbus-run-session -- bash /opt/app/deploy/run-gui-acceptance-session.sh \
             > "$RUNNER_TEMP/gui-hardened.json" 2> "$RUNNER_TEMP/gui-hardened.stderr"; then
             echo 'PASS: hardened Browser/Computer shared display and Chromium sandbox acceptance.'
             cat "$RUNNER_TEMP/gui-hardened.json"
@@ -190,7 +190,7 @@ jobs:
               if docker exec --user 10001:10001 \
                 -e DISPLAY=:99 \
                 -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
-                dsh-gui-ci-unconfined node /opt/app/deploy/e2e-gui-shared-display.mjs \
+                dsh-gui-ci-unconfined dbus-run-session -- bash /opt/app/deploy/run-gui-acceptance-session.sh \
                 > "$RUNNER_TEMP/gui-unconfined.json" 2> "$RUNNER_TEMP/gui-unconfined.stderr"; then
                 unconfined_status=0
                 echo 'PASS: diagnostic control Browser/Computer shared display and Chromium sandbox acceptance.'
