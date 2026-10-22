@@ -31,6 +31,7 @@ LABEL org.opencontainers.image.title="DeepSeekBot Linux GUI" \
       io.botharness.runtime="dsh-linux-gui" \
       io.botharness.profile="gui"
 RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade perl-base \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     at-spi2-core ca-certificates chromium chromium-sandbox dbus dbus-x11 fonts-dejavu-core \
     fonts-noto-color-emoji fonts-noto-cjk libasound2 libatk-bridge2.0-0 libatk1.0-0 \
@@ -57,7 +58,14 @@ COPY --from=build --chown=0:0 /opt/app/deploy /opt/app/deploy
 COPY --from=build --chown=0:0 /opt/dsh-seed/profiles /opt/dsh-seed/profiles
 COPY --from=build --chown=0:0 /opt/cua-driver /opt/cua-driver
 COPY --chown=0:0 deploy/container-entrypoint.mjs deploy/container-healthcheck.mjs deploy/gui-profile.patch.yml /opt/app/deploy/
-RUN chmod -R a-w /opt/app \
+RUN rm -rf \
+    /opt/app/node_modules/.pnpm/@typescript+typescript-linux-x64@* \
+    /opt/app/node_modules/.pnpm/typescript@* \
+    /opt/app/node_modules/.pnpm/node_modules/@typescript/typescript-linux-x64 \
+    /opt/app/node_modules/.pnpm/node_modules/typescript \
+    /opt/app/node_modules/@typescript/typescript-linux-x64 \
+    /opt/app/node_modules/typescript \
+ && chmod -R a-w /opt/app \
  && chmod 0555 /opt/app/deploy/container-entrypoint.mjs /opt/app/deploy/container-healthcheck.mjs
 USER 10001:10001
 EXPOSE 3080 1455

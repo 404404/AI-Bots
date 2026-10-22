@@ -123,9 +123,10 @@ The complete sanitized reports are checked in as [the online CLI result](accepta
 
 | Check                                      | Status                                  | Evidence                                                                                                           |
 | ------------------------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Focused CLI management unit tests          | Passed                                  | `packages/core/test/bot-management-cli.test.ts` (26 tests; non-empty Session and Assignment pages/details).        |
+| Focused CLI and Computer regression tests  | Passed                                  | 43 tests: `packages/core/test/bot-management-cli.test.ts` and `packages/computer/test/local-computer.test.ts`.     |
 | Online CLI against isolated Linux Host     | Passed with empty Session/Assignment data | Sanitized list/detail/session/assignment/activity/timeline report above; `not-found` and `invalid-cursor` verified. |
 | Isolated Host restart and old-token rejection | Passed                                 | Authenticated before/after; old token returned `host-unauthorized`; Bot ID remained stable.                        |
+| GHCR image build and security gate          | First run failed; remediation in progress | [Run 39743328552](https://github.com/404404/AI-Bots/actions/runs/39743328552): Docker build and Compose validation passed; Trivy rejected 38 findings (3 Critical, 35 High), so runtime smoke and publish were skipped. |
 | Online CLI against deployed GK50 Host      | Pending trusted SSH host key and container deployment | Capture the sanitized CLI and restart reports after deployment.                                         |
 | Browser/Computer shared X11 display        | Pending live container build/deployment | `deploy/e2e-gui-shared-display.mjs`; require the marker title in Computer window output and a Computer screenshot. |
 | Chromium sandbox under Docker on GK50      | Pending live container build/deployment | Same smoke test; require `chrome://sandbox` Seccomp-BPF status `Yes`, and no `--no-sandbox` argument.              |

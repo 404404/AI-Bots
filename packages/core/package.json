@@ -51,7 +51,7 @@
     "@deepseek-ai/dsh-user-approval": "0.2.1-rc.2",
     "@deepseek-ai/dsh-user-questions": "0.2.1-rc.2",
     "@deepseek-ai/schemastery": "3.18.5",
-    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/client": "2.2.0",
     "@types/css-tree": "2.3.11",
     "yaml": "^2.9.1",
     "zod": "4.4.3"
