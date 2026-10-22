@@ -51,6 +51,10 @@ let seccompBpfStatus = 'not-checked';
 let computerWindowDiscovery;
 const computerInputRoundTrip = {
   windowStateSucceeded: false,
+  windowStateErrorClass: null,
+  windowStateElementCount: null,
+  inputCandidateCount: null,
+  submitCandidateCount: null,
   inputControlFound: false,
   submitControlFound: false,
   inputClickSucceeded: false,
@@ -87,8 +91,14 @@ function classifyComputerToolError(result) {
     .join(' ')
     .toLowerCase();
   if (/stale[_ -]?(?:element|snapshot)|stale_element_token/u.test(details)) return 'stale-element';
-  if (/window[_ -]?(?:id[_ -]?)?not[_ -]?found|no windows? found/u.test(details))
+  if (
+    /window[_ -]?(?:id[_ -]?)?not[_ -]?found|window_owner_pid_mismatch|no windows? found/u.test(
+      details,
+    )
+  )
     return 'window-not-found';
+  if (/at[_ -]?spi|accessibility|ax[_ -]window[_ -]unresolved/u.test(details))
+    return 'accessibility-unavailable';
   if (/point[_ -]outside[_ -]window|invalid[_ -]coordinate/u.test(details))
     return 'invalid-coordinate';
   if (/background[_ -]unavailable|permission[_ -]denied|not permitted/u.test(details))
@@ -293,9 +303,13 @@ try {
     name: 'get_window_state',
     arguments: { ...windowArgs, include_screenshot: false },
   });
-  if (windowState.isError) throw new Error('Computer could not inspect the fixture controls.');
+  if (windowState.isError) {
+    computerInputRoundTrip.windowStateErrorClass = classifyComputerToolError(windowState);
+    throw new Error('Computer could not inspect the fixture controls.');
+  }
   computerInputRoundTrip.windowStateSucceeded = true;
   const elements = windowState.structuredContent?.elements;
+  computerInputRoundTrip.windowStateElementCount = Array.isArray(elements) ? elements.length : null;
   const controls = Array.isArray(elements)
     ? elements.map((element) => {
         const role = typeof element.role === 'string' ? element.role.toLowerCase() : '';
@@ -318,6 +332,12 @@ try {
       /(?:button|push button)/u.test(role) &&
       label.includes('submit'),
   )?.element;
+  computerInputRoundTrip.inputCandidateCount = controls.filter(
+    ({ role, label }) => /(?:text|entry|input)/u.test(role) && label.includes('input'),
+  ).length;
+  computerInputRoundTrip.submitCandidateCount = controls.filter(
+    ({ role, label }) => /(?:button|push button)/u.test(role) && label.includes('submit'),
+  ).length;
   computerInputRoundTrip.inputControlFound = Boolean(inputControl);
   computerInputRoundTrip.submitControlFound = Boolean(submitControl);
   if (!inputControl || !submitControl)
