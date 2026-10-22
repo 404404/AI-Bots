@@ -4,6 +4,7 @@ import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
+import { resolveCliHostTarget } from '../deploy/cli-host-target.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -30,9 +31,10 @@ const login = new URL(launch.internalUrl ?? launch.url);
 const token = login.searchParams.get('token');
 if (!token) throw new Error('The private launch file has no Host token.');
 const cli = resolve(process.env['DEEPSEEKBOT_CLI'] ?? 'packages/deepseekbot/dist/deepseekbot.mjs');
+const host = resolveCliHostTarget(login.origin, process.env['DEEPSEEKBOT_HOST']);
 const env = {
   ...process.env,
-  DEEPSEEKBOT_HOST: login.origin,
+  DEEPSEEKBOT_HOST: host,
   DEEPSEEKBOT_HOST_TOKEN: token,
 };
 const startedAt = new Date().toISOString();

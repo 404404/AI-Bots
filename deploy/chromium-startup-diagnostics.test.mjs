@@ -71,6 +71,14 @@ test('Chromium sandbox diagnostics report only yes, no, or missing statuses', ()
     summarizeChromiumSandboxStatus('Namespace Sandbox: No\nSeccomp-BPF sandbox: Yes'),
     { namespaceSandbox: 'no', seccompBpf: 'yes' },
   );
+  assert.deepEqual(
+    summarizeChromiumSandboxStatus('Layer 1 Sandbox\nNamespace\nSeccomp-BPF sandbox\nYes'),
+    { namespaceSandbox: 'yes', seccompBpf: 'yes' },
+  );
+  assert.deepEqual(
+    summarizeChromiumSandboxStatus('Layer 1 Sandbox\nSUID\nSeccomp-BPF sandbox\nYes'),
+    { namespaceSandbox: 'no', seccompBpf: 'yes' },
+  );
   assert.deepEqual(summarizeChromiumSandboxStatus('empty diagnostic page'), {
     namespaceSandbox: 'missing',
     seccompBpf: 'missing',

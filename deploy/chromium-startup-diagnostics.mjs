@@ -18,12 +18,30 @@ export function classifyChromiumStartupOutput(...streams) {
 }
 
 export function summarizeChromiumSandboxStatus(text) {
-  const status = (pattern) => {
-    const line = text.split(/\r?\n/u).find((entry) => pattern.test(entry));
-    return !line ? 'missing' : /\byes\b/iu.test(line) ? 'yes' : 'no';
+  const lines = text
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const status = (pattern, mode = 'boolean') => {
+    const index = lines.findIndex((line) => pattern.test(line));
+    if (index < 0) return 'missing';
+    const inline = lines[index]
+      .replace(pattern, '')
+      .replace(/^[\s:=-]+/u, '')
+      .trim();
+    const value = inline || lines[index + 1] || '';
+    if (/\byes\b/iu.test(value)) return 'yes';
+    if (/\bno\b|disabled/iu.test(value)) return 'no';
+    if (mode === 'layer-one') {
+      if (/\bnamespace\b/iu.test(value)) return 'yes';
+      if (/\b(?:suid|none)\b/iu.test(value)) return 'no';
+    }
+    return 'missing';
   };
+  const namespaceSandbox = status(/Namespace Sandbox/iu);
   return {
-    namespaceSandbox: status(/Namespace Sandbox/iu),
+    namespaceSandbox:
+      namespaceSandbox === 'missing' ? status(/Layer 1 Sandbox/iu, 'layer-one') : namespaceSandbox,
     seccompBpf: status(/Seccomp-BPF sandbox/iu),
   };
 }

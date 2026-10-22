@@ -51,6 +51,8 @@ jobs:
         run: node --test deploy/copy-profile-seed.test.mjs
       - name: Test loopback forwarding for authenticated online CLI
         run: node --test deploy/loopback-host-proxy.test.mjs
+      - name: Test authenticated CLI host target validation
+        run: node --test deploy/cli-host-target.test.mjs
       - name: Verify the Chromium user-namespace seccomp extension
         run: node --test deploy/chromium-userns-seccomp.test.mjs
       - name: Validate Compose files
@@ -82,6 +84,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/dsh-gui-ci"
           sudo chown 10001:10001 "$RUNNER_TEMP/dsh-gui-ci"
+          mkdir -p "$RUNNER_TEMP/dsh-cli-artifacts"
+          sudo chown 10001:10001 "$RUNNER_TEMP/dsh-cli-artifacts"
+          sudo chmod 0700 "$RUNNER_TEMP/dsh-cli-artifacts"
           docker run -d --name dsh-gui-ci \
             --user 10001:10001 \
             --shm-size 512m \
@@ -90,6 +95,7 @@ jobs:
             --security-opt "seccomp=$GITHUB_WORKSPACE/deploy/chromium-userns-seccomp.json" \
             -e PUBLIC_URL=http://127.0.0.1:20443 \
             -v "$RUNNER_TEMP/dsh-gui-ci:/data/dsh" \
+            -v "$RUNNER_TEMP/dsh-cli-artifacts:/tmp/dsh-cli-artifacts" \
             ai-bots-gui:ci
           cleanup() {
             docker rm -f dsh-gui-ci-unconfined >/dev/null 2>&1 || true
@@ -162,6 +168,26 @@ jobs:
             docker rm -f dsh-gui-ci-unconfined >/dev/null 2>&1 || true
           fi
           umask 077
+          echo 'RUN: seed a disposable Bot and DM through the authenticated DSH Host RPC for read-only CLI acceptance.'
+          if docker exec --user 10001:10001 dsh-gui-ci \
+            node /opt/app/deploy/seed-cli-acceptance.mjs \
+            > "$RUNNER_TEMP/cli-fixture.json" 2> "$RUNNER_TEMP/cli-fixture.stderr"; then
+            cat "$RUNNER_TEMP/cli-fixture.json"
+          else
+            echo 'FAIL: DSH-native CLI fixture seeding; sanitized result follows.'
+            cat "$RUNNER_TEMP/cli-fixture.json"
+            exit 1
+          fi
+          mapfile -t cli_fixture_ids < <(node --input-type=module -e '
+            import fs from "node:fs";
+            const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (report.schemaVersion !== 1 || report.status !== "passed") process.exit(1);
+            if (typeof report.botId !== "string" || typeof report.channelId !== "string") process.exit(1);
+            process.stdout.write(`${report.botId}\n${report.channelId}\n`);
+          ' "$RUNNER_TEMP/cli-fixture.json")
+          [ "${#cli_fixture_ids[@]}" -eq 2 ] || { echo 'FAIL: invalid sanitized CLI fixture IDs.'; exit 1; }
+          cli_fixture_bot=${cli_fixture_ids[0]}
+          cli_fixture_channel=${cli_fixture_ids[1]}
           echo 'RUN: authenticated online CLI before Host restart.'
           if docker exec --user 10001:10001 dsh-gui-ci \
             node /opt/app/deploy/cli-host-snapshot.mjs --launch /tmp/dsh-runtime/launch.json \
@@ -184,6 +210,28 @@ jobs:
           ' "$RUNNER_TEMP/cli-before-restart.json"
           echo 'PASS: authenticated online CLI before Host restart; sanitized response follows.'
           cat "$RUNNER_TEMP/cli-before-restart.json"
+          echo 'RUN: read-only Bot, Session, Timeline, Activity, Assignment, cursor, and error-code CLI acceptance.'
+          if docker exec --user 10001:10001 dsh-gui-ci \
+            node /opt/app/deploy/run-cli-readonly-acceptance.mjs \
+            --bot "$cli_fixture_bot" --channel "$cli_fixture_channel" --limit 20 \
+            --output /tmp/dsh-cli-artifacts/cli-readonly-before.json \
+            > "$RUNNER_TEMP/cli-readonly-before.json" 2> "$RUNNER_TEMP/cli-readonly-before.stderr"; then
+            :
+          else
+            echo 'FAIL: authenticated read-only CLI before Host restart; sanitized result follows.'
+            cat "$RUNNER_TEMP/cli-readonly-before.json"
+            exit 1
+          fi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            const checks = new Set(report.checks?.map((check) => check.name));
+            for (const check of ["bot-list", "bot-detail", "sessions", "assignments", "activity", "channel-timeline", "coded-error", "invalid-cursor"])
+              if (!checks.has(check)) process.exit(1);
+            if (report.status !== "passed" || report.botId !== process.argv[2]) process.exit(1);
+          ' "$RUNNER_TEMP/cli-readonly-before.json" "$cli_fixture_bot"
+          echo 'PASS: authenticated read-only CLI commands returned bounded JSON before Host restart.'
+          cat "$RUNNER_TEMP/cli-readonly-before.json"
           docker exec --user 10001:10001 dsh-gui-ci \
             cat /tmp/dsh-runtime/launch.json > "$RUNNER_TEMP/old-launch.json"
           started_before=$(docker inspect --format '{{.State.StartedAt}}' dsh-gui-ci)
@@ -236,13 +284,36 @@ jobs:
           ' "$RUNNER_TEMP/cli-before-restart.json" "$RUNNER_TEMP/cli-after-restart.json"
           echo 'PASS: refreshed launch token authenticated and Bot IDs stayed stable.'
           cat "$RUNNER_TEMP/cli-after-restart.json"
+          echo 'RUN: repeat read-only CLI acceptance and compare the stable Bot ID after Host restart.'
+          if docker exec --user 10001:10001 dsh-gui-ci \
+            node /opt/app/deploy/run-cli-readonly-acceptance.mjs \
+            --bot "$cli_fixture_bot" --channel "$cli_fixture_channel" --limit 20 \
+            --prior-report /tmp/dsh-cli-artifacts/cli-readonly-before.json \
+            > "$RUNNER_TEMP/cli-readonly-after.json" 2> "$RUNNER_TEMP/cli-readonly-after.stderr"; then
+            :
+          else
+            echo 'FAIL: authenticated read-only CLI after Host restart; sanitized result follows.'
+            cat "$RUNNER_TEMP/cli-readonly-after.json"
+            exit 1
+          fi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (report.status !== "passed" || report.hostRestartRecovery?.sameBotId !== true) process.exit(1);
+          ' "$RUNNER_TEMP/cli-readonly-after.json"
+          echo 'PASS: read-only CLI recovered after Host restart with the same Bot ID.'
+          cat "$RUNNER_TEMP/cli-readonly-after.json"
           {
             echo '## Online CLI and Host restart acceptance'
             cat "$RUNNER_TEMP/cli-before-restart.json"
             cat "$RUNNER_TEMP/cli-stale-token.json"
             cat "$RUNNER_TEMP/cli-after-restart.json"
+            cat "$RUNNER_TEMP/cli-readonly-before.json"
+            cat "$RUNNER_TEMP/cli-readonly-after.json"
           } >> "$GITHUB_STEP_SUMMARY"
-          rm -f "$RUNNER_TEMP/old-launch.json" "$RUNNER_TEMP/cli-stale-token.json"
+          rm -f "$RUNNER_TEMP/old-launch.json" "$RUNNER_TEMP/cli-stale-token.json" \
+            "$RUNNER_TEMP/cli-fixture.json" "$RUNNER_TEMP/cli-readonly-before.json" \
+            "$RUNNER_TEMP/cli-readonly-after.json"
           if [ "$gui_hardened_status" -ne 0 ]; then
             echo 'FAIL: production Docker seccomp profile did not pass the GUI sandbox gate; the unconfined control is diagnostic only.'
             exit "$gui_hardened_status"
