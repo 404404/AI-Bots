@@ -117,6 +117,8 @@ try {
     dsh,
     '--profile',
     'gui',
+    '--patch',
+    '/opt/app/deploy/gui-profile.patch.yml',
     '--host',
     address,
     '--port',
@@ -127,8 +129,6 @@ try {
     publicUrl.host,
     '--trusted-host',
     `${address}:${port}`,
-    '--patch',
-    '/opt/app/deploy/gui-profile.patch.yml',
     '--no-open',
   ];
   const command = spawn(
