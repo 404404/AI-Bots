@@ -6,11 +6,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { Client } from '@modelcontextprotocol/client';
-import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
 const requireBrowser = createRequire(new URL('../packages/browser/package.json', import.meta.url));
+const requireComputer = createRequire(
+  new URL('../packages/computer/package.json', import.meta.url),
+);
 const { chromium } = requireBrowser('playwright-core');
+const { Client } = requireComputer('@modelcontextprotocol/client');
+const { StdioClientTransport } = requireComputer('@modelcontextprotocol/client/stdio');
 
 if (process.env['DISPLAY'] !== ':99' || !process.env['XAUTHORITY'])
   throw new Error('The GUI acceptance must run in the container Host desktop environment.');
