@@ -95,13 +95,23 @@ jobs:
             sleep 2
           done
           [ "$(docker inspect --format '{{.State.Health.Status}}' dsh-gui-ci)" = healthy ] || { docker logs dsh-gui-ci; exit 1; }
+          echo 'PASS: GUI container became healthy.'
           umask 077
+          echo 'RUN: authenticated online CLI before Host restart.'
           docker exec --user 10001:10001 dsh-gui-ci \
             node /opt/app/deploy/cli-host-snapshot.mjs --launch /tmp/dsh-runtime/launch.json \
             > "$RUNNER_TEMP/cli-before-restart.json"
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const result = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (result.authenticated !== true || !Array.isArray(result.botIds)) process.exit(1);
+          ' "$RUNNER_TEMP/cli-before-restart.json"
+          echo 'PASS: authenticated online CLI before Host restart; sanitized response follows.'
+          cat "$RUNNER_TEMP/cli-before-restart.json"
           docker exec --user 10001:10001 dsh-gui-ci \
             cat /tmp/dsh-runtime/launch.json > "$RUNNER_TEMP/old-launch.json"
           started_before=$(docker inspect --format '{{.State.StartedAt}}' dsh-gui-ci)
+          echo 'RUN: restart the Host container and wait for health recovery.'
           docker restart --time 30 dsh-gui-ci >/dev/null
           for attempt in $(seq 1 90); do
             status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dsh-gui-ci 2>/dev/null || true)
@@ -111,6 +121,8 @@ jobs:
             sleep 2
           done
           [ "$started_after" != "$started_before" ] && [ "$status" = healthy ] || { docker logs dsh-gui-ci; exit 1; }
+          echo 'PASS: Host container restarted and became healthy.'
+          echo 'RUN: verify the old launch token is rejected.'
           if docker exec -i --user 10001:10001 dsh-gui-ci \
             node /opt/app/deploy/cli-host-snapshot.mjs --launch-stdin \
             < "$RUNNER_TEMP/old-launch.json" > "$RUNNER_TEMP/cli-stale-token.json"; then
@@ -122,6 +134,9 @@ jobs:
             const stale = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
             if (stale.authenticated !== false || typeof stale.errorCode !== "string") process.exit(1);
           ' "$RUNNER_TEMP/cli-stale-token.json"
+          echo 'PASS: old launch token rejected; sanitized error follows.'
+          cat "$RUNNER_TEMP/cli-stale-token.json"
+          echo 'RUN: authenticate with the refreshed launch token after restart.'
           docker exec --user 10001:10001 dsh-gui-ci \
             node /opt/app/deploy/cli-host-snapshot.mjs --launch /tmp/dsh-runtime/launch.json \
             > "$RUNNER_TEMP/cli-after-restart.json"
@@ -132,6 +147,8 @@ jobs:
             if (before.authenticated !== true || after.authenticated !== true) process.exit(1);
             if (JSON.stringify(before.botIds) !== JSON.stringify(after.botIds)) process.exit(1);
           ' "$RUNNER_TEMP/cli-before-restart.json" "$RUNNER_TEMP/cli-after-restart.json"
+          echo 'PASS: refreshed launch token authenticated and Bot IDs stayed stable.'
+          cat "$RUNNER_TEMP/cli-after-restart.json"
           {
             echo '## Online CLI and Host restart acceptance'
             cat "$RUNNER_TEMP/cli-before-restart.json"
@@ -139,7 +156,11 @@ jobs:
             cat "$RUNNER_TEMP/cli-after-restart.json"
           } >> "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/old-launch.json" "$RUNNER_TEMP/cli-stale-token.json"
-          docker exec --user 10001:10001 dsh-gui-ci node /opt/app/deploy/e2e-gui-shared-display.mjs
+          echo 'RUN: Browser/Computer shared display and Chromium sandbox acceptance.'
+          docker exec --user 10001:10001 \
+            -e DISPLAY=:99 \
+            -e XAUTHORITY=/tmp/dsh-runtime/Xauthority \
+            dsh-gui-ci node /opt/app/deploy/e2e-gui-shared-display.mjs
 
   publish:
     needs: build-check
