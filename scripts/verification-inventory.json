@@ -476,6 +476,14 @@
       "gap": "No maintained feature-map recipe binds this behavior to setup, user actions, authoritative read, cleanup and failure observation. Historical scripts below are candidates, not qualified paths."
     },
     {
+      "id": "cli.management.read-only",
+      "label": "Read Bot details, Sessions, Timeline, Activity and Assignments through authenticated online CLI",
+      "source": "packages/core/src/bots/cli-management.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/bot-cli-readonly.md",
+      "task": 2557,
+      "gap": null
+    },
+    {
       "id": "product.fresh-install",
       "label": "Install exact artifacts into fresh Profile and retain created Bot after restart",
       "source": "scripts/e2e-fresh-profile-install.mjs",
@@ -1170,6 +1178,22 @@
       "reason": "Private launcher and explicit QA Bot; repeated real-model send/send-status checks same receipt and no auth in output.",
       "task": 1967,
       "sha256": "3b6924c6d009ae9e00735173951945c9161a53ce9b5d8bcc417c20d266d3cce5"
+    },
+    {
+      "path": "scripts/e2e-cli-readonly.mjs",
+      "category": "mapped",
+      "behaviors": ["cli.management.read-only"],
+      "reason": "Task-owned Compose Host, authenticated DSH CLI reads for Bot/Session/Timeline/Activity/Assignment, cursor and coded-error checks; writes only sanitized report fields.",
+      "task": 2557,
+      "sha256": "ad5e5c16ec8344cc0200dcfbc6d3ad46ab4432f1d5735095df29a46c94cbaede"
+    },
+    {
+      "path": "scripts/e2e-cli-host-restart.mjs",
+      "category": "mapped",
+      "behaviors": ["cli.management.read-only"],
+      "reason": "Restarts only the task-owned Compose GUI service, checks Host health and online CLI re-authentication, rejects stale token when DSH does, and compares stable Bot IDs.",
+      "task": 2557,
+      "sha256": "47d3b851fcb023906169a066b37d4d45537e62ddbaac44abb25a008b09efad85"
     },
     {
       "path": "scripts/e2e-client-interactions.mjs",

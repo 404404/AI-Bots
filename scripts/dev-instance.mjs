@@ -1,4 +1,7 @@
-import { developmentProfileManifest } from './dev-profile.mjs';
+import {
+  developmentProfileManifest,
+  developmentProfileWorkspaceConfig,
+} from './dev-profile.mjs';
 import {
   packagedProfileManifest,
   packagedWorkspaceSettings,
@@ -18,6 +21,7 @@ import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'no
 import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import {
   devSecretEnvironment,
@@ -188,6 +192,13 @@ function ensureProfile(options) {
     writeFileSync(workspace, packagedWorkspaceSettings(existing, options.productArtifacts));
   }
   writeFileSync(manifestPath, `${JSON.stringify(composed, null, 2)}\n`);
+  if (!options.productArtifacts) {
+    const workspacePath = join(profileDir, 'pnpm-workspace.yaml');
+    const workspace = developmentProfileWorkspaceConfig(
+      parseYaml(readFileSync(join(options.worktree, 'pnpm-workspace.yaml'), 'utf8')),
+    );
+    writeFileSync(workspacePath, stringifyYaml(workspace));
+  }
   const [pnpmExecutable, pnpmArgs] = pnpmCommand(['install']);
   run(pnpmExecutable, pnpmArgs, { cwd: profileDir });
   if (options.productArtifacts) verifyPackagedProfile(profileDir, options.productArtifacts);

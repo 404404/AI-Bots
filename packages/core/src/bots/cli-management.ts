@@ -38,6 +38,8 @@ export const DIAGNOSTIC_COMMANDS = [
     description: 'inspect bounded Bot Source Event and Admission processing states',
   },
   { command: 'bot-sessions', description: 'inspect bounded Bot-owned Session summaries' },
+  { command: 'bot-assignments', description: 'page read-only Assignment summaries for one Bot' },
+  { command: 'bot-assignment', description: 'inspect one Assignment by its stable Session ID' },
   {
     command: 'bot-activity',
     description: 'inspect a Bot activity snapshot without execution logs',
@@ -74,6 +76,46 @@ export const LIFECYCLE_COMMANDS = [
 
 function usage(message: string): never {
   throw new CliLiveError('usage', message);
+}
+
+function assignmentCursor(value: string): { updatedAt: string; sessionId: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+  } catch {
+    parsed = undefined;
+  }
+  const fields = parsed as { u?: unknown; s?: unknown } | null | undefined;
+  if (typeof fields?.u !== 'string' || typeof fields.s !== 'string')
+    throw new CliLiveError('invalid-cursor', 'Restart Assignment paging from the first page.');
+  return { updatedAt: fields.u, sessionId: fields.s };
+}
+
+function encodeAssignmentCursor(assignment: { updatedAt: string; sessionId: string }): string {
+  return Buffer.from(
+    JSON.stringify({ u: assignment.updatedAt, s: assignment.sessionId }),
+    'utf8',
+  ).toString('base64url');
+}
+
+function sessionCursor(value: string): { createdAt: string; sessionId: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+  } catch {
+    parsed = undefined;
+  }
+  const fields = parsed as { v?: unknown; c?: unknown; s?: unknown } | null | undefined;
+  if (fields?.v !== 1 || typeof fields.c !== 'string' || typeof fields.s !== 'string')
+    throw new CliLiveError('invalid-cursor', 'Restart Session paging from the first page.');
+  return { createdAt: fields.c, sessionId: fields.s };
+}
+
+function encodeSessionCursor(session: { createdAt: string; sessionId: string }): string {
+  return Buffer.from(
+    JSON.stringify({ v: 1, c: session.createdAt, s: session.sessionId }),
+    'utf8',
+  ).toString('base64url');
 }
 
 function route(values: CreateValues, prefix: 'orchestrator' | 'assignment'): ModelRoute {
@@ -117,6 +159,13 @@ export async function runOnlineManagement(
     usage('--timeout must be between 0 and 600 seconds.');
   const limit = values.limit === undefined ? 50 : Number(values.limit);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) usage('--limit must be 1–100.');
+  if (command === 'bot-assignments' && limit > 50)
+    usage('--limit for bot-assignments must be 1–50.');
+  if (
+    typeof values.cursor === 'string' &&
+    (values.cursor.length < 1 || values.cursor.length > 2048)
+  )
+    throw new CliLiveError('invalid-cursor', 'Restart paging from the first page.');
   let presetInput:
     | {
         name: string;
@@ -250,9 +299,62 @@ export async function runOnlineManagement(
       ...(values.state === undefined ? {} : { state: values.state }),
     });
   if (command === 'bot-sessions') {
-    const result = await rpc<{ sessions: Array<{ createdAt: string }> }>('sessions', { slug });
-    const sorted = [...result.sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return { sessions: sorted.slice(0, limit), total: sorted.length };
+    const result = await rpc<{
+      sessions: Array<{ createdAt: string; sessionId: string }>;
+    }>('sessions', { slug });
+    const sorted = [...result.sessions].sort(
+      (a, b) => b.createdAt.localeCompare(a.createdAt) || a.sessionId.localeCompare(b.sessionId),
+    );
+    const cursor = values.cursor === undefined ? undefined : sessionCursor(values.cursor);
+    const remaining =
+      cursor === undefined
+        ? sorted
+        : sorted.filter(
+            (session) =>
+              session.createdAt < cursor.createdAt ||
+              (session.createdAt === cursor.createdAt && session.sessionId > cursor.sessionId),
+          );
+    const sessions = remaining.slice(0, limit);
+    const last = sessions.at(-1);
+    return {
+      sessions,
+      total: sorted.length,
+      ...(remaining.length > limit && last !== undefined
+        ? { nextCursor: encodeSessionCursor(last) }
+        : {}),
+    };
+  }
+  if (command === 'bot-assignments') {
+    const result = await rpc<{
+      assignments: Array<{ updatedAt: string; sessionId: string }>;
+    }>('assignments', { slug });
+    const cursor = values.cursor === undefined ? undefined : assignmentCursor(values.cursor);
+    const sorted = [...result.assignments].sort(
+      (a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.sessionId.localeCompare(b.sessionId),
+    );
+    const remaining =
+      cursor === undefined
+        ? sorted
+        : sorted.filter(
+            (assignment) =>
+              assignment.updatedAt < cursor.updatedAt ||
+              (assignment.updatedAt === cursor.updatedAt &&
+                assignment.sessionId > cursor.sessionId),
+          );
+    const assignments = remaining.slice(0, Math.min(limit, 50));
+    const last = assignments.at(-1);
+    return {
+      assignments,
+      total: sorted.length,
+      ...(remaining.length > assignments.length && last !== undefined
+        ? { nextCursor: encodeAssignmentCursor(last) }
+        : {}),
+    };
+  }
+  if (command === 'bot-assignment') {
+    const sessionId = values.session?.trim();
+    if (!sessionId) usage('bot-assignment requires --session <stable-session-id>.');
+    return rpc('assignment', { slug, sessionId });
   }
   if (command === 'bot-activity') {
     await rpc('get', { slug });

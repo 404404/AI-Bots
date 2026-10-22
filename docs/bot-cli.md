@@ -70,6 +70,9 @@ deepseekbot model-plan <bot-id>
 deepseekbot channels
 deepseekbot bot-attention <bot-id> --limit 20 --state handled
 deepseekbot bot-sessions <bot-id> --limit 20
+deepseekbot bot-sessions <bot-id> --limit 20 --cursor <nextCursor>
+deepseekbot bot-assignments <bot-id> --limit 20 [--cursor <nextCursor>]
+deepseekbot bot-assignment <bot-id> --session <session-id>
 deepseekbot bot-activity <bot-id> --limit 20
 deepseekbot bot-new-session <bot-id>
 deepseekbot bot-compact <bot-id>
@@ -77,7 +80,26 @@ deepseekbot bot-compact <bot-id>
 
 Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `steps` and `next`. The model preset is applied through its owner, never forwarded as a native Agent preset. A missing specified preset is rejected before creation; other model failures after creation preserve the Bot and return its known identity and steps with `outcome: created`. A lost creation/import response without a stable operation key can return `outcome: unknown`: inspect the Host before creating again; no automatic mutation retry is provided. For blank online creation, use the [receipt-backed operation key](#tob-bot-creation-profiles-and-lifecycle) to reconcile the same identity. A created Bot alone does not prove model usability: use `send` and its exact correlated committed reply.
 
-`bot-attention` supports `--cursor` and the Host's pending/processing/observed/deferred/needs-repair/handled states; it limits pages to 1–100. Session summaries are newest-first and limited to 1–100 (default 50), with `total`; activity limits its session details and reports `sessionCount`. These are bounded summaries, not full tool-call logs or streaming drafts.
+`bot-attention` supports `--cursor` and the Host's pending/processing/observed/deferred/needs-repair/handled states; it limits pages to 1–100. Session summaries are newest-first and limited to 1–100 (default 50), with `total` and a version-1 `nextCursor` when another page exists; the cursor is based on `createdAt` plus stable `sessionId`. `bot-assignments` pages the Host-owned Assignment summaries by `updatedAt` and stable `sessionId`, retaining the Assignment Directory cursor format and owner ordering; `bot-assignment` reads one full record by its stable Session ID. Activity limits its session details and reports `sessionCount`. These are bounded summaries, not full tool-call logs or streaming drafts. With `--compact`, each successful command emits one JSON document; failures retain the Host or CLI error `code`. The live commands always use the authenticated DSH Host RPC and never open or copy the profile database.
+
+Machine-readable read-only responses keep stable IDs, UTC timestamps, revisions and opaque paging cursors. For example, one Assignment page is:
+
+```json
+{
+  "assignments": [
+    {
+      "sessionId": "session-7f3a",
+      "activity": "running",
+      "createdAt": "2026-10-21T08:30:00.000Z",
+      "updatedAt": "2026-10-21T08:42:10.000Z"
+    }
+  ],
+  "total": 12,
+  "nextCursor": "eyJ1IjoiMjAyNi0xMC0yMVQwODo0MjoxMC4wMDBaIiwicyI6InNlc3Npb24tN2YzYSJ9"
+}
+```
+
+Treat cursors as opaque values. A refusal stays machine-readable with an explicit error code, for example `{"error":{"code":"invalid-cursor","message":"Restart Assignment paging from the first page."}}`. Field shapes and paging boundaries for Sessions, Activity, Assignments and Channel Timeline are covered in the [online CLI acceptance record](gui-container-acceptance.md).
 
 `bot-new-session <bot-id>` retires an idle Bot’s Orchestrator Session through the same Host runtime as IM `/new`; the next message starts a fresh Session. It returns `{"started":true}` and refuses with `bot-busy` while the Bot is working; stop the current turn first.
 

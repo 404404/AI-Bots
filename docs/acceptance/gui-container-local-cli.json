@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-22T07:31:44.348Z",
+  "host": "authenticated-local-dsh-host",
+  "botId": "bot-b16198a778054e289a81f777a0f0fe4f",
+  "checks": [
+    {
+      "name": "bot-list",
+      "exitCode": 0
+    },
+    {
+      "name": "bot-detail",
+      "exitCode": 0
+    },
+    {
+      "name": "sessions",
+      "exitCode": 0
+    },
+    {
+      "name": "assignments",
+      "exitCode": 0
+    },
+    {
+      "name": "assignment-detail",
+      "status": "skipped-empty"
+    },
+    {
+      "name": "activity",
+      "exitCode": 0
+    },
+    {
+      "name": "channel-timeline",
+      "exitCode": 0
+    },
+    {
+      "name": "coded-error",
+      "exitCode": 1,
+      "errorCode": "not-found"
+    },
+    {
+      "name": "invalid-cursor",
+      "exitCode": 1,
+      "errorCode": "invalid-cursor"
+    }
+  ],
+  "sample": {
+    "botList": {
+      "bots": [
+        {
+          "slug": "bot-b16198a778054e289a81f777a0f0fe4f",
+          "createdAt": "2026-10-22T07:28:26.935Z"
+        }
+      ]
+    },
+    "botDetail": {
+      "bot": {
+        "slug": "bot-b16198a778054e289a81f777a0f0fe4f",
+        "displayName": "GUI Acceptance 01a15ec5",
+        "createdAt": "2026-10-22T07:28:26.935Z"
+      },
+      "profileFingerprint": "073ac01cba0258b48b7b40ada91acb305e7a39a6a5ef2ac785cf6ede503fc073"
+    },
+    "sessions": {
+      "total": 0,
+      "sessions": []
+    },
+    "assignments": {
+      "total": 0,
+      "assignments": []
+    },
+    "activity": {
+      "generation": "2dc052be-e627-4a58-81ef-55b9a5b50b6e",
+      "revision": 0,
+      "bot": {
+        "slug": "bot-b16198a778054e289a81f777a0f0fe4f",
+        "state": "idle",
+        "sessions": []
+      }
+    },
+    "channelTimeline": {
+      "channelId": "dm-bot-b16198a778054e289a81f777a0f0fe4f",
+      "revision": 0,
+      "entries": [],
+      "olderCursor": null,
+      "newerCursor": null,
+      "hasOlder": false,
+      "hasNewer": false
+    }
+  },
+  "finishedAt": "2026-10-22T07:31:49.751Z",
+  "status": "passed"
+}

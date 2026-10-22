@@ -1,0 +1,186 @@
+name: GUI container
+
+on:
+  push:
+    tags: ['gui-container-*']
+  pull_request:
+    paths:
+      - '.dockerignore'
+      - 'deploy/**'
+      - 'packages/**'
+      - 'scripts/dev-profile.mjs'
+      - 'scripts/dev-instance.mjs'
+      - 'scripts/e2e-cli-host-restart.mjs'
+      - 'scripts/e2e-cli-readonly.mjs'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsdown.config.ts'
+      - '.github/workflows/gui-container.yml'
+  workflow_dispatch:
+    inputs:
+      publish_image:
+        description: Publish the current commit to GHCR after the image build succeeds
+        type: choice
+        options: [no, yes]
+        default: no
+        required: true
+      confirmation:
+        description: Type PUBLISH_GUI_IMAGE to authorize the GHCR write
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gui-container-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Validate Compose files
+        env:
+          IMAGE_REF: ghcr.io/404404/ai-bots@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        run: |
+          docker compose -f deploy/compose.gk50.yml config --quiet
+          docker compose -f deploy/compose.synology.yml config --quiet
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ai-bots-gui:ci
+          cache-from: type=gha,scope=gui-container
+          cache-to: type=gha,scope=gui-container,mode=max
+      - name: Scan the runtime image for fixed or actionable high-severity vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ai-bots-gui:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Boot the container and verify shared Browser/Computer display and Chromium sandbox
+        run: |
+          mkdir -p "$RUNNER_TEMP/dsh-gui-ci"
+          sudo chown 10001:10001 "$RUNNER_TEMP/dsh-gui-ci"
+          docker run -d --name dsh-gui-ci \
+            --user 10001:10001 \
+            --shm-size 512m \
+            --memory 2g --cpus 1.5 --pids-limit 512 \
+            --security-opt no-new-privileges:true --cap-drop ALL \
+            -e PUBLIC_URL=http://127.0.0.1:20443 \
+            -v "$RUNNER_TEMP/dsh-gui-ci:/data/dsh" \
+            ai-bots-gui:ci
+          cleanup() { docker rm -f dsh-gui-ci >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 90); do
+            status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dsh-gui-ci 2>/dev/null || true)
+            [ "$status" = healthy ] && break
+            [ "$status" = unhealthy ] && { docker logs dsh-gui-ci; exit 1; }
+            sleep 2
+          done
+          [ "$(docker inspect --format '{{.State.Health.Status}}' dsh-gui-ci)" = healthy ] || { docker logs dsh-gui-ci; exit 1; }
+          umask 077
+          docker exec --user 10001:10001 dsh-gui-ci \
+            node /opt/app/deploy/cli-host-snapshot.mjs --launch /tmp/dsh-runtime/launch.json \
+            > "$RUNNER_TEMP/cli-before-restart.json"
+          docker exec --user 10001:10001 dsh-gui-ci \
+            cat /tmp/dsh-runtime/launch.json > "$RUNNER_TEMP/old-launch.json"
+          started_before=$(docker inspect --format '{{.State.StartedAt}}' dsh-gui-ci)
+          docker restart --time 30 dsh-gui-ci >/dev/null
+          for attempt in $(seq 1 90); do
+            status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dsh-gui-ci 2>/dev/null || true)
+            started_after=$(docker inspect --format '{{.State.StartedAt}}' dsh-gui-ci 2>/dev/null || true)
+            [ "$started_after" != "$started_before" ] && [ "$status" = healthy ] && break
+            [ "$status" = unhealthy ] && { docker logs dsh-gui-ci; exit 1; }
+            sleep 2
+          done
+          [ "$started_after" != "$started_before" ] && [ "$status" = healthy ] || { docker logs dsh-gui-ci; exit 1; }
+          if docker exec -i --user 10001:10001 dsh-gui-ci \
+            node /opt/app/deploy/cli-host-snapshot.mjs --launch-stdin \
+            < "$RUNNER_TEMP/old-launch.json" > "$RUNNER_TEMP/cli-stale-token.json"; then
+            echo 'Old Host launch token unexpectedly authenticated after restart.'
+            exit 1
+          fi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const stale = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (stale.authenticated !== false || typeof stale.errorCode !== "string") process.exit(1);
+          ' "$RUNNER_TEMP/cli-stale-token.json"
+          docker exec --user 10001:10001 dsh-gui-ci \
+            node /opt/app/deploy/cli-host-snapshot.mjs --launch /tmp/dsh-runtime/launch.json \
+            > "$RUNNER_TEMP/cli-after-restart.json"
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const before = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            const after = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+            if (before.authenticated !== true || after.authenticated !== true) process.exit(1);
+            if (JSON.stringify(before.botIds) !== JSON.stringify(after.botIds)) process.exit(1);
+          ' "$RUNNER_TEMP/cli-before-restart.json" "$RUNNER_TEMP/cli-after-restart.json"
+          {
+            echo '## Online CLI and Host restart acceptance'
+            cat "$RUNNER_TEMP/cli-before-restart.json"
+            cat "$RUNNER_TEMP/cli-stale-token.json"
+            cat "$RUNNER_TEMP/cli-after-restart.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/old-launch.json" "$RUNNER_TEMP/cli-stale-token.json"
+          docker exec --user 10001:10001 dsh-gui-ci node /opt/app/deploy/e2e-gui-shared-display.mjs
+
+  publish:
+    needs: build-check
+    if: (github.event_name == 'workflow_dispatch' && inputs.publish_image == 'yes') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/gui-container-'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Require explicit publish confirmation
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "PUBLISH_GUI_IMAGE"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/404404/ai-bots:gui-sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/404404/AI-Bots
+            org.opencontainers.image.revision=${{ github.sha }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha,scope=gui-container
+          cache-to: type=gha,scope=gui-container,mode=max
+      - name: Record immutable image reference
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          IMAGE="ghcr.io/404404/ai-bots@$DIGEST"
+          echo "Published: `$IMAGE`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tag: `gui-sha-${GITHUB_SHA}`" >> "$GITHUB_STEP_SUMMARY"

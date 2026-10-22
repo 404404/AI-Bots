@@ -165,6 +165,14 @@ settings:
 overrides:
   dockview: 8.4.1
   dockview-core: 8.4.1
+  '@deepseek-ai/dsh-authorization': 0.2.1-rc.2
+  '@deepseek-ai/dsh-brand': 0.2.1-rc.2
+  '@deepseek-ai/dsh-credentials': 0.2.1-rc.2
+  '@deepseek-ai/dsh-llm': 0.2.1-rc.2
+  '@deepseek-ai/dsh-timeout': 0.2.1-rc.2
+  '@deepseek-ai/dsh-typert-protocol': 0.2.1-rc.2
+  '@deepseek-ai/dsh-util-crypto': 0.2.1-rc.2
+  '@deepseek-ai/dsh-util-values': 0.2.1-rc.2
 
 packageExtensionsChecksum: sha256-nTetP7MNwyU1g9eYGetFQDe+KmsSqdiIWUwSDTQtDmc=
 
@@ -917,6 +925,9 @@ importers:
       '@botharness/ui':
         specifier: link:../client
         version: link:../client
+      dsh-codex-oauth:
+        specifier: github:callqh/dsh-codex-oauth#3f4fdec20ab4d1e93fa60954f6687c3d01bb4241
+        version: https://codeload.github.com/callqh/dsh-codex-oauth/tar.gz/3f4fdec20ab4d1e93fa60954f6687c3d01bb4241(@deepseek-ai/cordis@4.0.5)(@deepseek-ai/dsh-authorization@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)(@deepseek-ai/dsh-credentials@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5))(@deepseek-ai/dsh-llm@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)))(@deepseek-ai/dsh-credentials@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5))(@deepseek-ai/dsh-typert-protocol@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5))
     devDependencies:
       '@deepseek-ai/dsh':
         specifier: 0.2.1-rc.2
@@ -9054,6 +9065,24 @@ packages:
   dset@3.1.4:
     resolution: {integrity: sha512-2QF/g9/zTaPDc3BjNcVTGoBbXBgYfMTTceLaYcFJ/W9kggFUkhxD/hMEeuLKbugyef9SqAx8cpgwlIP/jinUTA==}
     engines: {node: '>=4'}
+
+  dsh-codex-oauth@https://codeload.github.com/callqh/dsh-codex-oauth/tar.gz/3f4fdec20ab4d1e93fa60954f6687c3d01bb4241:
+    resolution: {gitHosted: true, integrity: sha512-ny3s1CU2qUT76v8+EMoi4gvAPelCk+1pmYrC2ecHK11Yh4npYKbWcNNksDqoGr6AiiEXguphOSRWfaum5iDLig==, tarball: https://codeload.github.com/callqh/dsh-codex-oauth/tar.gz/3f4fdec20ab4d1e93fa60954f6687c3d01bb4241}
+    version: 0.1.0
+    peerDependencies:
+      '@deepseek-ai/cordis': '>=4.0.1'
+      '@deepseek-ai/dsh-authorization': 0.2.1-rc.2
+      '@deepseek-ai/dsh-credentials': 0.2.1-rc.2
+      '@deepseek-ai/dsh-typert-protocol': 0.2.1-rc.2
+    peerDependenciesMeta:
+      '@deepseek-ai/cordis':
+        optional: true
+      '@deepseek-ai/dsh-authorization':
+        optional: true
+      '@deepseek-ai/dsh-credentials':
+        optional: true
+      '@deepseek-ai/dsh-typert-protocol':
+        optional: true
 
   dts-resolver@3.0.0:
     resolution: {integrity: sha512-1T1f+z+4tl9XD+m+0HBgWoL/nm0bOIffyWaUuUSBlFg/86IWvfx+wjNaO/ybU0AJzG9/Mi5hBUgGV6zCmWEN7Q==}
@@ -21024,6 +21053,7 @@ snapshots:
   '@volar/language-core@2.4.28':
     dependencies:
       '@volar/source-map': 2.4.28
+    optional: true
 
   '@volar/language-server@2.4.28(typescript@5.9.3)':
     dependencies:
@@ -21048,7 +21078,9 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  '@volar/source-map@2.4.28': {}
+  '@volar/source-map@2.4.28':
+    optional: true
+
 
   '@volar/typescript@2.4.28(typescript@5.9.3)':
     dependencies:
@@ -22344,6 +22376,15 @@ snapshots:
 
   dset@3.1.4: {}
 
+  dsh-codex-oauth@https://codeload.github.com/callqh/dsh-codex-oauth/tar.gz/3f4fdec20ab4d1e93fa60954f6687c3d01bb4241(@deepseek-ai/cordis@4.0.5)(@deepseek-ai/dsh-authorization@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)(@deepseek-ai/dsh-credentials@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5))(@deepseek-ai/dsh-llm@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)))(@deepseek-ai/dsh-credentials@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5))(@deepseek-ai/dsh-typert-protocol@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)):
+    dependencies:
+      '@deepseek-ai/dsh-llm': 0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)
+    optionalDependencies:
+      '@deepseek-ai/cordis': 4.0.5(@deepseek-ai/cordis-plugin-include@1.0.10)(@deepseek-ai/cordis-plugin-loader@1.0.6)
+      '@deepseek-ai/dsh-authorization': 0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)(@deepseek-ai/dsh-credentials@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5))(@deepseek-ai/dsh-llm@0.2.1-rc.2(@deepseek-ai/cordis@4.0.5))
+      '@deepseek-ai/dsh-credentials': 0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)
+      '@deepseek-ai/dsh-typert-protocol': 0.2.1-rc.2(@deepseek-ai/cordis@4.0.5)
+
   dts-resolver@3.0.0: {}
 
   dunder-proto@1.0.1:
@@ -23617,7 +23658,9 @@ snapshots:
 
   jimp-compact@0.16.1: {}
 
-  jiti@2.7.0: {}
+  jiti@2.7.0:
+    optional: true
+
 
   jose@6.2.12: {}
 
@@ -25195,7 +25238,9 @@ snapshots:
 
   partial-json@0.1.7: {}
 
-  path-browserify@1.0.1: {}
+  path-browserify@1.0.1:
+    optional: true
+
 
   path-data-parser@0.1.0: {}
 
@@ -27099,7 +27144,9 @@ snapshots:
 
   vscode-nls@5.2.0: {}
 
-  vscode-uri@3.2.0: {}
+  vscode-uri@3.2.0:
+    optional: true
+
 
   w3c-xmlserializer@5.0.0:
     dependencies:

@@ -9,6 +9,7 @@ allowBuilds:
   workerd: true
   puppeteer: true
   '@deepseek-ai/dsh-subprocess-local': true
+  'dsh-codex-oauth@https://codeload.github.com/callqh/dsh-codex-oauth/tar.gz/3f4fdec20ab4d1e93fa60954f6687c3d01bb4241': true
   '@google/genai': false
   koffi: true
   node-pty: true
@@ -19,6 +20,14 @@ allowBuilds:
 overrides:
   dockview: 8.4.1
   dockview-core: 8.4.1
+  '@deepseek-ai/dsh-authorization': 0.2.1-rc.2
+  '@deepseek-ai/dsh-brand': 0.2.1-rc.2
+  '@deepseek-ai/dsh-credentials': 0.2.1-rc.2
+  '@deepseek-ai/dsh-llm': 0.2.1-rc.2
+  '@deepseek-ai/dsh-timeout': 0.2.1-rc.2
+  '@deepseek-ai/dsh-typert-protocol': 0.2.1-rc.2
+  '@deepseek-ai/dsh-util-crypto': 0.2.1-rc.2
+  '@deepseek-ai/dsh-util-values': 0.2.1-rc.2
 
 packageExtensions:
   '@tanstack/react-table@8.21.3':

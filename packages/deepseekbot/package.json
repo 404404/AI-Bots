@@ -18,7 +18,8 @@
     "@botharness/browser": "link:../browser",
     "@botharness/computer": "link:../computer",
     "@botharness/core": "link:../core",
-    "@botharness/ui": "link:../client"
+    "@botharness/ui": "link:../client",
+    "dsh-codex-oauth": "github:callqh/dsh-codex-oauth#3f4fdec20ab4d1e93fa60954f6687c3d01bb4241"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.2.1-rc.2"

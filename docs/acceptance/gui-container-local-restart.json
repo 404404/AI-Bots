@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "startedAt": "2026-10-22T07:34:07.104Z",
+  "host": "isolated-local-linux-dsh-host",
+  "checks": [
+    {
+      "name": "online-cli-auth-before-restart",
+      "status": "passed"
+    },
+    {
+      "name": "host-process-restart-and-health",
+      "status": "passed"
+    },
+    {
+      "name": "old-launch-token-rejected",
+      "status": "passed",
+      "errorCode": "host-unauthorized"
+    },
+    {
+      "name": "online-cli-auth-after-restart",
+      "status": "passed"
+    },
+    {
+      "name": "stable-bot-ids-retained",
+      "status": "passed",
+      "botCount": 1
+    }
+  ],
+  "before": {
+    "botIds": [
+      "bot-b16198a778054e289a81f777a0f0fe4f"
+    ]
+  },
+  "after": {
+    "botIds": [
+      "bot-b16198a778054e289a81f777a0f0fe4f"
+    ]
+  },
+  "sameBotIds": true,
+  "finishedAt": "2026-10-22T07:34:23.628Z"
+}

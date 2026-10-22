@@ -1204,3 +1204,11 @@ Bot-owned choice controls use the shared `ds/Select` → `PointerMenu` geometry 
 window zoom. It keeps the native Menu renderer and keyboard owner inside the owning Modal,
 converts viewport anchor coordinates through effective CSS zoom, clamps to the safe viewport
 and returns focus after dismissal. No second shortcut router or Panel state is introduced.
+
+## Linux GUI container runtime
+
+GK50 Linux GUI PoC 在一个非 root 容器中运行 DSH Host、DeepSeekBot、可见 Chromium、Browser 与 Computer。一个 Xvfb display、Xauthority cookie 和 D-Bus session 供 Host 及两个本地工具运行时共用；Browser 可见地启动 Chromium，Computer 使用同一个本地 display。容器不挂载宿主 display 或 Docker socket，也不请求特权模式、host network、额外 capability 或关闭 Chromium sandbox。
+
+绑定挂载的 `/data/dsh` 仍是 DSH Home，也是 Profile、Bot、Session、Assignment、Channel、凭据和运行状态唯一的持久化权威。容器不增加 DevBoard 数据库或无认证 API。Compose 只在 loopback 发布 Host；远程访问使用 SSH 隧道和 DSH launch token 交换。在线 CLI 继续通过已认证的 DSH Host RPC 读取数据。Bot 摘要、Session 分页、Channel Timeline、Activity 和 Assignment 读取保留稳定 ID、时间戳、revision 与不透明游标，并以机器可解析格式返回拒绝码。
+
+固定镜像、Compose 样例、只读 CLI 验收步骤和实测边界见 [GUI 容器架构与验收指南](gui-container.md)。本阶段是 Linux PoC；Synology 样例需在真实 DSM 主机测试后才能确认兼容。Codex OAuth 和模型实际调用工具需要真实账号单独验收，不能从容器健康或 GUI smoke test 推断通过。

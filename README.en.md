@@ -47,6 +47,8 @@ In the DeepSeek Harness desktop app, go to **Plugins → Add plugin**, enter `de
 
 For command-line install, version notes and troubleshooting, see the [installation guide](https://deepseekbot.app/en/docs/installation/).
 
+You can also run a Linux GUI Host with visible Chromium/X11 in Docker Compose. Browser and Computer use the same desktop. Follow the [GK50 deployment guide](docs/deployment-gk50.md) for a digest-pinned GHCR image, loopback-only port and persistent DSH Home. The [Synology example and device acceptance status](docs/deployment-synology.md) are documented separately.
+
 <a id="features"></a>
 
 <picture>

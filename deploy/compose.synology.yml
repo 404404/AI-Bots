@@ -1,0 +1,37 @@
+name: deepseekbot-gui
+
+services:
+  deepseekbot-gui:
+    image: ${IMAGE_REF:?Set IMAGE_REF to the GHCR image digest}
+    container_name: deepseekbot-gui
+    init: true
+    user: ${PUID:-1026}:${PGID:-100}
+    environment:
+      DSH_PORT: '3080'
+      PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1:20443}
+      WORKSPACE_ID: ${WORKSPACE_ID:-deepseekbot-gui}
+    labels:
+      org.opencontainers.image.source: https://github.com/404404/AI-Bots
+      io.botharness.application: deepseekbot
+      io.botharness.runtime: dsh-linux-gui
+      io.botharness.workspace: ${WORKSPACE_ID:-deepseekbot-gui}
+    ports:
+      - 127.0.0.1:${HOST_PORT:-20443}:3080
+      - 127.0.0.1:${CODEX_CALLBACK_PORT:-1455}:1455
+    volumes:
+      - ./data:/data/dsh
+    restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 2g
+    pids_limit: 512
+    shm_size: 512m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: [CMD, node, /opt/app/deploy/container-healthcheck.mjs]
+      interval: 30s
+      timeout: 8s
+      start_period: 120s
+      retries: 3

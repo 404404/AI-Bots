@@ -70,6 +70,9 @@ deepseekbot model-plan <bot-id>
 deepseekbot channels
 deepseekbot bot-attention <bot-id> --limit 20 --state handled
 deepseekbot bot-sessions <bot-id> --limit 20
+deepseekbot bot-sessions <bot-id> --limit 20 --cursor <nextCursor>
+deepseekbot bot-assignments <bot-id> --limit 20 [--cursor <nextCursor>]
+deepseekbot bot-assignment <bot-id> --session <session-id>
 deepseekbot bot-activity <bot-id> --limit 20
 deepseekbot bot-new-session <bot-id>
 deepseekbot bot-compact <bot-id>
@@ -77,7 +80,26 @@ deepseekbot bot-compact <bot-id>
 
 创建返回 `bot`、`dm`、Host 的 Memory `dataDir`、完成／延后阶段 `steps` 和 `next`。模型预设经其 owner 应用，不会被误传为原生 Agent preset。已确定不存在的预设在创建前拒绝；创建后的模型失败保留 Bot，返回已知身份、完成阶段与 `outcome: created`。不带稳定 operation key 的创建／导入响应丢失时可能返回 `outcome: unknown`，先检查 Host 再决定是否重建，CLI 不自动重试修改。空白在线创建可用下文的持久创建回执核对同一个身份。创建成功不证明模型可用：使用 `send` 和准确关联的持久回复验证。
 
-`bot-attention` 支持 `--cursor` 及 Host 的 pending/processing/observed/deferred/needs-repair/handled 状态，分页上限 1–100。Session 摘要按创建时间倒序，限制 1–100（默认 50），返回 `total`；活动摘要限制 Session 明细并返回 `sessionCount`。这些是有界摘要，不是完整工具调用日志或流式草稿。
+`bot-attention` 支持 `--cursor` 及 Host 的 pending/processing/observed/deferred/needs-repair/handled 状态，分页上限 1–100。Session 摘要按创建时间倒序，限制 1–100（默认 50），返回 `total`；还有下一页时返回版本 1 的 `nextCursor`，游标由 `createdAt` 和稳定 `sessionId` 组成。`bot-assignments` 按 `updatedAt` 和稳定 `sessionId` 翻页，沿用 Host Assignment Directory 的游标格式与顺序；`bot-assignment` 按稳定 Session ID 读取完整 Assignment。活动摘要限制 Session 明细并返回 `sessionCount`。这些是有界摘要，不是完整工具调用日志或流式草稿。使用 `--compact` 时每条成功命令输出一个 JSON 文档，失败保留 CLI/Host 错误 `code`。这些在线命令始终调用已认证的 DSH Host RPC，不会打开或复制 Profile 数据库。
+
+机器读取的只读响应保留稳定 ID、UTC 时间戳、Revision 和不透明分页游标。例如 Assignment 页面：
+
+```json
+{
+  "assignments": [
+    {
+      "sessionId": "session-7f3a",
+      "activity": "running",
+      "createdAt": "2026-10-21T08:30:00.000Z",
+      "updatedAt": "2026-10-21T08:42:10.000Z"
+    }
+  ],
+  "total": 12,
+  "nextCursor": "eyJ1IjoiMjAyNi0xMC0yMVQwODo0MjoxMC4wMDBaIiwicyI6InNlc3Npb24tN2YzYSJ9"
+}
+```
+
+游标是客户端不应解析或改写的不透明值。失败输出保持机器可读且包含明确错误码，例如 `{"error":{"code":"invalid-cursor","message":"Restart Assignment paging from the first page."}}`。Session、Activity、Assignment 和 Channel Timeline 的字段及分页边界见[在线 CLI 验收说明](gui-container-acceptance.md)。
 
 `bot-new-session <bot-id>` 通过与 IM `/new` 相同的 Host 运行时退役空闲 Bot 的编排会话，下一条消息开启新会话。成功返回 `{"started":true}`；Bot 正在工作时以 `bot-busy` 拒绝，需先停止当前轮次。
 

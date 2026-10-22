@@ -376,7 +376,7 @@ describe('online CLI management', () => {
   });
 
   it('forwards a chosen Memory location to the Host create owner', async () => {
-    const live = await host((method) => ({
+    const live = await host((_method) => ({
       ok: true,
       value: { bot: { slug: 'minted', displayName: 'Ada', memoryDir: '/data/bots/minted' } },
     }));
@@ -602,20 +602,41 @@ describe('online CLI management', () => {
     ]);
   });
 
-  it('queries Channel discovery and bounded attention and Session summaries through their owners', async () => {
+  it('pages read-only Session and Assignment summaries through their Host owners', async () => {
     const live = await host((method) => ({
       ok: true,
       value:
         method === 'sessions'
           ? {
               sessions: [
-                { createdAt: '2026-01-01', sessionId: 'old' },
-                { createdAt: '2026-02-01', sessionId: 'new' },
+                { createdAt: '2026-01-01T00:00:00.000Z', sessionId: 'session-old' },
+                { createdAt: '2026-02-01T00:00:00.000Z', sessionId: 'session-new' },
               ],
             }
-          : { channels: [], items: [] },
+          : method === 'assignments'
+            ? {
+                assignments: [
+                  {
+                    sessionId: 'assignment-old',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                  },
+                  {
+                    sessionId: 'assignment-new',
+                    updatedAt: '2026-02-01T00:00:00.000Z',
+                    createdAt: '2026-02-01T00:00:00.000Z',
+                  },
+                ],
+              }
+            : method === 'assignment'
+              ? {
+                  assignment: {
+                    sessionId: 'assignment-new',
+                    createdAt: '2026-02-01T00:00:00.000Z',
+                  },
+                }
+              : { channels: [], items: [] },
     }));
-    expect((await invoke(['channels'], live.url)).code).toBe(0);
     expect(
       (
         await invoke(
@@ -626,15 +647,64 @@ describe('online CLI management', () => {
     ).toBe(0);
     const sessions = await invoke(['bot-sessions', 'ada', '--limit', '1'], live.url);
     expect(sessions.value).toEqual({
-      sessions: [{ createdAt: '2026-02-01', sessionId: 'new' }],
+      sessions: [{ createdAt: '2026-02-01T00:00:00.000Z', sessionId: 'session-new' }],
       total: 2,
+      nextCursor: expect.any(String),
     });
-    expect(live.calls[1]).toEqual({
+    const nextSessions = await invoke(
+      ['bot-sessions', 'ada', '--limit', '1', '--cursor', sessions.value.nextCursor],
+      live.url,
+    );
+    expect(nextSessions.value.sessions[0]).toMatchObject({ sessionId: 'session-old' });
+
+    const assignments = await invoke(['bot-assignments', 'ada', '--limit', '1'], live.url);
+    expect(assignments.value).toEqual({
+      assignments: [
+        {
+          sessionId: 'assignment-new',
+          updatedAt: '2026-02-01T00:00:00.000Z',
+          createdAt: '2026-02-01T00:00:00.000Z',
+        },
+      ],
+      total: 2,
+      nextCursor: expect.any(String),
+    });
+    const nextAssignments = await invoke(
+      ['bot-assignments', 'ada', '--limit', '1', '--cursor', assignments.value.nextCursor],
+      live.url,
+    );
+    expect(nextAssignments.value.assignments[0]).toMatchObject({
+      sessionId: 'assignment-old',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const assignment = await invoke(
+      ['bot-assignment', 'ada', '--session', 'assignment-new'],
+      live.url,
+    );
+    expect(assignment.value.assignment).toMatchObject({
+      sessionId: 'assignment-new',
+      createdAt: '2026-02-01T00:00:00.000Z',
+    });
+
+    expect(live.calls[0]).toEqual({
       method: 'botAttention',
       args: { slug: 'ada', limit: 10, cursor: 'source', state: 'handled' },
     });
     const invalid = await invoke(['bot-sessions', 'ada', '--limit', '0'], live.url);
     expect(invalid.value.error.code).toBe('usage');
-    expect(live.calls).toHaveLength(3);
+    const badCursor = await invoke(['bot-sessions', 'ada', '--cursor', 'bad'], live.url);
+    expect(badCursor.value.error.code).toBe('invalid-cursor');
+    expect(live.calls).toEqual([
+      {
+        method: 'botAttention',
+        args: { slug: 'ada', limit: 10, cursor: 'source', state: 'handled' },
+      },
+      { method: 'sessions', args: { slug: 'ada' } },
+      { method: 'sessions', args: { slug: 'ada' } },
+      { method: 'assignments', args: { slug: 'ada' } },
+      { method: 'assignments', args: { slug: 'ada' } },
+      { method: 'assignment', args: { slug: 'ada', sessionId: 'assignment-new' } },
+      { method: 'sessions', args: { slug: 'ada' } },
+    ]);
   });
 });
