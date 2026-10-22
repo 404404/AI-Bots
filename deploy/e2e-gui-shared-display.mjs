@@ -62,6 +62,7 @@ const computerInputRoundTrip = {
   windowStateElementSummaries: [],
   coordinateFallbackUsed: false,
   coordinateTypeFocusedField: false,
+  elementTypeTargetUsed: false,
   windowScreenshotWidth: null,
   windowScreenshotHeight: null,
   windowViewportWidth: null,
@@ -361,12 +362,13 @@ try {
   let inputTypeArguments;
   let submitClickArguments;
   if (inputControl && submitControl) {
-    inputClickArguments = { element_token: inputControl.element_token };
+    inputClickArguments = null;
     inputTypeArguments = {
       element_token: inputControl.element_token,
       text: 'computer-input-confirmed',
     };
     submitClickArguments = { element_token: submitControl.element_token };
+    computerInputRoundTrip.elementTypeTargetUsed = true;
   } else {
     const screenshot = windowState.content?.find(
       (item) => item.type === 'image' && item.mimeType === 'image/png',
@@ -443,7 +445,7 @@ try {
     throw new Error('Computer could not type into the fixture input.');
   }
   computerInputRoundTrip.typingSucceeded = true;
-  if (!inputClickArguments) {
+  if (computerInputRoundTrip.coordinateFallbackUsed) {
     computerInputRoundTrip.inputClickSucceeded = true;
     computerInputRoundTrip.coordinateTypeFocusedField = true;
   }
