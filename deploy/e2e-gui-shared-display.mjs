@@ -60,9 +60,16 @@ const computerInputRoundTrip = {
   windowStateNodesVisited: null,
   windowStateNodesPending: null,
   windowStateElementSummaries: [],
+  windowStateSnapshotIdAvailable: false,
+  inputTokenMatchesSnapshot: false,
   coordinateFallbackUsed: false,
   coordinateTypeFocusedField: false,
   elementTypeTargetUsed: false,
+  typingInitialErrorClass: null,
+  typingRetriedAfterFreshSnapshot: false,
+  typingRecoveredAfterFreshSnapshot: false,
+  typingRefreshErrorClass: null,
+  submitSnapshotRefreshed: false,
   windowScreenshotWidth: null,
   windowScreenshotHeight: null,
   windowViewportWidth: null,
@@ -103,6 +110,36 @@ function readPngDimensions(image) {
   const bytes = Buffer.from(image.data, 'base64');
   if (bytes.length < 24 || bytes.toString('hex', 0, 8) !== '89504e470d0a1a0a') return;
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+}
+
+function findFixtureControls(state) {
+  const elements = Array.isArray(state?.elements) ? state.elements : [];
+  const controls = elements.map((element) => {
+    const role = typeof element.role === 'string' ? element.role.toLowerCase() : '';
+    const label = [element.label, element.name, element.value]
+      .filter((value) => typeof value === 'string')
+      .join(' ')
+      .toLowerCase();
+    return { element, role, label };
+  });
+  const inputs = controls.filter(
+    ({ element, role, label }) =>
+      typeof element.element_token === 'string' &&
+      /(?:text|entry|input)/u.test(role) &&
+      label.includes('input'),
+  );
+  const submits = controls.filter(
+    ({ element, role, label }) =>
+      typeof element.element_token === 'string' &&
+      /(?:button|push button)/u.test(role) &&
+      label.includes('submit'),
+  );
+  return {
+    inputControl: inputs.length === 1 ? inputs[0].element : undefined,
+    submitControl: submits.length === 1 ? submits[0].element : undefined,
+    inputCandidateCount: inputs.length,
+    submitCandidateCount: submits.length,
+  };
 }
 
 try {
@@ -300,8 +337,7 @@ try {
   process.stdout.write('PASS: Computer sees Browser Chromium on the shared display.\n');
   stage = 'computer-window-state';
   const windowArgs = { pid: fixtureWindow.pid, window_id: fixtureWindow.window_id };
-  let windowState;
-  try {
+  const readWindowState = async () => {
     const result = await client.callTool({
       name: 'get_window_state',
       arguments: {
@@ -312,56 +348,45 @@ try {
       },
     });
     if (!result || typeof result !== 'object') {
-      computerInputRoundTrip.windowStateErrorClass = 'tool-error';
-      throw new Error('Computer returned an invalid tool result.');
+      const error = new Error('Computer returned an invalid tool result.');
+      error.computerErrorClass = 'tool-error';
+      throw error;
     }
     if (result.isError) {
-      computerInputRoundTrip.windowStateErrorClass = classifyComputerToolError(result);
-      throw new Error('Computer could not inspect the fixture controls.');
+      const error = new Error('Computer could not inspect the fixture controls.');
+      error.computerErrorClass = classifyComputerToolError(result);
+      throw error;
     }
-    windowState = result;
+    return result;
+  };
+  let windowState;
+  try {
+    windowState = await readWindowState();
   } catch (error) {
-    computerInputRoundTrip.windowStateErrorClass ??= classifyComputerToolError(error);
+    computerInputRoundTrip.windowStateErrorClass ??=
+      error.computerErrorClass ?? classifyComputerToolError(error);
     throw new Error('Computer could not inspect the fixture controls.');
   }
   computerInputRoundTrip.windowStateSucceeded = true;
   const windowStateData = windowState.structuredContent ?? {};
   Object.assign(computerInputRoundTrip, summarizeComputerWindowState(windowStateData));
-  const elements = windowStateData.elements;
-  const controls = Array.isArray(elements)
-    ? elements.map((element) => {
-        const role = typeof element.role === 'string' ? element.role.toLowerCase() : '';
-        const label = [element.label, element.name, element.value]
-          .filter((value) => typeof value === 'string')
-          .join(' ')
-          .toLowerCase();
-        return { element, role, label };
-      })
-    : [];
-  const inputControl = controls.find(
-    ({ element, role, label }) =>
-      typeof element.element_token === 'string' &&
-      /(?:text|entry|input)/u.test(role) &&
-      label.includes('input'),
-  )?.element;
-  const submitControl = controls.find(
-    ({ element, role, label }) =>
-      typeof element.element_token === 'string' &&
-      /(?:button|push button)/u.test(role) &&
-      label.includes('submit'),
-  )?.element;
-  computerInputRoundTrip.inputCandidateCount = controls.filter(
-    ({ role, label }) => /(?:text|entry|input)/u.test(role) && label.includes('input'),
-  ).length;
-  computerInputRoundTrip.submitCandidateCount = controls.filter(
-    ({ role, label }) => /(?:button|push button)/u.test(role) && label.includes('submit'),
-  ).length;
+  computerInputRoundTrip.windowStateSnapshotIdAvailable =
+    typeof windowStateData.snapshot_id === 'string' && windowStateData.snapshot_id.length > 0;
+  const { inputControl, submitControl, inputCandidateCount, submitCandidateCount } =
+    findFixtureControls(windowStateData);
+  computerInputRoundTrip.inputCandidateCount = inputCandidateCount;
+  computerInputRoundTrip.submitCandidateCount = submitCandidateCount;
   computerInputRoundTrip.inputControlFound = Boolean(inputControl);
   computerInputRoundTrip.submitControlFound = Boolean(submitControl);
+  computerInputRoundTrip.inputTokenMatchesSnapshot = Boolean(
+    inputControl &&
+    typeof windowStateData.snapshot_id === 'string' &&
+    inputControl.element_token.startsWith(`${windowStateData.snapshot_id}:`),
+  );
   let inputClickArguments;
   let inputTypeArguments;
   let submitClickArguments;
-  if (inputControl && submitControl) {
+  if (inputControl && submitControl && computerInputRoundTrip.inputTokenMatchesSnapshot) {
     inputClickArguments = null;
     inputTypeArguments = {
       element_token: inputControl.element_token,
@@ -440,14 +465,102 @@ try {
     name: 'type_text',
     arguments: inputTypeArguments,
   });
-  if (typed.isError) {
-    computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typed);
-    throw new Error('Computer could not type into the fixture input.');
+  let typingResult = typed;
+  if (typingResult.isError) {
+    const errorClass = classifyComputerToolError(typingResult);
+    computerInputRoundTrip.typingInitialErrorClass = errorClass;
+    if (errorClass !== 'stale-element' || !computerInputRoundTrip.elementTypeTargetUsed) {
+      computerInputRoundTrip.typingErrorClass = errorClass;
+      throw new Error('Computer could not type into the fixture input.');
+    }
+    computerInputRoundTrip.typingRetriedAfterFreshSnapshot = true;
+    stage = 'computer-refresh-after-stale-token';
+    let freshState;
+    try {
+      freshState = await readWindowState();
+    } catch (error) {
+      computerInputRoundTrip.typingRefreshErrorClass =
+        error.computerErrorClass ?? classifyComputerToolError(error);
+      throw new Error('Computer could not refresh the stale fixture observation.');
+    }
+    const freshData = freshState.structuredContent ?? {};
+    const freshInput = findFixtureControls(freshData).inputControl;
+    if (!freshInput || typeof freshData.snapshot_id !== 'string') {
+      computerInputRoundTrip.typingRefreshErrorClass = 'input-unavailable';
+      throw new Error('Computer could not resolve the fixture input from a fresh observation.');
+    }
+    if (!freshInput.element_token.startsWith(`${freshData.snapshot_id}:`)) {
+      computerInputRoundTrip.typingRefreshErrorClass = 'stale-element';
+      throw new Error('Computer returned an input token outside the fresh observation.');
+    }
+    typingResult = await client.callTool({
+      name: 'type_text',
+      arguments: {
+        element_token: freshInput.element_token,
+        text: 'computer-input-confirmed',
+      },
+    });
+    if (typingResult.isError) {
+      computerInputRoundTrip.typingErrorClass = classifyComputerToolError(typingResult);
+      throw new Error('Computer could not type into the fixture input after refreshing it.');
+    }
+    computerInputRoundTrip.typingRecoveredAfterFreshSnapshot = true;
   }
   computerInputRoundTrip.typingSucceeded = true;
   if (computerInputRoundTrip.coordinateFallbackUsed) {
     computerInputRoundTrip.inputClickSucceeded = true;
     computerInputRoundTrip.coordinateTypeFocusedField = true;
+  }
+  stage = 'computer-refresh-before-submit';
+  let submitState;
+  try {
+    submitState = await readWindowState();
+  } catch (error) {
+    computerInputRoundTrip.typingRefreshErrorClass ??=
+      error.computerErrorClass ?? classifyComputerToolError(error);
+    throw new Error('Computer could not refresh the fixture before submission.');
+  }
+  const submitStateData = submitState.structuredContent ?? {};
+  const freshSubmit = findFixtureControls(submitStateData).submitControl;
+  if (computerInputRoundTrip.elementTypeTargetUsed) {
+    if (
+      !freshSubmit ||
+      typeof submitStateData.snapshot_id !== 'string' ||
+      !freshSubmit.element_token.startsWith(`${submitStateData.snapshot_id}:`)
+    ) {
+      computerInputRoundTrip.typingRefreshErrorClass = 'stale-element';
+      throw new Error('Computer could not resolve Submit from the latest observation.');
+    }
+    submitClickArguments = { element_token: freshSubmit.element_token };
+    computerInputRoundTrip.submitSnapshotRefreshed = true;
+  } else {
+    const freshScreenshot = submitState.content?.find(
+      (item) => item.type === 'image' && item.mimeType === 'image/png',
+    );
+    const freshDimensions = readPngDimensions(freshScreenshot);
+    const submitBounds = await page.locator('#fixture-submit').boundingBox();
+    const viewport = await page.evaluate(() => ({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      scale: window.devicePixelRatio,
+    }));
+    if (!freshDimensions || !submitBounds || !Number.isFinite(viewport.scale))
+      throw new Error('Computer could not locate Submit in the refreshed screenshot.');
+    const point = {
+      x: Math.round((submitBounds.x + submitBounds.width / 2) * viewport.scale),
+      y: Math.round((submitBounds.y + submitBounds.height / 2) * viewport.scale),
+    };
+    if (
+      freshDimensions.width !== Math.round(viewport.width * viewport.scale) ||
+      freshDimensions.height !== Math.round(viewport.height * viewport.scale) ||
+      point.x < 0 ||
+      point.y < 0 ||
+      point.x >= freshDimensions.width ||
+      point.y >= freshDimensions.height
+    )
+      throw new Error('Computer Submit target left the refreshed Browser frame.');
+    submitClickArguments = { window_id: fixtureWindow.window_id, ...point };
+    computerInputRoundTrip.submitSnapshotRefreshed = true;
   }
   stage = 'computer-click-submit';
   const clickedSubmit = await client.callTool({
