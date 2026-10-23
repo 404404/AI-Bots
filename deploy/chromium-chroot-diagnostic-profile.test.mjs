@@ -22,15 +22,40 @@ test('diagnostic profile preserves default deny and adds only an unconditional c
   assert.equal(JSON.stringify(productionProfile), original);
 });
 
-test('CI clone diagnostic profile adds exactly chroot and clone without changing other policy', () => {
-  const diagnostic = createChromiumChrootDiagnosticProfile(productionProfile, ['clone']);
+test('CI PID namespace diagnostic adds chroot and only a CLONE_NEWPID rule', () => {
+  const diagnostic = createChromiumChrootDiagnosticProfile(productionProfile, true);
 
   assert.equal(diagnostic.defaultAction, 'SCMP_ACT_ERRNO');
   assert.deepEqual(diagnostic.archMap, productionProfile.archMap);
-  assert.deepEqual(diagnostic.syscalls.slice(0, -2), productionProfile.syscalls);
-  assert.deepEqual(diagnostic.syscalls.slice(-2), [
+  assert.deepEqual(diagnostic.syscalls.slice(0, -3), productionProfile.syscalls);
+  assert.deepEqual(diagnostic.syscalls.slice(-3), [
     { names: ['chroot'], action: 'SCMP_ACT_ALLOW' },
-    { names: ['clone'], action: 'SCMP_ACT_ALLOW' },
+    {
+      names: ['clone'],
+      action: 'SCMP_ACT_ALLOW',
+      args: [
+        {
+          index: 0,
+          value: 0x20000000,
+          valueTwo: 0x7e020080,
+          op: 'SCMP_CMP_MASKED_EQ',
+        },
+      ],
+      excludes: { arches: ['s390', 's390x'] },
+    },
+    {
+      names: ['clone'],
+      action: 'SCMP_ACT_ALLOW',
+      args: [
+        {
+          index: 1,
+          value: 0x20000000,
+          valueTwo: 0x7e020080,
+          op: 'SCMP_CMP_MASKED_EQ',
+        },
+      ],
+      includes: { arches: ['s390', 's390x'] },
+    },
   ]);
 });
 
@@ -44,7 +69,7 @@ test('diagnostic profile rejects anything other than the default-deny policy sha
     /default-deny/u,
   );
   assert.throws(
-    () => createChromiumChrootDiagnosticProfile(productionProfile, ['mount']),
-    /Only the CI diagnostic clone syscall/u,
+    () => createChromiumChrootDiagnosticProfile(productionProfile, 'clone'),
+    /only allow a PID-namespace clone/u,
   );
 });
