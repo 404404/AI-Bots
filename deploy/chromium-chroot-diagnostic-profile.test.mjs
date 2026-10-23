@@ -36,8 +36,8 @@ test('CI PID namespace diagnostic adds chroot and only a CLONE_NEWPID rule', () 
       args: [
         {
           index: 0,
-          value: 0x20000000,
-          valueTwo: 0x7e020080,
+          value: 0x7e020080,
+          valueTwo: 0x20000000,
           op: 'SCMP_CMP_MASKED_EQ',
         },
       ],
@@ -49,14 +49,19 @@ test('CI PID namespace diagnostic adds chroot and only a CLONE_NEWPID rule', () 
       args: [
         {
           index: 1,
-          value: 0x20000000,
-          valueTwo: 0x7e020080,
+          value: 0x7e020080,
+          valueTwo: 0x20000000,
           op: 'SCMP_CMP_MASKED_EQ',
         },
       ],
       includes: { arches: ['s390', 's390x'] },
     },
   ]);
+  const pidOnlyRule = diagnostic.syscalls.at(-2).args[0];
+  const pidOnlyRuleMatches = (flags) => (flags & pidOnlyRule.value) === pidOnlyRule.valueTwo;
+  assert.equal(pidOnlyRuleMatches(0x20000000 | 0x11), true);
+  assert.equal(pidOnlyRuleMatches(0x20000000 | 0x40000000), false);
+  assert.equal(pidOnlyRuleMatches(0x10000000), false);
 });
 
 test('diagnostic profile rejects anything other than the default-deny policy shape', () => {

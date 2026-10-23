@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const CLONE_NEWPID = 0x20000000;
+// Moby's namespace mask plus CLONE_NEWTIME, which the pinned profile predates.
 const CLONE_NAMESPACE_MASK = 0x7e020000 | 0x80;
 
 function clonePidNamespaceRules() {
@@ -13,8 +14,8 @@ function clonePidNamespaceRules() {
       args: [
         {
           index: 0,
-          value: CLONE_NEWPID,
-          valueTwo: CLONE_NAMESPACE_MASK,
+          value: CLONE_NAMESPACE_MASK,
+          valueTwo: CLONE_NEWPID,
           op: 'SCMP_CMP_MASKED_EQ',
         },
       ],
@@ -26,8 +27,8 @@ function clonePidNamespaceRules() {
       args: [
         {
           index: 1,
-          value: CLONE_NEWPID,
-          valueTwo: CLONE_NAMESPACE_MASK,
+          value: CLONE_NAMESPACE_MASK,
+          valueTwo: CLONE_NEWPID,
           op: 'SCMP_CMP_MASKED_EQ',
         },
       ],
