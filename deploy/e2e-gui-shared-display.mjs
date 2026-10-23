@@ -256,6 +256,7 @@ try {
   if (!devtoolsEndpoint) throw new Error('Chromium did not report its DevTools endpoint.');
   browser = await chromium.connectOverCDP(devtoolsEndpoint);
   browserConnected = true;
+  const browserCdpSession = await browser.newBrowserCDPSession();
   const page = browser.contexts()[0]?.pages()[0];
   if (!page) throw new Error('Chromium did not open its initial Browser page.');
   server = createServer((request, response) => {
@@ -821,6 +822,12 @@ try {
     );
   }
   stage = 'chromium-seccomp-process';
+  const processInfo = await browserCdpSession.send('SystemInfo.getProcessInfo');
+  const rendererProcessIds = Array.isArray(processInfo.processInfo)
+    ? processInfo.processInfo
+        .filter((process) => process?.type === 'renderer')
+        .map((process) => process.id)
+    : [];
   chromiumLaunchSecuritySummary.processIdAvailable = Number.isSafeInteger(chromiumProcess?.pid);
   const launchArgs = Array.isArray(chromiumProcess?.spawnargs) ? chromiumProcess.spawnargs : [];
   const wrapperSource = readFileSync('/usr/local/bin/deepseekbot-chromium', 'utf8');
@@ -849,7 +856,7 @@ try {
     } catch {
       continue;
     }
-    chromiumProcesses.push({ cmdline, status: statusText });
+    chromiumProcesses.push({ pid, cmdline, status: statusText });
     chromiumProcessScanSummary.inspectedProcessCount += 1;
     try {
       const children = readFileSync(`/proc/${pid}/task/${pid}/children`, 'utf8').trim();
@@ -862,7 +869,10 @@ try {
       chromiumProcessScanSummary.childListUnavailableCount += 1;
     }
   }
-  chromiumRendererSandboxSummary = summarizeChromiumRendererSandbox(chromiumProcesses);
+  chromiumRendererSandboxSummary = summarizeChromiumRendererSandbox(
+    chromiumProcesses,
+    rendererProcessIds,
+  );
   chromiumSandboxedRenderer = chromiumRendererSandboxSummary.rendererSeccompFilterCount > 0;
   if (!chromiumSandboxedRenderer)
     throw new Error('Chromium renderer process is not running with seccomp filtering.');

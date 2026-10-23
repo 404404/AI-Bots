@@ -46,19 +46,35 @@ export function summarizeChromiumSandboxStatus(text) {
   };
 }
 
-export function summarizeChromiumRendererSandbox(processes) {
+export function summarizeChromiumRendererSandbox(processes, rendererProcessIds = []) {
+  const rendererIds = new Set(
+    Array.isArray(rendererProcessIds)
+      ? rendererProcessIds.filter((id) => Number.isSafeInteger(id) && id > 0)
+      : [],
+  );
   const summary = {
     rendererProcessCount: 0,
     rendererSeccompFilterCount: 0,
     rendererSeccompUnfilteredCount: 0,
     rendererSeccompStatusMissingCount: 0,
+    devtoolsRendererProcessCount: rendererIds.size,
+    devtoolsRendererProcessMatchedCount: 0,
   };
   if (!Array.isArray(processes)) return summary;
   for (const process of processes) {
     if (!process || typeof process !== 'object') continue;
-    const { cmdline, status } = process;
+    const { cmdline, status, pid } = process;
     if (typeof cmdline !== 'string' || typeof status !== 'string') continue;
-    if (!cmdline.split('\0').includes('--type=renderer')) continue;
+    const namespacePids = status
+      .match(/^NSpid:\s*(\d+(?:\s+\d+)*)\s*$/mu)?.[1]
+      ?.split(/\s+/u)
+      .map(Number);
+    const processPids = [pid, ...(namespacePids ?? [])].filter(
+      (value) => Number.isSafeInteger(value) && value > 0,
+    );
+    const matchedByDevtools = processPids.some((value) => rendererIds.has(value));
+    if (matchedByDevtools) summary.devtoolsRendererProcessMatchedCount += 1;
+    if (!matchedByDevtools && !cmdline.split('\0').includes('--type=renderer')) continue;
     summary.rendererProcessCount += 1;
     const seccomp = status.match(/^Seccomp:\s+(\d+)/mu)?.[1];
     if (seccomp === undefined) summary.rendererSeccompStatusMissingCount += 1;

@@ -117,6 +117,30 @@ test('renderer sandbox summaries expose aggregate counts without process details
     rendererSeccompFilterCount: 1,
     rendererSeccompUnfilteredCount: 1,
     rendererSeccompStatusMissingCount: 1,
+    devtoolsRendererProcessCount: 0,
+    devtoolsRendererProcessMatchedCount: 0,
   });
   assert.equal(JSON.stringify(summary).includes('/usr/bin/chromium'), false);
+});
+
+test('matches CDP renderer IDs to proc status namespace IDs without exposing IDs', () => {
+  const summary = summarizeChromiumRendererSandbox(
+    [
+      { pid: 102, cmdline: '/usr/bin/chromium\0', status: 'NSpid:\t12 102\nSeccomp:\t2\n' },
+      { pid: 103, cmdline: '/usr/bin/chromium\0--type=utility\0', status: 'Seccomp:\t2\n' },
+      { pid: 104, cmdline: '/usr/bin/chromium\0', status: 'NSpid:\t14 104\nSeccomp:\t0\n' },
+    ],
+    [12, 14, 'invalid', 0],
+  );
+
+  assert.deepEqual(summary, {
+    rendererProcessCount: 2,
+    rendererSeccompFilterCount: 1,
+    rendererSeccompUnfilteredCount: 1,
+    rendererSeccompStatusMissingCount: 0,
+    devtoolsRendererProcessCount: 2,
+    devtoolsRendererProcessMatchedCount: 2,
+  });
+  assert.equal(JSON.stringify(summary).includes('102'), false);
+  assert.equal(JSON.stringify(summary).includes('104'), false);
 });
