@@ -8,10 +8,10 @@ Read-only host and repository checks captured on 2026-10-23 at 07:24 Asia/Shangh
 | ------------- | ------------------------------------------------------------------------------------ |
 | Fork          | `https://github.com/404404/AI-Bots.git`                                              |
 | Upstream      | `https://github.com/BotHarness/DeepSeekBot.git`                                      |
-| Branch / HEAD | `feature/gui-container-codex-prototype` / `6a0ad2ff650693d5b4a4c350705761bc33f528da` |
-| Worktree      | Clean at the time of inspection                                                      |
+| Branch / HEAD | `feature/gui-container-codex-prototype` / `08e8fcd4217faa55036fc266924b84fb1cfb6fb5` |
+| Worktree      | Documentation updates pending after CI run 39879550251                               |
 
-The local branch contains the unpublished GUI-container changes and acceptance records. The last local HTTPS `git ls-remote` probe for this feature branch timed out after 20 seconds. No proxy, route, firewall, DNS, Docker daemon, or existing service setting was changed. Do not treat the local timeout as proof that all outbound network access is unavailable.
+The initial snapshot recorded a timed-out `git ls-remote` probe. The feature branch was subsequently pushed to the fork and GitHub Actions checked out commit `08e8fcd4217faa55036fc266924b84fb1cfb6fb5` for run 39879550251. No proxy, route, firewall, DNS, Docker daemon, or existing service setting was changed. No project image was pulled or deployed.
 
 ## Host and Docker
 
@@ -43,8 +43,8 @@ The Compose sample binds the web port to host loopback. It must be rechecked imm
 
 ## Release and deployment gate
 
-- There is no accepted immutable GHCR image digest for this candidate. The latest hosted build passed image build and Trivy, but its production Chromium sandbox gate failed; the publish job was skipped.
-- Local Docker image inventory did not show an AI-Bots GUI candidate. The host-side Git ref probe timed out, so this snapshot does not claim a fresh image pull or a successful branch push.
+- There is no accepted immutable GHCR image digest for this candidate. Run 39879550251 passed image build and Trivy, but its production Chromium sandbox gate failed; the publish job was skipped. The CI-only `chroot + CLONE_NEWPID` control passed the GUI and renderer sandbox checks.
+- Commit `08e8fcd4217faa55036fc266924b84fb1cfb6fb5` is confirmed on the fork's feature branch. No GUI image pull or deployment occurred.
 - GK50 Compose deployment is therefore pending. No project data directory or Compose-managed container was created by this preflight.
 - Codex OAuth real tool-call verification and RS820+/DSM verification remain pending. The DSM host and version were not available in this session.
 

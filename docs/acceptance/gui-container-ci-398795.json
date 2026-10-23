@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": 39879550251,
+    "url": "https://github.com/404404/AI-Bots/actions/runs/39879550251",
+    "commit": "08e8fcd4217faa55036fc266924b84fb1cfb6fb5",
+    "event": "workflow_dispatch",
+    "startedAt": "2026-10-23T00:40:52Z",
+    "finishedAt": "2026-10-23T00:54:59Z",
+    "conclusion": "failure",
+    "publishImage": false
+  },
+  "image": {
+    "build": "passed",
+    "trivy": "passed",
+    "published": false
+  },
+  "fixture": {
+    "botId": "bot-bdf1b08031094d85bad30cc73577ff26",
+    "channelId": "dm-bot-bdf1b08031094d85bad30cc73577ff26",
+    "createdAt": "2026-10-23T00:54:01.450Z"
+  },
+  "onlineCli": {
+    "readOnly": {
+      "beforeRestart": "passed",
+      "afterRestart": "passed",
+      "checks": [
+        { "name": "bot-list", "exitCode": 0 },
+        { "name": "bot-detail", "exitCode": 0 },
+        { "name": "sessions", "exitCode": 0 },
+        { "name": "assignments", "exitCode": 0 },
+        { "name": "assignment-detail", "status": "skipped-empty" },
+        { "name": "activity", "exitCode": 0 },
+        { "name": "channel-timeline", "exitCode": 0 },
+        { "name": "coded-error", "exitCode": 1, "errorCode": "not-found" },
+        { "name": "invalid-cursor", "exitCode": 1, "errorCode": "invalid-cursor" }
+      ],
+      "sample": {
+        "bot": {
+          "slug": "bot-bdf1b08031094d85bad30cc73577ff26",
+          "displayName": "GUI Container CLI Acceptance",
+          "createdAt": "2026-10-23T00:54:01.450Z"
+        },
+        "sessions": { "total": 0, "sessions": [] },
+        "assignments": { "total": 0, "assignments": [] },
+        "channelTimeline": {
+          "channelId": "dm-bot-bdf1b08031094d85bad30cc73577ff26",
+          "revision": 0,
+          "entries": [],
+          "olderCursor": null,
+          "newerCursor": null,
+          "hasOlder": false,
+          "hasNewer": false
+        }
+      }
+    },
+    "hostRestart": {
+      "healthRecovered": true,
+      "oldTokenErrorCode": "host-unauthorized",
+      "refreshedTokenAuthenticated": true,
+      "sameBotId": true
+    }
+  },
+  "chromium": {
+    "productionSeccomp": {
+      "status": "failed",
+      "errorCode": "chromium-startup-failed",
+      "failedAt": "chromium-startup",
+      "chromiumVersion": "Chromium 155.0.8059.79",
+      "exitSignal": "SIGTRAP",
+      "devtoolsStarted": false,
+      "traceAttached": true,
+      "precedingFailedSyscalls": ["chroot:EPERM"],
+      "failedCloneCalls": [
+        { "syscall": "clone3", "errno": "ENOSYS", "namespaceFlags": [], "count": 11 }
+      ]
+    },
+    "chrootPidDiagnostic": {
+      "status": "passed",
+      "published": false,
+      "browserFixtureOpened": true,
+      "namespaceSandbox": "yes",
+      "seccompBpf": "yes",
+      "browserTitleSeenByComputer": true,
+      "computerClickAndTypingObservedByBrowser": true,
+      "computerScreenshot": "returned",
+      "chromiumNoSandboxFlag": false,
+      "userNamespaceSandboxFlag": true,
+      "chromiumProcessScan": {
+        "visitedProcessCount": 9,
+        "inspectedProcessCount": 9,
+        "childListReadCount": 9,
+        "childListUnavailableCount": 0
+      },
+      "chromiumRendererSandbox": {
+        "rendererProcessCount": 3,
+        "rendererSeccompFilterCount": 3,
+        "rendererSeccompUnfilteredCount": 0,
+        "rendererSeccompStatusMissingCount": 0,
+        "devtoolsRendererProcessCount": 3,
+        "devtoolsRendererProcessMatchedCount": 3
+      }
+    }
+  },
+  "codexAuth": {
+    "status": "not-tested",
+    "reason": "No real OAuth account or model Browser tool call was performed."
+  },
+  "gk50": { "status": "not-deployed" },
+  "synology": { "status": "not-tested" },
+  "notes": [
+    "The CI-only profile allowed chroot and clone calls whose namespace flags match CLONE_NEWPID; all other namespace flag combinations remained denied by that added clone rule.",
+    "Session, Assignment, and Channel Timeline collections were empty; Session/Assignment paging and Assignment detail were not exercised against populated Host data.",
+    "Production seccomp remains unchanged because the proposed persistent exception requires explicit review. This report excludes credentials, launch tokens, message bodies, raw stderr, syscall arguments, and host process IDs."
+  ]
+}

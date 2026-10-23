@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": 39875159151,
+    "url": "https://github.com/404404/AI-Bots/actions/runs/39875159151",
+    "commit": "69b4903f8d94e63b72dae357208697249d6d5958",
+    "event": "workflow_dispatch",
+    "startedAt": "2026-10-22T23:57:58Z",
+    "finishedAt": "2026-10-23T00:13:13Z",
+    "conclusion": "failure",
+    "publishImage": false
+  },
+  "image": {
+    "build": "passed",
+    "trivy": "passed",
+    "published": false
+  },
+  "fixture": {
+    "botId": "bot-65ca26b84ad64251815115f7339bcace",
+    "channelId": "dm-bot-65ca26b84ad64251815115f7339bcace",
+    "createdAt": "2026-10-23T00:12:15.665Z"
+  },
+  "onlineCli": {
+    "readOnly": {
+      "beforeRestart": "passed",
+      "afterRestart": "passed",
+      "checks": [
+        { "name": "bot-list", "exitCode": 0 },
+        { "name": "bot-detail", "exitCode": 0 },
+        { "name": "sessions", "exitCode": 0 },
+        { "name": "assignments", "exitCode": 0 },
+        { "name": "assignment-detail", "status": "skipped-empty" },
+        { "name": "activity", "exitCode": 0 },
+        { "name": "channel-timeline", "exitCode": 0 },
+        { "name": "coded-error", "exitCode": 1, "errorCode": "not-found" },
+        { "name": "invalid-cursor", "exitCode": 1, "errorCode": "invalid-cursor" }
+      ],
+      "sample": {
+        "bot": {
+          "slug": "bot-65ca26b84ad64251815115f7339bcace",
+          "displayName": "GUI Container CLI Acceptance",
+          "createdAt": "2026-10-23T00:12:15.665Z"
+        },
+        "sessions": { "total": 0, "sessions": [] },
+        "assignments": { "total": 0, "assignments": [] },
+        "channelTimeline": {
+          "channelId": "dm-bot-65ca26b84ad64251815115f7339bcace",
+          "revision": 0,
+          "entries": [],
+          "olderCursor": null,
+          "newerCursor": null,
+          "hasOlder": false,
+          "hasNewer": false
+        }
+      }
+    },
+    "hostRestart": {
+      "healthRecovered": true,
+      "oldTokenErrorCode": "host-unauthorized",
+      "refreshedTokenAuthenticated": true,
+      "sameBotId": true
+    }
+  },
+  "chromium": {
+    "productionSeccomp": {
+      "status": "failed",
+      "errorCode": "chromium-startup-failed",
+      "failedAt": "chromium-startup",
+      "chromiumVersion": "Chromium 155.0.8059.79",
+      "exitSignal": "SIGTRAP",
+      "devtoolsStarted": false,
+      "traceAttached": true,
+      "precedingFailedSyscalls": ["chroot:EPERM"]
+    },
+    "chrootOnlyDiagnostic": {
+      "status": "failed",
+      "errorCode": "shared-display-failed",
+      "published": false,
+      "sandboxPageLoaded": false,
+      "namespaceSandbox": "not-checked",
+      "seccompBpf": "not-checked",
+      "traceAttached": true,
+      "failedCloneCalls": [
+        {
+          "syscall": "clone",
+          "errno": "EPERM",
+          "namespaceFlags": ["CLONE_NEWPID"],
+          "count": 1
+        }
+      ],
+      "chromiumProcessScan": {
+        "visitedProcessCount": 0,
+        "inspectedProcessCount": 0,
+        "childListReadCount": 0,
+        "childListUnavailableCount": 0
+      }
+    }
+  },
+  "codexAuth": {
+    "status": "not-tested",
+    "reason": "No real OAuth account/model tool call was performed."
+  },
+  "gk50": { "status": "not-deployed" },
+  "synology": { "status": "not-tested" },
+  "notes": [
+    "The chroot-only diagnostic profile added chroot but left clone under the production policy; it recorded clone(CLONE_NEWPID) returning EPERM.",
+    "Session, Assignment, and Channel Timeline collections were empty; Session/Assignment paging and Assignment detail were not exercised against populated Host data.",
+    "The production seccomp profile was unchanged. This report excludes credentials, launch tokens, message bodies, raw stderr, syscall arguments, and host process IDs."
+  ]
+}
