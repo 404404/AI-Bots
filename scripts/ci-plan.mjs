@@ -92,6 +92,8 @@ export const RULES = [
   related('scripts/fixtures/**', 'Script test fixtures'),
   related('scripts/product-provider/**', 'Product provider scripts'),
   related('scripts/*', 'Repository scripts'),
+  none('.dockerignore', 'GUI image context; verified by gui-container.yml'),
+  none('deploy/**', 'GUI container Node tests and runtime acceptance run in gui-container.yml'),
   none('docs/**', 'Documentation synced into the docs site', true),
   none('{CHANGELOG,CHANGELOG.zh,CONTEXT,CONTEXT.zh}.md', 'Release Ledger and glossary pages', true),
   none('.agents/skills/dsh-plugin-dev/**', 'DSH skill pages on the docs site', true),
@@ -418,6 +420,8 @@ export function checkTestInclude(files, include) {
   const problems = [];
   for (const file of files) {
     if (!/\.test\.[cm]?[jt]sx?$/.test(file) || file.includes('/fixtures/')) continue;
+    // These use node:test and run as deploy/*.test.mjs in gui-container.yml.
+    if (matchesGlob(file, 'deploy/*.test.mjs')) continue;
     if (!include.some((glob) => matchesGlob(file, glob)))
       problems.push(`${file} is a test outside the Vitest include in vitest.config.ts`);
   }

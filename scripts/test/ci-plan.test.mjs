@@ -292,3 +292,14 @@ describe('CI test plan drift checks', () => {
     expect(syncGuide(synced)).toBe(synced);
   });
 });
+
+it('keeps standalone deployment Node tests out of the Vitest inventory', () => {
+  const files = [
+    'apps/docs/test/changelog-public-surfaces.test.ts',
+    'apps/docs/astro.config.ts',
+    'scripts/sync-docs.mjs',
+    'scripts/sync-slides.mjs',
+    'deploy/gk50-release.test.mjs',
+  ];
+  expect(checkTestInclude(files, ['apps/docs/test/**'])).toEqual([]);
+});

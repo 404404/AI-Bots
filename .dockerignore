@@ -22,3 +22,9 @@ docs/**/*.png
 docs/**/*.jpg
 docs/**/*.webp
 docs/**/*.gif
+
+# Private GUI deployment state and acceptance evidence
+.local/
+deploy/data/
+deploy/.env
+.humanlayer/

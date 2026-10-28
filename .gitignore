@@ -93,3 +93,6 @@ packages/deepseekbot/desktop-theme/
 deploy/data/
 deploy/.env
 deploy/acceptance-*.json
+
+# Private GUI deployment state and acceptance evidence
+.local/

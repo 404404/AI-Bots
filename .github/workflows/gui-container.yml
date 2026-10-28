@@ -47,24 +47,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
-      - name: Test first-start profile seed copy permissions
-        run: node --test deploy/copy-profile-seed.test.mjs
-      - name: Test loopback forwarding for authenticated online CLI
-        run: node --test deploy/loopback-host-proxy.test.mjs
-      - name: Test authenticated CLI host target validation
-        run: node --test deploy/cli-host-target.test.mjs
-      - name: Verify the Chromium user-namespace seccomp extension
-        run: node --test deploy/chromium-userns-seccomp.test.mjs
-      - name: Test sanitized Chromium seccomp diagnostics
-        run: node --test deploy/summarize-chromium-seccomp-trace.test.mjs
-      - name: Test sanitized Chromium startup and sandbox diagnostics
-        run: node --test deploy/chromium-startup-diagnostics.test.mjs
-      - name: Test CI-only Chromium chroot and PID clone diagnostic profiles
-        run: node --test deploy/chromium-chroot-diagnostic-profile.test.mjs
-      - name: Test sanitized Computer tool error diagnostics
-        run: node --test deploy/classify-computer-tool-error.test.mjs
-      - name: Test sanitized Computer window-state diagnostics
-        run: node --test deploy/summarize-computer-window-state.test.mjs
+      - name: Test deployment helpers and release gates
+        run: node --test deploy/*.test.mjs
       - name: Validate Compose files
         env:
           IMAGE_REF: ghcr.io/404404/ai-bots@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
