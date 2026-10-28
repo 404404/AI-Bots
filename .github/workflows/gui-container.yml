@@ -360,6 +360,20 @@ jobs:
             exit "$gui_hardened_status"
           fi
 
+      - name: Stage sanitized CLI evidence for the runner
+        if: always()
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/gui-cli-evidence"
+          install -d -m 0700 "$evidence_dir"
+          if sudo test -d "$RUNNER_TEMP/dsh-cli-artifacts"; then
+            sudo sh -c '
+              for file in "$1"/*.json; do
+                [ -f "$file" ] || continue
+                install -o "$2" -g "$3" -m 0600 "$file" "$4"
+              done
+            ' sh "$RUNNER_TEMP/dsh-cli-artifacts" "$(id -u)" "$(id -g)" "$evidence_dir"
+          fi
       - name: Preserve sanitized GUI and CLI evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -369,7 +383,7 @@ jobs:
             ${{ runner.temp }}/gui-hardened.json
             ${{ runner.temp }}/cli-before-restart.json
             ${{ runner.temp }}/cli-after-restart.json
-            ${{ runner.temp }}/dsh-cli-artifacts/*.json
+            ${{ runner.temp }}/gui-cli-evidence/*.json
           if-no-files-found: ignore
           retention-days: 14
       - name: Require explicit publish confirmation
