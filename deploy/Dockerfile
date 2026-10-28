@@ -32,15 +32,21 @@ LABEL org.opencontainers.image.title="DeepSeekBot Linux GUI" \
       org.opencontainers.image.licenses="MIT" \
       io.botharness.runtime="dsh-linux-gui" \
       io.botharness.profile="gui"
-RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade perl-base \
+# Bump this value to refresh the cached OS security updates on the pinned base.
+ARG SECURITY_REFRESH=2026-10-28
+RUN test -n "$SECURITY_REFRESH" \
+ && apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     at-spi2-core ca-certificates chromium chromium-sandbox dbus dbus-x11 fonts-dejavu-core \
     fonts-noto-color-emoji fonts-noto-cjk libasound2 libatk-bridge2.0-0 libatk1.0-0 \
     libcups2 libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 libnss3 libx11-xcb1 libxcomposite1 \
     libxdamage1 libxfixes3 libxkbcommon0 libxrandr2 libxshmfence1 libxss1 libxtst6 \
     curl git libglib2.0-bin openbox tini x11-utils xauth xvfb iproute2 util-linux \
- && npm install --global --ignore-scripts --no-audit --no-fund npm@12.2.1 \
+ && npm install --global --ignore-scripts --no-audit --no-fund npm@12.2.1 undici@6.29.1 \
+ && rm -rf /usr/local/lib/node_modules/npm/node_modules/undici \
+ && cp -a /usr/local/lib/node_modules/undici /usr/local/lib/node_modules/npm/node_modules/undici \
+ && npm uninstall --global --ignore-scripts undici \
  && npm --version | grep -Fx '12.2.1' \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /data/dsh \
@@ -63,11 +69,19 @@ COPY --from=build --chown=0:0 /opt/dsh-seed/profiles /opt/dsh-seed/profiles
 COPY --from=build --chown=0:0 /opt/cua-driver /opt/cua-driver
 COPY --chown=0:0 deploy/container-entrypoint.mjs deploy/container-healthcheck.mjs deploy/gui-profile.patch.yml /opt/app/deploy/
 COPY --chmod=0555 deploy/chromium-wrapper.sh /usr/local/bin/deepseekbot-chromium
+# Mermaid CLI and its Puppeteer tree are build-only; keep the separate
+# @puppeteer/browsers runtime dependency used by the Browser tool.
 RUN rm -rf \
     /opt/app/deploy/copy-profile-seed.test.mjs \
     /opt/app/deploy/loopback-host-proxy.test.mjs \
     /opt/app/node_modules/.pnpm/@typescript+typescript-linux-x64@* \
     /opt/app/node_modules/.pnpm/typescript@* \
+    /opt/app/node_modules/.pnpm/zod@3.25.76 \
+    /opt/app/node_modules/.pnpm/chromium-bidi@* \
+    /opt/app/node_modules/.pnpm/puppeteer@* \
+    /opt/app/node_modules/.pnpm/puppeteer-core@* \
+    /opt/app/node_modules/.pnpm/@mermaid-js+mermaid-cli@* \
+    /opt/app/node_modules/@mermaid-js/mermaid-cli \
     /opt/app/node_modules/.pnpm/node_modules/@typescript/typescript-linux-x64 \
     /opt/app/node_modules/.pnpm/node_modules/typescript \
     /opt/app/node_modules/@typescript/typescript-linux-x64 \
