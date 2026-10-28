@@ -2,7 +2,7 @@
 
 ## Current state
 
-The checked-in production profile remains unchanged. Production Chromium still exits before DevTools because `chroot` returns `EPERM`; the most recent trace records `chroot:EPERM` before `SIGTRAP`. The CI-only diagnostic profile passed the same GUI checks after adding the two syscall rules below. That diagnostic result is evidence for the candidate, not approval to apply it to production.
+On 2026-10-28 the Human explicitly approved both exceptions below. They are now applied to the production profile; publication still requires a fresh production-profile CI pass. The previous failure was: Production Chromium still exits before DevTools because `chroot` returns `EPERM`; the most recent trace records `chroot:EPERM` before `SIGTRAP`. The CI-only diagnostic profile passed the same GUI checks after adding the two syscall rules below. That diagnostic result is evidence for the candidate, not approval to apply it to production.
 
 ## Proposed delta
 
@@ -26,4 +26,4 @@ The CI run passed image build and Trivy but failed the production-profile accept
 
 ## Decision required
 
-The automatic approval review rejected the persistent production-profile edit because it changes the container security boundary and the request had not explicitly authorized these specific exceptions. The proposed delta is therefore not applied. After explicit approval, implementation must rerun the full production-profile GUI gate; publication and deployment remain gated on that run passing.
+The automatic approval review rejected the persistent production-profile edit because it changes the container security boundary and the request had not explicitly authorized these specific exceptions. That earlier refusal was resolved by the Human approval on 2026-10-28. After explicit approval, implementation must rerun the full production-profile GUI gate; publication and deployment remain gated on that run passing.

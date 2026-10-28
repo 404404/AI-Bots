@@ -50,3 +50,33 @@ test('GUI Chromium wrapper selects the user namespace sandbox without disabling 
   assert.doesNotMatch(wrapper, /--no-sandbox/u);
   assert.match(profilePatch, /browserPath:\s*\/usr\/local\/bin\/deepseekbot-chromium/u);
 });
+
+test('reviewed Chromium chroot and PID-only clone exceptions keep other namespaces excluded', () => {
+  assert.ok(
+    profile.syscalls.some(
+      (rule) =>
+        rule.names?.includes('chroot') &&
+        rule.action === 'SCMP_ACT_ALLOW' &&
+        !rule.includes &&
+        !rule.args,
+    ),
+  );
+  for (const index of [0, 1]) {
+    const rule = profile.syscalls.find(
+      (rule) =>
+        rule.names?.includes('clone') &&
+        rule.args?.some(
+          (arg) => arg.index === index && arg.value === 0x7e020080 && arg.valueTwo === 0x20000000,
+        ),
+    );
+    assert.ok(rule);
+    assert.deepEqual(index === 0 ? rule.excludes : rule.includes, { arches: ['s390', 's390x'] });
+    const arg = rule.args[0];
+    assert.equal(arg.op, 'SCMP_CMP_MASKED_EQ');
+    const matches = (flags) => (flags & arg.value) === arg.valueTwo;
+    assert.equal(matches(0x20000000 | 17), true);
+    for (const flag of [0x80, 0x20000, 0x2000000, 0x4000000, 0x8000000, 0x10000000, 0x40000000])
+      assert.equal(matches(0x20000000 | flag), false);
+    assert.equal(matches(17), false);
+  }
+});
