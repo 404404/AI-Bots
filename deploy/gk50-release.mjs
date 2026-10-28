@@ -84,7 +84,43 @@ export function guiReport(stdout) {
   );
   return value;
 }
-export function validateInstalledDeployment(receipt, container, root, compose, seccomp, envText) {
+export function validatePulledImage(receipt, image, rawManifest) {
+  const manifestDigest = receipt.imageRef.split('@')[1];
+  requireCheck(`sha256:${hash(rawManifest)}` === manifestDigest, 'image-manifest-digest-mismatch');
+  const manifest = JSON.parse(rawManifest);
+  requireCheck(
+    manifest.schemaVersion === 2 &&
+      [
+        'application/vnd.oci.image.manifest.v1+json',
+        'application/vnd.docker.distribution.manifest.v2+json',
+      ].includes(manifest.mediaType) &&
+      !manifest.manifests &&
+      manifest.config?.digest === receipt.imageId,
+    'image-manifest-config-mismatch',
+  );
+  // Classic Docker identifies an image by config digest; containerd may use manifest digest.
+  // Both are accepted only after the original manifest bytes bind them to the tested receipt.
+  requireCheck(
+    [receipt.imageId, manifestDigest].includes(image.Id) &&
+      image.RepoDigests?.includes(receipt.imageRef) &&
+      image.Config?.Labels?.['org.opencontainers.image.revision'] === receipt.commit &&
+      image.Os === 'linux' &&
+      image.Architecture === 'amd64',
+    'pulled-image-identity-mismatch',
+  );
+  return image.Id;
+}
+export function validateInstalledDeployment(
+  receipt,
+  container,
+  root,
+  compose,
+  seccomp,
+  envText,
+  image,
+  rawManifest,
+) {
+  const verifiedImageId = validatePulledImage(receipt, image, rawManifest);
   requireCheck(
     hash(compose) === receipt.composeSha256 && hash(seccomp) === receipt.seccompSha256,
     'installed-config-mismatch',
@@ -106,7 +142,8 @@ export function validateInstalledDeployment(receipt, container, root, compose, s
   );
   const labels = container.Config?.Labels;
   requireCheck(
-    container.Image === receipt.imageId &&
+    container.Image === verifiedImageId &&
+      container.Config?.Image === receipt.imageRef &&
       labels?.['com.docker.compose.project'] === service &&
       labels?.['com.docker.compose.service'] === service &&
       labels?.['com.docker.compose.project.working_dir'] === root &&
@@ -392,6 +429,10 @@ export async function main(argv) {
       const saved = JSON.parse(await fs.readFile(join(root, 'release.json'), 'utf8'));
       requireCheck(JSON.stringify(saved) === JSON.stringify(receipt), 'installed-release-mismatch');
       const installed = (await jsonCommand('docker', ['inspect', service]))[0];
+      const image = (await jsonCommand('docker', ['image', 'inspect', receipt.imageRef]))[0];
+      const manifest = (
+        await command('docker', ['buildx', 'imagetools', 'inspect', '--raw', receipt.imageRef])
+      ).stdout;
       port = validateInstalledDeployment(
         receipt,
         installed,
@@ -399,6 +440,8 @@ export async function main(argv) {
         await fs.readFile(join(root, 'compose.yml')),
         await fs.readFile(join(root, 'chromium-userns-seccomp.json')),
         await fs.readFile(join(root, '.env'), 'utf8'),
+        image,
+        manifest,
       );
       report.port = port;
       passed('existing-deployment-identity');
@@ -428,13 +471,10 @@ export async function main(argv) {
       await docker(['pull'], { timeout: 20 * 60_000 });
       report.mutations.push('pulled-accepted-image');
       const image = (await jsonCommand('docker', ['image', 'inspect', receipt.imageRef]))[0];
-      requireCheck(
-        image.Id === receipt.imageId &&
-          image.Config?.Labels?.['org.opencontainers.image.revision'] === receipt.commit &&
-          image.Os === 'linux' &&
-          image.Architecture === 'amd64',
-        'pulled-image-identity-mismatch',
-      );
+      const manifest = (
+        await command('docker', ['buildx', 'imagetools', 'inspect', '--raw', receipt.imageRef])
+      ).stdout;
+      report.localImageId = validatePulledImage(receipt, image, manifest);
       passed('pulled-image-matches-tested-image');
       stage('start-compose');
       started = true;

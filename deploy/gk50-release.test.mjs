@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import {
   validateRelease,
+  validatePulledImage,
   choosePort,
   guiReport,
   validateInstalledDeployment,
@@ -10,16 +11,29 @@ import {
 const compose = Buffer.from('compose');
 const seccomp = Buffer.from('policy');
 const digest = (value) => createHash('sha256').update(value).digest('hex');
+const manifest = JSON.stringify({
+  schemaVersion: 2,
+  mediaType: 'application/vnd.oci.image.manifest.v1+json',
+  config: { digest: `sha256:${'c'.repeat(64)}` },
+  layers: [],
+});
 const receipt = {
   schemaVersion: 1,
   repository: '404404/AI-Bots',
   runId: '123',
   commit: 'a'.repeat(40),
-  imageRef: `ghcr.io/404404/ai-bots@sha256:${'b'.repeat(64)}`,
+  imageRef: `ghcr.io/404404/ai-bots@sha256:${digest(manifest)}`,
   imageId: `sha256:${'c'.repeat(64)}`,
   productionGate: 'passed',
   composeSha256: digest(compose),
   seccompSha256: digest(seccomp),
+};
+const image = {
+  Id: receipt.imageId,
+  RepoDigests: [receipt.imageRef],
+  Config: { Labels: { 'org.opencontainers.image.revision': receipt.commit } },
+  Os: 'linux',
+  Architecture: 'amd64',
 };
 const run = {
   status: 'completed',
@@ -126,6 +140,7 @@ const environment = `IMAGE_REF=${receipt.imageRef}\nPUID=${process.getuid()}\nPG
 const installed = {
   Image: receipt.imageId,
   Config: {
+    Image: receipt.imageRef,
     User: `${process.getuid()}:${process.getgid()}`,
     Labels: {
       'com.docker.compose.project': 'deepseekbot-gui',
@@ -156,6 +171,8 @@ test('separate acceptance only targets the exact installed Compose project', () 
       compose,
       policyBytes,
       environment,
+      image,
+      manifest,
     ),
     20443,
   );
@@ -202,6 +219,8 @@ test('separate acceptance only targets the exact installed Compose project', () 
         compose,
         policyBytes,
         environment,
+        image,
+        manifest,
       ),
     );
   }
@@ -214,6 +233,8 @@ test('separate acceptance only targets the exact installed Compose project', () 
         compose,
         policyBytes,
         environment + 'HOST_PORT=22443\n',
+        image,
+        manifest,
       ),
     /environment-mismatch/,
   );
@@ -226,7 +247,80 @@ test('separate acceptance only targets the exact installed Compose project', () 
         compose,
         policyBytes,
         environment.replace('PUID=', 'UNKNOWN='),
+        image,
+        manifest,
       ),
     /environment-mismatch/,
+  );
+});
+
+test('classic and containerd IDs both require the exact manifest-to-config chain', () => {
+  assert.equal(validatePulledImage(receipt, image, manifest), receipt.imageId);
+  const manifestImage = { ...image, Id: receipt.imageRef.split('@')[1] };
+  assert.equal(validatePulledImage(receipt, manifestImage, manifest), manifestImage.Id);
+  assert.equal(
+    validateInstalledDeployment(
+      installedReceipt,
+      { ...installed, Image: manifestImage.Id },
+      root,
+      compose,
+      policyBytes,
+      environment,
+      manifestImage,
+      manifest,
+    ),
+    20443,
+  );
+  assert.throws(() => validatePulledImage(receipt, image, manifest + ' '), /manifest-digest/);
+  const changedManifest = JSON.stringify({
+    ...JSON.parse(manifest),
+    config: { digest: `sha256:${'f'.repeat(64)}` },
+  });
+  const changedReceipt = {
+    ...receipt,
+    imageRef: `ghcr.io/404404/ai-bots@sha256:${digest(changedManifest)}`,
+  };
+  assert.throws(
+    () => validatePulledImage(changedReceipt, image, changedManifest),
+    /manifest-config/,
+  );
+  for (const bad of [
+    { Id: `sha256:${'f'.repeat(64)}` },
+    { RepoDigests: [] },
+    { Config: { Labels: { 'org.opencontainers.image.revision': 'f'.repeat(40) } } },
+    { Os: 'windows' },
+    { Architecture: 'arm64' },
+  ])
+    assert.throws(
+      () => validatePulledImage(receipt, { ...image, ...bad }, manifest),
+      /image-identity/,
+    );
+  assert.throws(
+    () =>
+      validateInstalledDeployment(
+        installedReceipt,
+        { ...installed, Image: receipt.imageId },
+        root,
+        compose,
+        policyBytes,
+        environment,
+        manifestImage,
+        manifest,
+      ),
+    /installed-container/,
+  );
+  const index = JSON.stringify({
+    schemaVersion: 2,
+    mediaType: 'application/vnd.oci.image.index.v1+json',
+    manifests: [],
+  });
+  assert.throws(
+    () =>
+      validatePulledImage(
+        { ...receipt, imageRef: `ghcr.io/404404/ai-bots@sha256:${digest(index)}` },
+        image,
+        index,
+      ),
+    /manifest-config/,
   );
 });
