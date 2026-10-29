@@ -136,12 +136,12 @@ test('one filtered renderer cannot hide unfiltered or unmatched renderers', () =
 const root = '/tmp/gui-owned';
 const policyBytes = Buffer.from(JSON.stringify({ defaultAction: 'SCMP_ACT_ERRNO', syscalls: [] }));
 const installedReceipt = { ...receipt, seccompSha256: digest(policyBytes) };
-const environment = `IMAGE_REF=${receipt.imageRef}\nPUID=${process.getuid()}\nPGID=${process.getgid()}\nHOST_PORT=20443\nPUBLIC_URL=http://127.0.0.1:20443\nWORKSPACE_ID=deepseekbot-gui\nCODEX_CALLBACK_PORT=1455\n`;
+const environment = `IMAGE_REF=${receipt.imageRef}\nPUID=10001\nPGID=10001\nHOST_PORT=20443\nPUBLIC_URL=http://127.0.0.1:20443\nWORKSPACE_ID=deepseekbot-gui\nCODEX_CALLBACK_PORT=1455\n`;
 const installed = {
   Image: receipt.imageId,
   Config: {
     Image: receipt.imageRef,
-    User: `${process.getuid()}:${process.getgid()}`,
+    User: `10001:10001`,
     Labels: {
       'com.docker.compose.project': 'deepseekbot-gui',
       'com.docker.compose.service': 'deepseekbot-gui',
@@ -182,6 +182,9 @@ test('separate acceptance only targets the exact installed Compose project', () 
     },
     (value) => {
       value.Config.User = '0:0';
+    },
+    (value) => {
+      value.Config.User = '1001:1001';
     },
     (value) => {
       value.Config.Labels['com.docker.compose.project.working_dir'] = '/another';
@@ -322,5 +325,25 @@ test('classic and containerd IDs both require the exact manifest-to-config chain
         index,
       ),
     /manifest-config/,
+  );
+});
+
+test('host UID substitution is refused because D-Bus needs the tested named account', () => {
+  const hostEnvironment = environment
+    .replace('PUID=10001', 'PUID=1001')
+    .replace('PGID=10001', 'PGID=1001');
+  assert.throws(
+    () =>
+      validateInstalledDeployment(
+        installedReceipt,
+        { ...installed, Config: { ...installed.Config, User: '1001:1001' } },
+        root,
+        compose,
+        policyBytes,
+        hostEnvironment,
+        image,
+        manifest,
+      ),
+    /installed-environment/,
   );
 });

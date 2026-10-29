@@ -11,6 +11,9 @@ import { parseArgs } from 'node:util';
 const repo = '404404/AI-Bots';
 const source = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const service = 'deepseekbot-gui';
+// D-Bus requires the image's named dsh account, which CI tests with this identity.
+const runtimeUid = 10001;
+const runtimeGid = 10001;
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 function requireCheck(condition, code) {
   if (!condition) throw new Error(code);
@@ -132,8 +135,8 @@ export function validateInstalledDeployment(
     entries.length === 7 &&
       Object.keys(env).length === 7 &&
       env.IMAGE_REF === receipt.imageRef &&
-      env.PUID === String(process.getuid()) &&
-      env.PGID === String(process.getgid()) &&
+      env.PUID === String(runtimeUid) &&
+      env.PGID === String(runtimeGid) &&
       ['20443', '21443', '22443'].includes(env.HOST_PORT) &&
       env.PUBLIC_URL === `http://127.0.0.1:${env.HOST_PORT}` &&
       env.WORKSPACE_ID === service &&
@@ -457,12 +460,29 @@ export async function main(argv) {
       created = true;
       report.mutations.push('created-dedicated-deployment-directory');
       await fs.mkdir(join(root, 'data'), { mode: 0o700 });
+      if (process.getuid() === 0) {
+        await fs.chown(join(root, 'data'), runtimeUid, runtimeGid);
+      } else {
+        await command('sudo', [
+          '-n',
+          'chown',
+          '--',
+          `${runtimeUid}:${runtimeGid}`,
+          join(root, 'data'),
+        ]);
+      }
+      const dataOwner = await fs.stat(join(root, 'data'));
+      requireCheck(
+        dataOwner.uid === runtimeUid && dataOwner.gid === runtimeGid,
+        'data-owner-mismatch',
+      );
+      report.mutations.push('assigned-empty-data-directory-to-runtime-user');
       await fs.mkdir(join(root, 'evidence'), { mode: 0o700 });
       await fs.writeFile(join(root, 'compose.yml'), compose, { mode: 0o600 });
       await fs.writeFile(join(root, 'chromium-userns-seccomp.json'), seccomp, { mode: 0o600 });
       await fs.writeFile(
         join(root, '.env'),
-        `IMAGE_REF=${receipt.imageRef}\nPUID=${process.getuid()}\nPGID=${process.getgid()}\nHOST_PORT=${port}\nPUBLIC_URL=http://127.0.0.1:${port}\nWORKSPACE_ID=${service}\nCODEX_CALLBACK_PORT=1455\n`,
+        `IMAGE_REF=${receipt.imageRef}\nPUID=${runtimeUid}\nPGID=${runtimeGid}\nHOST_PORT=${port}\nPUBLIC_URL=http://127.0.0.1:${port}\nWORKSPACE_ID=${service}\nCODEX_CALLBACK_PORT=1455\n`,
         { mode: 0o600 },
       );
       await privateJson(join(root, 'release.json'), receipt);
