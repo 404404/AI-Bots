@@ -30,7 +30,7 @@ function createV1(db: DatabaseSync) {
 /** Apply only known forward migrations. Every version transition commits atomically. */
 export function migrate(db: DatabaseSync) {
   let version = Number(db.prepare('PRAGMA user_version').get()?.user_version);
-  requireValue(Number.isInteger(version) && version >= 0 && version <= 2, 'schema-upgrade-required', '数据库版本不兼容。');
+  requireValue(Number.isInteger(version) && version >= 0 && version <= 4, 'schema-upgrade-required', '数据库版本不兼容。');
   if (version === 0) {
     transaction(db, () => {
       createV1(db);
@@ -56,7 +56,84 @@ export function migrate(db: DatabaseSync) {
     });
     version = 2;
   }
-  requireValue(version === 2, 'schema-upgrade-required', '数据库版本不兼容。');
+  if (version === 2) {
+    transaction(db, () => {
+      db.exec(`
+        ALTER TABLE bots ADD COLUMN model_epoch INTEGER NOT NULL DEFAULT 1;
+        CREATE TABLE model_connections(
+          id TEXT PRIMARY KEY,
+          source_bot_id TEXT NOT NULL REFERENCES bots(id),
+          source_model_epoch INTEGER NOT NULL,
+          created_at TEXT NOT NULL,
+          revoked_at TEXT
+        );
+        CREATE TABLE connection_grants(
+          connection_id TEXT NOT NULL REFERENCES model_connections(id),
+          consumer_bot_id TEXT NOT NULL REFERENCES bots(id),
+          created_at TEXT NOT NULL,
+          revoked_at TEXT,
+          PRIMARY KEY(connection_id, consumer_bot_id)
+        );
+        CREATE TABLE delegation_grants(
+          main_bot_id TEXT NOT NULL REFERENCES bots(id),
+          worker_bot_id TEXT NOT NULL REFERENCES bots(id),
+          connection_id TEXT NOT NULL REFERENCES model_connections(id),
+          created_at TEXT NOT NULL,
+          revoked_at TEXT,
+          PRIMARY KEY(main_bot_id, worker_bot_id)
+        );
+        CREATE TABLE tasks(
+          seq INTEGER PRIMARY KEY AUTOINCREMENT,
+          id TEXT UNIQUE NOT NULL,
+          root_id TEXT NOT NULL,
+          parent_id TEXT REFERENCES tasks(id),
+          initiator_bot_id TEXT NOT NULL REFERENCES bots(id),
+          executor_bot_id TEXT NOT NULL REFERENCES bots(id),
+          request_key TEXT NOT NULL,
+          input_hash TEXT NOT NULL,
+          input TEXT NOT NULL,
+          status TEXT NOT NULL CHECK(status IN ('queued','running','completed','failed','cancelled','interrupted')),
+          result TEXT,
+          error_code TEXT,
+          connection_id TEXT REFERENCES model_connections(id),
+          config_revision INTEGER NOT NULL,
+          created_at TEXT NOT NULL,
+          started_at TEXT,
+          finished_at TEXT,
+          deadline_at TEXT NOT NULL,
+          UNIQUE(parent_id, request_key)
+        );
+        CREATE INDEX tasks_root_order ON tasks(root_id, seq);
+        CREATE TABLE task_tool_calls(
+          task_id TEXT NOT NULL REFERENCES tasks(id),
+          tool_call_id TEXT NOT NULL,
+          tool_name TEXT NOT NULL,
+          arguments_hash TEXT NOT NULL,
+          status TEXT NOT NULL CHECK(status IN ('running','completed','failed','cancelled')),
+          result TEXT,
+          error_code TEXT,
+          created_at TEXT NOT NULL,
+          finished_at TEXT,
+          PRIMARY KEY(task_id, tool_call_id)
+        );
+        ALTER TABLE runs ADD COLUMN task_id TEXT REFERENCES tasks(id);
+        ALTER TABLE tasks ADD COLUMN config_snapshot TEXT;
+        ALTER TABLE tasks ADD COLUMN memory_snapshot TEXT;
+        CREATE UNIQUE INDEX one_root_task_per_operation ON tasks(initiator_bot_id,request_key) WHERE parent_id IS NULL;
+        PRAGMA user_version=3;
+      `);
+    });
+    version = 3;
+  }
+  if (version === 3) {
+    transaction(db, () => {
+      db.exec(`ALTER TABLE main_bot ADD COLUMN connection_id TEXT REFERENCES model_connections(id);
+        ALTER TABLE diagnostics ADD COLUMN task_id TEXT;
+        PRAGMA user_version=4`);
+    });
+    version = 4;
+  }
+  requireValue(version === 4, 'schema-upgrade-required', '数据库版本不兼容。');
   const singleton = db.prepare('SELECT bot_id FROM main_bot WHERE singleton=1').get() as { bot_id?: string } | undefined;
   const rows = Number(db.prepare('SELECT count(*) AS n FROM main_bot').get()?.n);
   requireValue(rows === 1 && typeof singleton?.bot_id === 'string', 'main-bot-state-invalid', '主 Bot 身份记录损坏。', 500);

@@ -13,6 +13,7 @@ export async function completeCodex(
   sessionId: string,
   signal: AbortSignal,
   transport?: { request: typeof fetch },
+  beforeRequest?: () => void | Promise<void>,
 ) {
   const model = openaiCodexProvider()
     .getModels()
@@ -22,6 +23,8 @@ export async function completeCodex(
   const timeout = AbortSignal.timeout(90000),
     combined = AbortSignal.any([signal, timeout]);
   let upstreamStatus: number | undefined;
+  let beforeRequestFailed = false;
+  let beforeRequestError: unknown;
   try {
     const context = normalizeContext({
       systemPrompt: messages
@@ -60,6 +63,13 @@ export async function completeCodex(
       maxTokens: 1024,
       maxRetries: 0,
       fetch: async (input, init) => {
+        try {
+          await beforeRequest?.();
+        } catch (error) {
+          beforeRequestFailed = true;
+          beforeRequestError = error;
+          throw error;
+        }
         const url = new URL(
           typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
         );
@@ -93,6 +103,7 @@ export async function completeCodex(
         });
       },
     }).result();
+    if (beforeRequestFailed) throw beforeRequestError;
     if (combined.aborted) throw new Error('Aborted');
     if (result.stopReason === 'error' || result.stopReason === 'aborted') {
       const code =
@@ -119,6 +130,7 @@ export async function completeCodex(
     );
     return content;
   } catch (error) {
+    if (beforeRequestFailed) throw beforeRequestError;
     if (error instanceof BotError) throw error;
     if (signal.aborted) throw new BotError('cancelled', '执行已取消。', 409);
     if (timeout.aborted)

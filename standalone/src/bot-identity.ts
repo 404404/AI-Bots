@@ -58,6 +58,8 @@ export function mainCatalog(db: DatabaseSync, codexReady: (botId: string) => boo
         modelConfigured: !!model.model && (model.provider === 'openai-codex' || !!model.baseUrl),
         credentialConfigured:
           model.provider === 'openai-codex' ? codexReady(row.id) : !!row.credential || model.keyless === true,
+        canShareOwnConnection: !!model.model && (model.provider === 'openai-codex' || !!model.baseUrl) &&
+          (model.provider === 'openai-codex' ? codexReady(row.id) : !!row.credential || model.keyless === true),
         capabilities: ['identity', 'model-settings', 'chat', 'conversation-history', 'saved-file-memory'],
         executionStatus: recent.get(row.id) ?? 'idle',
       };

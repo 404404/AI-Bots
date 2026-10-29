@@ -231,12 +231,20 @@ export async function startServer(options: {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = Number(process.env.BOT_PORT ?? 3080),
     host = process.env.BOT_HOST ?? '127.0.0.1';
-  const runtime = await startServer({
-    dataDir: process.env.BOT_DATA_DIR ?? './data',
-    port,
-    host,
-    publicUrl: process.env.BOT_PUBLIC_URL ?? `http://127.0.0.1:${port}`,
-  });
+  let runtime: Awaited<ReturnType<typeof startServer>> | undefined;
+  try {
+    runtime = await startServer({
+      dataDir: process.env.BOT_DATA_DIR ?? './data',
+      port,
+      host,
+      publicUrl: process.env.BOT_PUBLIC_URL ?? `http://127.0.0.1:${port}`,
+    });
+  } catch (error) {
+    const code = error instanceof BotError ? error.code : 'startup-failed';
+    process.stderr.write(`${JSON.stringify({ event: 'startup-failed', code })}\n`);
+    process.exitCode = 1;
+  }
+  if (!runtime) process.exit();
   process.stdout.write(
     `${JSON.stringify({ event: 'listening', product: 'standalone-bot', port })}\n`,
   );

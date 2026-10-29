@@ -61,7 +61,12 @@ export class Storage {
       this.db.exec(
         'PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=3000;',
       );
-      migrate(this.db);
+      try {
+        migrate(this.db);
+      } catch (error) {
+        if (error instanceof BotError) throw error;
+        throw new BotError('schema-migration-failed', '数据结构迁移失败；数据库事务已回滚。', 500);
+      }
       for (const file of ['owner.sqlite', 'bot.sqlite']) chmodSync(join(this.root, file), 0o600);
     } catch (error) {
       if (this.db) this.db.close();
@@ -103,6 +108,11 @@ export class Storage {
     const mac = createHmac('sha256', this.key).update(payload).digest('base64url');
     return `${payload}.${mac}`;
   }
+  keysetCursor(scope: string, after: string): string {
+    const payload = Buffer.from(JSON.stringify({ v: 1, scope, after, kind: 'keyset' })).toString('base64url');
+    const mac = createHmac('sha256', this.key).update(payload).digest('base64url');
+    return `${payload}.${mac}`;
+  }
   after(cursor: unknown, scope: string): number {
     if (cursor === undefined || cursor === null || cursor === '') return 0;
     try {
@@ -120,6 +130,22 @@ export class Storage {
         data.after < 0
       )
         throw new Error();
+      return data.after;
+    } catch {
+      throw new BotError('invalid-cursor', '分页游标无效，请从第一页重新读取。');
+    }
+  }
+  keysetAfter(cursor: unknown, scope: string): string | null {
+    if (cursor === undefined || cursor === null || cursor === '') return null;
+    try {
+      if (typeof cursor !== 'string' || cursor.length > 1024) throw new Error();
+      const [payload, mac, extra] = cursor.split('.');
+      const expected = createHmac('sha256', this.key).update(payload).digest();
+      const actual = Buffer.from(mac ?? '', 'base64url');
+      if (extra || actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error();
+      const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
+      if (data.v !== 1 || data.kind !== 'keyset' || data.scope !== scope || typeof data.after !== 'string' ||
+          data.after.length > 512) throw new Error();
       return data.after;
     } catch {
       throw new BotError('invalid-cursor', '分页游标无效，请从第一页重新读取。');

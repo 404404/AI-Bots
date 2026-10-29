@@ -70,6 +70,7 @@
             </div>
           </div>
           <div id="run-error" class="run-error" role="status" hidden></div>
+          <section id="task-trace" class="task-trace" hidden aria-label="委派任务记录"></section>
           <form id="message-form" class="composer">
             <label class="sr-only" for="message-input">发送消息</label
             ><textarea
@@ -88,6 +89,21 @@
         <section id="view-catalog" class="view settings-view" hidden>
           <h2>Bot 管理目录</h2>
           <p class="muted">按稳定 ID 区分 Bot。能力与执行状态来自当前实现和已保存的运行记录。</p>
+          <section class="grant-panel">
+            <h3>设置主 Bot 模型</h3>
+            <p class="muted">明确选择已有连接来源。主 Bot 使用服务端连接引用，不复制 OAuth 或 API 密钥。</p>
+            <label>连接来源<select id="main-source"></select></label>
+            <button id="bind-main-source" type="button">绑定主 Bot</button>
+            <div id="main-connection" aria-live="polite"></div>
+          </section>
+          <section class="grant-panel">
+            <h3>授权主 Bot 委派</h3>
+            <p class="muted">选择一个工作 Bot 和一个已有模型连接。只创建服务端引用，不复制来源凭据。</p>
+            <label>工作 Bot<select id="grant-worker"></select></label>
+            <label>连接来源<select id="grant-source"></select></label>
+            <button id="grant-delegation" type="button">授权委派</button>
+            <div id="delegation-grants" aria-live="polite"></div>
+          </section>
           <div id="bot-catalog" class="bot-catalog"></div>
         </section>
         <section id="view-identity" class="view settings-view" hidden>
@@ -108,6 +124,7 @@
         <section id="view-model" class="view settings-view" hidden>
           <h2>模型连接</h2>
           <p class="muted">使用你已有、可合法使用的服务。连接状态以实际回复为准。</p>
+          <p id="model-connection-status" class="muted" aria-live="polite"></p>
           <form id="model-form">
             <label
               >接入方式<select id="model-provider">

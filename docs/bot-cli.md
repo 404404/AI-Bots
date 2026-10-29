@@ -1,5 +1,9 @@
 # Create Bots from the command line
 
+## Independent GK50 product CLI
+
+The fork's independent web product has a separate authenticated CLI, documented in [standalone/README.md](../standalone/README.md#在线-api-与-cli). Run `node --experimental-strip-types standalone/src/cli.ts --help` for its current command contract. Main identity, owner-issued connection references, delegation grants and durable tasks use the same business implementation as its web API; parameters are read from stdin or a private input file. The independent CLI does not launch or call a DSH Host. Existing `deepseekbot` commands documented below retain their original Host authority; unmigrated Session, Channel Timeline, Activity and Assignment data are not fabricated in the independent product. Current implementation and acceptance limits are tracked in [the expansion report](acceptance/standalone-bot-expansion-test-results.md).
+
 Bot summaries from `list` also include `lastActivityAt` (epoch milliseconds) when committed Bot messages visible to the local Human or an Assignment report record activity. It survives later Channel messages and restart; missing means no recorded activity, not a creation or Channel-visit timestamp.
 
 `deepseekbot create` makes a new PersonaBot without clicking: blank, from a bot bundle (a directory or a zip with the same shape as the [bot-zip export](docs/bot-zip.md)), or from GitHub. It is built for external coding agents driving a DSH install, so its output is machine-first.

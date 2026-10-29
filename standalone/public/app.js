@@ -16,6 +16,19 @@ const statusLabels = {
   failed: '生成失败',
   cancelled: '已停止',
   interrupted: '执行已中断',
+  idle: '空闲',
+  available: '可用',
+  revoked: '已撤销',
+  changed: '配置已变化',
+  unconfigured: '未配置',
+  unbound: '未绑定',
+};
+const capabilityLabels = {
+  identity: '身份设置',
+  'model-settings': '模型设置',
+  chat: '对话',
+  'conversation-history': '对话记录',
+  'saved-file-memory': '文件记忆',
 };
 function notice(message) {
   $('notice').textContent = message;
@@ -139,18 +152,53 @@ async function refreshBots() {
 async function loadCatalog() {
   const catalog = await command('main.catalog');
   mainBotId = catalog.mainBotId;
+  renderBots();
+  const workers = catalog.items.filter((item) => item.role === 'work');
+  $('grant-worker').replaceChildren(...workers.map((item) => {
+    const option = node('option', `${item.name} · ${item.id}`);
+    option.value = item.id;
+    return option;
+  }));
+  const sources = catalog.items.filter((item) => item.canShareOwnConnection);
+  const sourceOptions = () => sources.map((item) => {
+    const option = node('option', `${item.name} · ${item.id}`);
+    option.value = item.id;
+    return option;
+  });
+  $('grant-source').replaceChildren(...sourceOptions());
+  $('main-source').replaceChildren(...sourceOptions());
+  const byId = new Map(catalog.items.map((item) => [item.id, item]));
+  const mainConnection = catalog.mainConnection;
+  $('main-connection').textContent = mainConnection
+    ? `主 Bot 使用 ${byId.get(mainConnection.sourceBotId)?.name ?? mainConnection.sourceBotId} · ${mainConnection.id} · ${statusLabels[mainConnection.status] ?? mainConnection.status}`
+    : '主 Bot 尚未绑定可用模型连接。';
+  $('delegation-grants').replaceChildren(...catalog.connectionBindings.map((reference) => {
+    const row = node('div', undefined, 'grant-row');
+    row.append(node('span', `${byId.get(reference.consumerBotId)?.name ?? reference.consumerBotId} 使用 ${byId.get(reference.sourceBotId)?.name ?? reference.sourceBotId} · ${reference.id} · ${statusLabels[reference.status] ?? reference.status}`));
+    if (reference.status === 'available') {
+      const revoke = node('button', '撤销');
+      revoke.onclick = () => void command('connections.revoke', { connectionId: reference.id })
+        .then(loadCatalog).catch(showError);
+      row.append(revoke);
+    }
+    return row;
+  }));
   $('bot-catalog').replaceChildren();
   for (const item of catalog.items) {
     const card = node('article', undefined, 'catalog-card');
     const title = node('h3', `${item.name} · ${item.role === 'main' ? '主 Bot' : '工作 Bot'}`);
     const identity = node('p', `ID：${item.id} · slug：${item.slug}`);
-    const state = node('p', `模型：${item.modelConfigured ? (item.credentialConfigured ? '已配置' : '缺少凭据') : '未配置'} · 最近执行：${statusLabels[item.executionStatus] ?? item.executionStatus} · 配置版本：${item.configRevision}`);
-    const capabilities = node('p', `当前能力：${item.capabilities.join('、')}`);
+    const persona = node('p', `角色：${item.persona || '未设置'}`);
+    const modelState = item.role === 'main' && item.connectionStatus
+      ? `共享连接：${item.connectionStatus === 'available' ? `${byId.get(catalog.mainConnection?.sourceBotId)?.name ?? '已绑定'} · 已就绪` : item.connectionStatus === 'unbound' ? '未绑定' : '已失效，需要重新授权'}`
+      : `模型：${item.modelConfigured ? (item.credentialConfigured ? '已配置' : '缺少凭据') : '未配置'}`;
+    const state = node('p', `${modelState} · 最近执行：${statusLabels[item.executionStatus] ?? item.executionStatus} · 配置版本：${item.configRevision}`);
+    const capabilities = node('p', `当前能力：${item.capabilities.map((value) => capabilityLabels[value] ?? value).join('、')}`);
     const identityButton = node('button', '身份设置');
     identityButton.onclick = () => void selectBot(item.id).then(() => view('identity')).catch(showError);
     const modelButton = node('button', '模型设置');
     modelButton.onclick = () => void selectBot(item.id).then(() => view('model')).catch(showError);
-    card.append(title, identity, state, capabilities, identityButton, modelButton);
+    card.append(title, identity, persona, state, capabilities, identityButton, modelButton);
     $('bot-catalog').append(card);
   }
 }
@@ -167,6 +215,11 @@ function fillSettings() {
   $('model-keyless').checked = bot.model.keyless === true;
   $('model-key').value = '';
   $('clear-credential').checked = false;
+  $('model-connection-status').textContent = bot.isMain
+    ? (bot.mainConnection
+      ? `主 Bot 运行使用共享连接 ${bot.mainConnection.id}（${statusLabels[bot.mainConnection.status] ?? bot.mainConnection.status}），来源 Bot：${bot.mainConnection.sourceBotId}。此页的本地设置不会替代该绑定。`
+      : '主 Bot 尚未绑定共享模型连接。请在 Bot 管理目录选择已有连接来源；来源凭据留在原 Bot。')
+    : '';
   $('credential-status').textContent = bot.credentialConfigured
     ? '已保存私密凭据 · 不回显'
     : '尚未配置凭据';
@@ -272,6 +325,21 @@ async function refreshMessages() {
     const page = await command('messages.list', { botId, conversationId, limit: 1 });
     if (bot?.id !== botId || conversation?.id !== conversationId) return;
     activeRun = page.runs[0] ?? null;
+    const trace = $('task-trace');
+    trace.replaceChildren();
+    const tasks = (page.tasks ?? []).filter((task) => task.rootId === activeRun?.taskId);
+    trace.hidden = tasks.length === 0;
+    if (tasks.length) {
+      trace.append(node('h3', '委派任务'));
+      for (const task of tasks) {
+        const article = node('article', undefined, 'task-card');
+        article.append(node('p', `${task.parentId ? '工作任务' : '主任务'} · ${statusLabels[task.status] ?? task.status} · Task ${task.id}`));
+        if (task.parentId) article.append(node('p', `执行 Bot：${task.executorBotId} · 父任务：${task.parentId}`));
+        if (task.errorCode) article.append(node('p', `错误：${task.errorCode}`));
+        if (task.result) article.append(node('p', '工作结果是来源明确的未验证数据。'), node('pre', task.result));
+        trace.append(article);
+      }
+    }
     const container = $('messages'),
       nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 80;
     container.replaceChildren();
@@ -332,6 +400,21 @@ async function enter() {
   renderBots();
   $('main-entry').onclick = () => void selectBot(mainBotId).then(() => view('chat')).catch(showError);
   $('catalog-entry').onclick = () => void loadCatalog().then(() => view('catalog')).catch(showError);
+  $('grant-delegation').onclick = () => void (async () => {
+    const workerBotId = $('grant-worker').value;
+    const sourceBotId = $('grant-source').value;
+    if (!workerBotId || !sourceBotId) throw new Error('请先为工作 Bot 和连接来源完成模型设置。');
+    await command('delegation.grant', { workerBotId, sourceBotId });
+    await loadCatalog();
+    notice('委派授权已保存。工作 Bot 使用来源连接的服务端引用。');
+  })().catch(showError);
+  $('bind-main-source').onclick = () => void (async () => {
+    const sourceBotId = $('main-source').value;
+    if (!sourceBotId) throw new Error('请先为连接来源配置模型和授权。');
+    await command('connections.bind-main', { sourceBotId });
+    await loadCatalog();
+    notice('主 Bot 模型连接已绑定。来源授权仍保留在原 Bot。');
+  })().catch(showError);
   if (bots.length) await selectBot(mainBotId);
   else updateComposer();
 }

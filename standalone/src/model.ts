@@ -62,6 +62,7 @@ export async function completeModel(
   key: string,
   messages: ModelMessage[],
   signal: AbortSignal,
+  beforeRequest?: () => void | Promise<void>,
 ) {
   requireValue(
     key.length > 0 || config.keyless,
@@ -74,6 +75,7 @@ export async function completeModel(
     : new Agent();
   const timeout = AbortSignal.timeout(60000);
   try {
+    await beforeRequest?.();
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
       method: 'POST',
       redirect: 'error',

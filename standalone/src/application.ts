@@ -26,6 +26,11 @@ import { resolveMemoryPath, MemoryPathError } from './vendor/memory-jail.ts';
 import { CodexAuth } from './codex-auth.ts';
 import { completeCodex } from './codex-model.ts';
 import { isMainBot, mainBotId, mainCatalog } from './bot-identity.ts';
+import { ConnectionResolver, bumpModelEpoch } from './connection-resolver.ts';
+import { TaskEngine } from './task-engine.ts';
+import { TaskStore } from './task-store.ts';
+import { runMainTurn } from './root-run.ts';
+import type { CodexTransport } from './model-runner.ts';
 
 export type ExecutionContext = { kind: 'owner' } | { kind: 'bot'; botId: string };
 
@@ -57,6 +62,7 @@ type Run = {
   memory: string | null;
   config_snapshot: string | null;
   config_revision: number | null;
+  task_id: string | null;
 };
 type Message = {
   seq: number;
@@ -76,11 +82,20 @@ export class BotApplication {
   active = new Map<string, { controller: AbortController; done: Promise<void> }>();
   closing = false;
   auth: CodexAuth;
-  constructor(root: string) {
+  connections: ConnectionResolver;
+  tasks: TaskEngine;
+  codexTransport?: CodexTransport;
+  constructor(root: string, codexTransport?: CodexTransport) {
     this.storage = new Storage(root);
+    this.codexTransport = codexTransport;
     this.auth = new CodexAuth(this.storage, (botId, code, status) =>
       this.diag('codex-auth', botId, undefined, code, undefined, undefined, status),
     );
+    this.connections = new ConnectionResolver(this.storage);
+    this.tasks = new TaskEngine(this.storage, this.auth, this.connections,
+      (botId) => this.memoryList(botId),
+      (event, botId, taskId, code) => this.diag(event, botId, undefined, code, undefined, undefined, undefined, taskId));
+    this.tasks.store.recover(now());
     const recovered = this.storage.db
       .prepare(
         "UPDATE runs SET status='interrupted',error_code='process-interrupted',finished_at=? WHERE status IN ('queued','running')",
@@ -115,6 +130,10 @@ export class BotApplication {
     return result;
   }
   publicBot(bot: BotRow) {
+    const mainId = mainBotId(this.storage.db);
+    const connectionId = bot.id === mainId
+      ? this.storage.db.prepare('SELECT connection_id FROM main_bot WHERE singleton=1').get()?.connection_id as string | null
+      : null;
     return {
       id: bot.id,
       slug: bot.slug,
@@ -123,6 +142,7 @@ export class BotApplication {
       model: JSON.parse(bot.config),
       configRevision: bot.config_revision,
       isMain: isMainBot(this.storage.db, bot.id),
+      mainConnection: connectionId ? this.connections.status(connectionId, bot.id) : null,
       credentialConfigured: !!bot.credential,
       createdAt: bot.created_at,
       updatedAt: bot.updated_at,
@@ -141,6 +161,7 @@ export class BotApplication {
       model: run.model,
       memoryFiles: JSON.parse(run.memory ?? '[]'),
       configRevision: run.config_revision,
+      taskId: run.task_id,
       configSnapshot: run.config_snapshot ? JSON.parse(run.config_snapshot) : null,
     };
   }
@@ -233,12 +254,14 @@ export class BotApplication {
     durationMs?: number,
     route?: string,
     upstreamStatus?: number,
+    taskId?: string,
   ) {
     const record = {
       at: now(),
       event,
       botId: botId ?? null,
       runId: runId ?? null,
+      taskId: taskId ?? null,
       code: code ?? null,
       durationMs: durationMs ?? null,
       route: route ?? null,
@@ -246,13 +269,14 @@ export class BotApplication {
     };
     this.storage.db
       .prepare(
-        'INSERT INTO diagnostics(at,event,bot_id,run_id,code,duration_ms,route,upstream_status) VALUES(?,?,?,?,?,?,?,?)',
+        'INSERT INTO diagnostics(at,event,bot_id,run_id,task_id,code,duration_ms,route,upstream_status) VALUES(?,?,?,?,?,?,?,?,?)',
       )
       .run(
         record.at,
         event,
         record.botId,
         record.runId,
+        record.taskId,
         record.code,
         record.durationMs,
         record.route,
@@ -276,7 +300,139 @@ export class BotApplication {
       return { bot: this.publicBot(this.bot(id)), entry: { botId: id, path: '/' } };
     }
     if (command === 'main.catalog') {
-      return mainCatalog(db, (botId) => this.auth.status(botId).signedIn);
+      const catalog = mainCatalog(db, (botId) => this.auth.status(botId).signedIn) as ReturnType<typeof mainCatalog> & { items: Array<Record<string, unknown>> };
+      const mainConnectionId = db.prepare('SELECT connection_id FROM main_bot WHERE singleton=1').get()?.connection_id as string | null;
+      const mainConnection = mainConnectionId ? { ...this.connections.status(mainConnectionId, catalog.mainBotId), role: 'main' } : null;
+      const workerBindings = (db.prepare(`SELECT worker_bot_id,connection_id FROM delegation_grants
+        WHERE main_bot_id=? AND revoked_at IS NULL ORDER BY worker_bot_id`).all(catalog.mainBotId) as { worker_bot_id: string; connection_id: string }[])
+        .map((row) => ({ ...this.connections.status(row.connection_id, row.worker_bot_id), role: 'work' }));
+      const connectionBindings = [...(mainConnection ? [mainConnection] : []), ...workerBindings];
+      const bound = mainConnection;
+      const items = catalog.items.map((item) => item.role === 'main'
+        ? { ...item, connectionStatus: bound?.status ?? 'unbound' }
+        : item);
+      return { ...catalog, items, mainConnectionId, mainConnection, connectionBindings };
+    }
+    if (command === 'connections.list') {
+      const consumerBotId = params.consumerBotId === undefined ? undefined : text(params.consumerBotId, 'Bot ID', 64);
+      const limit = params.limit === undefined ? 100 : params.limit;
+      requireValue(Number.isInteger(limit) && Number(limit) > 0 && Number(limit) <= 100,
+        'invalid-limit', '分页大小应为 1–100。');
+      const scope = `connections:${consumerBotId ?? '*'}`;
+      const encoded = this.storage.keysetAfter(params.cursor, scope);
+      let after: { createdAt: string; id: string } | null = null;
+      if (encoded) {
+        try {
+          const value = JSON.parse(encoded) as { createdAt?: unknown; id?: unknown };
+          requireValue(typeof value.createdAt === 'string' && typeof value.id === 'string' && value.id.length > 0,
+            'invalid-cursor', '分页游标无效，请从第一页重新读取。');
+          after = { createdAt: value.createdAt, id: value.id };
+        } catch (error) {
+          if (error instanceof BotError && error.code === 'invalid-cursor') throw error;
+          throw new BotError('invalid-cursor', '分页游标无效，请从第一页重新读取。');
+        }
+      }
+      const rows = this.connections.catalogPage(consumerBotId, after, Number(limit) + 1);
+      const hasMore = rows.length > Number(limit), items = rows.slice(0, Number(limit));
+      const last = items.at(-1);
+      return { items, nextCursor: hasMore && last
+        ? this.storage.keysetCursor(scope, JSON.stringify({ createdAt: last.createdAt, id: last.id })) : null, hasMore };
+    }
+    if (command === 'connections.bind-main') {
+      const mainId = mainBotId(db), sourceId = text(params.sourceBotId, '连接来源 Bot ID', 64), source = this.bot(sourceId);
+      const config = JSON.parse(source.config) as ModelConfig;
+      requireValue(config.model && (config.provider === 'openai-codex' ? this.auth.status(sourceId).signedIn : !!source.credential || config.keyless),
+        'connection-unconfigured', '连接来源尚未配置可用模型和授权。', 409);
+      const at = now();
+      const connectionId = this.storage.transaction(() => {
+        const previous = db.prepare('SELECT connection_id FROM main_bot WHERE singleton=1').get() as { connection_id: string | null };
+        if (previous.connection_id) {
+          db.prepare('UPDATE connection_grants SET revoked_at=? WHERE connection_id=? AND consumer_bot_id=?').run(at, previous.connection_id, mainId);
+          db.prepare('UPDATE model_connections SET revoked_at=? WHERE id=?').run(at, previous.connection_id);
+        }
+        const id = this.connections.issue(sourceId, mainId, at);
+        db.prepare('UPDATE main_bot SET connection_id=? WHERE singleton=1').run(id);
+        db.prepare('UPDATE bots SET config_revision=config_revision+1 WHERE id=?').run(mainId);
+        return id;
+      });
+      return { mainBotId: mainId, sourceBotId: sourceId, connectionId, status: 'available' };
+    }
+    if (command === 'connections.revoke') {
+      const connectionId = text(params.connectionId, '连接 ID', 64), mainId = mainBotId(db), at = now();
+      const reference = db.prepare('SELECT id FROM model_connections WHERE id=?').get(connectionId);
+      requireValue(reference, 'connection-not-found', '模型连接引用不存在。', 404);
+      this.storage.transaction(() => {
+        db.prepare('UPDATE model_connections SET revoked_at=? WHERE id=?').run(at, connectionId);
+        db.prepare('UPDATE connection_grants SET revoked_at=? WHERE connection_id=?').run(at, connectionId);
+        db.prepare('UPDATE delegation_grants SET revoked_at=? WHERE main_bot_id=? AND connection_id=?').run(at, mainId, connectionId);
+        const unbound = db.prepare('UPDATE main_bot SET connection_id=NULL WHERE singleton=1 AND connection_id=?').run(connectionId).changes;
+        if (unbound) db.prepare('UPDATE bots SET config_revision=config_revision+1 WHERE id=?').run(mainId);
+      });
+      return { connectionId, status: 'revoked' };
+    }
+    if (command === 'connections.unbind-main') {
+      const mainId = mainBotId(db), row = db.prepare('SELECT connection_id FROM main_bot WHERE singleton=1').get() as { connection_id: string | null };
+      requireValue(row.connection_id, 'main-connection-not-found', '主 Bot 尚未绑定模型连接。', 404);
+      this.storage.transaction(() => {
+        db.prepare('UPDATE main_bot SET connection_id=NULL WHERE singleton=1').run();
+        db.prepare('UPDATE connection_grants SET revoked_at=? WHERE connection_id=? AND consumer_bot_id=?').run(now(), row.connection_id, mainId);
+        db.prepare('UPDATE model_connections SET revoked_at=? WHERE id=?').run(now(), row.connection_id);
+        db.prepare('UPDATE bots SET config_revision=config_revision+1 WHERE id=?').run(mainId);
+      });
+      return { mainBotId: mainId, status: 'unbound' };
+    }
+    if (command === 'delegation.grant') {
+      const mainId = mainBotId(db), workerId = text(params.workerBotId, '工作 Bot ID', 64), sourceId = text(params.sourceBotId, '连接来源 Bot ID', 64);
+      requireValue(workerId !== mainId, 'delegation-target-forbidden', '主 Bot 不能委派给自己。', 409);
+      const source = this.bot(sourceId), config = JSON.parse(source.config) as ModelConfig;
+      requireValue(config.model && (config.provider === 'openai-codex' ? this.auth.status(sourceId).signedIn : !!source.credential || config.keyless),
+        'connection-unconfigured', '连接来源尚未配置可用模型和授权。', 409);
+      const at = now();
+      const connectionId = this.storage.transaction(() => {
+        const previous = db.prepare('SELECT connection_id FROM delegation_grants WHERE main_bot_id=? AND worker_bot_id=?').get(mainId, workerId) as { connection_id: string } | undefined;
+        if (previous) {
+          db.prepare('UPDATE model_connections SET revoked_at=? WHERE id=?').run(at, previous.connection_id);
+          db.prepare('UPDATE connection_grants SET revoked_at=? WHERE connection_id=? AND consumer_bot_id=?').run(at, previous.connection_id, workerId);
+        }
+        const id = this.connections.issue(sourceId, workerId, at);
+        db.prepare('INSERT INTO delegation_grants(main_bot_id,worker_bot_id,connection_id,created_at) VALUES(?,?,?,?) ON CONFLICT(main_bot_id,worker_bot_id) DO UPDATE SET connection_id=excluded.connection_id,created_at=excluded.created_at,revoked_at=NULL').run(mainId, workerId, id, at);
+        return id;
+      });
+      this.diag('delegation-granted', workerId, undefined, 'owner-authorized');
+      return { mainBotId: mainId, workerBotId: workerId, sourceBotId: sourceId, connectionId, status: 'available' };
+    }
+    if (command === 'delegation.revoke') {
+      const mainId = mainBotId(db), workerId = text(params.workerBotId, '工作 Bot ID', 64), at = now();
+      const row = db.prepare('SELECT connection_id FROM delegation_grants WHERE main_bot_id=? AND worker_bot_id=? AND revoked_at IS NULL').get(mainId, workerId) as { connection_id: string } | undefined;
+      requireValue(row, 'delegation-grant-not-found', '委派授权不存在。', 404);
+      this.storage.transaction(() => {
+        db.prepare('UPDATE delegation_grants SET revoked_at=? WHERE main_bot_id=? AND worker_bot_id=?').run(at, mainId, workerId);
+        db.prepare('UPDATE connection_grants SET revoked_at=? WHERE connection_id=? AND consumer_bot_id=?').run(at, row.connection_id, workerId);
+        db.prepare('UPDATE model_connections SET revoked_at=? WHERE id=?').run(at, row.connection_id);
+      });
+      return { workerBotId: workerId, status: 'revoked' };
+    }
+    if (command === 'tasks.create') {
+      return this.tasks.createDirect(mainBotId(db), text(params.workerBotId, '工作 Bot ID', 64),
+        text(params.input, '任务内容', 12000), text(params.idempotencyKey, '任务 ID', 128));
+    }
+    if (command === 'tasks.list') {
+      const page = this.page('tasks', params, (after, limit) => db.prepare('SELECT * FROM tasks WHERE seq>? ORDER BY seq LIMIT ?').all(after, limit) as unknown as { seq: number }[]);
+      return { ...page, items: page.items.map((task) => this.tasks.store.public(task as never)) };
+    }
+    if (command === 'tasks.get') {
+      const root = this.tasks.store.get(text(params.taskId, '任务 ID', 64));
+      return { root: this.tasks.store.public(root), items: this.tasks.store.byRoot(root.root_id).map((task) => this.tasks.store.public(task)) };
+    }
+    if (command === 'tasks.cancel') {
+      const task = this.tasks.store.get(text(params.taskId, '任务 ID', 64));
+      const linkedRun = !task.parent_id ? db.prepare('SELECT id,bot_id FROM runs WHERE task_id=?').get(task.root_id) as { id: string; bot_id: string } | undefined : undefined;
+      if (linkedRun) {
+        db.prepare("UPDATE runs SET status='cancelled',error_code='cancelled',finished_at=? WHERE id=? AND status IN ('queued','running')").run(now(), linkedRun.id);
+      }
+      const cancelled = this.tasks.cancelTask(task.id);
+      if (linkedRun) this.active.get(linkedRun.id)?.controller.abort();
+      return this.tasks.store.public(cancelled);
     }
     if (command === 'bots.list') {
       const page = this.page(
@@ -329,7 +485,7 @@ export class BotApplication {
             .prepare('SELECT * FROM diagnostics WHERE seq>? ORDER BY seq LIMIT ?')
             .all(after, limit) as unknown as { seq: number }[],
       );
-      return { ...page, items: page.items.map(({ seq, ...row }) => ({ id: seq, ...row })) };
+      return { ...page, items: page.items.map(({ seq, ...row }) => ({ id: seq, ...row, taskId: row.task_id })) };
     }
     const bot = this.bot(params.botId);
     if (command === 'auth.status') return this.auth.status(bot.id);
@@ -379,10 +535,11 @@ export class BotApplication {
         );
         credential = this.storage.encrypt(key);
       }
-      const changed = name !== bot.name || persona !== bot.persona || config !== bot.config;
+      const modelChanged = config !== bot.config || credential !== bot.credential;
+      const changed = name !== bot.name || persona !== bot.persona || modelChanged;
       db.prepare(
-        'UPDATE bots SET name=?,persona=?,config=?,credential=?,updated_at=?,config_revision=config_revision+? WHERE id=?',
-      ).run(name, persona, config, credential, now(), changed ? 1 : 0, bot.id);
+        'UPDATE bots SET name=?,persona=?,config=?,credential=?,updated_at=?,config_revision=config_revision+?,model_epoch=model_epoch+? WHERE id=?',
+      ).run(name, persona, config, credential, now(), changed ? 1 : 0, modelChanged ? 1 : 0, bot.id);
       this.diag('bot-updated', bot.id);
       return this.publicBot(this.bot(bot.id));
     }
@@ -462,6 +619,7 @@ export class BotApplication {
       db.prepare(
         "UPDATE runs SET status='cancelled',error_code='cancelled',finished_at=? WHERE id=? AND status IN ('queued','running')",
       ).run(now(), run.id);
+      if (run.task_id) this.tasks.cancelRoot(run.task_id);
       this.active.get(run.id)?.controller.abort();
       this.diag('run-cancelled', bot.id, run.id);
       return this.publicRun(this.runRecord(bot.id, run.id));
@@ -495,6 +653,7 @@ export class BotApplication {
           createdAt: row.created_at,
         })),
         runs: runs.map((run) => this.publicRun(run)),
+        tasks: runs.flatMap((run) => run.task_id ? this.tasks.store.byRoot(run.task_id).map((task) => this.tasks.store.public(task)) : []),
       };
     }
     if (command === 'runs.submit') {
@@ -527,26 +686,23 @@ export class BotApplication {
         409,
       );
       const config = JSON.parse(bot.config) as ModelConfig;
-      requireValue(
-        config.baseUrl && config.model,
-        'model-not-configured',
-        '请先配置模型服务和模型。',
-        409,
-      );
-      if (config.provider === 'openai-codex')
-        requireValue(
-          this.auth.status(bot.id).signedIn,
-          'codex-not-signed-in',
-          '请先完成 Codex 登录。',
-          409,
-        );
-      else
-        requireValue(
-          bot.credential || config.keyless,
-          'model-credential-missing',
-          '请先私密设置模型凭据。',
-          409,
-        );
+      const isMain = isMainBot(db, bot.id);
+      const mainConnection = isMain ? db.prepare('SELECT connection_id FROM main_bot WHERE singleton=1').get()?.connection_id as string | null : null;
+      let connectionSnapshot: { id: string; sourceBotId: string; sourceModelEpoch: number } | null = null;
+      if (isMain) {
+        requireValue(mainConnection, 'model-not-configured', '请先在管理目录为主 Bot 绑定一个已授权模型连接。', 409);
+        const resolved = this.connections.resolve(mainConnection, bot.id);
+        config.baseUrl = resolved.config.baseUrl;
+        config.provider = resolved.config.provider;
+        config.model = resolved.config.model;
+        config.proxyUrl = resolved.config.proxyUrl;
+        config.keyless = resolved.config.keyless;
+        connectionSnapshot = { id: mainConnection, sourceBotId: resolved.sourceBotId, sourceModelEpoch: resolved.sourceModelEpoch };
+      } else {
+        requireValue(config.baseUrl && config.model, 'model-not-configured', '请先配置模型服务和模型。', 409);
+        if (config.provider === 'openai-codex') requireValue(this.auth.status(bot.id).signedIn, 'codex-not-signed-in', '请先完成 Codex 登录。', 409);
+        else requireValue(bot.credential || config.keyless, 'model-credential-missing', '请先私密设置模型凭据。', 409);
+      }
       const id = randomUUID(),
         at = now();
       this.storage.transaction(() => {
@@ -558,7 +714,17 @@ export class BotApplication {
           persona: bot.persona,
           configRevision: bot.config_revision,
           model: { provider: config.provider, baseUrl: config.baseUrl, model: config.model, proxyUrl: config.proxyUrl, keyless: config.keyless },
+          connection: connectionSnapshot,
         }), bot.config_revision);
+        const task = this.tasks.store.createRoot({ executorBotId: bot.id, initiatorBotId: bot.id,
+          requestKey: `run:${id}`, input, configRevision: bot.config_revision,
+          ...(connectionSnapshot ? { connectionId: connectionSnapshot.id, connectionEpoch: connectionSnapshot.sourceModelEpoch } : {}),
+          configSnapshot: JSON.stringify({ name: bot.name, persona: bot.persona,
+            model: { provider: config.provider, baseUrl: config.baseUrl, model: config.model, proxyUrl: config.proxyUrl, keyless: config.keyless },
+            connection: connectionSnapshot,
+            delegations: db.prepare('SELECT worker_bot_id AS workerBotId,connection_id AS connectionId FROM delegation_grants WHERE main_bot_id=? AND revoked_at IS NULL ORDER BY worker_bot_id').all(mainBotId(db)) }),
+          deadlineAt: new Date(Date.now() + 120000).toISOString(), at });
+        db.prepare('UPDATE runs SET task_id=? WHERE id=?').run(task.task.id, id);
         db.prepare(
           "INSERT INTO messages(id,bot_id,conversation_id,run_id,role,content,created_at) VALUES(?,?,?,?,'user',?,?)",
         ).run(randomUUID(), bot.id, conversation.id, id, input, at);
@@ -586,6 +752,7 @@ export class BotApplication {
       name?: string;
       persona?: string;
       model?: ModelConfig;
+      connection?: { id: string; sourceBotId: string; sourceModelEpoch: number } | null;
     };
     const db = this.storage.db,
       started = Date.now(),
@@ -607,6 +774,8 @@ export class BotApplication {
         JSON.stringify(files.map(({ path, revision }) => ({ path, revision }))),
         run.id,
       );
+      if (run.task_id) this.tasks.store.setMemorySnapshot(run.task_id,
+        files.map(({ path, revision }) => ({ path, revision })));
       const history = db
         .prepare(
           'SELECT role,content FROM messages WHERE bot_id=? AND conversation_id=? ORDER BY seq DESC LIMIT 40',
@@ -628,6 +797,10 @@ export class BotApplication {
         },
         ...bounded,
       ];
+      const rootTask = run.task_id ? this.tasks.store.get(run.task_id) : null;
+      if (rootTask && !this.tasks.store.begin(rootTask.id, now()) && rootTask.status !== 'running') return;
+      const deadlineSignal = rootTask ? AbortSignal.timeout(Math.max(1, new Date(rootTask.deadline_at).getTime() - Date.now())) : undefined;
+      const executionSignal = deadlineSignal ? AbortSignal.any([signal, deadlineSignal]) : signal;
       this.diag(
         'model-request',
         bot.id,
@@ -638,21 +811,40 @@ export class BotApplication {
       );
       let secrets: string[] = [],
         content: string;
+      const isMain = isMainBot(db, bot.id);
+      if (isMain) requireValue(snapshot.connection, 'connection-not-found', '此主 Bot 执行没有有效的共享模型连接引用。', 409);
+      const shared = isMain ? this.connections.resolve(snapshot.connection!.id, bot.id) : null;
+      if (shared) requireValue(shared.sourceBotId === snapshot.connection?.sourceBotId && shared.sourceModelEpoch === snapshot.connection?.sourceModelEpoch,
+        'connection-changed', '主 Bot 模型连接在此运行开始后发生变化。', 409);
+      const authorizeSharedRequest = shared ? () => {
+        const current = this.connections.resolve(snapshot.connection!.id, bot.id);
+        requireValue(current.sourceBotId === snapshot.connection!.sourceBotId && current.sourceModelEpoch === snapshot.connection!.sourceModelEpoch,
+          'connection-changed', '主 Bot 模型连接已变化。', 409);
+      } : undefined;
       if (config.provider === 'openai-codex') {
-        const grant = await this.auth.access(bot.id, config.proxyUrl, signal);
-        secrets = [grant.access, grant.refresh];
-        content = await completeCodex(
-          config.model,
-          grant.access,
-          messages,
-          config.proxyUrl,
-          run.conversation_id,
-          signal,
-        );
+        const accessGrant = async () => {
+          const grant = await this.auth.access(shared?.sourceBotId ?? bot.id, config.proxyUrl, executionSignal);
+          authorizeSharedRequest?.();
+          for (const secret of [grant.access, grant.refresh]) if (secret && !secrets.includes(secret)) secrets.push(secret);
+          return grant;
+        };
+        const grant = await accessGrant();
+        const mainId = mainBotId(db);
+        const scope = rootTask && bot.id === mainId ? this.tasks.scope(mainId, rootTask.id) : null;
+        const delegationAllowed = !!scope?.allowedWorkerIds.length;
+        content = delegationAllowed && rootTask && scope
+          ? await runMainTurn({ modelId: config.model, access: grant.access,
+              ...(shared ? { getAccess: async () => (await accessGrant()).access } : {}),
+              ...(authorizeSharedRequest ? { authorizeRequest: authorizeSharedRequest } : {}),
+              systemPrompt: `${messages[0].content}\n\n以下是此提交时已授权且当前仍有效的工作 Bot。只能使用目录中的 workerId，不能假设其他 Bot 可委派。\n${this.tasks.authorizedWorkerDirectory(scope)}`,
+              history: bounded, proxyUrl: config.proxyUrl,
+              sessionId: rootTask.id, signal: executionSignal, engine: this.tasks, mainBotId: mainId,
+              rootTaskId: rootTask.id, transport: this.codexTransport })
+          : await completeCodex(config.model, grant.access, messages, config.proxyUrl, rootTask?.id ?? run.conversation_id, executionSignal, this.codexTransport, authorizeSharedRequest);
       } else {
-        const key = bot.credential ? this.storage.decrypt(bot.credential) : '';
+        const key = shared?.credential ? this.storage.decrypt(shared.credential) : !shared && bot.credential ? this.storage.decrypt(bot.credential) : '';
         secrets = key ? [key] : [];
-        content = await completeModel(config, key, messages, signal);
+        content = await completeModel(config, key, messages, executionSignal, authorizeSharedRequest);
       }
       for (const secret of secrets) if (secret) content = content.replaceAll(secret, '[REDACTED]');
       const committed = this.storage.transaction(() => {
@@ -661,7 +853,14 @@ export class BotApplication {
             "UPDATE runs SET status='completed',finished_at=? WHERE id=? AND status='running'",
           )
           .run(now(), run.id).changes;
-        if (changed)
+        if (changed && rootTask) {
+          const taskChanged = db.prepare("UPDATE tasks SET status='completed',result=?,finished_at=? WHERE id=? AND status='running'").run(content, now(), rootTask.id).changes;
+          if (!taskChanged) {
+            db.prepare("UPDATE runs SET status='cancelled',error_code='task-cancelled',finished_at=? WHERE id=? AND status='completed'").run(now(), run.id);
+            return 0;
+          }
+        }
+        if (changed && (!rootTask || db.prepare("SELECT id FROM tasks WHERE id=? AND status='completed'").get(rootTask.id)))
           db.prepare(
             "INSERT INTO messages(id,bot_id,conversation_id,run_id,role,content,created_at) VALUES(?,?,?,?,'assistant',?,?)",
           ).run(randomUUID(), bot.id, run.conversation_id, run.id, content, now());
@@ -677,7 +876,10 @@ export class BotApplication {
           config.proxyUrl ? 'explicit-proxy' : 'direct',
         );
     } catch (error) {
-      const code = error instanceof BotError ? error.code : 'model-execution-failed';
+      const rootTask = run.task_id ? this.tasks.store.get(run.task_id) : null;
+      const deadlineExceeded = !!rootTask && Date.now() >= new Date(rootTask.deadline_at).getTime() && !signal.aborted;
+      const code = deadlineExceeded ? 'task-deadline-exceeded' : error instanceof BotError ? error.code : 'model-execution-failed';
+      if (run.task_id) this.tasks.store.finish(run.task_id, signal.aborted ? 'cancelled' : 'failed', null, code, now());
       db.prepare(
         "UPDATE runs SET status='failed',error_code=?,finished_at=? WHERE id=? AND status IN ('queued','running')",
       ).run(code, now(), run.id);
@@ -699,9 +901,11 @@ export class BotApplication {
         "UPDATE runs SET status='interrupted',error_code='process-interrupted',finished_at=? WHERE status IN ('queued','running')",
       )
       .run(now());
+    this.tasks.store.recover(now());
     for (const task of this.active.values()) task.controller.abort();
     await this.auth.close();
     await Promise.allSettled([...this.active.values()].map((task) => task.done));
+    await this.tasks.close();
     this.storage.close();
   }
 }

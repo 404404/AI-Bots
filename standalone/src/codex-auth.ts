@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex';
 import type { Storage } from './storage.ts';
 import { BotError, requireValue, text } from './errors.ts';
+import { bumpModelEpoch } from './connection-resolver.ts';
 
 export type Grant = {
   type: 'oauth';
@@ -137,6 +138,7 @@ export class CodexAuth {
               'INSERT INTO oauth_credentials(bot_id,credential) VALUES(?,?) ON CONFLICT(bot_id) DO UPDATE SET credential=excluded.credential',
             )
             .run(botId, blob);
+          bumpModelEpoch(this.storage.db, botId);
           attempt.phase = 'authorized';
           attempt.url = null;
           attempt.userCode = null;
@@ -215,7 +217,8 @@ export class CodexAuth {
   }
   logout(botId: string) {
     this.cancel(botId);
-    this.storage.db.prepare('DELETE FROM oauth_credentials WHERE bot_id=?').run(botId);
+    const removed = this.storage.db.prepare('DELETE FROM oauth_credentials WHERE bot_id=?').run(botId).changes;
+    if (removed) bumpModelEpoch(this.storage.db, botId);
     this.attempts.delete(botId);
     this.log(botId, 'codex-auth-removed');
     return this.status(botId);

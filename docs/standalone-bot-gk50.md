@@ -31,6 +31,15 @@ sudo cat /home/hermes/bots/.local/standalone-bot/data/secrets/access-code
 
 ## Compose 与数据
 
+### 本轮扩展候选（独立于 22443）
+
+- 网页：`http://192.168.68.11:20443`；容器：`gk50-standalone-bot-candidate`。
+- 源码 `e841d49c15ef169f8e2e32bbd1e7226f3d2e1d5b`，[CI 40942085923](https://github.com/404404/AI-Bots/actions/runs/40942085923) 的未发布产物；未在 GK50 重建。
+- 固定 OCI manifest：`sha256:54b393c84048928f27cb6f33cee43f194347b3aa88ee3a21afe83e312cb9540c`；config：`sha256:e6fa8b7b44ed664439af5badc45f4f5b2128e8249216dd36e0f198362d6ad443`。这是验证后的本地 CI 镜像身份，不是 registry 发布回执。
+- Compose：[候选样例](../standalone/deploy/compose.candidate.yml)；私有数据在 `.local/standalone-bot-candidate/data/`。访问码在其中 `secrets/access-code`，仅在 GK50 本机读取，不发到聊天。没有复制 22443 的网页访问码、会话或旧 DSH 授权。
+- 主身份和直接管理已完成本片 LAN、刷新、重启及自动验收；迁移故障点、权限矩阵和配置消费等仍有部分覆盖，见[逐项报告](acceptance/standalone-bot-expansion-test-results.md)。真实委派、头像和产品浏览器尚未完成，不把本片当作最终发布门禁。
+- 首片未迁移或覆盖 22443 数据，原 GUI 保持停止。第二片源码开发不改变正在运行的第一片镜像。
+
 源 Compose：[standalone/deploy/compose.yml](../standalone/deploy/compose.yml)。实际部署副本和 `.env` 位于 `/home/hermes/bots/.local/standalone-bot/`，唯一数据映射为该目录的 `data/` → `/data/bot`。UID/GID 10001、只读根文件系统、cap-drop ALL、no-new-privileges、Docker 默认 seccomp，无新增 GUI 安全例外或 Docker socket 映射。
 
 数据根目录 0700；访问码、主密钥及数据文件均受私密权限保护。SQLite 保存 Bot、执行、历史和加密授权；明确保存的 Markdown 按 Bot 隔离。备份需保留整个数据目录，包括主密钥。独立登录和文件记忆不复制旧 DSH 数据。

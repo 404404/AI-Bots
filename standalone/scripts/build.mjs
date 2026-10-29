@@ -20,6 +20,7 @@ function scan(dir) {
           !(
             spec.startsWith('node:') ||
             spec === 'undici' ||
+            spec === '@earendil-works/pi-ai' ||
             spec.startsWith('@earendil-works/pi-ai/') ||
             spec.startsWith('./')
           )
