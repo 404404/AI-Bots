@@ -34,9 +34,11 @@
           <span class="brandmark small">B</span><strong>GK50 Bot</strong>
         </header>
         <div class="side-heading">
-          <span>我的 Bots</span
+          <span>Bots</span
           ><button id="new-bot" aria-label="创建 Bot" title="创建 Bot">＋</button>
         </div>
+        <button id="main-entry" class="main-entry">主 Bot</button>
+        <button id="catalog-entry" class="catalog-entry">Bot 管理目录</button>
         <nav id="bots" aria-label="Bot 列表"></nav>
         <div class="side-heading">
           <span>对话</span
@@ -82,6 +84,11 @@
               ><button id="send-message" type="submit" class="primary">发送</button>
             </div>
           </form>
+        </section>
+        <section id="view-catalog" class="view settings-view" hidden>
+          <h2>Bot 管理目录</h2>
+          <p class="muted">按稳定 ID 区分 Bot。能力与执行状态来自当前实现和已保存的运行记录。</p>
+          <div id="bot-catalog" class="bot-catalog"></div>
         </section>
         <section id="view-identity" class="view settings-view" hidden>
           <h2>Bot 身份</h2>

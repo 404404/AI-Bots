@@ -4,7 +4,9 @@
 
 ## 当前范围
 
-网页创建 Bot、设置身份和模型、对话执行与取消、历史恢复、显式保存文件记忆。Web 与 CLI 共用 `BotApplication.execute`。重启将未完成执行标为 `interrupted`，不会自动重发；断线重试必须保留原 `idempotencyKey`，同键不同正文返回冲突。
+网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、角色提示、配置版本、当前已实现能力、模型设置状态和最近持久化执行状态。可以从目录进入已有身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限；主 Bot 未配置自己的模型或登录时会如实提示，不会复制当前 Bot 的 OAuth。SQLite v1→v2 迁移显式事务创建唯一主 Bot，不按名字收编旧 Bot；保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。
+
+Bot 配置变更递增 `configRevision`。每个新 Run 在受理时记录对应的配置版本和非 secret 身份/模型快照；不包含 API key 或 Codex access/refresh token。后续编辑仅影响新的 Run。Web 与 CLI 共用 `BotApplication.execute` 业务入口；HTTP 适配器显式注入 owner 上下文。应用命令不从 params 读取 actor/isMain 权限，缺少可信上下文或使用 Bot 上下文的管理请求会拒绝。重启将未完成执行标为 `interrupted`，不会自动重发；断线重试必须保留原 `idempotencyKey`，同键不同正文返回冲突。
 
 Codex Auth 复用锁定的独立 SDK，支持设备码和浏览器登录，但不复制旧 DSH 凭据。真实授权与模型回复仍需分别验收。兼容 Chat Completions 服务是另一个明确选项，密钥只通过私密输入保存。
 
@@ -63,7 +65,9 @@ node --experimental-strip-types standalone/src/cli.ts --help
 { "schemaVersion": 1, "result": { "items": [], "nextCursor": null, "hasMore": false } }
 ```
 
-准确命令见 `--help`，包括 `auth.status/start/answer/cancel/logout`。状态不返回授权令牌。诊断只保存有界事件、执行 ID、错误码与上游状态，不记录请求正文或原始上游错误体。
+准确命令见 `--help`，包括 `main.get`、`main.catalog` 和 `auth.status/start/answer/cancel/logout`。`main.get` 返回固定主 Bot 和实际入口 `/`；`main.catalog` 返回 Bot 列表及真实能力/执行状态。命令从同一业务入口读取，不接受参数伪造 owner 上下文。状态不返回授权令牌。诊断只保存有界事件、执行 ID、错误码与上游状态，不记录请求正文或原始上游错误体。
+
+候选部署使用独立的 `deploy/compose.candidate.yml` 与 `deploy/candidate.mjs`，项目名/容器名为 `gk50-standalone-bot-candidate`，数据目录为仓库根 `.local/standalone-bot-candidate/data`，端口为 `192.168.68.11:20443`。该路径不调用生产 `qualify.mjs`，不改 22443 Compose。候选容器以 UID 10001、只读 rootfs、drop-all capabilities、no-new-privileges 运行；不设置 seccomp 覆盖，使用 Docker 默认 seccomp。操作者需先在目标机创建数据目录并设为 UID 10001、0700；`IMAGE_REF` 必须是已本地存在且标签匹配的 GHCR manifest digest，或用于开发验证的本地 `sha256:` image ID。helper 不执行 pull；显式 `--check` 只检查，实际启动还需显式 `--execute`。未通过独立验收前不得发布 GHCR。
 
 ## 数据边界
 

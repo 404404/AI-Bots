@@ -394,6 +394,41 @@ main {
   flex-wrap: wrap;
   margin: 20px 0;
 }
+.main-entry,
+.catalog-entry {
+  width: 100%;
+  margin: 4px 0;
+  text-align: left;
+}
+.main-entry {
+  border-color: #9db49e;
+  background: #e9f1e8;
+  color: #264b37;
+  font-weight: 650;
+}
+.bot-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.catalog-card {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+.catalog-card h3 {
+  margin: 0 0 12px;
+}
+.catalog-card p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.catalog-card button {
+  margin: 6px 8px 0 0;
+}
 pre {
   font-size: 11px;
   white-space: pre-wrap;

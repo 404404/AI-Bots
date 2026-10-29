@@ -1,6 +1,6 @@
-> **This fork is developing an independent Bot web product.** See [standalone/](standalone/README.md), the [migration assessment](docs/standalone-bot-migration.md) and [acceptance record](docs/acceptance/standalone-bot-test-results-2026-10-29.md). The new runtime does not start or call DSH. Real Codex login and replies are still pending. Original project documentation and attribution follow; its complete feature set has not been migrated.
+> **This fork is developing an independent Bot web product.** See [standalone/](standalone/README.md), the [migration assessment](docs/standalone-bot-migration.md) and [acceptance record](docs/acceptance/standalone-bot-test-results-2026-10-29.md). The runtime does not start or call DSH. Real Codex login, API/LAN Web replies and explicitly saved file-memory recovery have been verified; some isolation and boundary checks remain partial. Original project documentation and attribution follow; its complete feature set has not been migrated.
 
-> The [GK50 candidate runbook](docs/standalone-bot-gk50.md) records access, Compose, immutable identities and remaining checks. Registry publication awaits real-model acceptance.
+> The [GK50 candidate runbook](docs/standalone-bot-gk50.md) records access, Compose and immutable identities. Main Bot, delegation, avatars and product browser work follow the [expansion plan](docs/standalone-bot-expansion-plan.md), with a separate [acceptance record](docs/acceptance/standalone-bot-expansion-test-results.md). Registry publication awaits the release gates.
 
 <div align="center">
   <a href="https://deepseekbot.app/en/">

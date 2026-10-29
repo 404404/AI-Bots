@@ -15,6 +15,8 @@ try {
           'BOT_URL=http://... BOT_SESSION_FILE=<private-file> node dist/cli.ts login --code-file <private-code-file> | <command> [--input-file <private-json-file>]',
         commands: [
           'bots.list',
+          'main.get',
+          'main.catalog',
           'bots.create',
           'bots.get',
           'bots.update',

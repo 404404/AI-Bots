@@ -1,12 +1,12 @@
 # GK50 独立 Bot 候选访问与部署
 
-这是新独立产品的首片候选，尚待真实 Codex 登录与模型回复验收。原项目的群聊、IM、多 Agent、定时任务、Browser/Computer 和客户端尚未迁移。架构依据见 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)及[迁移评估](standalone-bot-migration.md)。
+这是新独立产品的候选。2026-10-29 最新 PX 复验已确认真实 Codex 登录、API 与 LAN 网页回复、明确保存的文件记忆更新及重启恢复；完整边界仍有部分验证项。主 Bot、委派、头像、产品浏览器正在按[扩展计划](standalone-bot-expansion-plan.md)实现并另行验收，不能用现有测试浏览器替代产品浏览器。群聊、IM、定时任务、Computer 和客户端继续延后。架构依据见 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)及[迁移评估](standalone-bot-migration.md)。
 
 ## 访问
 
 - 网页：`http://192.168.68.11:22443`，仅面向已授权 LAN。
 - 新容器：`gk50-standalone-bot`；后台为独立 Node 服务，不启动 DSH。
-- 模型页中的「Codex 验收」Bot 已设置 Codex 接入和应用代理，尚未登录。模型目录来自锁定 SDK，不保证每个账号都可使用所有列出的模型。
+- 模型页中的「Codex 验收」Bot 已完成独立产品登录及真实回复验证。模型目录来自锁定 SDK，不保证每个账号都可使用所有列出的模型。
 - 访问码只在 GK50 本机读取，再填网页。不要将输出发到聊天或提交版本库：
 
 ```sh
@@ -27,7 +27,7 @@ sudo cat /home/hermes/bots/.local/standalone-bot/data/secrets/access-code
 
 候选来自 GitHub Actions 的未发布产物，经 ZIP CRC、tar SHA256、OCI index → manifest → config 哈希及平台/源码标签校验后导入。CI 和 GK50 使用不同 Docker 存储，`inspect` 的 ID 表示不同，引用链必须匹配，不能仅比较标签。GK50 没有重建候选。
 
-这不是 GHCR 正式发布。真实登录、真实回复、模型使用文件记忆及真实回复后的恢复门禁完成前，不发布正式镜像；以后正式部署仍须使用固定 registry digest，不能将本地 manifest/config 身份冒充 registry 发布回执。
+这不是 GHCR 正式发布。上述真实模型和记忆路径已有通过证据；本轮新增能力须通过各自门禁后才能发布。正式部署仍须使用固定 registry digest，不能将本地 manifest/config 身份冒充 registry 发布回执。
 
 ## Compose 与数据
 
@@ -50,12 +50,12 @@ node standalone/deploy/qualify.mjs --run-id 40887735117 --execute
 
 升级先停止并备份新产品数据，保存前一固定镜像 ID。`--rollback` 只做回退预检，`--rollback --execute` 回退新产品代码；不会自动恢复数据备份。上一候选为 `ca46623a`，存在 localhost CLI Host 拒绝问题，LAN 入口仍可用。schema 不兼容时应停止并另行评估数据恢复。
 
-20443 的原 `deepseekbot-gui` 及其数据保留；本轮发现它在 2026-10-29 21:00:12（北京时间）已退出，未由本轮停止或重启。21443 属于其他服务，不作修改。新服务由 Docker 管理，独立于 SSH 会话；本轮没有改动 mihomo 或主机代理配置。
+原 `deepseekbot-gui` 保持停止，其数据保留。20443 已在扩展预检中确认为空闲，预留给独立数据的 `gk50-standalone-bot-candidate`，实际启动前再次核查；22443 当前服务维持原镜像。21443 属于其他服务，不作修改。新服务由 Docker 管理，独立于 SSH 会话；本轮没有改动 mihomo 或主机代理配置。
 
 ## CLI 和模型验收
 
 新 CLI 使用同一认证 HTTP dispatcher，支持 Bot、Conversation、Message、Run、文件记忆、诊断及 Codex 授权命令，准确列表见[独立 README](../standalone/README.md)。它不伪造旧 Session、Channel Timeline、Activity 或 Assignment；旧产品命令保留在原代码及其数据权威中。
 
-容器模型代理设置使用 `http://host.docker.internal:7890`，不用宿主机 localhost。模拟 CONNECT 测试已证明显式代理路径和无直连回退；真实 Codex 代理与模型请求仍待登录后验证，不能据端口连通、配置存在或 SDK 目录宣称通过。
+容器模型代理设置使用 `http://host.docker.internal:7890`，不用宿主机 localhost。模拟 CONNECT 测试已证明显式代理路径和无直连回退；既有真实模型结果见最新验收记录，不能据端口连通、配置存在或 SDK 目录宣称新任务工具链已通过。
 
-用户已选择稍后登录。后续只在新页面完成授权，再分别验证真实回复、仅保存于文件中的记忆标记在新对话中被使用，以及重启后的新回复；模拟结果不能替代。用例、通过项、失败修复、未覆盖项和测试数据见[完整验收记录](acceptance/standalone-bot-test-results-2026-10-29.md)。
+历史“稍后登录”状态已被最新实测取代。用例、通过项、失败修复、未覆盖项和测试数据见[既有验收记录](acceptance/standalone-bot-test-results-2026-10-29.md)顶部及 PX-01–12；新主 Bot 的权限、连接和真实委派须重新按[扩展用例](acceptance/standalone-bot-expansion-test-cases.md)验收，不隐式继承既有 Bot 的授权。

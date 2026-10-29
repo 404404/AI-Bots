@@ -1,6 +1,6 @@
-> **本 fork 的新方向：独立 Bot 网页产品。** 首片代码位于 [standalone/](standalone/README.md)，不启动或调用 DSH；仍在验收，真实 Codex 登录及回复尚未确认。见[代码迁移评估](docs/standalone-bot-migration.md)和[验收记录](docs/acceptance/standalone-bot-test-results-2026-10-29.md)。以下保留原项目说明与归属，不代表独立产品已具备全部能力。
+> **本 fork 的新方向：独立 Bot 网页产品。** 代码位于 [standalone/](standalone/README.md)，不启动或调用 DSH。现有候选已验证真实 Codex 登录、API/LAN 网页回复及明确保存的文件记忆恢复；部分隔离与边界仍待补测。见[代码迁移评估](docs/standalone-bot-migration.md)和[验收记录](docs/acceptance/standalone-bot-test-results-2026-10-29.md)。以下保留原项目说明与归属，不代表独立产品已具备全部能力。
 
-> GK50 候选访问、Compose、固定身份和剩余验收见[独立产品运行说明](docs/standalone-bot-gk50.md)。当前只是可体验候选，正式 GHCR 发布等待真实模型验收。
+> GK50 候选访问、Compose 和固定身份见[独立产品运行说明](docs/standalone-bot-gk50.md)。主 Bot、委派、头像和产品浏览器按[扩展计划](docs/standalone-bot-expansion-plan.md)逐片实现，[扩展验收](docs/acceptance/standalone-bot-expansion-test-results.md)单独记录；完成发布门禁前不发布正式 GHCR 镜像。
 
 <div align="center">
   <a href="https://deepseekbot.app">

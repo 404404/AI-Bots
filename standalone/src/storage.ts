@@ -9,6 +9,7 @@ import {
 import { mkdirSync, chmodSync, readFileSync, writeFileSync, lstatSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { BotError, requireValue } from './errors.ts';
+import { migrate } from './migrations.ts';
 
 export class Storage {
   root: string;
@@ -42,37 +43,37 @@ export class Storage {
       this.lease.close();
       throw new BotError('data-directory-in-use', '数据目录已被其他进程占用。', 409);
     }
-    const secretDir = join(this.root, 'secrets');
-    mkdirSync(secretDir, { recursive: true, mode: 0o700 });
-    chmodSync(secretDir, 0o700);
-    const keyFile = join(secretDir, 'master.key');
-    if (!existsSync(keyFile)) writeFileSync(keyFile, randomBytes(32), { mode: 0o600, flag: 'wx' });
-    requireValue(
-      !lstatSync(keyFile).isSymbolicLink(),
-      'unsafe-key-file',
-      '密钥文件不能是符号链接。',
-    );
-    chmodSync(keyFile, 0o600);
-    this.key = readFileSync(keyFile);
-    requireValue(this.key.length === 32, 'invalid-key-file', '本机密钥文件无效。');
-    this.db = new DatabaseSync(join(this.root, 'bot.sqlite'));
-    this.db.exec(
-      'PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=3000;',
-    );
-    const version = this.db.prepare('PRAGMA user_version').get()?.user_version;
-    requireValue(version === 0 || version === 1, 'schema-upgrade-required', '数据库版本不兼容。');
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS bots(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE NOT NULL, slug TEXT UNIQUE NOT NULL, name TEXT NOT NULL, persona TEXT NOT NULL, config TEXT NOT NULL, credential TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS conversations(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE NOT NULL, bot_id TEXT NOT NULL REFERENCES bots(id), title TEXT NOT NULL, created_at TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS runs(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE NOT NULL, bot_id TEXT NOT NULL REFERENCES bots(id), conversation_id TEXT NOT NULL REFERENCES conversations(id), request_key TEXT NOT NULL, input TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('queued','running','completed','failed','cancelled','interrupted')), error_code TEXT, created_at TEXT NOT NULL, finished_at TEXT, model TEXT, memory TEXT, UNIQUE(conversation_id,request_key));
-      CREATE UNIQUE INDEX IF NOT EXISTS one_active_run ON runs(conversation_id) WHERE status IN ('queued','running');
-      CREATE TABLE IF NOT EXISTS messages(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE NOT NULL, bot_id TEXT NOT NULL REFERENCES bots(id), conversation_id TEXT NOT NULL REFERENCES conversations(id), run_id TEXT NOT NULL REFERENCES runs(id), role TEXT NOT NULL CHECK(role IN ('user','assistant')), content TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(run_id,role));
-      CREATE TABLE IF NOT EXISTS diagnostics(seq INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, event TEXT NOT NULL, bot_id TEXT, run_id TEXT, code TEXT, duration_ms INTEGER, route TEXT, upstream_status INTEGER);
-      CREATE TABLE IF NOT EXISTS auth_sessions(digest TEXT PRIMARY KEY, expires_at INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS oauth_credentials(bot_id TEXT PRIMARY KEY REFERENCES bots(id), credential TEXT NOT NULL);
-      PRAGMA user_version=1;
-    `);
-    for (const file of ['owner.sqlite', 'bot.sqlite']) chmodSync(join(this.root, file), 0o600);
+    try {
+      const secretDir = join(this.root, 'secrets');
+      mkdirSync(secretDir, { recursive: true, mode: 0o700 });
+      chmodSync(secretDir, 0o700);
+      const keyFile = join(secretDir, 'master.key');
+      if (!existsSync(keyFile)) writeFileSync(keyFile, randomBytes(32), { mode: 0o600, flag: 'wx' });
+      requireValue(
+        !lstatSync(keyFile).isSymbolicLink(),
+        'unsafe-key-file',
+        '密钥文件不能是符号链接。',
+      );
+      chmodSync(keyFile, 0o600);
+      this.key = readFileSync(keyFile);
+      requireValue(this.key.length === 32, 'invalid-key-file', '本机密钥文件无效。');
+      this.db = new DatabaseSync(join(this.root, 'bot.sqlite'));
+      this.db.exec(
+        'PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=3000;',
+      );
+      migrate(this.db);
+      for (const file of ['owner.sqlite', 'bot.sqlite']) chmodSync(join(this.root, file), 0o600);
+    } catch (error) {
+      if (this.db) this.db.close();
+      (this as { key?: Buffer }).key?.fill(0);
+      try {
+        this.lease.exec('ROLLBACK');
+      } catch {}
+      try {
+        this.lease.close();
+      } catch {}
+      throw error;
+    }
   }
   transaction<T>(fn: () => T): T {
     this.db.exec('BEGIN IMMEDIATE');

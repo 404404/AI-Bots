@@ -192,7 +192,7 @@ export async function startServer(options: {
           '命令参数无效。',
         );
         const command = text(input.command, '命令', 80);
-        const result = await app.execute(command, input.params ?? {});
+        const result = await app.execute(command, input.params ?? {}, { kind: 'owner' });
         return send(command === 'runs.submit' ? 202 : 200, { schemaVersion: 1, result });
       }
       requireValue(req.method === 'GET', 'method-not-allowed', '此请求方法不受支持。', 405);

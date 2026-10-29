@@ -1,5 +1,6 @@
 const $ = (id) => document.getElementById(id);
 let bots = [],
+  mainBotId = null,
   bot = null,
   conversation = null,
   activeRun = null,
@@ -125,7 +126,7 @@ function renderBots() {
   const nav = $('bots');
   nav.replaceChildren();
   for (const item of bots) {
-    const button = node('button', item.name);
+    const button = node('button', `${item.name}${item.id === mainBotId ? ' · 主 Bot' : ''}`);
     button.setAttribute('aria-current', String(item.id === bot?.id));
     button.onclick = () => void selectBot(item.id).catch(showError);
     nav.append(button);
@@ -134,6 +135,24 @@ function renderBots() {
 async function refreshBots() {
   bots = await all('bots.list');
   renderBots();
+}
+async function loadCatalog() {
+  const catalog = await command('main.catalog');
+  mainBotId = catalog.mainBotId;
+  $('bot-catalog').replaceChildren();
+  for (const item of catalog.items) {
+    const card = node('article', undefined, 'catalog-card');
+    const title = node('h3', `${item.name} · ${item.role === 'main' ? '主 Bot' : '工作 Bot'}`);
+    const identity = node('p', `ID：${item.id} · slug：${item.slug}`);
+    const state = node('p', `模型：${item.modelConfigured ? (item.credentialConfigured ? '已配置' : '缺少凭据') : '未配置'} · 最近执行：${statusLabels[item.executionStatus] ?? item.executionStatus} · 配置版本：${item.configRevision}`);
+    const capabilities = node('p', `当前能力：${item.capabilities.join('、')}`);
+    const identityButton = node('button', '身份设置');
+    identityButton.onclick = () => void selectBot(item.id).then(() => view('identity')).catch(showError);
+    const modelButton = node('button', '模型设置');
+    modelButton.onclick = () => void selectBot(item.id).then(() => view('model')).catch(showError);
+    card.append(title, identity, state, capabilities, identityButton, modelButton);
+    $('bot-catalog').append(card);
+  }
 }
 function fillSettings() {
   if (!bot) return;
@@ -307,7 +326,13 @@ async function enter() {
   $('login-screen').hidden = true;
   $('workspace').hidden = false;
   await refreshBots();
-  if (bots.length) await selectBot(bots[0].id);
+  const main = await command('main.get');
+  mainBotId = main.bot.id;
+  $('main-entry').textContent = `${main.bot.name} · 主 Bot`;
+  renderBots();
+  $('main-entry').onclick = () => void selectBot(mainBotId).then(() => view('chat')).catch(showError);
+  $('catalog-entry').onclick = () => void loadCatalog().then(() => view('catalog')).catch(showError);
+  if (bots.length) await selectBot(mainBotId);
   else updateComposer();
 }
 function form(id, action) {
@@ -345,6 +370,7 @@ form('create-form', async () => {
   $('bot-dialog').close();
   $('create-form').reset();
   await refreshBots();
+  if (created.id === mainBotId) mainBotId = created.id;
   await selectBot(created.id);
   view('model');
   notice('Bot 已创建，设置模型后即可开始。');
@@ -359,7 +385,10 @@ $('new-conversation').onclick = () =>
     await selectConversation(item);
   })().catch(showError);
 for (const button of document.querySelectorAll('[data-view]'))
-  button.onclick = () => view(button.dataset.view);
+  button.onclick = () => {
+    if (button.dataset.view === 'catalog') void loadCatalog().catch(showError);
+    view(button.dataset.view);
+  };
 form('identity-form', async () => {
   if (!bot) return;
   bot = await command('bots.update', {
@@ -369,6 +398,7 @@ form('identity-form', async () => {
   });
   fillSettings();
   await refreshBots();
+  if (bot.id === mainBotId) $('main-entry').textContent = `${bot.name} · 主 Bot`;
   notice('身份已保存');
 });
 async function saveModel() {

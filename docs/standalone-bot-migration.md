@@ -52,4 +52,10 @@
 
 风险：原产品功能面很大，首片不等于全部迁移；Node SQLite 的单进程 owner 需拒绝多实例；文件和 SQL 不能假装跨存储原子事务；LAN HTTP 无传输加密；可配置 endpoint/代理是 owner 级网络能力；模型协议兼容性和费用须有限真实验证；取消不保证提供方停止计费；历史上下文窗口有界。第一片不上线多用户、不做后台自动重试、不引入第二个旧数据权威。
 
-当前证据：原 HTTP 白屏与 Codex 登录失败是两个独立问题，详见 [HTTP 评估](acceptance/gk50-http-compatibility-assessment.md) 和 [阻塞补查](acceptance/gk50-blockers-followup-2026-10-29.md)。本评估写入时，独立产品尚未实现、构建或部署。
+历史评估写入时，独立产品尚未实现、构建或部署；上述范围划分是当时的迁移设计。原 HTTP 白屏与 Codex 登录失败是两个独立问题，详见 [HTTP 评估](acceptance/gk50-http-compatibility-assessment.md) 和 [阻塞补查](acceptance/gk50-blockers-followup-2026-10-29.md)。
+
+## 2026-10-29 当前实施状态
+
+独立 `standalone/` 已构建并在 22443 运行，真实 Codex 登录、API/LAN 页面回复及人工保存文件记忆使用、更新与重启恢复已取得证据。完整结论以[原验收记录](acceptance/standalone-bot-test-results-2026-10-29.md)顶部和 PX-01–12 为准；部分隔离、取消和输入边界仍待补测。历史“待登录”或“尚未实现独立产品”不能作为当前状态。
+
+本轮按[扩展计划](standalone-bot-expansion-plan.md)增量实现主身份、真实委派、自定义头像和产品浏览器；[新验收记录](acceptance/standalone-bot-expansion-test-results.md)独立于旧记录。ADR-0244–0246 描述本 fork 新设计，尚未验收的能力不算当前产品事实。不迁移群聊、IM、定时任务、Computer 或客户端，也不操作旧 DSH 数据。

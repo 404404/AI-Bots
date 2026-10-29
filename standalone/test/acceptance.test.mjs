@@ -36,12 +36,12 @@ async function fixture() {
   });
   await new Promise((r) => model.listen(0, '127.0.0.1', r));
   const app = new BotApplication(dir());
-  const bot = await app.execute('bots.create', { slug: 'qa-bot', name: 'QA' });
-  await app.execute('bots.update', {
+  const bot = await app.executeOwner('bots.create', { slug: 'qa-bot', name: 'QA' });
+  await app.executeOwner('bots.update', {
     botId: bot.id,
     model: { baseUrl: `http://127.0.0.1:${model.address().port}`, model: 'mock', keyless: true },
   });
-  const conversation = await app.execute('conversations.create', { botId: bot.id });
+  const conversation = await app.executeOwner('conversations.create', { botId: bot.id });
   return {
     app,
     bot,
@@ -72,26 +72,26 @@ test('SB08/09/10: replay, lost response, busy conversation, cancellation and lat
       content: 'hello',
     };
     const [a, b] = await Promise.all([
-      f.app.execute('runs.submit', p),
-      f.app.execute('runs.submit', p),
+      f.app.executeOwner('runs.submit', p),
+      f.app.executeOwner('runs.submit', p),
     ]);
     assert.equal(a.id, b.id);
     assert.equal(b.replayed, true);
     await until(() => f.calls === 1);
-    const retry = await f.app.execute('runs.submit', p);
+    const retry = await f.app.executeOwner('runs.submit', p);
     assert.equal(retry.id, a.id);
-    await assert.rejects(f.app.execute('runs.submit', { ...p, content: 'changed' }), {
+    await assert.rejects(f.app.executeOwner('runs.submit', { ...p, content: 'changed' }), {
       code: 'idempotency-conflict',
     });
-    await assert.rejects(f.app.execute('runs.submit', { ...p, idempotencyKey: 'other' }), {
+    await assert.rejects(f.app.executeOwner('runs.submit', { ...p, idempotencyKey: 'other' }), {
       code: 'conversation-busy',
     });
-    await f.app.execute('runs.cancel', { botId: f.bot.id, runId: a.id });
+    await f.app.executeOwner('runs.cancel', { botId: f.bot.id, runId: a.id });
     respond(f.pending[0]);
     await sleep(80);
-    const run = await f.app.execute('runs.get', { botId: f.bot.id, runId: a.id });
+    const run = await f.app.executeOwner('runs.get', { botId: f.bot.id, runId: a.id });
     assert.equal(run.status, 'cancelled');
-    const messages = await f.app.execute('messages.list', p);
+    const messages = await f.app.executeOwner('messages.list', p);
     assert.deepEqual(
       messages.items.map((x) => x.role),
       ['user'],
@@ -108,19 +108,19 @@ test('SB07/11: recovery, exclusive owner, scoped records, memory paths and revis
   let closed = false;
   try {
     assert.throws(() => new BotApplication(root), { code: 'data-directory-in-use' });
-    const other = await f.app.execute('bots.create', { slug: 'other', name: 'Other' });
+    const other = await f.app.executeOwner('bots.create', { slug: 'other', name: 'Other' });
     await assert.rejects(
-      f.app.execute('messages.list', { botId: other.id, conversationId: f.conversation.id }),
+      f.app.executeOwner('messages.list', { botId: other.id, conversationId: f.conversation.id }),
       { code: 'not-found' },
     );
-    const saved = await f.app.execute('memory.write', {
+    const saved = await f.app.executeOwner('memory.write', {
       botId: f.bot.id,
       path: 'note.md',
       body: 'first',
       expectedRevision: null,
     });
     await assert.rejects(
-      f.app.execute('memory.write', {
+      f.app.executeOwner('memory.write', {
         botId: f.bot.id,
         path: 'note.md',
         body: 'second',
@@ -129,22 +129,22 @@ test('SB07/11: recovery, exclusive owner, scoped records, memory paths and revis
       { code: 'memory-revision-conflict' },
     );
     assert.equal(
-      (await f.app.execute('memory.read', { botId: f.bot.id, path: 'note.md' })).revision,
+      (await f.app.executeOwner('memory.read', { botId: f.bot.id, path: 'note.md' })).revision,
       saved.revision,
     );
     for (const path of ['../outside.md', '%2e%2e.md', '.git', 'x/y.md'])
-      await assert.rejects(f.app.execute('memory.read', { botId: f.bot.id, path }));
+      await assert.rejects(f.app.executeOwner('memory.read', { botId: f.bot.id, path }));
     await assert.rejects(
-      f.app.execute('memory.write', { botId: f.bot.id, path: 'big.md', body: 'x'.repeat(8193) }),
+      f.app.executeOwner('memory.write', { botId: f.bot.id, path: 'big.md', body: 'x'.repeat(8193) }),
     );
     const target = join(root, 'outside');
     writeFileSync(target, 'outside');
     symlinkSync(target, join(root, 'bots', f.bot.id, 'memory', 'link.md'));
-    await assert.rejects(f.app.execute('memory.read', { botId: f.bot.id, path: 'link.md' }), {
+    await assert.rejects(f.app.executeOwner('memory.read', { botId: f.bot.id, path: 'link.md' }), {
       code: 'unsafe-memory-path',
     });
     unlinkSync(join(root, 'bots', f.bot.id, 'memory', 'link.md'));
-    const run = await f.app.execute('runs.submit', {
+    const run = await f.app.executeOwner('runs.submit', {
       botId: f.bot.id,
       conversationId: f.conversation.id,
       idempotencyKey: 'recovery',
@@ -156,7 +156,7 @@ test('SB07/11: recovery, exclusive owner, scoped records, memory paths and revis
     const recovered = new BotApplication(root);
     try {
       assert.equal(
-        (await recovered.execute('runs.get', { botId: f.bot.id, runId: run.id })).status,
+        (await recovered.executeOwner('runs.get', { botId: f.bot.id, runId: run.id })).status,
         'interrupted',
       );
       assert.equal(f.calls, 1);
@@ -230,7 +230,7 @@ test('SB02/04/14: HTTP auth, origin, secret storage and live CLI', async () => {
     cli.stdout.on('data', (x) => (out += x));
     const exit = await new Promise((r) => cli.on('exit', r));
     assert.equal(exit, 0);
-    assert.equal(JSON.parse(out).result.items[0].id, bot.id);
+    assert(JSON.parse(out).result.items.some((item) => item.id === bot.id));
     assert(!out.includes(secret));
     const bad = await command('bots.list', { cursor: 'invalid' });
     assert.equal(bad.body.error.code, 'invalid-cursor');
@@ -265,23 +265,23 @@ test('SB12: explicit CONNECT proxy carries model request and failure has no dire
   await new Promise((r) => proxy.listen(0, '127.0.0.1', r));
   const app = new BotApplication(dir());
   try {
-    const bot = await app.execute('bots.create', { slug: 'proxy-qa', name: 'QA' });
-    const conversation = await app.execute('conversations.create', { botId: bot.id });
+    const bot = await app.executeOwner('bots.create', { slug: 'proxy-qa', name: 'QA' });
+    const conversation = await app.executeOwner('conversations.create', { botId: bot.id });
     const config = {
       baseUrl: `http://127.0.0.1:${model.address().port}`,
       model: 'mock',
       keyless: true,
       proxyUrl: `http://127.0.0.1:${proxy.address().port}`,
     };
-    await app.execute('bots.update', { botId: bot.id, model: config });
-    const run = await app.execute('runs.submit', {
+    await app.executeOwner('bots.update', { botId: bot.id, model: config });
+    const run = await app.executeOwner('runs.submit', {
       botId: bot.id,
       conversationId: conversation.id,
       idempotencyKey: 'proxied',
       content: 'test',
     });
     const done = await until(async () => {
-      const x = await app.execute('runs.get', { botId: bot.id, runId: run.id });
+      const x = await app.executeOwner('runs.get', { botId: bot.id, runId: run.id });
       return x.status === 'completed' && x;
     });
     assert.equal(done.status, 'completed');
@@ -289,14 +289,14 @@ test('SB12: explicit CONNECT proxy carries model request and failure has no dire
     assert.equal(modelCalls, 1);
     proxy.closeAllConnections();
     await new Promise((r) => proxy.close(r));
-    const failed = await app.execute('runs.submit', {
+    const failed = await app.executeOwner('runs.submit', {
       botId: bot.id,
       conversationId: conversation.id,
       idempotencyKey: 'proxy-down',
       content: 'test',
     });
     const result = await until(async () => {
-      const x = await app.execute('runs.get', { botId: bot.id, runId: failed.id });
+      const x = await app.executeOwner('runs.get', { botId: bot.id, runId: failed.id });
       return x.status === 'failed' && x;
     });
     assert.equal(result.errorCode, 'model-proxy-unreachable');
