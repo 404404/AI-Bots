@@ -1,3 +1,5 @@
+> **This fork is developing an independent Bot web product.** See [standalone/](standalone/README.md), the [migration assessment](docs/standalone-bot-migration.md) and [acceptance record](docs/acceptance/standalone-bot-test-results-2026-10-29.md). The new runtime does not start or call DSH. Real Codex login and replies are still pending. Original project documentation and attribution follow; its complete feature set has not been migrated.
+
 <div align="center">
   <a href="https://deepseekbot.app/en/">
 <picture>

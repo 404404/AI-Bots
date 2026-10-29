@@ -1,3 +1,5 @@
+> **本 fork 的新方向：独立 Bot 网页产品。** 首片代码位于 [standalone/](standalone/README.md)，不启动或调用 DSH；仍在验收，真实 Codex 登录及回复尚未确认。见[代码迁移评估](docs/standalone-bot-migration.md)和[验收记录](docs/acceptance/standalone-bot-test-results-2026-10-29.md)。以下保留原项目说明与归属，不代表独立产品已具备全部能力。
+
 <div align="center">
   <a href="https://deepseekbot.app">
 <picture>

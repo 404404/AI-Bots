@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>GK50 Bot</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <section id="login-screen" class="login-screen">
+      <form id="login-form" class="login-card">
+        <div class="brandmark">B</div>
+        <p class="eyebrow">GK50 BOT · 独立网页预览</p>
+        <h1>与你的 Bot 开始对话</h1>
+        <p class="muted">使用此设备的私密访问码登录。</p>
+        <label
+          >访问码<input
+            id="access-code"
+            type="password"
+            autocomplete="current-password"
+            required
+            maxlength="200" /></label
+        ><button type="submit" class="primary">登录</button>
+        <p class="muted fine">
+          首次访问码保存在新产品数据目录的 secrets/access-code。请在本机查看，不要发送到聊天中。
+        </p>
+      </form>
+    </section>
+    <div id="workspace" class="workspace" hidden>
+      <aside class="sidebar">
+        <header class="brand">
+          <span class="brandmark small">B</span><strong>GK50 Bot</strong>
+        </header>
+        <div class="side-heading">
+          <span>我的 Bots</span
+          ><button id="new-bot" aria-label="创建 Bot" title="创建 Bot">＋</button>
+        </div>
+        <nav id="bots" aria-label="Bot 列表"></nav>
+        <div class="side-heading">
+          <span>对话</span
+          ><button id="new-conversation" aria-label="新对话" title="新对话">＋</button>
+        </div>
+        <nav id="conversations" aria-label="对话列表"></nav>
+        <footer>
+          <span class="status-dot"></span>独立网页预览<button id="logout">退出</button>
+        </footer>
+      </aside>
+      <main>
+        <header class="main-header">
+          <div>
+            <p class="eyebrow">你的专属对话空间</p>
+            <h1 id="bot-title">选择或创建一个 Bot</h1>
+          </div>
+          <span id="execution-status" class="pill">就绪</span>
+        </header>
+        <nav id="views" class="tabs" aria-label="Bot 功能">
+          <button data-view="chat" aria-pressed="true">对话</button
+          ><button data-view="identity">身份</button><button data-view="model">模型</button
+          ><button data-view="memory">文件记忆</button><button data-view="diagnostics">诊断</button>
+        </nav>
+        <section id="view-chat" class="view chat-view">
+          <div id="messages" class="messages" aria-label="消息记录" aria-live="polite">
+            <div class="empty">
+              <h2>为一个 Bot 留出专属空间</h2>
+              <p>设置它的身份和模型，再开始对话。明确保存的记忆会陪伴它进入后续对话。</p>
+            </div>
+          </div>
+          <div id="run-error" class="run-error" role="status" hidden></div>
+          <form id="message-form" class="composer">
+            <label class="sr-only" for="message-input">发送消息</label
+            ><textarea
+              id="message-input"
+              rows="3"
+              placeholder="发送一条消息…"
+              maxlength="12000"
+            ></textarea>
+            <div class="composer-actions">
+              <span id="send-hint" class="muted fine">Enter 发送 · Shift+Enter 换行</span
+              ><button id="cancel-run" type="button" hidden>停止生成</button
+              ><button id="send-message" type="submit" class="primary">发送</button>
+            </div>
+          </form>
+        </section>
+        <section id="view-identity" class="view settings-view" hidden>
+          <h2>Bot 身份</h2>
+          <p class="muted">身份提示用于这个 Bot 的每次对话。</p>
+          <form id="identity-form">
+            <label>名称<input id="bot-name" maxlength="100" required /></label
+            ><label
+              >身份提示<textarea
+                id="bot-persona"
+                rows="10"
+                maxlength="8000"
+                placeholder="它是谁，如何与你协作？"
+              ></textarea></label
+            ><button type="submit" class="primary">保存身份</button>
+          </form>
+        </section>
+        <section id="view-model" class="view settings-view" hidden>
+          <h2>模型连接</h2>
+          <p class="muted">使用你已有、可合法使用的服务。连接状态以实际回复为准。</p>
+          <form id="model-form">
+            <label
+              >接入方式<select id="model-provider">
+                <option value="openai-codex">Codex Auth</option>
+                <option value="compatible">兼容 Chat Completions API</option>
+              </select></label
+            ><label id="base-url-field"
+              >API 基础地址<input
+                id="model-base-url"
+                type="url"
+                placeholder="https://api.deepseek.com/v1" /></label
+            ><label
+              >模型名称<input
+                id="model-name"
+                maxlength="160"
+                list="model-catalog"
+                required /></label
+            ><datalist id="model-catalog"></datalist>
+            <div id="api-key-fields">
+              <label
+                >私密 API 凭据<input
+                  id="model-key"
+                  type="password"
+                  autocomplete="off"
+                  maxlength="8192"
+                  placeholder="留空保留已有凭据"
+              /></label>
+              <p id="credential-status" class="muted fine">尚未配置凭据</p>
+              <label class="check"
+                ><input id="clear-credential" type="checkbox" />清除已保存的凭据</label
+              ><label class="check"
+                ><input
+                  id="model-keyless"
+                  type="checkbox"
+                />此服务明确无需凭据（例如本地模型）</label
+              >
+            </div>
+            <label
+              >应用代理地址（可选）<input
+                id="model-proxy"
+                type="url"
+                placeholder="http://host.docker.internal:7890"
+            /></label>
+            <p class="muted fine">
+              留空为直连。容器请使用 host.docker.internal，不要填宿主机的
+              127.0.0.1。代理不能保证解除服务端地区或账户限制。配置同时用于 Codex
+              登录、刷新和模型请求。
+            </p>
+            <button type="submit" class="primary">保存模型连接</button>
+          </form>
+          <div id="codex-auth-panel">
+            <hr />
+            <h3>Codex 登录</h3>
+            <p id="codex-status" role="status">尚未登录</p>
+            <p class="muted fine">
+              使用独立登录记录，不读取旧 DSH 或 Codex CLI 凭据。此接入复用 pi-ai
+              的登录协议；刷新令牌轮换可能影响同一账户的其他会话。
+            </p>
+            <div class="auth-actions">
+              <button id="codex-device-login">设备码登录</button
+              ><button id="codex-browser-login">浏览器登录</button
+              ><button id="codex-cancel">取消登录</button
+              ><button id="codex-logout">退出 Codex</button>
+            </div>
+            <div id="codex-notice" hidden>
+              <p>
+                <a id="codex-login-link" target="_blank" rel="noopener noreferrer"
+                  >在服务方页面完成登录</a
+                >
+              </p>
+              <p id="codex-user-code"></p>
+            </div>
+            <form id="codex-answer-form" hidden>
+              <label
+                >私密回调地址<input
+                  id="codex-callback"
+                  type="password"
+                  autocomplete="off"
+                  maxlength="8192"
+                  placeholder="http://localhost:1455/auth/callback?…"
+              /></label>
+              <p class="muted fine">
+                远程浏览器的 localhost
+                回调可能无法打开。完成服务方登录后，将地址栏完整回调地址私密粘贴于此，不要发到聊天中。
+              </p>
+              <button type="submit">提交回调</button>
+            </form>
+          </div>
+        </section>
+        <section id="view-memory" class="view settings-view" hidden>
+          <h2>明确保存的文件记忆</h2>
+          <p class="muted">
+            只有保存的内容会带入新对话。每个 Bot 独立保存，最多 10 个文件、总计 24 KiB。
+          </p>
+          <div id="memory-files" class="memory-files"></div>
+          <form id="memory-form">
+            <label
+              >Markdown 文件名<input
+                id="memory-path"
+                value="notes.md"
+                maxlength="80"
+                required /></label
+            ><button id="read-memory" type="button">读取文件</button
+            ><label
+              >记忆内容<textarea
+                id="memory-body"
+                rows="12"
+                maxlength="8192"
+                placeholder="写下希望这个 Bot 在后续对话中记住的事实或偏好。"
+              ></textarea>
+            </label>
+            <p id="memory-revision" class="muted fine">新文件</p>
+            <button type="submit" class="primary">保存记忆</button>
+          </form>
+        </section>
+        <section id="view-diagnostics" class="view settings-view" hidden>
+          <h2>运行诊断</h2>
+          <p class="muted">记录执行阶段、耗时和错误码，不记录消息正文、模型凭据或完整网络请求。</p>
+          <button id="refresh-diagnostics">刷新诊断</button>
+          <pre id="diagnostics-output" aria-label="诊断记录"></pre>
+        </section>
+      </main>
+    </div>
+    <dialog id="bot-dialog" aria-labelledby="create-title">
+      <form id="create-form">
+        <h2 id="create-title">创建 Bot</h2>
+        <label>名称<input id="create-name" maxlength="100" required /></label
+        ><label
+          >标识 slug<input
+            id="create-slug"
+            maxlength="64"
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+            placeholder="my-bot"
+            required /></label
+        ><label>身份提示<textarea id="create-persona" rows="4" maxlength="8000"></textarea></label>
+        <div class="dialog-actions">
+          <button id="dismiss-create" type="button">取消</button
+          ><button class="primary" type="submit">创建</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="copy-dialog" aria-labelledby="copy-title">
+      <h2 id="copy-title">手动复制</h2>
+      <p class="muted">此环境未能自动复制，请选中下方文本后复制。</p>
+      <textarea id="copy-content" readonly rows="8" aria-label="待复制文本"></textarea
+      ><button id="dismiss-copy">关闭</button>
+    </dialog>
+  </body>
+</html>

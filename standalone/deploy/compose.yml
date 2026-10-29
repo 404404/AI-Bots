@@ -1,0 +1,30 @@
+name: gk50-standalone-bot
+services:
+  bot:
+    image: ${IMAGE_REF:?Set an accepted immutable image identity}
+    container_name: gk50-standalone-bot
+    user: '10001:10001'
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    network_mode: bridge
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - '127.0.0.1:22443:3080'
+      - '192.168.68.11:22443:3080'
+    environment:
+      BOT_PUBLIC_URL: http://192.168.68.11:22443
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data/bot
+        bind:
+          create_host_path: false
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
+    stop_grace_period: 20s

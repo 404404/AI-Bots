@@ -1,5 +1,7 @@
 # BotHarness 架构与数据流
 
+> **Fork 独立产品方向（2026-10-29）**：新运行时位于 `standalone/`，独立后台、数据和执行边界见[迁移评估](../standalone-bot-migration.md)。这是一条单独维护、仍待真实首片验收的产品路径。以下仍描述原 DSH 插件架构，不将其能力或数据权威隐式移入新产品。
+
 #2080 第一条切片让 Web 请求卡与在线 CLI 共用 application-defined Workspace 请求批准命令。Grant owner 在 Channel owner 的现有提交事务内写入读写权限，规范决议与 Inbox Admission 同时提交；成功读回后再沿原运行时处理原任务。新目录与旧只读升级均需 Human 明确确认，不由 Client 串联多个独立成功动作。Orchestrator 与 Assignment 的原生文件写入都检查当前 Grant 写权限；Assignment 仍只使用其原 Grant 和单 cwd。普通目录设置、移动端交互和完整重启恢复矩阵仍按后续切片交付，不能从本次 Web/CLI 路径推定已完成。见 [ADR-0238](../adr/0238-workspace-request-approval-commits-write-authority-with-the-channel-decision.md)。
 
 #2053 的本地 Group 发送复核试点由 Channel owner 在正式 Source Event / placement 追加的同一事务内比较实际观察依据。

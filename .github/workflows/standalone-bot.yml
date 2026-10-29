@@ -1,0 +1,79 @@
+name: Standalone Bot
+on:
+  push:
+    branches: [feature/gui-container-codex-prototype]
+    paths: ['standalone/**', '.github/workflows/standalone-bot.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: standalone-bot-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  qualify:
+    if: github.repository == '404404/AI-Bots'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Independent build and protocol tests
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: ./standalone
+          file: ./standalone/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: standalone-bot:ci
+          build-args: SOURCE_REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=standalone-bot
+          cache-to: type=gha,scope=standalone-bot,mode=max
+      - name: Scan independent runtime
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: standalone-bot:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Boot without a DSH Host and verify restart persistence
+        run: |
+          install -d "$RUNNER_TEMP/standalone-data"
+          sudo chown 10001:10001 "$RUNNER_TEMP/standalone-data"
+          sudo chmod 0700 "$RUNNER_TEMP/standalone-data"
+          docker run -d --name standalone-ci --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=32m --cap-drop ALL --security-opt no-new-privileges:true --memory 768m --cpus 1 --pids-limit 128 -v "$RUNNER_TEMP/standalone-data:/data/bot" -e BOT_PUBLIC_URL=http://127.0.0.1:3080 standalone-bot:ci
+          for i in $(seq 1 30); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' standalone-ci)" = healthy ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' standalone-ci)" = healthy
+          docker cp standalone/scripts/container-smoke.mjs standalone-ci:/tmp/container-smoke.mjs
+          docker exec standalone-ci node /tmp/container-smoke.mjs seed
+          docker restart standalone-ci
+          for i in $(seq 1 30); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' standalone-ci)" = healthy ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' standalone-ci)" = healthy
+          docker cp standalone/scripts/container-smoke.mjs standalone-ci:/tmp/container-smoke.mjs
+          docker exec standalone-ci node /tmp/container-smoke.mjs restored
+          docker exec standalone-ci node --experimental-strip-types dist/cli.ts --help
+      - name: Save qualification artifact without publishing
+        run: |
+          docker save standalone-bot:ci -o standalone-candidate.tar
+          node standalone/scripts/candidate-record.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: standalone-candidate
+          path: |
+            standalone-candidate.tar
+            standalone-candidate.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Clean only the CI fixture
+        if: always()
+        run: docker rm -f standalone-ci >/dev/null 2>&1 || true
