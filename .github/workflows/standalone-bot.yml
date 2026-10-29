@@ -51,16 +51,14 @@ jobs:
             sleep 2
           done
           test "$(docker inspect --format '{{.State.Health.Status}}' standalone-ci)" = healthy
-          docker cp standalone/scripts/container-smoke.mjs standalone-ci:/tmp/container-smoke.mjs
-          docker exec standalone-ci node /tmp/container-smoke.mjs seed
+          docker exec -i standalone-ci node --input-type=module - seed < standalone/scripts/container-smoke.mjs
           docker restart standalone-ci
           for i in $(seq 1 30); do
             if [ "$(docker inspect --format '{{.State.Health.Status}}' standalone-ci)" = healthy ]; then break; fi
             sleep 2
           done
           test "$(docker inspect --format '{{.State.Health.Status}}' standalone-ci)" = healthy
-          docker cp standalone/scripts/container-smoke.mjs standalone-ci:/tmp/container-smoke.mjs
-          docker exec standalone-ci node /tmp/container-smoke.mjs restored
+          docker exec -i standalone-ci node --input-type=module - restored < standalone/scripts/container-smoke.mjs
           docker exec standalone-ci node --experimental-strip-types dist/cli.ts --help
       - name: Save qualification artifact without publishing
         run: |
