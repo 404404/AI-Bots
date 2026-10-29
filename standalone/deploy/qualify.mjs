@@ -69,6 +69,42 @@ export function validateCandidate(record, ci) {
     fail(record.gates?.[gate] === true, `Missing gate: ${gate}`);
   return record;
 }
+export function validateArchiveIdentity(index, manifestSource, configSource, candidate) {
+  const descriptor = index.manifests?.[0];
+  fail(
+    index.schemaVersion === 2 &&
+      index.manifests?.length === 1 &&
+      /^sha256:[a-f0-9]{64}$/u.test(descriptor?.digest ?? ''),
+    'Unexpected OCI archive index',
+  );
+  fail(
+    descriptor.mediaType === 'application/vnd.oci.image.manifest.v1+json' &&
+      `sha256:${sha(manifestSource)}` === descriptor.digest &&
+      Buffer.byteLength(manifestSource) === descriptor.size,
+    'OCI manifest digest mismatch',
+  );
+  const manifest = JSON.parse(manifestSource);
+  fail(
+    manifest.schemaVersion === 2 &&
+      manifest.config?.mediaType === 'application/vnd.oci.image.config.v1+json' &&
+      `sha256:${sha(configSource)}` === manifest.config.digest &&
+      Buffer.byteLength(configSource) === manifest.config.size,
+    'OCI config digest mismatch',
+  );
+  fail(
+    [descriptor.digest, manifest.config.digest].includes(candidate.imageId),
+    'CI image identity is not in the verified OCI chain',
+  );
+  const config = JSON.parse(configSource);
+  fail(
+    config.architecture === 'amd64' &&
+      config.os === 'linux' &&
+      config.config?.Labels?.['org.opencontainers.image.revision'] === candidate.commit &&
+      config.config?.Labels?.['io.404404.product'] === 'standalone-bot',
+    'OCI product source/platform mismatch',
+  );
+  return { manifestId: descriptor.digest, configId: manifest.config.digest };
+}
 function snapshot() {
   return [
     'deepseekbot-gui',
@@ -237,6 +273,15 @@ async function main() {
     sha(readFileSync(join(artifacts, 'standalone-candidate.tar'))) === candidate.archiveSha256,
     'Candidate archive digest mismatch',
   );
+  const archive = join(artifacts, 'standalone-candidate.tar');
+  const index = JSON.parse(run('tar', ['-xOf', archive, 'index.json']));
+  const manifestId = index.manifests?.[0]?.digest;
+  fail(/^sha256:[a-f0-9]{64}$/u.test(manifestId ?? ''), 'Invalid archive manifest path');
+  const manifestSource = run('tar', ['-xOf', archive, `blobs/sha256/${manifestId.slice(7)}`]);
+  const configId = JSON.parse(manifestSource).config?.digest;
+  fail(/^sha256:[a-f0-9]{64}$/u.test(configId ?? ''), 'Invalid archive config path');
+  const configSource = run('tar', ['-xOf', archive, `blobs/sha256/${configId.slice(7)}`]);
+  const identity = validateArchiveIdentity(index, manifestSource, configSource, candidate);
   if (!current)
     fail(
       run('ss', ['-H', '-ltn', 'sport = :22443']).trim() === '',
@@ -246,6 +291,9 @@ async function main() {
     schemaVersion: 1,
     status: 'qualification-ready',
     candidate,
+    archiveIdentity: identity,
+    deploymentHelperSha256: sha(readFileSync(fileURLToPath(import.meta.url))),
+    composeSha256: sha(readFileSync(join(repo, 'standalone/deploy/compose.yml'))),
     source: 'GitHub CI artifact, unpublished',
     fullAcceptance: 'pending',
     publicUrl: 'http://192.168.68.11:22443',
@@ -256,9 +304,9 @@ async function main() {
   run('docker', ['load', '--input', join(artifacts, 'standalone-candidate.tar')], {
     timeout: 300000,
   });
-  const image = inspect(candidate.imageId);
+  const image = inspect(identity.configId) ?? inspect(identity.manifestId);
   fail(
-    image?.Id === candidate.imageId &&
+    [identity.configId, identity.manifestId].includes(image?.Id) &&
       image?.Architecture === 'amd64' &&
       image?.Os === 'linux' &&
       image?.Config?.Labels?.['org.opencontainers.image.revision'] === candidate.commit &&
@@ -294,7 +342,8 @@ async function main() {
     copyFileSync(envFile, join(install, 'previous.env'));
   }
   copyFileSync(join(repo, 'standalone/deploy/compose.yml'), join(install, 'compose.yml'));
-  writeFileSync(envFile, `IMAGE_REF=${candidate.imageId}\n`, { mode: 0o600 });
+  result.deploymentImageId = image.Id;
+  writeFileSync(envFile, `IMAGE_REF=${image.Id}\n`, { mode: 0o600 });
   run('docker', [
     'compose',
     '--project-directory',

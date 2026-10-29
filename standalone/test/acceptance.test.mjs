@@ -309,3 +309,47 @@ test('SB12: explicit CONNECT proxy carries model request and failure has no dire
     await new Promise((r) => model.close(r));
   }
 });
+
+test('mapped public port accepts loopback Host while refusing wrong Host and cross-origin', async () => {
+  const { request } = await import('node:http');
+  const probe = createServer();
+  await new Promise((r) => probe.listen(0, '127.0.0.1', r));
+  const port = probe.address().port;
+  await new Promise((r) => probe.close(r));
+  const runtime = await startServer({
+    dataDir: dir(),
+    port,
+    host: '127.0.0.1',
+    publicUrl: 'http://192.168.68.11:22443',
+  });
+  const send = (host, origin) =>
+    new Promise((resolve, reject) => {
+      const req = request(
+        {
+          host: '127.0.0.1',
+          port,
+          path: origin ? '/api/v1/session' : '/healthz',
+          method: origin ? 'POST' : 'GET',
+          headers: { host, ...(origin ? { origin, 'content-type': 'application/json' } : {}) },
+        },
+        (res) => {
+          let body = '';
+          res.on('data', (x) => (body += x));
+          res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(body) }));
+        },
+      );
+      req.on('error', reject);
+      req.end(origin ? JSON.stringify({ code: 'synthetic' }) : undefined);
+    });
+  try {
+    for (const host of ['127.0.0.1:22443', 'localhost:22443', '192.168.68.11:22443'])
+      assert.equal((await send(host)).status, 200, host);
+    for (const host of ['127.0.0.1:22444', 'localhost:22444', 'evil.invalid:22443'])
+      assert.equal((await send(host)).status, 403, host);
+    const r = await send('127.0.0.1:22443', 'http://evil.invalid');
+    assert.equal(r.status, 403);
+    assert.equal(r.body.error.code, 'origin-not-allowed');
+  } finally {
+    await runtime.close();
+  }
+});

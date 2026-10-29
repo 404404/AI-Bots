@@ -60,7 +60,7 @@ node --experimental-strip-types standalone/src/cli.ts --help
 参数从 stdin 或 `--input-file` 私密 JSON 读取，凭据不能放命令行。stdout 仅一个 JSON 文档；成功包含 `schemaVersion`，错误包含 `error.code`，列表保留稳定 ID、时间戳和 `nextCursor`。无凭据示例：
 
 ```json
-{ "schemaVersion": 1, "result": { "items": [], "nextCursor": null } }
+{ "schemaVersion": 1, "result": { "items": [], "nextCursor": null, "hasMore": false } }
 ```
 
 准确命令见 `--help`，包括 `auth.status/start/answer/cancel/logout`。状态不返回授权令牌。诊断只保存有界事件、执行 ID、错误码与上游状态，不记录请求正文或原始上游错误体。

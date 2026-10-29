@@ -35,6 +35,12 @@ export async function startServer(options: {
     'invalid-public-url',
     '公开地址无效。',
   );
+  const loopbackHosts = new Set([`127.0.0.1:${options.port}`, `localhost:${options.port}`]);
+  for (const hostname of ['127.0.0.1', 'localhost']) {
+    const alias = new URL(publicUrl);
+    alias.hostname = hostname;
+    loopbackHosts.add(alias.host);
+  }
   const app = new BotApplication(options.dataDir);
   const codeFile = join(app.storage.root, 'secrets', 'access-code');
   if (!existsSync(codeFile))
@@ -71,9 +77,7 @@ export async function startServer(options: {
       const path = req.url?.split('?')[0] ?? '/';
       const host = req.headers.host;
       requireValue(
-        host === publicUrl.host ||
-          host === `127.0.0.1:${options.port}` ||
-          host === `localhost:${options.port}`,
+        host === publicUrl.host || loopbackHosts.has(host ?? ''),
         'host-not-allowed',
         'Host 不受信任。',
         403,
