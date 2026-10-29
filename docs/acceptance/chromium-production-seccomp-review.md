@@ -2,9 +2,9 @@
 
 ## Current state
 
-On 2026-10-28 the Human explicitly approved both exceptions below. They are now applied to the production profile; publication still requires a fresh production-profile CI pass. The previous failure was: Production Chromium still exits before DevTools because `chroot` returns `EPERM`; the most recent trace records `chroot:EPERM` before `SIGTRAP`. The CI-only diagnostic profile passed the same GUI checks after adding the two syscall rules below. That diagnostic result is evidence for the candidate, not approval to apply it to production.
+On 2026-10-28 the Human explicitly approved both exceptions below. They are now applied to the production profile; [CI run 40761954987](https://github.com/404404/AI-Bots/actions/runs/40761954987) has passed the production-profile gate and published the tested image. Before approval, production Chromium exited before DevTools because `chroot` returned `EPERM`; the trace recorded `chroot:EPERM` before `SIGTRAP`. The CI-only diagnostic profile passed the same GUI checks after adding the two syscall rules below. That diagnostic result supported the candidate; the Human subsequently authorized the production change explicitly.
 
-## Proposed delta
+## Approved delta
 
 Keep Docker's default-deny `SCMP_ACT_ERRNO` policy and the existing capability drop. Add only:
 
@@ -24,6 +24,10 @@ Run [39879550251](https://github.com/404404/AI-Bots/actions/runs/39879550251), c
 
 The CI run passed image build and Trivy but failed the production-profile acceptance gate. No image was published or deployed.
 
-## Decision required
+## Approval and release gate
 
 The automatic approval review rejected the persistent production-profile edit because it changes the container security boundary and the request had not explicitly authorized these specific exceptions. That earlier refusal was resolved by the Human approval on 2026-10-28. After explicit approval, implementation must rerun the full production-profile GUI gate; publication and deployment remain gated on that run passing.
+
+## Production verification after approval
+
+Run 40761954987 used the approved production profile. Chromium 156.0.8078.47 reported both Namespace Sandbox and Seccomp-BPF enabled; all 3 CDP renderers matched `/proc` and all 3 had Seccomp filters. Browser observed Computer click and text entry on the shared display, and Computer returned a screenshot. Build, Trivy, online CLI and restart recovery passed. See the [sanitized CI report and release receipt](gui-container-ci-407619.json). This CI result is separate from GK50 functional acceptance.

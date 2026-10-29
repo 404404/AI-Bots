@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "scope": "CI only; GK50 deployment and functional acceptance are separate",
+  "run": {
+    "id": 40761954987,
+    "url": "https://github.com/404404/AI-Bots/actions/runs/40761954987",
+    "commit": "4e56c0d286f785e81d0f7320c1286784d00d7465",
+    "conclusion": "success"
+  },
+  "release": {
+    "schemaVersion": 1,
+    "repository": "404404/AI-Bots",
+    "runId": "40761954987",
+    "commit": "4e56c0d286f785e81d0f7320c1286784d00d7465",
+    "imageRef": "ghcr.io/404404/ai-bots@sha256:afebfa1da0647f85774b0da832c3ca829d58608d99dc4063713417c3748414ba",
+    "imageId": "sha256:6652aacfd69209ecc218491eaff61b805e22dfa8435e72e1b1ae0095dc94e775",
+    "productionGate": "passed",
+    "composeSha256": "3815f575f03feca9f8651bd00d97df7de025f7d53111548e3b3e14135d28c724",
+    "seccompSha256": "a8ec691e2b21a15ccc4ab1d1af7284f900a334887936403ff3b4b51beead1ee4"
+  },
+  "securityScan": {
+    "status": "passed",
+    "policy": "Trivy HIGH,CRITICAL with existing ignore-unfixed policy"
+  },
+  "productionGui": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "dbusSessionAvailable": true,
+    "atSpiBusAddressAvailable": true,
+    "chromiumVersion": "Chromium 156.0.8078.47",
+    "display": ":99",
+    "browserTitleSeenByComputer": true,
+    "computerClickAndTypingObservedByBrowser": true,
+    "computerScreenshot": "returned",
+    "chromiumNoSandboxFlag": false,
+    "chromiumLaunchSecurity": {
+      "processIdAvailable": true,
+      "wrapperRead": true,
+      "noSandboxFlag": false,
+      "userNamespaceSandboxFlag": true
+    },
+    "sandboxedRenderer": true,
+    "chromiumProcessScan": {
+      "visitedProcessCount": 9,
+      "inspectedProcessCount": 9,
+      "childListReadCount": 9,
+      "childListUnavailableCount": 0
+    },
+    "chromiumRendererSandbox": {
+      "rendererProcessCount": 3,
+      "rendererSeccompFilterCount": 3,
+      "rendererSeccompUnfilteredCount": 0,
+      "rendererSeccompStatusMissingCount": 0,
+      "devtoolsRendererProcessCount": 3,
+      "devtoolsRendererProcessMatchedCount": 3
+    },
+    "namespaceSandbox": "yes",
+    "seccompBpf": "yes"
+  },
+  "onlineCli": {
+    "beforeRestart": {
+      "schemaVersion": 1,
+      "authenticated": true,
+      "capturedAt": "2026-10-28T20:23:03.129Z",
+      "botIds": ["bot-802ec78ca2f24889a1ba7040c50a1879"],
+      "botCount": 1
+    },
+    "afterRestart": {
+      "schemaVersion": 1,
+      "authenticated": true,
+      "capturedAt": "2026-10-28T20:23:13.720Z",
+      "botIds": ["bot-802ec78ca2f24889a1ba7040c50a1879"],
+      "botCount": 1
+    },
+    "readOnlyBeforeRestart": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "bot-list",
+          "exitCode": 0
+        },
+        {
+          "name": "bot-detail",
+          "exitCode": 0
+        },
+        {
+          "name": "sessions",
+          "exitCode": 0
+        },
+        {
+          "name": "assignments",
+          "exitCode": 0
+        },
+        {
+          "name": "assignment-detail",
+          "status": "skipped-empty"
+        },
+        {
+          "name": "activity",
+          "exitCode": 0
+        },
+        {
+          "name": "channel-timeline",
+          "exitCode": 0
+        },
+        {
+          "name": "coded-error",
+          "exitCode": 1,
+          "errorCode": "not-found"
+        },
+        {
+          "name": "invalid-cursor",
+          "exitCode": 1,
+          "errorCode": "invalid-cursor"
+        }
+      ],
+      "sessionCount": 0,
+      "assignmentCount": 0
+    },
+    "readOnlyAfterRestart": {
+      "status": "passed",
+      "evidence": "Workflow log: PASS: read-only CLI recovered after Host restart with the same Bot ID."
+    },
+    "oldTokenErrorCode": "host-unauthorized",
+    "sameBotIds": true
+  },
+  "notCovered": [
+    "GK50 functional acceptance",
+    "real Codex OAuth and model tool call",
+    "nonempty Session/Assignment pagination and Assignment detail"
+  ]
+}

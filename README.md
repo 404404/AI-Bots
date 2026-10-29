@@ -47,7 +47,7 @@ DeepSeekBot（简称 **DSB**，是 DeepSeekBot 的缩写，才不是“大啥比
 
 命令行安装、版本说明和常见问题见[官网安装指南](https://deepseekbot.app/docs/installation/)。
 
-仓库提供 Linux GUI Host 的 Docker Compose 实验样例，目标是在共享 X11 display 上运行可见 Chromium、Browser 和 Computer，并保留 DSH Home 作为唯一数据权威。当前 GHCR 发布门禁尚未通过：生产 seccomp 下 Chromium 启动失败，尚无可部署镜像；不要把 Compose 样例视为已验收发布版。最新结果、CLI 重启验收、GK50 部署门槛和未完成的 DSM/Codex 验收见[验收记录](docs/gui-container-acceptance.md)与[部署指南](docs/deployment-gk50.md)。
+仓库提供 Linux GUI Host 的 Docker Compose 实验部署，在共享 X11 display 上运行可见 Chromium、Browser 和 Computer，并保留 DSH Home 作为唯一数据权威。生产安全策略下的 GUI、浏览器隔离、在线 CLI 和重启检查已通过 CI，镜像已发布并在 GK50 健康运行；[自动部署流程](docs/gk50-automation.md)按固定 digest 部署到 GK50，并支持部署后单独发起验收。GK50 是唯一部署目标，无需群晖或其他节点。详细状态及尚未完成的真实 Codex 登录与模型调用验收见[验收记录](docs/gui-container-acceptance.md)和[部署指南](docs/deployment-gk50.md)。
 
 <a id="features"></a>
 

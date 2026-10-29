@@ -47,7 +47,7 @@ In the DeepSeek Harness desktop app, go to **Plugins → Add plugin**, enter `de
 
 For command-line install, version notes and troubleshooting, see the [installation guide](https://deepseekbot.app/en/docs/installation/).
 
-The repository also contains experimental Docker Compose samples for a Linux GUI Host where Browser and Computer share one visible Chromium/X11 desktop, while DSH remains the single data authority. The production Chromium sandbox gate has not passed, so no GHCR image is released and the sample is not ready to deploy. See the [acceptance record](docs/gui-container-acceptance.md), [GK50 preflight](docs/gk50-preflight.md), [GK50 deployment guide](docs/deployment-gk50.md) and [Synology compatibility notes](docs/deployment-synology.md) for current status.
+The repository also contains an experimental Docker Compose deployment for a Linux GUI Host where Browser and Computer share one visible Chromium/X11 desktop, while DSH remains the single data authority. The production GUI, Chromium sandbox, online CLI and restart checks have passed CI, and the tested image is published and running healthy on GK50. The [automated runner](docs/gk50-automation.md) deploys a fixed digest to GK50 and supports separate acceptance after deployment. GK50 is the sole target; no Synology or additional node is required. See the [acceptance record](docs/gui-container-acceptance.md) and [deployment guide](docs/deployment-gk50.md) for current status and the outstanding real Codex sign-in and model-tool checks.
 
 <a id="features"></a>
 

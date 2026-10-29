@@ -2,13 +2,17 @@
 
 This Compose project runs the DSH Web Host, DeepSeekBot, a visible Chromium Bot Browser, and the local Computer desktop in one container. DSH continues to own the Profile, Bot, Session, Assignment, Channel, Activity, credentials, and runtime state. The image adds no DevBoard database and exposes no unauthenticated API.
 
-**Production policy approved on 2026-10-28.** The Human approved the exact `chroot` and PID-only `clone` exceptions documented in the [policy review](acceptance/chromium-production-seccomp-review.md). A fresh production-profile gate must pass before publication and deployment. The [automated deployment runner](gk50-automation.md) checks this gate and immutable image/configuration identity; earlier diagnostic passes cannot authorize deployment.
+**Production policy approved on 2026-10-28.** The Human approved the exact `chroot` and PID-only `clone` exceptions documented in the [policy review](acceptance/chromium-production-seccomp-review.md). [CI run 40761954987](https://github.com/404404/AI-Bots/actions/runs/40761954987) passed that production-profile gate and published the exact tested image; see the [acceptance record](gui-container-acceptance.md). The [automated deployment runner](gk50-automation.md) checks this gate and immutable image/configuration identity; earlier diagnostic passes cannot authorize deployment.
+
+## Current GK50 installation
+
+The fixed digest from [CI run 40761954987](https://github.com/404404/AI-Bots/actions/runs/40761954987) was deployed successfully on 2026-10-29. It is healthy on loopback port `20443`; port `1455` is reserved for its OAuth callback. The private installation is `.local/gui-deployment/` in the GK50 checkout. Use that directory for the launch-URL and backup commands below; do not run a second installation over it. See the [deployment evidence](acceptance/gk50-deployment-407619.json) and [separate acceptance instructions](gk50-automation.md). Detailed GK50 functional acceptance and real Codex login/model-tool checks remain pending.
 
 ## Before starting
 
 - Use the exact GHCR image digest printed by the release workflow, in the form `ghcr.io/404404/ai-bots@sha256:<digest>`. Do not use `latest` or another moving tag.
-- Check `20443`, then `21443`, then `22443` on GK50. Set `HOST_PORT` and `PUBLIC_URL` to the first unused port. Current availability was not checked because deployment has not started.
-- Set the data directory owner to the UID/GID that Compose runs as. Use `id -u` and `id -g` on the host where you deploy.
+- Check `20443`, then `21443`, then `22443` on GK50. Set `HOST_PORT` and `PUBLIC_URL` to the first unused port. Recheck availability immediately before each new installation.
+- Set `PUID=10001` and `PGID=10001`, the image's named `dsh` user tested by CI. Give the dedicated data directory to that UID/GID; the host login UID is not interchangeable because D-Bus requires an account in the image.
 - Allow at least 2 GB RAM for the container and keep free space for DSH Home, Browser profiles and backups.
 
 ## Install with Compose
@@ -23,10 +27,10 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Edit `.env`: set `IMAGE_REF` to the published `@sha256:` reference and set `PUID`/`PGID` to the data directory owner. Use the first free port from `20443`, `21443`, and `22443` for both `HOST_PORT` and `PUBLIC_URL`. The compose file maps the data directory to `/data/dsh` and does not mount the Docker socket, host home, or system configuration.
+Edit `.env`: set `IMAGE_REF` to the published `@sha256:` reference and set both `PUID` and `PGID` to `10001`. The automated runner prepares the data directory with this owner; manual installations must do so explicitly. Use the first free port from `20443`, `21443`, and `22443` for both `HOST_PORT` and `PUBLIC_URL`. The compose file maps the data directory to `/data/dsh` and does not mount the Docker socket, host home, or system configuration.
 
 ```bash
-install -d -m 700 -o "$(id -u)" -g "$(id -g)" data
+sudo install -d -m 700 -o 10001 -g 10001 data
 docker login ghcr.io
 docker compose -f compose.yml pull
 docker compose -f compose.yml up -d
@@ -85,7 +89,7 @@ The output is a mode-`0600` JSON acceptance record. `botCount: 0` confirms servi
 
 The image starts one Xvfb server at `:99` and one Openbox window manager. The DSH Host, Browser runtime and Computer driver inherit the same `DISPLAY`, `XAUTHORITY` and D-Bus session. Browser is configured with `headless: false` and `/usr/local/bin/deepseekbot-chromium`; the wrapper selects Chromium's user-namespace sandbox with `--disable-setuid-sandbox`, and Computer uses DSH's local-display target. It does not pass `--no-sandbox`, `--privileged`, `SYS_ADMIN`, host networking, or `seccomp=unconfined`. Compose drops all Linux capabilities and sets `no-new-privileges`. The checked-in seccomp profile is based on [Docker's default profile at pinned Moby profiles commit `6fe7deb1b9fb7c0397a4593480d7d22b9ee8caef`](https://github.com/moby/profiles/blob/6fe7deb1b9fb7c0397a4593480d7d22b9ee8caef/seccomp/default.json) and currently adds argument-constrained `clone`/`unshare` calls for Chromium's unprivileged `CLONE_NEWUSER` sandbox. Run 398795 verified in a CI-only diagnostic that adding `chroot` and a clone with only `CLONE_NEWPID` in its namespace flags allows the namespace sandbox and renderer Seccomp filters to pass. Those additions were approved on 2026-10-28 and are now in the production profile; see the [policy review](acceptance/chromium-production-seccomp-review.md). Do not use a diagnostic profile on GK50. Acceptance requires both `Namespace Sandbox` and `Seccomp-BPF sandbox` to report `Yes` at `chrome://sandbox` under the production profile.
 
-The CI-only diagnostic profile previously passed Browser/Computer shared-display interactions and renderer Seccomp verification. The approved production-profile change requires a fresh CI and GK50 run. Verify a real Browser window and Computer desktop using the GUI acceptance procedure in [the acceptance record](gui-container-acceptance.md) only after a reviewed production-profile change passes CI. Chromium must start without a sandbox-disabling flag. If the kernel or DSM blocks user namespaces, record the failure and stop; do not work around it by disabling the sandbox, using an unconfined seccomp profile, or adding broad capabilities.
+The approved production profile passed Browser/Computer shared-display interactions and renderer Seccomp verification in CI run 40761954987. GK50 functional acceptance is a separate step after deployment, using the [automated acceptance runner](gk50-automation.md). Chromium must start without a sandbox-disabling flag. If the GK50 kernel blocks user namespaces, record the failure and stop; do not work around it by disabling the sandbox, using an unconfined seccomp profile, or adding broad capabilities.
 
 Run the included low-level desktop acceptance in the Host container. It opens a local fixture in visible Chromium with the production Browser launch flags, checks `chrome://sandbox`, then asks the pinned Computer CUA driver to locate that window, click and type into the fixture, and capture the same X11 desktop:
 
@@ -110,7 +114,7 @@ Back up the complete `/data/dsh` volume while the container is stopped so SQLite
 ```bash
 umask 077
 docker compose -f compose.yml stop
-tar -C data -czf "dsh-home-$(date -u +%Y%m%dT%H%M%SZ).tar.gz" .
+sudo tar -C data -czf - . > "dsh-home-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
 docker compose -f compose.yml start
 ```
 

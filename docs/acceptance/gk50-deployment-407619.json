@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-29T02:38:03.909Z",
+  "runId": "40761954987",
+  "status": "deployed-awaiting-acceptance",
+  "stage": "start-compose",
+  "checks": [
+    {
+      "name": "dedicated-project-and-free-ports",
+      "status": "passed"
+    },
+    {
+      "name": "production-ci-and-config-identity",
+      "status": "passed"
+    },
+    {
+      "name": "pulled-image-matches-tested-image",
+      "status": "passed"
+    },
+    {
+      "name": "container-health",
+      "status": "passed"
+    }
+  ],
+  "mutations": [
+    "created-dedicated-deployment-directory",
+    "assigned-empty-data-directory-to-runtime-user",
+    "pulled-accepted-image",
+    "attempted-compose-start"
+  ],
+  "remaining": ["gk50-gui-cli-and-restart-acceptance", "codex-oauth-real-model-and-tool-call"],
+  "port": 20443,
+  "release": {
+    "schemaVersion": 1,
+    "repository": "404404/AI-Bots",
+    "runId": "40761954987",
+    "commit": "4e56c0d286f785e81d0f7320c1286784d00d7465",
+    "imageRef": "ghcr.io/404404/ai-bots@sha256:afebfa1da0647f85774b0da832c3ca829d58608d99dc4063713417c3748414ba",
+    "imageId": "sha256:6652aacfd69209ecc218491eaff61b805e22dfa8435e72e1b1ae0095dc94e775",
+    "productionGate": "passed",
+    "composeSha256": "3815f575f03feca9f8651bd00d97df7de025f7d53111548e3b3e14135d28c724",
+    "seccompSha256": "a8ec691e2b21a15ccc4ab1d1af7284f900a334887936403ff3b4b51beead1ee4"
+  },
+  "localImageId": "sha256:afebfa1da0647f85774b0da832c3ca829d58608d99dc4063713417c3748414ba",
+  "fullAcceptance": "not-run",
+  "finishedAt": "2026-10-29T02:38:28.214Z",
+  "readOnlyVerification": {
+    "at": "2026-10-29T02:39:06.898Z",
+    "status": "passed",
+    "installedIdentity": "passed",
+    "containerHealth": "healthy",
+    "runtimeUser": "10001:10001",
+    "loopbackPorts": [20443, 1455],
+    "existingServices": "observed still running; HermesStatus server healthy",
+    "functionalAcceptance": "not-run"
+  }
+}
