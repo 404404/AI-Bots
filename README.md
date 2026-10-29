@@ -1,5 +1,7 @@
 > **本 fork 的新方向：独立 Bot 网页产品。** 首片代码位于 [standalone/](standalone/README.md)，不启动或调用 DSH；仍在验收，真实 Codex 登录及回复尚未确认。见[代码迁移评估](docs/standalone-bot-migration.md)和[验收记录](docs/acceptance/standalone-bot-test-results-2026-10-29.md)。以下保留原项目说明与归属，不代表独立产品已具备全部能力。
 
+> GK50 候选访问、Compose、固定身份和剩余验收见[独立产品运行说明](docs/standalone-bot-gk50.md)。当前只是可体验候选，正式 GHCR 发布等待真实模型验收。
+
 <div align="center">
   <a href="https://deepseekbot.app">
 <picture>
@@ -49,7 +51,7 @@ DeepSeekBot（简称 **DSB**，是 DeepSeekBot 的缩写，才不是“大啥比
 
 命令行安装、版本说明和常见问题见[官网安装指南](https://deepseekbot.app/docs/installation/)。
 
-仓库提供 Linux GUI Host 的 Docker Compose 实验部署，在共享 X11 display 上运行可见 Chromium、Browser 和 Computer，并保留 DSH Home 作为唯一数据权威。生产安全策略下的 GUI、浏览器隔离、在线 CLI 和重启检查已通过 CI，镜像已发布并在 GK50 健康运行；[自动部署流程](docs/gk50-automation.md)按固定 digest 部署到 GK50，并支持部署后单独发起验收。GK50 是唯一部署目标，无需群晖或其他节点。详细状态及尚未完成的真实 Codex 登录与模型调用验收见[验收记录](docs/gui-container-acceptance.md)和[部署指南](docs/deployment-gk50.md)。
+仓库保留 Linux GUI Host 的 Docker Compose 实验部署，在共享 X11 display 上运行可见 Chromium、Browser 和 Computer，并保留 DSH Home 作为旧产品唯一数据权威。生产安全策略下的 GUI、浏览器隔离、在线 CLI 和重启检查此前通过 CI，镜像已发布；2026-10-29 21:00:12（北京时间）只读观察到旧容器退出码 0，原因尚未确认，本轮独立产品开发未停止或重启它。[原自动部署流程](docs/gk50-automation.md)按固定 digest 部署，历史证据及未完成的真实 Codex 登录与模型调用验收见[原验收记录](docs/gui-container-acceptance.md)和[原部署指南](docs/deployment-gk50.md)。新独立产品使用另一份 Compose 和数据目录，见本页顶部入口。
 
 <a id="features"></a>
 

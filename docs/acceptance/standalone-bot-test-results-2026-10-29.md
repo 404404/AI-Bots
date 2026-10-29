@@ -1,4 +1,32 @@
-# 独立 Bot 首片验收记录（进行中）
+# 独立 Bot 首片验收记录（真实模型待验收）
+
+## 当前结论
+
+2026-10-29 收尾状态：独立候选 `6486cd961a15ffd501c7ff2119672cf506557f9c` 已在 GK50 的 `http://192.168.68.11:22443` 通过 Compose 运行。不是首片全部验收完成，也不是正式 GHCR 发布。用户选择稍后完成 Codex 登录；本轮未发起外部 OAuth 或真实模型请求。
+
+| 范围           | 结论及证据边界                                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 独立构建与运行 | 通过空目录安装/构建、运行依赖和 import 检查；新容器进程为独立 `dist/server.ts`，未启动或调用旧 DSH Host。                                  |
+| 自动化         | 最终源码 13/13；身份/存储、幂等、取消、错误、隔离、代理、SDK SSE/OAuth 模拟及 OCI/Host 回归。SDK 授权与回复测试使用合成数据。              |
+| CI             | [40887735117](https://github.com/404404/AI-Bots/actions/runs/40887735117) 全部门禁通过，含独立构建、测试、漏洞扫描、容器启动及重启持久化。 |
+| 实际页面       | 两轮真实 LAN HTTP；创建 Bot、身份读回、文件记忆隔离、未登录模型拒绝、复制降级通过；主代理查看了两轮截图。                                  |
+| 重启和回退     | 同一浏览器重启读回；实际固定镜像回退并恢复当前候选，原 session、Bot/Conversation IDs 和记忆保持。未测试备份数据恢复。                      |
+| 实际在线 CLI   | 最终 LAN 与 localhost 查询、稳定 IDs/时间戳、分页及错误游标通过，旧候选 localhost 问题已修复。                                             |
+| 访问码轮换     | 用户明确授权后完成；旧码/旧会话 401、新码 200，原 Bot 和记忆保持，模型授权表不作修改。                                                     |
+| 真实模型       | **待用户稍后登录**：真实回复、模型使用明确保存的文件记忆、真实回复后的重启恢复及实际 Codex 代理路径，均未通过验收。                        |
+| 其余未覆盖     | 浏览器实际断线重试、随机源缺失/抛错、完整错误/竞态矩阵和真实模型取消等仍需补测；不将业务层模拟或本次页面回访扩大为这些项目已通过。         |
+
+当前部署 OCI manifest 为 `sha256:5d043efb55bb63c344bca5961329efd10bbeea437577bb47becfdd840f1dd81d`，config 为 `sha256:afec0539a2598102eb06e4ee7f1f431c1b608188f631cf47df4e5e86493a056d`。完整 tar SHA256、Compose 和操作步骤见[运行说明](../standalone-bot-gk50.md)。产物来自成功 CI，经归档及 OCI 引用链验证，GK50 未重建，未发布正式 registry digest。
+
+实际 CLI 的[只读分页示例](standalone-cli-readonly-example.json)仅保留指定 QA Bot 的身份/时间戳与游标，省略模型及授权字段；[错误示例](standalone-cli-error-example.json)来自真实非法游标拒绝。它们是可机器解析的脱敏投影，不包含访问码、cookie、密钥或 grant。分页游标不能代替登录。
+
+测试数据保留：两个 QA Bot、其两段对话、一条指定错误模型的 QA user message 与失败 Run、`qa.md` 记忆标记，以及未登录的「Codex 验收」Bot。没有真实模型回复。私有 CLI 会话、主密钥、访问码、数据库、原始证据、固定候选归档和数据备份位于 gitignored `.local/standalone-bot/`。短时 QA 容器、网络和 22999 转发均已清理。新产品数据和 Compose 是本轮新增的运行状态。
+
+旧 `deepseekbot-gui`、其数据和其他服务未被本轮停止/重启/修改；旧容器在本轮观察前已退出，不能声称旧页面仍可用。初始三个未提交部署文件的 diff SHA256 始终为 `13bfa2d9438bbb882cb91ace029599179ff2af50e11a5cda6a737d0bdb2f672d`，原五份未跟踪 GK50 文档保留。未操作群晖、mihomo、系统代理或 Docker daemon 配置，未向上游提交、推送或同步。
+
+## 历史执行记录
+
+以下保留按执行顺序写入的阶段观察；其中“等待部署”“风险推断”等是当时状态，以本页当前结论和最终复测为准。所有失败均保留，不能由后续通过抹去。
 
 日期：2026-10-29。测试使用 `/tmp/standalone-qa-*` 专用目录、合成凭据和本地模拟模型；模拟结果不证明真实模型可用。未读取旧 DSH 凭据，未操作旧服务或其他容器。自动化测试：`standalone/test/acceptance.test.mjs`。
 
@@ -40,3 +68,37 @@
 - SB-15 候选记录校验：合成合法记录通过；仓库、产品、运行 ID、提交、摘要格式、平台、发布状态、工作流结论和每项门禁的错误值均被拒绝。该单元测试不证明真实 CI 产物或容器来源。
 - 完整 `npm test`：11/11 通过（Node 22.23.1，模拟测试）。
 - LAN 只读预检：`192.168.68.11/24` 为本机地址，22443 当前无监听。浏览器功能和页面操作尚未执行，等待新服务部署；未启动旧容器或 DSH。
+- LAN 浏览器预案已准备在 `.local/standalone-bot/qa/`：固定已有浏览器镜像 ID、专用 Compose 桥网和受限本机转发，保留 LAN HTTP 地址与 Chromium 沙箱。脚本仅做语法检查，尚未启动；模型设置、console、ARIA 与 SB-13 尚需补充，不能视为浏览器验收通过。
+
+- 最终 SDK 版本复制到空临时目录后 `npm ci --ignore-scripts` 和 `npm run build` 成功（Node 22.23.1，89 个包审计无漏洞），不依赖根目录安装。
+- CI 40882891086 的构建、11 项测试和 Trivy 通过；容器 smoke 因只读根文件系统拒绝 `docker cp` 失败，GK50 未部署。实现方改为 `docker exec -i` 从标准输入执行，不放宽权限，提交 `ca46623a`；CI 40883245391 的结果待确认。
+- LAN QA 脚本现准备身份重载、Codex 未登录拒绝、记忆保存及两个 Bot 隔离、HTTP 复制降级、console 类型及 ARIA 证据；仅语法检查，尚未启动。
+
+- CI 40883245391 的所有门禁已通过，artifact 上传中（依据主代理的当前观察）；部署尚未完成。截图像素检查移至宿主机独立脚本，不改页面 CSP；尚未运行浏览器。
+- CI 40883245391 据主代理确认已全部成功；产物仍在获取并须校验 SHA，服务尚未部署。已准备正常 LAN 页面能力记录，以及首轮成功后保持同一浏览器会话、仅重启新服务一次再核对 Bot ID、身份、Conversation ID 和记忆的脚本；尚未执行。真实模型恢复仍待验证。
+- SB-15 首次部署门禁按预期停止：CI 镜像 ID 为 OCI config，GK50 containerd inspect 返回 manifest ID，严格相等检查未通过；当时未创建新容器。实现方补充归档 index→manifest→config 的哈希、大小及元数据验证。合成测试中两种链内 ID 正例通过；manifest/config 篡改、两处大小、多 index、无关 ID、平台/产品/源码标签篡改均被拒绝。此为 helper 模拟验证，实际候选部署仍待重试。
+- localhost CLI 风险（源码推断，未启动服务验证）：宿主 `127.0.0.1:22443` 映射容器 3080，而 Host 白名单只包括公开 LAN 地址及 `127.0.0.1:3080` / `localhost:3080`；普通 localhost:22443 请求可能被拒。LAN 和 localhost CLI 均待实际验证。
+
+## 真实 LAN 验收和重启（2026-10-29）
+
+- 首次浏览器检查历史失败于 `sandbox-unverified`：脚本未识别 Chromium 的 `Layer 1 Sandbox: Namespace` 文案。无网络独立诊断保存了 `chrome://sandbox` 文本、截图和启动 stderr：PID namespaces 和 Seccomp-BPF 均为 Yes。修正测试匹配后重试，未更改浏览器权限或安全策略。
+- SB-03/04/11/13 的已覆盖部分：真实 `http://192.168.68.11:22443` 页面登录、创建两个 QA Bot、身份保存及重载、Codex 配置且未登录发送拒绝、记忆保存读回及 Bot 隔离、新对话和手动复制降级通过。HTTP 页面报告 `isSecureContext=false`、`crypto.randomUUID` undefined、`getRandomValues` function、`navigator.clipboard` undefined。截图经像素检查并由主代理查看确认页面非空；ARIA、截图和分类 console 证据存 `.local/standalone-bot/evidence/lan-20261029-ui/`。pageerror 为 0；console 有 3 条 error，仅保留类型，不能据此认定其具体原因。随机源缺失/抛错未执行。
+- SB-07 持久化部分：只重启新 `gk50-standalone-bot` 一次，健康恢复后保留的同一浏览器会话确认两个 Bot ID、身份、两个对话 ID 和 `qa.md` 不变。真实模型登录、回复及模型使用记忆尚未验证。
+- SB-14：运行中的 ca466 候选经 LAN CLI 登录并列出两个 QA Bot；localhost CLI 登录返回 `host-not-allowed`，是该候选已知限制。源码修复在本地以实际 HTTP Host 头验证，13/13 测试通过；修复提交 6486cd96 已推送，尚不能视为当前运行容器已修复。
+- 本轮只短时启动专用 QA 容器、网络及受限转发；均已清理，22999 无监听。新服务健康。旧容器未被操作。未发起外部 OAuth 或模型请求。
+
+## 访问码轮换中断
+
+Human 明确授权后，轮换脚本在 `rotate` 阶段失败，按约定保持新服务停止；没有开始最终浏览器回访。只读观察：一次性容器启动后以 1 退出并被自动删除；脚本未保存其 stderr，精确原因尚未确定。访问码文件修改时间仍为轮换前时间，operator-session 修改时间未变；SQLite 只读计数为 3 个会话、3 个 Bot、0 个 OAuth 记录。缺少会话前置计数，不能仅凭现有计数证明没有变化。未输出私密值，等待修复和进一步验证。
+
+## 轮换恢复与最终候选回访
+
+- 前述轮换失败原因经主代理定位为操作脚本静态导入路径错误。固定候选 `5d043efb…81d` 的无网络只读一次性检查确认 `/opt/bot/dist/storage.ts` 导出存在、旧路径不存在；未打开数据库。修正后恢复同一候选并执行 Human 明确授权的轮换：旧访问码登录 401、旧会话 401、新访问码登录 200；Bot ID 与记忆前后相同，对照服务快照不变，私有 operator session 已更新。访问码和会话值均未输出。
+- 最终候选真实 LAN 页面回访通过：复用 QA Bot，身份和 `qa.md` 读回，截图像素检查与人工查看确认非空；证据在 `.local/standalone-bot/evidence/lan-20261029-final/`。普通 HTTP 仍为非安全上下文，`randomUUID` undefined、`getRandomValues` function、clipboard undefined。该回访未创建 Bot 或触发模型请求。
+- 最终候选 LAN 与 localhost CLI 均通过只读 Bot、对话、消息、Run、记忆、授权状态、诊断及分页/非法游标检查。此前 localhost `host-not-allowed` 是旧候选历史结果，当前候选已实际验证修复。
+- QA 容器、专用网络和临时转发已清理，22443 新服务健康。真实 Codex 授权、回复及记忆使用由 Human 稍后进行，仍未验收。
+
+## 固定候选回退往返
+
+- 通过：同一新产品从 `5d043…81d` 回退至 `59b1…ccbf` 并健康，再恢复 `5d043…81d` 并健康。两个阶段使用同一既有私密会话，Bot 和 Conversation ID、文件记忆与切换前一致；部署工具报告对照服务快照不变。恢复后 LAN 与 localhost CLI 的只读检查、分页和非法游标均通过。
+- 恢复当前候选时，新建私有备份 `.local/standalone-bot/backup-1793283518754.tgz`。本次验证代码回退和数据保留，未恢复该备份或验证备份恢复。没有调用模型或操作旧服务。

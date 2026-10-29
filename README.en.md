@@ -1,5 +1,7 @@
 > **This fork is developing an independent Bot web product.** See [standalone/](standalone/README.md), the [migration assessment](docs/standalone-bot-migration.md) and [acceptance record](docs/acceptance/standalone-bot-test-results-2026-10-29.md). The new runtime does not start or call DSH. Real Codex login and replies are still pending. Original project documentation and attribution follow; its complete feature set has not been migrated.
 
+> The [GK50 candidate runbook](docs/standalone-bot-gk50.md) records access, Compose, immutable identities and remaining checks. Registry publication awaits real-model acceptance.
+
 <div align="center">
   <a href="https://deepseekbot.app/en/">
 <picture>
@@ -49,7 +51,7 @@ In the DeepSeek Harness desktop app, go to **Plugins → Add plugin**, enter `de
 
 For command-line install, version notes and troubleshooting, see the [installation guide](https://deepseekbot.app/en/docs/installation/).
 
-The repository also contains an experimental Docker Compose deployment for a Linux GUI Host where Browser and Computer share one visible Chromium/X11 desktop, while DSH remains the single data authority. The production GUI, Chromium sandbox, online CLI and restart checks have passed CI, and the tested image is published and running healthy on GK50. The [automated runner](docs/gk50-automation.md) deploys a fixed digest to GK50 and supports separate acceptance after deployment. GK50 is the sole target; no Synology or additional node is required. See the [acceptance record](docs/gui-container-acceptance.md) and [deployment guide](docs/deployment-gk50.md) for current status and the outstanding real Codex sign-in and model-tool checks.
+The original experimental Linux GUI Host Compose deployment is retained: Browser and Computer share Chromium/X11 and DSH owns its data. Its GUI, Chromium sandbox, online CLI and restart checks previously passed CI and its image was published. A read-only check found that the old container exited with code 0 at 2026-10-29T13:00:12Z; the cause remains unconfirmed and this independent-product task did not stop or restart it. The [original runner](docs/gk50-automation.md), [acceptance record](docs/gui-container-acceptance.md) and [deployment guide](docs/deployment-gk50.md) retain historical evidence and outstanding real Codex checks. The new product uses separate Compose and data; follow the fork notice above.
 
 <a id="features"></a>
 

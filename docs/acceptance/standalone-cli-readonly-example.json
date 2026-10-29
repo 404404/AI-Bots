@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "result": {
+    "items": [
+      {
+        "id": "e36c71d5-f2bb-4421-a7ef-3622a36b101a",
+        "slug": "qa-1793282283071-a",
+        "name": "QA Bot A updated",
+        "createdAt": "2026-10-29T13:58:07.250Z",
+        "updatedAt": "2026-10-29T13:58:09.778Z"
+      }
+    ],
+    "nextCursor": "eyJ2IjoxLCJzY29wZSI6ImJvdHMiLCJhZnRlciI6MX0.YFtkiPYB77iAJ3LqGu4h5ePTBD44Pn0BsJtesIBbfE4",
+    "hasMore": true
+  }
+}

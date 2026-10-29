@@ -1,5 +1,7 @@
 # GK50 独立 Bot 迁移范围评估
 
+独立运行和数据归属决定已记录于 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)。当前候选、固定身份及剩余门禁见 [GK50 独立运行说明](standalone-bot-gk50.md)；评估不替代验收记录。
+
 评估日期：2026-10-29；源码基线 `650e5fce39d7c2548aded93f402f5c0699ccb49f`。这是用户 fork 的**新独立产品方向**，不是当前 DSH 产品已经完成迁移的声明。仅 GK50、网页优先；不向 BotHarness 上游提交、推送或同步。原部署 `deepseekbot-gui`、20443 入口、DSH Home 和所有未提交部署调整保留。
 
 ## 代码依据与处理清单

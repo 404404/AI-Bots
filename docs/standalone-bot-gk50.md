@@ -1,0 +1,61 @@
+# GK50 独立 Bot 候选访问与部署
+
+这是新独立产品的首片候选，尚待真实 Codex 登录与模型回复验收。原项目的群聊、IM、多 Agent、定时任务、Browser/Computer 和客户端尚未迁移。架构依据见 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)及[迁移评估](standalone-bot-migration.md)。
+
+## 访问
+
+- 网页：`http://192.168.68.11:22443`，仅面向已授权 LAN。
+- 新容器：`gk50-standalone-bot`；后台为独立 Node 服务，不启动 DSH。
+- 模型页中的「Codex 验收」Bot 已设置 Codex 接入和应用代理，尚未登录。模型目录来自锁定 SDK，不保证每个账号都可使用所有列出的模型。
+- 访问码只在 GK50 本机读取，再填网页。不要将输出发到聊天或提交版本库：
+
+```sh
+sudo cat /home/hermes/bots/.local/standalone-bot/data/secrets/access-code
+```
+
+本次用户明确授权后已轮换访问码并撤销旧会话；旧码及旧会话返回 401。轮换保留 Bot、历史、文件记忆和模型授权。网页登录与 Codex 登录是两个步骤；访问码不是模型授权。
+
+## 当前候选身份
+
+| 项目          | 身份                                                                      |
+| ------------- | ------------------------------------------------------------------------- |
+| 源码          | `6486cd961a15ffd501c7ff2119672cf506557f9c`                                |
+| CI            | [40887735117](https://github.com/404404/AI-Bots/actions/runs/40887735117) |
+| OCI manifest  | `sha256:5d043efb55bb63c344bca5961329efd10bbeea437577bb47becfdd840f1dd81d` |
+| OCI config    | `sha256:afec0539a2598102eb06e4ee7f1f431c1b608188f631cf47df4e5e86493a056d` |
+| CI tar SHA256 | `074d78406a3742986d64d8ec2af8a97fdc2a18232e6723e57d07c6f87e3e5450`        |
+
+候选来自 GitHub Actions 的未发布产物，经 ZIP CRC、tar SHA256、OCI index → manifest → config 哈希及平台/源码标签校验后导入。CI 和 GK50 使用不同 Docker 存储，`inspect` 的 ID 表示不同，引用链必须匹配，不能仅比较标签。GK50 没有重建候选。
+
+这不是 GHCR 正式发布。真实登录、真实回复、模型使用文件记忆及真实回复后的恢复门禁完成前，不发布正式镜像；以后正式部署仍须使用固定 registry digest，不能将本地 manifest/config 身份冒充 registry 发布回执。
+
+## Compose 与数据
+
+源 Compose：[standalone/deploy/compose.yml](../standalone/deploy/compose.yml)。实际部署副本和 `.env` 位于 `/home/hermes/bots/.local/standalone-bot/`，唯一数据映射为该目录的 `data/` → `/data/bot`。UID/GID 10001、只读根文件系统、cap-drop ALL、no-new-privileges、Docker 默认 seccomp，无新增 GUI 安全例外或 Docker socket 映射。
+
+数据根目录 0700；访问码、主密钥及数据文件均受私密权限保护。SQLite 保存 Bot、执行、历史和加密授权；明确保存的 Markdown 按 Bot 隔离。备份需保留整个数据目录，包括主密钥。独立登录和文件记忆不复制旧 DSH 数据。
+
+查看新产品：
+
+```sh
+docker compose --project-directory /home/hermes/bots/.local/standalone-bot -f /home/hermes/bots/.local/standalone-bot/compose.yml ps
+```
+
+部署工具先校验再执行，任何门禁失败即停止：
+
+```sh
+node standalone/deploy/qualify.mjs --run-id 40887735117
+node standalone/deploy/qualify.mjs --run-id 40887735117 --execute
+```
+
+升级先停止并备份新产品数据，保存前一固定镜像 ID。`--rollback` 只做回退预检，`--rollback --execute` 回退新产品代码；不会自动恢复数据备份。上一候选为 `ca46623a`，存在 localhost CLI Host 拒绝问题，LAN 入口仍可用。schema 不兼容时应停止并另行评估数据恢复。
+
+20443 的原 `deepseekbot-gui` 及其数据保留；本轮发现它在 2026-10-29 21:00:12（北京时间）已退出，未由本轮停止或重启。21443 属于其他服务，不作修改。新服务由 Docker 管理，独立于 SSH 会话；本轮没有改动 mihomo 或主机代理配置。
+
+## CLI 和模型验收
+
+新 CLI 使用同一认证 HTTP dispatcher，支持 Bot、Conversation、Message、Run、文件记忆、诊断及 Codex 授权命令，准确列表见[独立 README](../standalone/README.md)。它不伪造旧 Session、Channel Timeline、Activity 或 Assignment；旧产品命令保留在原代码及其数据权威中。
+
+容器模型代理设置使用 `http://host.docker.internal:7890`，不用宿主机 localhost。模拟 CONNECT 测试已证明显式代理路径和无直连回退；真实 Codex 代理与模型请求仍待登录后验证，不能据端口连通、配置存在或 SDK 目录宣称通过。
+
+用户已选择稍后登录。后续只在新页面完成授权，再分别验证真实回复、仅保存于文件中的记忆标记在新对话中被使用，以及重启后的新回复；模拟结果不能替代。用例、通过项、失败修复、未覆盖项和测试数据见[完整验收记录](acceptance/standalone-bot-test-results-2026-10-29.md)。
