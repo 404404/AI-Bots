@@ -67,7 +67,7 @@
         </nav>
         <section id="view-chat" class="view chat-view">
           <div id="chat-context" class="chat-context" hidden></div>
-          <button id="load-older" class="load-older" type="button" hidden>载入后续记录</button>
+          <button id="load-older" class="load-older" type="button" hidden>更早记录</button>
           <div id="messages" class="messages" aria-label="消息记录" aria-live="polite">
             <div class="empty">
               <h2>为一个 Bot 留出专属空间</h2>
@@ -83,13 +83,13 @@
               placeholder="发送一条消息…"
               maxlength="12000"
             ></textarea>
-            <div class="composer-actions">
-              <label class="model-picker-label" for="chat-model">本次使用</label>
+            <div class="composer-control-row">
+              <label class="model-picker-label sr-only" for="chat-model">本次使用</label>
               <select id="chat-model" aria-label="选择当前 Bot 可用的模型" disabled></select>
-              <span id="send-hint" class="muted fine">Enter 发送 · Shift+Enter 换行</span
-              ><button id="cancel-run" type="button" hidden>停止生成</button
-              ><button id="send-message" type="submit" class="primary">发送</button>
+              <button id="cancel-run" type="button" hidden>停止生成</button>
+              <button id="send-message" type="submit" class="primary">发送</button>
             </div>
+            <p id="send-hint" class="composer-hint muted fine">Enter 发送 · Shift+Enter 换行</p>
           </form>
         </section>
         <section id="view-catalog" class="view settings-view" hidden>

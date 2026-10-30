@@ -496,7 +496,8 @@ function renderModelOptions(selected) {
   placeholder.selected = true;
   select.append(placeholder);
   modelOptions.forEach((item, index) => {
-    const option = node('option', `${item.label ?? item.model}${item.status && item.status !== 'available' ? ` · ${statusLabels[item.status] ?? item.status}` : ''}`);
+    const option = node('option', `${item.model ?? item.label}${item.status && item.status !== 'available' ? ` · ${statusLabels[item.status] ?? item.status}` : ''}`);
+    option.title = item.label ?? `${item.provider} · ${item.model}`;
     option.value = String(index);
     option.disabled = item.status && item.status !== 'available';
     select.append(option);

@@ -67,8 +67,13 @@ test('timeline collaboration cards open canonical task details as accessible dia
 test('390px chat surface allows model selection, history and timeline paging without horizontal overflow', () => {
   const mobile = css.slice(css.indexOf('@media (max-width: 750px)'));
   assert.match(mobile, /\.chat-view\s*\{[^}]*width:\s*100%;[^}]*overflow:\s*hidden;/su);
-  assert.match(mobile, /#chat-model\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*none;/su);
+  assert.match(html, /<div class="composer-control-row">\s*<label class="model-picker-label sr-only"[^>]*>本次使用<\/label>\s*<select id="chat-model"[\s\S]*?<button id="cancel-run"[\s\S]*?<button id="send-message"/u);
+  assert.match(html, /<\/div>\s*<p id="send-hint" class="composer-hint/u);
+  assert.match(mobile, /\.composer-control-row\s*\{[^}]*min-width:\s*0;[^}]*gap:\s*6px;/su);
+  assert.match(mobile, /#chat-model\s*\{[^}]*flex:\s*1 1 0;[^}]*min-width:\s*0;[^}]*max-width:\s*none;/su);
+  assert.doesNotMatch(mobile, /\.composer-control-row\s*\{[^}]*flex-wrap:\s*wrap/su);
+  assert.match(app, /node\('option', `\$\{item\.model \?\? item\.label\}[\s\S]*?option\.title = item\.label/u);
   assert.match(mobile, /\.timeline-task\s*\{[^}]*width:\s*100%;/su);
   assert.match(mobile, /\.dialog-content\s*\{[^}]*min-width:\s*0;[^}]*width:\s*100%;/su);
-  assert.match(html, /id="load-older"[^>]*>载入后续记录/u);
+  assert.match(html, /id="load-older"[^>]*>更早记录/u);
 });
