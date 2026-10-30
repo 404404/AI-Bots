@@ -10,6 +10,8 @@ export const expectedBrowserImages = [
   ['gateway', 'standalone-browser-gateway:candidate'],
   ['fixture', 'standalone-browser-fixture:candidate'],
 ];
+const expectedBaseName = 'node:24.21.0-trixie-slim';
+const expectedBaseDigest = 'sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66';
 
 function sha256(bytes) { return `sha256:${createHash('sha256').update(bytes).digest('hex')}`; }
 function digestPath(digest) {
@@ -110,16 +112,19 @@ export function verifyImageInspect(imageRecord, inspect, revision) {
   const labels = config.config?.Labels ?? {};
   const sourceRevision = labels['org.opencontainers.image.revision'];
   const source = labels['org.opencontainers.image.source'];
+  const baseName = labels['org.opencontainers.image.base.name'];
+  const baseDigest = labels['org.opencontainers.image.base.digest'];
   const product = labels['io.404404.product'];
   const role = labels['io.404404.role'];
   const platform = `${config.os}/${config.architecture}`;
   if (sourceRevision !== revision) throw new Error(`Image ${imageRecord.reference} has an unexpected source revision label.`);
   if (source !== 'https://github.com/404404/AI-Bots') throw new Error(`Image ${imageRecord.reference} has an unexpected source repository label.`);
+  if (baseName !== expectedBaseName || baseDigest !== expectedBaseDigest) throw new Error(`Image ${imageRecord.reference} has an unexpected base image identity.`);
   if (platform !== 'linux/amd64') throw new Error(`Image ${imageRecord.reference} has an unexpected platform.`);
   if (product !== 'standalone-browser' || role !== imageRecord.name) throw new Error(`Image ${imageRecord.reference} has unexpected product or role labels.`);
-  if (inspect.sourceRevision !== sourceRevision || inspect.source !== source || inspect.product !== product || inspect.role !== role || inspect.platform !== platform) throw new Error(`Image ${imageRecord.reference} archive and inspect labels/platform do not match.`);
+  if (inspect.sourceRevision !== sourceRevision || inspect.source !== source || inspect.baseName !== baseName || inspect.baseDigest !== baseDigest || inspect.product !== product || inspect.role !== role || inspect.platform !== platform) throw new Error(`Image ${imageRecord.reference} archive and inspect labels/platform do not match.`);
   if (inspect.id !== configDigest && inspect.id !== manifestDigest) throw new Error(`Image ${imageRecord.reference} inspect ID is not in its verified config/manifest chain.`);
-  return { name: imageRecord.name, reference: imageRecord.reference, platform, sourceRevision, configDigest, manifestDigest,
+  return { name: imageRecord.name, reference: imageRecord.reference, platform, sourceRevision, source, baseName, baseDigest, configDigest, manifestDigest,
     archiveManifestRecordDigest: imageRecord.archiveManifestRecordDigest, archiveLayers: imageRecord.archiveLayers, ociLayers: imageRecord.ociLayers, inspectId: inspect.id };
 }
 
@@ -138,6 +143,8 @@ async function main(env = process.env) {
       id: value('{{.Id}}'),
       sourceRevision: value('{{ index .Config.Labels "org.opencontainers.image.revision" }}'),
       source: value('{{ index .Config.Labels "org.opencontainers.image.source" }}'),
+      baseName: value('{{ index .Config.Labels "org.opencontainers.image.base.name" }}'),
+      baseDigest: value('{{ index .Config.Labels "org.opencontainers.image.base.digest" }}'),
       product: value('{{ index .Config.Labels "io.404404.product" }}'),
       role: value('{{ index .Config.Labels "io.404404.role" }}'),
       platform: value('{{.Os}}/{{.Architecture}}'),

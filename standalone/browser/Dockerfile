@@ -1,9 +1,11 @@
-FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS base
+FROM node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 AS base
 ARG SOURCE_REVISION=unknown
 LABEL org.opencontainers.image.title="404404 AI-Bots standalone browser service" \
       org.opencontainers.image.source="https://github.com/404404/AI-Bots" \
       org.opencontainers.image.licenses="MIT AND Apache-2.0" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      org.opencontainers.image.base.name="node:24.21.0-trixie-slim" \
+      org.opencontainers.image.base.digest="sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66" \
       io.404404.product="standalone-browser" \
       io.404404.role="base"
 ENV NODE_ENV=production

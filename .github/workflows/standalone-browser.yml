@@ -21,8 +21,8 @@ jobs:
       - name: Browser module tests and syntax checks on pinned Node image
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD/standalone/browser:/work" -w /work node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 npm ci
-          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges:true -v "$PWD/standalone/browser:/work:ro" -w /work node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 sh -ec 'npm test && for file in src/*.mjs fixture/*.mjs scripts/*.mjs test/*.mjs; do node --check "$file"; done'
+          docker run --rm -v "$PWD/standalone/browser:/work" -w /work node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 npm ci
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges:true -v "$PWD/standalone/browser:/work:ro" -w /work node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 sh -ec 'npm test && for file in src/*.mjs fixture/*.mjs scripts/*.mjs test/*.mjs; do node --check "$file"; done'
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Build fixture-only images without publishing
         env:

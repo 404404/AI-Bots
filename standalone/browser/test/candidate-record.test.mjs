@@ -9,6 +9,8 @@ import { readCandidateArchive, verifyImageInspect } from '../scripts/candidate-r
 
 const revision = 'a'.repeat(40);
 const rootUrl = 'https://github.com/404404/AI-Bots';
+const baseName = 'node:24.21.0-trixie-slim';
+const baseDigest = 'sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66';
 const roots = [];
 const sha = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 function put(root, path, bytes) { mkdirSync(dirname(join(root, path)), { recursive: true }); writeFileSync(join(root, path), bytes); }
@@ -23,6 +25,8 @@ function config(role) {
     config: { Labels: {
       'org.opencontainers.image.revision': revision,
       'org.opencontainers.image.source': rootUrl,
+      'org.opencontainers.image.base.name': baseName,
+      'org.opencontainers.image.base.digest': baseDigest,
       'io.404404.product': 'standalone-browser',
       'io.404404.role': role,
     } },
@@ -78,14 +82,19 @@ test('supports classic Docker archive config names and validates inspect ID agai
   assert.deepEqual(record.archiveLayers.map((layer) => layer.digest), [fixture.layerDigest]);
   const labels = record.config.config.Labels;
   const verified = verifyImageInspect(record, {
-    id: fixture.configDigest, sourceRevision: revision, source: rootUrl,
+    id: fixture.configDigest, sourceRevision: revision, source: rootUrl, baseName, baseDigest,
     product: labels['io.404404.product'], role: 'worker', platform: 'linux/amd64',
   }, revision);
   assert.equal(verified.inspectId, fixture.configDigest);
+  assert.equal(verified.baseName, baseName);
   assert.throws(() => verifyImageInspect(record, {
-    id: `sha256:${'f'.repeat(64)}`, sourceRevision: revision, source: rootUrl,
+    id: `sha256:${'f'.repeat(64)}`, sourceRevision: revision, source: rootUrl, baseName, baseDigest,
     product: labels['io.404404.product'], role: 'worker', platform: 'linux/amd64',
   }, revision), /inspect ID is not in its verified config\/manifest chain/u);
+  assert.throws(() => verifyImageInspect(record, {
+    id: fixture.configDigest, sourceRevision: revision, source: rootUrl, baseName,
+    baseDigest: `sha256:${'f'.repeat(64)}`, product: labels['io.404404.product'], role: 'worker', platform: 'linux/amd64',
+  }, revision), /archive and inspect labels\/platform do not match/u);
 });
 
 test('maps OCI multi-target manifests by verified config digest, not generic index annotations', async () => {
@@ -100,7 +109,7 @@ test('maps OCI multi-target manifests by verified config digest, not generic ind
     assert.deepEqual(record.ociLayers.map((layer) => layer.digest), [expected.layerDigest]);
     const labels = record.config.config.Labels;
     const verified = verifyImageInspect(record, {
-      id: expected.manifestDigest, sourceRevision: revision, source: rootUrl,
+      id: expected.manifestDigest, sourceRevision: revision, source: rootUrl, baseName, baseDigest,
       product: labels['io.404404.product'], role: expected.role, platform: 'linux/amd64',
     }, revision);
     assert.equal(verified.manifestDigest, expected.manifestDigest);
