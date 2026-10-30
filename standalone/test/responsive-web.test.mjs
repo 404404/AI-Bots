@@ -21,6 +21,9 @@ test('small-screen Bot navigation becomes a closable drawer and keeps the chat u
   assert.match(mobile, /main\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/su);
   assert.match(mobile, /\.tabs\s*\{[^}]*overflow-x:\s*auto;/su);
   assert.match(mobile, /\.chat-view\s*\{[^}]*height:\s*calc\(100dvh - 180px\);[^}]*min-height:\s*300px;/su);
-  assert.match(mobile, /\.composer-actions\s*\{[^}]*flex-wrap:\s*wrap;/su);
+  assert.match(css, /\.composer-control-row\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;/su);
+  assert.doesNotMatch(css, /\.composer-control-row\s*\{[^}]*flex-wrap:\s*wrap;/su);
+  assert.match(mobile, /\.composer-control-row\s*\{[^}]*min-width:\s*0;[^}]*gap:\s*6px;/su);
+  assert.match(mobile, /#chat-model\s*\{[^}]*flex:\s*1 1 0;[^}]*min-width:\s*0;/su);
   assert.doesNotMatch(mobile, /grid-template-columns:\s*160px/u);
 });
