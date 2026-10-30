@@ -132,9 +132,15 @@ export class WorkerManagement {
 
   allowedTargets(scope: WorkerManagementScope) {
     this.assertCurrent(scope);
-    const created = scope.rootTaskId ? this.storage.db.prepare('SELECT bot_id FROM worker_management_scope_targets WHERE root_task_id=? ORDER BY bot_id')
-      .all(scope.rootTaskId) as { bot_id: string }[] : [];
-    return [...new Set([...scope.policy.allowedWorkerIds, ...created.map((row) => row.bot_id)])];
+    return [...new Set([...scope.policy.allowedWorkerIds, ...this.createdTargets(scope)])];
+  }
+
+  /** Targets added by successful management receipts for this root only. */
+  createdTargets(scope: WorkerManagementScope) {
+    if (!scope.policy.enabled || !scope.rootTaskId) return [];
+    this.assertCurrent(scope);
+    return (this.storage.db.prepare('SELECT bot_id FROM worker_management_scope_targets WHERE root_task_id=? ORDER BY bot_id')
+      .all(scope.rootTaskId) as { bot_id: string }[]).map((row) => row.bot_id);
   }
 
   create(scope: WorkerManagementScope, operationId: string, nameInput: unknown, personaInput: unknown, connectionIdInput: unknown) {

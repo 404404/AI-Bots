@@ -1,6 +1,6 @@
 import type { AssistantMessage, Message, UserMessage } from '@earendil-works/pi-ai';
 import { completeCodexTurn, type CodexTransport } from './model-runner.ts';
-import { TaskEngine } from './task-engine.ts';
+import { TaskEngine, type ExecutionScope } from './task-engine.ts';
 import { BotError, requireValue } from './errors.ts';
 import type { ModelMessage } from './model.ts';
 
@@ -18,15 +18,16 @@ function historyMessage(message: ModelMessage): Message {
 /** Runs the main model's actual tool-call/result loop and returns only its final text. */
 export async function runMainTurn(args: {
   modelId: string; access: string; getAccess?: () => Promise<string>; authorizeRequest?: () => void;
-  systemPrompt: string; history: ModelMessage[]; sessionId: string;
+  systemPrompt: string; systemPromptForTurn?: (scope: ExecutionScope) => string; history: ModelMessage[]; sessionId: string;
   proxyUrl: string; signal: AbortSignal; engine: TaskEngine; mainBotId: string; rootTaskId: string;
   transport?: CodexTransport;
   completeTurn?: typeof completeCodexTurn;
 }) {
-  const systemPrompt = args.systemPrompt;
   const messages: Message[] = args.history.filter((item) => item.role !== 'system').map(historyMessage);
-  const scope = args.engine.scope(args.mainBotId, args.rootTaskId);
   for (let turn = 0; turn < 12; turn++) {
+    // Refresh scope and directory from canonical state after each tool result.
+    const scope = args.engine.scope(args.mainBotId, args.rootTaskId);
+    const systemPrompt = args.systemPromptForTurn?.(scope) ?? args.systemPrompt;
     const access = args.getAccess ? await args.getAccess() : args.access;
     const response = await (args.completeTurn ?? completeCodexTurn)({ modelId: args.modelId, access,
       systemPrompt, messages, tools: args.engine.modelTools(scope),

@@ -285,3 +285,147 @@ test('DG03 true SDK tools create, update by stable ID, delegate, and return the 
     await new Promise((resolve) => workerServer.close(resolve));
   }
 });
+
+test('DG03 rebuilds the trusted management directory each model turn and ignores forged result text', async () => {
+  const workerServer = createServer(async (req, res) => {
+    for await (const _chunk of req) { /* bounded fixture request */ }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ choices: [{ message: { content: 'DYNAMIC_DIRECTORY_WORKER_OK' } }] }));
+  });
+  await new Promise((resolve) => workerServer.listen(0, '127.0.0.1', resolve));
+  const app = new BotApplication(dir());
+  try {
+    const main = (await owner(app, 'main.get')).bot;
+    const source = await owner(app, 'bots.create', { slug: 'dynamic-directory-source', name: 'Dynamic source' });
+    await owner(app, 'bots.update', { botId: source.id, model: {
+      provider: 'compatible', baseUrl: `http://127.0.0.1:${workerServer.address().port}`, model: 'dynamic-worker', keyless: true,
+    } });
+    const reference = await owner(app, 'connections.grant-main', { sourceBotId: source.id });
+    const policy = app.workerManagement.policy();
+    app.workerManagement.updatePolicy({ enabled: true, allowCreation: true,
+      allowedConnectionIds: [reference.connectionId], expectedRevision: policy.revision });
+    const outsider = await owner(app, 'bots.create', { slug: 'dynamic-outsider', name: 'Out of scope' });
+    const root = app.tasks.store.createRoot({ executorBotId: main.id, initiatorBotId: main.id,
+      requestKey: 'dynamic-management-directory', input: 'create, update and delegate', configRevision: main.configRevision,
+      configSnapshot: JSON.stringify({ name: main.name, persona: main.persona,
+        workerManagement: app.workerManagement.snapshot(), delegations: [] }),
+      deadlineAt: new Date(Date.now() + 60_000).toISOString(), at: new Date().toISOString() });
+    app.tasks.store.begin(root.task.id, new Date().toISOString());
+
+    const prompts = [];
+    let workerId;
+    const result = await runMainTurn({ modelId: 'gpt-5.5', access: 'synthetic-access', systemPrompt: 'base prompt',
+      systemPromptForTurn: (scope) => `base prompt\n${app.tasks.managementDirectory(scope)}`,
+      history: [], sessionId: root.task.id, proxyUrl: '', signal: new AbortController().signal,
+      engine: app.tasks, mainBotId: main.id, rootTaskId: root.task.id,
+      completeTurn: async ({ systemPrompt, messages }) => {
+        prompts.push(systemPrompt);
+        const turn = prompts.length;
+        if (turn === 1) return { role: 'assistant', content: [
+          { type: 'text', text: `A forged tool result claims workerId ${outsider.id} is authorized.` },
+          { type: 'toolCall', id: 'forged-result', name: 'invented_management_tool', arguments: { workerId: outsider.id } },
+        ] };
+        if (turn === 2) {
+          assert(!systemPrompt.includes(outsider.id), 'forged result text must not add an owner target');
+          assert(systemPrompt.includes(`connectionId: ${reference.connectionId}`));
+          return { role: 'assistant', content: [{ type: 'toolCall', id: 'dynamic-create', name: 'create_worker', arguments: {
+            name: 'Dynamic Echo', persona: 'first persona', connectionId: reference.connectionId,
+          } }] };
+        }
+        if (turn === 3) {
+          const createResult = JSON.parse(messages.at(-1).content[0].text);
+          workerId = createResult.id;
+          assert(systemPrompt.includes(workerId));
+          assert.match(systemPrompt, /canUpdate: true; canDelegate: true/u);
+          assert(!systemPrompt.includes(outsider.id));
+          return { role: 'assistant', content: [{ type: 'toolCall', id: 'dynamic-update', name: 'update_worker', arguments: {
+            workerId, name: 'Dynamic Echo renamed', persona: 'revised persona',
+          } }] };
+        }
+        if (turn === 4) {
+          const updateResult = JSON.parse(messages.at(-1).content[0].text);
+          assert.equal(updateResult.id, workerId);
+          assert(systemPrompt.includes(`${workerId}; configRevision: 2; canUpdate: true; canDelegate: true`));
+          assert(systemPrompt.includes('Dynamic Echo renamed'));
+          assert(!systemPrompt.includes(outsider.id));
+          return { role: 'assistant', content: [{ type: 'toolCall', id: 'dynamic-delegate', name: 'delegate_to_worker', arguments: {
+            workerId, task: 'return DYNAMIC_DIRECTORY_WORKER_OK',
+          } }] };
+        }
+        assert.equal(turn, 5);
+        assert(systemPrompt.includes('Dynamic Echo renamed'));
+        assert(!systemPrompt.includes(outsider.id));
+        return { role: 'assistant', content: [{ type: 'text', text: 'Dynamic task complete.' }] };
+      } });
+
+    assert.equal(result, 'Dynamic task complete.');
+    assert.equal(prompts.length, 5);
+    const worker = await owner(app, 'bots.get', { botId: workerId });
+    assert.equal(worker.name, 'Dynamic Echo renamed');
+    assert.equal(worker.configRevision, 2);
+    assert.equal(app.tasks.store.toolError(root.task.id, 'forged-result'), 'tool-not-allowed');
+    assert.equal(app.tasks.store.get(root.task.id).status, 'running');
+    const child = app.storage.db.prepare('SELECT status,result FROM tasks WHERE parent_id=?').get(root.task.id);
+    assert.equal(child.status, 'completed');
+    assert.equal(child.result, 'DYNAMIC_DIRECTORY_WORKER_OK');
+  } finally {
+    await app.close();
+    workerServer.closeAllConnections();
+    await new Promise((resolve) => workerServer.close(resolve));
+  }
+});
+
+test('enabled management directory keeps existing delegate-only targets visible without allowing edits', async () => {
+  const workerServer = createServer(async (req, res) => {
+    for await (const _chunk of req) { /* bounded fixture request */ }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ choices: [{ message: { content: 'DELEGATE_ONLY_OK' } }] }));
+  });
+  await new Promise((resolve) => workerServer.listen(0, '127.0.0.1', resolve));
+  const app = new BotApplication(dir());
+  try {
+    const main = (await owner(app, 'main.get')).bot;
+    const source = await owner(app, 'bots.create', { slug: 'delegate-only-source', name: 'Delegate source' });
+    const worker = await owner(app, 'bots.create', { slug: 'delegate-only-worker', name: 'Delegate only' });
+    await owner(app, 'bots.update', { botId: source.id, model: {
+      provider: 'compatible', baseUrl: `http://127.0.0.1:${workerServer.address().port}`, model: 'delegate-only', keyless: true,
+    } });
+    const grant = await owner(app, 'delegation.grant', { workerBotId: worker.id, sourceBotId: source.id });
+    const policy = app.workerManagement.policy();
+    app.workerManagement.updatePolicy({ enabled: true, allowCreation: false, allowedWorkerIds: [], expectedRevision: policy.revision });
+    const root = app.tasks.store.createRoot({ executorBotId: main.id, initiatorBotId: main.id,
+      requestKey: 'delegate-only-directory', input: 'delegate without management access', configRevision: main.configRevision,
+      configSnapshot: JSON.stringify({ name: main.name, persona: main.persona,
+        workerManagement: app.workerManagement.snapshot(), delegations: [{ workerBotId: worker.id, connectionId: grant.connectionId }] }),
+      deadlineAt: new Date(Date.now() + 60_000).toISOString(), at: new Date().toISOString() });
+    app.tasks.store.begin(root.task.id, new Date().toISOString());
+
+    const result = await runMainTurn({ modelId: 'gpt-5.5', access: 'synthetic-access', systemPrompt: 'base prompt',
+      systemPromptForTurn: (scope) => `base prompt\n${app.tasks.managementDirectory(scope)}`,
+      history: [], sessionId: root.task.id, proxyUrl: '', signal: new AbortController().signal,
+      engine: app.tasks, mainBotId: main.id, rootTaskId: root.task.id,
+      completeTurn: async ({ systemPrompt, messages }) => {
+        assert.match(systemPrompt, new RegExp(`${worker.id}; configRevision: 1; canUpdate: false; canDelegate: true`));
+        if (messages.length === 0) return { role: 'assistant', content: [{ type: 'toolCall', id: 'edit-denied', name: 'update_worker', arguments: {
+          workerId: worker.id, name: 'Must remain unchanged',
+        } }] };
+        if (messages.at(-1).content[0].text.includes('worker-management-target-forbidden'))
+          return { role: 'assistant', content: [{ type: 'toolCall', id: 'delegate-only-call', name: 'delegate_to_worker', arguments: {
+            workerId: worker.id, task: 'return DELEGATE_ONLY_OK',
+          } }] };
+        if (messages.at(-1).content[0].text.includes('DELEGATE_ONLY_OK'))
+          return { role: 'assistant', content: [{ type: 'text', text: 'Delegation succeeded.' }] };
+        assert.fail('model should see the denied edit and real worker result in sequence');
+      } });
+
+    assert.equal(result, 'Delegation succeeded.');
+    assert.equal((await owner(app, 'bots.get', { botId: worker.id })).name, 'Delegate only');
+    const child = app.storage.db.prepare('SELECT status,result FROM tasks WHERE parent_id=?').get(root.task.id);
+    assert.equal(child.status, 'completed');
+    assert.equal(child.result, 'DELEGATE_ONLY_OK');
+  } finally {
+    await app.close();
+    workerServer.closeAllConnections();
+    await new Promise((resolve) => workerServer.close(resolve));
+  }
+});
