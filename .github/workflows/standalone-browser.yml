@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm -v "$PWD/standalone/browser:/work" -w /work node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 npm ci
-          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges:true -v "$PWD/standalone/browser:/work:ro" -w /work node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 sh -ec 'npm test && for file in src/*.mjs fixture/*.mjs scripts/*.mjs test/*.mjs; do node --check "$file"; done'
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges:true -e BROWSER_WORKFLOW_PATH=/tmp/standalone-browser.yml -v "$PWD/standalone/browser:/work:ro" -v "$PWD/.github/workflows/standalone-browser.yml:/tmp/standalone-browser.yml:ro" -w /work node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 sh -ec 'npm test && for file in src/*.mjs fixture/*.mjs scripts/*.mjs test/*.mjs; do node --check "$file"; done'
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Build fixture-only images without publishing
         env:

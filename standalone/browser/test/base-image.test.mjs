@@ -4,12 +4,19 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 const dockerfile = readFileSync(new URL('../Dockerfile', import.meta.url), 'utf8');
-const workflow = readFileSync(new URL('../../../.github/workflows/standalone-browser.yml', import.meta.url), 'utf8');
+function loadWorkflow(path = process.env.BROWSER_WORKFLOW_PATH || new URL('../../../.github/workflows/standalone-browser.yml', import.meta.url)) {
+  return readFileSync(path, 'utf8');
+}
+const workflow = loadWorkflow();
 const compose = readFileSync(new URL('../deploy/compose.example.yml', import.meta.url), 'utf8');
 const candidateRecord = readFileSync(new URL('../scripts/candidate-record.mjs', import.meta.url), 'utf8');
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 const seccomp = readFileSync(new URL('../deploy/chromium-userns-seccomp.json', import.meta.url));
 const base = 'node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66';
+
+test('missing explicitly configured workflow fixture fails closed', () => {
+  assert.throws(() => loadWorkflow('/tmp/standalone-browser-workflow-fixture-missing.yml'), { code: 'ENOENT' });
+});
 
 test('container targets and isolated Node tests share the fixed official Node 24.21 Trixie base', () => {
   assert.ok(dockerfile.split('\n').includes(`FROM ${base} AS base`));
