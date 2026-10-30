@@ -4,7 +4,7 @@
 
 ## 当前范围
 
-网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、persona、角色、配置版本、头像、当前已实现能力、有效共享模型连接和最近持久化执行状态。可以从目录进入身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限。SQLite v1→v6 显式事务迁移创建唯一主 Bot、任务、连接授权、头像和工作 Bot 管理策略/操作回执表；不按名字收编旧 Bot，保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。
+网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、persona、角色、配置版本、头像、当前已实现能力、有效共享模型连接和最近持久化执行状态。可以从目录进入身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限。SQLite v1→v7 显式事务迁移创建唯一主 Bot、任务、连接授权、头像、工作 Bot 管理策略/操作回执及浏览器授权/会话/步骤/截图表；不按名字收编旧 Bot，保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。
 
 Bot 配置变更递增 `configRevision`。每个新 Run 在受理时记录对应的配置版本和非 secret 身份/模型快照；不包含 API key 或 Codex access/refresh token。后续编辑仅影响新的 Run。Web 与 CLI 共用 `BotApplication.execute` 业务入口；HTTP 适配器显式注入 owner 上下文。应用命令不从 params 读取 actor/isMain 权限，缺少可信上下文或使用 Bot 上下文的管理请求会拒绝。重启将未完成执行标为 `interrupted`，不会自动重发；断线重试必须保留原 `idempotencyKey`，同键不同正文返回冲突。
 
@@ -16,7 +16,7 @@ worker 只收到受理时锁定的明确输入、自己的 persona 和自己的�
 
 每个 Bot 可在身份页上传、更换或删除 PNG 头像。服务端按文件内容校验，只接受不超过 2 MiB 的非交错 8 位 RGB/RGBA PNG（不支持灰度或调色板），输入边长最多 1024、像素最多 1,048,576；保存前去除元数据并缩放至最长边 256 像素，输出不超过 320 KiB。头像以 SQLite BLOB 和 SHA-256 revision 保存，页面通过登录保护的 revision URL 读取；列表、主标题、消息、管理目录和任务轨迹使用同一头像元数据。未上传时明确显示默认头像。头像不写入主机路径。完整校验合同见[头像实现说明](docs/avatars.md)。
 
-本切片尚未实现多层委派、排队调度、自动重试、浏览器或电脑控制。真实 LAN 的模型内创建/编辑验收仍需独立完成，不以模拟测试代替。
+**浏览器源码状态（未部署）**：schema7 接线已为网页和 CLI 实现 owner 直接控制的浏览器路径：所有者先授权当前 Bot 的精确 HTTP(S) origin，再创建独立、有限时的浏览会话，逐步打开地址、读取页面、点击、输入、滚动或保存截图。步骤、结果、截图 BLOB 和 session 状态保存在 canonical SQLite 任务轨迹中；截图读取要求已登录会话和匹配的 Bot/任务。未配置浏览器 worker socket 时，产品仍可启动并显示“网页操作暂不可用”，不会回退到宿主机浏览器或其他服务。此接线目前只有 fake UDS/受控测试证据，真实 worker 的严格镜像扫描失败，当前 GK50 schema6 候选没有这些浏览器命令；详见[阻塞记录](../docs/acceptance/standalone-browser-security-blocker-2026-10-30.md)。浏览器能力尚未接入模型工具；多层委派、排队调度和自动重试也未实现。
 
 DG03 自动测试使用锁定 SDK 的真实工具参数校验器和受控本地 transport 验证协议及持久化；它不代表真实 Codex 模型会话或 LAN 验收已通过。
 
@@ -87,6 +87,20 @@ node --experimental-strip-types standalone/src/cli.ts avatars.delete --input-fil
 ```
 
 `avatar.set` 通过专用有界 `/api/v1/avatar` 路由上传 Base64 JSON；普通 `/api/v1/command` 请求体仍限制为 49 KiB。`avatars.get` 和 `avatars.delete` 是普通在线命令；图片本身仅能通过带会话认证的 `GET /api/v1/bots/<bot-id>/avatar/<revision>` 读取，URL 不包含主机文件路径。
+
+浏览器的授权与操作命令也通过同一登录会话和 `/api/v1/command` 业务入口：
+
+```sh
+node --experimental-strip-types standalone/src/cli.ts browser.status
+node --experimental-strip-types standalone/src/cli.ts browser.origins.grant --input-file <bot-and-origin.json>
+node --experimental-strip-types standalone/src/cli.ts browser.open --input-file <bot-origin-and-operation-id.json>
+node --experimental-strip-types standalone/src/cli.ts browser.step --input-file <session-task-action.json>
+node --experimental-strip-types standalone/src/cli.ts browser.trace --input-file <bot-and-task.json>
+node --experimental-strip-types standalone/src/cli.ts browser.close --input-file <session-task.json>
+node --experimental-strip-types standalone/src/cli.ts browser.screenshot --resource-id <resource-id> --bot-id <bot-id> --task-id <task-id> --output-file <new-private-file.png>
+```
+
+`browser.origins.grant/revoke` 输入为 `{"botId":"<Bot ID>","origin":"https://example.com"}`；origin 必须是无路径的精确来源。`browser.open` 输入为 `{"botId":"<Bot ID>","origin":"https://example.com","idempotencyKey":"<操作 ID>"}`；步骤输入包含 `botId`、`taskId`、`sessionId`、`stepId`、`action` 和可选 `args`。支持的 action 为 `navigate`、`read`、`click`、`type`、`scroll` 和 `screenshot`。CLI 截图读取使用登录保护资源 URL，仅写入不存在的新文件，限制 2 MiB。浏览器 worker 不可用、授权被拒或动作结果不确定时会返回明确错误；不会自动重放不确定动作。浏览器命令尚未接入模型工具或后台队列。
 
 ```sh
 node --experimental-strip-types standalone/src/cli.ts connections.bind-main --input-file <source-bot.json>

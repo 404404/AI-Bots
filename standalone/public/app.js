@@ -7,6 +7,8 @@ let bots = [],
   memoryRevision = null,
   memoryPath = null,
   workerPolicyRevision = 0,
+  browserSessionId = null,
+  browserTaskId = null,
   polling = false;
 let noticeTimer;
 let authPolling = false;
@@ -135,6 +137,7 @@ function view(name) {
     button.setAttribute('aria-pressed', String(button.dataset.view === name));
   if (name === 'memory' && bot) void loadMemory().catch(showError);
   if (name === 'diagnostics') void diagnostics().catch(showError);
+  if (name === 'browser') void loadBrowser().catch(showError);
   if (name === 'model' && bot) void refreshAuth().catch(showError);
 }
 async function copy(content) {
@@ -535,6 +538,107 @@ async function diagnostics() {
   const rows = await all('diagnostics.list');
   $('diagnostics-output').textContent = JSON.stringify(rows.slice(-100).reverse(), null, 2);
 }
+function renderBrowserHistory(traces) {
+  const list = $('browser-tasks');
+  list.replaceChildren();
+  if (!traces.length) {
+    list.append(node('p', '还没有浏览会话记录。', 'muted fine'));
+    return;
+  }
+  const actionLabels = { navigate: '打开地址', read: '读取页面', click: '点击元素', type: '输入文字', scroll: '滚动页面', screenshot: '截图' };
+  for (const trace of traces) {
+    const card = node('article', undefined, 'browser-task-card');
+    const heading = node('div', undefined, 'browser-task-heading');
+    const title = node('div');
+    title.append(node('strong', `${statusLabels[trace.task.status] ?? trace.task.status} · ${new Date(trace.task.createdAt).toLocaleString()}`));
+    title.append(node('p', `任务 ${trace.task.id}`, 'muted fine'));
+    heading.append(title);
+    card.append(heading);
+    for (const session of trace.sessions) {
+      const sessionPanel = node('section', undefined, 'browser-session-card');
+      sessionPanel.append(node('h4', `${session.origin} · ${statusLabels[session.status] ?? session.status}`));
+      const select = node('button', session.status === 'active' ? '继续此会话' : '查看会话记录');
+      select.type = 'button';
+      select.disabled = session.status !== 'active';
+      select.onclick = () => {
+        browserSessionId = session.id;
+        browserTaskId = session.taskId;
+        $('browser-current').textContent = `当前会话 ${session.id} · 任务 ${session.taskId} · ${session.origin}`;
+        notice('已选择进行中的浏览会话。');
+      };
+      sessionPanel.append(select);
+      const steps = node('ol', undefined, 'browser-steps');
+      for (const step of session.steps) {
+        const row = node('li');
+        row.append(node('span', `${step.sequence}. ${actionLabels[step.action] ?? step.action} · ${statusLabels[step.status] ?? step.status}${step.errorCode ? ` · ${step.errorCode}` : ''}`));
+        if (step.result) {
+          const detail = node('pre', JSON.stringify(step.result.result ?? step.result, null, 2), 'browser-step-result');
+          row.append(detail);
+          const resourceId = step.result.result?.resourceId;
+          if (step.action === 'screenshot' && resourceId) {
+            const image = node('img', undefined, 'browser-screenshot');
+            image.alt = `浏览器步骤 ${step.sequence} 的截图`;
+            const params = new URLSearchParams({ botId: bot.id, taskId: session.taskId });
+            image.src = `/api/v1/browser-screenshots/${encodeURIComponent(resourceId)}?${params}`;
+            row.append(image);
+          }
+        }
+        steps.append(row);
+      }
+      sessionPanel.append(steps);
+      card.append(sessionPanel);
+    }
+    list.append(card);
+  }
+}
+async function loadBrowser() {
+  const status = await command('browser.status');
+  $('browser-status').textContent = status.configured
+    ? '网页操作可用。只有当前 Bot 已授权的来源可以打开。'
+    : '网页操作暂不可用。你仍可查看和管理来源授权；连接恢复后才能打开或继续会话。';
+  const botId = bot?.id;
+  if (!botId) {
+    $('browser-origins').replaceChildren(node('p', '请先选择一个 Bot。', 'muted fine'));
+    $('browser-open-origin').replaceChildren();
+    $('browser-tasks').replaceChildren();
+    return;
+  }
+  const [origins, traces] = await Promise.all([
+    command('browser.origins.list', { botId }),
+    command('browser.tasks.list', { botId, limit: 50 }),
+  ]);
+  if (bot?.id !== botId) return;
+  const activeOrigins = origins.filter((item) => item.granted);
+  $('browser-open-origin').replaceChildren(...activeOrigins.map((item) => {
+    const option = node('option', item.origin);
+    option.value = item.origin;
+    return option;
+  }));
+  if (!browserSessionId || !traces.some((trace) => trace.sessions.some((session) => session.id === browserSessionId && session.status === 'active'))) {
+    browserSessionId = null;
+    browserTaskId = null;
+    $('browser-current').textContent = '尚未选择进行中的会话。';
+  }
+  const originList = $('browser-origins');
+  originList.replaceChildren();
+  if (!origins.length) originList.append(node('p', '尚未授权任何网站来源。', 'muted fine'));
+  for (const grant of origins) {
+    const row = node('div', undefined, 'browser-origin-row');
+    row.append(node('span', `${grant.origin} · ${grant.granted ? '已授权' : '已撤销'} · revision ${grant.revision}`));
+    if (grant.granted) {
+      const revoke = node('button', '撤销');
+      revoke.type = 'button';
+      revoke.onclick = () => void command('browser.origins.revoke', { botId, origin: grant.origin }).then(loadBrowser).catch(showError);
+      row.append(revoke);
+    }
+    originList.append(row);
+  }
+  $('browser-open').disabled = !status.configured || activeOrigins.length === 0;
+  $('browser-run-step').disabled = !status.configured || !browserSessionId;
+  $('browser-close').disabled = !status.configured || !browserSessionId;
+  $('browser-cancel').disabled = !status.configured || !browserSessionId;
+  renderBrowserHistory(traces);
+}
 async function enter() {
   await request('/api/v1/session');
   $('login-screen').hidden = true;
@@ -574,6 +678,55 @@ async function enter() {
     await loadCatalog();
     notice('模型连接已授权给主 Bot，可加入新工作 Bot 管理范围。');
   })().catch(showError);
+  form('browser-origin-form', async () => {
+    if (!bot) throw new Error('请先选择一个 Bot。');
+    await command('browser.origins.grant', { botId: bot.id, origin: $('browser-origin').value.trim() });
+    $('browser-origin').value = '';
+    await loadBrowser();
+    notice('网站来源已授权。');
+  });
+  $('browser-open').onclick = () => void (async () => {
+    if (!bot || !$('browser-open-origin').value) throw new Error('请先授权并选择一个网站来源。');
+    const opened = await command('browser.open', { botId: bot.id, origin: $('browser-open-origin').value, idempotencyKey: id() });
+    browserSessionId = opened.sessionId;
+    browserTaskId = opened.taskId;
+    $('browser-current').textContent = `当前会话 ${opened.sessionId} · 任务 ${opened.taskId} · ${$('browser-open-origin').value}`;
+    await loadBrowser();
+    notice('浏览会话已打开。');
+  })().catch(showError);
+  form('browser-step-form', async () => {
+    if (!bot || !browserSessionId || !browserTaskId) throw new Error('请先打开或选择一个进行中的浏览会话。');
+    const action = $('browser-action').value;
+    const target = $('browser-target').value.trim();
+    const args = action === 'navigate' ? { url: target }
+      : action === 'click' ? { selector: target }
+      : action === 'read' ? (target ? { selector: target } : {})
+      : action === 'type' ? { selector: target, text: $('browser-text').value }
+      : action === 'scroll' ? { direction: $('browser-scroll').value, pixels: 500 }
+      : {};
+    const result = await command('browser.step', { botId: bot.id, taskId: browserTaskId, sessionId: browserSessionId, stepId: id(), action, args });
+    if (action === 'navigate' || action === 'click' || action === 'type') $('browser-target').value = '';
+    if (action === 'type') $('browser-text').value = '';
+    await loadBrowser();
+    notice(result.status === 'completed' ? '网页操作已完成。' : '网页操作状态已更新。');
+  });
+  $('browser-close').onclick = () => void (async () => {
+    if (!bot || !browserSessionId || !browserTaskId) return;
+    await command('browser.close', { botId: bot.id, taskId: browserTaskId, sessionId: browserSessionId });
+    browserSessionId = null;
+    browserTaskId = null;
+    await loadBrowser();
+    notice('浏览会话已关闭。');
+  })().catch(showError);
+  $('browser-cancel').onclick = () => void (async () => {
+    if (!bot || !browserSessionId || !browserTaskId) return;
+    await command('browser.cancel', { botId: bot.id, taskId: browserTaskId, sessionId: browserSessionId });
+    browserSessionId = null;
+    browserTaskId = null;
+    await loadBrowser();
+    notice('浏览会话已停止。');
+  })().catch(showError);
+  $('browser-refresh').onclick = () => void loadBrowser().catch(showError);
   $('bind-main-source').onclick = () => void (async () => {
     const sourceBotId = $('main-source').value;
     if (!sourceBotId) throw new Error('请先为连接来源配置模型和授权。');

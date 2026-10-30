@@ -9,13 +9,13 @@ import { BotApplication } from '../src/application.ts';
 
 const dir = () => mkdtempSync(join(tmpdir(), 'standalone-main-'));
 
-test('v6 creates one stable main Bot, exposes catalog, and rejects model context for owner operations', async () => {
+test('v7 creates one stable main Bot, exposes catalog, and rejects model context for owner operations', async () => {
   const app = new BotApplication(dir());
   try {
     const first = await app.executeOwner('main.get');
     assert.equal(first.bot.isMain, true);
     assert.equal((await app.executeOwner('main.get')).bot.id, first.bot.id);
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 6);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 7);
     const catalog = await app.executeOwner('main.catalog');
     assert.equal(catalog.mainBotId, first.bot.id);
     assert.equal(catalog.items[0].role, 'main');
@@ -40,6 +40,50 @@ test('v6 creates one stable main Bot, exposes catalog, and rejects model context
   }
 });
 
+test('schema 6 upgrades atomically to 7 while preserving existing Bot and conversation identity', async () => {
+  const root = dir();
+  let app = new BotApplication(root);
+  const bot = await app.executeOwner('bots.create', { slug: 'kept-bot', name: 'Keep me', persona: 'stable persona' });
+  const conversation = await app.executeOwner('conversations.create', { botId: bot.id, title: 'Keep history' });
+  await app.close();
+  const raw = new DatabaseSync(join(root, 'bot.sqlite'));
+  raw.exec(`DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions; DROP TABLE browser_origin_grants; PRAGMA user_version=6;`);
+  raw.close();
+
+  app = new BotApplication(root);
+  try {
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 7);
+    const kept = await app.executeOwner('bots.get', { botId: bot.id });
+    assert.deepEqual([kept.id, kept.name, kept.persona], [bot.id, 'Keep me', 'stable persona']);
+    assert.equal((await app.executeOwner('conversations.list', { botId: bot.id })).items[0].id, conversation.id);
+    for (const table of ['browser_origin_grants', 'browser_sessions', 'browser_steps', 'browser_screenshots']) {
+      assert.equal(app.storage.db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name=?").get(table).n, 1);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
+test('failed schema 6 to 7 DDL rolls back user_version and releases the lease for retry', async () => {
+  const root = dir();
+  const app = new BotApplication(root);
+  await app.close();
+  const raw = new DatabaseSync(join(root, 'bot.sqlite'));
+  raw.exec(`DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions;
+    DROP TABLE browser_origin_grants; CREATE TABLE browser_origin_grants(blocker TEXT); PRAGMA user_version=6;`);
+  raw.close();
+
+  assert.throws(() => new BotApplication(root), { code: 'schema-migration-failed' });
+  const afterFailure = new DatabaseSync(join(root, 'bot.sqlite'));
+  assert.equal(afterFailure.prepare('PRAGMA user_version').get().user_version, 6);
+  assert.equal(afterFailure.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name='browser_sessions'").get().n, 0);
+  afterFailure.exec('DROP TABLE browser_origin_grants');
+  afterFailure.close();
+  const recovered = new BotApplication(root);
+  try { assert.equal(recovered.storage.db.prepare('PRAGMA user_version').get().user_version, 7); }
+  finally { await recovered.close(); }
+});
+
 test('v1 migration preserves existing Bot IDs and data despite a reserved slug collision', async () => {
   const root = dir();
   let app = new BotApplication(root);
@@ -55,6 +99,10 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
 
   const raw = new DatabaseSync(join(root, 'bot.sqlite'));
   raw.exec(`
+    DROP TABLE browser_screenshots;
+    DROP TABLE browser_steps;
+    DROP TABLE browser_sessions;
+    DROP TABLE browser_origin_grants;
     DROP TABLE worker_management_scope_targets;
     DROP TABLE worker_management_operations;
     DROP TABLE worker_management_policy;
@@ -87,7 +135,7 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
     const main = (await app.executeOwner('main.get')).bot;
     assert.notEqual(main.id, original.id);
     assert.notEqual(main.slug, 'main-bot');
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 6);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 7);
   } finally {
     await app.close();
   }
@@ -160,6 +208,10 @@ test('failed v1 migration rolls back all DDL and releases the lease for retry', 
   await app.close();
   const db = new DatabaseSync(join(root, 'bot.sqlite'));
   db.exec(`
+    DROP TABLE browser_screenshots;
+    DROP TABLE browser_steps;
+    DROP TABLE browser_sessions;
+    DROP TABLE browser_origin_grants;
     DROP TABLE worker_management_scope_targets;
     DROP TABLE worker_management_operations;
     DROP TABLE worker_management_policy;

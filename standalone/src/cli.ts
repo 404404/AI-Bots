@@ -71,6 +71,17 @@ try {
           'avatars.get',
           'avatar.set',
           'avatars.delete',
+          'browser.status',
+          'browser.origins.list',
+          'browser.origins.grant',
+          'browser.origins.revoke',
+          'browser.open',
+          'browser.step',
+          'browser.close',
+          'browser.cancel',
+          'browser.tasks.list',
+          'browser.trace',
+          'browser.screenshot',
           'memory.list',
           'memory.read',
           'memory.write',
@@ -82,7 +93,7 @@ try {
           'auth.logout',
         ],
         notes:
-          'Missing input-file: JSON from stdin. Use avatar.set --bot-id ID --image-file PNG [--expected-revision HASH] for a PNG upload. workers.create/workers.update require explicit operationId; secrets never belong in argv. Run IDs and paging cursors are returned unchanged.',
+          'Missing input-file: JSON from stdin. Use avatar.set --bot-id ID --image-file PNG [--expected-revision HASH] for a PNG upload; use browser.screenshot --resource-id ID --bot-id ID --task-id ID --output-file PATH to save an authenticated PNG. Browser actions use the same JSON command contract. workers.create/workers.update require explicit operationId; secrets never belong in argv. Run IDs and paging cursors are returned unchanged.',
       }) + '\n',
     );
   } else {
@@ -104,9 +115,55 @@ try {
       'Session file must not be a symbolic link.',
     );
     const avatarSet = command === 'avatar.set';
+    const browserScreenshot = command === 'browser.screenshot';
     let data: Record<string, unknown>;
     let route: string;
-    if (avatarSet) {
+    if (browserScreenshot) {
+      requireValue(args.length === 8 && args[0] === '--resource-id' && args[2] === '--bot-id' &&
+        args[4] === '--task-id' && args[6] === '--output-file', 'invalid-arguments',
+      'Use browser.screenshot --resource-id ID --bot-id ID --task-id ID --output-file PATH.');
+      const url = new URL(`/api/v1/browser-screenshots/${encodeURIComponent(args[1]!)}`, base);
+      url.searchParams.set('botId', args[3]!);
+      url.searchParams.set('taskId', args[5]!);
+      const response = await fetch(url, { method: 'GET', redirect: 'error', headers: { cookie: readFileSync(sessionFile, 'utf8').trim() } });
+      if (!response.ok) {
+        let payload;
+        try { payload = await response.json(); } catch { payload = { error: { code: 'invalid-response', message: 'Server response is invalid.' } }; }
+        process.stdout.write(JSON.stringify(payload) + '\n');
+        process.exitCode = 1;
+      } else {
+        const reader = response.body?.getReader();
+        try {
+          requireValue(String(response.headers.get('content-type') ?? '').toLowerCase().startsWith('image/png'),
+            'invalid-image-response', 'Server did not return PNG data.');
+          const declared = Number(response.headers.get('content-length') ?? 0);
+          requireValue(!declared || declared <= 2 * 1024 * 1024, 'browser-screenshot-too-large', 'Browser screenshot exceeds 2 MiB.');
+          requireValue(reader, 'invalid-image-response', 'Server response body is missing.');
+          const chunks: Buffer[] = [];
+          let total = 0;
+          while (true) {
+            const item = await reader.read();
+            if (item.done) break;
+            total += item.value.length;
+            requireValue(total <= 2 * 1024 * 1024, 'browser-screenshot-too-large', 'Browser screenshot exceeds 2 MiB.');
+            chunks.push(Buffer.from(item.value));
+          }
+          const png = Buffer.concat(chunks, total);
+          requireValue(png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+            'invalid-image-response', 'Server did not return a PNG file.');
+          const fd = openSync(args[7]!, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+          try { writeFileSync(fd, png); } finally { closeSync(fd); }
+          process.stdout.write(JSON.stringify({ saved: true, bytes: png.length }) + '\n');
+        } catch (error) {
+          try {
+            if (reader) await reader.cancel();
+            else await response.body?.cancel();
+          } catch {}
+          throw error;
+        }
+      }
+      process.exitCode ??= 0;
+    } else if (avatarSet) {
       requireValue(args.length === 4 || args.length === 6, 'invalid-arguments',
         'Use avatar.set --bot-id ID --image-file PNG [--expected-revision HASH].');
       requireValue(args[0] === '--bot-id' && args[2] === '--image-file', 'invalid-arguments',
@@ -128,6 +185,7 @@ try {
       data = command === 'login' ? { code: input.trim() } : { command, params: JSON.parse(input.trim() || '{}') };
       route = command === 'login' ? '/api/v1/session' : '/api/v1/command';
     }
+    if (!browserScreenshot) {
     const cookie = command === 'login' ? '' : readFileSync(sessionFile, 'utf8').trim();
     const response = await fetch(
       new URL(route, base),
@@ -147,6 +205,7 @@ try {
     }
     process.stdout.write(JSON.stringify(payload) + '\n');
     if (!response.ok) process.exitCode = 1;
+    }
   }
 } catch (error) {
   process.stdout.write(

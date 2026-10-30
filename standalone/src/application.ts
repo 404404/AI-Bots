@@ -34,6 +34,9 @@ import type { CodexTransport } from './model-runner.ts';
 import { AvatarStore } from './avatars.ts';
 import { WorkerManagement } from './worker-management.ts';
 import { validateBotIdentityPatch } from './bot-fields.ts';
+import { BrowserClient, type BrowserAction } from './browser-client.ts';
+import { BrowserService } from './browser-service.ts';
+import { BrowserTaskAdapterImpl } from './browser-task-adapter.ts';
 
 export type ExecutionContext = { kind: 'owner' } | { kind: 'bot'; botId: string };
 
@@ -89,8 +92,12 @@ export class BotApplication {
   tasks: TaskEngine;
   workerManagement: WorkerManagement;
   avatars: AvatarStore;
+  browser: BrowserService;
+  browserTasks: BrowserTaskAdapterImpl;
+  browserConfigured: boolean;
+  browserSocketPath: string;
   codexTransport?: CodexTransport;
-  constructor(root: string, codexTransport?: CodexTransport) {
+  constructor(root: string, codexTransport?: CodexTransport, browserSocketPath?: string) {
     this.storage = new Storage(root);
     this.codexTransport = codexTransport;
     this.auth = new CodexAuth(this.storage, (botId, code, status) =>
@@ -103,6 +110,12 @@ export class BotApplication {
       (botId) => this.memoryList(botId),
       (event, botId, taskId, code) => this.diag(event, botId, undefined, code, undefined, undefined, undefined, taskId),
       this.workerManagement);
+    this.browserConfigured = typeof browserSocketPath === 'string' && browserSocketPath.length > 0;
+    this.browserSocketPath = this.browserConfigured ? browserSocketPath! : '/run/browser-control/worker.sock';
+    this.browserTasks = new BrowserTaskAdapterImpl(this.storage, this.tasks.store);
+    this.browser = new BrowserService({ storage: this.storage,
+      client: new BrowserClient({ socketPath: this.browserSocketPath }),
+      tasks: this.browserTasks });
     this.tasks.store.recover(now());
     const recovered = this.storage.db
       .prepare(
@@ -301,6 +314,9 @@ export class BotApplication {
     params: Record<string, unknown> = {},
     context?: ExecutionContext,
   ) {
+    if (context?.kind === 'owner' && !this.browserTasks.isCurrentOwner()) {
+      return this.browserTasks.runAsOwner(() => this.execute(command, params, context));
+    }
     requireValue(!this.closing, 'shutting-down', '服务正在关闭，请稍后重新连接。', 503);
     requireValue(context?.kind === 'owner', 'forbidden', '此操作仅限所有者执行。', 403);
     const db = this.storage.db;
@@ -353,6 +369,31 @@ export class BotApplication {
     if (command === 'avatars.delete') {
       const bot = this.bot(params.botId);
       return this.avatars.delete(bot.id, params.expectedRevision);
+    }
+    if (command === 'browser.status') return { configured: this.browserConfigured,
+      status: this.browserConfigured ? 'configured' : 'browser-unavailable' };
+    if (command === 'browser.origins.list') return this.browser.listOriginGrants(text(params.botId, 'Bot ID', 64));
+    if (command === 'browser.origins.grant') return this.browser.grantOrigin({ botId: text(params.botId, 'Bot ID', 64), origin: params.origin as string });
+    if (command === 'browser.origins.revoke') return await this.browser.revokeOrigin({ botId: text(params.botId, 'Bot ID', 64), origin: params.origin as string });
+    if (command === 'browser.tasks.list') return this.browser.listOwnerTasks(text(params.botId, 'Bot ID', 64), params.limit === undefined ? 50 : Number(params.limit));
+    if (command === 'browser.trace') return this.browser.traceForOwner({ botId: text(params.botId, 'Bot ID', 64), taskId: text(params.taskId, '任务 ID', 64) });
+    if (command === 'browser.open') {
+      requireValue(this.browserConfigured, 'browser-unavailable', '浏览器服务未配置。', 503);
+      return await this.browser.openForOwner({ botId: text(params.botId, 'Bot ID', 64),
+        idempotencyKey: text(params.idempotencyKey, '操作 ID', 128), origin: params.origin as string });
+    }
+    if (command === 'browser.step') {
+      requireValue(this.browserConfigured, 'browser-unavailable', '浏览器服务未配置。', 503);
+      return await this.browser.step({ sessionId: text(params.sessionId, '会话 ID', 64), botId: text(params.botId, 'Bot ID', 64),
+        taskId: text(params.taskId, '任务 ID', 64), stepId: text(params.stepId, '步骤 ID', 128),
+        action: params.action as BrowserAction,
+        args: params.args as Record<string, unknown> | undefined });
+    }
+    if (command === 'browser.close' || command === 'browser.cancel') {
+      requireValue(this.browserConfigured, 'browser-unavailable', '浏览器服务未配置。', 503);
+      const input = { sessionId: text(params.sessionId, '会话 ID', 64), botId: text(params.botId, 'Bot ID', 64),
+        taskId: text(params.taskId, '任务 ID', 64), ...(command === 'browser.cancel' ? { mode: 'cancelled' as const } : {}) };
+      return await this.browser.closeForOwner(input);
     }
     if (command === 'connections.list') {
       const consumerBotId = params.consumerBotId === undefined ? undefined : text(params.consumerBotId, 'Bot ID', 64);
@@ -476,11 +517,13 @@ export class BotApplication {
     }
     if (command === 'tasks.cancel') {
       const task = this.tasks.store.get(text(params.taskId, '任务 ID', 64));
+      const affected = task.parent_id ? [task.id] : this.tasks.store.byRoot(task.root_id).map((item) => item.id);
       const linkedRun = !task.parent_id ? db.prepare('SELECT id,bot_id FROM runs WHERE task_id=?').get(task.root_id) as { id: string; bot_id: string } | undefined : undefined;
       if (linkedRun) {
         db.prepare("UPDATE runs SET status='cancelled',error_code='cancelled',finished_at=? WHERE id=? AND status IN ('queued','running')").run(now(), linkedRun.id);
       }
       const cancelled = this.tasks.cancelTask(task.id);
+      for (const taskId of affected) await this.browser.taskTerminal(taskId, 'cancelled');
       if (linkedRun) this.active.get(linkedRun.id)?.controller.abort();
       return this.tasks.store.public(cancelled);
     }
@@ -669,7 +712,11 @@ export class BotApplication {
       db.prepare(
         "UPDATE runs SET status='cancelled',error_code='cancelled',finished_at=? WHERE id=? AND status IN ('queued','running')",
       ).run(now(), run.id);
-      if (run.task_id) this.tasks.cancelRoot(run.task_id);
+      if (run.task_id) {
+        const affected = this.tasks.store.byRoot(run.task_id).map((task) => task.id);
+        this.tasks.cancelRoot(run.task_id);
+        for (const taskId of affected) await this.browser.taskTerminal(taskId, 'cancelled');
+      }
       this.active.get(run.id)?.controller.abort();
       this.diag('run-cancelled', bot.id, run.id);
       return this.publicRun(this.runRecord(bot.id, run.id));
@@ -781,9 +828,8 @@ export class BotApplication {
         ).run(randomUUID(), bot.id, conversation.id, id, input, at);
       });
       const controller = new AbortController();
-      const done = Promise.resolve().then(() =>
-        this.generate(bot, this.runRecord(bot.id, id), controller.signal),
-      );
+      const done = Promise.resolve().then(() => this.browserTasks.runAsUntrusted(() =>
+        this.generate(bot, this.runRecord(bot.id, id), controller.signal)));
       this.active.set(id, { controller, done });
       void done
         .finally(() => this.active.delete(id))
@@ -797,6 +843,12 @@ export class BotApplication {
   /** Internal owner entry for application-owned jobs and isolated development fixtures. */
   executeOwner(command: string, params: Record<string, unknown> = {}) {
     return this.execute(command, params, { kind: 'owner' });
+  }
+  async initializeBrowser() {
+    return this.browser.recover(this.browserConfigured);
+  }
+  readBrowserScreenshot(input: { resourceId: string; botId: string; taskId: string }) {
+    return this.browserTasks.runAsOwner(() => this.browser.readScreenshot(input));
   }
   async generate(bot: BotRow, run: Run, signal: AbortSignal) {
     const snapshot = JSON.parse(run.config_snapshot ?? '{}') as {
@@ -957,6 +1009,7 @@ export class BotApplication {
       )
       .run(now());
     this.tasks.store.recover(now());
+    await this.browser.recover(this.browserConfigured);
     for (const task of this.active.values()) task.controller.abort();
     await this.auth.close();
     await Promise.allSettled([...this.active.values()].map((task) => task.done));

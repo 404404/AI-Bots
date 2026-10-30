@@ -24,6 +24,7 @@ export async function startServer(options: {
   host: string;
   publicUrl: string;
   trustedUrls?: readonly string[];
+  browserSocketPath?: string;
 }) {
   process.umask(0o077);
   const publicUrl = new URL(options.publicUrl);
@@ -39,7 +40,8 @@ export async function startServer(options: {
   );
   const trustedUrls = options.trustedUrls ?? configuredTrustedUrls(process.env.BOT_TRUSTED_URLS);
   const networkPolicy = createNetworkAccessPolicy(publicUrl.href, trustedUrls, options.port);
-  const app = new BotApplication(options.dataDir);
+  const app = new BotApplication(options.dataDir, undefined, options.browserSocketPath);
+  await app.initializeBrowser();
   const codeFile = join(app.storage.root, 'secrets', 'access-code');
   if (!existsSync(codeFile))
     writeFileSync(codeFile, randomBytes(24).toString('base64url'), { mode: 0o600, flag: 'wx' });
@@ -51,7 +53,9 @@ export async function startServer(options: {
   chmodSync(codeFile, 0o600);
   const accessDigest = Buffer.from(digest(readFileSync(codeFile, 'utf8').trim()), 'hex');
   const attempts = new Map<string, { count: number; until: number }>();
-  const staticRoot = join(dirname(fileURLToPath(import.meta.url)), 'public');
+  const serverDir = dirname(fileURLToPath(import.meta.url));
+  const adjacentPublic = join(serverDir, 'public');
+  const staticRoot = existsSync(adjacentPublic) ? adjacentPublic : join(serverDir, '..', 'public');
   const server = createServer(async (req, res) => {
     res.setHeader('cache-control', 'no-store');
     res.setHeader('x-content-type-options', 'nosniff');
@@ -193,6 +197,18 @@ export async function startServer(options: {
           res.setHeader('cache-control', 'private, no-store');
           return res.end(png);
         }
+        const browserShotPath = /^\/api\/v1\/browser-screenshots\/([0-9a-f-]{36})$/u.exec(path);
+        if (browserShotPath && req.method === 'GET') {
+          const url = new URL(req.url ?? '/', publicUrl);
+          const png = app.readBrowserScreenshot({ resourceId: browserShotPath[1]!,
+            botId: text(url.searchParams.get('botId'), 'Bot ID', 64),
+            taskId: text(url.searchParams.get('taskId'), '任务 ID', 64) });
+          res.statusCode = 200;
+          res.setHeader('content-type', 'image/png');
+          res.setHeader('content-length', png.length);
+          res.setHeader('cache-control', 'private, no-store');
+          return res.end(png);
+        }
         if (path === '/api/v1/avatar' && req.method === 'POST') {
           requireValue(authenticated, 'unauthorized', '请先登录。', 401);
           const input = await body(Math.ceil((2 * 1024 * 1024) / 3) * 4 + 2048);
@@ -238,10 +254,13 @@ export async function startServer(options: {
     server.once('error', reject);
     server.listen(options.port, options.host, resolve);
   });
+  const browserReaper = setInterval(() => { void app.browser.reap().catch(() => {}); }, 5000);
+  browserReaper.unref?.();
   return {
     server,
     app,
     async close() {
+      clearInterval(browserReaper);
       server.closeIdleConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await app.close();
@@ -260,6 +279,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       host,
       publicUrl: process.env.BOT_PUBLIC_URL ?? `http://127.0.0.1:${port}`,
       trustedUrls: configuredTrustedUrls(process.env.BOT_TRUSTED_URLS),
+      browserSocketPath: process.env.BROWSER_CONTROL_SOCKET,
     });
   } catch (error) {
     const code = error instanceof BotError ? error.code : 'startup-failed';

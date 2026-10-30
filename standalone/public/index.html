@@ -62,7 +62,8 @@
         <nav id="views" class="tabs" aria-label="Bot 功能">
           <button data-view="chat" aria-pressed="true">对话</button
           ><button data-view="identity">身份</button><button data-view="model">模型</button
-          ><button data-view="memory">文件记忆</button><button data-view="diagnostics">诊断</button>
+          ><button data-view="memory">文件记忆</button><button data-view="browser">浏览器</button
+          ><button data-view="diagnostics">诊断</button>
         </nav>
         <section id="view-chat" class="view chat-view">
           <div id="messages" class="messages" aria-label="消息记录" aria-live="polite">
@@ -270,6 +271,44 @@
           <p class="muted">记录执行阶段、耗时和错误码，不记录消息正文、模型凭据或完整网络请求。</p>
           <button id="refresh-diagnostics">刷新诊断</button>
           <pre id="diagnostics-output" aria-label="诊断记录"></pre>
+        </section>
+        <section id="view-browser" class="view settings-view browser-view" hidden>
+          <h2>网页操作</h2>
+          <p class="muted">先为当前 Bot 明确授权一个网站来源，再在此页面直接操作并查看保存的步骤与截图。</p>
+          <p id="browser-status" class="muted" role="status">正在检查网页操作状态…</p>
+          <section class="grant-panel">
+            <h3>网站访问授权</h3>
+            <p class="muted fine">授权仅匹配完整来源，例如 https://example.com。撤销后，该来源下的进行中操作会停止。</p>
+            <form id="browser-origin-form" class="browser-inline-form">
+              <label>网站来源<input id="browser-origin" type="url" inputmode="url" maxlength="512" placeholder="https://example.com" required /></label>
+              <button class="primary" type="submit">授权此来源</button>
+            </form>
+            <div id="browser-origins" class="browser-origins" aria-live="polite"></div>
+          </section>
+          <section class="grant-panel">
+            <h3>新浏览会话</h3>
+            <div class="browser-inline-form">
+              <label>已授权来源<select id="browser-open-origin"></select></label>
+              <button id="browser-open" type="button" class="primary">打开网站</button>
+            </div>
+            <p id="browser-current" class="muted fine" aria-live="polite">尚未选择进行中的会话。</p>
+            <form id="browser-step-form">
+              <label>操作<select id="browser-action">
+                <option value="navigate">打开地址</option><option value="read">读取页面</option>
+                <option value="click">点击元素</option><option value="type">输入文字</option>
+                <option value="scroll">滚动页面</option><option value="screenshot">保存截图</option>
+              </select></label>
+              <label>地址或元素选择器<input id="browser-target" maxlength="2048" placeholder="https://example.com 或 #按钮" /></label>
+              <label>输入文字<textarea id="browser-text" rows="2" maxlength="4000"></textarea></label>
+              <label>滚动方向<select id="browser-scroll"><option value="down">向下</option><option value="up">向上</option></select></label>
+              <div class="browser-actions"><button id="browser-run-step" type="submit" class="primary">执行操作</button>
+                <button id="browser-close" type="button">正常关闭</button><button id="browser-cancel" type="button">停止会话</button></div>
+            </form>
+          </section>
+          <section class="grant-panel">
+            <div class="browser-history-heading"><h3>已保存的操作记录</h3><button id="browser-refresh" type="button">刷新记录</button></div>
+            <div id="browser-tasks" class="browser-tasks" aria-live="polite"></div>
+          </section>
         </section>
       </main>
     </div>
