@@ -2,6 +2,10 @@
 
 > The [GK50 candidate runbook](docs/standalone-bot-gk50.md) records access, Compose and immutable identities. Main Bot, delegation, avatars and product browser work follow the [expansion plan](docs/standalone-bot-expansion-plan.md), with a separate [acceptance record](docs/acceptance/standalone-bot-expansion-test-results.md). Registry publication awaits the release gates.
 
+> Verified paths include a persistent main Bot, conversational worker creation/configuration, real Codex delegation/result aggregation and custom PNG avatars. The expansion record identifies each tested image and remaining boundaries.
+
+> GK50 preview: [LAN](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443). Private-network sources are allowed; access-code login remains required. See the runbook for local retrieval. The product browser remains blocked by its image qualification gate.
+
 <div align="center">
   <a href="https://deepseekbot.app/en/">
 <picture>

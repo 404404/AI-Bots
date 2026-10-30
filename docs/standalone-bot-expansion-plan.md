@@ -1,5 +1,17 @@
 # GK50 独立 Bot 扩展交付计划
 
+## 当前检查点（2026-10-30）
+
+用户体验复验追加了必须修复的产品问题：新工作 Bot 已有委派连接但不能直接私聊；模型入口和委派区仍沿用会话管理界面。当前优先按 [ADR-0249](adr/0249-digital-employees-share-private-and-group-chat-surfaces.md)交付“数字员工私聊、发送区模型选择、协作时间线”，再接真实群聊。[新用例](acceptance/standalone-digital-employee-test-cases-2026-10-30.md)先于实现编写，[新报告](acceptance/standalone-digital-employee-test-results-2026-10-30.md)单独记录，不能用下述旧委派通过结论推定私聊可用。
+
+分支仍为 `feature/gui-container-codex-prototype`。当前 20443 候选源码为 `e5444f66bb0bf43a79c3671e0e15e8d76d4e979f`，来自成功 [CI 41016727806](https://github.com/404404/AI-Bots/actions/runs/41016727806) 的固定未发布镜像 `sha256:e6619dcdb4370362049f4752a7c8ae90cb88139e2ceee83afc9dfb021caa7907`，健康、schema6，未在 GK50 重建。访问 [LAN](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443)，访问码本机读取方式见[运行说明](standalone-bot-gk50.md)。22443 对照及停止的旧 GUI 保持原身份。
+
+主身份、单工作 Bot 真实委派和自定义 PNG 头像已有各自固定候选的真实 LAN 证据。新候选修复每轮模型的授权目录：Terra 在真实 LAN 对话完成创建→修改→委派→结果回传，并完成两个不同工作 Bot 的结果汇总；具体 ID、版本、覆盖与未覆盖项见[逐项验收](acceptance/standalone-bot-expansion-test-results.md)。这不代表完整权限、故障及调度矩阵均通过。内网来源与精确 Host/Origin 修复后，两个地址分别通过真实浏览器登录及数据一致性验证；本机虚拟接口不代表远端 EasyTier 设备验收。
+
+浏览器直接工具 schema7 的 API/CLI/Web 接线已在工作区实现，隔离模拟测试与迁移/回退验证通过，**未部署**。浏览器 worker 的 [CI 41013969970](https://github.com/404404/AI-Bots/actions/runs/41013969970) 构建成功但严格扫描失败（66 HIGH、1 CRITICAL），后续真实沙箱/直接工具门禁未运行，没有可晋级产物；[阻塞依据](acceptance/standalone-browser-security-blocker-2026-10-30.md)已保存。未降低门禁或使用失败镜像。工作 Bot 模型浏览器工具仍未实现，按直接真实工具先通过的顺序推进。整体发布门禁未达到，不发布正式 GHCR，不切换 22443。
+
+下列历史检查点保留当时状态，当前结论以本节及验收报告顶部为准。
+
 ## 已核对基线
 
 源码 `8b0a6ee42cf60916a801550df1bf0aa10b4e6a9e`，分支 `feature/gui-container-codex-prototype`；运行源码 `6486cd96`，OCI manifest `sha256:5d043efb55bb63c344bca5961329efd10bbeea437577bb47becfdd840f1dd81d`。22443 当前健康；旧 GUI Host 保持停止，数据保留。当前真实 Codex 登录/回复、保存记忆使用与恢复已经通过，不能沿用历史等待登录结论。PX-01/02/06/09 是未实现；部分隔离、取消和权限边界仍未完整验证。
@@ -18,11 +30,17 @@
 
 每片由主代理先写用例，GPT 6 Luna 实现产品代码，主代理审查，GPT 6.1 Terra 独立执行。失败保留证据并交 Luna 修复。只使用本 fork；保持独立构建和 MIT 归属，不开发客户端或群晖。各片未实现部分明确保留，先提供第一片真实候选入口和证据，再扩展下一片。
 
+## 历史：头像与对话管理的依赖调整
+
+主身份及单工作 Bot 的真实 Codex 委派已经过候选 LAN 验收，来源和限制见[新验收记录](acceptance/standalone-bot-expansion-test-results.md)。头像沿用已隔离实现的 codec/Store，先完成其网页/CLI/API 接线并固定为 `f08fd7752293d69e7b0fa870fc880e0f38ba24d3`；Terra 源码测试 58/58 通过，真实头像 LAN 尚待候选升级后验证。
+
+头像不依赖多工作任务调度，故在 DG-03 对话管理/多任务片前先独立验收，减少共享页面和 schema 的同时变更。下一片依据 ADR-0247 实现所有者协调策略及模型真实创建/配置工作 Bot；浏览器执行器在独立子目录开发，完成直接工具及隔离验证后再接入工作模型。未接入应用的浏览器原型不计交付，也不随头像片发布。22443 对照服务保持原镜像；所有新增 schema 先在 20443 独立候选验证。
+
 ## 候选与迁移约束
 
 当前用户数据不作迁移实验。先用隔离 v1 fixtures 验证逐版升级、失败回滚和恢复；再使用专用候选容器、私有数据目录及重新核对的空闲端口。最初预检时 20443 空闲，现已用于主 Bot 候选；21443 属于其他服务，不动；22443 维持当前服务直到迁移/验收门禁通过。CI 产物固定身份验证；发布必须记录 registry digest，不能用 mutable tag 或本机临时镜像冒充已发布产物。需要使用现有独立产品授权做有限模型验证时，保持原 Bot 身份及私有备份规则，不读取或复制旧 DSH 授权。
 
-## 当前切片与并行准备
+## 历史：第二片准备检查点
 
 主身份和管理入口已在 20443 的固定 CI 镜像中验证；其逐项限制见扩展验收记录。一个工作 Bot 的委派及 schema v4 已实现，尚待独立源码复验、CI 和真实 Codex/LAN 候选验收，不能按实现完成推定验收通过。当前根任务最多一次委派、深度一层、超限明确拒绝；多工作 Bot 和对话内创建/配置仍未实现。
 

@@ -2,6 +2,10 @@
 
 > GK50 候选访问、Compose 和固定身份见[独立产品运行说明](docs/standalone-bot-gk50.md)。主 Bot、委派、头像和产品浏览器按[扩展计划](docs/standalone-bot-expansion-plan.md)逐片实现，[扩展验收](docs/acceptance/standalone-bot-expansion-test-results.md)单独记录；完成发布门禁前不发布正式 GHCR 镜像。
 
+> 已有真实验收证据：持久主 Bot、对话内创建和配置工作 Bot、真实 Codex 委派与结果汇总、自定义 PNG 头像；完整边界及对应镜像见扩展验收。
+
+> 当前 GK50 体验入口：[局域网](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443)。已放通内网来源，仍需访问码登录；获取方式见运行说明。浏览器能力仍受镜像门禁阻塞，未作为正式功能交付。
+
 <div align="center">
   <a href="https://deepseekbot.app">
 <picture>
