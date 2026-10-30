@@ -194,8 +194,13 @@ test('SB02/04/14: HTTP auth, origin, secret storage and live CLI', async () => {
         .status,
       403,
     );
-    assert.equal(allowedAddress('192.168.69.1'), false);
+    assert.equal(allowedAddress('192.168.69.1'), true);
     assert.equal(allowedAddress('192.168.68.11'), true);
+    assert.equal(allowedAddress('100.100.10.5'), true);
+    assert.equal(allowedAddress('fd12:3456::1'), true);
+    assert.equal(allowedAddress('::ffff:192.168.69.1'), true);
+    assert.equal(allowedAddress('8.8.8.8'), false);
+    assert.equal(allowedAddress('2001:4860::1'), false);
     const code = readFileSync(join(root, 'secrets', 'access-code'), 'utf8').trim();
     const login = await post('/api/v1/session', { code });
     assert.equal(login.status, 200);

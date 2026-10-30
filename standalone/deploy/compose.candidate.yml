@@ -14,9 +14,10 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:
-      - '192.168.68.11:20443:3080'
+      - '0.0.0.0:20443:3080'
     environment:
       BOT_PUBLIC_URL: http://192.168.68.11:20443
+      BOT_TRUSTED_URLS: '["http://192.168.68.12:20443","http://192.168.110.11:20443","http://10.250.250.1:20443"]'
     volumes:
       - type: bind
         source: ${BOT_CANDIDATE_DATA_DIR:?Use the isolated candidate data directory}

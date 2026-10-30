@@ -5,16 +5,17 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { BotApplication } from './application.ts';
 import { BotError, publicError, requireValue, text } from './errors.ts';
+import {
+  configuredTrustedUrls,
+  createNetworkAccessPolicy,
+  isPrivateOrLoopbackAddress,
+  trustedHost,
+  trustedOrigin,
+} from './network-access.ts';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 export function allowedAddress(address: string) {
-  const ip = address.replace(/^::ffff:/u, '');
-  return (
-    ip === '::1' ||
-    ip.startsWith('127.') ||
-    /^192\.168\.68\.(?:\d{1,3})$/u.test(ip) ||
-    ip === '172.17.0.1'
-  );
+  return isPrivateOrLoopbackAddress(address);
 }
 
 export async function startServer(options: {
@@ -22,6 +23,7 @@ export async function startServer(options: {
   port: number;
   host: string;
   publicUrl: string;
+  trustedUrls?: readonly string[];
 }) {
   process.umask(0o077);
   const publicUrl = new URL(options.publicUrl);
@@ -35,12 +37,8 @@ export async function startServer(options: {
     'invalid-public-url',
     '公开地址无效。',
   );
-  const loopbackHosts = new Set([`127.0.0.1:${options.port}`, `localhost:${options.port}`]);
-  for (const hostname of ['127.0.0.1', 'localhost']) {
-    const alias = new URL(publicUrl);
-    alias.hostname = hostname;
-    loopbackHosts.add(alias.host);
-  }
+  const trustedUrls = options.trustedUrls ?? configuredTrustedUrls(process.env.BOT_TRUSTED_URLS);
+  const networkPolicy = createNetworkAccessPolicy(publicUrl.href, trustedUrls, options.port);
   const app = new BotApplication(options.dataDir);
   const codeFile = join(app.storage.root, 'secrets', 'access-code');
   if (!existsSync(codeFile))
@@ -77,7 +75,7 @@ export async function startServer(options: {
       const path = req.url?.split('?')[0] ?? '/';
       const host = req.headers.host;
       requireValue(
-        host === publicUrl.host || loopbackHosts.has(host ?? ''),
+        trustedHost(host, networkPolicy),
         'host-not-allowed',
         'Host 不受信任。',
         403,
@@ -94,7 +92,7 @@ export async function startServer(options: {
         });
       if (req.method !== 'GET') {
         requireValue(
-          !req.headers.origin || req.headers.origin === publicUrl.origin,
+          !req.headers.origin || trustedOrigin(req.headers.origin, networkPolicy),
           'origin-not-allowed',
           '请求来源不受信任。',
           403,
@@ -261,6 +259,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       port,
       host,
       publicUrl: process.env.BOT_PUBLIC_URL ?? `http://127.0.0.1:${port}`,
+      trustedUrls: configuredTrustedUrls(process.env.BOT_TRUSTED_URLS),
     });
   } catch (error) {
     const code = error instanceof BotError ? error.code : 'startup-failed';
