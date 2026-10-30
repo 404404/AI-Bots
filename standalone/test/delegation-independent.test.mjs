@@ -1,11 +1,11 @@
-import {test} from 'node:test';
+import {test,after} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync} from 'node:fs';
+import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer} from 'node:http';
 import {BotApplication} from '../src/application.ts';
-const dir=()=>mkdtempSync(join(tmpdir(),'delegation-independent-'));
+const createdDirs=[];const dir=()=>{const root=mkdtempSync(join(tmpdir(),'delegation-independent-'));createdDirs.push(root);return root;};after(()=>{for(const root of createdDirs)rmSync(root,{recursive:true,force:true});});
 const owner=(app,command,params={})=>app.execute(command,params,{kind:'owner'});
 const wait=async(fn)=>{for(let i=0;i<150;i++){if(await fn())return;await new Promise(r=>setTimeout(r,20));}throw Error('fixture-timeout');};
 async function setup(){let calls=0;const pending=[];const model=createServer(async(req,res)=>{for await(const _ of req){}calls++;pending.push(res);});await new Promise(r=>model.listen(0,'127.0.0.1',r));const app=new BotApplication(dir());const main=(await owner(app,'main.get')).bot;const source=await owner(app,'bots.create',{slug:'source',name:'source'});const worker=await owner(app,'bots.create',{slug:'worker',name:'worker'});const other=await owner(app,'bots.create',{slug:'other',name:'other'});await owner(app,'bots.update',{botId:source.id,model:{provider:'compatible',baseUrl:`http://127.0.0.1:${model.address().port}`,model:'synthetic',keyless:false},apiKey:'synthetic-private-key-739'});return {app,main,source,worker,other,model,pending,get calls(){return calls},async close(){await app.close();model.closeAllConnections();await new Promise(r=>model.close(r));}};}

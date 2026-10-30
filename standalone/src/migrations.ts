@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { requireValue } from './errors.ts';
 import { unusedMainSlug } from './bot-identity.ts';
+import { avatarSchemaSql } from './avatars.ts';
 
 function transaction(db: DatabaseSync, fn: () => void) {
   db.exec('BEGIN IMMEDIATE');
@@ -30,7 +31,7 @@ function createV1(db: DatabaseSync) {
 /** Apply only known forward migrations. Every version transition commits atomically. */
 export function migrate(db: DatabaseSync) {
   let version = Number(db.prepare('PRAGMA user_version').get()?.user_version);
-  requireValue(Number.isInteger(version) && version >= 0 && version <= 4, 'schema-upgrade-required', '数据库版本不兼容。');
+  requireValue(Number.isInteger(version) && version >= 0 && version <= 5, 'schema-upgrade-required', '数据库版本不兼容。');
   if (version === 0) {
     transaction(db, () => {
       createV1(db);
@@ -133,7 +134,13 @@ export function migrate(db: DatabaseSync) {
     });
     version = 4;
   }
-  requireValue(version === 4, 'schema-upgrade-required', '数据库版本不兼容。');
+  if (version === 4) {
+    transaction(db, () => {
+      db.exec(`${avatarSchemaSql}\nPRAGMA user_version=5`);
+    });
+    version = 5;
+  }
+  requireValue(version === 5, 'schema-upgrade-required', '数据库版本不兼容。');
   const singleton = db.prepare('SELECT bot_id FROM main_bot WHERE singleton=1').get() as { bot_id?: string } | undefined;
   const rows = Number(db.prepare('SELECT count(*) AS n FROM main_bot').get()?.n);
   requireValue(rows === 1 && typeof singleton?.bot_id === 'string', 'main-bot-state-invalid', '主 Bot 身份记录损坏。', 500);

@@ -4,13 +4,15 @@
 
 ## 当前范围
 
-网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、persona、角色、配置版本、当前已实现能力、有效共享模型连接和最近持久化执行状态。可以从目录进入身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限。SQLite v1→v4 显式事务迁移创建唯一主 Bot、任务和连接授权表；不按名字收编旧 Bot，保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。
+网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、persona、角色、配置版本、头像、当前已实现能力、有效共享模型连接和最近持久化执行状态。可以从目录进入身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限。SQLite v1→v5 显式事务迁移创建唯一主 Bot、任务、连接授权和头像表；不按名字收编旧 Bot，保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。
 
 Bot 配置变更递增 `configRevision`。每个新 Run 在受理时记录对应的配置版本和非 secret 身份/模型快照；不包含 API key 或 Codex access/refresh token。后续编辑仅影响新的 Run。Web 与 CLI 共用 `BotApplication.execute` 业务入口；HTTP 适配器显式注入 owner 上下文。应用命令不从 params 读取 actor/isMain 权限，缺少可信上下文或使用 Bot 上下文的管理请求会拒绝。重启将未完成执行标为 `interrupted`，不会自动重发；断线重试必须保留原 `idempotencyKey`，同键不同正文返回冲突。
 
 主 Bot 的模型须在“Bot 管理目录”选择已配置的来源 Bot 并绑定；工作 Bot 委派也由所有者选择目标与连接来源。SQLite 只保存来源 Bot ID、模型授权 epoch 和明确授权引用，OAuth/API 凭据留在来源 Bot；请求开始前重查引用和授权版本，失效时明确拒绝且不回退到主 Bot 本地配置。Codex Auth 复用锁定的独立 SDK，支持设备码和浏览器登录，不复制旧 DSH 凭据。兼容 Chat Completions 服务是另一个明确选项，密钥只通过私密输入保存。
 
 主 Bot 的 Codex 对话使用 SDK 原生结构化 `toolCall` / `toolResult`，将一个 owner 已授权的工作 Bot 作为持久子任务执行，再由主模型汇总。worker 只收到任务明确输入、自己的 persona 和自己的有界文件记忆；不继承主对话历史。单进程最多同时运行 4 个根 Bot Run 和 2 个 worker/direct 任务（最多 6 个模型请求）；超限分别明确返回 `execution-capacity` 或 `task-capacity`，没有后台队列。每个根任务最多一个 worker、只支持一层委派；deadline、取消、幂等键、配置/记忆快照和带来源标记的结果均持久化。API/CLI 的 `tasks.create` 与模型工具使用同一 TaskEngine。目录分别呈现 Bot 自有模型配置与主 Bot 的有效共享连接；绑定变更递增主 Bot 配置版本。目录的能力来自实际实现和持久运行记录。
+
+每个 Bot 可在身份页上传、更换或删除 PNG 头像。服务端按文件内容校验，只接受不超过 2 MiB 的非交错 8 位 RGB/RGBA PNG（不支持灰度或调色板），输入边长最多 1024、像素最多 1,048,576；保存前去除元数据并缩放至最长边 256 像素，输出不超过 320 KiB。头像以 SQLite BLOB 和 SHA-256 revision 保存，页面通过登录保护的 revision URL 读取；列表、主标题、消息、管理目录和任务轨迹使用同一头像元数据。未上传时明确显示默认头像。头像不写入主机路径。完整校验合同见[头像实现说明](docs/avatars.md)。
 
 本切片尚未实现模型内创建/编辑工作 Bot（DG03）、多 worker/worker 间继续委派、排队调度、自动重试、浏览器或电脑控制。不会把这些标成当前能力，也不建立虚假的活动/任务记录。
 
@@ -70,6 +72,17 @@ node --experimental-strip-types standalone/src/cli.ts --help
 ```
 
 准确命令见 `--help`，包括 `main.get`、`main.catalog`、`connections.list/bind-main/revoke`、`delegation.grant/revoke`、`tasks.create/list/get/cancel` 和 `auth.status/start/answer/cancel/logout`。`connections.list` 默认每页100条，支持 `consumerBotId`、`limit`（1–100）和服务端签名的 `cursor`；每项包含稳定连接/来源/使用者 ID、`createdAt`、`revokedAt` 与当前状态。`main.catalog` 只返回主 Bot 当前绑定与未撤销的工作 Bot授权绑定，不包含历史连接记录。示例：
+
+头像命令使用同一登录会话和 AvatarStore。Web 上传与 CLI 都执行相同的 PNG 内容校验和 revision 比较；CLI 从本地普通 PNG 文件读取字节，不把文件路径发给服务端：
+
+```sh
+node --experimental-strip-types standalone/src/cli.ts avatar.set --bot-id <bot-id> --image-file <image.png>
+node --experimental-strip-types standalone/src/cli.ts avatar.set --bot-id <bot-id> --image-file <replacement.png> --expected-revision <current-sha256>
+node --experimental-strip-types standalone/src/cli.ts avatars.get --input-file <bot-id.json>
+node --experimental-strip-types standalone/src/cli.ts avatars.delete --input-file <bot-and-revision.json>
+```
+
+`avatar.set` 通过专用有界 `/api/v1/avatar` 路由上传 Base64 JSON；普通 `/api/v1/command` 请求体仍限制为 49 KiB。`avatars.get` 和 `avatars.delete` 是普通在线命令；图片本身仅能通过带会话认证的 `GET /api/v1/bots/<bot-id>/avatar/<revision>` 读取，URL 不包含主机文件路径。
 
 ```sh
 node --experimental-strip-types standalone/src/cli.ts connections.bind-main --input-file <source-bot.json>

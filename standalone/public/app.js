@@ -89,6 +89,19 @@ function node(tag, text, className) {
   if (className) item.className = className;
   return item;
 }
+function avatarVisual(metadata, label, size = 'sm', botId = metadata?.botId) {
+  const avatar = node('span', undefined, `avatar ${size}`);
+  avatar.setAttribute('role', 'img');
+  avatar.setAttribute('aria-label', metadata ? `${label}头像` : `${label}默认头像`);
+  if (botId) avatar.dataset.botId = botId;
+  if (metadata?.revision) {
+    const image = document.createElement('img');
+    image.alt = '';
+    image.src = `/api/v1/bots/${encodeURIComponent(metadata.botId)}/avatar/${metadata.revision}`;
+    avatar.append(image);
+  } else avatar.textContent = [...(label || '?')][0] ?? '?';
+  return avatar;
+}
 function id() {
   const source = globalThis.crypto;
   if (typeof source?.getRandomValues !== 'function')
@@ -139,7 +152,9 @@ function renderBots() {
   const nav = $('bots');
   nav.replaceChildren();
   for (const item of bots) {
-    const button = node('button', `${item.name}${item.id === mainBotId ? ' · 主 Bot' : ''}`);
+    const button = node('button', undefined, 'bot-nav-item');
+    button.append(avatarVisual(item.avatar, item.name, 'xs', item.id), node('span', `${item.name}${item.id === mainBotId ? ' · 主 Bot' : ''}`));
+    button.setAttribute('aria-label', `${item.name}${item.id === mainBotId ? ' · 主 Bot' : ''}`);
     button.setAttribute('aria-current', String(item.id === bot?.id));
     button.onclick = () => void selectBot(item.id).catch(showError);
     nav.append(button);
@@ -186,7 +201,8 @@ async function loadCatalog() {
   $('bot-catalog').replaceChildren();
   for (const item of catalog.items) {
     const card = node('article', undefined, 'catalog-card');
-    const title = node('h3', `${item.name} · ${item.role === 'main' ? '主 Bot' : '工作 Bot'}`);
+    const title = node('h3', undefined, 'catalog-heading');
+    title.append(avatarVisual(item.avatar, item.name, 'sm', item.id), node('span', `${item.name} · ${item.role === 'main' ? '主 Bot' : '工作 Bot'}`));
     const identity = node('p', `ID：${item.id} · slug：${item.slug}`);
     const persona = node('p', `角色：${item.persona || '未设置'}`);
     const modelState = item.role === 'main' && item.connectionStatus
@@ -205,6 +221,8 @@ async function loadCatalog() {
 function fillSettings() {
   if (!bot) return;
   $('bot-title').textContent = bot.name;
+  $('bot-title-avatar').replaceChildren(avatarVisual(bot.avatar, bot.name, 'sm', bot.id));
+  renderAvatarSettings();
   $('bot-name').value = bot.name;
   $('bot-persona').value = bot.persona;
   $('model-provider').value =
@@ -225,6 +243,77 @@ function fillSettings() {
     : '尚未配置凭据';
   providerFields();
   void refreshAuth().catch(showError);
+}
+function renderAvatarSettings() {
+  if (!bot) return;
+  const current = $('avatar-current');
+  current.replaceChildren();
+  const preview = node('div', undefined, 'avatar-preview');
+  preview.append(avatarVisual(bot.avatar, bot.name, 'lg', bot.id), node('p', bot.avatar
+    ? `已保存 · revision ${bot.avatar.revision}`
+    : '默认头像 · 尚未上传'));
+  current.append(preview);
+  $('avatar-delete').hidden = !bot.avatar;
+}
+async function readAvatarFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('无法读取所选图片。'));
+    reader.onload = () => {
+      const value = String(reader.result ?? '');
+      const comma = value.indexOf(',');
+      if (comma < 0) reject(new Error('图片数据无效。'));
+      else resolve(value.slice(comma + 1));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadAvatar() {
+  if (!bot) throw new Error('请先选择一个 Bot。');
+  const file = $('avatar-file').files?.[0];
+  if (!file) throw new Error('请选择 PNG 图片。');
+  if (file.size > 2 * 1024 * 1024) throw new Error('PNG 输入不能超过 2 MiB。');
+  const botId = bot.id;
+  const expectedRevision = bot.avatar?.revision ?? null;
+  const pngBase64 = await readAvatarFile(file);
+  const response = await fetch('/api/v1/avatar', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ botId, pngBase64, expectedRevision }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw Object.assign(new Error(data.error?.message ?? '头像未保存。'), { code: data.error?.code, status: response.status });
+  if (bot?.id === botId) $('avatar-file').value = '';
+  await refreshAvatarSurfaces(botId);
+  notice('头像已保存。');
+}
+async function deleteAvatar() {
+  if (!bot?.avatar) return;
+  const botId = bot.id;
+  const expectedRevision = bot.avatar.revision;
+  await command('avatars.delete', { botId, expectedRevision });
+  await refreshAvatarSurfaces(botId);
+  notice('头像已删除，当前使用默认头像。');
+}
+async function refreshAvatarSurfaces(botId) {
+  await refreshBots();
+  const updated = bots.find((item) => item.id === botId);
+  if (!updated) return;
+  if (bot?.id === botId) {
+    bot.avatar = updated.avatar;
+    $('bot-title-avatar').replaceChildren(avatarVisual(bot.avatar, bot.name, 'sm', bot.id));
+    renderAvatarSettings();
+  }
+  for (const element of document.querySelectorAll('.avatar[data-bot-id]')) {
+    if (element.dataset.botId === botId)
+      element.replaceWith(avatarVisual(updated.avatar, updated.name, element.classList.contains('lg') ? 'lg' : element.classList.contains('xs') ? 'xs' : 'sm', botId));
+  }
+  if (bot?.id === botId) {
+    const conversations = await all('conversations.list', { botId });
+    if (bot?.id === botId) renderConversations(conversations);
+  }
+  await loadCatalog();
 }
 function providerFields() {
   const codex = $('model-provider').value === 'openai-codex';
@@ -284,7 +373,9 @@ async function selectBot(botId) {
 function renderConversations(items) {
   $('conversations').replaceChildren();
   for (const item of items) {
-    const button = node('button', item.title);
+    const button = node('button', undefined, 'bot-nav-item');
+    button.append(avatarVisual(bot?.avatar, bot?.name ?? 'Bot', 'xs', bot?.id), node('span', item.title));
+    button.setAttribute('aria-label', item.title);
     button.setAttribute('aria-current', String(item.id === conversation?.id));
     button.onclick = () => void selectConversation(item).catch(showError);
     $('conversations').append(button);
@@ -326,20 +417,38 @@ async function refreshMessages() {
     if (bot?.id !== botId || conversation?.id !== conversationId) return;
     activeRun = page.runs[0] ?? null;
     const trace = $('task-trace');
-    trace.replaceChildren();
+    const traceOpen = trace.open;
+    const openResults = new Set([...trace.querySelectorAll('details.task-result[open]')].map((item) => item.dataset.taskId));
+    const traceItems = $('task-trace-items');
+    traceItems.replaceChildren();
     const tasks = (page.tasks ?? []).filter((task) => task.rootId === activeRun?.taskId);
     trace.hidden = tasks.length === 0;
     if (tasks.length) {
-      trace.append(node('h3', '委派任务'));
+      $('task-trace-summary').textContent = `委派任务 · ${tasks.length} 项 · ${tasks.map((task) => `${task.parentId ? '工作' : '主'} ${statusLabels[task.status] ?? task.status}`).join(' / ')}`;
       for (const task of tasks) {
         const article = node('article', undefined, 'task-card');
+        article.dataset.taskId = task.id;
         article.append(node('p', `${task.parentId ? '工作任务' : '主任务'} · ${statusLabels[task.status] ?? task.status} · Task ${task.id}`));
-        if (task.parentId) article.append(node('p', `执行 Bot：${task.executorBotId} · 父任务：${task.parentId}`));
+        if (task.parentId) {
+          const executor = bots.find((item) => item.id === task.executorBotId);
+          const identity = node('p', undefined);
+          identity.append(avatarVisual(executor?.avatar, executor?.name ?? task.executorBotId, 'xs', task.executorBotId),
+            node('span', `执行 Bot：${executor?.name ?? task.executorBotId} · ${task.executorBotId} · 父任务：${task.parentId}`));
+          article.append(identity);
+        }
         if (task.errorCode) article.append(node('p', `错误：${task.errorCode}`));
-        if (task.result) article.append(node('p', '工作结果是来源明确的未验证数据。'), node('pre', task.result));
-        trace.append(article);
+        if (task.result) {
+          const result = node('details', undefined, 'task-result');
+          result.dataset.taskId = task.id;
+          result.open = openResults.has(task.id);
+          result.append(node('summary', `${task.parentId ? '工作任务结果' : '任务结果'} · ${task.result.length} 字符`),
+            node('p', '以下内容是来源明确的未验证数据。'), node('pre', task.result));
+          article.append(result);
+        }
+        traceItems.append(article);
       }
     }
+    trace.open = traceOpen;
     const container = $('messages'),
       nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 80;
     container.replaceChildren();
@@ -351,6 +460,7 @@ async function refreshMessages() {
         'header',
         `${message.role === 'user' ? '你' : bot.name} · ${new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
       );
+      if (message.role === 'assistant') header.prepend(avatarVisual(bot.avatar, bot.name, 'xs', bot.id));
       const button = node('button', '复制');
       button.onclick = () => void copy(message.content);
       header.append(button);
@@ -400,6 +510,8 @@ async function enter() {
   renderBots();
   $('main-entry').onclick = () => void selectBot(mainBotId).then(() => view('chat')).catch(showError);
   $('catalog-entry').onclick = () => void loadCatalog().then(() => view('catalog')).catch(showError);
+  $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
+  $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
   $('grant-delegation').onclick = () => void (async () => {
     const workerBotId = $('grant-worker').value;
     const sourceBotId = $('grant-source').value;

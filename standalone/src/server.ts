@@ -82,6 +82,10 @@ export async function startServer(options: {
         'Host 不受信任。',
         403,
       );
+      if (req.method === 'GET' && path === '/favicon.ico') {
+        res.statusCode = 204;
+        return res.end();
+      }
       if (path === '/healthz' && req.method === 'GET')
         return send(app.closing ? 503 : 200, {
           product: 'standalone-bot',
@@ -121,12 +125,12 @@ export async function startServer(options: {
         !!app.storage.db
           .prepare('SELECT digest FROM auth_sessions WHERE digest=? AND expires_at>?')
           .get(session, Date.now());
-      async function body() {
+      async function body(maxBytes = 49152) {
         let size = 0;
         const chunks = [];
         for await (const chunk of req) {
           size += chunk.length;
-          requireValue(size <= 49152, 'body-too-large', '请求内容过大。', 413);
+          requireValue(size <= maxBytes, 'body-too-large', '请求内容过大。', 413);
           chunks.push(Buffer.from(chunk));
         }
         let value;
@@ -177,6 +181,25 @@ export async function startServer(options: {
           app.storage.db.prepare('DELETE FROM auth_sessions WHERE digest=?').run(session);
           res.setHeader('set-cookie', 'bot_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
           return send(200, { authenticated: false });
+        }
+        const avatarPath = /^\/api\/v1\/bots\/([^/]+)\/avatar\/([a-f0-9]{64})$/u.exec(path);
+        if (avatarPath && req.method === 'GET') {
+          requireValue(authenticated, 'unauthorized', '请先登录。', 401);
+          const botId = avatarPath[1]!;
+          const avatar = app.avatars.read(botId);
+          requireValue(avatar && avatar.revision === avatarPath[2], 'avatar-not-found', '头像不存在或已更改。', 404);
+          const png = Buffer.from(avatar.pngBase64, 'base64');
+          res.statusCode = 200;
+          res.setHeader('content-type', 'image/png');
+          res.setHeader('content-length', png.length);
+          res.setHeader('cache-control', 'private, no-store');
+          return res.end(png);
+        }
+        if (path === '/api/v1/avatar' && req.method === 'POST') {
+          requireValue(authenticated, 'unauthorized', '请先登录。', 401);
+          const input = await body(Math.ceil((2 * 1024 * 1024) / 3) * 4 + 2048);
+          const result = await app.execute('avatars.set', input, { kind: 'owner' });
+          return send(200, { schemaVersion: 1, result });
         }
         requireValue(
           path === '/api/v1/command' && req.method === 'POST',

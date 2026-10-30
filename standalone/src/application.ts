@@ -31,6 +31,7 @@ import { TaskEngine } from './task-engine.ts';
 import { TaskStore } from './task-store.ts';
 import { runMainTurn } from './root-run.ts';
 import type { CodexTransport } from './model-runner.ts';
+import { AvatarStore } from './avatars.ts';
 
 export type ExecutionContext = { kind: 'owner' } | { kind: 'bot'; botId: string };
 
@@ -84,6 +85,7 @@ export class BotApplication {
   auth: CodexAuth;
   connections: ConnectionResolver;
   tasks: TaskEngine;
+  avatars: AvatarStore;
   codexTransport?: CodexTransport;
   constructor(root: string, codexTransport?: CodexTransport) {
     this.storage = new Storage(root);
@@ -92,6 +94,7 @@ export class BotApplication {
       this.diag('codex-auth', botId, undefined, code, undefined, undefined, status),
     );
     this.connections = new ConnectionResolver(this.storage);
+    this.avatars = new AvatarStore(this.storage);
     this.tasks = new TaskEngine(this.storage, this.auth, this.connections,
       (botId) => this.memoryList(botId),
       (event, botId, taskId, code) => this.diag(event, botId, undefined, code, undefined, undefined, undefined, taskId));
@@ -144,6 +147,7 @@ export class BotApplication {
       isMain: isMainBot(this.storage.db, bot.id),
       mainConnection: connectionId ? this.connections.status(connectionId, bot.id) : null,
       credentialConfigured: !!bot.credential,
+      avatar: this.avatars.getMetadata(bot.id),
       createdAt: bot.created_at,
       updatedAt: bot.updated_at,
     };
@@ -308,10 +312,26 @@ export class BotApplication {
         .map((row) => ({ ...this.connections.status(row.connection_id, row.worker_bot_id), role: 'work' }));
       const connectionBindings = [...(mainConnection ? [mainConnection] : []), ...workerBindings];
       const bound = mainConnection;
-      const items = catalog.items.map((item) => item.role === 'main'
-        ? { ...item, connectionStatus: bound?.status ?? 'unbound' }
-        : item);
+      const items = catalog.items.map((item) => ({
+        ...item,
+        avatar: this.avatars.getMetadata(item.id),
+        ...(item.role === 'main' ? { connectionStatus: bound?.status ?? 'unbound' } : {}),
+      }));
       return { ...catalog, items, mainConnectionId, mainConnection, connectionBindings };
+    }
+    if (command === 'avatars.get') {
+      const bot = this.bot(params.botId);
+      const avatar = this.avatars.getMetadata(bot.id);
+      return { botId: bot.id, avatar,
+        url: avatar ? `/api/v1/bots/${encodeURIComponent(bot.id)}/avatar/${avatar.revision}` : null };
+    }
+    if (command === 'avatars.set') {
+      const bot = this.bot(params.botId);
+      return this.avatars.set(bot.id, params.pngBase64, params.expectedRevision);
+    }
+    if (command === 'avatars.delete') {
+      const bot = this.bot(params.botId);
+      return this.avatars.delete(bot.id, params.expectedRevision);
     }
     if (command === 'connections.list') {
       const consumerBotId = params.consumerBotId === undefined ? undefined : text(params.consumerBotId, 'Bot ID', 64);

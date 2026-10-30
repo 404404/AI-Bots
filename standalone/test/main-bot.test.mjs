@@ -15,7 +15,7 @@ test('v3 creates one stable main Bot, exposes catalog, and rejects model context
     const first = await app.executeOwner('main.get');
     assert.equal(first.bot.isMain, true);
     assert.equal((await app.executeOwner('main.get')).bot.id, first.bot.id);
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 4);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 5);
     const catalog = await app.executeOwner('main.catalog');
     assert.equal(catalog.mainBotId, first.bot.id);
     assert.equal(catalog.items[0].role, 'main');
@@ -60,6 +60,7 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
     DROP TABLE delegation_grants;
     DROP TABLE connection_grants;
     DROP TABLE model_connections;
+    DROP TABLE bot_avatars;
     DROP TABLE main_bot;
     ALTER TABLE runs DROP COLUMN task_id;
     ALTER TABLE bots DROP COLUMN config_revision;
@@ -83,7 +84,7 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
     const main = (await app.executeOwner('main.get')).bot;
     assert.notEqual(main.id, original.id);
     assert.notEqual(main.slug, 'main-bot');
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 4);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 5);
   } finally {
     await app.close();
   }
@@ -161,6 +162,7 @@ test('failed v1 migration rolls back all DDL and releases the lease for retry', 
     DROP TABLE delegation_grants;
     DROP TABLE connection_grants;
     DROP TABLE model_connections;
+    DROP TABLE bot_avatars;
     DROP TABLE main_bot;
     ALTER TABLE runs DROP COLUMN task_id;
     ALTER TABLE bots DROP COLUMN config_revision;
