@@ -1,18 +1,22 @@
 # GK50 独立 Bot 候选访问与部署
 
-这是新独立产品的候选。2026-10-29 最新 PX 复验已确认真实 Codex 登录、API 与 LAN 网页回复、明确保存的文件记忆更新及重启恢复；完整边界仍有部分验证项。主 Bot、委派、头像、产品浏览器正在按[扩展计划](standalone-bot-expansion-plan.md)实现并另行验收，不能用现有测试浏览器替代产品浏览器。群聊、IM、定时任务、Computer 和客户端继续延后。架构依据见 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)及[迁移评估](standalone-bot-migration.md)。
+这是新独立产品的候选。既有真实 Codex、明确保存的文件记忆、主 Bot、委派和头像证据分别见 PX 及扩展报告；2026-10-31 已将员工私聊第一片固定候选切到 20443。完整边界仍有部分验证项，群聊尚未实现，产品浏览器仍受镜像门禁阻塞；IM、定时任务、Computer 和客户端继续延后。架构依据见 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)、[ADR-0249](adr/0249-digital-employees-share-private-and-group-chat-surfaces.md)及[迁移评估](standalone-bot-migration.md)。
 
 ## 当前体验入口：20443
 
-当前用户复验已发现工作 Bot 直接私聊不可用及消息布局问题，正在按[数字员工用例](acceptance/standalone-digital-employee-test-cases-2026-10-30.md)修复；真实委派通过不等于私聊通过。尚未切换当前候选，访问地址与数据保留。
+当前为员工私聊候选 `e8721d4b`：工作 Bot 使用明确授权的来源直接私聊，发送左侧选择模型，来源统一在“来源与授权设置”管理，真实协作摘要进入聊天并可展开。旧历史从私聊中的“历史记录”访问，没有独立侧栏对话区。网页操作与 CLI/API 见[使用说明](../standalone/docs/digital-employee-guide.md)。真实模型、页面、重启和未覆盖项见[数字员工验收](acceptance/standalone-digital-employee-test-results-2026-10-30.md)，不能把本片当作全部能力交付。
 
 - EasyTier：<http://10.250.250.1:20443>；局域网：<http://192.168.68.11:20443>。
 - 容器：`gk50-standalone-bot-candidate`。两地址使用同一份独立数据和访问码，浏览器按地址分别建立登录会话。
 - 在 GK50 SSH 终端读取访问码并填网页；不要把实际输出发到聊天或提交：
 
 ```sh
-sudo cat /home/hermes/bots/.local/standalone-bot-candidate/data/secrets/access-code
+sudo cat /home/hermes/bots/.local/standalone-bot-candidate/data-v8-e8721d4b/secrets/access-code
 ```
+
+2026-10-31 当前固定镜像来自成功 [CI 41077763856](https://github.com/404404/AI-Bots/actions/runs/41077763856)，源码 `e8721d4b3627adbd31f658002170307533801a16`；本地 OCI manifest/runtime ID 为 `sha256:0b10be3931242ff0511f4654263e06c4f8d32c1d94b635bab9d909c78f3b4cea`，config 为 `sha256:919dea178dc70b06910df46d0f10bd55f7054d7d1cdc6b6695cf1b94b10a5566`，tar SHA-256 为 `387d163da955134ea6561307425a5868cf53a9d62d9b08563e13de7621c42366`。未在 GK50 重建、未正式发布 GHCR。
+
+实际挂载改为上述新的 schema 8 数据副本；旧 `data/` 保留 schema 6。迁移前全部 15 Bot、5 Conversation、6 Run、12 消息、12 Task、授权及原文件经独立比对保持，访问码和既有会话随副本保留。逐项门禁、实际 Compose、备份及回退命令见[部署记录](acceptance/standalone-employee-deployment-2026-10-30.md)。不要让旧镜像读取 schema 8，也不要把保留的旧 `data/` 误当当前写入目录。
 
 2026-10-30 用户明确授权整个内网及 EasyTier 来源。当前候选监听 `0.0.0.0:20443`；应用数值匹配 RFC1918、CGNAT、ULA 和 loopback 来源，并只接受部署配置的精确 Host/Origin，认证与 CSRF 保留，不信任转发 IP 头。允许地址还包括 GK50 的 `192.168.68.12` 和 `192.168.110.11`。配置合同见 [network-access.md](../standalone/docs/network-access.md)。IPv6 来源规则有单元证据，本机未验证 IPv6 ULA 监听。
 
@@ -47,9 +51,9 @@ sudo cat /home/hermes/bots/.local/standalone-bot/data/secrets/access-code
 
 ## Compose 与数据
 
-### 本轮扩展候选（独立于 22443）
+### 升级前的 schema 6 候选（历史，独立于 22443）
 
-当前源码 `e5444f66bb0bf43a79c3671e0e15e8d76d4e979f`，[CI 41016727806](https://github.com/404404/AI-Bots/actions/runs/41016727806) 成功归档；固定 OCI manifest 为 `sha256:e6619dcdb4370362049f4752a7c8ae90cb88139e2ceee83afc9dfb021caa7907`，config 为 `sha256:5f97ed928421d130a539091b9d1080a53cf32d2dd4a093104ddbb8b8a47198ef`，tar SHA256 `e03f27ab891fab8ddeb5d5d252f40d853bfa42998ee5d74473db6089d10b1f2f`。使用同一 CI 归档经分段 Content-Range、ZIP CRC、tar SHA 及 OCI 链验证后导入，未本机重建、未正式发布 GHCR。
+升级前源码 `e5444f66bb0bf43a79c3671e0e15e8d76d4e979f`，[CI 41016727806](https://github.com/404404/AI-Bots/actions/runs/41016727806) 成功归档；固定 OCI manifest 为 `sha256:e6619dcdb4370362049f4752a7c8ae90cb88139e2ceee83afc9dfb021caa7907`，config 为 `sha256:5f97ed928421d130a539091b9d1080a53cf32d2dd4a093104ddbb8b8a47198ef`，tar SHA256 `e03f27ab891fab8ddeb5d5d252f40d853bfa42998ee5d74473db6089d10b1f2f`。使用同一 CI 归档经分段 Content-Range、ZIP CRC、tar SHA 及 OCI 链验证后导入，未本机重建、未正式发布 GHCR。
 
 本次 schema 保持 6。升级前确认无活动任务，停止候选后完整私密备份到 `.local/standalone-bot-expansion/private/candidate-pre-network-e5444f66/`；访问码和数据保留。该目录保存前一固定镜像、Compose 快照和备份记录；仅代码回退可使用同 schema6 的前一镜像 `sha256:523f044c6eddf16810225903f8686ceea44fa68be34ecfcb2018d5958325d2f3` 及其匹配配置。恢复数据是独立动作，会丢弃备份之后的写入，不能将代码回退视作数据恢复。
 

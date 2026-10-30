@@ -6,6 +6,8 @@
 
 > GK50 preview: [LAN](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443). Private-network sources are allowed; access-code login remains required. See the runbook for local retrieval. The product browser remains blocked by its image qualification gate.
 
+> The 2026-10-31 employee private-chat preview is now on that entry: direct worker chat, model selection beside Send, global source settings and chronological summaries of real delegation. See the [usage guide](standalone/docs/digital-employee-guide.md), [independent acceptance](docs/acceptance/standalone-digital-employee-test-results-2026-10-30.md) and [immutable image/rollback record](docs/acceptance/standalone-employee-deployment-2026-10-30.md). Group chat is not implemented; the complete release gates remain unmet.
+
 <div align="center">
   <a href="https://deepseekbot.app/en/">
 <picture>

@@ -1,4 +1,26 @@
-# Independent product changes
+# Independent Bot changes / 独立 Bot 变更
+
+This ledger concerns the fork's `standalone/` product. The original project's ledgers and MIT attribution are retained separately. Entries below describe GK50 previews, not a published registry release.
+
+本记录只描述 fork 的 `standalone/` 产品。原项目变更记录与 MIT 归属单独保留。以下是 GK50 候选记录，不代表正式 registry 发布。
+
+## Unreleased — employee private chat / 员工私聊
+
+- Workers can use their explicitly authorized server-side model reference for direct private chat. The composer selects the model beside Send; model sources and private authorization are managed in global settings.
+- Real child-task summaries appear chronologically in chat, with canonical input, status, executor and result in a dialog. Legacy Conversations remain accessible from private-chat history without a separate sidebar section.
+- Schema 8 adds persistent private-chat pointers and explicit model choices. Requests retain stable IDs, idempotency, configuration snapshots and authorization checks, including revocation during execution. Old schema data must be backed up separately for rollback.
+- 工作 Bot 通过明确授权的服务端来源引用直接私聊，发送键左侧选择模型；来源与私密授权统一从全局设置管理。
+- 真实子任务摘要按发生时间进入聊天，弹窗读取同一持久任务的输入、状态、执行者和结果；旧 Conversation 从私聊历史访问，不再单独占侧栏区域。
+- schema 8 保存私聊指针及明确模型选择，保留稳定 ID、幂等、配置快照及执行中撤权检查；回退需另行保留旧 schema 数据。
+
+Source / 源码：[`e8721d4b`](https://github.com/404404/AI-Bots/commit/e8721d4b3627adbd31f658002170307533801a16)；CI：[41077763856](https://github.com/404404/AI-Bots/actions/runs/41077763856)。[Cases / 用例](../docs/acceptance/standalone-digital-employee-test-cases-2026-10-30.md) · [Results / 结果](../docs/acceptance/standalone-digital-employee-test-results-2026-10-30.md) · [Deployment / 部署](../docs/acceptance/standalone-employee-deployment-2026-10-30.md)。
+
+Group chat is not implemented. The product browser remains blocked by worker image qualification and is unavailable in this preview. These capabilities are not covered by the private-chat acceptance.
+
+群聊未实现；产品浏览器仍受 worker 镜像门禁阻塞，本候选不可用。私聊验收不代表上述能力交付。
+
+## Earlier implementation notes / 早期实现记录（保留原阶段结论）
+
 
 ## Unreleased — 协调策略与多任务 / Coordination policy and multiple tasks
 

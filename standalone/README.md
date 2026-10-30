@@ -1,6 +1,6 @@
 # GK50 独立 Bot — 0.1.0-alpha.1
 
-这是 `404404/AI-Bots` fork 的新独立产品方向，使用自己的后台、SQLite、文件记忆和加密凭据，不启动或调用 DSH Host。首片正在验收，不代表全部能力已迁移。依据见[迁移评估](../docs/standalone-bot-migration.md)，状态以[验收记录](../docs/acceptance/standalone-bot-test-results-2026-10-29.md)为准。MIT 许可证及归属见 LICENSE、NOTICE.md。
+这是 `404404/AI-Bots` fork 的新独立产品方向，使用自己的后台、SQLite、文件记忆和加密凭据，不启动或调用 DSH Host。候选按端到端切片验收，不代表全部能力已迁移。依据见[迁移评估](../docs/standalone-bot-migration.md)，状态以[验收记录](../docs/acceptance/standalone-bot-test-results-2026-10-29.md)为准。MIT 许可证及归属见 LICENSE、NOTICE.md。
 
 ## 当前范围
 
@@ -10,7 +10,7 @@ Bot 配置变更递增 `configRevision`。每个新 Run 在受理时记录对应
 
 每个 Bot 的私聊入口由 `private-chat.open` 幂等选择最近 Conversation，或只创建一次新 Conversation；旧线程保留并能在私聊里切换和续聊。模型选项由 `private-chat.models` 提供：员工直接私聊通过既有 delegation 引用读取已授权连接，选择和发送都校验稳定 `modelId` 及授权 epoch，不复制来源凭据。首次私聊不会自动选本地模型；本地 CLI 首次发起 Run 必须传 `selection`，或先用 `private-chat.select-model` 保存明确选择。没有选择时以 `model-selection-required` 拒绝且不调用模型。每次 Run 固定选择和上下文快照；重用幂等键改正文或模型会冲突。消息与真实子任务通过 `private-chat.timeline` 按发生时间和稳定 ID 分页，`private-chat.task-detail` 读取同一持久任务的输入、状态、结果或错误。完整字段及拒绝码见[数字员工私聊 API 契约](docs/digital-employee-contract.md)。
 
-主 Bot 的模型须在“Bot 管理目录”选择已配置的来源 Bot 并绑定；工作 Bot 委派也由所有者选择目标与连接来源。SQLite 只保存来源 Bot ID、模型授权 epoch 和明确授权引用，OAuth/API 凭据留在来源 Bot；请求开始前重查引用和授权版本，失效时明确拒绝且不回退到主 Bot 本地配置。Codex Auth 复用锁定的独立 SDK，支持设备码和浏览器登录，不复制旧 DSH 凭据。兼容 Chat Completions 服务是另一个明确选项，密钥只通过私密输入保存。
+主 Bot 的模型须在“来源与授权设置”选择已配置的来源 Bot 并绑定；工作 Bot 委派也由所有者选择目标与连接来源。SQLite 只保存来源 Bot ID、模型授权 epoch 和明确授权引用，OAuth/API 凭据留在来源 Bot；请求开始前重查引用和授权版本，失效时明确拒绝且不回退到主 Bot 本地配置。Codex Auth 复用锁定的独立 SDK，支持设备码和浏览器登录，不复制旧 DSH 凭据。兼容 Chat Completions 服务是另一个明确选项，密钥只通过私密输入保存。
 
 主 Bot 的 Codex 对话使用 SDK 原生结构化 `toolCall` / `toolResult`，最多执行 12 轮。所有者可在管理目录明确启用对话中的工作 Bot 管理，选择可配置目标与新 Bot 可用的主 Bot 连接引用；默认关闭创建。此开关只控制对话创建/修改，既有逐 Bot 委派授权继续独立有效。模型可创建最多 2 个工作 Bot、按稳定 ID 修改名称/persona，再对 owner 已授权工作 Bot 执行最多 3 个持久子任务；根级共最多 8 次工具调用，最多一层委派。创建只接受名称、persona 和允许的连接引用，更新只接受名称/persona；模型不能设置源 Bot、模型、凭据、权限、主身份或记忆。每个操作以真实工具调用 ID派生的作用域回执幂等；直接 API/CLI 调用需给明确 `operationId`。策略变更、撤权或连接 epoch 变化会使后续调用明确失败。
 
@@ -18,11 +18,15 @@ worker 只收到受理时锁定的明确输入、自己的 persona 和自己的�
 
 每个 Bot 可在身份页上传、更换或删除 PNG 头像。服务端按文件内容校验，只接受不超过 2 MiB 的非交错 8 位 RGB/RGBA PNG（不支持灰度或调色板），输入边长最多 1024、像素最多 1,048,576；保存前去除元数据并缩放至最长边 256 像素，输出不超过 320 KiB。头像以 SQLite BLOB 和 SHA-256 revision 保存，页面通过登录保护的 revision URL 读取；列表、主标题、消息、管理目录和任务轨迹使用同一头像元数据。未上传时明确显示默认头像。头像不写入主机路径。完整校验合同见[头像实现说明](docs/avatars.md)。
 
-**浏览器源码状态（未部署）**：schema7 接线已为网页和 CLI 实现 owner 直接控制的浏览器路径：所有者先授权当前 Bot 的精确 HTTP(S) origin，再创建独立、有限时的浏览会话，逐步打开地址、读取页面、点击、输入、滚动或保存截图。步骤、结果、截图 BLOB 和 session 状态保存在 canonical SQLite 任务轨迹中；截图读取要求已登录会话和匹配的 Bot/任务。未配置浏览器 worker socket 时，产品仍可启动并显示“网页操作暂不可用”，不会回退到宿主机浏览器或其他服务。此接线目前只有 fake UDS/受控测试证据，真实 worker 的严格镜像扫描失败，当前 GK50 schema6 候选没有这些浏览器命令；详见[阻塞记录](../docs/acceptance/standalone-browser-security-blocker-2026-10-30.md)。浏览器能力尚未接入模型工具；多层委派、排队调度和自动重试也未实现。
+**浏览器接线状态（功能未交付）**：schema7 接线已为网页和 CLI 实现 owner 直接控制的浏览器路径：所有者先授权当前 Bot 的精确 HTTP(S) origin，再创建独立、有限时的浏览会话，逐步打开地址、读取页面、点击、输入、滚动或保存截图。步骤、结果、截图 BLOB 和 session 状态保存在 canonical SQLite 任务轨迹中；截图读取要求已登录会话和匹配的 Bot/任务。未配置浏览器 worker socket 时，产品仍可启动并显示“网页操作暂不可用”，不会回退到宿主机浏览器或其他服务。此接线目前只有 fake UDS/受控测试证据，真实 worker 的严格镜像扫描失败；当前 GK50 schema8 候选不配置 worker socket，直接命令明确返回 browser-unavailable；详见[阻塞记录](../docs/acceptance/standalone-browser-security-blocker-2026-10-30.md)。浏览器能力尚未接入模型工具；多层委派、排队调度和自动重试也未实现。
 
 DG03 自动测试使用锁定 SDK 的真实工具参数校验器和受控本地 transport 验证协议及持久化；它不代表真实 Codex 模型会话或 LAN 验收已通过。
 
 群聊、IM、Assignment、多 Agent、定时任务、Git 记忆同步、浏览器、电脑控制及客户端延后。旧 `deepseekbot` 在线 CLI 的 Bot、Session、Channel Timeline、Activity、Assignment 仍属于旧部署；新 CLI 不伪造尚未迁移的能力，不作为 DevBoard 的第二套数据库。
+
+## 员工私聊候选
+
+网页路径、CLI/API 示例与不含 Credential 的响应见[使用说明](docs/digital-employee-guide.md)。私聊、模型选择和协作时间线的真实测试结果见[数字员工验收](../docs/acceptance/standalone-digital-employee-test-results-2026-10-30.md)，固定镜像与数据回退见[部署记录](../docs/acceptance/standalone-employee-deployment-2026-10-30.md)，独立产品阶段变化见[CHANGELOG](CHANGELOG.md)。群聊下一片尚未实现，产品浏览器仍不可用；原项目说明中的完整能力不能当作本独立候选的当前功能。
 
 ## 本地运行
 
@@ -51,13 +55,13 @@ node standalone/deploy/qualify.mjs --run-id <successful-run-id> --execute
 
 首次部署没有独立旧版本可回退，原部署和数据始终保留。后续升级保存新产品数据备份及前一镜像 ID；`--rollback` 检查，`--rollback --execute` 回退代码，不自动恢复备份。schema 不兼容时拒绝启动，需单独评估恢复。
 
-私聊首片的独立验收可使用 `deploy/compose.employee-preview.yml`：容器名 `gk50-employee-preview`、端口 23443、独立 `BOT_EMPLOYEE_DATA_DIR`，不会挂载当前候选或对照数据目录，也不配置浏览器 worker。该文件只是待验收 Compose 样例；启动前仍须重新确认端口空闲、数据目录为新建私有目录，并提供已验证的不可变 `IMAGE_REF`。本次实现没有执行该样例或切换任何运行服务。
+私聊首片的独立验收可使用 `deploy/compose.employee-preview.yml`：容器名 `gk50-employee-preview`、端口 23443、独立 `BOT_EMPLOYEE_DATA_DIR`，不会挂载当前候选或对照数据目录，也不配置浏览器 worker。该文件只是待验收 Compose 样例；启动前仍须重新确认端口空闲、数据目录为新建私有目录，并提供已验证的不可变 `IMAGE_REF`。2026-10-30/31 已按该样例在独立数据和 23443 验证固定候选，真实 Codex 私聊及委派、LAN 终态和重启恢复已有证据；临时模型授权和会话已清理、容器停止。通过独立迁移门禁后，同一固定镜像切到 20443，实际身份、数据、回退和剩余验收项见[部署记录](../docs/acceptance/standalone-employee-deployment-2026-10-30.md)。
 
 完整真实验收通过前不发布 GHCR。正式交付需以 `ghcr.io/404404/ai-bots@sha256:…` 固定 registry digest 部署；候选的本地 image ID 不等于已发布 registry digest。
 
 ## Codex 登录与代理
 
-模型页先保存供应商、模型和代理，再点击登录。容器代理可填 `http://host.docker.internal:7890`，不能填宿主机 `127.0.0.1`。显式 Undici dispatcher 处理授权和模型请求，模型强制 SSE。端口连通或环境变量存在不证明请求经过代理；日志给出脱敏路由与错误，验收另外检查实际路径。不支持包含用户名或密码的代理 URL。
+从“来源与授权设置”打开指定来源，先保存供应商、模型和代理，再点击登录。容器代理可填 `http://host.docker.internal:7890`，不能填宿主机 `127.0.0.1`。显式 Undici dispatcher 处理授权和模型请求，模型强制 SSE。端口连通或环境变量存在不证明请求经过代理；日志给出脱敏路由与错误，验收另外检查实际路径。不支持包含用户名或密码的代理 URL。
 
 浏览器登录若 localhost 回调无法连接，将完整回调地址粘贴到页面私密输入框，不要发送到聊天、日志或 Issue。设备码只向已登录用户显示。上游地区限制、账号权限或模型错误均明确失败，不自动改用别的服务。
 
@@ -123,7 +127,7 @@ node --experimental-strip-types standalone/src/cli.ts tasks.get --input-file <ta
 
 `main.get` 返回固定主 Bot 和实际入口 `/`；`main.catalog` 返回 Bot 列表及真实能力、共享连接状态和执行状态。`tasks.get` 包含受理时的非 secret 配置快照，以及实际读取的记忆文件路径/版本清单；不返回记忆正文或凭据。诊断事件用 `runId` 和 `taskId` 分别关联对应执行。任务内容从 stdin 或私密输入文件读取。命令从同一业务入口读取，不接受参数伪造 owner 上下文。状态不返回授权令牌。诊断只保存有界事件、执行 ID、错误码与上游状态，不记录请求正文或原始上游错误体。
 
-候选部署使用独立的 `deploy/compose.candidate.yml` 与 `deploy/candidate.mjs`，项目名/容器名为 `gk50-standalone-bot-candidate`，数据目录为仓库根 `.local/standalone-bot-candidate/data`，端口为 `192.168.68.11:20443`。该路径不调用生产 `qualify.mjs`，不改 22443 Compose。候选容器以 UID 10001、只读 rootfs、drop-all capabilities、no-new-privileges 运行；不设置 seccomp 覆盖，使用 Docker 默认 seccomp。操作者需先在目标机创建数据目录并设为 UID 10001、0700；`IMAGE_REF` 必须是已本地存在且标签匹配的 GHCR manifest digest，或用于开发验证的本地 `sha256:` image ID。helper 不执行 pull；显式 `--check` 只检查，实际启动还需显式 `--execute`。未通过独立验收前不得发布 GHCR。
+候选部署使用独立的 `deploy/compose.candidate.yml` 与 `deploy/candidate.mjs`，项目名/容器名为 `gk50-standalone-bot-candidate`，当前数据目录为仓库根 `.local/standalone-bot-candidate/data-v8-e8721d4b`（原 `data` 保留为 schema6 回退点），端口为 `192.168.68.11:20443`。该路径不调用生产 `qualify.mjs`，不改 22443 Compose。候选容器以 UID 10001、只读 rootfs、drop-all capabilities、no-new-privileges 运行；不设置 seccomp 覆盖，使用 Docker 默认 seccomp。操作者需先在目标机创建数据目录并设为 UID 10001、0700；`IMAGE_REF` 必须是已本地存在且标签匹配的 GHCR manifest digest，或用于开发验证的本地 `sha256:` image ID。helper 不执行 pull；显式 `--check` 只检查，实际启动还需显式 `--execute`。未通过独立验收前不得发布 GHCR。
 
 ## 数据边界
 

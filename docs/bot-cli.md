@@ -2,6 +2,8 @@
 
 ## Independent GK50 product CLI
 
+Employee private chat, explicit model selection, chronological task summaries and scoped task details are described in the [independent usage guide](../standalone/docs/digital-employee-guide.md) and [versioned command contract](../standalone/docs/digital-employee-contract.md). They use the independent service's authenticated owner session and canonical SQLite data; the original online read-only commands below keep their Host authority.
+
 The fork's independent web product has a separate authenticated CLI, documented in [standalone/README.md](../standalone/README.md#在线-api-与-cli). Run `node --experimental-strip-types standalone/src/cli.ts --help` for its current command contract. Main identity, owner-issued connection references, delegation grants and durable tasks use the same business implementation as its web API; parameters are read from stdin or a private input file. The independent CLI does not launch or call a DSH Host. Existing `deepseekbot` commands documented below retain their original Host authority; unmigrated Session, Channel Timeline, Activity and Assignment data are not fabricated in the independent product. Current implementation and acceptance limits are tracked in [the expansion report](acceptance/standalone-bot-expansion-test-results.md).
 
 Bot summaries from `list` also include `lastActivityAt` (epoch milliseconds) when committed Bot messages visible to the local Human or an Assignment report record activity. It survives later Channel messages and restart; missing means no recorded activity, not a creation or Channel-visit timestamp.

@@ -1,0 +1,13 @@
+# Example only for GK50 hosts that already have the historical gk50_bots_lan guard.
+# Do not blindly load on a new host without that guard. Back up the current ruleset
+# and validate with nft --check before applying. For a live rule, have the operator
+# precisely replace the existing matching rule to avoid duplicate rules; keep this
+# file for boot-time persistence. Individual source exclusions avoid an old nft
+# anonymous interval-set replace assertion.
+# AppAuth and HostOrigin checks remain active in the application.
+table inet gk50_bots_lan {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    ip daddr 192.168.68.11 tcp dport 20443 ip saddr != 127.0.0.0/8 ip saddr != 10.0.0.0/8 ip saddr != 172.16.0.0/12 ip saddr != 192.168.0.0/16 ip saddr != 100.64.0.0/10 counter reject with tcp reset
+  }
+}

@@ -6,6 +6,8 @@
 
 > 当前 GK50 体验入口：[局域网](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443)。已放通内网来源，仍需访问码登录；获取方式见运行说明。浏览器能力仍受镜像门禁阻塞，未作为正式功能交付。
 
+> 2026-10-31 员工私聊第一片已更新到上述入口：工作 Bot 直接私聊、发送左侧模型选择、全局来源设置及按时间展开的真实协作摘要。见[操作说明](standalone/docs/digital-employee-guide.md)、[独立验收](docs/acceptance/standalone-digital-employee-test-results-2026-10-30.md)和[固定镜像及回退记录](docs/acceptance/standalone-employee-deployment-2026-10-30.md)。群聊尚未实现，完整发布门禁未达到。
+
 <div align="center">
   <a href="https://deepseekbot.app">
 <picture>

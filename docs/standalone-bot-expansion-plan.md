@@ -1,14 +1,14 @@
 # GK50 独立 Bot 扩展交付计划
 
-## 当前检查点（2026-10-30）
+## 当前检查点（2026-10-31）
 
-用户体验复验追加了必须修复的产品问题：新工作 Bot 已有委派连接但不能直接私聊；模型入口和委派区仍沿用会话管理界面。当前优先按 [ADR-0249](adr/0249-digital-employees-share-private-and-group-chat-surfaces.md)交付“数字员工私聊、发送区模型选择、协作时间线”，再接真实群聊。[新用例](acceptance/standalone-digital-employee-test-cases-2026-10-30.md)先于实现编写，[新报告](acceptance/standalone-digital-employee-test-results-2026-10-30.md)单独记录，不能用下述旧委派通过结论推定私聊可用。
+用户反馈的工作 Bot 私聊、模型位置和协作展示已按 [ADR-0249](adr/0249-digital-employees-share-private-and-group-chat-surfaces.md)完成第一片：真实员工私聊、发送区模型选择、全局来源设置和协作时间线。固定镜像已在独立 23443 完成真实 Codex 与 LAN/重启终态验证，再经独立迁移/回退门禁切到 20443；整体边界仍有部分覆盖，先交用户体验，再接真实群聊。[新用例](acceptance/standalone-digital-employee-test-cases-2026-10-30.md)先于实现编写，[新报告](acceptance/standalone-digital-employee-test-results-2026-10-30.md)单独记录，不能用下述旧委派通过结论推定私聊可用。
 
-分支仍为 `feature/gui-container-codex-prototype`。当前 20443 候选源码为 `e5444f66bb0bf43a79c3671e0e15e8d76d4e979f`，来自成功 [CI 41016727806](https://github.com/404404/AI-Bots/actions/runs/41016727806) 的固定未发布镜像 `sha256:e6619dcdb4370362049f4752a7c8ae90cb88139e2ceee83afc9dfb021caa7907`，健康、schema6，未在 GK50 重建。访问 [LAN](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443)，访问码本机读取方式见[运行说明](standalone-bot-gk50.md)。22443 对照及停止的旧 GUI 保持原身份。
+分支仍为 `feature/gui-container-codex-prototype`。当前 20443 候选源码为 `e8721d4b3627adbd31f658002170307533801a16`，来自成功 [CI 41077763856](https://github.com/404404/AI-Bots/actions/runs/41077763856) 的固定未发布镜像 `sha256:0b10be3931242ff0511f4654263e06c4f8d32c1d94b635bab9d909c78f3b4cea`，健康、schema8，未在 GK50 重建。原 schema6 目录及完整备份保留，[部署记录](acceptance/standalone-employee-deployment-2026-10-30.md)区分镜像和数据回退。访问 [LAN](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443)，访问码本机读取方式见[运行说明](standalone-bot-gk50.md)。22443 对照及停止的旧 GUI 保持原身份。
 
 主身份、单工作 Bot 真实委派和自定义 PNG 头像已有各自固定候选的真实 LAN 证据。新候选修复每轮模型的授权目录：Terra 在真实 LAN 对话完成创建→修改→委派→结果回传，并完成两个不同工作 Bot 的结果汇总；具体 ID、版本、覆盖与未覆盖项见[逐项验收](acceptance/standalone-bot-expansion-test-results.md)。这不代表完整权限、故障及调度矩阵均通过。内网来源与精确 Host/Origin 修复后，两个地址分别通过真实浏览器登录及数据一致性验证；本机虚拟接口不代表远端 EasyTier 设备验收。
 
-浏览器直接工具 schema7 的 API/CLI/Web 接线已在工作区实现，隔离模拟测试与迁移/回退验证通过，**未部署**。浏览器 worker 的 [CI 41013969970](https://github.com/404404/AI-Bots/actions/runs/41013969970) 构建成功但严格扫描失败（66 HIGH、1 CRITICAL），后续真实沙箱/直接工具门禁未运行，没有可晋级产物；[阻塞依据](acceptance/standalone-browser-security-blocker-2026-10-30.md)已保存。未降低门禁或使用失败镜像。工作 Bot 模型浏览器工具仍未实现，按直接真实工具先通过的顺序推进。整体发布门禁未达到，不发布正式 GHCR，不切换 22443。
+浏览器直接工具 schema7 的 API/CLI/Web 接线随 schema8 镜像存在，但未配置 worker socket，只返回明确不可用；隔离模拟测试不代表真实功能交付。浏览器 worker 的 [CI 41013969970](https://github.com/404404/AI-Bots/actions/runs/41013969970) 构建成功但严格扫描失败（66 HIGH、1 CRITICAL），后续真实沙箱/直接工具门禁未运行，没有可晋级产物；[阻塞依据](acceptance/standalone-browser-security-blocker-2026-10-30.md)已保存。未降低门禁或使用失败镜像。工作 Bot 模型浏览器工具仍未实现，按直接真实工具先通过的顺序推进。整体发布门禁未达到，不发布正式 GHCR，不切换 22443。
 
 下列历史检查点保留当时状态，当前结论以本节及验收报告顶部为准。
 
@@ -26,7 +26,7 @@
 4. **自定义头像**：受认证资源 owner、内容解码/转换与格式/尺寸/字节上限，Web 和 CLI/API 上传/替换/删除同一对象；默认占位不算自定义头像。
 5. **浏览器直接工具**：部署层管理的非 root 浏览器执行容器，受限接口、目标授权与防重绑定/重定向限制、会话归属/清理、文本/点击/输入/滚动/截图；先证明隔离测试页的直接操作。
 6. **真实模型浏览器任务**：工作 Bot 的有界工具循环返回真实轨迹与结果，主 Bot 汇总；页面指令不改变权限，禁止真实第三方消息或交易。
-7. **发布**：针对性全回归、备份/迁移/代码及数据回退验证、完整证据；全部门禁达到后发布 GHCR 并以 registry digest 切换 22443。
+7. **发布**：针对性全回归、备份/迁移/代码及数据回退验证、完整证据；全部门禁达到后发布 GHCR 并以 registry digest 部署 GK50；本轮不切换 22443。
 
 每片由主代理先写用例，GPT 6 Luna 实现产品代码，主代理审查，GPT 6.1 Terra 独立执行。失败保留证据并交 Luna 修复。只使用本 fork；保持独立构建和 MIT 归属，不开发客户端或群晖。各片未实现部分明确保留，先提供第一片真实候选入口和证据，再扩展下一片。
 

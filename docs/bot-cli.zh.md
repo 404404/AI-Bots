@@ -2,6 +2,8 @@
 
 ## GK50 独立产品 CLI
 
+员工私聊、明确模型选择、按时间排序的任务摘要和限定范围的协作详情，见[独立使用说明](../standalone/docs/digital-employee-guide.md)及[版本化命令合同](../standalone/docs/digital-employee-contract.md)。这些命令使用独立服务的认证 owner 会话及 SQLite 数据；下文原在线只读命令仍由原 Host 持有数据权威。
+
 本 fork 的独立网页产品使用单独的认证 CLI，见 [standalone/README.md](../standalone/README.md#在线-api-与-cli)。执行 `node --experimental-strip-types standalone/src/cli.ts --help` 查看当前命令合同。主身份、所有者明确授权的连接引用、委派授权和持久任务均与网页 API 共用业务实现，参数从 stdin 或私密文件读取，不启动或调用 DSH Host。下文原 `deepseekbot` 在线命令仍由原 Host 持有数据权威；尚未迁移的 Session、Channel Timeline、Activity 和 Assignment 不在独立产品中伪造。当前实现和验收限制见[扩展验收报告](acceptance/standalone-bot-expansion-test-results.md)。
 
 `list` 返回的 Bot 摘要在有记录时包含 `lastActivityAt`（毫秒时间戳），来自本地用户可见的 Bot 消息或 Assignment 汇报。后续频道消息和重启不会覆盖它；缺省表示没有记录到活动，不会用创建时间或频道访问时间代替。
