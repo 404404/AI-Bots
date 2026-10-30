@@ -1,0 +1,148 @@
+services:
+  fixture:
+    image: standalone-browser-fixture:candidate
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: fixture
+      args: { SOURCE_REVISION: ${SOURCE_REVISION:?set immutable source revision} }
+    environment:
+      FIXTURE_HOST: fixture.test:8081
+    networks:
+      browser-internal:
+        ipv4_address: 172.31.240.10
+        aliases: [fixture.test]
+    read_only: true
+    tmpfs: [/tmp:size=8m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    pids_limit: 32
+
+  egress:
+    image: standalone-browser-proxy:candidate
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: proxy
+      args: { SOURCE_REVISION: ${SOURCE_REVISION:?set immutable source revision} }
+    environment:
+      BROWSER_TARGET_RULES: '{"http://fixture.test:8081":{"addresses":["172.31.240.10"],"allowPrivate":true}}'
+      BROWSER_PROXY_ADMIN_TOKEN: ${BROWSER_PROXY_ADMIN_TOKEN:?set a random 32+ character value}
+      BROWSER_PROXY_SOCKET: /run/browser-egress/proxy.sock
+      BROWSER_PROXY_ADMIN_SOCKET: /run/browser-egress/admin.sock
+    networks:
+      - browser-internal
+      - outbound
+    volumes: [browser-egress:/run/browser-egress]
+    read_only: true
+    tmpfs: [/tmp:size=8m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    pids_limit: 64
+    healthcheck:
+      test: [CMD, node, -e, "const fs=require('node:fs');for(const p of ['/run/browser-egress/proxy.sock','/run/browser-egress/admin.sock'])if(!fs.statSync(p).isSocket())process.exit(1)"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  worker:
+    image: standalone-browser-worker:candidate
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: worker
+      args: { SOURCE_REVISION: ${SOURCE_REVISION:?set immutable source revision} }
+    environment:
+      BROWSER_TARGET_RULES: '{"http://fixture.test:8081":{"addresses":["172.31.240.10"],"allowPrivate":true}}'
+      BROWSER_PROXY_ADMIN_TOKEN: ${BROWSER_PROXY_ADMIN_TOKEN:?set a random 32+ character value}
+      BROWSER_PROXY_ADMIN_SOCKET: /run/browser-egress/admin.sock
+      BROWSER_PROXY_SOCKET: /run/browser-egress/proxy.sock
+      BROWSER_PROXY_URL: http://127.0.0.1:8080
+      BROWSER_CONTROL_SOCKET: /run/browser-control/worker.sock
+      BROWSER_DATA_ROOT: /tmp/browser-sessions
+      BROWSER_BRIDGE_GATEWAY: 172.31.240.1
+      BROWSER_HOST_SENSITIVE_PORTS: "22,80,443,2375,2376,22443"
+    network_mode: none
+    volumes:
+      - browser-control:/run/browser-control
+      - browser-egress:/run/browser-egress:ro
+    read_only: true
+    tmpfs: [/tmp:size=384m,mode=0700,uid=10001,gid=10001]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=./chromium-userns-seccomp.json
+    mem_limit: 1536m
+    cpus: 2.0
+    pids_limit: 128
+    depends_on:
+      egress:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "require('node:http').get({socketPath:'/run/browser-control/worker.sock',path:'/health'},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 25s
+
+  gateway:
+    image: standalone-browser-gateway:candidate
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: gateway
+      args: { SOURCE_REVISION: ${SOURCE_REVISION:?set immutable source revision} }
+    environment:
+      BROWSER_CONTROL_TOKEN: ${BROWSER_CONTROL_TOKEN:?set a random 32+ character value}
+      BROWSER_CONTROL_SOCKET: /run/browser-control/worker.sock
+      BROWSER_GATEWAY_PORT: "8090"
+      BROWSER_GATEWAY_HOST: 0.0.0.0
+    networks: [control-internal]
+    volumes: [browser-control:/run/browser-control:ro]
+    read_only: true
+    tmpfs: [/tmp:size=8m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    pids_limit: 32
+    depends_on:
+      worker:
+        condition: service_healthy
+
+  e2e:
+    profiles: [e2e]
+    image: standalone-browser-gateway:candidate
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: gateway
+      args: { SOURCE_REVISION: ${SOURCE_REVISION:?set immutable source revision} }
+    command: [node, scripts/e2e.mjs]
+    environment:
+      BROWSER_CONTROL_TOKEN: ${BROWSER_CONTROL_TOKEN:?set a random 32+ character value}
+      BROWSER_GATEWAY_URL: http://gateway:8090
+    networks: [control-internal]
+    depends_on: [gateway]
+    read_only: true
+    tmpfs: [/tmp:size=8m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    pids_limit: 32
+
+networks:
+  browser-internal:
+    internal: true
+    ipam:
+      config: [{ subnet: 172.31.240.0/24, gateway: 172.31.240.1 }]
+  control-internal:
+    internal: true
+  outbound:
+    driver: bridge
+
+volumes:
+  browser-control: {}
+  browser-egress: {}

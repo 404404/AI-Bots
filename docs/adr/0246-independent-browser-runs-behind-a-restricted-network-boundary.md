@@ -12,7 +12,7 @@
 
 1. 部署层管理专用、独立构建的 browser worker 和受限出口。应用无 Docker socket、容器管理 API 或任意命令执行接口。worker 非 root，保留 Chromium namespace/seccomp 沙箱；不得使用 `--no-sandbox`、privileged 或 host network。只沿用已批准的 chroot 与仅 PID namespace 的 clone 例外，不扩大例外。
 2. 业务模块创建带 Bot ID/task ID 的会话，只有可信调用上下文可指定归属。每会话独立 browser context/cookie/storage、私有临时目录和受限资源预算。命令仅支持 navigate、read、click、type、scroll、screenshot、close；无任意 JavaScript、shell、文件读取、上传和下载接口。
-3. 浏览器出口采用默认拒绝的网络隔离与受限代理；页面请求拦截是第二层校验。不能单独依靠初次 URL 检查或 Playwright route。目标授权由所有者设置，模型工具不能更改。首个真实验收只授权隔离测试站点的精确 origin，不授权已有产品网页、宿主服务或第三方账号。
+3. 浏览器执行容器使用 `network_mode: none`，只有 loopback；通过 Unix socket 与受限出口代理通信，页面请求拦截是第二层校验。仅有 Docker internal network 不能证明宿主 bridge INPUT 不可达，不能作为该边界的充分证据。代理容器的网络由部署管理，浏览器不能直连该网络。不能单独依靠初次 URL 检查或 Playwright route。目标授权由所有者设置，模型工具不能更改。首个真实验收只授权隔离测试站点的精确 origin，不授权已有产品网页、宿主服务或第三方账号。该方案仍须实际容器验证，不能从配置推定通过。
 4. 代理在每次请求/CONNECT 上校验协议、规范化主机、端口、DNS 返回地址和规则。连接使用本次校验的确定地址，重定向后的目标重新验证；不接受云元数据、文件协议、任意回环/链路本地/私网地址。LAN 特例须精确 origin 和限定地址，且不能覆盖整个局域网。浏览器不能绕过代理直连、访问云元数据或通过 DNS 变化获得额外地址。
 5. 禁止任意 WebSocket/额外协议、账号登录、持久 cookie 共享、上传下载、第三方消息和交易。点击/输入首片只面向明确授权测试站点；文档说明这仍可能改变测试站点状态。以后开放外部副作用须单独的业务授权边界。
 6. worker 控制接口仅内部网络可达，并验证独立服务凭据、会话租约与操作序号。控制凭据与浏览器页面隔离，不能进入工具参数、模型上下文、截图、日志或返回值。应用 owner 会话不能作为 worker 页面凭据。

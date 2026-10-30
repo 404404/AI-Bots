@@ -1,0 +1,97 @@
+name: Standalone Browser Candidate
+on:
+  push:
+    branches: [feature/gui-container-codex-prototype]
+    paths: ['standalone/browser/**', '.github/workflows/standalone-browser.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: standalone-browser-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  qualify:
+    if: github.repository == '404404/AI-Bots' && github.ref == 'refs/heads/feature/gui-container-codex-prototype'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Browser module tests and syntax checks on pinned Node image
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD/standalone/browser:/work" -w /work node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 npm ci
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges:true -v "$PWD/standalone/browser:/work:ro" -w /work node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 sh -ec 'npm test && for file in src/*.mjs fixture/*.mjs scripts/*.mjs test/*.mjs; do node --check "$file"; done'
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Build fixture-only images without publishing
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for target in worker proxy gateway fixture; do
+            docker build --pull --platform linux/amd64 --build-arg "SOURCE_REVISION=$SOURCE_REVISION" --target "$target" -t "standalone-browser-$target:candidate" -f standalone/browser/Dockerfile standalone/browser
+          done
+      - name: Scan worker image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: standalone-browser-worker:candidate
+          format: table
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Scan proxy image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: standalone-browser-proxy:candidate
+          format: table
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Scan gateway image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: standalone-browser-gateway:candidate
+          format: table
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Scan fixture image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: standalone-browser-fixture:candidate
+          format: table
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+      - name: Run real Chromium sandbox and fixture E2E gates
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          export BROWSER_CONTROL_TOKEN="$(openssl rand -hex 32)"
+          export BROWSER_PROXY_ADMIN_TOKEN="$(openssl rand -hex 32)"
+          trap 'docker compose -f standalone/browser/deploy/compose.example.yml --profile e2e down -v --remove-orphans' EXIT
+          docker compose -f standalone/browser/deploy/compose.example.yml --profile e2e up --no-build --abort-on-container-exit --exit-code-from e2e
+      - name: Save candidate image archive and identity record
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_ACTIONS: 'true'
+        run: |
+          docker save standalone-browser-worker:candidate standalone-browser-proxy:candidate standalone-browser-gateway:candidate standalone-browser-fixture:candidate -o standalone-browser-candidate.tar
+          node standalone/browser/scripts/candidate-record.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: standalone-browser-candidate-${{ github.sha }}
+          path: |
+            standalone-browser-candidate.tar
+            standalone-browser-candidate.json
+          if-no-files-found: error
+          retention-days: 7
