@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Type, validateToolCall } from '@earendil-works/pi-ai';
 import type { Tool, ToolCall, ToolResultMessage } from '@earendil-works/pi-ai';
 import type { Storage } from './storage.ts';
@@ -7,14 +8,16 @@ import { TaskStore } from './task-store.ts';
 import { completeCodex } from './codex-model.ts';
 import { completeModel, type ModelConfig } from './model.ts';
 import { BotError, requireValue } from './errors.ts';
+import { WorkerManagement, type WorkerManagementScope } from './worker-management.ts';
 
 export type ExecutionScope = Readonly<{
   rootTaskId: string;
   taskId: string;
   executorBotId: string;
-  allowedTools: readonly ['delegate_to_worker'];
+  allowedTools: readonly string[];
   allowedWorkerIds: readonly string[];
   allowedConnections: Readonly<Record<string, string>>;
+  managementScope: WorkerManagementScope;
   remainingDepth: 1;
   deadlineAt: number;
 }>;
@@ -25,6 +28,25 @@ export const delegateTool: Tool = {
   parameters: Type.Object({
     workerId: Type.String({ minLength: 1, maxLength: 64 }),
     task: Type.String({ minLength: 1, maxLength: 12000 }),
+  }, { additionalProperties: false }),
+};
+
+export const createWorkerTool: Tool = {
+  name: 'create_worker',
+  description: '按所有者启用的范围创建工作 Bot，并绑定一个允许的新 Bot 使用的共享连接引用。',
+  parameters: Type.Object({
+    name: Type.String({ minLength: 1, maxLength: 100 }),
+    persona: Type.String({ maxLength: 8000 }),
+    connectionId: Type.String({ minLength: 1, maxLength: 64 }),
+  }, { additionalProperties: false }),
+};
+export const updateWorkerTool: Tool = {
+  name: 'update_worker',
+  description: '只修改所有者允许管理的工作 Bot 名称或身份提示，使用稳定 workerId。',
+  parameters: Type.Object({
+    workerId: Type.String({ minLength: 1, maxLength: 64 }),
+    name: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
+    persona: Type.Optional(Type.String({ maxLength: 8000 })),
   }, { additionalProperties: false }),
 };
 
@@ -39,6 +61,7 @@ export class TaskEngine {
   storage: Storage;
   auth: CodexAuth;
   connections: ConnectionResolver;
+  management: WorkerManagement;
   memoryRead: (botId: string) => { path: string; body: string; revision: string }[];
   log: (event: string, botId: string, taskId?: string, code?: string) => void;
   constructor(
@@ -47,10 +70,12 @@ export class TaskEngine {
     connections: ConnectionResolver,
     memoryRead: (botId: string) => { path: string; body: string; revision: string }[],
     log: (event: string, botId: string, taskId?: string, code?: string) => void,
+    management: WorkerManagement,
   ) {
     this.storage = storage;
     this.auth = auth;
     this.connections = connections;
+    this.management = management;
     this.memoryRead = memoryRead;
     this.log = log;
     this.store = new TaskStore(storage);
@@ -59,15 +84,45 @@ export class TaskEngine {
   scope(mainBotId: string, rootTaskId: string): ExecutionScope {
     const root = this.store.get(rootTaskId);
     const snapshot = JSON.parse(root.config_snapshot ?? '{}') as { delegations?: { workerBotId: string; connectionId: string }[] };
+    const managementScope = this.management.scope(rootTaskId, root.config_snapshot);
     const allowedConnections = Object.fromEntries((snapshot.delegations ?? []).map((item) => [item.workerBotId, item.connectionId]));
     const current = this.storage.db.prepare("SELECT worker_bot_id,connection_id FROM delegation_grants WHERE main_bot_id=? AND revoked_at IS NULL ORDER BY worker_bot_id").all(mainBotId) as { worker_bot_id: string; connection_id: string }[];
     const grants = current.filter((item) => allowedConnections[item.worker_bot_id] === item.connection_id &&
       this.connections.status(item.connection_id, item.worker_bot_id).status === 'available');
     return Object.freeze({ rootTaskId, taskId: rootTaskId, executorBotId: mainBotId,
-      allowedTools: Object.freeze(['delegate_to_worker']) as readonly ['delegate_to_worker'],
+      allowedTools: Object.freeze(['delegate_to_worker']),
       allowedWorkerIds: Object.freeze(grants.map((row) => row.worker_bot_id)),
-      allowedConnections: Object.freeze(allowedConnections), remainingDepth: 1,
+      allowedConnections: Object.freeze(allowedConnections), managementScope, remainingDepth: 1,
       deadlineAt: time(root.deadline_at) });
+  }
+
+  modelTools(scope: ExecutionScope): Tool[] {
+    const tools: Tool[] = [];
+    const policy = scope.managementScope.policy;
+    if (scope.allowedWorkerIds.length || (policy.enabled && policy.allowCreation)) tools.push(delegateTool);
+    if (policy.enabled) {
+      tools.push(updateWorkerTool);
+      if (policy.allowCreation) tools.push(createWorkerTool);
+    }
+    return tools;
+  }
+
+  managementDirectory(scope: ExecutionScope) {
+    const policy = scope.managementScope.policy;
+    const rows = this.storage.db.prepare(`SELECT id,name,persona FROM bots WHERE id IN (${policy.allowedWorkerIds.length ? policy.allowedWorkerIds.map(() => '?').join(',') : "''"}) ORDER BY id`)
+      .all(...policy.allowedWorkerIds) as { id: string; name: string; persona: string }[];
+    const connections = policy.allowedConnectionIds.map((id) => {
+      try {
+        const reference = this.connections.status(id, scope.managementScope.mainBotId);
+        return `- connectionId: ${reference.id}; sourceBotId: ${reference.sourceBotId}; ${reference.provider}/${reference.model}; ${reference.status}`;
+      } catch { return `- connectionId: ${id}; unavailable`; }
+    });
+    return [
+      `管理策略 revision ${policy.revision}; enabled=${policy.enabled}; allowCreation=${policy.allowCreation}`,
+      `可管理的稳定 workerId：\n${rows.map((row) => `- ${row.name} (workerId: ${row.id})：${row.persona.slice(0, 1000)}`).join('\n') || '- none'}`,
+      `创建可用连接：\n${connections.join('\n') || '- none'}`,
+      `现有已授权委派目标：\n${this.authorizedWorkerDirectory(scope)}`,
+    ].join('\n\n');
   }
 
   authorizedWorkerDirectory(scope: ExecutionScope) {
@@ -160,11 +215,15 @@ export class TaskEngine {
     await Promise.allSettled([...this.directJobs]);
   }
 
-  async delegate(scope: ExecutionScope, call: ToolCall, signal: AbortSignal): Promise<ToolResultMessage> {
+  async delegate(scope: ExecutionScope, call: ToolCall, signal: AbortSignal,
+    reservation: ReturnType<TaskStore['beginTool']>): Promise<ToolResultMessage> {
     const timestamp = Date.now();
-    let toolStarted = false;
+    let toolStarted = !reservation.replayed && !reservation.budgetExceeded;
     try {
-      const validated = validateToolCall([delegateTool], call) as { workerId: string; task: string };
+      if (reservation.budgetExceeded) return this.toolResult(call, JSON.stringify({ error: 'tool-budget-exceeded' }), true, timestamp);
+      let validated: { workerId: string; task: string };
+      try { validated = validateToolCall([delegateTool], call) as { workerId: string; task: string }; }
+      catch { throw new BotError('invalid-tool-call', '工具参数不符合允许的格式。', 400); }
       requireValue(scope.taskId === scope.rootTaskId && scope.executorBotId && scope.remainingDepth === 1,
         'delegation-scope-invalid', '当前执行范围不允许委派。', 403);
       requireValue(scope.deadlineAt > Date.now(), 'task-deadline-exceeded', '任务已超过截止时间。', 504);
@@ -174,25 +233,26 @@ export class TaskEngine {
       requireValue(root.executor_bot_id === mainId && scope.executorBotId === mainId,
         'delegation-main-only', '只有主 Bot 可以委派任务。', 403);
       const args = validated;
-      requireValue(scope.allowedWorkerIds.includes(args.workerId) && args.workerId !== mainId,
+      const policyTargets = scope.managementScope.policy.enabled ? this.management.allowedTargets(scope.managementScope) : [];
+      requireValue((scope.allowedWorkerIds.includes(args.workerId) || policyTargets.includes(args.workerId)) && args.workerId !== mainId,
         'delegation-target-forbidden', '此工作 Bot 未获所有者授权。', 403);
       const grant = this.storage.db.prepare(`SELECT worker_bot_id,connection_id FROM delegation_grants
         WHERE main_bot_id=? AND worker_bot_id=? AND revoked_at IS NULL`).get(mainId, args.workerId) as { worker_bot_id: string; connection_id: string } | undefined;
       requireValue(grant, 'delegation-grant-revoked', '工作 Bot 的委派授权已撤销。', 409);
-      requireValue(scope.allowedConnections[args.workerId] === grant.connection_id,
+      const createdForRoot = !!this.storage.db.prepare('SELECT 1 FROM worker_management_scope_targets WHERE root_task_id=? AND bot_id=?')
+        .get(scope.rootTaskId, args.workerId);
+      requireValue((createdForRoot && policyTargets.includes(args.workerId)) || scope.allowedConnections[args.workerId] === grant.connection_id,
         'delegation-scope-changed', '委派授权在此运行开始后发生变化。', 409);
       const worker = this.storage.db.prepare('SELECT id,name,persona,config_revision FROM bots WHERE id=?').get(args.workerId) as { id: string; name: string; persona: string; config_revision: number } | undefined;
       requireValue(worker, 'not-found', '工作 Bot 不存在。', 404);
       const connection = this.connections.resolve(grant.connection_id, worker.id);
-      const task = this.store.beginTool(scope.rootTaskId, call.id, call.name,
-        JSON.stringify({ arguments: args, workerId: args.workerId, connectionId: grant.connection_id, sourceModelEpoch: connection.sourceModelEpoch }), now());
-      if (task.replayed) {
-        const output = task.result ?? JSON.stringify({ error: task.errorCode ?? 'tool-result-unavailable' });
-        return this.toolResult(call, output, !!task.errorCode, timestamp);
+      if (reservation.replayed) {
+        const output = reservation.result ?? JSON.stringify({ error: reservation.errorCode ?? 'tool-result-unavailable' });
+        return this.toolResult(call, output, !!reservation.errorCode, timestamp);
       }
-      toolStarted = true;
       requireValue(this.active.size < 2, 'task-capacity', '当前任务执行数已达上限。', 409);
-      requireValue(this.store.byRoot(scope.rootTaskId).length < 3, 'task-budget-exceeded', '根任务最多创建一个工作任务。', 409);
+      const childCount = Number(this.storage.db.prepare('SELECT count(*) AS n FROM tasks WHERE root_id=? AND parent_id IS NOT NULL').get(scope.rootTaskId)?.n);
+      requireValue(childCount < 3, 'task-budget-exceeded', '每个根任务最多创建三个工作任务。', 409);
       const model = connection.config;
       const files = this.memoryRead(worker.id);
       requireValue(files.reduce((sum, file) => sum + Buffer.byteLength(file.body), 0) <= 24576,
@@ -245,6 +305,71 @@ export class TaskEngine {
       this.log('task-refused', scope.executorBotId, scope.taskId, code);
       return this.toolResult(call, JSON.stringify({ error: code }), true, timestamp);
     }
+  }
+
+  async executeManagementTool(scope: ExecutionScope, call: ToolCall,
+    reservation: ReturnType<TaskStore['beginTool']>): Promise<ToolResultMessage> {
+    const timestamp = Date.now();
+    let started = !reservation.replayed && !reservation.budgetExceeded;
+    try {
+      if (reservation.budgetExceeded) return this.toolResult(call, JSON.stringify({ error: 'tool-budget-exceeded' }), true, timestamp);
+      requireValue(scope.taskId === scope.rootTaskId && scope.executorBotId === scope.managementScope.mainBotId,
+        'worker-management-scope-invalid', '当前执行范围不允许管理工作 Bot。', 403);
+      requireValue(scope.deadlineAt > Date.now(), 'task-deadline-exceeded', '任务已超过截止时间。', 504);
+      const root = this.store.get(scope.rootTaskId);
+      requireValue(root.status === 'running', 'task-not-running', '根任务不在活动状态。', 409);
+      if (reservation.replayed) this.management.assertCurrent(scope.managementScope);
+      const tool = call.name === createWorkerTool.name ? createWorkerTool : updateWorkerTool;
+      let args: Record<string, unknown>;
+      try { args = validateToolCall([tool], call) as Record<string, unknown>; }
+      catch { throw new BotError('invalid-tool-call', '工具参数不符合允许的格式。', 400); }
+      const operationId = createHash('sha256').update(`${scope.rootTaskId}\0${call.id}\0${call.name}`).digest('hex');
+      if (reservation.replayed) {
+        const kind = call.name === createWorkerTool.name ? 'create' : 'update';
+        this.management.assertReplayScope(scope.managementScope, kind, args);
+        if (!reservation.errorCode) this.management.operationReceipt(scope.managementScope, operationId, kind, args);
+        return this.toolResult(call, reservation.result ?? JSON.stringify({ error: reservation.errorCode ?? 'tool-result-unavailable' }),
+          !!reservation.errorCode, timestamp);
+      }
+      let result: Record<string, unknown>;
+      if (call.name === createWorkerTool.name) {
+        const creates = Number(this.storage.db.prepare(`SELECT count(*) AS n FROM worker_management_operations
+          WHERE root_task_id=? AND kind='create'`).get(scope.rootTaskId)?.n);
+        requireValue(creates < 2, 'worker-create-budget-exceeded', '每个根任务最多创建两个工作 Bot。', 409);
+        result = this.management.create(scope.managementScope, operationId, args.name, args.persona, args.connectionId);
+      } else {
+        const { workerId, ...patch } = args;
+        result = this.management.update(scope.managementScope, operationId, workerId, patch);
+      }
+      const serialized = JSON.stringify({ source: 'owner-scoped-worker-management', ...result });
+      this.store.finishTool(scope.rootTaskId, call.id, serialized, null, now());
+      return this.toolResult(call, serialized, false, timestamp);
+    } catch (error) {
+      const code = error instanceof BotError ? error.code : 'worker-management-failed';
+      if (started) this.store.finishTool(scope.rootTaskId, call.id, JSON.stringify({ error: code }), code, now());
+      this.log('worker-management-refused', scope.executorBotId, scope.taskId, code);
+      return this.toolResult(call, JSON.stringify({ error: code }), true, timestamp);
+    }
+  }
+
+  async executeTool(scope: ExecutionScope, call: ToolCall, signal: AbortSignal): Promise<ToolResultMessage> {
+    const timestamp = Date.now();
+    let reservation: ReturnType<TaskStore['beginTool']>;
+    try {
+      reservation = this.store.beginTool(scope.rootTaskId, call.id, call.name,
+        JSON.stringify({ arguments: call.arguments ?? null }), now());
+    } catch (error) {
+      const code = error instanceof BotError ? error.code : 'tool-call-invalid';
+      return this.toolResult(call, JSON.stringify({ error: code }), true, timestamp);
+    }
+    if (call.name === delegateTool.name) return this.delegate(scope, call, signal, reservation);
+    if (call.name === createWorkerTool.name || call.name === updateWorkerTool.name)
+      return this.executeManagementTool(scope, call, reservation);
+    if (reservation.budgetExceeded) return this.toolResult(call, JSON.stringify({ error: 'tool-budget-exceeded' }), true, timestamp);
+    if (reservation.replayed) return this.toolResult(call, reservation.result ?? JSON.stringify({ error: reservation.errorCode ?? 'tool-not-allowed' }), true, timestamp);
+    const output = JSON.stringify({ error: 'tool-not-allowed' });
+    this.store.finishTool(scope.rootTaskId, call.id, output, 'tool-not-allowed', now());
+    return this.toolResult(call, output, true, timestamp);
   }
 
   private async runWorker(taskId: string, botId: string, botName: string, persona: string, input: string, config: ModelConfig, encryptedCredential: string | null,

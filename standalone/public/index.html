@@ -29,7 +29,7 @@
       </form>
     </section>
     <div id="workspace" class="workspace" hidden>
-      <aside class="sidebar">
+      <aside id="bot-sidebar" class="sidebar">
         <header class="brand">
           <span class="brandmark small">B</span><strong>GK50 Bot</strong>
         </header>
@@ -49,8 +49,10 @@
           <span class="status-dot"></span>独立网页预览<button id="logout">退出</button>
         </footer>
       </aside>
+      <button id="nav-scrim" class="nav-scrim" aria-label="关闭 Bot 导航"></button>
       <main>
         <header class="main-header">
+          <button id="mobile-bots-toggle" class="mobile-nav-toggle" type="button" aria-controls="bot-sidebar" aria-expanded="false">☰ Bots</button>
           <div>
             <p class="eyebrow">你的专属对话空间</p>
             <div class="bot-title-row"><span id="bot-title-avatar"></span><h1 id="bot-title">选择或创建一个 Bot</h1></div>
@@ -106,6 +108,18 @@
             <label>连接来源<select id="grant-source"></select></label>
             <button id="grant-delegation" type="button">授权委派</button>
             <div id="delegation-grants" aria-live="polite"></div>
+          </section>
+          <section class="grant-panel worker-policy-settings">
+            <h3>对话中的工作 Bot 管理</h3>
+            <p class="muted fine">关闭时仍保留逐个 Bot 的现有委派授权；此策略只控制主 Bot 能否在对话中创建或修改工作 Bot。模型只能改名称和身份提示，不能改凭据、模型、授权或记忆。</p>
+            <label class="check"><input id="worker-policy-enabled" type="checkbox" />允许主 Bot 在对话中管理工作 Bot</label>
+            <label class="check"><input id="worker-policy-create" type="checkbox" />允许主 Bot 创建工作 Bot</label>
+            <label>可修改的工作 Bot<select id="worker-policy-targets" multiple size="5"></select></label>
+            <label>新工作 Bot 可使用的连接<select id="worker-policy-connections" multiple size="4"></select></label>
+            <label>将模型来源授权给主 Bot<select id="worker-policy-source"></select></label>
+            <button id="worker-policy-grant-source" type="button">添加可共享连接</button>
+            <button id="worker-policy-save" type="button">保存管理范围</button>
+            <p id="worker-policy-status" class="muted fine" aria-live="polite"></p>
           </section>
           <div id="bot-catalog" class="bot-catalog"></div>
         </section>

@@ -55,10 +55,15 @@ try {
           'runs.cancel',
           'connections.list',
           'connections.bind-main',
+          'connections.grant-main',
           'connections.unbind-main',
           'connections.revoke',
           'delegation.grant',
           'delegation.revoke',
+          'worker-policy.get',
+          'worker-policy.update',
+          'workers.create',
+          'workers.update',
           'tasks.create',
           'tasks.list',
           'tasks.get',
@@ -77,7 +82,7 @@ try {
           'auth.logout',
         ],
         notes:
-          'Missing input-file: JSON from stdin. Use avatar.set --bot-id ID --image-file PNG [--expected-revision HASH] for a PNG upload. Secrets never belong in argv. Run IDs and paging cursors are returned unchanged.',
+          'Missing input-file: JSON from stdin. Use avatar.set --bot-id ID --image-file PNG [--expected-revision HASH] for a PNG upload. workers.create/workers.update require explicit operationId; secrets never belong in argv. Run IDs and paging cursors are returned unchanged.',
       }) + '\n',
     );
   } else {

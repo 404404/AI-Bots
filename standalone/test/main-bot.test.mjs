@@ -9,13 +9,13 @@ import { BotApplication } from '../src/application.ts';
 
 const dir = () => mkdtempSync(join(tmpdir(), 'standalone-main-'));
 
-test('v3 creates one stable main Bot, exposes catalog, and rejects model context for owner operations', async () => {
+test('v6 creates one stable main Bot, exposes catalog, and rejects model context for owner operations', async () => {
   const app = new BotApplication(dir());
   try {
     const first = await app.executeOwner('main.get');
     assert.equal(first.bot.isMain, true);
     assert.equal((await app.executeOwner('main.get')).bot.id, first.bot.id);
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 5);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 6);
     const catalog = await app.executeOwner('main.catalog');
     assert.equal(catalog.mainBotId, first.bot.id);
     assert.equal(catalog.items[0].role, 'main');
@@ -55,6 +55,9 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
 
   const raw = new DatabaseSync(join(root, 'bot.sqlite'));
   raw.exec(`
+    DROP TABLE worker_management_scope_targets;
+    DROP TABLE worker_management_operations;
+    DROP TABLE worker_management_policy;
     DROP TABLE task_tool_calls;
     DROP TABLE tasks;
     DROP TABLE delegation_grants;
@@ -84,7 +87,7 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
     const main = (await app.executeOwner('main.get')).bot;
     assert.notEqual(main.id, original.id);
     assert.notEqual(main.slug, 'main-bot');
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 5);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 6);
   } finally {
     await app.close();
   }
@@ -157,6 +160,9 @@ test('failed v1 migration rolls back all DDL and releases the lease for retry', 
   await app.close();
   const db = new DatabaseSync(join(root, 'bot.sqlite'));
   db.exec(`
+    DROP TABLE worker_management_scope_targets;
+    DROP TABLE worker_management_operations;
+    DROP TABLE worker_management_policy;
     DROP TABLE task_tool_calls;
     DROP TABLE tasks;
     DROP TABLE delegation_grants;

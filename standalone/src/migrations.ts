@@ -31,7 +31,7 @@ function createV1(db: DatabaseSync) {
 /** Apply only known forward migrations. Every version transition commits atomically. */
 export function migrate(db: DatabaseSync) {
   let version = Number(db.prepare('PRAGMA user_version').get()?.user_version);
-  requireValue(Number.isInteger(version) && version >= 0 && version <= 5, 'schema-upgrade-required', '数据库版本不兼容。');
+  requireValue(Number.isInteger(version) && version >= 0 && version <= 6, 'schema-upgrade-required', '数据库版本不兼容。');
   if (version === 0) {
     transaction(db, () => {
       createV1(db);
@@ -140,7 +140,42 @@ export function migrate(db: DatabaseSync) {
     });
     version = 5;
   }
-  requireValue(version === 5, 'schema-upgrade-required', '数据库版本不兼容。');
+  if (version === 5) {
+    transaction(db, () => {
+      db.exec(`
+        CREATE TABLE worker_management_policy(
+          singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+          enabled INTEGER NOT NULL CHECK(enabled IN (0,1)),
+          allow_creation INTEGER NOT NULL CHECK(allow_creation IN (0,1)),
+          allowed_worker_ids TEXT NOT NULL,
+          allowed_connection_ids TEXT NOT NULL,
+          revision INTEGER NOT NULL CHECK(revision>=1),
+          updated_at TEXT NOT NULL
+        );
+        INSERT INTO worker_management_policy(singleton,enabled,allow_creation,allowed_worker_ids,allowed_connection_ids,revision,updated_at)
+          VALUES(1,0,0,'[]','[]',1,datetime('now'));
+        CREATE TABLE worker_management_operations(
+          operation_id TEXT PRIMARY KEY,
+          root_task_id TEXT REFERENCES tasks(id),
+          kind TEXT NOT NULL CHECK(kind IN ('create','update')),
+          arguments_hash TEXT NOT NULL,
+          bot_id TEXT NOT NULL REFERENCES bots(id),
+          response_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+        CREATE TABLE worker_management_scope_targets(
+          root_task_id TEXT NOT NULL REFERENCES tasks(id),
+          bot_id TEXT NOT NULL REFERENCES bots(id),
+          operation_id TEXT NOT NULL REFERENCES worker_management_operations(operation_id),
+          created_at TEXT NOT NULL,
+          PRIMARY KEY(root_task_id,bot_id)
+        );
+        PRAGMA user_version=6;
+      `);
+    });
+    version = 6;
+  }
+  requireValue(version === 6, 'schema-upgrade-required', '数据库版本不兼容。');
   const singleton = db.prepare('SELECT bot_id FROM main_bot WHERE singleton=1').get() as { bot_id?: string } | undefined;
   const rows = Number(db.prepare('SELECT count(*) AS n FROM main_bot').get()?.n);
   requireValue(rows === 1 && typeof singleton?.bot_id === 'string', 'main-bot-state-invalid', '主 Bot 身份记录损坏。', 500);

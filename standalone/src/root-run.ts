@@ -1,6 +1,6 @@
 import type { AssistantMessage, Message, UserMessage } from '@earendil-works/pi-ai';
 import { completeCodexTurn, type CodexTransport } from './model-runner.ts';
-import { delegateTool, TaskEngine } from './task-engine.ts';
+import { TaskEngine } from './task-engine.ts';
 import { BotError, requireValue } from './errors.ts';
 import type { ModelMessage } from './model.ts';
 
@@ -21,16 +21,15 @@ export async function runMainTurn(args: {
   systemPrompt: string; history: ModelMessage[]; sessionId: string;
   proxyUrl: string; signal: AbortSignal; engine: TaskEngine; mainBotId: string; rootTaskId: string;
   transport?: CodexTransport;
+  completeTurn?: typeof completeCodexTurn;
 }) {
   const systemPrompt = args.systemPrompt;
   const messages: Message[] = args.history.filter((item) => item.role !== 'system').map(historyMessage);
   const scope = args.engine.scope(args.mainBotId, args.rootTaskId);
-  const canDelegate = scope.allowedWorkerIds.length > 0;
-  let toolsUsed = false;
-  for (let turn = 0; turn < 3; turn++) {
+  for (let turn = 0; turn < 12; turn++) {
     const access = args.getAccess ? await args.getAccess() : args.access;
-    const response = await completeCodexTurn({ modelId: args.modelId, access,
-      systemPrompt, messages, tools: canDelegate && !toolsUsed ? [delegateTool] : undefined,
+    const response = await (args.completeTurn ?? completeCodexTurn)({ modelId: args.modelId, access,
+      systemPrompt, messages, tools: args.engine.modelTools(scope),
       proxyUrl: args.proxyUrl, sessionId: args.sessionId, signal: args.signal, transport: args.transport,
       beforeRequest: args.authorizeRequest });
     const calls = response.content.filter((part) => part.type === 'toolCall');
@@ -41,9 +40,10 @@ export async function runMainTurn(args: {
     }
     messages.push(response as AssistantMessage);
     for (const call of calls) {
-      toolsUsed = true;
-      const result = await args.engine.delegate(scope, call, args.signal);
+      const result = await args.engine.executeTool(scope, call, args.signal);
       messages.push(result);
+      if (args.engine.store.toolError(scope.rootTaskId, call.id) === 'tool-budget-exceeded')
+        throw new BotError('tool-budget-exceeded', '此根执行最多允许八次工具调用。', 409);
     }
   }
   throw new BotError('tool-turn-limit', '主 Bot 工具调用超过本次运行限制。', 409);

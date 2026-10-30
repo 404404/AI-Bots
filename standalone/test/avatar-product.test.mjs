@@ -40,7 +40,7 @@ function png(metadataSize = 0, color = [40, 120, 80, 255]) {
 }
 const owner = (app, command, params = {}) => app.execute(command, params, { kind: 'owner' });
 
-test('schema 4 fixture migrates transactionally to schema 5 without changing Bot identity', async (t) => {
+test('schema 4 fixture migrates transactionally to schema 6 without changing Bot identity', async (t) => {
   const root = dir();
   let app = new BotApplication(root);
   const bot = await owner(app, 'bots.create', { slug: 'avatar-migration', name: 'Avatar fixture' });
@@ -48,11 +48,11 @@ test('schema 4 fixture migrates transactionally to schema 5 without changing Bot
   await app.close();
 
   const db = new DatabaseSync(join(root, 'bot.sqlite'));
-  db.exec('DROP TABLE bot_avatars; PRAGMA user_version=4;');
+  db.exec('DROP TABLE worker_management_scope_targets; DROP TABLE worker_management_operations; DROP TABLE worker_management_policy; DROP TABLE bot_avatars; PRAGMA user_version=4;');
   db.close();
   app = new BotApplication(root);
   try {
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 5);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 6);
     assert.equal((await owner(app, 'bots.get', { botId: bot.id })).id, bot.id);
     assert.equal((await owner(app, 'main.get')).bot.id, main);
     assert.equal((await owner(app, 'avatars.get', { botId: bot.id })).avatar, null);

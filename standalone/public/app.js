@@ -6,6 +6,7 @@ let bots = [],
   activeRun = null,
   memoryRevision = null,
   memoryPath = null,
+  workerPolicyRevision = 0,
   polling = false;
 let noticeTimer;
 let authPolling = false;
@@ -182,6 +183,31 @@ async function loadCatalog() {
   });
   $('grant-source').replaceChildren(...sourceOptions());
   $('main-source').replaceChildren(...sourceOptions());
+  const policy = catalog.workerManagementPolicy;
+  workerPolicyRevision = policy.revision;
+  const targetSelect = $('worker-policy-targets');
+  targetSelect.replaceChildren(...workers.map((item) => {
+    const option = node('option', `${item.name} · ${item.id}`);
+    option.value = item.id;
+    option.selected = policy.allowedWorkerIds.includes(item.id);
+    return option;
+  }));
+  const policyConnections = catalog.mainConnectionRefs;
+  $('worker-policy-connections').replaceChildren(...policyConnections.map((reference) => {
+    const source = catalog.items.find((item) => item.id === reference.sourceBotId);
+    const option = node('option', `${source?.name ?? reference.sourceBotId} · ${reference.provider}/${reference.model} · ${reference.id}`);
+    option.value = reference.id;
+    option.selected = policy.allowedConnectionIds.includes(reference.id);
+    return option;
+  }));
+  $('worker-policy-enabled').checked = policy.enabled;
+  $('worker-policy-create').checked = policy.allowCreation;
+  $('worker-policy-source').replaceChildren(...sources.map((item) => {
+    const option = node('option', `${item.name} · ${item.id}`);
+    option.value = item.id;
+    return option;
+  }));
+  $('worker-policy-status').textContent = `策略版本 ${policy.revision} · ${policy.enabled ? '对话管理已启用' : '对话管理已关闭'}；关闭不会撤销现有委派授权。`;
   const byId = new Map(catalog.items.map((item) => [item.id, item]));
   const mainConnection = catalog.mainConnection;
   $('main-connection').textContent = mainConnection
@@ -352,7 +378,16 @@ async function refreshAuth() {
     authPolling = false;
   }
 }
+function closeMobileNav() {
+  document.body.classList.remove('mobile-nav-open');
+  $('mobile-bots-toggle').setAttribute('aria-expanded', 'false');
+}
+function toggleMobileNav() {
+  const open = document.body.classList.toggle('mobile-nav-open');
+  $('mobile-bots-toggle').setAttribute('aria-expanded', String(open));
+}
 async function selectBot(botId) {
+  closeMobileNav();
   const selected = await command('bots.get', { botId });
   bot = selected;
   conversation = null;
@@ -382,6 +417,7 @@ function renderConversations(items) {
   }
 }
 async function selectConversation(item) {
+  closeMobileNav();
   conversation = item;
   activeRun = null;
   view('chat');
@@ -509,7 +545,7 @@ async function enter() {
   $('main-entry').textContent = `${main.bot.name} · 主 Bot`;
   renderBots();
   $('main-entry').onclick = () => void selectBot(mainBotId).then(() => view('chat')).catch(showError);
-  $('catalog-entry').onclick = () => void loadCatalog().then(() => view('catalog')).catch(showError);
+  $('catalog-entry').onclick = () => { closeMobileNav(); void loadCatalog().then(() => view('catalog')).catch(showError); };
   $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
   $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
   $('grant-delegation').onclick = () => void (async () => {
@@ -519,6 +555,24 @@ async function enter() {
     await command('delegation.grant', { workerBotId, sourceBotId });
     await loadCatalog();
     notice('委派授权已保存。工作 Bot 使用来源连接的服务端引用。');
+  })().catch(showError);
+  $('worker-policy-save').onclick = () => void (async () => {
+    await command('worker-policy.update', {
+      enabled: $('worker-policy-enabled').checked,
+      allowCreation: $('worker-policy-create').checked,
+      allowedWorkerIds: Array.from($('worker-policy-targets').selectedOptions, (option) => option.value),
+      allowedConnectionIds: Array.from($('worker-policy-connections').selectedOptions, (option) => option.value),
+      expectedRevision: workerPolicyRevision,
+    });
+    await loadCatalog();
+    notice('工作 Bot 管理范围已保存。');
+  })().catch(showError);
+  $('worker-policy-grant-source').onclick = () => void (async () => {
+    const sourceBotId = $('worker-policy-source').value;
+    if (!sourceBotId) throw new Error('请先为模型来源 Bot 配置模型和授权。');
+    await command('connections.grant-main', { sourceBotId });
+    await loadCatalog();
+    notice('模型连接已授权给主 Bot，可加入新工作 Bot 管理范围。');
   })().catch(showError);
   $('bind-main-source').onclick = () => void (async () => {
     const sourceBotId = $('main-source').value;
@@ -554,6 +608,11 @@ $('logout').onclick = () =>
     })
     .catch(showError);
 $('new-bot').onclick = () => $('bot-dialog').showModal();
+$('mobile-bots-toggle').onclick = toggleMobileNav;
+$('nav-scrim').onclick = closeMobileNav;
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMobileNav();
+});
 $('dismiss-create').onclick = () => $('bot-dialog').close();
 $('dismiss-copy').onclick = () => $('copy-dialog').close();
 form('create-form', async () => {

@@ -76,19 +76,28 @@ export class TaskStore {
   }
   beginTool(taskId: string, callId: string, name: string, argsJson: string, at: string) {
     const digest = hash(canonical(JSON.parse(argsJson))), db = this.storage.db;
-    const existing = db.prepare('SELECT * FROM task_tool_calls WHERE task_id=? AND tool_call_id=?').get(taskId, callId) as { arguments_hash: string; status: string; result: string | null; error_code: string | null } | undefined;
+    const existing = db.prepare('SELECT * FROM task_tool_calls WHERE task_id=? AND tool_call_id=?').get(taskId, callId) as { arguments_hash: string; tool_name: string; status: string; result: string | null; error_code: string | null } | undefined;
     if (existing) {
-      requireValue(existing.arguments_hash === digest && name === 'delegate_to_worker', 'tool-call-id-conflict', '工具调用 ID 已绑定其他参数。', 409);
+      requireValue(existing.arguments_hash === digest && name === existing.tool_name, 'tool-call-id-conflict', '工具调用 ID 已绑定其他参数。', 409);
       requireValue(existing.status !== 'running', 'tool-call-in-progress', '此工具调用仍在执行，拒绝重复副作用。', 409);
-      return { replayed: true, result: existing.result, errorCode: existing.error_code };
+      return { replayed: true, budgetExceeded: existing.error_code === 'tool-budget-exceeded', result: existing.result, errorCode: existing.error_code };
     }
-    const count = Number(db.prepare('SELECT count(*) AS n FROM task_tool_calls WHERE task_id=?').get(taskId)?.n);
-    requireValue(count < 1, 'tool-budget-exceeded', '此执行范围的工具预算已用完。', 409);
-    db.prepare("INSERT INTO task_tool_calls(task_id,tool_call_id,tool_name,arguments_hash,status,created_at) VALUES(?,?,?,?,'running',?)").run(taskId, callId, name, digest, at);
-    return { replayed: false as const, result: null, errorCode: null };
+    const count = Number(db.prepare(`SELECT count(*) AS n FROM task_tool_calls tc
+      JOIN tasks t ON t.id=tc.task_id WHERE t.root_id=(SELECT root_id FROM tasks WHERE id=?)
+        AND COALESCE(tc.error_code,'')<>'tool-budget-exceeded'`).get(taskId)?.n);
+    if (count >= 8) {
+      db.prepare(`INSERT INTO task_tool_calls(task_id,tool_call_id,tool_name,arguments_hash,status,error_code,created_at,finished_at)
+        VALUES(?,?,?,?,'failed','tool-budget-exceeded',?,?)`).run(taskId, callId, name.slice(0, 100), digest, at, at);
+      return { replayed: false as const, budgetExceeded: true, result: null, errorCode: 'tool-budget-exceeded' };
+    }
+    db.prepare("INSERT INTO task_tool_calls(task_id,tool_call_id,tool_name,arguments_hash,status,created_at) VALUES(?,?,?,?,'running',?)").run(taskId, callId, name.slice(0, 100), digest, at);
+    return { replayed: false as const, budgetExceeded: false, result: null, errorCode: null };
   }
   finishTool(taskId: string, callId: string, result: string | null, errorCode: string | null, at: string) {
     this.storage.db.prepare("UPDATE task_tool_calls SET status=?,result=?,error_code=?,finished_at=? WHERE task_id=? AND tool_call_id=? AND status='running'").run(errorCode ? 'failed' : 'completed', result, errorCode, at, taskId, callId);
+  }
+  toolError(taskId: string, callId: string) {
+    return (this.storage.db.prepare('SELECT error_code FROM task_tool_calls WHERE task_id=? AND tool_call_id=?').get(taskId, callId) as { error_code: string | null } | undefined)?.error_code ?? null;
   }
   get(id: string): Task {
     const row = this.storage.db.prepare('SELECT * FROM tasks WHERE id=?').get(id) as Task | undefined;
@@ -150,6 +159,7 @@ export class TaskStore {
         .filter((key) => model[key] !== undefined).map((key) => [key, model[key]])) } : {}),
       ...(snapshot.connection && typeof snapshot.connection === 'object' ? { connection: snapshot.connection } : {}),
       ...(Array.isArray(snapshot.delegations) ? { delegations: snapshot.delegations } : {}),
+      ...(snapshot.workerManagement && typeof snapshot.workerManagement === 'object' ? { workerManagement: snapshot.workerManagement } : {}),
       ...(typeof snapshot.sourceBotId === 'string' ? { sourceBotId: snapshot.sourceBotId } : {}),
       ...(typeof snapshot.sourceModelEpoch === 'number' ? { sourceModelEpoch: snapshot.sourceModelEpoch } : {}),
     } : null;

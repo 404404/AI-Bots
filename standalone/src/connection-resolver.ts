@@ -101,6 +101,18 @@ export class ConnectionResolver {
     `).all(...values, limit) as { id: string; created_at: string; consumer_bot_id: string }[];
     return rows.map((row) => this.status(row.id, row.consumer_bot_id));
   }
+
+  activeCatalog(consumerBotId: string, limit: number) {
+    const rows = this.storage.db.prepare(`
+      SELECT c.id,c.created_at,g.consumer_bot_id FROM model_connections c
+      JOIN connection_grants g ON g.connection_id=c.id
+      JOIN bots source ON source.id=c.source_bot_id
+      WHERE g.consumer_bot_id=? AND g.revoked_at IS NULL AND c.revoked_at IS NULL
+        AND c.source_model_epoch=source.model_epoch
+      ORDER BY c.created_at,c.id LIMIT ?
+    `).all(consumerBotId, limit) as { id: string; created_at: string; consumer_bot_id: string }[];
+    return rows.map((row) => this.status(row.id, row.consumer_bot_id));
+  }
 }
 
 export function bumpModelEpoch(db: DatabaseSync, botId: string) {

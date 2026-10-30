@@ -1,6 +1,6 @@
 # Independent product changes
 
-## Unreleased — 单 worker 委派 / Single-worker delegation
+## Unreleased — 协调策略与多任务 / Coordination policy and multiple tasks
 
 - 增加 PNG 头像的 schema 5 存储和端到端上传、替换、删除、认证读取；Bot 列表、消息、目录和任务轨迹显示统一头像或默认占位。真实 LAN 头像验收尚待完成。
 - Add schema 5 PNG avatar storage with end-to-end upload, replacement, deletion, and authenticated reads; Bot lists, messages, catalog, and task traces share the avatar or an explicit default placeholder. Real LAN avatar acceptance remains pending.
@@ -10,8 +10,10 @@
 - The Main Bot can bind an explicit source connection; the main model and worker use owner-authorized references without copied credentials, rechecked before each request.
 - Codex 原生 toolCall 派发一个持久 worker 任务，主模型收到带任务来源信息的 toolResult 后汇总；direct CLI/API 复用相同 TaskEngine。
 - A native Codex toolCall dispatches one durable worker task; the main model summarizes a provenance-labeled toolResult. Direct CLI/API tasks share the same TaskEngine.
-- 增加任务快照、单层/单 worker 限制、截止时间、取消、幂等和失效连接拒绝；未实现多 worker、队列及模型内创建/编辑工作 Bot。
-- Add task snapshots, one-worker/one-level limits, deadlines, cancellation, idempotency, and refusal for stale connections; multiple workers, queues, and model-driven worker creation/editing are not implemented.
+- 增加默认关闭的所有者工作 Bot 管理策略、schema 6 操作回执、真实 create/update 工具与 owner API/CLI/Web；模型只能设置名称/persona，并从主 Bot 获准连接引用创建新 Bot，不复制凭据。
+- Add an owner-controlled worker-management policy, schema 6 operation receipts, real create/update tools, and shared owner API/CLI/Web operations; model tools edit only name/persona and create from a Main Bot-authorized connection reference without copying credentials.
+- 根任务最多 8 次工具调用、3 个子任务、2 个新建 Bot 和 12 轮模型请求；仍保持深度 1、4 个根请求及 2 个 worker 请求上限，超限明确拒绝且不排队。DG03真实 LAN 验收待完成。
+- Each root allows at most 8 tool calls, 3 child tasks, 2 created Bots, and 12 model turns; depth remains 1, with limits of 4 root and 2 worker requests. Excess work is refused without a queue. Real LAN DG03 acceptance remains pending.
 - 连接列表返回带创建/撤销时间的签名分页；Bot 目录只返回当前有效绑定，避免随着历史引用增长而膨胀。
 - Connection listings use signed pagination with creation/revocation timestamps; the Bot catalog includes only current bindings so it stays bounded as history grows.
 - `tasks.get` 提供非 secret 配置快照和记忆文件路径/版本清单；任务诊断单独标注 `taskId`。
