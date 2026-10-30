@@ -32,7 +32,7 @@ function createV1(db: DatabaseSync) {
 /** Apply only known forward migrations. Every version transition commits atomically. */
 export function migrate(db: DatabaseSync) {
   let version = Number(db.prepare('PRAGMA user_version').get()?.user_version);
-  requireValue(Number.isInteger(version) && version >= 0 && version <= 7, 'schema-upgrade-required', '数据库版本不兼容。');
+  requireValue(Number.isInteger(version) && version >= 0 && version <= 8, 'schema-upgrade-required', '数据库版本不兼容。');
   if (version === 0) {
     transaction(db, () => {
       createV1(db);
@@ -182,7 +182,19 @@ export function migrate(db: DatabaseSync) {
     });
     version = 7;
   }
-  requireValue(version === 7, 'schema-upgrade-required', '数据库版本不兼容。');
+  if (version === 7) {
+    transaction(db, () => {
+      db.exec(`CREATE TABLE private_chat_state(
+        bot_id TEXT PRIMARY KEY REFERENCES bots(id),
+        conversation_id TEXT REFERENCES conversations(id),
+        selection_json TEXT,
+        updated_at TEXT NOT NULL
+      );
+      PRAGMA user_version=8`);
+    });
+    version = 8;
+  }
+  requireValue(version === 8, 'schema-upgrade-required', '数据库版本不兼容。');
   const singleton = db.prepare('SELECT bot_id FROM main_bot WHERE singleton=1').get() as { bot_id?: string } | undefined;
   const rows = Number(db.prepare('SELECT count(*) AS n FROM main_bot').get()?.n);
   requireValue(rows === 1 && typeof singleton?.bot_id === 'string', 'main-bot-state-invalid', '主 Bot 身份记录损坏。', 500);

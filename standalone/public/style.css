@@ -207,7 +207,8 @@ nav#conversations {
   overflow: auto;
 }
 nav#bots {
-  max-height: 35vh;
+  flex: 1;
+  min-height: 0;
 }
 nav#conversations {
   flex: 1;
@@ -233,7 +234,9 @@ nav button[aria-current='true'] {
   font-size: 10px;
   color: var(--muted);
   margin-top: 16px;
+  flex-wrap: wrap;
 }
+.sidebar footer #settings-entry { width: 100%; text-align: left; }
 .sidebar footer button {
   font-size: 11px;
   padding: 5px 9px;
@@ -262,6 +265,7 @@ main {
 .main-header h1 {
   margin: 0;
 }
+.header-actions { display: flex; align-items: center; gap: 10px; }
 .bot-title-row { display: flex; align-items: center; gap: 12px; }
 .avatar-settings { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
 .avatar-settings h3 { margin-top: 0; }
@@ -305,6 +309,15 @@ nav#bots button.bot-nav-item { display: flex; align-items: center; gap: 8px; }
   flex-direction: column;
   gap: 16px;
 }
+.chat-context {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #f7f8f4;
+}
+.load-older { align-self: center; font-size: 12px; }
 .messages {
   flex: 1 1 0%;
   min-height: 0;
@@ -383,6 +396,8 @@ nav#bots button.bot-nav-item { display: flex; align-items: center; gap: 8px; }
   align-items: center;
   gap: 12px;
 }
+.model-picker-label { margin-left: 4px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+#chat-model { max-width: min(300px, 42vw); min-width: 120px; padding: 8px; }
 .composer-actions span {
   flex: 1;
   padding-left: 8px;
@@ -569,6 +584,24 @@ dialog::backdrop {
   max-height: 150px;
   overflow: auto;
 }
+.timeline-task {
+  align-self: center;
+  width: min(88%, 620px);
+  border: 1px solid #d7dfd2;
+  border-left: 3px solid #8aa18c;
+  background: #f6f8f4;
+  border-radius: 11px;
+  padding: 12px 15px;
+}
+.timeline-task button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 0; }
+.timeline-task-meta,
+.timeline-task-result { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.history-list { display: grid; gap: 8px; max-height: 55dvh; overflow: auto; }
+.history-item { width: 100%; display: flex; justify-content: space-between; gap: 12px; text-align: left; }
+.history-item[aria-current="true"] { border-color: var(--accent); background: #edf3e9; }
+.dialog-content { min-width: min(420px, 78vw); max-width: min(680px, 88vw); }
+.dialog-content pre { max-height: 35dvh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dialog-content .dialog-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
 .grant-row {
   display: flex;
   align-items: center;
@@ -638,6 +671,7 @@ dialog::backdrop {
     flex: 1 1 180px;
     min-width: 0;
   }
+  .header-actions { margin-left: auto; }
   .main-header h1 {
     max-width: 100%;
     font-size: 18px;
@@ -710,6 +744,8 @@ dialog::backdrop {
     flex: 1 0 100%;
     padding-left: 2px;
   }
+  #chat-model { flex: 1 1 150px; min-width: 0; max-width: none; }
+  .model-picker-label { margin-left: 0; }
   .composer-actions button {
     min-height: 40px;
   }
@@ -729,6 +765,8 @@ dialog::backdrop {
   .browser-origin-row button { align-self: flex-start; }
   .browser-actions button { flex: 1 1 120px; }
   .browser-step-result { max-height: 140px; }
+  .timeline-task { width: 100%; }
+  .dialog-content { min-width: 0; width: 100%; }
 }
 @media (max-height: 680px) {
   .chat-view { min-height: 0; height: calc(100dvh - 135px); gap: 8px; }

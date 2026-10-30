@@ -4,9 +4,11 @@
 
 ## 当前范围
 
-网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、persona、角色、配置版本、头像、当前已实现能力、有效共享模型连接和最近持久化执行状态。可以从目录进入身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限。SQLite v1→v7 显式事务迁移创建唯一主 Bot、任务、连接授权、头像、工作 Bot 管理策略/操作回执及浏览器授权/会话/步骤/截图表；不按名字收编旧 Bot，保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。
+网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、persona、角色、配置版本、头像、当前已实现能力、有效共享模型连接和最近持久化执行状态。可以从目录进入身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限。SQLite v1→v8 显式事务迁移创建唯一主 Bot、任务、连接授权、头像、工作 Bot 管理策略/操作回执及浏览器权限表、私聊指针与模型选择；不按名字收编旧 Bot，保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。
 
 Bot 配置变更递增 `configRevision`。每个新 Run 在受理时记录对应的配置版本和非 secret 身份/模型快照；不包含 API key 或 Codex access/refresh token。后续编辑仅影响新的 Run。Web 与 CLI 共用 `BotApplication.execute` 业务入口；HTTP 适配器显式注入 owner 上下文。应用命令不从 params 读取 actor/isMain 权限，缺少可信上下文或使用 Bot 上下文的管理请求会拒绝。重启将未完成执行标为 `interrupted`，不会自动重发；断线重试必须保留原 `idempotencyKey`，同键不同正文返回冲突。
+
+每个 Bot 的私聊入口由 `private-chat.open` 幂等选择最近 Conversation，或只创建一次新 Conversation；旧线程保留并能在私聊里切换和续聊。模型选项由 `private-chat.models` 提供：员工直接私聊通过既有 delegation 引用读取已授权连接，选择和发送都校验稳定 `modelId` 及授权 epoch，不复制来源凭据。首次私聊不会自动选本地模型；本地 CLI 首次发起 Run 必须传 `selection`，或先用 `private-chat.select-model` 保存明确选择。没有选择时以 `model-selection-required` 拒绝且不调用模型。每次 Run 固定选择和上下文快照；重用幂等键改正文或模型会冲突。消息与真实子任务通过 `private-chat.timeline` 按发生时间和稳定 ID 分页，`private-chat.task-detail` 读取同一持久任务的输入、状态、结果或错误。完整字段及拒绝码见[数字员工私聊 API 契约](docs/digital-employee-contract.md)。
 
 主 Bot 的模型须在“Bot 管理目录”选择已配置的来源 Bot 并绑定；工作 Bot 委派也由所有者选择目标与连接来源。SQLite 只保存来源 Bot ID、模型授权 epoch 和明确授权引用，OAuth/API 凭据留在来源 Bot；请求开始前重查引用和授权版本，失效时明确拒绝且不回退到主 Bot 本地配置。Codex Auth 复用锁定的独立 SDK，支持设备码和浏览器登录，不复制旧 DSH 凭据。兼容 Chat Completions 服务是另一个明确选项，密钥只通过私密输入保存。
 
@@ -49,6 +51,8 @@ node standalone/deploy/qualify.mjs --run-id <successful-run-id> --execute
 
 首次部署没有独立旧版本可回退，原部署和数据始终保留。后续升级保存新产品数据备份及前一镜像 ID；`--rollback` 检查，`--rollback --execute` 回退代码，不自动恢复备份。schema 不兼容时拒绝启动，需单独评估恢复。
 
+私聊首片的独立验收可使用 `deploy/compose.employee-preview.yml`：容器名 `gk50-employee-preview`、端口 23443、独立 `BOT_EMPLOYEE_DATA_DIR`，不会挂载当前候选或对照数据目录，也不配置浏览器 worker。该文件只是待验收 Compose 样例；启动前仍须重新确认端口空闲、数据目录为新建私有目录，并提供已验证的不可变 `IMAGE_REF`。本次实现没有执行该样例或切换任何运行服务。
+
 完整真实验收通过前不发布 GHCR。正式交付需以 `ghcr.io/404404/ai-bots@sha256:…` 固定 registry digest 部署；候选的本地 image ID 不等于已发布 registry digest。
 
 ## Codex 登录与代理
@@ -75,7 +79,7 @@ node --experimental-strip-types standalone/src/cli.ts --help
 { "schemaVersion": 1, "result": { "items": [], "nextCursor": null, "hasMore": false } }
 ```
 
-准确命令见 `--help`，包括 `main.get`、`main.catalog`、`connections.list/bind-main/grant-main/revoke`、`delegation.grant/revoke`、`worker-policy.get/update`、`workers.create/update`、`tasks.create/list/get/cancel` 和 `auth.status/start/answer/cancel/logout`。`connections.list` 默认每页100条，支持 `consumerBotId`、`limit`（1–100）和服务端签名的 `cursor`；每项包含稳定连接/来源/使用者 ID、`createdAt`、`revokedAt` 与当前状态。`main.catalog` 只返回主 Bot 当前绑定与主 Bot 当前有效的来源引用，不返回其他历史引用。示例：
+准确命令见 `--help`，包括 `private-chat.open/history/select-conversation/models/select-model/timeline/task-detail`、`main.get`、`main.catalog`、`connections.list/bind-main/grant-main/revoke`、`delegation.grant/revoke`、`worker-policy.get/update`、`workers.create/update`、`tasks.create/list/get/cancel` 和 `auth.status/start/answer/cancel/logout`。历史、时间线和连接列表使用作用域校验的服务端签名游标。`main.catalog` 只返回主 Bot 当前绑定与主 Bot 当前有效的来源引用，不返回其他历史引用。示例：
 
 头像命令使用同一登录会话和 AvatarStore。Web 上传与 CLI 都执行相同的 PNG 内容校验和 revision 比较；CLI 从本地普通 PNG 文件读取字节，不把文件路径发给服务端：
 

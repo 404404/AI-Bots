@@ -2,16 +2,33 @@ const $ = (id) => document.getElementById(id);
 let bots = [],
   mainBotId = null,
   bot = null,
+  sourceSettingsBot = null,
+  sourceSettingsEpoch = 0,
   conversation = null,
+  modelOptions = [],
+  currentModelSelection = null,
+  modelSelectionPending = false,
+  timelineCursor = null,
+  timelineItems = [],
+  timelineInitialized = false,
+  hasOlderTimeline = false,
+  botSelectionEpoch = 0,
+  conversationSelectionEpoch = 0,
+  historyItems = [],
+  historyCursor = null,
+  defaultConversationId = null,
+  timelineRequests = new Set(),
+  taskDetailContext = null,
+  taskDetailEpoch = 0,
+  taskDetailInFlight = null,
   activeRun = null,
   memoryRevision = null,
   memoryPath = null,
   workerPolicyRevision = 0,
   browserSessionId = null,
-  browserTaskId = null,
-  polling = false;
+  browserTaskId = null;
 let noticeTimer;
-let authPolling = false;
+const authPolls = new Set();
 const statusLabels = {
   queued: '已排队',
   running: '生成中',
@@ -138,7 +155,7 @@ function view(name) {
   if (name === 'memory' && bot) void loadMemory().catch(showError);
   if (name === 'diagnostics') void diagnostics().catch(showError);
   if (name === 'browser') void loadBrowser().catch(showError);
-  if (name === 'model' && bot) void refreshAuth().catch(showError);
+  if (name === 'model' && sourceSettingsBot) void refreshAuth().catch(showError);
 }
 async function copy(content) {
   try {
@@ -172,6 +189,15 @@ async function loadCatalog() {
   const catalog = await command('main.catalog');
   mainBotId = catalog.mainBotId;
   renderBots();
+  const modelSettingsSource = $('model-settings-source');
+  const preferredSourceId = sourceSettingsBot?.id ?? bot?.id ?? catalog.mainBotId;
+  modelSettingsSource.replaceChildren(...catalog.items.map((item) => {
+    const option = node('option', `${item.name} · ${item.role === 'main' ? '主 Bot' : '工作 Bot'} · ${item.id}`);
+    option.value = item.id;
+    option.selected = item.id === preferredSourceId;
+    return option;
+  }));
+  if (!catalog.items.some((item) => item.id === preferredSourceId)) modelSettingsSource.value = catalog.mainBotId;
   const workers = catalog.items.filter((item) => item.role === 'work');
   $('grant-worker').replaceChildren(...workers.map((item) => {
     const option = node('option', `${item.name} · ${item.id}`);
@@ -242,7 +268,7 @@ async function loadCatalog() {
     const identityButton = node('button', '身份设置');
     identityButton.onclick = () => void selectBot(item.id).then(() => view('identity')).catch(showError);
     const modelButton = node('button', '模型设置');
-    modelButton.onclick = () => void selectBot(item.id).then(() => view('model')).catch(showError);
+    modelButton.onclick = () => void openSourceSettings(item.id).catch(showError);
     card.append(title, identity, persona, state, capabilities, identityButton, modelButton);
     $('bot-catalog').append(card);
   }
@@ -254,24 +280,61 @@ function fillSettings() {
   renderAvatarSettings();
   $('bot-name').value = bot.name;
   $('bot-persona').value = bot.persona;
-  $('model-provider').value =
-    bot.model.provider ?? (bot.model.baseUrl ? 'compatible' : 'openai-codex');
-  $('model-base-url').value = bot.model.baseUrl ?? '';
-  $('model-name').value = bot.model.model ?? '';
-  $('model-proxy').value = bot.model.proxyUrl ?? '';
-  $('model-keyless').checked = bot.model.keyless === true;
+}
+function fillSourceSettings() {
+  if (!sourceSettingsBot) return;
+  const source = sourceSettingsBot;
+  $('model-source-context').textContent = `正在配置 ${source.name} · ${source.id}。保存或登录仅作用于此来源 Bot，不改变当前私聊选择。`;
+  $('model-provider').value = source.model.provider ?? (source.model.baseUrl ? 'compatible' : 'openai-codex');
+  $('model-base-url').value = source.model.baseUrl ?? '';
+  $('model-name').value = source.model.model ?? '';
+  $('model-proxy').value = source.model.proxyUrl ?? '';
+  $('model-keyless').checked = source.model.keyless === true;
   $('model-key').value = '';
   $('clear-credential').checked = false;
-  $('model-connection-status').textContent = bot.isMain
-    ? (bot.mainConnection
-      ? `主 Bot 运行使用共享连接 ${bot.mainConnection.id}（${statusLabels[bot.mainConnection.status] ?? bot.mainConnection.status}），来源 Bot：${bot.mainConnection.sourceBotId}。此页的本地设置不会替代该绑定。`
-      : '主 Bot 尚未绑定共享模型连接。请在 Bot 管理目录选择已有连接来源；来源凭据留在原 Bot。')
+  $('credential-status').textContent = source.credentialConfigured ? '已保存私密凭据 · 不回显' : '尚未配置凭据';
+  $('model-connection-status').textContent = source.isMain
+    ? (source.mainConnection
+      ? `此主 Bot 使用共享连接 ${source.mainConnection.id}（${statusLabels[source.mainConnection.status] ?? source.mainConnection.status}），来源 Bot：${source.mainConnection.sourceBotId}。本地设置不会替代该绑定。`
+      : '此主 Bot 尚未绑定共享模型连接。可在 Bot 管理目录绑定已有来源；来源凭据留在原 Bot。')
     : '';
-  $('credential-status').textContent = bot.credentialConfigured
-    ? '已保存私密凭据 · 不回显'
-    : '尚未配置凭据';
   providerFields();
-  void refreshAuth().catch(showError);
+}
+async function openSourceSettings(botId) {
+  const epoch = ++sourceSettingsEpoch;
+  view('model');
+  sourceSettingsBot = null;
+  $('model-source-context').textContent = `正在读取来源 Bot ${botId}…`;
+  $('model-key').value = '';
+  $('clear-credential').checked = false;
+  $('codex-callback').value = '';
+  $('codex-status').textContent = '正在读取来源 Bot…';
+  $('codex-notice').hidden = true;
+  $('codex-login-link').removeAttribute('href');
+  $('codex-user-code').textContent = '';
+  $('codex-answer-form').hidden = true;
+  setSourceSettingsLoading(true);
+  try {
+    const source = await command('bots.get', { botId });
+    if (epoch !== sourceSettingsEpoch) return;
+    sourceSettingsBot = source;
+    $('model-settings-source').value = botId;
+    fillSourceSettings();
+    setSourceSettingsLoading(false);
+    view('model');
+  } catch (error) {
+    if (epoch === sourceSettingsEpoch) {
+      $('model-source-context').textContent = '读取来源 Bot 失败。请回到来源与授权设置重新选择。';
+    }
+    throw error;
+  }
+}
+function setSourceSettingsLoading(loading) {
+  for (const control of $('model-form').elements) control.disabled = loading;
+  for (const id of ['codex-device-login', 'codex-browser-login', 'codex-cancel', 'codex-logout'])
+    $(id).disabled = loading;
+  $('codex-callback').disabled = loading;
+  $('codex-answer-form').querySelector('button[type="submit"]').disabled = loading;
 }
 function renderAvatarSettings() {
   if (!bot) return;
@@ -338,10 +401,6 @@ async function refreshAvatarSurfaces(botId) {
     if (element.dataset.botId === botId)
       element.replaceWith(avatarVisual(updated.avatar, updated.name, element.classList.contains('lg') ? 'lg' : element.classList.contains('xs') ? 'xs' : 'sm', botId));
   }
-  if (bot?.id === botId) {
-    const conversations = await all('conversations.list', { botId });
-    if (bot?.id === botId) renderConversations(conversations);
-  }
   await loadCatalog();
 }
 function providerFields() {
@@ -352,12 +411,14 @@ function providerFields() {
   $('codex-auth-panel').hidden = !codex;
 }
 async function refreshAuth() {
-  if (!bot || authPolling) return;
-  authPolling = true;
-  const botId = bot.id;
+  if (!sourceSettingsBot) return;
+  const botId = sourceSettingsBot.id, epoch = sourceSettingsEpoch;
+  const pollKey = `${botId}:${epoch}`;
+  if (authPolls.has(pollKey)) return;
+  authPolls.add(pollKey);
   try {
     const status = await command('auth.status', { botId });
-    if (bot?.id !== botId) return;
+    if (sourceSettingsBot?.id !== botId || sourceSettingsEpoch !== epoch) return;
     const attempt = status.attempt;
     $('codex-status').textContent =
       `${status.signedIn ? '已登录 · 需通过实际回复验证' : '尚未登录'}${attempt.phase === 'running' ? ' · 登录进行中' : ''}${attempt.errorCode ? ` · ${attempt.errorCode}` : ''}`;
@@ -378,7 +439,7 @@ async function refreshAuth() {
       $('model-name').value =
         status.models.find((model) => model.id === 'gpt-6.1-sol')?.id ?? status.models[0]?.id ?? '';
   } finally {
-    authPolling = false;
+    authPolls.delete(pollKey);
   }
 }
 function closeMobileNav() {
@@ -391,49 +452,95 @@ function toggleMobileNav() {
 }
 async function selectBot(botId) {
   closeMobileNav();
+  invalidateTaskDetail();
+  const epoch = ++botSelectionEpoch;
+  modelSelectionPending = false;
   const selected = await command('bots.get', { botId });
+  if (epoch !== botSelectionEpoch) return;
   bot = selected;
   conversation = null;
+  timelineCursor = null;
+  timelineItems = [];
+  timelineInitialized = false;
+  hasOlderTimeline = false;
   activeRun = null;
   memoryRevision = null;
   memoryPath = null;
   fillSettings();
   renderBots();
-  const items = await all('conversations.list', { botId });
-  if (bot?.id !== botId) return;
-  renderConversations(items);
-  if (items.length) await selectConversation(items.at(-1));
-  else {
-    $('messages').replaceChildren(node('div', '点击“新对话”开始。', 'empty'));
-    updateComposer();
-  }
+  $('messages').replaceChildren(node('div', '正在打开私聊…', 'empty'));
+  $('chat-model').replaceChildren();
+  $('chat-model').disabled = true;
+  $('history-entry').disabled = true;
+  const opened = await command('private-chat.open', { botId });
+  if (epoch !== botSelectionEpoch || bot?.id !== botId) return;
+  const modelSet = await command('private-chat.models', { botId });
+  if (epoch !== botSelectionEpoch || bot?.id !== botId) return;
+  modelOptions = modelSet.items ?? [];
+  currentModelSelection = modelSet.selected ?? opened.selection ?? null;
+  defaultConversationId = opened.conversation.id;
+  renderModelOptions(currentModelSelection);
+  await selectConversation(opened.conversation, { skipOpen: true });
 }
-function renderConversations(items) {
-  $('conversations').replaceChildren();
-  for (const item of items) {
-    const button = node('button', undefined, 'bot-nav-item');
-    button.append(avatarVisual(bot?.avatar, bot?.name ?? 'Bot', 'xs', bot?.id), node('span', item.title));
-    button.setAttribute('aria-label', item.title);
-    button.setAttribute('aria-current', String(item.id === conversation?.id));
-    button.onclick = () => void selectConversation(item).catch(showError);
-    $('conversations').append(button);
-  }
+function selectionKey(selection) {
+  return selection ? JSON.stringify(selection) : '';
 }
-async function selectConversation(item) {
+function renderModelOptions(selected) {
+  currentModelSelection = selected ?? null;
+  const select = $('chat-model');
+  select.replaceChildren();
+  const placeholder = node('option', selected
+    ? '所选来源已失效，请重新选择'
+    : !modelOptions.length ? '无可用模型，请前往来源与授权设置' : '选择模型');
+  placeholder.value = '';
+  placeholder.selected = true;
+  select.append(placeholder);
+  modelOptions.forEach((item, index) => {
+    const option = node('option', `${item.label ?? item.model}${item.status && item.status !== 'available' ? ` · ${statusLabels[item.status] ?? item.status}` : ''}`);
+    option.value = String(index);
+    option.disabled = item.status && item.status !== 'available';
+    select.append(option);
+  });
+  const found = modelOptions.findIndex((item) => selectionKey(item.selection) === selectionKey(selected)
+    && (!item.status || item.status === 'available'));
+  select.value = found >= 0 ? String(found) : '';
+  select.disabled = modelOptions.length === 0 || Boolean(pending()) || modelSelectionPending;
+  $('send-message').disabled = !conversation || modelSelectionPending || (!pending() && found < 0);
+  if (!modelOptions.length) $('send-hint').textContent = '此 Bot 尚无可用模型，请在来源与授权设置中配置。';
+  else if (found < 0 && selected) $('send-hint').textContent = '所选模型来源已失效；重新选择前不会改用其他来源。';
+  else if (found < 0) $('send-hint').textContent = '选择此 Bot 已获准使用的模型后发送。';
+  else $('send-hint').textContent = 'Enter 发送 · Shift+Enter 换行';
+}
+async function selectConversation(item, { skipOpen = false } = {}) {
   closeMobileNav();
+  const botId = bot?.id;
+  if (!botId) return;
+  const epoch = ++conversationSelectionEpoch;
+  if (!skipOpen) {
+    const selected = await command('private-chat.select-conversation', { botId, conversationId: item.id });
+    item = selected.conversation;
+  }
+  if (epoch !== conversationSelectionEpoch || bot?.id !== botId) return;
+  invalidateTaskDetail();
   conversation = item;
+  timelineCursor = null;
+  timelineItems = [];
+  timelineInitialized = false;
+  hasOlderTimeline = false;
   activeRun = null;
   view('chat');
-  const items = await all('conversations.list', { botId: bot.id });
-  if (conversation?.id !== item.id) return;
-  renderConversations(items);
+  const historical = item.id !== defaultConversationId;
+  $('chat-context').hidden = !historical;
+  $('chat-context').textContent = historical ? `历史上下文 · ${item.title ?? item.id} · 后续消息将继续此上下文` : '';
+  $('history-entry').disabled = false;
   $('message-input').value = pending()?.content ?? '';
-  await refreshMessages();
+  if (pending()?.selection) renderModelOptions(pending().selection);
+  await refreshTimeline({ reset: true });
 }
 function updateComposer() {
   const active = activeRun && ['queued', 'running'].includes(activeRun.status);
   $('cancel-run').hidden = !active;
-  $('send-message').disabled = !conversation || !!active;
+  $('send-message').disabled = !conversation || !!active || modelSelectionPending || (!pending() && ($('chat-model').value === '' || $('chat-model').disabled));
   $('message-input').disabled = !conversation || !!active;
   $('send-message').textContent = pending() ? '重试发送' : '发送';
   $('execution-status').textContent = activeRun
@@ -445,72 +552,157 @@ function updateComposer() {
       `${statusLabels[activeRun.status] ?? '执行未完成'} · ${activeRun.errorCode}。未自动重试；可检查模型连接后发起新消息。`;
   } else $('run-error').hidden = true;
 }
-async function refreshMessages() {
-  if (!bot || !conversation || polling) return;
-  polling = true;
-  const botId = bot.id,
-    conversationId = conversation.id;
+function renderTimelineItem(item) {
+  if (item.type === 'task') {
+    const task = item.task;
+    const card = node('article', undefined, 'timeline-task');
+    const button = node('button', undefined);
+    const executor = bots.find((candidate) => candidate.id === task.executorBotId)?.name ?? task.executorBotId;
+    const initiator = bots.find((candidate) => candidate.id === task.initiatorBotId)?.name ?? task.initiatorBotId;
+    const status = statusLabels[task.status] ?? task.status ?? '状态未知';
+    const title = `${initiator ?? 'Bot'} → ${executor ?? 'Bot'}`;
+    button.append(node('strong', title), node('span', `${status} · ${new Date(item.createdAt).toLocaleString()}`, 'timeline-task-meta'));
+    if (task.result) button.append(node('span', task.result.length > 140 ? `${task.result.slice(0, 140)}…` : task.result, 'timeline-task-result'));
+    button.setAttribute('aria-label', `打开协作记录：${title}，${status}`);
+    button.onclick = () => void openTaskDetail(task).catch(showError);
+    card.append(button);
+    return card;
+  }
+  const message = item.message ?? item;
+  const role = message.role;
+  const article = node('article', undefined, `message ${role}`);
+  article.dataset.messageId = message.id;
+  const author = role === 'user' ? '你' : (message.botName ?? bot.name);
+  const timestamp = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const header = node('header', `${author} · ${timestamp}`);
+  if (role === 'assistant') header.prepend(avatarVisual(bot.avatar, bot.name, 'xs', bot.id));
+  const button = node('button', '复制');
+  button.onclick = () => void copy(message.content);
+  header.append(button);
+  article.append(header, node('p', message.content));
+  return article;
+}
+async function refreshTimeline({ reset = false, older = false } = {}) {
+  if (!bot || !conversation) return;
+  const botId = bot.id, conversationId = conversation.id, epoch = conversationSelectionEpoch;
+  const requestKey = `${botId}\0${conversationId}\0${epoch}\0${older ? 'older' : 'latest'}`;
+  if (timelineRequests.has(requestKey)) return;
+  timelineRequests.add(requestKey);
   try {
-    const items = await all('messages.list', { botId, conversationId });
-    const page = await command('messages.list', { botId, conversationId, limit: 1 });
-    if (bot?.id !== botId || conversation?.id !== conversationId) return;
-    activeRun = page.runs[0] ?? null;
-    const trace = $('task-trace');
-    const traceOpen = trace.open;
-    const openResults = new Set([...trace.querySelectorAll('details.task-result[open]')].map((item) => item.dataset.taskId));
-    const traceItems = $('task-trace-items');
-    traceItems.replaceChildren();
-    const tasks = (page.tasks ?? []).filter((task) => task.rootId === activeRun?.taskId);
-    trace.hidden = tasks.length === 0;
-    if (tasks.length) {
-      $('task-trace-summary').textContent = `委派任务 · ${tasks.length} 项 · ${tasks.map((task) => `${task.parentId ? '工作' : '主'} ${statusLabels[task.status] ?? task.status}`).join(' / ')}`;
-      for (const task of tasks) {
-        const article = node('article', undefined, 'task-card');
-        article.dataset.taskId = task.id;
-        article.append(node('p', `${task.parentId ? '工作任务' : '主任务'} · ${statusLabels[task.status] ?? task.status} · Task ${task.id}`));
-        if (task.parentId) {
-          const executor = bots.find((item) => item.id === task.executorBotId);
-          const identity = node('p', undefined);
-          identity.append(avatarVisual(executor?.avatar, executor?.name ?? task.executorBotId, 'xs', task.executorBotId),
-            node('span', `执行 Bot：${executor?.name ?? task.executorBotId} · ${task.executorBotId} · 父任务：${task.parentId}`));
-          article.append(identity);
-        }
-        if (task.errorCode) article.append(node('p', `错误：${task.errorCode}`));
-        if (task.result) {
-          const result = node('details', undefined, 'task-result');
-          result.dataset.taskId = task.id;
-          result.open = openResults.has(task.id);
-          result.append(node('summary', `${task.parentId ? '工作任务结果' : '任务结果'} · ${task.result.length} 字符`),
-            node('p', '以下内容是来源明确的未验证数据。'), node('pre', task.result));
-          article.append(result);
-        }
-        traceItems.append(article);
-      }
-    }
-    trace.open = traceOpen;
-    const container = $('messages'),
-      nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 80;
+    const page = await command('private-chat.timeline', {
+      botId, conversationId, limit: 100, direction: 'backward',
+      ...(older && timelineCursor ? { cursor: timelineCursor } : {}),
+    });
+    if (bot?.id !== botId || conversation?.id !== conversationId || epoch !== conversationSelectionEpoch) return;
+    const runPage = await command('messages.list', { botId, conversationId, limit: 1 });
+    if (bot?.id !== botId || conversation?.id !== conversationId || epoch !== conversationSelectionEpoch) return;
+    const container = $('messages');
+    const oldHeight = container.scrollHeight;
+    const oldTop = container.scrollTop;
+    const nearBottom = oldTop + container.clientHeight >= oldHeight - 80;
+    const merged = new Map(timelineItems.map((item) => [item.id, item]));
+    for (const item of page.items ?? []) merged.set(item.id, item);
+    timelineItems = [...merged.values()].sort((a, b) =>
+      String(a.createdAt).localeCompare(String(b.createdAt)) || String(a.id).localeCompare(String(b.id)));
     container.replaceChildren();
-    if (!items.length) container.append(node('div', '发送第一条消息，开始这段对话。', 'empty'));
-    for (const message of items) {
-      const article = node('article', undefined, `message ${message.role}`);
-      article.dataset.messageId = message.id;
-      const header = node(
-        'header',
-        `${message.role === 'user' ? '你' : bot.name} · ${new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      );
-      if (message.role === 'assistant') header.prepend(avatarVisual(bot.avatar, bot.name, 'xs', bot.id));
-      const button = node('button', '复制');
-      button.onclick = () => void copy(message.content);
-      header.append(button);
-      article.append(header, node('p', message.content));
-      container.append(article);
+    if (!timelineItems.length) container.append(node('div', '发送第一条消息，开始这段对话。', 'empty'));
+    for (const item of timelineItems) container.append(renderTimelineItem(item));
+    if (older) {
+      timelineCursor = page.nextCursor ?? null;
+      hasOlderTimeline = Boolean(page.hasMore ?? page.nextCursor);
+    } else if (!timelineInitialized) {
+      timelineCursor = page.nextCursor ?? null;
+      hasOlderTimeline = Boolean(page.hasMore ?? page.nextCursor);
+      timelineInitialized = true;
     }
-    if (nearBottom) container.scrollTop = container.scrollHeight;
+    $('load-older').hidden = !hasOlderTimeline;
+    if (older) container.scrollTop = oldTop + container.scrollHeight - oldHeight;
+    else if (reset || nearBottom) container.scrollTop = container.scrollHeight;
+    else container.scrollTop = oldTop;
+    activeRun = runPage.runs?.[0] ?? null;
     updateComposer();
   } finally {
-    polling = false;
+    timelineRequests.delete(requestKey);
   }
+}
+function renderTaskDetail(detail, taskId) {
+  const content = $('task-dialog-content');
+  content.replaceChildren();
+  const current = [...(detail.items ?? []), detail.root].find((item) => item?.id === taskId);
+  if (!current) throw new Error('服务未返回所选任务详情。');
+  const executor = bots.find((candidate) => candidate.id === current.executorBotId)?.name ?? current.executorBotId;
+  const initiator = bots.find((candidate) => candidate.id === current.initiatorBotId)?.name ?? current.initiatorBotId;
+  const rows = [
+    ['状态', statusLabels[current.status] ?? current.status],
+    ['发起者', initiator],
+    ['执行者', executor],
+    ['模型来源 Bot', current.sourceBotId],
+    ['来源任务', current.parentId ?? '无（根任务）'],
+    ['根任务', current.rootId],
+    ['任务 ID', current.id],
+    ['输入', current.input],
+    ['结果', current.result],
+    ['错误', current.errorCode],
+  ];
+  for (const [label, value] of rows) {
+    if (value === undefined || value === null || value === '') continue;
+    content.append(node('h3', label), node(label === '输入' || label === '结果' || label === '错误' ? 'pre' : 'p', String(value)));
+  }
+  const children = (detail.items ?? []).filter((item) => item.parentId === current.id);
+  if (children.length) {
+    content.append(node('h3', '子任务'));
+    for (const child of children) {
+      const childName = bots.find((candidate) => candidate.id === child.executorBotId)?.name ?? child.executorBotId;
+      content.append(node('p', `${childName} · ${statusLabels[child.status] ?? child.status} · ${child.id}`));
+    }
+  }
+  $('task-detail-updated').textContent = `详情已同步 · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+  return current;
+}
+async function refreshTaskDetail(epoch = taskDetailContext?.epoch, initial = false) {
+  const context = taskDetailContext;
+  if (!context || context.epoch !== epoch || taskDetailInFlight === epoch) return;
+  if (!initial && (!context.autoRefresh || Date.now() >= context.deadlineAt)) {
+    context.autoRefresh = false;
+    $('task-detail-updated').textContent = '自动刷新已暂停；关闭后重新打开可再次读取。';
+    return;
+  }
+  taskDetailInFlight = epoch;
+  try {
+    const detail = await command('private-chat.task-detail', {
+      botId: context.botId, conversationId: context.conversationId, taskId: context.taskId,
+    });
+    if (taskDetailContext !== context || context.epoch !== taskDetailEpoch
+      || bot?.id !== context.botId || conversation?.id !== context.conversationId) return;
+    const current = renderTaskDetail(detail, context.taskId);
+    context.autoRefresh = ['queued', 'running'].includes(current.status);
+    if (initial && !$('task-dialog').open) $('task-dialog').showModal();
+  } catch (error) {
+    if (taskDetailContext !== context || context.epoch !== taskDetailEpoch) return;
+    if (initial) throw error;
+    context.autoRefresh = false;
+    $('task-detail-updated').textContent = `自动刷新失败 · ${error.code ?? error.message}；关闭后重新打开可重试。`;
+  } finally {
+    if (taskDetailInFlight === epoch) taskDetailInFlight = null;
+  }
+}
+async function openTaskDetail(task) {
+  const context = {
+    botId: bot.id,
+    conversationId: conversation.id,
+    taskId: task.id,
+    epoch: ++taskDetailEpoch,
+    deadlineAt: Date.now() + 300000,
+    autoRefresh: true,
+  };
+  taskDetailContext = context;
+  await refreshTaskDetail(context.epoch, true);
+}
+function invalidateTaskDetail() {
+  taskDetailEpoch += 1;
+  taskDetailContext = null;
+  taskDetailInFlight = null;
+  if ($('task-dialog').open) $('task-dialog').close();
 }
 async function loadMemory() {
   const botId = bot.id;
@@ -650,6 +842,8 @@ async function enter() {
   renderBots();
   $('main-entry').onclick = () => void selectBot(mainBotId).then(() => view('chat')).catch(showError);
   $('catalog-entry').onclick = () => { closeMobileNav(); void loadCatalog().then(() => view('catalog')).catch(showError); };
+  $('settings-entry').onclick = () => { closeMobileNav(); void loadCatalog().then(() => view('catalog')).catch(showError); };
+  $('open-model-settings').onclick = () => void openSourceSettings($('model-settings-source').value).catch(showError);
   $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
   $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
   $('grant-delegation').onclick = () => void (async () => {
@@ -758,6 +952,8 @@ $('logout').onclick = () =>
       $('login-screen').hidden = false;
       bot = null;
       conversation = null;
+      sourceSettingsBot = null;
+      sourceSettingsEpoch += 1;
     })
     .catch(showError);
 $('new-bot').onclick = () => $('bot-dialog').showModal();
@@ -768,6 +964,13 @@ document.addEventListener('keydown', (event) => {
 });
 $('dismiss-create').onclick = () => $('bot-dialog').close();
 $('dismiss-copy').onclick = () => $('copy-dialog').close();
+$('dismiss-history').onclick = () => $('history-dialog').close();
+$('dismiss-task').onclick = () => $('task-dialog').close();
+$('task-dialog').addEventListener('close', () => {
+  taskDetailEpoch += 1;
+  taskDetailContext = null;
+  taskDetailInFlight = null;
+});
 form('create-form', async () => {
   const created = await command('bots.create', {
     name: $('create-name').value,
@@ -779,18 +982,78 @@ form('create-form', async () => {
   await refreshBots();
   if (created.id === mainBotId) mainBotId = created.id;
   await selectBot(created.id);
-  view('model');
+  await openSourceSettings(created.id);
   notice('Bot 已创建，设置模型后即可开始。');
 });
-$('new-conversation').onclick = () =>
-  void (async () => {
-    if (!bot) return notice('请先创建 Bot。');
-    const item = await command('conversations.create', {
-      botId: bot.id,
-      title: `对话 ${new Date().toLocaleString()}`,
-    });
-    await selectConversation(item);
-  })().catch(showError);
+$('history-entry').onclick = () => void (async () => {
+  if (!bot) return;
+  const botId = bot.id;
+  const result = await command('private-chat.history', { botId, limit: 100 });
+  if (bot?.id !== botId) return;
+  historyItems = result.items ?? [];
+  historyCursor = result.nextCursor ?? null;
+  $('history-more').hidden = !result.hasMore;
+  const list = $('history-list');
+  list.replaceChildren();
+  if (!historyItems.length) list.append(node('p', '暂无历史上下文。', 'muted'));
+  for (const item of historyItems) {
+    const button = node('button', undefined, 'history-item');
+    button.type = 'button';
+    button.setAttribute('aria-current', String(item.id === conversation?.id));
+    button.append(node('span', item.title ?? item.id), node('span', item.createdAt ? new Date(item.createdAt).toLocaleString() : item.id));
+    button.onclick = () => void selectConversation(item).then(() => $('history-dialog').close()).catch(showError);
+    list.append(button);
+  }
+  $('history-dialog').showModal();
+})().catch(showError);
+$('history-more').onclick = () => void (async () => {
+  if (!bot || !historyCursor) return;
+  const botId = bot.id;
+  const result = await command('private-chat.history', { botId, limit: 100, cursor: historyCursor });
+  if (bot?.id !== botId) return;
+  historyItems.push(...(result.items ?? []));
+  historyCursor = result.nextCursor ?? null;
+  $('history-more').hidden = !result.hasMore;
+  const list = $('history-list');
+  list.replaceChildren();
+  for (const item of historyItems) {
+    const button = node('button', undefined, 'history-item');
+    button.type = 'button';
+    button.setAttribute('aria-current', String(item.id === conversation?.id));
+    button.append(node('span', item.title ?? item.id), node('span', item.createdAt ? new Date(item.createdAt).toLocaleString() : item.id));
+    button.onclick = () => void selectConversation(item).then(() => $('history-dialog').close()).catch(showError);
+    list.append(button);
+  }
+})().catch(showError);
+$('load-older').onclick = () => void refreshTimeline({ older: true }).catch(showError);
+$('chat-model').onchange = () => void (async () => {
+  if (!bot || !modelOptions[Number($('chat-model').value)]) return;
+  const selected = modelOptions[Number($('chat-model').value)].selection;
+  const botId = bot.id, epoch = botSelectionEpoch;
+  modelSelectionPending = true;
+  $('send-message').disabled = true;
+  $('send-hint').textContent = '正在保存本次模型选择…';
+  $('chat-model').disabled = true;
+  try {
+    const updated = await command('private-chat.select-model', { botId, selection: selected });
+    if (bot?.id !== botId || botSelectionEpoch !== epoch) return;
+    modelOptions = updated.items ?? modelOptions;
+    currentModelSelection = updated.selected ?? selected;
+    renderModelOptions(currentModelSelection);
+    $('send-hint').textContent = 'Enter 发送 · Shift+Enter 换行';
+    updateComposer();
+  } catch (error) {
+    if (bot?.id !== botId || botSelectionEpoch !== epoch) return;
+    renderModelOptions(currentModelSelection);
+    throw error;
+  } finally {
+    if (bot?.id === botId && botSelectionEpoch === epoch) {
+      modelSelectionPending = false;
+      renderModelOptions(currentModelSelection);
+      updateComposer();
+    }
+  }
+})().catch(showError);
 for (const button of document.querySelectorAll('[data-view]'))
   button.onclick = () => {
     if (button.dataset.view === 'catalog') void loadCatalog().catch(showError);
@@ -798,21 +1061,25 @@ for (const button of document.querySelectorAll('[data-view]'))
   };
 form('identity-form', async () => {
   if (!bot) return;
-  bot = await command('bots.update', {
-    botId: bot.id,
+  const botId = bot.id, epoch = botSelectionEpoch;
+  const updated = await command('bots.update', {
+    botId,
     name: $('bot-name').value,
     persona: $('bot-persona').value,
   });
+  if (bot?.id !== botId || botSelectionEpoch !== epoch) return;
+  bot = updated;
   fillSettings();
   await refreshBots();
+  if (bot?.id !== botId || botSelectionEpoch !== epoch) return;
   if (bot.id === mainBotId) $('main-entry').textContent = `${bot.name} · 主 Bot`;
   notice('身份已保存');
 });
-async function saveModel() {
-  if (!bot) return;
+async function saveModel(sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch) {
+  if (!sourceBotId || sourceSettingsBot?.id !== sourceBotId) return;
   try {
-    bot = await command('bots.update', {
-      botId: bot.id,
+    const updated = await command('bots.update', {
+      botId: sourceBotId,
       model: {
         provider: $('model-provider').value,
         baseUrl: $('model-base-url').value,
@@ -823,16 +1090,22 @@ async function saveModel() {
       apiKey: $('model-key').value,
       clearCredential: $('clear-credential').checked,
     });
-    fillSettings();
-    notice('模型连接已保存，请发送消息验证实际回复。');
+    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) {
+      sourceSettingsBot = updated;
+      fillSourceSettings();
+      notice('模型来源已保存，请在对应 Bot 私聊验证实际回复。');
+    }
+  } catch (error) {
+    if (sourceSettingsBot?.id !== sourceBotId || sourceSettingsEpoch !== epoch) return;
+    throw error;
   } finally {
-    $('model-key').value = '';
+    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) $('model-key').value = '';
   }
 }
 form('model-form', saveModel);
 $('model-provider').onchange = () => {
   providerFields();
-  if ($('model-provider').value === 'openai-codex') void refreshAuth().catch(showError);
+  if ($('model-provider').value === 'openai-codex' && sourceSettingsBot) void refreshAuth().catch(showError);
 };
 for (const [id, method] of [
   ['codex-device-login', 'device_code'],
@@ -840,19 +1113,34 @@ for (const [id, method] of [
 ])
   $(id).onclick = () =>
     void (async () => {
-      await saveModel();
-      await command('auth.start', { botId: bot.id, method });
-      await refreshAuth();
+      const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
+      if (!sourceBotId) throw new Error('请先选择模型来源 Bot。');
+      await saveModel(sourceBotId, epoch);
+      if (sourceSettingsBot?.id !== sourceBotId || sourceSettingsEpoch !== epoch) return;
+      await command('auth.start', { botId: sourceBotId, method });
+      if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
     })().catch(showError);
 $('codex-cancel').onclick = () =>
-  void command('auth.cancel', { botId: bot.id }).then(refreshAuth).catch(showError);
+  void (async () => {
+    const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
+    if (!sourceBotId) return;
+    await command('auth.cancel', { botId: sourceBotId });
+    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
+  })().catch(showError);
 $('codex-logout').onclick = () =>
-  void command('auth.logout', { botId: bot.id }).then(refreshAuth).catch(showError);
+  void (async () => {
+    const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
+    if (!sourceBotId) return;
+    await command('auth.logout', { botId: sourceBotId });
+    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
+  })().catch(showError);
 form('codex-answer-form', async () => {
+  const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
+  if (!sourceBotId) throw new Error('请先选择模型来源 Bot。');
   const value = $('codex-callback').value;
   $('codex-callback').value = '';
-  await command('auth.answer', { botId: bot.id, value });
-  await refreshAuth();
+  await command('auth.answer', { botId: sourceBotId, value });
+  if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
 });
 form('memory-form', async () => {
   if (!bot) return;
@@ -878,7 +1166,9 @@ form('message-form', async () => {
   let submission = pending();
   if (!submission) {
     if (!$('message-input').value.trim()) return;
-    submission = { botId, conversationId, content: $('message-input').value, idempotencyKey: id() };
+    const model = modelOptions[Number($('chat-model').value)];
+    if (!model?.selection) throw new Error('请先选择此 Bot 已获准使用的模型。');
+    submission = { botId, conversationId, content: $('message-input').value, idempotencyKey: id(), selection: model.selection };
     try {
       localStorage.setItem(storageKey, JSON.stringify(submission));
     } catch {
@@ -887,17 +1177,19 @@ form('message-form', async () => {
   }
   $('send-message').disabled = true;
   try {
-    await command('runs.submit', submission);
+    const submitted = await command('runs.submit', submission);
     localStorage.removeItem(storageKey);
-    if (conversation?.id === conversationId) {
+    if (bot?.id === botId && conversation?.id === conversationId) {
+      activeRun = submitted?.run ?? submitted;
+      updateComposer();
       $('message-input').value = '';
-      await refreshMessages();
+      await refreshTimeline({ reset: true });
     }
   } catch (error) {
     if (error.status && error.status < 500) localStorage.removeItem(storageKey);
     throw error;
   } finally {
-    updateComposer();
+    if (bot?.id === botId && conversation?.id === conversationId) updateComposer();
   }
 });
 $('message-input').addEventListener('keydown', (event) => {
@@ -910,14 +1202,19 @@ $('cancel-run').onclick = () =>
   void (async () => {
     if (!activeRun || !bot) return;
     await command('runs.cancel', { botId: bot.id, runId: activeRun.id });
-    await refreshMessages();
+    await refreshTimeline({ reset: true });
   })().catch(showError);
 setInterval(() => {
   if (!$('workspace').hidden && conversation && !document.hidden)
-    void refreshMessages().catch(showError);
+    void refreshTimeline().catch(showError);
 }, 2000);
 setInterval(() => {
-  if (!$('workspace').hidden && !$('view-model').hidden && bot && !document.hidden)
+  const context = taskDetailContext;
+  if (context && $('task-dialog').open && context.autoRefresh && !document.hidden)
+    void refreshTaskDetail(context.epoch).catch(showError);
+}, 2000);
+setInterval(() => {
+  if (!$('workspace').hidden && !$('view-model').hidden && sourceSettingsBot && !document.hidden)
     void refreshAuth().catch(showError);
 }, 2500);
 void enter().catch((error) => {

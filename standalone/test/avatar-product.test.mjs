@@ -40,7 +40,7 @@ function png(metadataSize = 0, color = [40, 120, 80, 255]) {
 }
 const owner = (app, command, params = {}) => app.execute(command, params, { kind: 'owner' });
 
-test('schema 4 fixture migrates transactionally to schema 7 without changing Bot identity', async (t) => {
+test('schema 4 fixture migrates transactionally to current schema without changing Bot identity', async (t) => {
   const root = dir();
   let app = new BotApplication(root);
   const bot = await owner(app, 'bots.create', { slug: 'avatar-migration', name: 'Avatar fixture' });
@@ -48,11 +48,11 @@ test('schema 4 fixture migrates transactionally to schema 7 without changing Bot
   await app.close();
 
   const db = new DatabaseSync(join(root, 'bot.sqlite'));
-  db.exec('DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions; DROP TABLE browser_origin_grants; DROP TABLE worker_management_scope_targets; DROP TABLE worker_management_operations; DROP TABLE worker_management_policy; DROP TABLE bot_avatars; PRAGMA user_version=4;');
+  db.exec('DROP TABLE private_chat_state; DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions; DROP TABLE browser_origin_grants; DROP TABLE worker_management_scope_targets; DROP TABLE worker_management_operations; DROP TABLE worker_management_policy; DROP TABLE bot_avatars; PRAGMA user_version=4;');
   db.close();
   app = new BotApplication(root);
   try {
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 7);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 8);
     assert.equal((await owner(app, 'bots.get', { botId: bot.id })).id, bot.id);
     assert.equal((await owner(app, 'main.get')).bot.id, main);
     assert.equal((await owner(app, 'avatars.get', { botId: bot.id })).avatar, null);
@@ -155,7 +155,7 @@ test('authenticated bounded HTTP upload, revision reads, delete and CLI file pat
   assert.equal((await command('bots.get', { botId: bot.id })).body.result.avatar, null);
 });
 
-test('avatar UI snapshots selection revision and keeps bounded task trace state', () => {
+test('avatar surfaces coexist with inline collaboration timeline and canonical detail dialog', () => {
   const app = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
@@ -165,12 +165,13 @@ test('avatar UI snapshots selection revision and keeps bounded task trace state'
   assert.match(upload, /JSON\.stringify\(\{ botId, pngBase64, expectedRevision \}\)/u);
   assert.match(app, /async function refreshAvatarSurfaces\(botId\)/u);
   assert.match(app, /querySelectorAll\('\.avatar\[data-bot-id\]'\)/u);
-  assert.match(html, /<details id="task-trace"/u);
-  assert.match(app, /const traceOpen = trace\.open/u);
-  assert.match(app, /trace\.open = traceOpen/u);
-  assert.match(app, /details\.task-result\[open\]/u);
-  assert.match(app, /result\.open = openResults\.has\(task\.id\)/u);
-  assert.match(app, /result\.append\(node\('summary', `\$\{task\.parentId \? '工作任务结果' : '任务结果'\}/u);
-  assert.match(css, /\.task-trace\s*\{[^}]*max-height:\s*190px;[^}]*overflow:\s*auto;/su);
+  assert.match(html, /<dialog id="task-dialog"/u);
+  assert.match(app, /node\('article', undefined, 'timeline-task'\)/u);
+  assert.match(app, /button\.onclick = \(\) => void openTaskDetail\(task\)/u);
+  assert.match(app, /private-chat\.task-detail/u);
+  assert.match(app, /\['输入', current\.input\]/u);
+  assert.match(app, /\['结果', current\.result\]/u);
+  assert.match(app, /header\.prepend\(avatarVisual\(bot\.avatar, bot\.name, 'xs', bot\.id\)\)/u);
+  assert.match(css, /\.timeline-task\s*\{/u);
   assert.match(css, /\.messages\s*\{[^}]*min-height:\s*0;/su);
 });

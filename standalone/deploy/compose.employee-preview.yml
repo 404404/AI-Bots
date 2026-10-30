@@ -1,0 +1,30 @@
+name: gk50-employee-preview
+services:
+  bot:
+    image: ${IMAGE_REF:?Set a verified immutable image digest or image ID}
+    container_name: gk50-employee-preview
+    user: '10001:10001'
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    network_mode: bridge
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - '0.0.0.0:23443:3080'
+    environment:
+      BOT_PUBLIC_URL: http://192.168.68.11:23443
+      BOT_TRUSTED_URLS: '["http://10.250.250.1:23443","http://192.168.68.12:23443","http://192.168.110.11:23443"]'
+    volumes:
+      - type: bind
+        source: ${BOT_EMPLOYEE_DATA_DIR:?Use a new isolated employee preview data directory}
+        target: /data/bot
+        bind:
+          create_host_path: false
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
+    stop_grace_period: 20s

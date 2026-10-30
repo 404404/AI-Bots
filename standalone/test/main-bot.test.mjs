@@ -9,13 +9,13 @@ import { BotApplication } from '../src/application.ts';
 
 const dir = () => mkdtempSync(join(tmpdir(), 'standalone-main-'));
 
-test('v7 creates one stable main Bot, exposes catalog, and rejects model context for owner operations', async () => {
+test('current schema creates one stable main Bot, exposes catalog, and rejects model context for owner operations', async () => {
   const app = new BotApplication(dir());
   try {
     const first = await app.executeOwner('main.get');
     assert.equal(first.bot.isMain, true);
     assert.equal((await app.executeOwner('main.get')).bot.id, first.bot.id);
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 7);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 8);
     const catalog = await app.executeOwner('main.catalog');
     assert.equal(catalog.mainBotId, first.bot.id);
     assert.equal(catalog.items[0].role, 'main');
@@ -40,19 +40,19 @@ test('v7 creates one stable main Bot, exposes catalog, and rejects model context
   }
 });
 
-test('schema 6 upgrades atomically to 7 while preserving existing Bot and conversation identity', async () => {
+test('schema 6 upgrades atomically to current schema while preserving existing Bot and conversation identity', async () => {
   const root = dir();
   let app = new BotApplication(root);
   const bot = await app.executeOwner('bots.create', { slug: 'kept-bot', name: 'Keep me', persona: 'stable persona' });
   const conversation = await app.executeOwner('conversations.create', { botId: bot.id, title: 'Keep history' });
   await app.close();
   const raw = new DatabaseSync(join(root, 'bot.sqlite'));
-  raw.exec(`DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions; DROP TABLE browser_origin_grants; PRAGMA user_version=6;`);
+  raw.exec(`DROP TABLE private_chat_state; DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions; DROP TABLE browser_origin_grants; PRAGMA user_version=6;`);
   raw.close();
 
   app = new BotApplication(root);
   try {
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 7);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 8);
     const kept = await app.executeOwner('bots.get', { botId: bot.id });
     assert.deepEqual([kept.id, kept.name, kept.persona], [bot.id, 'Keep me', 'stable persona']);
     assert.equal((await app.executeOwner('conversations.list', { botId: bot.id })).items[0].id, conversation.id);
@@ -69,7 +69,7 @@ test('failed schema 6 to 7 DDL rolls back user_version and releases the lease fo
   const app = new BotApplication(root);
   await app.close();
   const raw = new DatabaseSync(join(root, 'bot.sqlite'));
-  raw.exec(`DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions;
+  raw.exec(`DROP TABLE private_chat_state; DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions;
     DROP TABLE browser_origin_grants; CREATE TABLE browser_origin_grants(blocker TEXT); PRAGMA user_version=6;`);
   raw.close();
 
@@ -80,7 +80,7 @@ test('failed schema 6 to 7 DDL rolls back user_version and releases the lease fo
   afterFailure.exec('DROP TABLE browser_origin_grants');
   afterFailure.close();
   const recovered = new BotApplication(root);
-  try { assert.equal(recovered.storage.db.prepare('PRAGMA user_version').get().user_version, 7); }
+  try { assert.equal(recovered.storage.db.prepare('PRAGMA user_version').get().user_version, 8); }
   finally { await recovered.close(); }
 });
 
@@ -99,6 +99,7 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
 
   const raw = new DatabaseSync(join(root, 'bot.sqlite'));
   raw.exec(`
+    DROP TABLE private_chat_state;
     DROP TABLE browser_screenshots;
     DROP TABLE browser_steps;
     DROP TABLE browser_sessions;
@@ -135,7 +136,7 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
     const main = (await app.executeOwner('main.get')).bot;
     assert.notEqual(main.id, original.id);
     assert.notEqual(main.slug, 'main-bot');
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 7);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 8);
   } finally {
     await app.close();
   }
@@ -156,6 +157,7 @@ test('run captures revision and non-secret model and identity snapshot at submit
       conversationId: conversation.id,
       idempotencyKey: 'snapshot-run',
       content: 'hello',
+      selection: { kind: 'local', modelId: 'first-model' },
     });
     const submitted = await app.executeOwner('runs.get', { botId: bot.id, runId: run.id });
     await app.executeOwner('bots.update', {
@@ -208,6 +210,7 @@ test('failed v1 migration rolls back all DDL and releases the lease for retry', 
   await app.close();
   const db = new DatabaseSync(join(root, 'bot.sqlite'));
   db.exec(`
+    DROP TABLE private_chat_state;
     DROP TABLE browser_screenshots;
     DROP TABLE browser_steps;
     DROP TABLE browser_sessions;

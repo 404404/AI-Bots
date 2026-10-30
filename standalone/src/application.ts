@@ -27,6 +27,7 @@ import { CodexAuth } from './codex-auth.ts';
 import { completeCodex } from './codex-model.ts';
 import { isMainBot, mainBotId, mainCatalog } from './bot-identity.ts';
 import { ConnectionResolver, bumpModelEpoch } from './connection-resolver.ts';
+import { PrivateChat, parseModelSelection } from './private-chat.ts';
 import { TaskEngine } from './task-engine.ts';
 import { TaskStore } from './task-store.ts';
 import { runMainTurn } from './root-run.ts';
@@ -89,6 +90,7 @@ export class BotApplication {
   closing = false;
   auth: CodexAuth;
   connections: ConnectionResolver;
+  privateChat: PrivateChat;
   tasks: TaskEngine;
   workerManagement: WorkerManagement;
   avatars: AvatarStore;
@@ -104,6 +106,7 @@ export class BotApplication {
       this.diag('codex-auth', botId, undefined, code, undefined, undefined, status),
     );
     this.connections = new ConnectionResolver(this.storage);
+    this.privateChat = new PrivateChat(this.storage, this.connections, this.auth);
     this.workerManagement = new WorkerManagement(this.storage, this.connections);
     this.avatars = new AvatarStore(this.storage);
     this.tasks = new TaskEngine(this.storage, this.auth, this.connections,
@@ -582,6 +585,30 @@ export class BotApplication {
       return { ...page, items: page.items.map(({ seq, ...row }) => ({ id: seq, ...row, taskId: row.task_id })) };
     }
     const bot = this.bot(params.botId);
+    if (command === 'private-chat.open') return this.privateChat.open(bot.id);
+    if (command === 'private-chat.history') {
+      const page = this.page(`private-chat-history:${bot.id}`, params, (after, limit) => db
+        .prepare('SELECT * FROM conversations WHERE bot_id=? AND seq>? ORDER BY seq LIMIT ?')
+        .all(bot.id, after, limit) as unknown as { seq: number }[]);
+      return { ...page, items: page.items.map((row) => ({ id: row.id, botId: row.bot_id,
+        title: row.title, createdAt: row.created_at })) };
+    }
+    if (command === 'private-chat.select-conversation') return this.privateChat.selectConversation(bot.id, params.conversationId);
+    if (command === 'private-chat.models') return this.privateChat.listModels(bot.id);
+    if (command === 'private-chat.select-model') return this.privateChat.selectModel(bot.id, params.selection);
+    if (command === 'private-chat.timeline') {
+      const conversation = this.conversation(bot.id, params.conversationId);
+      return this.privateChat.timeline(bot.id, conversation.id, params, this.storage,
+        (value) => {
+          const limit = value === undefined ? 50 : Number(value);
+          requireValue(Number.isInteger(limit) && limit >= 1 && limit <= 100, 'invalid-limit', '分页大小应为 1–100。');
+          return limit;
+        });
+    }
+    if (command === 'private-chat.task-detail') {
+      const conversation = this.conversation(bot.id, params.conversationId);
+      return this.privateChat.taskDetail(bot.id, conversation.id, params.taskId);
+    }
     if (command === 'auth.status') return this.auth.status(bot.id);
     if (command === 'auth.start') {
       const config = JSON.parse(bot.config) as ModelConfig;
@@ -766,8 +793,16 @@ export class BotApplication {
           '相同提交 ID 不能用于不同消息。',
           409,
         );
+        if (params.selection !== undefined) {
+          const saved = existing.config_snapshot ? JSON.parse(existing.config_snapshot).selection : null;
+          const requested = JSON.stringify(parseModelSelection(params.selection));
+          requireValue(saved && JSON.stringify(saved) === requested, 'idempotency-conflict',
+            '相同提交 ID 不能用于不同模型选择或上下文。', 409);
+        }
         return { ...this.publicRun(existing), replayed: true };
       }
+      requireValue(!db.prepare('SELECT id FROM runs WHERE bot_id=? AND request_key=? LIMIT 1').get(bot.id, key),
+        'idempotency-conflict', '相同提交 ID 不能用于其他私聊上下文。', 409);
       requireValue(
         !db
           .prepare("SELECT id FROM runs WHERE conversation_id=? AND status IN ('queued','running')")
@@ -782,24 +817,13 @@ export class BotApplication {
         '当前已有 4 个执行，请稍后重试。',
         409,
       );
-      const config = JSON.parse(bot.config) as ModelConfig;
-      const isMain = isMainBot(db, bot.id);
-      const mainConnection = isMain ? db.prepare('SELECT connection_id FROM main_bot WHERE singleton=1').get()?.connection_id as string | null : null;
-      let connectionSnapshot: { id: string; sourceBotId: string; sourceModelEpoch: number } | null = null;
-      if (isMain) {
-        requireValue(mainConnection, 'model-not-configured', '请先在管理目录为主 Bot 绑定一个已授权模型连接。', 409);
-        const resolved = this.connections.resolve(mainConnection, bot.id);
-        config.baseUrl = resolved.config.baseUrl;
-        config.provider = resolved.config.provider;
-        config.model = resolved.config.model;
-        config.proxyUrl = resolved.config.proxyUrl;
-        config.keyless = resolved.config.keyless;
-        connectionSnapshot = { id: mainConnection, sourceBotId: resolved.sourceBotId, sourceModelEpoch: resolved.sourceModelEpoch };
-      } else {
-        requireValue(config.baseUrl && config.model, 'model-not-configured', '请先配置模型服务和模型。', 409);
-        if (config.provider === 'openai-codex') requireValue(this.auth.status(bot.id).signedIn, 'codex-not-signed-in', '请先完成 Codex 登录。', 409);
-        else requireValue(bot.credential || config.keyless, 'model-credential-missing', '请先私密设置模型凭据。', 409);
-      }
+      const resolved = this.privateChat.resolve(bot.id, params.selection);
+      const config = resolved.config;
+      const connectionSnapshot = resolved.connectionId ? { id: resolved.connectionId, sourceBotId: resolved.sourceBotId,
+        sourceModelEpoch: resolved.sourceModelEpoch } : null;
+      if (config.provider === 'openai-codex') requireValue(this.auth.status(resolved.sourceBotId).signedIn,
+        'codex-not-signed-in', '请先完成 Codex 登录。', 409);
+      else requireValue(resolved.credential || config.keyless, 'model-credential-missing', '请先私密设置模型凭据。', 409);
       const id = randomUUID(),
         at = now();
       this.storage.transaction(() => {
@@ -812,6 +836,9 @@ export class BotApplication {
           configRevision: bot.config_revision,
           model: { provider: config.provider, baseUrl: config.baseUrl, model: config.model, proxyUrl: config.proxyUrl, keyless: config.keyless },
           connection: connectionSnapshot,
+          selection: resolved.selection,
+          sourceBotId: resolved.sourceBotId,
+          sourceModelEpoch: resolved.sourceModelEpoch,
         }), bot.config_revision);
         const task = this.tasks.store.createRoot({ executorBotId: bot.id, initiatorBotId: bot.id,
           requestKey: `run:${id}`, input, configRevision: bot.config_revision,
@@ -819,6 +846,9 @@ export class BotApplication {
           configSnapshot: JSON.stringify({ name: bot.name, persona: bot.persona,
             model: { provider: config.provider, baseUrl: config.baseUrl, model: config.model, proxyUrl: config.proxyUrl, keyless: config.keyless },
             connection: connectionSnapshot,
+            selection: resolved.selection,
+            sourceBotId: resolved.sourceBotId,
+            sourceModelEpoch: resolved.sourceModelEpoch,
             workerManagement: this.workerManagement.snapshot(),
             delegations: db.prepare('SELECT worker_bot_id AS workerBotId,connection_id AS connectionId FROM delegation_grants WHERE main_bot_id=? AND revoked_at IS NULL ORDER BY worker_bot_id').all(mainBotId(db)) }),
           deadlineAt: new Date(Date.now() + 300000).toISOString(), at });
@@ -856,6 +886,9 @@ export class BotApplication {
       persona?: string;
       model?: ModelConfig;
       connection?: { id: string; sourceBotId: string; sourceModelEpoch: number } | null;
+      selection?: { kind: 'local'; modelId: string } | { kind: 'connection'; connectionId: string; modelId: string };
+      sourceBotId?: string;
+      sourceModelEpoch?: number;
     };
     const db = this.storage.db,
       started = Date.now(),
@@ -914,16 +947,17 @@ export class BotApplication {
       );
       let secrets: string[] = [],
         content: string;
-      const isMain = isMainBot(db, bot.id);
-      if (isMain) requireValue(snapshot.connection, 'connection-not-found', '此主 Bot 执行没有有效的共享模型连接引用。', 409);
-      const shared = isMain ? this.connections.resolve(snapshot.connection!.id, bot.id) : null;
+      const selected = this.privateChat.resolve(bot.id, snapshot.selection);
+      const shared = selected.connectionId ? this.connections.resolve(selected.connectionId, bot.id) : null;
+      requireValue(selected.config.model === config.model && selected.sourceBotId === snapshot.sourceBotId &&
+        selected.sourceModelEpoch === snapshot.sourceModelEpoch, 'connection-changed', '所选模型配置在此运行开始后发生变化。', 409);
       if (shared) requireValue(shared.sourceBotId === snapshot.connection?.sourceBotId && shared.sourceModelEpoch === snapshot.connection?.sourceModelEpoch,
-        'connection-changed', '主 Bot 模型连接在此运行开始后发生变化。', 409);
-      const authorizeSharedRequest = shared ? () => {
-        const current = this.connections.resolve(snapshot.connection!.id, bot.id);
-        requireValue(current.sourceBotId === snapshot.connection!.sourceBotId && current.sourceModelEpoch === snapshot.connection!.sourceModelEpoch,
-          'connection-changed', '主 Bot 模型连接已变化。', 409);
-      } : undefined;
+        'connection-changed', '模型连接在此运行开始后发生变化。', 409);
+      const authorizeSharedRequest = () => {
+        const current = this.privateChat.resolve(bot.id, snapshot.selection);
+        requireValue(current.sourceBotId === snapshot.sourceBotId && current.sourceModelEpoch === snapshot.sourceModelEpoch &&
+          current.config.model === config.model, 'connection-changed', '模型授权或配置已变化。', 409);
+      };
       if (config.provider === 'openai-codex') {
         const accessGrant = async () => {
           const grant = await this.auth.access(shared?.sourceBotId ?? bot.id, config.proxyUrl, executionSignal);
@@ -953,6 +987,7 @@ export class BotApplication {
         secrets = key ? [key] : [];
         content = await completeModel(config, key, messages, executionSignal, authorizeSharedRequest);
       }
+      authorizeSharedRequest();
       for (const secret of secrets) if (secret) content = content.replaceAll(secret, '[REDACTED]');
       const committed = this.storage.transaction(() => {
         const changed = db

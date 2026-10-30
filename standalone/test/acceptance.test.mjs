@@ -70,6 +70,7 @@ test('SB08/09/10: replay, lost response, busy conversation, cancellation and lat
       conversationId: f.conversation.id,
       idempotencyKey: 'same-key',
       content: 'hello',
+      selection: { kind: 'local', modelId: 'mock' },
     };
     const [a, b] = await Promise.all([
       f.app.executeOwner('runs.submit', p),
@@ -149,6 +150,7 @@ test('SB07/11: recovery, exclusive owner, scoped records, memory paths and revis
       conversationId: f.conversation.id,
       idempotencyKey: 'recovery',
       content: 'wait',
+      selection: { kind: 'local', modelId: 'mock' },
     });
     await until(() => f.calls === 1);
     await f.close();
@@ -284,6 +286,7 @@ test('SB12: explicit CONNECT proxy carries model request and failure has no dire
       conversationId: conversation.id,
       idempotencyKey: 'proxied',
       content: 'test',
+      selection: { kind: 'local', modelId: 'mock' },
     });
     const done = await until(async () => {
       const x = await app.executeOwner('runs.get', { botId: bot.id, runId: run.id });
@@ -299,6 +302,7 @@ test('SB12: explicit CONNECT proxy carries model request and failure has no dire
       conversationId: conversation.id,
       idempotencyKey: 'proxy-down',
       content: 'test',
+      selection: { kind: 'local', modelId: 'mock' },
     });
     const result = await until(async () => {
       const x = await app.executeOwner('runs.get', { botId: bot.id, runId: failed.id });

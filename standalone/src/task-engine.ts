@@ -396,11 +396,13 @@ export class TaskEngine {
       const grant = await this.auth.access(credentialSourceBotId, config.proxyUrl, signal);
       authorize();
       let output = await completeCodex(config.model, grant.access, messages, config.proxyUrl, `task:${taskId}`, signal, undefined, authorize);
+      authorize();
       for (const secret of [grant.access, grant.refresh]) if (secret) output = output.replaceAll(secret, '[REDACTED]');
       return output;
     }
     const credential = encryptedCredential ? this.storage.decrypt(encryptedCredential) : '';
     let output = await completeModel(config, credential, messages, signal, authorize);
+    authorize();
     if (credential) output = output.replaceAll(credential, '[REDACTED]');
     return output;
   }

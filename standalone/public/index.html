@@ -40,12 +40,8 @@
         <button id="main-entry" class="main-entry">主 Bot</button>
         <button id="catalog-entry" class="catalog-entry">Bot 管理目录</button>
         <nav id="bots" aria-label="Bot 列表"></nav>
-        <div class="side-heading">
-          <span>对话</span
-          ><button id="new-conversation" aria-label="新对话" title="新对话">＋</button>
-        </div>
-        <nav id="conversations" aria-label="对话列表"></nav>
         <footer>
+          <button id="settings-entry" type="button">模型来源与授权设置</button>
           <span class="status-dot"></span>独立网页预览<button id="logout">退出</button>
         </footer>
       </aside>
@@ -57,15 +53,21 @@
             <p class="eyebrow">你的专属对话空间</p>
             <div class="bot-title-row"><span id="bot-title-avatar"></span><h1 id="bot-title">选择或创建一个 Bot</h1></div>
           </div>
-          <span id="execution-status" class="pill">就绪</span>
+          <div class="header-actions">
+            <button id="history-entry" type="button" disabled>历史记录</button>
+            <span id="execution-status" class="pill">就绪</span>
+          </div>
         </header>
         <nav id="views" class="tabs" aria-label="Bot 功能">
-          <button data-view="chat" aria-pressed="true">对话</button
-          ><button data-view="identity">身份</button><button data-view="model">模型</button
-          ><button data-view="memory">文件记忆</button><button data-view="browser">浏览器</button
-          ><button data-view="diagnostics">诊断</button>
+          <button data-view="chat" aria-pressed="true">私聊</button>
+          <button data-view="identity">身份</button>
+          <button data-view="memory">文件记忆</button>
+          <button data-view="browser">浏览器</button>
+          <button data-view="diagnostics">诊断</button>
         </nav>
         <section id="view-chat" class="view chat-view">
+          <div id="chat-context" class="chat-context" hidden></div>
+          <button id="load-older" class="load-older" type="button" hidden>载入后续记录</button>
           <div id="messages" class="messages" aria-label="消息记录" aria-live="polite">
             <div class="empty">
               <h2>为一个 Bot 留出专属空间</h2>
@@ -73,10 +75,6 @@
             </div>
           </div>
           <div id="run-error" class="run-error" role="status" hidden></div>
-          <details id="task-trace" class="task-trace" hidden>
-            <summary id="task-trace-summary">委派任务</summary>
-            <div id="task-trace-items"></div>
-          </details>
           <form id="message-form" class="composer">
             <label class="sr-only" for="message-input">发送消息</label
             ><textarea
@@ -86,6 +84,8 @@
               maxlength="12000"
             ></textarea>
             <div class="composer-actions">
+              <label class="model-picker-label" for="chat-model">本次使用</label>
+              <select id="chat-model" aria-label="选择当前 Bot 可用的模型" disabled></select>
               <span id="send-hint" class="muted fine">Enter 发送 · Shift+Enter 换行</span
               ><button id="cancel-run" type="button" hidden>停止生成</button
               ><button id="send-message" type="submit" class="primary">发送</button>
@@ -95,6 +95,15 @@
         <section id="view-catalog" class="view settings-view" hidden>
           <h2>Bot 管理目录</h2>
           <p class="muted">按稳定 ID 区分 Bot。能力与执行状态来自当前实现和已保存的运行记录。</p>
+          <section class="grant-panel">
+            <h3>模型来源与私密登录</h3>
+            <p class="muted">选择一个 Bot 配置它自己的模型来源或登录。已有凭据留在来源 Bot，不复制到授权员工。</p>
+            <div class="source-settings-picker">
+              <label for="model-settings-source">来源 Bot</label>
+              <select id="model-settings-source"></select>
+              <button id="open-model-settings" type="button">配置来源与登录</button>
+            </div>
+          </section>
           <section class="grant-panel">
             <h3>设置主 Bot 模型</h3>
             <p class="muted">明确选择已有连接来源。主 Bot 使用服务端连接引用，不复制 OAuth 或 API 密钥。</p>
@@ -148,8 +157,8 @@
           </form>
         </section>
         <section id="view-model" class="view settings-view" hidden>
-          <h2>模型连接</h2>
-          <p class="muted">使用你已有、可合法使用的服务。连接状态以实际回复为准。</p>
+          <h2>模型来源与私密登录</h2>
+          <p id="model-source-context" class="muted">为选中的来源 Bot 配置模型。连接状态以实际回复为准。</p>
           <p id="model-connection-status" class="muted" aria-live="polite"></p>
           <form id="model-form">
             <label
@@ -335,6 +344,23 @@
       <p class="muted">此环境未能自动复制，请选中下方文本后复制。</p>
       <textarea id="copy-content" readonly rows="8" aria-label="待复制文本"></textarea
       ><button id="dismiss-copy">关闭</button>
+    </dialog>
+    <dialog id="history-dialog" aria-labelledby="history-title">
+      <section class="dialog-content">
+        <h2 id="history-title">历史记录</h2>
+        <p class="muted">切换后，消息与后续回复都属于所选的明确上下文。</p>
+        <div id="history-list" class="history-list" aria-live="polite"></div>
+        <button id="history-more" type="button" hidden>更多历史记录</button>
+        <div class="dialog-actions"><button id="dismiss-history" type="button">关闭</button></div>
+      </section>
+    </dialog>
+    <dialog id="task-dialog" aria-labelledby="task-dialog-title">
+      <section class="dialog-content">
+        <h2 id="task-dialog-title">协作记录</h2>
+        <p id="task-detail-updated" class="muted fine" aria-live="polite"></p>
+        <div id="task-dialog-content"></div>
+        <div class="dialog-actions"><button id="dismiss-task" type="button">关闭</button></div>
+      </section>
     </dialog>
   </body>
 </html>
