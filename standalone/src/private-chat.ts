@@ -1,22 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import type { Storage } from './storage.ts';
-import type { ConnectionResolver } from './connection-resolver.ts';
 import type { ModelConfig } from './model.ts';
 import type { CodexAuth } from './codex-auth.ts';
 import { TaskStore } from './task-store.ts';
 import { BotError, requireValue, text } from './errors.ts';
-import { isMainBot, mainBotId } from './bot-identity.ts';
 
 export type ModelSelection =
+  | { kind: 'global'; modelId: string }
   | { kind: 'local'; modelId: string }
   | { kind: 'connection'; connectionId: string; modelId: string };
 
 function selection(value: unknown): ModelSelection {
   requireValue(value && typeof value === 'object' && !Array.isArray(value), 'invalid-model-selection', '模型选择无效。');
   const item = value as Record<string, unknown>;
-  if (item.kind === 'local') {
+  if (item.kind === 'local' || item.kind === 'global') {
     requireValue(Object.keys(item).every((key) => ['kind', 'modelId'].includes(key)), 'invalid-model-selection', '模型选择字段无效。');
-    return { kind: 'local', modelId: text(item.modelId, '模型 ID', 160) };
+    return { kind: item.kind, modelId: text(item.modelId, '模型 ID', 160) };
   }
   requireValue(item.kind === 'connection' && Object.keys(item).every((key) => ['kind', 'connectionId', 'modelId'].includes(key)),
     'invalid-model-selection', '模型选择字段无效。');
@@ -26,11 +25,9 @@ function selection(value: unknown): ModelSelection {
 /** Persistence and authorization boundary for employee private chat. */
 export class PrivateChat {
   storage: Storage;
-  connections: ConnectionResolver;
   auth: CodexAuth;
-  constructor(storage: Storage, connections: ConnectionResolver, auth: CodexAuth) {
+  constructor(storage: Storage, auth: CodexAuth) {
     this.storage = storage;
-    this.connections = connections;
     this.auth = auth;
   }
 
@@ -40,23 +37,9 @@ export class PrivateChat {
   }
 
   private initialSelection(botId: string): ModelSelection | null {
-    const db = this.storage.db;
-    const connectionId = isMainBot(db, botId)
-      ? db.prepare('SELECT connection_id FROM main_bot WHERE singleton=1').get()?.connection_id as string | null
-      : (db.prepare('SELECT connection_id FROM delegation_grants WHERE main_bot_id=? AND worker_bot_id=?')
-          .get(mainBotId(db), botId) as { connection_id: string } | undefined)?.connection_id ?? null;
-    if (connectionId) {
-      try {
-        const resolved = this.connections.resolve(connectionId, botId);
-        return { kind: 'connection', connectionId, modelId: resolved.config.model };
-      } catch {
-        const saved = db.prepare('SELECT b.config FROM model_connections c JOIN bots b ON b.id=c.source_bot_id WHERE c.id=?')
-          .get(connectionId) as { config: string } | undefined;
-        const model = saved ? (JSON.parse(saved.config) as ModelConfig).model : '';
-        return { kind: 'connection', connectionId, modelId: model || 'unavailable' };
-      }
-    }
-    return null;
+    const row = this.storage.db.prepare('SELECT config_json,provider FROM model_account WHERE singleton=1').get() as {config_json:string;provider:string};
+    const model = (JSON.parse(row.config_json) as ModelConfig).model;
+    return model ? { kind: 'global', modelId: model } : null;
   }
 
   open(botId: string) {
@@ -88,46 +71,34 @@ export class PrivateChat {
       }
       const conversation = db.prepare('SELECT id,bot_id,title,created_at FROM conversations WHERE id=?').get(conversationId) as
         { id: string; bot_id: string; title: string; created_at: string };
+      let selected = state?.selection_json ? JSON.parse(state.selection_json) as ModelSelection : null;
+      if (!selected) {
+        selected = this.initialSelection(botId);
+        if (selected) db.prepare('UPDATE private_chat_state SET selection_json=?,updated_at=? WHERE bot_id=?')
+          .run(JSON.stringify(selected), new Date().toISOString(), botId);
+      }
       return { botId, conversation: { id: conversation.id, botId, title: conversation.title, createdAt: conversation.created_at },
-        selection: state?.selection_json ? JSON.parse(state.selection_json) as ModelSelection : null };
+        selection: selected };
     });
   }
 
   listModels(botId: string) {
     const db = this.storage.db;
-    const bot = db.prepare('SELECT config,credential FROM bots WHERE id=?').get(botId) as { config: string; credential: string | null };
-    const local = JSON.parse(bot.config) as ModelConfig;
+    const row = db.prepare('SELECT config_json,provider,oauth_credential,credential,migration_state FROM model_account WHERE singleton=1').get() as
+      {config_json:string;provider:string;oauth_credential:string|null;credential:string|null;migration_state:string};
+    const local = JSON.parse(row.config_json) as ModelConfig;
     const options: { selection: ModelSelection; provider: string; model: string; label: string; status: string }[] = [];
-    if (local.provider === 'openai-codex' && this.auth.status(botId).signedIn) {
-      for (const model of this.auth.status(botId).models) options.push({ selection: { kind: 'local', modelId: model.id },
-        provider: 'openai-codex', model: model.id, label: `Codex · ${model.name}`, status: 'available' });
-    } else if (local.provider !== 'openai-codex' && local.model && local.baseUrl && (bot.credential || local.keyless)) {
-      options.push({ selection: { kind: 'local', modelId: local.model }, provider: 'compatible', model: local.model,
-        label: `本地连接 · ${local.model}`, status: 'available' });
-    }
-    const ids = new Set<string>();
-    if (isMainBot(db, botId)) {
-      const rows = db.prepare('SELECT id FROM model_connections c JOIN connection_grants g ON g.connection_id=c.id WHERE g.consumer_bot_id=? AND g.revoked_at IS NULL ORDER BY c.created_at,c.id')
-        .all(botId) as { id: string }[];
-      for (const row of rows) ids.add(row.id);
-    } else {
-      const grant = db.prepare('SELECT connection_id FROM delegation_grants WHERE main_bot_id=? AND worker_bot_id=? AND revoked_at IS NULL')
-        .get(mainBotId(db), botId) as { connection_id: string } | undefined;
-      if (grant) ids.add(grant.connection_id);
-    }
-    for (const id of ids) {
-      let resolved;
-      try { resolved = this.connections.resolve(id, botId); } catch { continue; }
-      const models = resolved.config.provider === 'openai-codex'
-        ? this.auth.status(resolved.sourceBotId).models.map((item) => item.id)
-        : [resolved.config.model];
-      const sourceName = (db.prepare('SELECT name FROM bots WHERE id=?').get(resolved.sourceBotId) as { name: string }).name;
-      for (const modelId of models) options.push({ selection: { kind: 'connection', connectionId: id, modelId },
-        provider: resolved.config.provider ?? 'compatible', model: modelId,
-        label: `${sourceName} · ${resolved.config.provider ?? 'compatible'} · ${modelId}`, status: 'available' });
+    const status = this.auth.status('@owner');
+    if (local.model) {
+      if (local.provider === 'openai-codex') {
+        for (const model of status.models) options.push({ selection: { kind: 'global', modelId: model.id }, provider: 'openai-codex',
+          model: model.id, label: `Codex · ${model.name}`, status: status.signedIn ? model.status : 'not-signed-in' });
+      } else if (row.credential || local.keyless) options.push({ selection: { kind: 'global', modelId: local.model }, provider: 'compatible',
+        model: local.model, label: `模型账户 · ${local.model}`, status: 'available' });
     }
     const state = this.state(botId);
-    return { botId, items: options, selected: state?.selection_json ? JSON.parse(state.selection_json) as ModelSelection : null };
+    return { botId, items: options, selected: state?.selection_json ? JSON.parse(state.selection_json) as ModelSelection : this.initialSelection(botId),
+      migrationState: row.migration_state };
   }
 
   resolve(botId: string, value?: unknown) {
@@ -135,30 +106,23 @@ export class PrivateChat {
       ? JSON.parse(this.state(botId)!.selection_json!) as ModelSelection : this.initialSelection(botId)) : selection(value);
     requireValue(selected, 'model-selection-required', '请先在发送区选择模型，或在设置中保存明确选择。', 409);
     const db = this.storage.db;
-    if (selected.kind === 'connection') {
-      if (!isMainBot(db, botId)) {
-        const grant = db.prepare(`SELECT connection_id FROM delegation_grants WHERE main_bot_id=? AND worker_bot_id=? AND revoked_at IS NULL`)
-          .get(mainBotId(db), botId) as { connection_id: string } | undefined;
-        requireValue(grant?.connection_id === selected.connectionId, 'connection-not-found',
-          '此工作 Bot 未获该连接的直接私聊授权。', 403);
-      }
-      const reference = this.connections.resolve(selected.connectionId, botId);
-      const model = reference.config.provider === 'openai-codex'
-        ? this.auth.status(reference.sourceBotId).models.some((item) => item.id === selected.modelId)
-        : reference.config.model === selected.modelId;
-      requireValue(model, 'model-not-authorized', '所选模型不在此连接的允许目录中。', 403);
-      return { selection: selected, config: { ...reference.config, model: selected.modelId }, sourceBotId: reference.sourceBotId,
-        sourceModelEpoch: reference.sourceModelEpoch, connectionId: selected.connectionId, credential: reference.credential };
-    }
-    const bot = db.prepare('SELECT config,credential FROM bots WHERE id=?').get(botId) as { config: string; credential: string | null };
-    const config = JSON.parse(bot.config) as ModelConfig;
+    requireValue(selected.kind === 'global', 'model-account-only', '所有员工共用全局模型账户；请在账户设置中选择模型。', 409);
+    const account = db.prepare('SELECT config_json,credential,epoch,migration_state FROM model_account WHERE singleton=1').get() as
+      {config_json:string;credential:string|null;epoch:number;migration_state:string};
+    requireValue(account.migration_state !== 'selection-required', 'model-account-selection-required', '请选择要保留的已有模型账户。', 409);
+    const configured = JSON.parse(account.config_json) as ModelConfig;
+    let config = configured;
     if (config.provider === 'openai-codex') {
-      requireValue(this.auth.status(botId).signedIn && this.auth.status(botId).models.some((item) => item.id === selected.modelId),
-        'model-not-authorized', '所选 Codex 模型不在当前 SDK 目录中或账号未登录。', 403);
-    } else requireValue(config.model === selected.modelId, 'model-not-authorized', '兼容 API 只允许选择已配置模型。', 403);
-    return { selection: selected, config: { ...config, model: selected.modelId }, sourceBotId: botId,
-      sourceModelEpoch: Number(db.prepare('SELECT model_epoch FROM bots WHERE id=?').get(botId)?.model_epoch),
-      connectionId: null as string | null, credential: bot.credential };
+      const auth = this.auth.status('@owner');
+      requireValue(auth.signedIn, 'codex-not-signed-in', '请先完成全局模型账户登录。', 409);
+      requireValue(auth.models.some((item) => item.id === selected.modelId), 'model-not-authorized', '所选模型不在当前 SDK 目录中。', 403);
+      config = { ...configured, model: selected.modelId };
+    } else {
+      requireValue(configured.model === selected.modelId, 'model-not-authorized', '所选模型不在全局模型账户目录中。', 403);
+      requireValue(account.credential || configured.keyless, 'model-credential-missing', '请先私密设置全局模型凭据。', 409);
+    }
+    return { selection: selected, config, sourceBotId: '@owner', sourceModelEpoch: account.epoch,
+      connectionId: null as string | null, credential: account.credential };
   }
 
   selectModel(botId: string, value: unknown) {

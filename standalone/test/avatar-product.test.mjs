@@ -39,6 +39,13 @@ function png(metadataSize = 0, color = [40, 120, 80, 255]) {
   return Buffer.concat(parts);
 }
 const owner = (app, command, params = {}) => app.execute(command, params, { kind: 'owner' });
+function removeSchemaAfterV4(db) {
+  db.exec(`DROP TABLE IF EXISTS chat_group_runs; DROP TABLE IF EXISTS chat_group_messages; DROP TABLE IF EXISTS chat_group_members; DROP TABLE IF EXISTS chat_groups;
+    DROP TABLE IF EXISTS employee_onboarding; DROP TABLE IF EXISTS employee_create_operations; DROP TABLE IF EXISTS contact_preferences; DROP TABLE IF EXISTS model_account;
+    DROP TABLE IF EXISTS private_chat_state; DROP TABLE IF EXISTS browser_screenshots; DROP TABLE IF EXISTS browser_steps; DROP TABLE IF EXISTS browser_sessions; DROP TABLE IF EXISTS browser_origin_grants;
+    DROP TABLE IF EXISTS worker_management_scope_targets; DROP TABLE IF EXISTS worker_management_operations; DROP TABLE IF EXISTS worker_management_policy; DROP TABLE IF EXISTS bot_avatars;`);
+  if ((db.prepare('PRAGMA table_info(bots)').all()).some((column) => column.name === 'kind')) db.exec('ALTER TABLE bots DROP COLUMN kind');
+}
 
 test('schema 4 fixture migrates transactionally to current schema without changing Bot identity', async (t) => {
   const root = dir();
@@ -48,11 +55,12 @@ test('schema 4 fixture migrates transactionally to current schema without changi
   await app.close();
 
   const db = new DatabaseSync(join(root, 'bot.sqlite'));
-  db.exec('DROP TABLE private_chat_state; DROP TABLE browser_screenshots; DROP TABLE browser_steps; DROP TABLE browser_sessions; DROP TABLE browser_origin_grants; DROP TABLE worker_management_scope_targets; DROP TABLE worker_management_operations; DROP TABLE worker_management_policy; DROP TABLE bot_avatars; PRAGMA user_version=4;');
+  removeSchemaAfterV4(db);
+  db.exec('PRAGMA user_version=4');
   db.close();
   app = new BotApplication(root);
   try {
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 8);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 10);
     assert.equal((await owner(app, 'bots.get', { botId: bot.id })).id, bot.id);
     assert.equal((await owner(app, 'main.get')).bot.id, main);
     assert.equal((await owner(app, 'avatars.get', { botId: bot.id })).avatar, null);

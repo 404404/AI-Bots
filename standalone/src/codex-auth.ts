@@ -23,6 +23,7 @@ type Attempt = {
   worker?: Worker;
 };
 export class CodexAuth {
+  static readonly OWNER = '@owner';
   storage: Storage;
   attempts = new Map<string, Attempt>();
   refreshes = new Map<string, Promise<Grant>>();
@@ -40,6 +41,8 @@ export class CodexAuth {
     this.createWorker = createWorker;
   }
   read(botId: string) {
+    if (botId === CodexAuth.OWNER)
+      return this.storage.db.prepare('SELECT oauth_credential AS credential FROM model_account WHERE singleton=1').get()?.credential as string | undefined;
     return this.storage.db
       .prepare('SELECT credential FROM oauth_credentials WHERE bot_id=?')
       .get(botId)?.credential as string | undefined;
@@ -60,15 +63,20 @@ export class CodexAuth {
     return grant;
   }
   status(botId: string) {
-    const blob = this.read(botId),
-      grant = blob ? this.decode(blob) : undefined,
-      attempt = this.attempts.get(botId);
+    const blob = this.read(botId);
+    let grant: Grant | undefined, invalidGrant = false;
+    if (blob) { try { grant=this.decode(blob); } catch { invalidGrant=true; } }
+    const attempt = this.attempts.get(botId);
+    const account = botId === CodexAuth.OWNER ? this.storage.db.prepare('SELECT verified_models,verified_epoch,epoch FROM model_account WHERE singleton=1').get() as {verified_models:string;verified_epoch:number;epoch:number} | undefined : undefined;
+    const verified = botId === CodexAuth.OWNER && account?.verified_epoch === account.epoch
+      ? new Set(JSON.parse(account.verified_models) as string[])
+      : new Set<string>();
     return {
       signedIn: !!grant,
       expiresAt: grant?.expires ?? null,
       models: openaiCodexProvider()
         .getModels()
-        .map((model) => ({ id: model.id, name: model.name })),
+        .map((model) => ({ id: model.id, name: model.name, status: verified.has(model.id) ? 'verified' : 'candidate' })),
       attempt: attempt
         ? {
             id: attempt.id,
@@ -79,7 +87,7 @@ export class CodexAuth {
             expiresAt: attempt.expiresAt,
             manualInput: attempt.manualInput,
           }
-        : { phase: 'idle' },
+        : invalidGrant ? {phase:'failed',errorCode:'codex-invalid-grant'} : { phase: 'idle' },
     };
   }
   begin(botId: string, proxyUrl: string, method: unknown) {
@@ -133,12 +141,13 @@ export class CodexAuth {
         try {
           const blob = this.storage.encrypt(JSON.stringify(message.credential));
           this.decode(blob);
-          this.storage.db
-            .prepare(
-              'INSERT INTO oauth_credentials(bot_id,credential) VALUES(?,?) ON CONFLICT(bot_id) DO UPDATE SET credential=excluded.credential',
-            )
-            .run(botId, blob);
-          bumpModelEpoch(this.storage.db, botId);
+          if (botId === CodexAuth.OWNER) {
+            this.storage.db.prepare("UPDATE model_account SET oauth_credential=?,epoch=epoch+1,verified_models='[]',migration_state='ready',updated_at=? WHERE singleton=1")
+              .run(blob, new Date().toISOString());
+          } else {
+            this.storage.db.prepare('INSERT INTO oauth_credentials(bot_id,credential) VALUES(?,?) ON CONFLICT(bot_id) DO UPDATE SET credential=excluded.credential').run(botId, blob);
+            bumpModelEpoch(this.storage.db, botId);
+          }
           attempt.phase = 'authorized';
           attempt.url = null;
           attempt.userCode = null;
@@ -217,8 +226,10 @@ export class CodexAuth {
   }
   logout(botId: string) {
     this.cancel(botId);
-    const removed = this.storage.db.prepare('DELETE FROM oauth_credentials WHERE bot_id=?').run(botId).changes;
-    if (removed) bumpModelEpoch(this.storage.db, botId);
+    const removed = botId === CodexAuth.OWNER
+      ? this.storage.db.prepare("UPDATE model_account SET oauth_credential=NULL,epoch=epoch+1,verified_models='[]',verified_epoch=epoch+1,migration_state='not-configured',updated_at=? WHERE singleton=1 AND oauth_credential IS NOT NULL").run(new Date().toISOString()).changes
+      : this.storage.db.prepare('DELETE FROM oauth_credentials WHERE bot_id=?').run(botId).changes;
+    if (removed && botId !== CodexAuth.OWNER) bumpModelEpoch(this.storage.db, botId);
     this.attempts.delete(botId);
     this.log(botId, 'codex-auth-removed');
     return this.status(botId);
@@ -228,7 +239,7 @@ export class CodexAuth {
     const active = this.refreshes.get(botId);
     if (active) return await this.waitForRefresh(active, signal);
     const blob = this.read(botId);
-    requireValue(blob, 'codex-not-signed-in', '请先完成此 Bot 的 Codex 登录。', 409);
+    requireValue(blob, 'codex-not-signed-in', botId === CodexAuth.OWNER ? '请先完成全局模型账户登录。' : '请先完成此 Bot 的 Codex 登录。', 409);
     const grant = this.decode(blob);
     if (grant.expires > Date.now() + 60000) return grant;
     const pending = new Promise<Grant>((resolve, reject) => {
@@ -255,12 +266,14 @@ export class CodexAuth {
           try {
             const next = this.storage.encrypt(JSON.stringify(message.credential)),
               value = this.decode(next);
+            const changed = botId === CodexAuth.OWNER
+              // Refresh rotates the token inside the same owner authorization. Keep the account
+              // epoch stable so in-flight requests remain tied to that authorization snapshot.
+              ? this.storage.db.prepare("UPDATE model_account SET oauth_credential=?,updated_at=? WHERE singleton=1 AND oauth_credential=?")
+                  .run(next, new Date().toISOString(), blob).changes
+              : this.storage.db.prepare('UPDATE oauth_credentials SET credential=? WHERE bot_id=? AND credential=?').run(next, botId, blob).changes;
             requireValue(
-              this.storage.db
-                .prepare(
-                  'UPDATE oauth_credentials SET credential=? WHERE bot_id=? AND credential=?',
-                )
-                .run(next, botId, blob).changes,
+              changed,
               'codex-auth-changed',
               '登录状态已变化，请重新发送。',
               409,
@@ -289,6 +302,23 @@ export class CodexAuth {
     };
     void pending.then(cleanup, cleanup);
     return await this.waitForRefresh(pending, signal);
+  }
+  epoch() {
+    return Number(this.storage.db.prepare('SELECT epoch FROM model_account WHERE singleton=1').get()?.epoch ?? 0);
+  }
+  assertEpoch(epoch: number) {
+    const row=this.storage.db.prepare('SELECT epoch,credential,oauth_credential,config_json FROM model_account WHERE singleton=1').get() as
+      {epoch:number;credential:string|null;oauth_credential:string|null;config_json:string}|undefined;
+    const config=row?JSON.parse(row.config_json) as {keyless?:boolean}:{};
+    requireValue(!!row && row.epoch===epoch && (!!row.oauth_credential || !!row.credential || config.keyless===true),
+      'model-account-changed', '全局模型账户已变化或不可用，请重新发送。', 409);
+  }
+  markModelVerified(modelId: string) {
+    const row = this.storage.db.prepare('SELECT verified_models,epoch FROM model_account WHERE singleton=1').get() as {verified_models:string;epoch:number};
+    const previous=this.storage.db.prepare('SELECT verified_epoch FROM model_account WHERE singleton=1').get() as {verified_epoch:number};
+    const ids = new Set(previous.verified_epoch===row.epoch?JSON.parse(row.verified_models) as string[]:[]); ids.add(modelId);
+    this.storage.db.prepare('UPDATE model_account SET verified_models=?,verified_epoch=epoch,updated_at=? WHERE singleton=1')
+      .run(JSON.stringify([...ids].sort()), new Date().toISOString());
   }
   private waitForRefresh(pending: Promise<Grant>, signal: AbortSignal): Promise<Grant> {
     return new Promise((resolve, reject) => {

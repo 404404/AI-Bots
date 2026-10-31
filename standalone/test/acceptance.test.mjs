@@ -37,9 +37,8 @@ async function fixture() {
   await new Promise((r) => model.listen(0, '127.0.0.1', r));
   const app = new BotApplication(dir());
   const bot = await app.executeOwner('bots.create', { slug: 'qa-bot', name: 'QA' });
-  await app.executeOwner('bots.update', {
-    botId: bot.id,
-    model: { baseUrl: `http://127.0.0.1:${model.address().port}`, model: 'mock', keyless: true },
+  await app.executeOwner('model-account.update', {
+    provider: 'compatible', baseUrl: `http://127.0.0.1:${model.address().port}`, model: 'mock', keyless: true,
   });
   const conversation = await app.executeOwner('conversations.create', { botId: bot.id });
   return {
@@ -70,7 +69,7 @@ test('SB08/09/10: replay, lost response, busy conversation, cancellation and lat
       conversationId: f.conversation.id,
       idempotencyKey: 'same-key',
       content: 'hello',
-      selection: { kind: 'local', modelId: 'mock' },
+      selection: { kind: 'global', modelId: 'mock' },
     };
     const [a, b] = await Promise.all([
       f.app.executeOwner('runs.submit', p),
@@ -150,9 +149,9 @@ test('SB07/11: recovery, exclusive owner, scoped records, memory paths and revis
       conversationId: f.conversation.id,
       idempotencyKey: 'recovery',
       content: 'wait',
-      selection: { kind: 'local', modelId: 'mock' },
+      selection: { kind: 'global', modelId: 'mock' },
     });
-    await until(() => f.calls === 1);
+    await until(() => f.calls >= 2);
     await f.close();
     closed = true;
     const recovered = new BotApplication(root);
@@ -161,7 +160,7 @@ test('SB07/11: recovery, exclusive owner, scoped records, memory paths and revis
         (await recovered.executeOwner('runs.get', { botId: f.bot.id, runId: run.id })).status,
         'interrupted',
       );
-      assert.equal(f.calls, 1);
+      assert.equal(f.calls, 2);
     } finally {
       await recovered.close();
     }
@@ -216,12 +215,11 @@ test('SB02/04/14: HTTP auth, origin, secret storage and live CLI', async () => {
     };
     const bot = (await command('bots.create', { slug: 'http-qa', name: 'QA' })).body.result;
     const secret = 'synthetic-test-secret-9dfcf';
-    const updated = await command('bots.update', {
-      botId: bot.id,
-      apiKey: secret,
-      model: { baseUrl: 'http://127.0.0.1:9', model: 'mock' },
+    const updated = await command('model-account.update', {
+      key: secret,
+      provider: 'compatible', baseUrl: 'http://127.0.0.1:9', model: 'mock',
     });
-    assert.equal(updated.body.result.credentialConfigured, true);
+    assert.equal(updated.body.result.configured, true);
     assert(!JSON.stringify(updated).includes(secret));
     assert(!readFileSync(join(root, 'bot.sqlite')).includes(Buffer.from(secret)));
     assert.equal(statSync(join(root, 'secrets', 'master.key')).mode & 0o777, 0o600);
@@ -280,13 +278,13 @@ test('SB12: explicit CONNECT proxy carries model request and failure has no dire
       keyless: true,
       proxyUrl: `http://127.0.0.1:${proxy.address().port}`,
     };
-    await app.executeOwner('bots.update', { botId: bot.id, model: config });
+    await app.executeOwner('model-account.update', { provider: 'compatible', ...config });
     const run = await app.executeOwner('runs.submit', {
       botId: bot.id,
       conversationId: conversation.id,
       idempotencyKey: 'proxied',
       content: 'test',
-      selection: { kind: 'local', modelId: 'mock' },
+      selection: { kind: 'global', modelId: 'mock' },
     });
     const done = await until(async () => {
       const x = await app.executeOwner('runs.get', { botId: bot.id, runId: run.id });
@@ -302,7 +300,7 @@ test('SB12: explicit CONNECT proxy carries model request and failure has no dire
       conversationId: conversation.id,
       idempotencyKey: 'proxy-down',
       content: 'test',
-      selection: { kind: 'local', modelId: 'mock' },
+      selection: { kind: 'global', modelId: 'mock' },
     });
     const result = await until(async () => {
       const x = await app.executeOwner('runs.get', { botId: bot.id, runId: failed.id });

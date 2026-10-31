@@ -1,9 +1,14 @@
 const $ = (id) => document.getElementById(id);
 let bots = [],
-  mainBotId = null,
+  contacts = null,
+  groups = [],
+  activeGroupId = null,
+  groupMessageCursor = null,
+  groupHasOlder = false,
+  groupMessages = [],
+  groupOnboardings = new Map(),
+  hydratedGroupRetries = new Set(),
   bot = null,
-  sourceSettingsBot = null,
-  sourceSettingsEpoch = 0,
   conversation = null,
   modelOptions = [],
   currentModelSelection = null,
@@ -21,14 +26,14 @@ let bots = [],
   taskDetailContext = null,
   taskDetailEpoch = 0,
   taskDetailInFlight = null,
+  contactsRequestEpoch = 0,
   activeRun = null,
   memoryRevision = null,
   memoryPath = null,
-  workerPolicyRevision = 0,
   browserSessionId = null,
   browserTaskId = null;
 let noticeTimer;
-const authPolls = new Set();
+let handlersBound = false;
 const statusLabels = {
   queued: '已排队',
   running: '生成中',
@@ -38,11 +43,16 @@ const statusLabels = {
   interrupted: '执行已中断',
   idle: '空闲',
   available: '可用',
+  verified: '已验证',
+  candidate: '待验证',
   revoked: '已撤销',
   changed: '配置已变化',
   unconfigured: '未配置',
   unbound: '未绑定',
 };
+function modelIsUsable(item) {
+  return !item.status || ['available', 'verified', 'candidate'].includes(item.status);
+}
 const capabilityLabels = {
   identity: '身份设置',
   'model-settings': '模型设置',
@@ -155,7 +165,7 @@ function view(name) {
   if (name === 'memory' && bot) void loadMemory().catch(showError);
   if (name === 'diagnostics') void diagnostics().catch(showError);
   if (name === 'browser') void loadBrowser().catch(showError);
-  if (name === 'model' && sourceSettingsBot) void refreshAuth().catch(showError);
+  if (name === 'groups') void loadGroups().catch(showError);
 }
 async function copy(content) {
   try {
@@ -174,8 +184,8 @@ function renderBots() {
   nav.replaceChildren();
   for (const item of bots) {
     const button = node('button', undefined, 'bot-nav-item');
-    button.append(avatarVisual(item.avatar, item.name, 'xs', item.id), node('span', `${item.name}${item.id === mainBotId ? ' · 主 Bot' : ''}`));
-    button.setAttribute('aria-label', `${item.name}${item.id === mainBotId ? ' · 主 Bot' : ''}`);
+    button.append(avatarVisual(item.avatar, item.name, 'xs', item.id), node('span', item.name));
+    button.setAttribute('aria-label', item.name);
     button.setAttribute('aria-current', String(item.id === bot?.id));
     button.onclick = () => void selectBot(item.id).catch(showError);
     nav.append(button);
@@ -184,94 +194,13 @@ function renderBots() {
 async function refreshBots() {
   bots = await all('bots.list');
   renderBots();
-}
-async function loadCatalog() {
-  const catalog = await command('main.catalog');
-  mainBotId = catalog.mainBotId;
-  renderBots();
-  const modelSettingsSource = $('model-settings-source');
-  const preferredSourceId = sourceSettingsBot?.id ?? bot?.id ?? catalog.mainBotId;
-  modelSettingsSource.replaceChildren(...catalog.items.map((item) => {
-    const option = node('option', `${item.name} · ${item.role === 'main' ? '主 Bot' : '工作 Bot'} · ${item.id}`);
-    option.value = item.id;
-    option.selected = item.id === preferredSourceId;
-    return option;
-  }));
-  if (!catalog.items.some((item) => item.id === preferredSourceId)) modelSettingsSource.value = catalog.mainBotId;
-  const workers = catalog.items.filter((item) => item.role === 'work');
-  $('grant-worker').replaceChildren(...workers.map((item) => {
+  $('group-recipients').replaceChildren(...bots.map((item) => {
     const option = node('option', `${item.name} · ${item.id}`);
     option.value = item.id;
     return option;
   }));
-  const sources = catalog.items.filter((item) => item.canShareOwnConnection);
-  const sourceOptions = () => sources.map((item) => {
-    const option = node('option', `${item.name} · ${item.id}`);
-    option.value = item.id;
-    return option;
-  });
-  $('grant-source').replaceChildren(...sourceOptions());
-  $('main-source').replaceChildren(...sourceOptions());
-  const policy = catalog.workerManagementPolicy;
-  workerPolicyRevision = policy.revision;
-  const targetSelect = $('worker-policy-targets');
-  targetSelect.replaceChildren(...workers.map((item) => {
-    const option = node('option', `${item.name} · ${item.id}`);
-    option.value = item.id;
-    option.selected = policy.allowedWorkerIds.includes(item.id);
-    return option;
-  }));
-  const policyConnections = catalog.mainConnectionRefs;
-  $('worker-policy-connections').replaceChildren(...policyConnections.map((reference) => {
-    const source = catalog.items.find((item) => item.id === reference.sourceBotId);
-    const option = node('option', `${source?.name ?? reference.sourceBotId} · ${reference.provider}/${reference.model} · ${reference.id}`);
-    option.value = reference.id;
-    option.selected = policy.allowedConnectionIds.includes(reference.id);
-    return option;
-  }));
-  $('worker-policy-enabled').checked = policy.enabled;
-  $('worker-policy-create').checked = policy.allowCreation;
-  $('worker-policy-source').replaceChildren(...sources.map((item) => {
-    const option = node('option', `${item.name} · ${item.id}`);
-    option.value = item.id;
-    return option;
-  }));
-  $('worker-policy-status').textContent = `策略版本 ${policy.revision} · ${policy.enabled ? '对话管理已启用' : '对话管理已关闭'}；关闭不会撤销现有委派授权。`;
-  const byId = new Map(catalog.items.map((item) => [item.id, item]));
-  const mainConnection = catalog.mainConnection;
-  $('main-connection').textContent = mainConnection
-    ? `主 Bot 使用 ${byId.get(mainConnection.sourceBotId)?.name ?? mainConnection.sourceBotId} · ${mainConnection.id} · ${statusLabels[mainConnection.status] ?? mainConnection.status}`
-    : '主 Bot 尚未绑定可用模型连接。';
-  $('delegation-grants').replaceChildren(...catalog.connectionBindings.map((reference) => {
-    const row = node('div', undefined, 'grant-row');
-    row.append(node('span', `${byId.get(reference.consumerBotId)?.name ?? reference.consumerBotId} 使用 ${byId.get(reference.sourceBotId)?.name ?? reference.sourceBotId} · ${reference.id} · ${statusLabels[reference.status] ?? reference.status}`));
-    if (reference.status === 'available') {
-      const revoke = node('button', '撤销');
-      revoke.onclick = () => void command('connections.revoke', { connectionId: reference.id })
-        .then(loadCatalog).catch(showError);
-      row.append(revoke);
-    }
-    return row;
-  }));
-  $('bot-catalog').replaceChildren();
-  for (const item of catalog.items) {
-    const card = node('article', undefined, 'catalog-card');
-    const title = node('h3', undefined, 'catalog-heading');
-    title.append(avatarVisual(item.avatar, item.name, 'sm', item.id), node('span', `${item.name} · ${item.role === 'main' ? '主 Bot' : '工作 Bot'}`));
-    const identity = node('p', `ID：${item.id} · slug：${item.slug}`);
-    const persona = node('p', `角色：${item.persona || '未设置'}`);
-    const modelState = item.role === 'main' && item.connectionStatus
-      ? `共享连接：${item.connectionStatus === 'available' ? `${byId.get(catalog.mainConnection?.sourceBotId)?.name ?? '已绑定'} · 已就绪` : item.connectionStatus === 'unbound' ? '未绑定' : '已失效，需要重新授权'}`
-      : `模型：${item.modelConfigured ? (item.credentialConfigured ? '已配置' : '缺少凭据') : '未配置'}`;
-    const state = node('p', `${modelState} · 最近执行：${statusLabels[item.executionStatus] ?? item.executionStatus} · 配置版本：${item.configRevision}`);
-    const capabilities = node('p', `当前能力：${item.capabilities.map((value) => capabilityLabels[value] ?? value).join('、')}`);
-    const identityButton = node('button', '身份设置');
-    identityButton.onclick = () => void selectBot(item.id).then(() => view('identity')).catch(showError);
-    const modelButton = node('button', '模型设置');
-    modelButton.onclick = () => void openSourceSettings(item.id).catch(showError);
-    card.append(title, identity, persona, state, capabilities, identityButton, modelButton);
-    $('bot-catalog').append(card);
-  }
+  if (contacts) renderContacts();
+  $('group-create-members').replaceChildren(...bots.map((item) => { const option = node('option', `${item.name} · ${item.id}`); option.value = item.id; return option; }));
 }
 function fillSettings() {
   if (!bot) return;
@@ -280,61 +209,6 @@ function fillSettings() {
   renderAvatarSettings();
   $('bot-name').value = bot.name;
   $('bot-persona').value = bot.persona;
-}
-function fillSourceSettings() {
-  if (!sourceSettingsBot) return;
-  const source = sourceSettingsBot;
-  $('model-source-context').textContent = `正在配置 ${source.name} · ${source.id}。保存或登录仅作用于此来源 Bot，不改变当前私聊选择。`;
-  $('model-provider').value = source.model.provider ?? (source.model.baseUrl ? 'compatible' : 'openai-codex');
-  $('model-base-url').value = source.model.baseUrl ?? '';
-  $('model-name').value = source.model.model ?? '';
-  $('model-proxy').value = source.model.proxyUrl ?? '';
-  $('model-keyless').checked = source.model.keyless === true;
-  $('model-key').value = '';
-  $('clear-credential').checked = false;
-  $('credential-status').textContent = source.credentialConfigured ? '已保存私密凭据 · 不回显' : '尚未配置凭据';
-  $('model-connection-status').textContent = source.isMain
-    ? (source.mainConnection
-      ? `此主 Bot 使用共享连接 ${source.mainConnection.id}（${statusLabels[source.mainConnection.status] ?? source.mainConnection.status}），来源 Bot：${source.mainConnection.sourceBotId}。本地设置不会替代该绑定。`
-      : '此主 Bot 尚未绑定共享模型连接。可在 Bot 管理目录绑定已有来源；来源凭据留在原 Bot。')
-    : '';
-  providerFields();
-}
-async function openSourceSettings(botId) {
-  const epoch = ++sourceSettingsEpoch;
-  view('model');
-  sourceSettingsBot = null;
-  $('model-source-context').textContent = `正在读取来源 Bot ${botId}…`;
-  $('model-key').value = '';
-  $('clear-credential').checked = false;
-  $('codex-callback').value = '';
-  $('codex-status').textContent = '正在读取来源 Bot…';
-  $('codex-notice').hidden = true;
-  $('codex-login-link').removeAttribute('href');
-  $('codex-user-code').textContent = '';
-  $('codex-answer-form').hidden = true;
-  setSourceSettingsLoading(true);
-  try {
-    const source = await command('bots.get', { botId });
-    if (epoch !== sourceSettingsEpoch) return;
-    sourceSettingsBot = source;
-    $('model-settings-source').value = botId;
-    fillSourceSettings();
-    setSourceSettingsLoading(false);
-    view('model');
-  } catch (error) {
-    if (epoch === sourceSettingsEpoch) {
-      $('model-source-context').textContent = '读取来源 Bot 失败。请回到来源与授权设置重新选择。';
-    }
-    throw error;
-  }
-}
-function setSourceSettingsLoading(loading) {
-  for (const control of $('model-form').elements) control.disabled = loading;
-  for (const id of ['codex-device-login', 'codex-browser-login', 'codex-cancel', 'codex-logout'])
-    $(id).disabled = loading;
-  $('codex-callback').disabled = loading;
-  $('codex-answer-form').querySelector('button[type="submit"]').disabled = loading;
 }
 function renderAvatarSettings() {
   if (!bot) return;
@@ -401,46 +275,6 @@ async function refreshAvatarSurfaces(botId) {
     if (element.dataset.botId === botId)
       element.replaceWith(avatarVisual(updated.avatar, updated.name, element.classList.contains('lg') ? 'lg' : element.classList.contains('xs') ? 'xs' : 'sm', botId));
   }
-  await loadCatalog();
-}
-function providerFields() {
-  const codex = $('model-provider').value === 'openai-codex';
-  $('api-key-fields').hidden = codex;
-  $('base-url-field').hidden = codex;
-  $('model-base-url').required = !codex;
-  $('codex-auth-panel').hidden = !codex;
-}
-async function refreshAuth() {
-  if (!sourceSettingsBot) return;
-  const botId = sourceSettingsBot.id, epoch = sourceSettingsEpoch;
-  const pollKey = `${botId}:${epoch}`;
-  if (authPolls.has(pollKey)) return;
-  authPolls.add(pollKey);
-  try {
-    const status = await command('auth.status', { botId });
-    if (sourceSettingsBot?.id !== botId || sourceSettingsEpoch !== epoch) return;
-    const attempt = status.attempt;
-    $('codex-status').textContent =
-      `${status.signedIn ? '已登录 · 需通过实际回复验证' : '尚未登录'}${attempt.phase === 'running' ? ' · 登录进行中' : ''}${attempt.errorCode ? ` · ${attempt.errorCode}` : ''}`;
-    $('codex-notice').hidden = !attempt.url;
-    if (attempt.url) $('codex-login-link').href = attempt.url;
-    else $('codex-login-link').removeAttribute('href');
-    $('codex-user-code').textContent = attempt.userCode ? `设备验证码：${attempt.userCode}` : '';
-    $('codex-answer-form').hidden = !attempt.manualInput;
-    $('model-catalog').replaceChildren(
-      ...status.models.map((model) => {
-        const option = node('option');
-        option.value = model.id;
-        option.label = model.name;
-        return option;
-      }),
-    );
-    if (!$('model-name').value && $('model-provider').value === 'openai-codex')
-      $('model-name').value =
-        status.models.find((model) => model.id === 'gpt-6.1-sol')?.id ?? status.models[0]?.id ?? '';
-  } finally {
-    authPolls.delete(pollKey);
-  }
 }
 function closeMobileNav() {
   document.body.classList.remove('mobile-nav-open');
@@ -487,11 +321,21 @@ function selectionKey(selection) {
 }
 function renderModelOptions(selected) {
   currentModelSelection = selected ?? null;
+  const groupSelect = $('group-model');
+  groupSelect.replaceChildren();
+  const groupPlaceholder = node('option', '选择模型'); groupPlaceholder.value = ''; groupPlaceholder.selected = true; groupSelect.append(groupPlaceholder);
+  modelOptions.forEach((item, index) => { const option = node('option', item.model ?? item.label); option.value = String(index); option.disabled = !modelIsUsable(item); groupSelect.append(option); });
+  const selectedIndex = modelOptions.findIndex((item) => selectionKey(item.selection) === selectionKey(selected) && modelIsUsable(item));
+  if (selectedIndex >= 0) groupSelect.value = String(selectedIndex);
+  const hasAvailableModel = modelOptions.some(modelIsUsable);
+  groupSelect.disabled = !hasAvailableModel;
+  $('group-send').disabled = !hasAvailableModel;
+  $('group-send-hint').textContent = modelOptions.length ? '发送时使用所选的共享模型。' : '请先在模型账户设置中配置可用模型。';
   const select = $('chat-model');
   select.replaceChildren();
   const placeholder = node('option', selected
     ? '所选来源已失效，请重新选择'
-    : !modelOptions.length ? '无可用模型，请前往来源与授权设置' : '选择模型');
+    : !modelOptions.length ? '无可用模型，请先配置共享账户' : '选择模型');
   placeholder.value = '';
   placeholder.selected = true;
   select.append(placeholder);
@@ -499,17 +343,17 @@ function renderModelOptions(selected) {
     const option = node('option', `${item.model ?? item.label}${item.status && item.status !== 'available' ? ` · ${statusLabels[item.status] ?? item.status}` : ''}`);
     option.title = item.label ?? `${item.provider} · ${item.model}`;
     option.value = String(index);
-    option.disabled = item.status && item.status !== 'available';
+    option.disabled = !modelIsUsable(item);
     select.append(option);
   });
   const found = modelOptions.findIndex((item) => selectionKey(item.selection) === selectionKey(selected)
-    && (!item.status || item.status === 'available'));
+    && modelIsUsable(item));
   select.value = found >= 0 ? String(found) : '';
   select.disabled = modelOptions.length === 0 || Boolean(pending()) || modelSelectionPending;
   $('send-message').disabled = !conversation || modelSelectionPending || (!pending() && found < 0);
-  if (!modelOptions.length) $('send-hint').textContent = '此 Bot 尚无可用模型，请在来源与授权设置中配置。';
+  if (!modelOptions.length) $('send-hint').textContent = '尚无可用模型，请先完成共享模型账户设置。';
   else if (found < 0 && selected) $('send-hint').textContent = '所选模型来源已失效；重新选择前不会改用其他来源。';
-  else if (found < 0) $('send-hint').textContent = '选择此 Bot 已获准使用的模型后发送。';
+  else if (found < 0) $('send-hint').textContent = '选择一个共享模型后发送。';
   else $('send-hint').textContent = 'Enter 发送 · Shift+Enter 换行';
 }
 async function selectConversation(item, { skipOpen = false } = {}) {
@@ -637,7 +481,7 @@ function renderTaskDetail(detail, taskId) {
     ['状态', statusLabels[current.status] ?? current.status],
     ['发起者', initiator],
     ['执行者', executor],
-    ['模型来源 Bot', current.sourceBotId],
+    ['模型来源 Bot', current.configSnapshot?.sourceBotId],
     ['来源任务', current.parentId ?? '无（根任务）'],
     ['根任务', current.rootId],
     ['任务 ID', current.id],
@@ -832,106 +676,302 @@ async function loadBrowser() {
   $('browser-cancel').disabled = !status.configured || !browserSessionId;
   renderBrowserHistory(traces);
 }
+async function loadAccount({ authOnly = false, refreshContacts = true } = {}) {
+  const account = await command('model-account.get');
+  $('account-status').textContent = account.configured
+    ? `${account.provider} · ${account.model || '请选择模型'} · ${account.auth?.signedIn ? '已登录' : '未登录'}${account.auth?.errorCode ? ` · ${account.auth.errorCode}` : ''}`
+    : '尚未配置共享模型账户。请先保存来源和模型。';
+  if (!authOnly) {
+    $('model-provider').value = account.provider || 'openai-codex';
+    $('model-name').value = account.model || '';
+    $('model-base-url').value = account.baseUrl || '';
+    $('model-proxy').value = account.proxyUrl || '';
+    $('model-keyless').checked = account.keyless === true;
+    $('clear-model-key').checked = false;
+    $('credential-status').textContent = '凭据仅由服务端检查和保存，不会回显。';
+  }
+  $('codex-status').textContent = `${account.auth?.signedIn ? '已登录' : '尚未登录'}${account.auth?.attempt?.phase && account.auth.attempt.phase !== 'idle' ? ` · ${account.auth.attempt.phase}` : ''}${account.auth?.attempt?.errorCode ? ` · ${account.auth.attempt.errorCode}` : ''}`;
+  const attempt = account.auth?.attempt || {};
+  $('codex-notice').hidden = !attempt.url && !attempt.userCode;
+  if (attempt.url) $('codex-login-link').href = attempt.url; else $('codex-login-link').removeAttribute('href');
+  $('codex-user-code').textContent = attempt.userCode ? `设备验证码：${attempt.userCode}` : '';
+  $('codex-answer-form').hidden = !attempt.manualInput;
+  const models = account.auth?.models || [];
+  $('model-catalog').replaceChildren(...models.map((m) => { const option = node('option'); option.value = m.id; option.label = m.name; return option; }));
+  if (!authOnly) {
+    const migration = account.migration || { state: 'ready', candidates: [] };
+    $('account-migration').hidden = migration.state !== 'selection-required';
+    $('migration-source').replaceChildren(...(migration.candidates || []).map((candidate) => {
+      const option = node('option', `${candidate.name} · ${candidate.provider}/${candidate.model} · ${candidate.status}`);
+      option.value = candidate.botId;
+      return option;
+    }));
+  }
+  if (refreshContacts && !authOnly) await loadContacts();
+}
+function renderContacts() {
+  if (!contacts) return;
+  const picker = $('contact-picker');
+  picker.replaceChildren();
+  if (contacts.count > 1 && !contacts.primaryEmployeeId) { const placeholder = node('option', '请选择主要联系人'); placeholder.value = ''; placeholder.selected = true; picker.append(placeholder); }
+  picker.append(...bots.map((item) => {
+    const option = node('option', `${item.name} · ${item.id}`);
+    option.value = item.id;
+    option.selected = item.id === contacts.primaryEmployeeId;
+    return option;
+  }));
+  const employeeList = $('employee-list');
+  employeeList.replaceChildren();
+  for (const employee of bots) {
+    const row = node('article', undefined, 'employee-row');
+    row.append(node('strong', employee.name), node('span', `ID ${employee.id}`, 'muted fine'));
+    const onboarding = groupOnboardings.get(employee.id) || employee.onboarding;
+    if (onboarding?.welcome?.kind === 'preset-welcome') row.append(node('p', `已显示预设欢迎语 · 角色分析${onboarding.roleStatus === 'completed' ? '已完成' : onboarding.roleStatus === 'failed' ? `失败${onboarding.roleErrorCode ? ` · ${onboarding.roleErrorCode}` : ''}` : '待完成'}`, 'muted fine'));
+    if (['pending', 'failed'].includes(onboarding?.roleStatus)) {
+      const retry = node('button', '重试角色分析'); retry.type = 'button';
+      retry.onclick = () => void command('employees.onboarding.retry', { botId: employee.id }).then((result) => { groupOnboardings.set(employee.id, result); renderContacts(); }).catch(showError);
+      row.append(retry);
+    }
+    employeeList.append(row);
+  }
+  const primary = bots.find((item) => item.id === contacts.primaryEmployeeId);
+  $('contact-shortcut').hidden = !primary;
+  $('contact-shortcut').textContent = primary ? `主要联系人 · ${primary.name}` : '';
+  $('contact-shortcut').onclick = () => void selectBot(primary.id).catch(showError);
+  $('contact-status').textContent = contacts.count === 0
+    ? '先创建一位员工。'
+    : contacts.count === 1
+      ? `当前联系人：${bots.find((item) => item.id === contacts.primaryEmployeeId)?.name || '唯一员工'}`
+      : contacts.primaryEmployeeId
+        ? `当前联系人：${bots.find((item) => item.id === contacts.primaryEmployeeId)?.name || '已选择'}`
+        : '有多位员工，请明确选择主要联系人。';
+  $('contact-picker-label').hidden = contacts.count < 2;
+  $('contact-save').hidden = contacts.count < 2;
+  $('contact-save').disabled = contacts.count < 2 || !picker.value || picker.value === contacts.primaryEmployeeId;
+  picker.onchange = () => { $('contact-save').disabled = !picker.value || picker.value === contacts.primaryEmployeeId; };
+}
+async function loadContacts() {
+    const epoch = ++contactsRequestEpoch;
+    const result = await command('contacts.get');
+    if (epoch !== contactsRequestEpoch) return;
+    contacts = result;
+  renderContacts();
+}
+async function loadEmployeeStatuses() {
+  const results = await Promise.allSettled(bots.map((employee) => command('employees.onboarding.status', { botId: employee.id })));
+  results.forEach((result, index) => { if (result.status === 'fulfilled' && result.value) groupOnboardings.set(bots[index].id, result.value); });
+  renderContacts();
+}
+async function refreshOnboardings() {
+  const pendingIds = [...groupOnboardings.entries()].filter(([, value]) => ['pending', 'running'].includes(value?.roleStatus)).map(([botId]) => botId);
+  if (!pendingIds.length) return;
+  await Promise.all(pendingIds.map(async (botId) => {
+    const status = await command('employees.onboarding.status', { botId });
+    groupOnboardings.set(botId, status);
+  }));
+  renderContacts();
+}
+async function loadGroups() {
+  const result = await command('groups.list');
+  groups = result.groups || [];
+  const list = $('groups-list');
+  list.replaceChildren();
+  if (!groups.length) list.append(node('p', '还没有群聊。', 'muted fine'));
+  for (const group of groups) {
+    const button = node('button', `${group.name} · ${(group.members || []).length} 位员工`);
+    button.type = 'button';
+    button.dataset.groupId = group.id;
+    button.setAttribute('aria-current', String(group.id === activeGroupId));
+    button.onclick = () => void openGroup(group.id).catch(showError);
+    list.append(button);
+  }
+  if (activeGroupId && groups.some((item) => item.id === activeGroupId)) await openGroup(activeGroupId);
+}
+async function openGroup(groupId, { reset = false, older = false } = {}) {
+  const changed = activeGroupId !== groupId;
+  activeGroupId = groupId;
+  if (changed || reset) { groupMessageCursor = null; groupHasOlder = false; groupMessages = []; }
+  const result = await command('groups.get', { groupId });
+  const group = result.group;
+  if (!group) throw new Error('群聊不存在或已不可用。');
+  $('group-title').textContent = group.name;
+  const editor = $('group-members-editor');
+  editor.replaceChildren(...bots.map((employee) => { const option = node('option', `${employee.name} · ${employee.id}`); option.value = employee.id; option.selected = (group.members || []).some((member) => member.botId === employee.id); return option; }));
+  $('group-members').textContent = (group.members || []).map((m) => `${m.name} · ${m.botId}`).join('、');
+  const memberIds = (group.members || []).map((member) => member.botId);
+  $('group-recipients').replaceChildren(...(group.members || []).map((member) => { const option = node('option', `${member.name} · ${member.botId}`); option.value = member.botId; return option; }));
+  $('group-send').disabled = memberIds.length === 0 || !modelOptions.some((item) => !item.status || item.status === 'available');
+  if (!hydratedGroupRetries.has(groupId)) {
+    hydratedGroupRetries.add(groupId);
+    try {
+      const pending = JSON.parse(localStorage.getItem(`gk50-bot:pending-group:${groupId}`) || 'null');
+      if (pending) {
+        $('group-input').value = pending.text;
+        for (const option of $('group-recipients').options) option.selected = pending.recipientBotIds.includes(option.value);
+        const pendingModel = modelOptions.findIndex((item) => item.selection?.modelId === pending.modelId);
+        if (pendingModel >= 0) $('group-model').value = String(pendingModel);
+        $('group-send-hint').textContent = '有一条群消息发送结果未确认；已恢复原请求，可安全重试。';
+      }
+    } catch { /* a malformed local retry record is ignored; no message is sent */ }
+  }
+  const page = await command('groups.messages', { groupId, limit: 50, ...(older && groupMessageCursor ? { cursor: groupMessageCursor } : {}) });
+  const incoming = page.items || [];
+  if (changed || reset || groupMessageCursor === null) groupMessages = incoming;
+  else {
+    const existingIds = new Set(groupMessages.map((message) => message.id));
+    const unseen = incoming.filter((message) => !existingIds.has(message.id));
+    groupMessages = older ? [...unseen, ...groupMessages] : [...groupMessages, ...unseen];
+  }
+  if (changed || reset || older || groupMessageCursor === null) groupMessageCursor = page.nextCursor || null;
+  groupHasOlder = Boolean(page.hasMore ?? page.nextCursor);
+  $('group-load-older').hidden = !groupHasOlder;
+  const list = $('group-messages');
+  list.replaceChildren();
+  for (const message of groupMessages) {
+    const row = node('article', undefined, `group-message ${message.senderType}`);
+    row.dataset.senderId = message.senderId;
+    const employee = message.senderType === 'bot' ? bots.find((item) => item.id === message.senderId) : null;
+    const heading = node('div', undefined, 'group-message-heading');
+    heading.append(avatarVisual(employee?.avatar, employee?.name || message.senderName, 'xs', employee?.id));
+    heading.append(node('strong', `${message.senderName} · ${message.senderId}`));
+    row.append(heading, node('time', new Date(message.createdAt).toLocaleString()), node('p', message.content));
+    list.append(row);
+  }
+  for (const run of result.runs || []) {
+    const active = ['queued', 'running'].includes(run.status);
+    const failed = ['failed', 'cancelled', 'interrupted'].includes(run.status);
+    if (!active && !failed) continue;
+    const row = node('p', `${bots.find((item) => item.id === run.botId)?.name || run.botId} · ${statusLabels[run.status] || run.status}${run.errorCode ? ` · ${run.errorCode}` : ''}`, `group-run-status${failed ? ' failed' : ''}`);
+    if (active) {
+      const cancel = node('button', '停止'); cancel.type = 'button';
+      cancel.onclick = () => void command('groups.cancel', { groupId, runId: run.id }).then(() => openGroup(groupId)).catch(showError);
+      row.append(cancel);
+    }
+    list.append(row);
+  }
+  await loadGroupsListOnly();
+}
+async function loadGroupsListOnly() {
+  const list = $('groups-list');
+  for (const button of list.querySelectorAll('button')) button.setAttribute('aria-current', String(button.dataset.groupId === activeGroupId));
+}
+async function createGroup() {
+  $('group-create-members').replaceChildren(...bots.map((item) => { const option = node('option', `${item.name} · ${item.id}`); option.value = item.id; return option; }));
+  $('group-dialog').showModal();
+}
+function initialEmployeeId() {
+  if (bots.length === 1) return bots[0].id;
+  return contacts?.primaryEmployeeId || null;
+}
+function showNoEmployeeSelected() {
+  bot = null; conversation = null; modelOptions = []; currentModelSelection = null;
+  $('bot-title').textContent = '选择员工开始对话';
+  $('bot-title-avatar').replaceChildren(); $('history-entry').disabled = true;
+  $('messages').replaceChildren(node('div', contacts?.count > 1 && !contacts.primaryEmployeeId ? '请先在模型账户设置中选择主要联系人；也可以继续访问每位员工的私聊。' : '创建一位员工，或从左侧选择一位员工。', 'empty'));
+  renderModelOptions(null); updateComposer();
+}
 async function enter() {
   await request('/api/v1/session');
   $('login-screen').hidden = true;
   $('workspace').hidden = false;
   await refreshBots();
-  const main = await command('main.get');
-  mainBotId = main.bot.id;
-  $('main-entry').textContent = `${main.bot.name} · 主 Bot`;
-  renderBots();
-  $('main-entry').onclick = () => void selectBot(mainBotId).then(() => view('chat')).catch(showError);
-  $('catalog-entry').onclick = () => { closeMobileNav(); void loadCatalog().then(() => view('catalog')).catch(showError); };
-  $('settings-entry').onclick = () => { closeMobileNav(); void loadCatalog().then(() => view('catalog')).catch(showError); };
-  $('open-model-settings').onclick = () => void openSourceSettings($('model-settings-source').value).catch(showError);
+  try { const pendingCreate = JSON.parse(localStorage.getItem('gk50-bot:create-employee') || 'null'); if (pendingCreate) { $('create-name').value = pendingCreate.name; $('create-persona').value = pendingCreate.persona; } } catch { /* invalid retry state is not submitted automatically */ }
+  await loadContacts();
+  await loadEmployeeStatuses();
+  if (handlersBound) {
+    const employeeId = initialEmployeeId();
+    if (employeeId) await selectBot(employeeId); else showNoEmployeeSelected();
+    await loadGroups();
+    return;
+  }
+  handlersBound = true;
+  $('settings-entry').onclick = () => { closeMobileNav(); void loadAccount().then(() => view('catalog')).catch(showError); };
   $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
   $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
-  $('grant-delegation').onclick = () => void (async () => {
-    const workerBotId = $('grant-worker').value;
-    const sourceBotId = $('grant-source').value;
-    if (!workerBotId || !sourceBotId) throw new Error('请先为工作 Bot 和连接来源完成模型设置。');
-    await command('delegation.grant', { workerBotId, sourceBotId });
-    await loadCatalog();
-    notice('委派授权已保存。工作 Bot 使用来源连接的服务端引用。');
-  })().catch(showError);
-  $('worker-policy-save').onclick = () => void (async () => {
-    await command('worker-policy.update', {
-      enabled: $('worker-policy-enabled').checked,
-      allowCreation: $('worker-policy-create').checked,
-      allowedWorkerIds: Array.from($('worker-policy-targets').selectedOptions, (option) => option.value),
-      allowedConnectionIds: Array.from($('worker-policy-connections').selectedOptions, (option) => option.value),
-      expectedRevision: workerPolicyRevision,
-    });
-    await loadCatalog();
-    notice('工作 Bot 管理范围已保存。');
-  })().catch(showError);
-  $('worker-policy-grant-source').onclick = () => void (async () => {
-    const sourceBotId = $('worker-policy-source').value;
-    if (!sourceBotId) throw new Error('请先为模型来源 Bot 配置模型和授权。');
-    await command('connections.grant-main', { sourceBotId });
-    await loadCatalog();
-    notice('模型连接已授权给主 Bot，可加入新工作 Bot 管理范围。');
-  })().catch(showError);
-  form('browser-origin-form', async () => {
-    if (!bot) throw new Error('请先选择一个 Bot。');
-    await command('browser.origins.grant', { botId: bot.id, origin: $('browser-origin').value.trim() });
-    $('browser-origin').value = '';
-    await loadBrowser();
-    notice('网站来源已授权。');
+  $('new-group').onclick = () => { if (!bots.length) { notice('请先创建一位员工，再建立群聊。'); return; } void createGroup().catch(showError); };
+  $('group-load-older').onclick = () => void openGroup(activeGroupId, { older: true }).catch(showError);
+  $('group-members-save').onclick = () => void (async () => { if (!activeGroupId) throw new Error('请先选择一个群聊。'); const memberBotIds = Array.from($('group-members-editor').selectedOptions, (option) => option.value); await command('groups.members.set', { groupId: activeGroupId, memberBotIds }); await openGroup(activeGroupId, { reset: true }); })().catch(showError);
+  $('dismiss-group-create').onclick = () => $('group-dialog').close();
+  form('group-create-form', async () => {
+    const memberBotIds = Array.from($('group-create-members').selectedOptions, (option) => option.value);
+    if (!memberBotIds.length) throw new Error('请至少选择一位员工。');
+    const result = await command('groups.create', { name: $('group-create-name').value.trim(), memberBotIds });
+    $('group-dialog').close(); $('group-create-form').reset(); activeGroupId = result.group.id; await loadGroups();
   });
-  $('browser-open').onclick = () => void (async () => {
-    if (!bot || !$('browser-open-origin').value) throw new Error('请先授权并选择一个网站来源。');
-    const opened = await command('browser.open', { botId: bot.id, origin: $('browser-open-origin').value, idempotencyKey: id() });
-    browserSessionId = opened.sessionId;
-    browserTaskId = opened.taskId;
-    $('browser-current').textContent = `当前会话 ${opened.sessionId} · 任务 ${opened.taskId} · ${$('browser-open-origin').value}`;
-    await loadBrowser();
-    notice('浏览会话已打开。');
-  })().catch(showError);
-  form('browser-step-form', async () => {
-    if (!bot || !browserSessionId || !browserTaskId) throw new Error('请先打开或选择一个进行中的浏览会话。');
-    const action = $('browser-action').value;
-    const target = $('browser-target').value.trim();
-    const args = action === 'navigate' ? { url: target }
-      : action === 'click' ? { selector: target }
-      : action === 'read' ? (target ? { selector: target } : {})
-      : action === 'type' ? { selector: target, text: $('browser-text').value }
-      : action === 'scroll' ? { direction: $('browser-scroll').value, pixels: 500 }
-      : {};
-    const result = await command('browser.step', { botId: bot.id, taskId: browserTaskId, sessionId: browserSessionId, stepId: id(), action, args });
-    if (action === 'navigate' || action === 'click' || action === 'type') $('browser-target').value = '';
-    if (action === 'type') $('browser-text').value = '';
-    await loadBrowser();
-    notice(result.status === 'completed' ? '网页操作已完成。' : '网页操作状态已更新。');
+  $('contact-save').onclick = () => { const employeeId = $('contact-picker').value; if (!employeeId) { notice('请先选择一位主要联系人。'); return; } const epoch = ++contactsRequestEpoch; void command('contacts.set-primary', { employeeId }).then((value) => { if (epoch !== contactsRequestEpoch) return; contacts = value; renderContacts(); notice('主要联系人已保存。'); }).catch(showError); };
+  $('migration-select').onclick = () => void command('model-account.migration.select', { sourceBotId: $('migration-source').value }).then(loadAccount).catch(showError);
+  form('model-form', async () => {
+    const payload = { provider: $('model-provider').value, model: $('model-name').value, baseUrl: $('model-base-url').value || undefined, proxyUrl: $('model-proxy').value || undefined, key: $('clear-model-key').checked ? '' : $('model-key').value || undefined, keyless: $('model-keyless').checked };
+    await command('model-account.update', payload);
+    $('model-key').value = '';
+    $('clear-model-key').checked = false;
+    notice('共享模型账户已保存。');
+    await loadAccount();
   });
-  $('browser-close').onclick = () => void (async () => {
-    if (!bot || !browserSessionId || !browserTaskId) return;
-    await command('browser.close', { botId: bot.id, taskId: browserTaskId, sessionId: browserSessionId });
-    browserSessionId = null;
-    browserTaskId = null;
-    await loadBrowser();
-    notice('浏览会话已关闭。');
-  })().catch(showError);
-  $('browser-cancel').onclick = () => void (async () => {
-    if (!bot || !browserSessionId || !browserTaskId) return;
-    await command('browser.cancel', { botId: bot.id, taskId: browserTaskId, sessionId: browserSessionId });
-    browserSessionId = null;
-    browserTaskId = null;
-    await loadBrowser();
-    notice('浏览会话已停止。');
-  })().catch(showError);
+  $('model-provider').onchange = () => { const compatible = $('model-provider').value === 'compatible'; $('base-url-field').hidden = !compatible; $('model-base-url').required = compatible; $('api-key-fields').hidden = !compatible; $('codex-auth-panel').hidden = compatible; };
+  $('model-provider').onchange();
+  for (const [buttonId, method] of [['codex-device-login','device_code'], ['codex-browser-login','browser']])
+    $(buttonId).onclick = () => void command('model-account.auth.start', { method }).then((auth) => { if (auth?.attempt) { $('codex-status').textContent = auth.attempt.errorCode || auth.attempt.phase || '登录进行中'; $('codex-notice').hidden = !auth.attempt.url && !auth.attempt.userCode; if (auth.attempt.url) $('codex-login-link').href = auth.attempt.url; $('codex-user-code').textContent = auth.attempt.userCode ? `设备验证码：${auth.attempt.userCode}` : ''; $('codex-answer-form').hidden = !auth.attempt.manualInput; } return loadAccount({ authOnly: true }); }).catch(showError);
+  $('codex-cancel').onclick = () => void command('model-account.auth.cancel').then(() => loadAccount({ authOnly: true })).catch(showError);
+  $('codex-logout').onclick = () => void command('model-account.auth.logout').then(() => loadAccount({ authOnly: true })).catch(showError);
+  form('codex-answer-form', async () => { const value = $('codex-callback').value; $('codex-callback').value = ''; await command('model-account.auth.answer', { value }); await loadAccount({ authOnly: true }); });
+  $('settings-entry').onclick = () => { closeMobileNav(); view('catalog'); void loadAccount().catch(showError); };
+  $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
+  $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
+  $('browser-origin-form').addEventListener('submit', (event) => { event.preventDefault(); void (async () => { if (!bot) throw new Error('请先选择一位员工。'); await command('browser.origins.grant', { botId: bot.id, origin: $('browser-origin').value.trim() }); $('browser-origin').value=''; await loadBrowser(); })().catch(showError); });
+  $('browser-open').onclick = () => void (async () => { if (!bot || !$('browser-open-origin').value) throw new Error('请先授权并选择一个网站来源。'); const opened = await command('browser.open', { botId: bot.id, origin: $('browser-open-origin').value, idempotencyKey: id() }); browserSessionId = opened.sessionId; browserTaskId = opened.taskId; await loadBrowser(); })().catch(showError);
+  $('browser-step-form').addEventListener('submit', (event) => { event.preventDefault(); void (async () => { if (!bot || !browserSessionId || !browserTaskId) throw new Error('请先打开或选择一个进行中的浏览会话。'); const action = $('browser-action').value, target = $('browser-target').value.trim(); const args = action === 'navigate' ? { url: target } : action === 'click' ? { selector: target } : action === 'read' ? (target ? { selector: target } : {}) : action === 'type' ? { selector: target, text: $('browser-text').value } : action === 'scroll' ? { direction: $('browser-scroll').value, pixels: 500 } : {}; await command('browser.step', { botId: bot.id, taskId: browserTaskId, sessionId: browserSessionId, stepId: id(), action, args }); await loadBrowser(); })().catch(showError); });
+  $('browser-close').onclick = () => void command('browser.close', { botId: bot?.id, taskId: browserTaskId, sessionId: browserSessionId }).then(loadBrowser).catch(showError);
+  $('browser-cancel').onclick = () => void command('browser.cancel', { botId: bot?.id, taskId: browserTaskId, sessionId: browserSessionId }).then(loadBrowser).catch(showError);
   $('browser-refresh').onclick = () => void loadBrowser().catch(showError);
-  $('bind-main-source').onclick = () => void (async () => {
-    const sourceBotId = $('main-source').value;
-    if (!sourceBotId) throw new Error('请先为连接来源配置模型和授权。');
-    await command('connections.bind-main', { sourceBotId });
-    await loadCatalog();
-    notice('主 Bot 模型连接已绑定。来源授权仍保留在原 Bot。');
-  })().catch(showError);
-  if (bots.length) await selectBot(mainBotId);
-  else updateComposer();
+  $('group-form').addEventListener('submit', (event) => { event.preventDefault(); void (async () => {
+    if (!activeGroupId) throw new Error('请先选择一个群聊。');
+    const recipientBotIds = Array.from($('group-recipients').selectedOptions, (option) => option.value);
+    if (!recipientBotIds.length) throw Object.assign(new Error('请选择至少一位回应员工。'), { code: 'group-recipient-required' });
+    if (recipientBotIds.length > 3) throw new Error('一次最多选择三位回应员工。');
+    const text = $('group-input').value.trim(); if (!text) return;
+    const model = modelOptions[Number($('group-model').value)];
+    if (!model?.selection?.modelId) throw Object.assign(new Error('请先选择一个共享模型。'), { code: 'model-account-required' });
+    const payload = { groupId: activeGroupId, text, recipientBotIds, modelId: model.selection.modelId };
+    const pendingKey = `gk50-bot:pending-group:${activeGroupId}`;
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(pendingKey) || 'null'); } catch { saved = null; }
+    if (saved && (saved.groupId !== payload.groupId || saved.text !== payload.text || saved.modelId !== payload.modelId || JSON.stringify(saved.recipientBotIds) !== JSON.stringify(payload.recipientBotIds)))
+      throw new Error('上一条群消息的发送结果尚未确认。请恢复原内容重试后，再发送新消息。');
+    const submission = saved || { ...payload, idempotencyKey: id() };
+    try { localStorage.setItem(pendingKey, JSON.stringify(submission)); }
+    catch { throw new Error('无法保存群消息重试标识，消息尚未发送。'); }
+    try { await command('groups.send', submission); }
+    catch (error) { if (error.status && error.status < 500 && error.code !== 'group-capacity') localStorage.removeItem(pendingKey); throw error; }
+    localStorage.removeItem(pendingKey);
+    hydratedGroupRetries.delete(activeGroupId);
+    $('group-input').value = ''; await openGroup(activeGroupId);
+  })().catch(showError); });
+  form('create-form', async () => {
+    const createPayload = { name: $('create-name').value.trim(), persona: $('create-persona').value.trim() };
+    let stored;
+    try { stored = JSON.parse(localStorage.getItem('gk50-bot:create-employee') || 'null'); } catch { stored = null; }
+    if (stored && (stored.name !== createPayload.name || stored.persona !== createPayload.persona))
+      throw new Error('上一条员工创建请求结果尚未确认。请恢复原名称和定义后安全重试。');
+    const retry = Boolean(stored);
+    const createKey = retry ? stored.idempotencyKey : id();
+    try { localStorage.setItem('gk50-bot:create-employee', JSON.stringify({ ...createPayload, idempotencyKey: createKey })); }
+    catch { throw new Error('无法保存创建请求标识，员工尚未创建。'); }
+    const created = await command('bots.create', { ...createPayload, idempotencyKey: createKey });
+    localStorage.removeItem('gk50-bot:create-employee');
+    const employee = created.bot || created;
+    $('bot-dialog').close(); $('create-form').reset(); await refreshBots(); await selectBot(employee.id);
+    const onboarding = created.onboarding;
+    if (onboarding) groupOnboardings.set(employee.id, { ...onboarding, roleStatus: onboarding.status === 'completed' ? 'completed' : onboarding.status === 'failed' ? 'failed' : 'running' });
+    try { const onboardingStatus = await command('employees.onboarding.status', { botId: employee.id }); groupOnboardings.set(employee.id, onboardingStatus); } catch { /* status remains whatever creation returned */ }
+    await loadContacts();
+    if (onboarding?.status === 'failed') notice(`员工已创建 · 首次问候待完成 · ${onboarding.errorCode || 'model-unavailable'}`);
+  });
+  const employeeId = initialEmployeeId();
+  if (employeeId) await selectBot(employeeId); else showNoEmployeeSelected();
+  await loadGroups();
 }
+
 function form(id, action) {
   $(id).addEventListener('submit', (event) => {
     event.preventDefault();
@@ -953,8 +993,6 @@ $('logout').onclick = () =>
       $('login-screen').hidden = false;
       bot = null;
       conversation = null;
-      sourceSettingsBot = null;
-      sourceSettingsEpoch += 1;
     })
     .catch(showError);
 $('new-bot').onclick = () => $('bot-dialog').showModal();
@@ -971,20 +1009,6 @@ $('task-dialog').addEventListener('close', () => {
   taskDetailEpoch += 1;
   taskDetailContext = null;
   taskDetailInFlight = null;
-});
-form('create-form', async () => {
-  const created = await command('bots.create', {
-    name: $('create-name').value,
-    slug: $('create-slug').value,
-    persona: $('create-persona').value,
-  });
-  $('bot-dialog').close();
-  $('create-form').reset();
-  await refreshBots();
-  if (created.id === mainBotId) mainBotId = created.id;
-  await selectBot(created.id);
-  await openSourceSettings(created.id);
-  notice('Bot 已创建，设置模型后即可开始。');
 });
 $('history-entry').onclick = () => void (async () => {
   if (!bot) return;
@@ -1057,8 +1081,8 @@ $('chat-model').onchange = () => void (async () => {
 })().catch(showError);
 for (const button of document.querySelectorAll('[data-view]'))
   button.onclick = () => {
-    if (button.dataset.view === 'catalog') void loadCatalog().catch(showError);
-    view(button.dataset.view);
+    if (button.dataset.view === 'catalog') { view(button.dataset.view); void loadAccount().catch(showError); }
+    else view(button.dataset.view);
   };
 form('identity-form', async () => {
   if (!bot) return;
@@ -1073,75 +1097,7 @@ form('identity-form', async () => {
   fillSettings();
   await refreshBots();
   if (bot?.id !== botId || botSelectionEpoch !== epoch) return;
-  if (bot.id === mainBotId) $('main-entry').textContent = `${bot.name} · 主 Bot`;
   notice('身份已保存');
-});
-async function saveModel(sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch) {
-  if (!sourceBotId || sourceSettingsBot?.id !== sourceBotId) return;
-  try {
-    const updated = await command('bots.update', {
-      botId: sourceBotId,
-      model: {
-        provider: $('model-provider').value,
-        baseUrl: $('model-base-url').value,
-        model: $('model-name').value,
-        proxyUrl: $('model-proxy').value,
-        keyless: $('model-keyless').checked,
-      },
-      apiKey: $('model-key').value,
-      clearCredential: $('clear-credential').checked,
-    });
-    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) {
-      sourceSettingsBot = updated;
-      fillSourceSettings();
-      notice('模型来源已保存，请在对应 Bot 私聊验证实际回复。');
-    }
-  } catch (error) {
-    if (sourceSettingsBot?.id !== sourceBotId || sourceSettingsEpoch !== epoch) return;
-    throw error;
-  } finally {
-    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) $('model-key').value = '';
-  }
-}
-form('model-form', saveModel);
-$('model-provider').onchange = () => {
-  providerFields();
-  if ($('model-provider').value === 'openai-codex' && sourceSettingsBot) void refreshAuth().catch(showError);
-};
-for (const [id, method] of [
-  ['codex-device-login', 'device_code'],
-  ['codex-browser-login', 'browser'],
-])
-  $(id).onclick = () =>
-    void (async () => {
-      const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
-      if (!sourceBotId) throw new Error('请先选择模型来源 Bot。');
-      await saveModel(sourceBotId, epoch);
-      if (sourceSettingsBot?.id !== sourceBotId || sourceSettingsEpoch !== epoch) return;
-      await command('auth.start', { botId: sourceBotId, method });
-      if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
-    })().catch(showError);
-$('codex-cancel').onclick = () =>
-  void (async () => {
-    const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
-    if (!sourceBotId) return;
-    await command('auth.cancel', { botId: sourceBotId });
-    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
-  })().catch(showError);
-$('codex-logout').onclick = () =>
-  void (async () => {
-    const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
-    if (!sourceBotId) return;
-    await command('auth.logout', { botId: sourceBotId });
-    if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
-  })().catch(showError);
-form('codex-answer-form', async () => {
-  const sourceBotId = sourceSettingsBot?.id, epoch = sourceSettingsEpoch;
-  if (!sourceBotId) throw new Error('请先选择模型来源 Bot。');
-  const value = $('codex-callback').value;
-  $('codex-callback').value = '';
-  await command('auth.answer', { botId: sourceBotId, value });
-  if (sourceSettingsBot?.id === sourceBotId && sourceSettingsEpoch === epoch) await refreshAuth();
 });
 form('memory-form', async () => {
   if (!bot) return;
@@ -1168,7 +1124,7 @@ form('message-form', async () => {
   if (!submission) {
     if (!$('message-input').value.trim()) return;
     const model = modelOptions[Number($('chat-model').value)];
-    if (!model?.selection) throw new Error('请先选择此 Bot 已获准使用的模型。');
+    if (!model?.selection) throw new Error('请先选择已配置的共享模型。');
     submission = { botId, conversationId, content: $('message-input').value, idempotencyKey: id(), selection: model.selection };
     try {
       localStorage.setItem(storageKey, JSON.stringify(submission));
@@ -1210,14 +1166,20 @@ setInterval(() => {
     void refreshTimeline().catch(showError);
 }, 2000);
 setInterval(() => {
+  if (!$('workspace').hidden && !document.hidden) void refreshOnboardings().catch(() => {});
+}, 5000);
+setInterval(() => {
+  if (!$('workspace').hidden && $('view-groups') && !$('view-groups').hidden && activeGroupId && !document.hidden) void openGroup(activeGroupId).catch((error) => { $('group-title').textContent = `群聊连接失败 · ${error.code || error.message}`; });
+}, 3000);
+setInterval(() => {
   const context = taskDetailContext;
   if (context && $('task-dialog').open && context.autoRefresh && !document.hidden)
     void refreshTaskDetail(context.epoch).catch(showError);
 }, 2000);
 setInterval(() => {
-  if (!$('workspace').hidden && !$('view-model').hidden && sourceSettingsBot && !document.hidden)
-    void refreshAuth().catch(showError);
-}, 2500);
+  if (!$('workspace').hidden && !$('view-catalog').hidden && !document.hidden)
+    void loadAccount({ authOnly: true }).catch(showError);
+}, 5000);
 void enter().catch((error) => {
   if (error.status !== 401) showError(error);
 });

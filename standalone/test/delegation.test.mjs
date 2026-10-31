@@ -13,6 +13,7 @@ import { delegateTool } from '../src/task-engine.ts';
 import { completeCodex } from '../src/codex-model.ts';
 import { completeCodexTurn } from '../src/model-runner.ts';
 import { BotError } from '../src/errors.ts';
+import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex';
 
 const dir = () => mkdtempSync(join(tmpdir(), 'delegation-qa-'));
 const owner = (app, command, params = {}) => app.execute(command, params, { kind: 'owner' });
@@ -46,46 +47,41 @@ function sseText(text) {
 
 test('DG-01 protocol fixture dispatches real pi-ai toolCall, worker task, typed toolResult, and main follow-up', async () => {
   const workerRequests = [], rootRequests = [];
+  const accessToken = codexToken();
+  const refreshToken = 'synthetic-refresh-724';
   let targetWorkerId;
-  const workerServer = createServer(async (req, res) => {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const body = JSON.parse(Buffer.concat(chunks).toString());
-    workerRequests.push({ body, authorization: req.headers.authorization });
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ choices: [{ message: { content: `DELEGATE_OK from worker synthetic-shared-key-724${'\u0001'.repeat(15000)}` } }] }));
-  });
-  await new Promise((resolve) => workerServer.listen(0, '127.0.0.1', resolve));
+  let mainCalls = 0;
   const transport = { request: async (_url, init) => {
     const bytes = typeof init.body === 'string' ? Buffer.from(init.body) : Buffer.from(init.body);
     const headers = new Headers(init.headers);
-    rootRequests.push(JSON.parse(headers.get('content-encoding') === 'zstd' ? zstdDecompressSync(bytes).toString() : bytes.toString()));
-    const body = rootRequests.length === 1 ? sseToolCall(targetWorkerId) : sseText('Main summary: DELEGATE_OK');
-    return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+    const request = JSON.parse(headers.get('content-encoding') === 'zstd' ? zstdDecompressSync(bytes).toString() : bytes.toString());
+    if (request.tools?.length) {
+      rootRequests.push(request);
+      mainCalls++;
+      const body = mainCalls === 1 ? sseToolCall(targetWorkerId) : sseText('Main summary: DELEGATE_OK');
+      return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+    }
+    workerRequests.push({ request, authorization: headers.get('authorization') });
+    return new Response(sseText(`DELEGATE_OK from worker ${accessToken} ${refreshToken}${'\u0001'.repeat(15000)}`), { headers: { 'content-type': 'text/event-stream' } });
   } };
   const app = new BotApplication(dir(), transport);
   try {
-    const main = (await owner(app, 'main.get')).bot;
-    const source = await owner(app, 'bots.create', { slug: 'connection-source', name: 'Main Codex source' });
-    const workerSource = await owner(app, 'bots.create', { slug: 'worker-source', name: 'Worker source' });
+    const main = await owner(app, 'bots.create', { slug: 'delegating-employee', name: 'Delegating employee', persona: 'main persona' });
     const worker = await owner(app, 'bots.create', { slug: 'delegated-worker', name: 'QA worker', persona: 'worker-only persona' });
     targetWorkerId = worker.id;
-    const sourceUrl = `http://127.0.0.1:${workerServer.address().port}`;
-    await owner(app, 'bots.update', { botId: source.id, model: { provider: 'openai-codex', model: 'gpt-5.5' } });
-    await owner(app, 'bots.update', { botId: workerSource.id, model: { provider: 'compatible', baseUrl: sourceUrl, model: 'fixture-model', keyless: false }, apiKey: 'synthetic-shared-key-724' });
-    app.storage.db.prepare('INSERT INTO oauth_credentials(bot_id,credential) VALUES(?,?)').run(source.id,
-      app.storage.encrypt(JSON.stringify({ type: 'oauth', access: codexToken(), refresh: 'synthetic-refresh-724', expires: Date.now() + 3600000 })));
-    await owner(app, 'connections.bind-main', { sourceBotId: source.id });
+    const codexModel = openaiCodexProvider().getModels()[0].id;
+    app.storage.db.prepare('UPDATE model_account SET oauth_credential=? WHERE singleton=1').run(
+      app.storage.encrypt(JSON.stringify({ type: 'oauth', access: accessToken, refresh: refreshToken, expires: Date.now() + 3600000 })));
+    await owner(app, 'model-account.update', { provider: 'openai-codex', model: codexModel, keyless: true });
     const memoryRoot = join(app.storage.root, 'bots', worker.id, 'memory');
     mkdirSync(memoryRoot, { recursive: true });
     writeFileSync(join(memoryRoot, 'notes.md'), 'worker secret note');
-    const granted = await owner(app, 'delegation.grant', { workerBotId: worker.id, sourceBotId: workerSource.id });
-    assert.equal(granted.status, 'available');
-    assert(!JSON.stringify(await owner(app, 'connections.list', { consumerBotId: worker.id })).includes('synthetic-shared-key-724'));
+    assert.equal((await owner(app, 'bots.get', { botId: worker.id })).credentialConfigured, false);
 
     assert.throws(() => validateToolCall([delegateTool], { id: 'invalid', name: 'delegate_to_worker', arguments: { workerId: worker.id, task: 'bad', unexpected: true } }));
     const conversation = await owner(app, 'conversations.create', { botId: main.id });
-    const run = await owner(app, 'runs.submit', { botId: main.id, conversationId: conversation.id, idempotencyKey: 'protocol-fixture', content: 'delegate to worker' });
+    const selection = { kind: 'global', modelId: codexModel };
+    const run = await owner(app, 'runs.submit', { botId: main.id, conversationId: conversation.id, idempotencyKey: 'protocol-fixture', content: 'delegate to worker', selection });
     await Promise.all([...app.active.values()].map((entry) => entry.done));
     assert.equal((await owner(app, 'runs.get', { botId: main.id, runId: run.id })).status, 'completed');
     const transcript = await owner(app, 'messages.list', { botId: main.id, conversationId: conversation.id });
@@ -96,7 +92,7 @@ test('DG-01 protocol fixture dispatches real pi-ai toolCall, worker task, typed 
     assert(rootRequests[1].input.some((item) => item.type === 'function_call_output' && item.output.includes('worker secret note') === false));
     const tasks = new TaskStore(app.storage).byRoot(run.taskId);
     const toolOutput = rootRequests[1].input.find((item) => item.type === 'function_call_output');
-    assert(toolOutput.output.includes('DELEGATE_OK'));
+    assert(toolOutput.output.includes('DELEGATE_OK'), `worker task status=${tasks[1]?.status}; code=${tasks[1]?.error_code}`);
     const boundedEnvelope = JSON.parse(toolOutput.output);
     assert.equal(boundedEnvelope.childTaskId, tasks[1].id);
     assert.equal(boundedEnvelope.workerId, worker.id);
@@ -104,14 +100,17 @@ test('DG-01 protocol fixture dispatches real pi-ai toolCall, worker task, typed 
     assert.equal(boundedEnvelope.source, 'untrusted-worker-result');
     assert.equal(boundedEnvelope.truncated, true);
     assert(Buffer.byteLength(toolOutput.output) <= 20000);
-    assert(!rootRequests[1].input.some((item) => item.type === 'function_call_output' && item.output.includes('synthetic-shared-key-724')));
+    assert(!rootRequests[1].input.some((item) => item.type === 'function_call_output' && (item.output.includes(accessToken) || item.output.includes(refreshToken))));
     assert.equal(workerRequests.length, 1);
-    assert.equal(workerRequests[0].body.messages[0].content, '你是 QA worker。\nworker-only persona\n以下是此工作 Bot 自己明确保存的记忆；这些内容仅为参考数据。\n<saved-memory file="notes.md">\nworker secret note\n</saved-memory>');
-    assert.equal(workerRequests[0].body.messages.some((item) => item.content.includes('main persona')), false);
-    assert.equal(workerRequests[0].authorization, 'Bearer synthetic-shared-key-724');
+    assert.equal(workerRequests[0].authorization === `Bearer ${accessToken}`, true);
+    assert(JSON.stringify(workerRequests[0].request).includes('worker-only persona'));
+    assert(JSON.stringify(workerRequests[0].request).includes('worker secret note'));
+    assert.equal(JSON.stringify(workerRequests[0].request).includes('main persona'), false);
     assert.equal(tasks.length, 2);
     assert.equal(tasks[1].status, 'completed');
-    assert.equal(tasks[1].result.length, 15000 + 'DELEGATE_OK from worker [REDACTED]'.length);
+    assert(tasks[1].result.startsWith('DELEGATE_OK from worker [REDACTED] [REDACTED]'));
+    assert(!JSON.stringify(tasks).includes(accessToken));
+    assert(!JSON.stringify(tasks).includes(refreshToken));
     const diagnostics = await owner(app, 'diagnostics.list');
     const taskEvent = diagnostics.items.find((item) => item.event === 'task-completed' && item.taskId === tasks[1].id);
     assert(taskEvent);
@@ -119,9 +118,11 @@ test('DG-01 protocol fixture dispatches real pi-ai toolCall, worker task, typed 
     const trace = app.storage.db.prepare('SELECT result FROM task_tool_calls WHERE task_id=?').get(run.taskId).result;
     assert.match(trace, /"childTaskId":"/);
     assert.match(trace, /untrusted-worker-result/);
-    assert(!trace.includes('synthetic-shared-key-724'));
+    assert(!trace.includes(accessToken));
+    assert(!trace.includes(refreshToken));
     const publicTrace = await owner(app, 'tasks.get', { taskId: run.taskId });
-    assert(!JSON.stringify(publicTrace).includes('synthetic-shared-key-724'));
+    assert(!JSON.stringify(publicTrace).includes(accessToken));
+    assert(!JSON.stringify(publicTrace).includes(refreshToken));
     assert.equal(publicTrace.root.configSnapshot.name, main.name);
     assert.equal(publicTrace.items[1].configSnapshot.name, worker.name);
     assert.equal(publicTrace.items[1].configSnapshot.persona, 'worker-only persona');
@@ -129,14 +130,12 @@ test('DG-01 protocol fixture dispatches real pi-ai toolCall, worker task, typed 
     assert.equal(publicTrace.items[1].memoryManifest[0].path, 'notes.md');
     assert.match(publicTrace.items[1].memoryManifest[0].revision, /^[a-f0-9]{64}$/u);
     assert(!JSON.stringify(publicTrace).includes('worker secret note'));
-  } finally {
-    await app.close();
-    workerServer.closeAllConnections();
-    await new Promise((resolve) => workerServer.close(resolve));
-  }
+    assert(!JSON.stringify(diagnostics).includes(accessToken));
+    assert(!JSON.stringify(diagnostics).includes(refreshToken));
+  } finally { await app.close(); }
 });
 
-test('main run uses its explicitly bound source connection without local model fallback', async () => {
+test('main run uses its explicitly selected global model without a per-Bot connection', async () => {
   const requests = [];
   const server = createServer(async (req, res) => {
     const chunks = [];
@@ -148,27 +147,24 @@ test('main run uses its explicitly bound source connection without local model f
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const app = new BotApplication(dir());
   try {
-    const main = (await owner(app, 'main.get')).bot;
-    const source = await owner(app, 'bots.create', { slug: 'main-model-source', name: 'Main source' });
+    const main = await owner(app, 'bots.create', { slug: 'global-model-employee', name: 'Global model employee' });
     const baseUrl = `http://127.0.0.1:${server.address().port}`;
-    await owner(app, 'bots.update', { botId: source.id, model: { provider: 'compatible', baseUrl, model: 'source-model', keyless: false }, apiKey: 'synthetic-main-key-724' });
-    const binding = await owner(app, 'connections.bind-main', { sourceBotId: source.id });
+    await owner(app, 'model-account.update', { provider: 'compatible', baseUrl, model: 'source-model', key: 'synthetic-main-key-724' });
     const conversation = await owner(app, 'conversations.create', { botId: main.id });
-    const run = await owner(app, 'runs.submit', { botId: main.id, conversationId: conversation.id, idempotencyKey: 'main-shared-source', content: 'hello main' });
+    const selection = { kind: 'global', modelId: 'source-model' };
+    const run = await owner(app, 'runs.submit', { botId: main.id, conversationId: conversation.id, idempotencyKey: 'main-shared-source', content: 'hello main', selection });
     await Promise.all([...app.active.values()].map((entry) => entry.done));
     assert.equal(requests.length, 1);
     assert.equal(requests[0].body.model, 'source-model');
     assert.equal(requests[0].authorization, 'Bearer synthetic-main-key-724');
     const record = await owner(app, 'runs.get', { botId: main.id, runId: run.id });
     assert.equal(record.status, 'completed');
-    assert.equal(record.configSnapshot.connection.id, binding.connectionId);
-    assert.equal(record.configSnapshot.connection.sourceBotId, source.id);
+    assert.deepEqual(record.configSnapshot.selection, selection);
+    assert.equal(record.configSnapshot.sourceBotId, '@owner');
     assert(!JSON.stringify(record).includes('synthetic-main-key-724'));
-    assert.equal((await owner(app, 'bots.get', { botId: main.id })).mainConnection.status, 'available');
-    const catalog = await owner(app, 'main.catalog');
-    assert.equal(catalog.items.find((item) => item.id === main.id).connectionStatus, 'available');
-    assert.equal(catalog.items.find((item) => item.id === main.id).canShareOwnConnection, false);
-    assert.equal(catalog.items.find((item) => item.id === main.id).modelConfigured, false);
+    assert.deepEqual((await owner(app, 'bots.get', { botId: main.id })).model, {});
+    assert.equal((await owner(app, 'bots.get', { botId: main.id })).credentialConfigured, false);
+    assert.equal((await owner(app, 'model-account.get')).model, 'source-model');
   } finally {
     await app.close();
     server.closeAllConnections();
@@ -176,18 +172,15 @@ test('main run uses its explicitly bound source connection without local model f
   }
 });
 
-test('binding changes increment main Bot config revision', async () => {
+test('global model account changes do not rewrite the main Bot identity revision', async () => {
   const app = new BotApplication(dir());
   try {
     const main = (await owner(app, 'main.get')).bot;
-    const source = await owner(app, 'bots.create', { slug: 'revision-source', name: 'Source' });
-    await owner(app, 'bots.update', { botId: source.id, model: { provider: 'compatible', baseUrl: 'http://127.0.0.1:9', model: 'fixture', keyless: true } });
-    const beforeBind = (await owner(app, 'bots.get', { botId: main.id })).configRevision;
-    await owner(app, 'connections.bind-main', { sourceBotId: source.id });
-    const afterBind = (await owner(app, 'bots.get', { botId: main.id })).configRevision;
-    assert.equal(afterBind, beforeBind + 1);
-    await owner(app, 'connections.unbind-main');
-    assert.equal((await owner(app, 'bots.get', { botId: main.id })).configRevision, afterBind + 1);
+    const before = (await owner(app, 'main.get')).bot.configRevision;
+    await owner(app, 'model-account.update', { provider: 'compatible', baseUrl: 'http://127.0.0.1:9', model: 'fixture', keyless: true });
+    await owner(app, 'model-account.update', { provider: 'compatible', baseUrl: 'http://127.0.0.1:9', model: 'fixture-2', keyless: true });
+    assert.equal((await owner(app, 'main.get')).bot.configRevision, before);
+    assert.equal((await owner(app, 'model-account.get')).model, 'fixture-2');
   } finally { await app.close(); }
 });
 
@@ -227,17 +220,14 @@ test('cancelling a worker child leaves the root active so the main model can rec
   const app = new BotApplication(dir());
   try {
     const main = (await owner(app, 'main.get')).bot;
-    const source = await owner(app, 'bots.create', { slug: 'cancel-source', name: 'Source' });
     const worker = await owner(app, 'bots.create', { slug: 'cancel-worker', name: 'Worker' });
-    await owner(app, 'bots.update', { botId: source.id, model: { provider: 'compatible', baseUrl: 'http://127.0.0.1:9', model: 'fixture', keyless: true } });
-    const grant = await owner(app, 'delegation.grant', { workerBotId: worker.id, sourceBotId: source.id });
     const store = new TaskStore(app.storage), at = new Date().toISOString();
     const root = store.createRoot({ executorBotId: main.id, initiatorBotId: main.id, requestKey: 'cancel-root', input: 'root', configRevision: main.configRevision,
-      configSnapshot: JSON.stringify({ delegations: [{ workerBotId: worker.id, connectionId: grant.connectionId }] }), deadlineAt: new Date(Date.now() + 60000).toISOString(), at }).task;
+      configSnapshot: JSON.stringify({ selection: { kind: 'global', modelId: 'fixture' } }), deadlineAt: new Date(Date.now() + 60000).toISOString(), at }).task;
     store.begin(root.id, at);
     const child = store.createChild({ rootId: root.id, parentId: root.id, initiatorBotId: main.id, executorBotId: worker.id,
-      requestKey: 'cancel-call', input: 'child', connectionId: grant.connectionId, configRevision: worker.configRevision,
-      configSnapshot: JSON.stringify({ sourceModelEpoch: 1 }), memorySnapshot: '[]', deadlineAt: new Date(Date.now() + 30000).toISOString(), at }).task;
+      requestKey: 'cancel-call', input: 'child', connectionId: null, configRevision: worker.configRevision,
+      configSnapshot: JSON.stringify({ sourceBotId: '@owner', sourceModelEpoch: 1 }), memorySnapshot: '[]', deadlineAt: new Date(Date.now() + 30000).toISOString(), at }).task;
     store.begin(child.id, at);
     const cancelled = await owner(app, 'tasks.cancel', { taskId: child.id });
     assert.equal(cancelled.status, 'cancelled');
@@ -245,22 +235,18 @@ test('cancelling a worker child leaves the root active so the main model can rec
   } finally { await app.close(); }
 });
 
-test('a persisted worker deadline is terminal failed with task-deadline-exceeded', async () => {
+test('a persisted worker deadline is terminal failed with task-deadline-exceeded under the global account', async () => {
   const server = createServer(() => {});
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const app = new BotApplication(dir());
   try {
     const main = (await owner(app, 'main.get')).bot;
-    const source = await owner(app, 'bots.create', { slug: 'timeout-source', name: 'Source' });
     const worker = await owner(app, 'bots.create', { slug: 'timeout-worker', name: 'Worker', persona: 'bounded worker' });
-    await owner(app, 'bots.update', { botId: source.id, model: {
-      provider: 'compatible', baseUrl: `http://127.0.0.1:${server.address().port}`, model: 'fixture', keyless: true,
-    } });
-    const grant = await owner(app, 'delegation.grant', { workerBotId: worker.id, sourceBotId: source.id });
-    const connection = app.connections.resolve(grant.connectionId, worker.id);
+    await owner(app, 'model-account.update', { provider: 'compatible', baseUrl: `http://127.0.0.1:${server.address().port}`, model: 'fixture', keyless: true });
+    const connection = app.privateChat.resolve(worker.id, { kind: 'global', modelId: 'fixture' });
     const at = new Date().toISOString();
     const task = app.tasks.store.createRoot({ executorBotId: worker.id, initiatorBotId: main.id,
-      requestKey: 'deadline-worker', input: 'wait until cancelled', connectionId: grant.connectionId,
+      requestKey: 'deadline-worker', input: 'wait until cancelled', connectionId: null,
       connectionEpoch: connection.sourceModelEpoch, configRevision: worker.configRevision,
       configSnapshot: JSON.stringify({ name: worker.name, persona: worker.persona }),
       deadlineAt: new Date(Date.now() + 100).toISOString(), at }).task;
@@ -268,7 +254,7 @@ test('a persisted worker deadline is terminal failed with task-deadline-exceeded
     const controller = new AbortController();
     app.tasks.active.set(task.id, controller);
     await app.tasks.runDirect(task.id, worker, 'wait until cancelled', connection.config,
-      connection.credential, source.id, [], controller);
+      connection.credential, '@owner', [], controller);
     const completed = app.tasks.store.get(task.id);
     assert.equal(completed.status, 'failed');
     assert.equal(completed.error_code, 'task-deadline-exceeded');
@@ -279,46 +265,37 @@ test('a persisted worker deadline is terminal failed with task-deadline-exceeded
   }
 });
 
-test('connection listing has signed stable pages and main catalog exposes only current bindings', async () => {
+test('one global model account is shared by employees without per-Bot credentials or grants', async () => {
   const app = new BotApplication(dir());
   try {
-    const main = (await owner(app, 'main.get')).bot;
-    const source = await owner(app, 'bots.create', { slug: 'connection-pages', name: 'Connection source' });
-    await owner(app, 'bots.update', { botId: source.id, model: {
-      provider: 'compatible', baseUrl: 'http://127.0.0.1:9', model: 'fixture', keyless: true,
-    } });
-    for (let index = 0; index < 102; index++) await owner(app, 'connections.bind-main', { sourceBotId: source.id });
-    const catalog = await owner(app, 'main.catalog');
-    assert.equal(catalog.connectionBindings.length, 1);
-    assert.equal(catalog.connectionBindings[0].consumerBotId, main.id);
-    assert.equal(catalog.connectionReferences, undefined);
-    const first = await owner(app, 'connections.list');
-    assert.equal(first.items.length, 100);
-    assert.equal(first.hasMore, true);
-    assert(first.nextCursor);
-    assert(first.items[0].createdAt);
-    assert(first.items[0].revokedAt);
-    const nextA = await owner(app, 'connections.list', { cursor: first.nextCursor });
-    const nextB = await owner(app, 'connections.list', { cursor: first.nextCursor });
-    assert.deepEqual(nextA, nextB);
-    assert.equal(nextA.items.length, 2);
-    assert.equal(nextA.hasMore, false);
-    await assert.rejects(owner(app, 'connections.list', { limit: 101 }), { code: 'invalid-limit' });
-    await assert.rejects(owner(app, 'connections.list', { consumerBotId: source.id, cursor: first.nextCursor }), { code: 'invalid-cursor' });
+    const employee = await owner(app, 'bots.create', { slug: 'shared-account-employee', name: 'Shared account employee' });
+    const second = await owner(app, 'bots.create', { slug: 'shared-account-employee-two', name: 'Another employee' });
+    await owner(app, 'model-account.update', { provider: 'compatible', baseUrl: 'http://127.0.0.1:9', model: 'shared-model', key: 'synthetic-shared-secret-724' });
+    await owner(app, 'contacts.set-primary', { employeeId: employee.id });
+    const openedEmployee = await owner(app, 'private-chat.open', { botId: employee.id });
+    const openedSecond = await owner(app, 'private-chat.open', { botId: second.id });
+    assert.deepEqual(openedEmployee.selection, { kind: 'global', modelId: 'shared-model' });
+    assert.deepEqual(openedSecond.selection, openedEmployee.selection);
+    assert.equal((await owner(app, 'contacts.get')).primaryEmployeeId, employee.id);
+    assert.equal((await owner(app, 'bots.get', { botId: employee.id })).credentialConfigured, false);
+    const account = await owner(app, 'model-account.get');
+    assert.equal(account.model, 'shared-model');
+    assert(!JSON.stringify(account).includes('synthetic-shared-secret-724'));
+    assert.equal(app.storage.db.prepare('SELECT count(*) n FROM connection_grants').get().n, 0);
   } finally { await app.close(); }
 });
 
-test('DG-04 changed model epoch refuses old reference; direct task idempotency cannot change target or connection', async () => {
+test('DG-04 direct task idempotency cannot change target or input and replays while capacity is full', async () => {
   const server = createServer(async (_req, res) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { content: 'worker done' } }] })); });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const app = new BotApplication(dir());
   try {
     const main = (await owner(app, 'main.get')).bot;
-    const source = await owner(app, 'bots.create', { slug: 'epoch-source', name: 'Source' });
+    const source = await owner(app, 'bots.create', { slug: 'epoch-source', name: 'Initiator' });
     const worker = await owner(app, 'bots.create', { slug: 'epoch-worker', name: 'Worker' });
     const baseUrl = `http://127.0.0.1:${server.address().port}`;
-    await owner(app, 'bots.update', { botId: source.id, model: { provider: 'compatible', baseUrl, model: 'fixture', keyless: true } });
-    await owner(app, 'delegation.grant', { workerBotId: worker.id, sourceBotId: source.id });
+    await owner(app, 'model-account.update', { provider: 'compatible', baseUrl, model: 'fixture', keyless: true });
+    await owner(app, 'contacts.set-primary', { employeeId: source.id });
     const first = await owner(app, 'tasks.create', { workerBotId: worker.id, idempotencyKey: 'direct-once', input: 'same task' });
     assert(first.id);
     assert.equal((await owner(app, 'tasks.get', { taskId: first.id })).root.id, first.id);
@@ -331,9 +308,8 @@ test('DG-04 changed model epoch refuses old reference; direct task idempotency c
     const replay = await owner(app, 'tasks.create', { workerBotId: worker.id, idempotencyKey: 'direct-once', input: 'same task' });
     assert.equal(replay.id, first.id);
     for (const key of occupied) app.tasks.active.delete(key);
-    await assert.rejects(owner(app, 'tasks.create', { workerBotId: main.id, idempotencyKey: 'direct-once', input: 'same task' }), { code: 'idempotency-conflict' });
-    await owner(app, 'bots.update', { botId: source.id, model: { provider: 'compatible', baseUrl, model: 'changed', keyless: true } });
-    await assert.rejects(owner(app, 'tasks.create', { workerBotId: worker.id, idempotencyKey: 'direct-two', input: 'new task' }), { code: 'connection-changed' });
+    await assert.rejects(owner(app, 'tasks.create', { workerBotId: source.id, idempotencyKey: 'direct-once', input: 'same task' }), { code: 'idempotency-conflict' });
+    await assert.rejects(owner(app, 'tasks.create', { workerBotId: worker.id, idempotencyKey: 'direct-once', input: 'changed input' }), { code: 'idempotency-conflict' });
   } finally {
     await app.close();
     server.closeAllConnections();

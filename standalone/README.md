@@ -2,6 +2,8 @@
 
 这是 `404404/AI-Bots` fork 的新独立产品方向，使用自己的后台、SQLite、文件记忆和加密凭据，不启动或调用 DSH Host。候选按端到端切片验收，不代表全部能力已迁移。依据见[迁移评估](../docs/standalone-bot-migration.md)，状态以[验收记录](../docs/acceptance/standalone-bot-test-results-2026-10-29.md)为准。MIT 许可证及归属见 LICENSE、NOTICE.md。
 
+**本轮开发状态：** 单用户共享模型账户、用户创建员工和群聊正在开发与验收；其新接口、网页路径及限制见[单用户员工与群聊候选说明](docs/single-user-employee-guide.md)，结果以[本轮验收记录](../docs/acceptance/standalone-single-user-employee-results-2026-10-31.md)为准。以下旧版运行说明描述此前交付的候选，不能用作本轮功能已部署的证据。
+
 ## 当前范围
 
 网页固定进入由 SQLite singleton UUID 指向的主 Bot，并提供 Bot 管理目录；目录展示稳定 ID、persona、角色、配置版本、头像、当前已实现能力、有效共享模型连接和最近持久化执行状态。可以从目录进入身份/模型设置或创建工作 Bot。主 Bot 是普通 Bot，persona 不授予权限。SQLite v1→v8 显式事务迁移创建唯一主 Bot、任务、连接授权、头像、工作 Bot 管理策略/操作回执及浏览器权限表、私聊指针与模型选择；不按名字收编旧 Bot，保留 slug 冲突时会生成未占用 slug。损坏或丢失的 singleton/引用会明确失败，不能删除该记录后启动服务掩盖问题。

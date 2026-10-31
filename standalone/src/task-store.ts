@@ -45,20 +45,20 @@ export class TaskStore {
     return { task: this.get(id), replayed: false };
   }
 
-  createChild(args: { rootId: string; parentId: string; initiatorBotId: string; executorBotId: string; requestKey: string; input: string; connectionId: string; configRevision: number; configSnapshot: string; memorySnapshot: string; deadlineAt: string; at: string }) {
+  createChild(args: { rootId: string; parentId: string; initiatorBotId: string; executorBotId: string; requestKey: string; input: string; connectionId?: string | null; configRevision: number; configSnapshot: string; memorySnapshot: string; deadlineAt: string; at: string }) {
     const input = text(args.input, '任务内容', 12000);
     requireValue(time(args.deadlineAt) > time(args.at), 'task-deadline-exceeded', '任务截止时间已到。', 409);
     const snapshot = JSON.parse(args.configSnapshot) as { sourceModelEpoch?: number };
     const inputHash = hash(canonical({ input, rootId: args.rootId, parentId: args.parentId,
-      executorBotId: args.executorBotId, connectionId: args.connectionId, connectionEpoch: snapshot.sourceModelEpoch ?? null, configRevision: args.configRevision }));
+      executorBotId: args.executorBotId, connectionId: args.connectionId ?? null, connectionEpoch: snapshot.sourceModelEpoch ?? null, configRevision: args.configRevision }));
     const existing = this.storage.db.prepare('SELECT * FROM tasks WHERE parent_id=? AND request_key=?').get(args.parentId, args.requestKey) as Task | undefined;
     if (existing) {
-      requireValue(existing.input_hash === inputHash && existing.executor_bot_id === args.executorBotId && existing.connection_id === args.connectionId && existing.config_revision === args.configRevision, 'idempotency-conflict', '相同工具调用不能用于不同任务、连接或配置版本。', 409);
+      requireValue(existing.input_hash === inputHash && existing.executor_bot_id === args.executorBotId && existing.connection_id === (args.connectionId ?? null) && existing.config_revision === args.configRevision, 'idempotency-conflict', '相同工具调用不能用于不同任务、连接或配置版本。', 409);
       return { task: existing, replayed: true };
     }
     const id = randomUUID();
     this.storage.db.prepare(`INSERT INTO tasks(id,root_id,parent_id,initiator_bot_id,executor_bot_id,request_key,input_hash,input,status,connection_id,config_revision,created_at,deadline_at,config_snapshot,memory_snapshot)
-      VALUES(?,?,?,?,?,?,?,?,'queued',?,?,?,?,?,?)`).run(id, args.rootId, args.parentId, args.initiatorBotId, args.executorBotId, args.requestKey, inputHash, input, args.connectionId, args.configRevision, args.at, args.deadlineAt, args.configSnapshot, args.memorySnapshot);
+      VALUES(?,?,?,?,?,?,?,?,'queued',?,?,?,?,?,?)`).run(id, args.rootId, args.parentId, args.initiatorBotId, args.executorBotId, args.requestKey, inputHash, input, args.connectionId ?? null, args.configRevision, args.at, args.deadlineAt, args.configSnapshot, args.memorySnapshot);
     return { task: this.get(id), replayed: false };
   }
 

@@ -4,6 +4,26 @@ A DeepSeek Harness plugin layer that gives LLM agents a persistent product ident
 
 ## Language
 
+### Independent GK50 product (404404 fork)
+
+These terms describe the independent product in `standalone/`; the BotHarness and DSH terms below retain their existing meanings.
+
+**Employee Bot**:
+A user-owned digital employee with a stable identity, a user-defined purpose and its own private conversation and memory. New employees are created by the user; existing identities can be retained from an earlier version.
+_Avoid_: subordinate identity, model-created employee
+
+**Primary Contact**:
+The employee the user chooses as the main point of contact for coordinating work. With one employee that employee fills this role; with several employees the user chooses one. The role does not grant ownership or permission to create employees.
+_Avoid_: administrator, autonomous manager
+
+**Shared Model Account**:
+The single user's model service authorization, made available to their employees across private and group conversations.
+_Avoid_: Bot-owned account, per-employee credential copy
+
+**Employee Group**:
+A conversation shared by the user and its explicitly selected employee members, with each message attributed to its sender.
+_Avoid_: delegation result, private conversation bundle
+
 ### Product releases
 
 **Product Release Version**:

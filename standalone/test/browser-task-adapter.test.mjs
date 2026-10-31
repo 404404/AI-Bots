@@ -20,13 +20,6 @@ test('owner-only browser methods require authenticated owner ALS, while executor
   try {
     const main = (await owner(app, 'main.get')).bot;
     const worker = await owner(app, 'bots.create', { slug: 'browser-worker', name: 'Worker' });
-    const source = await owner(app, 'bots.create', { slug: 'browser-source', name: 'Source' });
-    await owner(app, 'bots.update', {
-      botId: source.id,
-      model: { provider: 'compatible', baseUrl: 'https://browser-fixture.invalid/v1', model: 'fixture', keyless: true },
-    });
-    const grant = await owner(app, 'delegation.grant', { workerBotId: worker.id, sourceBotId: source.id });
-
     assert.throws(() => app.browser.grantOrigin({ botId: worker.id, origin: 'https://fixture.example' }), { code: 'forbidden' });
     const originGrant = await owner(app, 'browser.origins.grant', { botId: worker.id, origin: 'https://fixture.example' });
     assert.equal(originGrant.granted, true);
@@ -51,9 +44,9 @@ test('owner-only browser methods require authenticated owner ALS, while executor
       executorBotId: worker.id,
       requestKey: 'browser-adapter-child',
       input: 'fixture child',
-      connectionId: grant.connectionId,
+      connectionId: null,
       configRevision: worker.configRevision,
-      configSnapshot: JSON.stringify({ sourceModelEpoch: grant.sourceModelEpoch }),
+      configSnapshot: '{}',
       memorySnapshot: '[]',
       deadlineAt: new Date(Date.now() + 50_000).toISOString(),
       at,

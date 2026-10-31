@@ -35,13 +35,12 @@
         </header>
         <div class="side-heading">
           <span>Bots</span
-          ><button id="new-bot" aria-label="创建 Bot" title="创建 Bot">＋</button>
+          ><button id="new-bot" aria-label="创建员工" title="创建员工">＋</button>
         </div>
-        <button id="main-entry" class="main-entry">主 Bot</button>
-        <button id="catalog-entry" class="catalog-entry">Bot 管理目录</button>
-        <nav id="bots" aria-label="Bot 列表"></nav>
+        <button id="contact-shortcut" class="contact-shortcut" type="button" hidden></button>
+        <nav id="bots" aria-label="员工列表"></nav>
         <footer>
-          <button id="settings-entry" type="button">模型来源与授权设置</button>
+          <button id="settings-entry" type="button">模型账户设置</button>
           <span class="status-dot"></span>独立网页预览<button id="logout">退出</button>
         </footer>
       </aside>
@@ -60,6 +59,7 @@
         </header>
         <nav id="views" class="tabs" aria-label="Bot 功能">
           <button data-view="chat" aria-pressed="true">私聊</button>
+          <button data-view="groups">群聊</button>
           <button data-view="identity">身份</button>
           <button data-view="memory">文件记忆</button>
           <button data-view="browser">浏览器</button>
@@ -85,7 +85,7 @@
             ></textarea>
             <div class="composer-control-row">
               <label class="model-picker-label sr-only" for="chat-model">本次使用</label>
-              <select id="chat-model" aria-label="选择当前 Bot 可用的模型" disabled></select>
+              <select id="chat-model" aria-label="选择本次使用的模型" disabled></select>
               <button id="cancel-run" type="button" hidden>停止生成</button>
               <button id="send-message" type="submit" class="primary">发送</button>
             </div>
@@ -93,45 +93,37 @@
           </form>
         </section>
         <section id="view-catalog" class="view settings-view" hidden>
-          <h2>Bot 管理目录</h2>
-          <p class="muted">按稳定 ID 区分 Bot。能力与执行状态来自当前实现和已保存的运行记录。</p>
-          <section class="grant-panel">
-            <h3>模型来源与私密登录</h3>
-            <p class="muted">选择一个 Bot 配置它自己的模型来源或登录。已有凭据留在来源 Bot，不复制到授权员工。</p>
-            <div class="source-settings-picker">
-              <label for="model-settings-source">来源 Bot</label>
-              <select id="model-settings-source"></select>
-              <button id="open-model-settings" type="button">配置来源与登录</button>
-            </div>
+          <h2>模型账户</h2>
+          <p class="muted">在此设置一次，所有私聊、群聊和协作共用此账户。凭据只发送到本服务端并且不会回显。</p>
+          <p id="account-status" class="muted" role="status">正在读取账户状态…</p>
+          <section id="account-migration" class="grant-panel" hidden>
+            <h3>选择要保留的现有登录</h3>
+            <p class="muted">检测到多个旧登录。请明确选择一个；其他记录会保留，不会自动合并。</p>
+            <label>现有登录<select id="migration-source"></select></label>
+            <button id="migration-select" type="button">使用所选登录</button>
           </section>
-          <section class="grant-panel">
-            <h3>设置主 Bot 模型</h3>
-            <p class="muted">明确选择已有连接来源。主 Bot 使用服务端连接引用，不复制 OAuth 或 API 密钥。</p>
-            <label>连接来源<select id="main-source"></select></label>
-            <button id="bind-main-source" type="button">绑定主 Bot</button>
-            <div id="main-connection" aria-live="polite"></div>
+          <form id="model-form">
+            <label>账户来源<select id="model-provider"><option value="openai-codex">Codex 登录</option><option value="compatible">兼容 API</option></select></label>
+            <label id="base-url-field">API 基础地址<input id="model-base-url" type="url" placeholder="https://api.deepseek.com/v1" /></label>
+            <label>模型名称<input id="model-name" maxlength="160" list="model-catalog" required /></label>
+            <datalist id="model-catalog"></datalist>
+            <div id="api-key-fields"><label>私密 API 凭据<input id="model-key" type="password" autocomplete="new-password" maxlength="8192" placeholder="留空保留已有凭据" /></label><label class="inline-check"><input id="clear-model-key" type="checkbox" />清除已保存凭据</label><label class="inline-check"><input id="model-keyless" type="checkbox" />此服务不需要凭据</label><p id="credential-status" class="muted fine">凭据仅由服务端检查和保存，不会回显。</p></div>
+            <label>应用代理地址（可选）<input id="model-proxy" type="url" placeholder="http://host.docker.internal:7890" /></label>
+            <p class="muted fine">留空为直连。手机或局域网浏览器仅连接此服务地址；凭据不会写入浏览器存储或聊天。</p>
+            <button type="submit" class="primary">保存共享账户</button>
+          </form>
+          <section id="codex-auth-panel" class="grant-panel">
+            <h3>Codex 登录</h3><p id="codex-status" role="status">尚未登录</p>
+            <div class="auth-actions"><button id="codex-device-login" type="button">设备码登录</button><button id="codex-browser-login" type="button">浏览器登录</button><button id="codex-cancel" type="button">取消登录</button><button id="codex-logout" type="button">退出登录</button></div>
+            <div id="codex-notice" hidden><p><a id="codex-login-link" target="_blank" rel="noopener noreferrer">在服务方页面完成登录</a></p><p id="codex-user-code"></p></div>
+            <form id="codex-answer-form" hidden><label>私密回调地址<input id="codex-callback" type="password" autocomplete="off" maxlength="8192" /></label><button type="submit">提交回调</button></form>
           </section>
-          <section class="grant-panel">
-            <h3>授权主 Bot 委派</h3>
-            <p class="muted">选择一个工作 Bot 和一个已有模型连接。只创建服务端引用，不复制来源凭据。</p>
-            <label>工作 Bot<select id="grant-worker"></select></label>
-            <label>连接来源<select id="grant-source"></select></label>
-            <button id="grant-delegation" type="button">授权委派</button>
-            <div id="delegation-grants" aria-live="polite"></div>
-          </section>
-          <section class="grant-panel worker-policy-settings">
-            <h3>对话中的工作 Bot 管理</h3>
-            <p class="muted fine">关闭时仍保留逐个 Bot 的现有委派授权；此策略只控制主 Bot 能否在对话中创建或修改工作 Bot。模型只能改名称和身份提示，不能改凭据、模型、授权或记忆。</p>
-            <label class="check"><input id="worker-policy-enabled" type="checkbox" />允许主 Bot 在对话中管理工作 Bot</label>
-            <label class="check"><input id="worker-policy-create" type="checkbox" />允许主 Bot 创建工作 Bot</label>
-            <label>可修改的工作 Bot<select id="worker-policy-targets" multiple size="5"></select></label>
-            <label>新工作 Bot 可使用的连接<select id="worker-policy-connections" multiple size="4"></select></label>
-            <label>将模型来源授权给主 Bot<select id="worker-policy-source"></select></label>
-            <button id="worker-policy-grant-source" type="button">添加可共享连接</button>
-            <button id="worker-policy-save" type="button">保存管理范围</button>
-            <p id="worker-policy-status" class="muted fine" aria-live="polite"></p>
-          </section>
-          <div id="bot-catalog" class="bot-catalog"></div>
+          <section class="grant-panel"><h3>主要联系人</h3><p id="contact-status" class="muted" role="status"></p><label id="contact-picker-label">选择主要联系人<select id="contact-picker"></select></label><button id="contact-save" type="button">保存联系人</button></section>
+          <section class="grant-panel"><h3>员工</h3><p class="muted">你定义每位员工的名称和身份。新员工会在自己的私聊中分析角色并询问你希望它承担什么工作。</p><div id="employee-list"></div></section>
+        </section>
+        <section id="view-groups" class="view settings-view" hidden>
+          <h2>群聊</h2><p class="muted">选择群成员后发送。每位被选成员都会在同一条群聊记录中真实回应。</p>
+          <div class="group-layout"><aside><div class="group-heading"><h3>群聊</h3><button id="new-group" type="button">新建</button></div><nav id="groups-list" aria-label="群聊列表"></nav></aside><section><h3 id="group-title">选择一个群聊</h3><div id="group-members" class="group-members"></div><label>群成员<select id="group-members-editor" multiple size="4"></select></label><button id="group-members-save" type="button">保存成员</button><button id="group-load-older" type="button" hidden>更早消息</button><div id="group-messages" class="group-messages" aria-live="polite"></div><form id="group-form"><label>本次回应的员工<select id="group-recipients" multiple size="3"></select></label><label>消息<textarea id="group-input" rows="3" maxlength="12000"></textarea></label><div class="composer-control-row"><label class="sr-only" for="group-model">本次使用</label><select id="group-model" aria-label="选择群聊使用的模型" disabled></select><button id="group-send" type="submit" class="primary">发送到群聊</button></div><p id="group-send-hint" class="composer-hint muted fine">选择共享模型和回应员工后发送。</p></form></section></div>
         </section>
         <section id="view-identity" class="view settings-view" hidden>
           <h2>Bot 身份</h2>
@@ -155,99 +147,6 @@
               ></textarea></label
             ><button type="submit" class="primary">保存身份</button>
           </form>
-        </section>
-        <section id="view-model" class="view settings-view" hidden>
-          <h2>模型来源与私密登录</h2>
-          <p id="model-source-context" class="muted">为选中的来源 Bot 配置模型。连接状态以实际回复为准。</p>
-          <p id="model-connection-status" class="muted" aria-live="polite"></p>
-          <form id="model-form">
-            <label
-              >接入方式<select id="model-provider">
-                <option value="openai-codex">Codex Auth</option>
-                <option value="compatible">兼容 Chat Completions API</option>
-              </select></label
-            ><label id="base-url-field"
-              >API 基础地址<input
-                id="model-base-url"
-                type="url"
-                placeholder="https://api.deepseek.com/v1" /></label
-            ><label
-              >模型名称<input
-                id="model-name"
-                maxlength="160"
-                list="model-catalog"
-                required /></label
-            ><datalist id="model-catalog"></datalist>
-            <div id="api-key-fields">
-              <label
-                >私密 API 凭据<input
-                  id="model-key"
-                  type="password"
-                  autocomplete="off"
-                  maxlength="8192"
-                  placeholder="留空保留已有凭据"
-              /></label>
-              <p id="credential-status" class="muted fine">尚未配置凭据</p>
-              <label class="check"
-                ><input id="clear-credential" type="checkbox" />清除已保存的凭据</label
-              ><label class="check"
-                ><input
-                  id="model-keyless"
-                  type="checkbox"
-                />此服务明确无需凭据（例如本地模型）</label
-              >
-            </div>
-            <label
-              >应用代理地址（可选）<input
-                id="model-proxy"
-                type="url"
-                placeholder="http://host.docker.internal:7890"
-            /></label>
-            <p class="muted fine">
-              留空为直连。容器请使用 host.docker.internal，不要填宿主机的
-              127.0.0.1。代理不能保证解除服务端地区或账户限制。配置同时用于 Codex
-              登录、刷新和模型请求。
-            </p>
-            <button type="submit" class="primary">保存模型连接</button>
-          </form>
-          <div id="codex-auth-panel">
-            <hr />
-            <h3>Codex 登录</h3>
-            <p id="codex-status" role="status">尚未登录</p>
-            <p class="muted fine">
-              使用独立登录记录，不读取旧 DSH 或 Codex CLI 凭据。此接入复用 pi-ai
-              的登录协议；刷新令牌轮换可能影响同一账户的其他会话。
-            </p>
-            <div class="auth-actions">
-              <button id="codex-device-login">设备码登录</button
-              ><button id="codex-browser-login">浏览器登录</button
-              ><button id="codex-cancel">取消登录</button
-              ><button id="codex-logout">退出 Codex</button>
-            </div>
-            <div id="codex-notice" hidden>
-              <p>
-                <a id="codex-login-link" target="_blank" rel="noopener noreferrer"
-                  >在服务方页面完成登录</a
-                >
-              </p>
-              <p id="codex-user-code"></p>
-            </div>
-            <form id="codex-answer-form" hidden>
-              <label
-                >私密回调地址<input
-                  id="codex-callback"
-                  type="password"
-                  autocomplete="off"
-                  maxlength="8192"
-                  placeholder="http://localhost:1455/auth/callback?…"
-              /></label>
-              <p class="muted fine">
-                远程浏览器的 localhost
-                回调可能无法打开。完成服务方登录后，将地址栏完整回调地址私密粘贴于此，不要发到聊天中。
-              </p>
-              <button type="submit">提交回调</button>
-            </form>
-          </div>
         </section>
         <section id="view-memory" class="view settings-view" hidden>
           <h2>明确保存的文件记忆</h2>
@@ -323,20 +222,22 @@
     </div>
     <dialog id="bot-dialog" aria-labelledby="create-title">
       <form id="create-form">
-        <h2 id="create-title">创建 Bot</h2>
-        <label>名称<input id="create-name" maxlength="100" required /></label
-        ><label
-          >标识 slug<input
-            id="create-slug"
-            maxlength="64"
-            pattern="[a-z0-9]+(-[a-z0-9]+)*"
-            placeholder="my-bot"
-            required /></label
-        ><label>身份提示<textarea id="create-persona" rows="4" maxlength="8000"></textarea></label>
+        <h2 id="create-title">创建员工</h2>
+        <label>名称<input id="create-name" maxlength="100" required /></label>
+        <label>角色建议与职责<textarea id="create-persona" rows="4" maxlength="8000" placeholder="你希望它擅长什么、如何与你协作？"></textarea></label>
         <div class="dialog-actions">
           <button id="dismiss-create" type="button">取消</button
           ><button class="primary" type="submit">创建</button>
         </div>
+      </form>
+    </dialog>
+    <dialog id="group-dialog" aria-labelledby="group-create-title">
+      <form id="group-create-form">
+        <h2 id="group-create-title">新建群聊</h2>
+        <label>群聊名称<input id="group-create-name" maxlength="100" required /></label>
+        <label>选择成员<select id="group-create-members" multiple size="6" required></select></label>
+        <p class="muted fine">同名员工会显示稳定 ID，便于选择正确成员。</p>
+        <div class="dialog-actions"><button id="dismiss-group-create" type="button">取消</button><button type="submit" class="primary">创建群聊</button></div>
       </form>
     </dialog>
     <dialog id="copy-dialog" aria-labelledby="copy-title">

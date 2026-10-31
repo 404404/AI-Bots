@@ -11,54 +11,53 @@ const directory = () => { const path = mkdtempSync(join(tmpdir(), 'employee-inde
 after(() => { for (const path of roots) rmSync(path, { recursive: true, force: true }); });
 const owner = (app, command, params = {}) => app.execute(command, params, { kind: 'owner' });
 
-test('DE-06 history pages in insertion order, preserves contexts and initializes only once', async () => {
+test('DE-06 history pages preserve the onboarding Conversation and every existing context', async () => {
   const app = new BotApplication(directory());
   try {
     const bot = await owner(app, 'bots.create', { slug: 'employee-history', name: 'Employee' });
     const other = await owner(app, 'bots.create', { slug: 'employee-other', name: 'Other' });
+    const defaultChat = await owner(app, 'private-chat.open', { botId: bot.id });
     const conversations = [];
     for (let i = 0; i < 4; i++) conversations.push(await owner(app, 'conversations.create', { botId: bot.id }));
     const foreign = await owner(app, 'conversations.create', { botId: other.id });
     const db = app.storage.db;
     db.prepare('UPDATE conversations SET created_at=? WHERE bot_id=?').run('2026-01-01T00:00:00.000Z', bot.id);
     const [first, second] = await Promise.all([owner(app, 'private-chat.open', { botId: bot.id }), owner(app, 'private-chat.open', { botId: bot.id })]);
-    assert.equal(first.conversation.id, conversations.map(x => x.id).sort().at(-1));
+    assert.equal(first.conversation.id, defaultChat.conversation.id);
     assert.equal(second.conversation.id, first.conversation.id);
+    const expectedIds = db.prepare('SELECT id FROM conversations WHERE bot_id=? ORDER BY seq').all(bot.id).map(x => x.id);
     let cursor; const ids = [];
     do { const page = await owner(app, 'private-chat.history', { botId: bot.id, limit: 1, cursor }); ids.push(...page.items.map(x => x.id)); cursor = page.nextCursor; } while (cursor);
-    assert.deepEqual(ids, conversations.map(x => x.id));
+    assert.deepEqual(ids, expectedIds);
     await owner(app, 'private-chat.select-conversation', { botId: bot.id, conversationId: conversations[0].id });
     assert.equal((await owner(app, 'private-chat.open', { botId: bot.id })).conversation.id, conversations[0].id);
     await assert.rejects(owner(app, 'private-chat.select-conversation', { botId: bot.id, conversationId: foreign.id }), { code: 'not-found' });
-    assert.equal(db.prepare('SELECT count(*) n FROM conversations WHERE bot_id=?').get(bot.id).n, 4);
+    assert.equal(db.prepare('SELECT count(*) n FROM conversations WHERE bot_id=?').get(bot.id).n, 5);
   } finally { await app.close(); }
 });
 
-test('DE-03 revoked default connection never falls back to configured local model', async () => {
-  let calls = 0;
-  const model = createServer(async (req, res) => { for await (const _ of req) {} calls++; res.end(JSON.stringify({ choices: [{ message: { content: 'synthetic' } }] })); });
+test('DE-03 changing the shared model account invalidates the saved employee selection without fallback', async () => {
+  const requests = [];
+  const model = createServer(async (req, res) => { let body = ''; for await (const chunk of req) body += chunk; requests.push(body); res.end(JSON.stringify({ choices: [{ message: { content: 'synthetic' } }] })); });
   await new Promise(resolve => model.listen(0, '127.0.0.1', resolve));
   const app = new BotApplication(directory());
   try {
-    const source = await owner(app, 'bots.create', { slug: 'employee-source', name: 'Source' });
     const worker = await owner(app, 'bots.create', { slug: 'employee-worker', name: 'Worker' });
-    const other = await owner(app, 'bots.create', { slug: 'employee-ungranted', name: 'Other' });
     const config = { provider: 'compatible', baseUrl: `http://127.0.0.1:${model.address().port}`, model: 'synthetic-model', keyless: true };
-    await owner(app, 'bots.update', { botId: source.id, model: config });
-    await owner(app, 'bots.update', { botId: worker.id, model: config });
-    const grant = await owner(app, 'delegation.grant', { workerBotId: worker.id, sourceBotId: source.id });
-    const selection = { kind: 'connection', connectionId: grant.connectionId, modelId: config.model };
+    await owner(app, 'model-account.update', config);
+    const selection = { kind: 'global', modelId: config.model };
     const chat = await owner(app, 'private-chat.open', { botId: worker.id });
     assert.deepEqual(chat.selection, selection);
-    await assert.rejects(owner(app, 'private-chat.select-model', { botId: other.id, selection }));
-    await owner(app, 'delegation.revoke', { workerBotId: worker.id });
-    await assert.rejects(owner(app, 'runs.submit', { botId: worker.id, conversationId: chat.conversation.id, idempotencyKey: 'revoked', content: 'synthetic' }), e => ['connection-not-found', 'connection-revoked'].includes(e.code));
-    assert.equal(calls, 0);
-    assert.equal(app.storage.db.prepare('SELECT count(*) n FROM runs WHERE bot_id=?').get(worker.id).n, 0);
+    await owner(app, 'bots.create', { slug: 'employee-ungranted', name: 'Other' });
+    await owner(app, 'model-account.update', { ...config, model: 'replacement-model' });
+    await assert.rejects(owner(app, 'runs.submit', { botId: worker.id, conversationId: chat.conversation.id,
+      idempotencyKey: 'stale-global-selection', content: 'synthetic', selection }), { code: 'model-not-authorized' });
+    assert.equal(requests.some((body) => body.includes('stale-global-selection')), false);
+    assert.equal(app.storage.db.prepare('SELECT count(*) n FROM runs WHERE bot_id=? AND request_key=?').get(worker.id, 'stale-global-selection').n, 0);
   } finally { await app.close(); model.closeAllConnections(); await new Promise(resolve => model.close(resolve)); }
 });
 
-test('DE-03 local model requires explicit selection while existing runs replay without it', async () => {
+test('DE-03 an employee requires explicit global model selection and replays an accepted run', async () => {
   let calls = 0;
   const model = createServer(async (req, res) => {
     for await (const _ of req) {}
@@ -70,13 +69,13 @@ test('DE-03 local model requires explicit selection while existing runs replay w
   const app = new BotApplication(directory());
   try {
     const bot = await owner(app, 'bots.create', { slug: 'employee-explicit-local', name: 'Employee' });
-    await owner(app, 'bots.update', { botId: bot.id, model: { provider: 'compatible', baseUrl: `http://127.0.0.1:${model.address().port}`, model: 'synthetic-local', keyless: true } });
     const chat = await owner(app, 'private-chat.open', { botId: bot.id });
     assert.equal(chat.selection, null);
     const params = { botId: bot.id, conversationId: chat.conversation.id, idempotencyKey: 'explicit', content: 'synthetic input' };
     await assert.rejects(owner(app, 'runs.submit', params), { code: 'model-selection-required' });
     assert.equal(calls, 0);
-    const selection = { kind: 'local', modelId: 'synthetic-local' };
+    await owner(app, 'model-account.update', { provider: 'compatible', baseUrl: `http://127.0.0.1:${model.address().port}`, model: 'synthetic-local', keyless: true });
+    const selection = { kind: 'global', modelId: 'synthetic-local' };
     const run = await owner(app, 'runs.submit', { ...params, selection });
     await Promise.all([...app.active.values()].map(active => active.done));
     assert.equal(calls, 1);

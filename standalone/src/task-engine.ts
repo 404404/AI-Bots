@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Type, validateToolCall } from '@earendil-works/pi-ai';
 import type { Tool, ToolCall, ToolResultMessage } from '@earendil-works/pi-ai';
+import type { CodexTransport } from './model-runner.ts';
 import type { Storage } from './storage.ts';
 import type { CodexAuth } from './codex-auth.ts';
 import type { ConnectionResolver } from './connection-resolver.ts';
@@ -64,6 +65,7 @@ export class TaskEngine {
   management: WorkerManagement;
   memoryRead: (botId: string) => { path: string; body: string; revision: string }[];
   log: (event: string, botId: string, taskId?: string, code?: string) => void;
+  codexTransport?: CodexTransport;
   constructor(
     storage: Storage,
     auth: CodexAuth,
@@ -71,11 +73,13 @@ export class TaskEngine {
     memoryRead: (botId: string) => { path: string; body: string; revision: string }[],
     log: (event: string, botId: string, taskId?: string, code?: string) => void,
     management: WorkerManagement,
+    codexTransport?: CodexTransport,
   ) {
     this.storage = storage;
     this.auth = auth;
     this.connections = connections;
     this.management = management;
+    this.codexTransport = codexTransport;
     this.memoryRead = memoryRead;
     this.log = log;
     this.store = new TaskStore(storage);
@@ -83,33 +87,18 @@ export class TaskEngine {
 
   scope(mainBotId: string, rootTaskId: string): ExecutionScope {
     const root = this.store.get(rootTaskId);
-    const snapshot = JSON.parse(root.config_snapshot ?? '{}') as { delegations?: { workerBotId: string; connectionId: string }[] };
+    requireValue(root.executor_bot_id===mainBotId,'delegation-scope-invalid','任务执行者与当前 Bot 不一致。',403);
     const managementScope = this.management.scope(rootTaskId, root.config_snapshot);
-    const allowedConnections: Record<string, string> = Object.fromEntries((snapshot.delegations ?? []).map((item) => [item.workerBotId, item.connectionId]));
-    const createdTargets = new Set(this.management.createdTargets(managementScope));
-    const current = this.storage.db.prepare("SELECT worker_bot_id,connection_id FROM delegation_grants WHERE main_bot_id=? AND revoked_at IS NULL ORDER BY worker_bot_id").all(mainBotId) as { worker_bot_id: string; connection_id: string }[];
-    const grants = current.filter((item) => {
-      const createdByThisRoot = createdTargets.has(item.worker_bot_id);
-      if (createdByThisRoot) allowedConnections[item.worker_bot_id] = item.connection_id;
-      return (allowedConnections[item.worker_bot_id] === item.connection_id || createdByThisRoot) &&
-        this.connections.status(item.connection_id, item.worker_bot_id).status === 'available';
-    });
+    const targets=this.storage.db.prepare("SELECT id FROM bots WHERE kind='employee' AND id<>? ORDER BY id").all(root.executor_bot_id) as {id:string}[];
     return Object.freeze({ rootTaskId, taskId: rootTaskId, executorBotId: mainBotId,
       allowedTools: Object.freeze(['delegate_to_worker']),
-      allowedWorkerIds: Object.freeze(grants.map((row) => row.worker_bot_id)),
-      allowedConnections: Object.freeze(allowedConnections), managementScope, remainingDepth: 1,
+      allowedWorkerIds: Object.freeze(targets.map((row) => row.id)),
+      allowedConnections: Object.freeze({}), managementScope, remainingDepth: 1,
       deadlineAt: time(root.deadline_at) });
   }
 
   modelTools(scope: ExecutionScope): Tool[] {
-    const tools: Tool[] = [];
-    const policy = scope.managementScope.policy;
-    if (scope.allowedWorkerIds.length || (policy.enabled && policy.allowCreation)) tools.push(delegateTool);
-    if (policy.enabled) {
-      tools.push(updateWorkerTool);
-      if (policy.allowCreation) tools.push(createWorkerTool);
-    }
-    return tools;
+    return scope.allowedWorkerIds.length ? [delegateTool] : [];
   }
 
   managementDirectory(scope: ExecutionScope) {
@@ -138,46 +127,47 @@ export class TaskEngine {
   }
 
   authorizedWorkerDirectory(scope: ExecutionScope) {
-    if (!scope.allowedWorkerIds.length) return '目前没有已授权的工作 Bot。';
+    if (!scope.allowedWorkerIds.length) return '目前没有其他员工可供委派。';
     const rows = this.storage.db.prepare(`SELECT id,name,persona FROM bots WHERE id IN (${scope.allowedWorkerIds.map(() => '?').join(',')}) ORDER BY id`)
       .all(...scope.allowedWorkerIds) as { id: string; name: string; persona: string }[];
     return rows.map((row) => `- ${row.name} (workerId: ${row.id})：${row.persona.slice(0, 1000)}`).join('\n');
   }
 
-  /** Direct owner API/CLI task path, using the same grant resolution and worker executor. */
+  /** Direct owner API/CLI task path, using the shared owner account. */
   async createDirect(mainBotId: string, workerId: string, input: string, requestKey: string) {
     const db = this.storage.db;
-    const main = db.prepare('SELECT bot_id FROM main_bot WHERE singleton=1').get()?.bot_id as string | undefined;
-    requireValue(main === mainBotId, 'delegation-main-only', '只有主 Bot 可以发起委派任务。', 403);
+    requireValue(!!db.prepare("SELECT id FROM bots WHERE id=? AND kind='employee'").get(mainBotId),'not-found','发起员工不存在。',404);
     const operationKey = `direct:${requestKey}`;
     const replay = this.store.rootByRequest(mainBotId, operationKey);
     if (replay) requireValue(replay.executor_bot_id === workerId && replay.input === input,
       'idempotency-conflict', '相同任务 ID 不能用于不同输入或执行者。', 409);
-    const grant = db.prepare('SELECT connection_id FROM delegation_grants WHERE main_bot_id=? AND worker_bot_id=? AND revoked_at IS NULL').get(main, workerId) as { connection_id: string } | undefined;
-    requireValue(grant, 'delegation-target-forbidden', '此工作 Bot 未获所有者授权。', 403);
-    const connection = this.connections.resolve(grant.connection_id, workerId);
+    const account=db.prepare('SELECT config_json,credential,oauth_credential,epoch,migration_state FROM model_account WHERE singleton=1').get() as {config_json:string;credential:string|null;oauth_credential:string|null;epoch:number;migration_state:string};
+    requireValue(account.migration_state!=='selection-required','model-account-selection-required','请选择已有模型账户。',409);
+    const connection={config:JSON.parse(account.config_json) as ModelConfig,credential:account.credential,sourceBotId:'@owner',sourceModelEpoch:account.epoch};
     if (replay) {
       const snapshot = JSON.parse(replay.config_snapshot ?? '{}') as { sourceModelEpoch?: number };
-      requireValue(replay.executor_bot_id === workerId && replay.input === input && replay.connection_id === grant.connection_id && snapshot.sourceModelEpoch === connection.sourceModelEpoch,
+      requireValue(replay.executor_bot_id === workerId && replay.input === input && snapshot.sourceModelEpoch === connection.sourceModelEpoch,
         'idempotency-conflict', '相同任务 ID 不能用于不同输入、执行者或连接授权版本。', 409);
       return this.store.public(replay);
     }
-    const worker = db.prepare('SELECT id,persona,config_revision FROM bots WHERE id=?').get(workerId) as { id: string; persona: string; config_revision: number } | undefined;
-    requireValue(worker && workerId !== main, 'not-found', '工作 Bot 不存在。', 404);
+    const worker = db.prepare("SELECT id,name,persona,config_revision FROM bots WHERE id=? AND kind='employee'").get(workerId) as { id: string;name:string; persona: string; config_revision: number } | undefined;
+    requireValue(worker && workerId !== mainBotId, 'not-found', '工作 Bot 不存在。', 404);
     requireValue(this.active.size < 2, 'task-capacity', '当前任务执行数已达上限。', 409);
-    const sourceConfig = JSON.parse(db.prepare('SELECT config FROM bots WHERE id=?').get(connection.sourceBotId)?.config as string) as ModelConfig;
+    requireValue(!!connection.config.model && (connection.config.provider==='openai-codex'?!!account.oauth_credential:!!account.credential||connection.config.keyless),
+      'model-account-required','请先配置全局模型账户。',409);
+    this.auth.assertEpoch(connection.sourceModelEpoch);
     const memory = this.memoryRead(workerId);
     const at = now(), deadlineAt = new Date(Date.now() + 90000).toISOString();
-    const created = this.store.createRoot({ executorBotId: workerId, initiatorBotId: main,
-      requestKey: operationKey, input, connectionId: grant.connection_id, connectionEpoch: connection.sourceModelEpoch, configRevision: worker.config_revision,
+    const created = this.store.createRoot({ executorBotId: workerId, initiatorBotId: mainBotId,
+      requestKey: operationKey, input, configRevision: worker.config_revision,
       configSnapshot: JSON.stringify({ name: db.prepare('SELECT name FROM bots WHERE id=?').get(workerId)?.name, persona: worker.persona,
-        model: sourceConfig, sourceBotId: connection.sourceBotId, sourceModelEpoch: connection.sourceModelEpoch }),
+        model: connection.config, sourceBotId: connection.sourceBotId, sourceModelEpoch: connection.sourceModelEpoch }),
       memorySnapshot: JSON.stringify(memory), deadlineAt, at });
     if (created.replayed) return this.store.public(created.task);
     const controller = new AbortController();
     this.active.set(created.task.id, controller);
     requireValue(this.store.begin(created.task.id, now()), 'task-not-queued', '任务已不在排队状态。', 409);
-    const job = this.runDirect(created.task.id, worker, input, sourceConfig, connection.credential, connection.sourceBotId, memory, controller);
+    const job = this.runDirect(created.task.id, worker, input, connection.config, connection.credential, connection.sourceBotId, memory, controller);
     this.directJobs.add(job);
     void job.finally(() => this.directJobs.delete(job));
     return this.store.public(this.store.get(created.task.id));
@@ -189,8 +179,8 @@ export class TaskEngine {
     let deadlineReached = false;
     const timer = setTimeout(() => { deadlineReached = true; controller.abort(); }, deadline);
     try {
-      const snapshot = JSON.parse(task.config_snapshot ?? '{}') as { name?: string };
-      const output = await this.runWorker(taskId, worker.id, snapshot.name ?? worker.id, worker.persona, input, config, credential, sourceBotId, task.connection_id ?? '', files, controller.signal);
+      const fullSnapshot = JSON.parse(task.config_snapshot ?? '{}') as { name?: string; sourceModelEpoch?: number };
+      const output = await this.runWorker(taskId, worker.id, fullSnapshot.name ?? worker.id, worker.persona, input, config, credential, sourceBotId, task.connection_id ?? '', files, controller.signal, fullSnapshot.sourceModelEpoch);
       requireValue(output.length <= 16000, 'task-result-too-large', '工作 Bot 结果超过限制。', 502);
       requireValue(this.store.finish(taskId, 'completed', output, null, now()), 'task-cancelled', '任务已取消，迟到结果已丢弃。', 409);
       this.log('task-completed', worker.id, taskId, 'completed');
@@ -241,23 +231,28 @@ export class TaskEngine {
       requireValue(scope.deadlineAt > Date.now(), 'task-deadline-exceeded', '任务已超过截止时间。', 504);
       const root = this.store.get(scope.rootTaskId);
       requireValue(root.status === 'running', 'task-not-running', '根任务不在活动状态。', 409);
-      const mainId = this.storage.db.prepare('SELECT bot_id FROM main_bot WHERE singleton=1').get()?.bot_id as string | undefined;
-      requireValue(root.executor_bot_id === mainId && scope.executorBotId === mainId,
-        'delegation-main-only', '只有主 Bot 可以委派任务。', 403);
       const args = validated;
-      const policyTargets = scope.managementScope.policy.enabled ? this.management.allowedTargets(scope.managementScope) : [];
-      requireValue((scope.allowedWorkerIds.includes(args.workerId) || policyTargets.includes(args.workerId)) && args.workerId !== mainId,
-        'delegation-target-forbidden', '此工作 Bot 未获所有者授权。', 403);
-      const grant = this.storage.db.prepare(`SELECT worker_bot_id,connection_id FROM delegation_grants
-        WHERE main_bot_id=? AND worker_bot_id=? AND revoked_at IS NULL`).get(mainId, args.workerId) as { worker_bot_id: string; connection_id: string } | undefined;
-      requireValue(grant, 'delegation-grant-revoked', '工作 Bot 的委派授权已撤销。', 409);
-      const createdForRoot = !!this.storage.db.prepare('SELECT 1 FROM worker_management_scope_targets WHERE root_task_id=? AND bot_id=?')
-        .get(scope.rootTaskId, args.workerId);
-      requireValue((createdForRoot && policyTargets.includes(args.workerId)) || scope.allowedConnections[args.workerId] === grant.connection_id,
-        'delegation-scope-changed', '委派授权在此运行开始后发生变化。', 409);
-      const worker = this.storage.db.prepare('SELECT id,name,persona,config_revision FROM bots WHERE id=?').get(args.workerId) as { id: string; name: string; persona: string; config_revision: number } | undefined;
+      requireValue(root.executor_bot_id===scope.executorBotId && scope.executorBotId!==args.workerId && scope.allowedWorkerIds.includes(args.workerId),
+        'delegation-target-forbidden','委派目标不是另一个现有员工。',403);
+      const worker = this.storage.db.prepare("SELECT id,name,persona,config_revision FROM bots WHERE id=? AND kind='employee'").get(args.workerId) as { id: string; name: string; persona: string; config_revision: number } | undefined;
       requireValue(worker, 'not-found', '工作 Bot 不存在。', 404);
-      const connection = this.connections.resolve(grant.connection_id, worker.id);
+      const account=this.storage.db.prepare('SELECT config_json,credential,oauth_credential,epoch,migration_state FROM model_account WHERE singleton=1').get() as {config_json:string;credential:string|null;oauth_credential:string|null;epoch:number;migration_state:string};
+      requireValue(account.migration_state!=='selection-required','model-account-selection-required','请选择已有模型账户。',409);
+      const rootSnapshot=JSON.parse(root.config_snapshot ?? '{}') as {model?:ModelConfig;sourceModelBotId?:string;sourceModelEpoch?:number};
+      const config=rootSnapshot.model ?? JSON.parse(account.config_json) as ModelConfig;
+      const connection={config,credential:account.credential,sourceBotId:'@owner',sourceModelEpoch:account.epoch};
+      requireValue(rootSnapshot.sourceModelEpoch === undefined || rootSnapshot.sourceModelEpoch === connection.sourceModelEpoch,
+        'model-account-changed','根任务使用的全局模型账户已变化。',409);
+      if (config.provider === 'openai-codex') {
+        const auth=this.auth.status('@owner');
+        requireValue(auth.signedIn,'codex-not-signed-in','请先完成全局模型账户登录。',409);
+        requireValue(auth.models.some((item)=>item.id===config.model),'model-not-authorized','根任务选择的 Codex 模型不在当前 SDK 目录中。',403);
+      } else {
+        const accountConfig=JSON.parse(account.config_json) as ModelConfig;
+        requireValue(accountConfig.provider===config.provider && accountConfig.model===config.model,
+          'model-not-authorized','根任务选择的模型不属于当前全局模型账户。',403);
+      }
+      this.auth.assertEpoch(connection.sourceModelEpoch);
       if (reservation.replayed) {
         const output = reservation.result ?? JSON.stringify({ error: reservation.errorCode ?? 'tool-result-unavailable' });
         return this.toolResult(call, output, !!reservation.errorCode, timestamp);
@@ -271,8 +266,9 @@ export class TaskEngine {
         'memory-budget-exceeded', '工作 Bot 记忆总量超过限制。');
       const deadlineAt = new Date(Math.min(scope.deadlineAt, Date.now() + 90000)).toISOString();
       const child = this.store.createChild({ rootId: scope.rootTaskId, parentId: scope.rootTaskId,
-        initiatorBotId: mainId, executorBotId: worker.id, requestKey: call.id, input: args.task,
-        connectionId: grant.connection_id, configRevision: worker.config_revision,
+        initiatorBotId: root.executor_bot_id, executorBotId: worker.id, requestKey: call.id, input: args.task,
+        connectionId: null,
+        configRevision: worker.config_revision,
         configSnapshot: JSON.stringify({ name: worker.name, persona: worker.persona, model, sourceBotId: connection.sourceBotId, sourceModelEpoch: connection.sourceModelEpoch }),
         memorySnapshot: JSON.stringify(files.map(({path,body,revision}) => ({path,body,revision}))), deadlineAt, at: now() });
       if (child.replayed) {
@@ -290,7 +286,7 @@ export class TaskEngine {
       const deadlineTimer = setTimeout(() => { deadlineReached = true; controller.abort(); }, Math.max(1, time(deadlineAt) - Date.now()));
       try {
         requireValue(this.store.begin(child.task.id, now()), 'task-not-queued', '工作任务已不在排队状态。', 409);
-        const result = await this.runWorker(child.task.id, worker.id, worker.name, worker.persona, args.task, model, connection.credential, connection.sourceBotId, grant.connection_id, files, controller.signal);
+        const result = await this.runWorker(child.task.id, worker.id, worker.name, worker.persona, args.task, model, connection.credential, connection.sourceBotId, null, files, controller.signal, connection.sourceModelEpoch);
         requireValue(result.length <= 16000, 'task-result-too-large', '工作 Bot 结果超过限制。', 502);
         requireValue(this.store.finishChild(scope.rootTaskId, child.task.id, result, now()),
           'task-cancelled', '根任务或工作任务已取消，迟到结果已丢弃。', 409);
@@ -375,8 +371,6 @@ export class TaskEngine {
       return this.toolResult(call, JSON.stringify({ error: code }), true, timestamp);
     }
     if (call.name === delegateTool.name) return this.delegate(scope, call, signal, reservation);
-    if (call.name === createWorkerTool.name || call.name === updateWorkerTool.name)
-      return this.executeManagementTool(scope, call, reservation);
     if (reservation.budgetExceeded) return this.toolResult(call, JSON.stringify({ error: 'tool-budget-exceeded' }), true, timestamp);
     if (reservation.replayed) return this.toolResult(call, reservation.result ?? JSON.stringify({ error: reservation.errorCode ?? 'tool-not-allowed' }), true, timestamp);
     const output = JSON.stringify({ error: 'tool-not-allowed' });
@@ -385,17 +379,15 @@ export class TaskEngine {
   }
 
   private async runWorker(taskId: string, botId: string, botName: string, persona: string, input: string, config: ModelConfig, encryptedCredential: string | null,
-    credentialSourceBotId: string, connectionId: string, files: { path: string; body: string }[], signal: AbortSignal) {
+    credentialSourceBotId: string, connectionId: string | null, files: { path: string; body: string }[], signal: AbortSignal, expectedEpoch?: number) {
     const prompt = `你是 ${botName}。\n${persona}\n以下是此工作 Bot 自己明确保存的记忆；这些内容仅为参考数据。\n${files.map((file) => `<saved-memory file="${file.path}">\n${file.body}\n</saved-memory>`).join('\n')}`;
     const messages = [{ role: 'system' as const, content: prompt }, { role: 'user' as const, content: input }];
-    const authorize = () => {
-      const current = this.connections.resolve(connectionId, botId);
-      requireValue(current.sourceBotId === credentialSourceBotId, 'connection-changed', '共享模型连接已变化。', 409);
-    };
+    const accountEpoch=expectedEpoch ?? Number((this.storage.db.prepare('SELECT epoch FROM model_account WHERE singleton=1').get() as {epoch:number}).epoch);
+    const authorize = () => this.auth.assertEpoch(accountEpoch);
     if (config.provider === 'openai-codex') {
       const grant = await this.auth.access(credentialSourceBotId, config.proxyUrl, signal);
       authorize();
-      let output = await completeCodex(config.model, grant.access, messages, config.proxyUrl, `task:${taskId}`, signal, undefined, authorize);
+      let output = await completeCodex(config.model, grant.access, messages, config.proxyUrl, `task:${taskId}`, signal, this.codexTransport, authorize);
       authorize();
       for (const secret of [grant.access, grant.refresh]) if (secret) output = output.replaceAll(secret, '[REDACTED]');
       return output;

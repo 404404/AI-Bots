@@ -396,6 +396,13 @@ nav#bots button.bot-nav-item { display: flex; align-items: center; gap: 8px; }
   align-items: center;
   gap: 8px;
 }
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.inline-check input { width: auto; }
 .model-picker-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
 #chat-model { flex: 1 1 0; max-width: 360px; min-width: 0; padding: 8px; }
 .composer-hint {
@@ -773,3 +780,42 @@ dialog::backdrop {
   .chat-view { min-height: 0; height: calc(100dvh - 135px); gap: 8px; }
   .task-trace { max-height: 120px; }
 }
+
+.group-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.32fr) minmax(0, 1fr);
+  gap: 18px;
+  min-height: 420px;
+}
+.group-layout > aside,
+.group-layout > section,
+.employee-row {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+.group-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.group-heading h3 { margin: 0; }
+#groups-list { display: grid; gap: 6px; margin-top: 12px; }
+#groups-list button { width: 100%; text-align: left; overflow-wrap: anywhere; }
+.group-members { color: var(--muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.group-messages { min-height: 220px; max-height: 50dvh; overflow: auto; display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+.group-message { max-width: min(90%, 760px); padding: 11px 13px; border: 1px solid var(--border); border-radius: 12px; background: #f8faf7; overflow-wrap: anywhere; }
+.group-message.user { align-self: flex-end; background: #e9f2eb; }
+.group-message-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.group-message-heading strong { overflow-wrap: anywhere; }
+.group-message time { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.group-message p { margin: 8px 0 0; white-space: pre-wrap; }
+.group-run-status { padding: 8px; background: #fff6e8; border-radius: 8px; }
+.employee-row { display: flex; flex-direction: column; gap: 5px; margin: 8px 0; }
+#group-model { flex: 1 1 0; min-width: 0; max-width: 360px; padding: 8px; }
+@media (max-width: 750px) {
+  .group-layout { grid-template-columns: minmax(0, 1fr); }
+  .group-layout > aside { max-height: 190px; overflow: auto; }
+  .group-messages { max-height: 42dvh; }
+  #group-model { flex: 1 1 0; min-width: 0; max-width: none; }
+}
+.contact-shortcut { width: 100%; text-align: left; color: var(--accent); font-size: 12px; }
+.group-run-status.failed { background: #fff0ec; color: #8a3827; }
