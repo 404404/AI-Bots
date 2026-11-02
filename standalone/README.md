@@ -20,7 +20,7 @@
 
 ## Browser 开发候选
 
-源码中的 Browser 接线尚未部署到上述预览。网页「设置 → 浏览器」和 `browser.origins.grant` 可为指定 Bot 授权精确 origin；`browser.open`、`browser.step`、`browser.close`、`browser.cancel`、`browser.trace` 及 `browser.screenshot` 使用相同后台和 SQLite 任务记录。新的 `browser.read` 是受限读取候选，使用已有授权、稳定 Bot ID 和幂等键，在一个会话中导航、读取并关闭；模型侧的 `browser_read` 调用同一实现。当前只允许精确授权 origin 内没有 query 的 URL，页面内容作为不可信数据处理。模型实用性、真实 Chromium 和完整工具链尚未通过验收。
+源码中的 Browser 接线尚未部署到上述预览。网页「设置 → 浏览器」和 `browser.origins.grant` 可为指定 Bot 授权精确 origin；`browser.open`、`browser.step`、`browser.close`、`browser.cancel`、`browser.trace` 及 `browser.screenshot` 使用相同后台和 SQLite 任务记录。新的 `browser.read` 是受限读取候选，使用已有授权、稳定 Bot ID 和幂等键，在一个会话中导航、读取并关闭；模型侧的 `browser_read` 调用同一实现。当前严格读取只允许精确授权的 HTTP origin 内没有 query 的 URL；HTTPS 严格会话在安全边界完成验证前拒绝。页面内容作为不可信数据处理。模型实用性、真实 Chromium 和完整工具链尚未通过验收。
 
 以下仅为隔离候选的命令格式；需要事先登录 CLI、配置合格 worker，并使用测试站点和实际 Bot ID，不能在现有预览上假定此版本已运行：
 

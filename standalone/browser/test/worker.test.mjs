@@ -56,8 +56,8 @@ function makeFakeBrowser(sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Ye
         async close() { context.closed = true; },
         setDefaultTimeout() {},
         setDefaultNavigationTimeout() {},
-        route(pattern, handler) { context.routes.push([pattern, handler]); },
-        routeWebSocket(pattern, handler) { context.websocketHandler = handler; },
+        async route(pattern, handler) { context.routes.push([pattern, handler]); },
+        async routeWebSocket(pattern, handler) { context.websocketHandler = handler; },
         async newCDPSession() {
           if (cdpState.unavailable) throw new Error('CDP unavailable');
           return { async send(method, params) { context.cdpCommands.push({ method, params }); }, async detach() {} };
@@ -271,6 +271,91 @@ test('strict query sessions fail closed when HTTPS or the Chromium network query
     operationId: randomUUID(), botId: 'cdp-policy', taskId: 'cdp-policy-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
   }), { code: 'query-guard-unavailable' });
   assert.equal(noCdp.worker.sessions.size, 0);
+});
+
+test('worker closes a strict session and creates the next one through the same browser process', async (t) => {
+  const logs = [];
+  const { worker, proxy } = await setup(t, undefined, { queryPolicy: 'deny', logger: (entry) => logs.push(entry) });
+  await worker.start();
+  const first = await worker.create({
+    operationId: randomUUID(), botId: 'repeat-bot-a', taskId: 'repeat-task-a', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  });
+  assert.equal(proxy.leases.get(first.sessionId)?.queryPolicy, 'deny');
+  await worker.close(first.sessionId, { botId: 'repeat-bot-a', taskId: 'repeat-task-a', requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  assert.equal(proxy.leases.has(first.sessionId), false);
+  const second = await worker.create({
+    operationId: randomUUID(), botId: 'repeat-bot-b', taskId: 'repeat-task-b', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  });
+  assert.equal(proxy.leases.get(second.sessionId)?.queryPolicy, 'deny');
+  assert.equal(worker.sessions.size, 1);
+  const stages = logs.filter((entry) => entry.event === 'browser-session-stage');
+  assert.ok(stages.some((entry) => entry.phase === 'session-close-context' && entry.outcome === 'completed'));
+  assert.ok(stages.some((entry) => entry.phase === 'session-close-proxy-lease' && entry.outcome === 'completed'));
+  assert.ok(stages.some((entry) => entry.phase === 'context-create' && entry.outcome === 'completed'));
+  assert.ok(stages.every((entry) => Number.isSafeInteger(entry.at) && (!('durationMs' in entry) || (entry.durationMs >= 0 && entry.durationMs <= 120_000))));
+  assert.equal(JSON.stringify(stages).includes(first.sessionId), false);
+  assert.equal(JSON.stringify(stages).includes('fixture.test'), false);
+});
+
+test('session-stage diagnostics expose only a fixed phase and safe error-name enum on setup failure', async (t) => {
+  const logs = [];
+  const { worker, driver } = await setup(t, undefined, { queryPolicy: 'deny', logger: (entry) => logs.push(entry) });
+  await worker.start();
+  driver.browser.newContext = async () => { throw new Error('https://private.test/path?token=do-not-log'); };
+  await assert.rejects(worker.create({
+    operationId: randomUUID(), botId: 'diagnostic-bot', taskId: 'diagnostic-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), /do-not-log/u);
+  const failed = logs.find((entry) => entry.event === 'browser-session-stage' && entry.phase === 'context-create' && entry.outcome === 'failed');
+  assert.equal(failed?.errorName, 'Error');
+  const serialized = JSON.stringify(logs);
+  for (const secret of ['private.test', 'token=do-not-log', 'https://']) assert.equal(serialized.includes(secret), false);
+});
+
+test('asynchronous request route installation failure rejects session creation', async (t) => {
+  const logs = [];
+  const { worker, proxy, driver } = await setup(t, undefined, { queryPolicy: 'deny', logger: (entry) => logs.push(entry) });
+  await worker.start();
+  const newContext = driver.browser.newContext.bind(driver.browser);
+  driver.browser.newContext = async (...args) => {
+    const context = await newContext(...args);
+    context.route = async () => { throw new Error('route install failure contains secret text'); };
+    return context;
+  };
+  await assert.rejects(worker.create({
+    operationId: randomUUID(), botId: 'route-failure-bot', taskId: 'route-failure-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), /route install failure/u);
+  assert.ok(logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'request-routes-install' && entry.outcome === 'failed'));
+  assert.ok(logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'session-close-proxy-lease' && entry.outcome === 'completed'));
+  assert.equal(JSON.stringify(logs).includes('secret text'), false);
+  assert.equal(proxy.leases.size, 0);
+});
+
+test('cleanup stage failures are logged as failed while later cleanup stages continue', async (t) => {
+  const logs = [];
+  const { worker, proxy, driver } = await setup(t, undefined, { queryPolicy: 'deny', logger: (entry) => logs.push(entry) });
+  await worker.start();
+  const newContext = driver.browser.newContext.bind(driver.browser);
+  driver.browser.newContext = async (...args) => {
+    const context = await newContext(...args);
+    context.close = async () => { throw new Error('sensitive context close detail'); };
+    const newCDPSession = context.newCDPSession.bind(context);
+    context.newCDPSession = async (...sessionArgs) => {
+      const cdp = await newCDPSession(...sessionArgs);
+      cdp.detach = async () => { throw new Error('sensitive CDP detach detail'); };
+      return cdp;
+    };
+    return context;
+  };
+  const session = await worker.create({
+    operationId: randomUUID(), botId: 'cleanup-failure-bot', taskId: 'cleanup-failure-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  });
+  await worker.close(session.sessionId, { botId: 'cleanup-failure-bot', taskId: 'cleanup-failure-task', requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  const stages = logs.filter((entry) => entry.event === 'browser-session-stage');
+  assert.ok(stages.some((entry) => entry.phase === 'session-close-query-guard' && entry.outcome === 'failed'));
+  assert.ok(stages.some((entry) => entry.phase === 'session-close-context' && entry.outcome === 'failed'));
+  assert.ok(stages.some((entry) => entry.phase === 'session-close-proxy-lease' && entry.outcome === 'completed'));
+  assert.equal(proxy.leases.has(session.sessionId), false);
+  assert.equal(JSON.stringify(stages).includes('sensitive'), false);
 });
 
 test('closing through an operation remains idempotent after the session is removed', async (t) => {

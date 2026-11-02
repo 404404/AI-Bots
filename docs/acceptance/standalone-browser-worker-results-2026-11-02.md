@@ -53,4 +53,6 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 [CI 41439388440](https://github.com/404404/AI-Bots/actions/runs/41439388440) 的 Resolute 镜像由 Syft 正确识别 Node 24.22.2，Grype 对已知 NVD/CPE 匹配未报告该 Node 二进制的 HIGH/CRITICAL；这是辅助证据，CPE 匹配存在范围与误匹配限制，不证明 Node 核心漏洞的完整覆盖。该镜像沙箱探针仍失败，脱敏诊断显示失败发生在 `chrome://sandbox` 导航阶段，原因尚未确认。
 
+[CI 41440677136](https://github.com/404404/AI-Bots/actions/runs/41440677136) 中，严格租约的 HTTPS CONNECT 在代理处返回 403；第一个会话完成基础操作后，第二个会话创建等待超时，Gateway 返回 `worker-unavailable`，因此后续 query 重定向零命中和跨会话用例未完成。[CI 41440677038](https://github.com/404404/AI-Bots/actions/runs/41440677038) 的 Resolute 使用完整 Chromium channel 后仍在沙箱页面导航阶段超时，严格沙箱门禁保持失败。此次两轮均未发布或部署。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

@@ -21,12 +21,18 @@ const OP_TIMEOUT_MS = 15_000;
 const MAX_RELAY_TUNNEL_MS = 30_000;
 const MAX_RELAY_TUNNEL_BYTES = 16 * 1024 * 1024;
 const MAX_RELAY_DIAGNOSTIC_EVENTS = 64;
+const MAX_SESSION_DIAGNOSTIC_EVENTS = 96;
 const SAFE_PROXY_ERROR_CODES = new Set([
   'ECONNREFUSED', 'ENOENT', 'EACCES', 'EPIPE', 'ETIMEDOUT', 'ECONNRESET', 'EHOSTUNREACH', 'ENETUNREACH', 'EADDRINUSE',
   'ERR_SOCKET_CLOSED', 'ERR_PROXY_CONNECTION_FAILED', 'ERR_TUNNEL_CONNECTION_FAILED', 'ERR_NO_SUPPORTED_PROXIES',
   'ERR_CONNECTION_CLOSED', 'ERR_CONNECTION_REFUSED', 'ERR_TIMED_OUT', 'ERR_NAME_NOT_RESOLVED',
 ]);
 const SAFE_RELAY_METHODS = new Set(['GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'PATCH', 'CONNECT']);
+const SESSION_STAGE_NAMES = new Set([
+  'proxy-lease-register', 'context-create', 'page-create', 'query-guard-attach', 'query-guard-enable',
+  'query-guard-block-queries', 'request-routes-install', 'session-activate',
+  'session-close-query-guard', 'session-close-context', 'session-close-proxy-lease',
+]);
 
 export function safeRelayMethod(method) {
   return SAFE_RELAY_METHODS.has(method) ? method : 'OTHER';
@@ -235,6 +241,8 @@ export class BrowserWorker {
     this.launcher = launcher;
     this.now = now;
     this.logger = logger;
+    this.sessionDiagnosticEvents = 0;
+    this.sessionDiagnosticsSuppressed = false;
     this.maxSessions = maxSessions;
     this.networkInspector = networkInspector;
     this.bridgeGateway = bridgeGateway;
@@ -318,6 +326,39 @@ export class BrowserWorker {
     return proxyAdmin({ url: this.proxyAdminUrl, socketPath: this.proxyAdminSocket, token: this.proxyAdminToken }, body);
   }
 
+  sessionStage(phase, outcome, startedAt, error) {
+    if (this.sessionDiagnosticEvents >= MAX_SESSION_DIAGNOSTIC_EVENTS) {
+      if (!this.sessionDiagnosticsSuppressed) {
+        this.sessionDiagnosticsSuppressed = true;
+        this.logger({ event: 'browser-session-diagnostics-suppressed', limit: MAX_SESSION_DIAGNOSTIC_EVENTS, at: this.now() });
+      }
+      return;
+    }
+    this.sessionDiagnosticEvents += 1;
+    const safeOutcome = ['started', 'completed', 'failed'].includes(outcome) ? outcome : 'failed';
+    const elapsed = startedAt === undefined ? undefined : Math.max(0, Math.min(120_000, this.now() - startedAt));
+    const errorName = error ? (['Error', 'TypeError', 'TimeoutError', 'AbortError', 'BrowserError', 'ProtocolError'].includes(error.name) ? error.name : 'Other') : undefined;
+    this.logger({
+      event: 'browser-session-stage', phase: SESSION_STAGE_NAMES.has(phase) ? phase : 'unknown', outcome: safeOutcome,
+      ...(elapsed === undefined ? {} : { durationMs: elapsed }),
+      ...(errorName ? { errorName } : {}),
+      at: this.now(),
+    });
+  }
+
+  async runSessionStage(phase, action) {
+    const startedAt = this.now();
+    this.sessionStage(phase, 'started');
+    try {
+      const result = await action();
+      this.sessionStage(phase, 'completed', startedAt);
+      return result;
+    } catch (error) {
+      this.sessionStage(phase, 'failed', startedAt, error);
+      throw error;
+    }
+  }
+
   async verifySandbox(browser) {
     let context;
     let stage = 'context-create';
@@ -385,53 +426,60 @@ export class BrowserWorker {
     chmodSync(directory, 0o700);
     const session = { id, botId, taskId, secret, expiresAt, allowedOrigins: new Set(allowedOrigins), queryPolicy: this.queryPolicy, directory, context: null, page: null, nextSequence: 1, steps: 0, operations: new Map(), busy: null, state: 'starting', screenshots: new Map() };
     try {
-      await this.updateProxyLease({ sessionId: id, secret, expiresAt, origins: allowedOrigins, queryPolicy: session.queryPolicy });
-      session.context = await this.browser.newContext({
+      await this.runSessionStage('proxy-lease-register', () => this.updateProxyLease({ sessionId: id, secret, expiresAt, origins: allowedOrigins, queryPolicy: session.queryPolicy }));
+      session.context = await this.runSessionStage('context-create', () => this.browser.newContext({
         acceptDownloads: false,
         serviceWorkers: 'block',
         proxy: { server: this.proxyServer, username: id, password: secret },
         viewport: { width: 1280, height: 800 },
-      });
+      }));
       session.context.setDefaultTimeout(OP_TIMEOUT_MS);
       session.context.setDefaultNavigationTimeout(OP_TIMEOUT_MS);
-      session.page = await session.context.newPage();
+      session.page = await this.runSessionStage('page-create', () => session.context.newPage());
       if (session.queryPolicy === 'deny') {
         try {
-          session.networkPolicySession = await session.context.newCDPSession(session.page);
-          await session.networkPolicySession.send('Network.enable');
-          // Block any URL query at Chromium's network layer, including redirect targets and subresources.
-          await session.networkPolicySession.send('Network.setBlockedURLs', { urls: ['*?*'] });
+          session.networkPolicySession = await this.runSessionStage('query-guard-attach', () => session.context.newCDPSession(session.page));
+          await this.runSessionStage('query-guard-enable', () => session.networkPolicySession.send('Network.enable'));
+          // Defense in depth; the proxy lease remains the enforcement point for every page.
+          await this.runSessionStage('query-guard-block-queries', () => session.networkPolicySession.send('Network.setBlockedURLs', { urls: ['*?*'] }));
         } catch {
           await session.networkPolicySession?.detach().catch(() => {});
           throw new BrowserError('query-guard-unavailable', '严格查询策略的浏览器网络拦截不可用。', 503);
         }
       }
-      session.context.route('**/*', async (route) => {
-        try {
-          const target = canonicalTarget(route.request().url());
-          requireValue(session.allowedOrigins.has(target.origin), 'target-origin-denied', '页面请求目标未获精确授权。', 403);
-          requireValue(session.queryPolicy !== 'deny' || !hasQuery(target), 'target-query-denied', '页面请求 URL 不允许查询参数。', 403);
-          await route.continue();
-        } catch (error) {
-          const request = route.request();
-          const code = typeof error?.code === 'string' && /^[a-z0-9-]{1,80}$/u.test(error.code) ? error.code : 'target-request-denied';
-          const resourceType = typeof request.resourceType === 'function' ? request.resourceType() : 'unknown';
-          this.logger({ event: 'browser-request-refused', sessionId: session.id, code, resourceType, at: this.now() });
-          await route.abort('blockedbyclient').catch(() => {});
-        }
+      await this.runSessionStage('request-routes-install', async () => {
+        await session.context.route('**/*', async (route) => {
+          try {
+            const target = canonicalTarget(route.request().url());
+            requireValue(session.allowedOrigins.has(target.origin), 'target-origin-denied', '页面请求目标未获精确授权。', 403);
+            requireValue(session.queryPolicy !== 'deny' || !hasQuery(target), 'target-query-denied', '页面请求 URL 不允许查询参数。', 403);
+            await route.continue();
+          } catch (error) {
+            const request = route.request();
+            const code = typeof error?.code === 'string' && /^[a-z0-9-]{1,80}$/u.test(error.code) ? error.code : 'target-request-denied';
+            const resourceType = typeof request.resourceType === 'function' ? request.resourceType() : 'unknown';
+            this.logger({ event: 'browser-request-refused', sessionId: session.id, code, resourceType, at: this.now() });
+            await route.abort('blockedbyclient').catch(() => {});
+          }
+        });
+        await session.context.routeWebSocket('**/*', (webSocketRoute) => webSocketRoute.close());
+        session.context.on('page', (page) => {
+          if (session.page && page !== session.page) page.close().catch(() => {});
+          page.on('download', (download) => download.cancel().catch(() => {}));
+        });
       });
-      session.context.routeWebSocket('**/*', (webSocketRoute) => webSocketRoute.close());
-      session.context.on('page', (page) => {
-        if (session.page && page !== session.page) page.close().catch(() => {});
-        page.on('download', (download) => download.cancel().catch(() => {}));
+      await this.runSessionStage('session-activate', async () => {
+        session.state = 'active';
+        this.sessions.set(id, session);
       });
-      session.state = 'active';
-      this.sessions.set(id, session);
       this.event(session, 'session-created');
       return { operationId, sessionId: id, taskId, expiresAt, stepBudget: MAX_STEPS, enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy } };
     } catch (error) {
-      await session.context?.close().catch(() => {});
-      await this.updateProxyLease({ sessionId: id, close: true }).catch(() => {});
+      if (session.networkPolicySession) {
+        await this.runSessionStage('session-close-query-guard', () => session.networkPolicySession.detach()).catch(() => {});
+      }
+      await this.runSessionStage('session-close-context', () => session.context?.close()).catch(() => {});
+      await this.runSessionStage('session-close-proxy-lease', () => this.updateProxyLease({ sessionId: id, close: true })).catch(() => {});
       rmSync(directory, { recursive: true, force: true });
       throw error;
     }
@@ -587,9 +635,11 @@ export class BrowserWorker {
     if (session.state === 'closed' || session.state === 'cancelled') return;
     session.state = status;
     this.sessions.delete(session.id);
-    await session.networkPolicySession?.detach().catch(() => {});
-    await session.context?.close().catch(() => {});
-    await this.updateProxyLease({ sessionId: session.id, close: true }).catch(() => {});
+    if (session.networkPolicySession) {
+      await this.runSessionStage('session-close-query-guard', () => session.networkPolicySession.detach()).catch(() => {});
+    }
+    await this.runSessionStage('session-close-context', () => session.context?.close()).catch(() => {});
+    await this.runSessionStage('session-close-proxy-lease', () => this.updateProxyLease({ sessionId: session.id, close: true })).catch(() => {});
     rmSync(session.directory, { recursive: true, force: true });
     this.tombstones.set(session.id, { botId: session.botId, taskId: session.taskId, queryPolicy: session.queryPolicy, status, at: this.now(), closeOperation: session.closingOperation });
     this.event(session, `session-${status}`);
