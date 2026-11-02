@@ -120,6 +120,12 @@ function assertWorkflowGateStructure(source) {
   assert.match(candidateUpload, /name: standalone-browser-candidate-\$\{\{ github\.sha \}\}/u, 'only candidate job should publish candidate artifact');
 }
 
+test('compose build args quote required SOURCE_REVISION interpolation as YAML strings', () => {
+  const args = compose.match(/^      args: \{ SOURCE_REVISION: "\$\{SOURCE_REVISION:\?set immutable source revision\}" \}$/gmu) ?? [];
+  assert.equal(args.length, 5, 'every service build target must use a YAML-quoted fixed revision');
+  assert.doesNotMatch(compose, /^      args: \{ SOURCE_REVISION: \$\{/mu, 'flow mapping interpolation must remain quoted');
+});
+
 test('missing explicitly configured workflow fixture fails closed', () => {
   assert.throws(() => loadWorkflow('/tmp/standalone-browser-workflow-fixture-missing.yml'), { code: 'ENOENT' });
 });
