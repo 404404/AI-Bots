@@ -176,6 +176,9 @@ test('trusted deny query policy blocks navigations and each routed request befor
   const session = await worker.create({ operationId: randomUUID(), botId: 'bot-policy', taskId: 'task-policy', allowedOrigins: [origin], queryPolicy: 'allow', requiredPolicy: { version: 1, queryPolicy: 'deny' } });
   assert.deepEqual(session.enforcedPolicy, { version: 1, queryPolicy: 'deny' });
   await assert.rejects(worker.operate(session.sessionId, { botId: 'bot-policy', taskId: 'task-policy', requiredPolicy: { version: 1, queryPolicy: 'allow' } }), { code: 'required-policy-unmet' });
+  await assert.rejects(worker.operate(session.sessionId, {
+    botId: 'bot-policy', taskId: 'task-policy', sequence: 1, operationId: randomUUID(), action: 'navigate', args: { url: 'http://169.254.169.254/latest/meta-data/' },
+  }), { code: 'required-policy-unmet' });
   const op = { botId: 'bot-policy', taskId: 'task-policy', requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 1, operationId: randomUUID(), action: 'navigate', args: { url: `${origin}/page?secret=value` } };
   await assert.rejects(worker.operate(session.sessionId, op), { code: 'target-query-denied' });
   await assert.rejects(worker.operate(session.sessionId, { ...op, sequence: 2, operationId: randomUUID(), args: { url: `${origin}/page?` } }), { code: 'target-query-denied' });

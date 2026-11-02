@@ -66,7 +66,7 @@ try {
   assert.equal(image.contentType, 'image/png');
   assert.ok(image.bytes.length > 100);
   const denied = await request(`/v1/sessions/${sessionA.sessionId}/operations`, {
-    botId: botA, taskId: taskA, sequence: 9, operationId: randomUUID(), action: 'navigate', args: { url: 'http://169.254.169.254/latest/meta-data/' },
+    botId: botA, taskId: taskA, requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 9, operationId: randomUUID(), action: 'navigate', args: { url: 'http://169.254.169.254/latest/meta-data/' },
   });
   assert.equal(denied.status, 403);
   assert.equal(denied.value.error.code, 'target-origin-denied');

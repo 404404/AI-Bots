@@ -47,4 +47,6 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 该轮 Resolute 仅在 runner 内构建的 image config ID 为 `sha256:2183c4684d6f87328c644647f384a4e6f70af1fdfb3ba83abf84cdec920974c3`，没有 registry repo digest，不能用作已发布镜像或部署身份。
 
+[CI 41437483966](https://github.com/404404/AI-Bots/actions/runs/41437483966) 使用 `cc05b09d4638b34e09a8290eedf232545789d11d`：四个镜像扫描均失败，归档跳过。真实 Trixie Chromium 的 namespace、PID namespace 和 Seccomp-BPF 状态均为 true，隔离测试页的导航、读取、输入、滚动、点击和截图经 relay 完成；完整 E2E 随后在权限错误码断言失败（期望 `target-origin-denied`，实际 `required-policy-unmet`）。尚未完成后续取消、隔离及清理等全部用例，不能将作业标记通过。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。
