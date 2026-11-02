@@ -152,3 +152,24 @@ Node 22.23.1、npm 10.9.8，在 `standalone` 下分别以 300 秒和 120 秒超�
 - 浏览器拦截并延迟创建 Gamma 请求，关闭创建对话框并切换 Alpha，再释放请求：Gamma 出现在列表中，当前页面仍为 Alpha。该检查覆盖创建请求在途的切换，不穷举所有异步交错。
 
 截图及脱敏 JSON 位于 `/tmp/employee-fix-qa/`，浏览器 QA 容器已退出；预览容器及数据保留。未配置模型或访问 23443、20443；真实模型和远端设备不在本次结果中。
+
+### 23443 真实模型、代理与群聊检查（2026-11-02）
+
+隔离预览仍使用旧镜像 ID `sha256:796245e2cb69263d55c2be0560bccfcf7d30f1cbab4fa965a3b25e0cf73c084a`；本轮源码修复尚未部署。账号状态确认 `configured=true`、`signedIn=true`、认证状态 `authorized`、代理已配置。非 root QA Chromium 使用固定本地镜像 `sha256:afebfa1da0647f85774b0da832c3ca829d58608d99dc4063713417c3748414ba`、项目窄 seccomp、Xvfb 和 host 网络访问 LAN；页面报告 namespace、PID namespace、seccomp-BPF 均启用。未使用 `--no-sandbox` 或启动 DSH。临时 API 状态查询会话已清理；网页 QA 登录创建的会话未主动注销。
+
+- **真实私聊通过：** Alpha 于 02:01:02 UTC、Beta 于 02:02:10 UTC 分别发送短请求，页面均出现指定回复；其模型请求及完成诊断记录 `explicit-proxy`。Alpha run `260aca93-c1ec-48e8-bae4-c407f5cc961c`，Beta run `1377bec3-e200-4949-b52c-062de7552e36`。
+- **联系人委派通过：** 02:04:46 UTC 经 Beta 页面请求将简单计算交给 Alpha；02:04:53 页面回复给出 15 并注明 Alpha。run `a4fddd81-6f6a-41f1-a4e6-1a18d73c2674`、Beta 根任务 `c8db6449-ac27-4f08-af99-d01ee461a038`、Alpha 子任务 `1043ae57-e76e-4998-a666-9ed1583a091f` 和 `delegate_to_worker` 均完成。模型请求与完成诊断的 route 均为 `explicit-proxy`。截图 `/tmp/employee-proxy-evidence/delegate-reply.png`。
+- **代理连接证据：** 只读进入预览网络命名空间采样 socket 元数据，在上述委派期间观察到三条 `172.17.0.4` 至 `172.17.0.1:7890` 的 TCP 连接，时间 02:04:46.545–02:04:52.216 UTC；三个连接分别观测到最多发送/接收 4816/17732、4072/10591、5039/13075 字节。采样仅保留端点、时间和字节计数：`/tmp/employee-proxy-evidence/delegate-sockets.jsonl`。时间相关性不单独证明每条连接所属的具体模型步骤。tcpdump 因系统权限拒绝未采集任何包；宿主命名空间 ss 未显示预览 socket，改用预览命名空间 ss。
+- **群聊失败：** 两成员群选择有效模型后发送按钮仍禁用，未产生群 run 或模型请求；页面无法完成双成员真实回复。源码检查发现群刷新时按钮条件只接受 `available` 或无状态，而模型可用性判断也接受 `verified` 和 `candidate`。`/tmp/employee-proxy-evidence/group-observation.png` 是重开群的当前状态，`group-retry-failure.png` 记录两人选中、模型启用但发送禁用；原始等待超时页面未保存截图。后续源码修复需固定新镜像后再进行真实 LAN 复测。
+
+本轮在隔离预览中增加真实 QA 私聊消息和委派任务，保留截图及脱敏 socket 元数据；没有修改预览配置、重启预览或触碰其他服务。浏览器 QA 容器已退出。
+
+### 群交互源码复审（未部署，2026-11-02）
+
+工作树基础 HEAD `4caa17b5051e902f15b21ff9780601f9e0c4241f`；所审工作树内容未提交。主要文件 SHA-256：`public/app.js` 为 `1395fc162bbc4834492c1d523209d381ffbd3f1b79d917d8aa598c70fbf8cf95`，`public/group-ui-state.js` 为 `558cfa4dde51fcc06aeab1ed4c1f2882f765f1b319256008a77d151d1fd4dcb0`，`test/single-user-ui.test.mjs` 为 `cea9c2452e2c7da403f4bef7513e2472a0dabe5b04b3ade6210d360f81660feb`。检查前后这些文件指纹一致。
+
+静态复审显示：群发送使用与模型选择一致的可用状态判断；刷新保留仍属于群的接收人并剔除已移除成员；切群期间刷新、发送、创建、成员保存和取消回调有目标群或选择版本检查；慢速历史分页期间抑制同群轮询；草稿恢复同步模型 ID。未确认请求保留原始幂等键和收件人顺序；成员重新加入后按集合核对并发送原始请求，发送失败保留原记录，仅成功后清除。若原接收人已移除，界面阻止发送并提示先加回。新增静态模块有服务端路由和真实 HTTP 资源测试。上述检查包括源码和异步 helper 测试；所谓 DOM 测试使用模拟 select/option 和源码断言，未驱动实际页面事件链，不能替代新固定镜像的真实网页复测。
+
+`npm run build` 成功。完整 `npm test` 为 151/152：`private-chat.test.mjs` 的 `each Bot uses the shared global account selection without local model configuration` 报 `conversation-busy`，日志 `/tmp/standalone-group-final2.log`；该测试单独重跑 1/1 通过。完整套件失败仍需分析，单独通过不能证明根因或将完整套件记为通过。当前 23443 预览仍为旧镜像，修订未部署，群双成员真实回复仍未验证。
+
+为调查该失败，完整套件再运行一次，仍为 151/152，且同一私聊测试再次报 `conversation-busy`；日志 `/tmp/standalone-group-final3.log`。这与单测独立通过并存，原因尚待调查。

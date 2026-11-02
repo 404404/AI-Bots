@@ -26,6 +26,8 @@ async function fixture() {
   const app = new BotApplication(dir());
   const worker = await owner(app, 'bots.create', { slug: 'private-worker', name: '员工甲' });
   await owner(app, 'model-account.update', { provider: 'compatible', baseUrl: `http://127.0.0.1:${upstream.address().port}`, model: 'mock-v1', key: 'synthetic-private-key-731' });
+  await wait(() => app.active.size === 0 && !app.storage.db.prepare("SELECT 1 FROM runs WHERE bot_id=? AND status IN ('queued','running') LIMIT 1").get(worker.id));
+  requests.length = 0;
   return { app, worker, upstream, requests,
     async close() { await app.close(); upstream.closeAllConnections(); await new Promise((resolve) => upstream.close(resolve)); } };
 }
@@ -60,18 +62,19 @@ test('each Bot uses the shared global account selection without local model conf
     const bot = f.worker;
     const opened = await owner(f.app, 'private-chat.open', { botId: bot.id });
     assert.deepEqual(opened.selection, {kind:'global',modelId:'mock-v1'});
+    const requestBaseline = f.requests.length;
     await assert.rejects(owner(f.app, 'runs.submit', { botId: bot.id, conversationId: opened.conversation.id,
       idempotencyKey: 'requires-choice', content: 'must not transport', selection:{kind:'global',modelId:'unauthorized'} }), { code: 'model-not-authorized' });
-    assert.equal(f.requests.length, 0);
+    assert.equal(f.requests.length, requestBaseline);
     const selection = { kind: 'global', modelId: 'mock-v1' };
     await owner(f.app, 'private-chat.select-model', { botId: bot.id, selection });
     const run = await owner(f.app, 'runs.submit', { botId: bot.id, conversationId: opened.conversation.id,
       idempotencyKey: 'saved-choice', content: 'explicit saved choice' });
-    await wait(() => f.requests.length === 1);
+    await wait(() => f.requests.length === requestBaseline + 1 && f.app.storage.db.prepare('SELECT status FROM runs WHERE id=?').get(run.id)?.status === 'completed');
     assert.equal((await owner(f.app, 'runs.get', { botId: bot.id, runId: run.id })).configSnapshot.selection.kind, 'global');
     const explicit = await owner(f.app, 'runs.submit', { botId: bot.id, conversationId: opened.conversation.id,
       idempotencyKey: 'request-choice', content: 'request choice', selection });
-    await wait(() => f.requests.length === 2);
+    await wait(() => f.requests.length === requestBaseline + 2 && f.app.storage.db.prepare('SELECT status FROM runs WHERE id=?').get(explicit.id)?.status === 'completed');
     assert.equal((await owner(f.app, 'runs.get', { botId: bot.id, runId: explicit.id })).configSnapshot.selection.modelId, 'mock-v1');
   } finally { await f.close(); }
 });

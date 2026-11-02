@@ -1,10 +1,16 @@
 import { OnboardingRequestCoordinator, selectCreatedBotIfUnchanged } from './onboarding-state.js';
+import { GroupRefreshGate, findModelIndexById, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, selectedModelOption, sendPendingGroupRequest, shouldApplyGroupResult, shouldSelectGroupAfterRequest } from './group-ui-state.js';
 
 const $ = (id) => document.getElementById(id);
 let bots = [],
   contacts = null,
   groups = [],
   activeGroupId = null,
+  groupComposerGroupId = null,
+  groupSelectionEpoch = 0,
+  groupPendingBlocked = false,
+  groupModelId = null,
+  groupRefreshGate = new GroupRefreshGate(),
   groupMessageCursor = null,
   groupHasOlder = false,
   groupMessages = [],
@@ -53,9 +59,6 @@ const statusLabels = {
   unconfigured: '未配置',
   unbound: '未绑定',
 };
-function modelIsUsable(item) {
-  return !item.status || ['available', 'verified', 'candidate'].includes(item.status);
-}
 const capabilityLabels = {
   identity: '身份设置',
   'model-settings': '模型设置',
@@ -339,11 +342,14 @@ function renderModelOptions(selected) {
   groupSelect.replaceChildren();
   const groupPlaceholder = node('option', '选择模型'); groupPlaceholder.value = ''; groupPlaceholder.selected = true; groupSelect.append(groupPlaceholder);
   modelOptions.forEach((item, index) => { const option = node('option', item.model ?? item.label); option.value = String(index); option.disabled = !modelIsUsable(item); groupSelect.append(option); });
+  const priorGroupIndex = findModelIndexById(modelOptions, groupModelId);
   const selectedIndex = modelOptions.findIndex((item) => selectionKey(item.selection) === selectionKey(selected) && modelIsUsable(item));
-  if (selectedIndex >= 0) groupSelect.value = String(selectedIndex);
+  if (priorGroupIndex >= 0) groupSelect.value = String(priorGroupIndex);
+  else if (selectedIndex >= 0) { groupSelect.value = String(selectedIndex); groupModelId = modelOptions[selectedIndex].selection?.modelId || null; }
+  else { groupSelect.value = ''; groupModelId = null; }
   const hasAvailableModel = modelOptions.some(modelIsUsable);
-  groupSelect.disabled = !hasAvailableModel;
-  $('group-send').disabled = !hasAvailableModel;
+  groupSelect.disabled = !hasAvailableModel || !groupComposerGroupId;
+  $('group-send').disabled = !hasAvailableModel || groupPendingBlocked || !groupComposerGroupId;
   $('group-send-hint').textContent = modelOptions.length ? '发送时使用所选的共享模型。' : '请先在模型账户设置中配置可用模型。';
   const select = $('chat-model');
   select.replaceChildren();
@@ -824,39 +830,104 @@ async function loadGroups() {
     button.type = 'button';
     button.dataset.groupId = group.id;
     button.setAttribute('aria-current', String(group.id === activeGroupId));
-    button.onclick = () => void openGroup(group.id).catch(showError);
+    button.onclick = () => { groupSelectionEpoch += 1; void openGroup(group.id).catch(showError); };
     list.append(button);
   }
   if (activeGroupId && groups.some((item) => item.id === activeGroupId)) await openGroup(activeGroupId);
 }
-async function openGroup(groupId, { reset = false, older = false } = {}) {
+async function openGroup(groupId, options = {}) {
+  const { older = false } = options;
+  if (older) {
+    if (!groupRefreshGate.beginOlder(groupId)) return;
+  } else if (activeGroupId === groupId && groupRefreshGate.hasOlderInFlight(groupId)) return;
+  try { return await renderGroup(groupId, options); }
+  finally { if (older) groupRefreshGate.finishOlder(groupId); }
+}
+function setGroupComposerEnabled(enabled) {
+  $('group-input').disabled = !enabled;
+  $('group-recipients').disabled = !enabled;
+  $('group-model').disabled = !enabled || !modelOptions.some(modelIsUsable);
+  $('group-members-editor').disabled = !enabled;
+  $('group-members-save').disabled = !enabled;
+  if (!enabled) $('group-send').disabled = true;
+}
+async function renderGroup(groupId, { reset = false, older = false } = {}) {
   const changed = activeGroupId !== groupId;
+  if (changed && groupComposerGroupId) {
+    const previousGroupId = groupComposerGroupId;
+    try {
+      localStorage.setItem(groupDraftKey(previousGroupId), JSON.stringify({
+        text: $('group-input').value,
+        recipientBotIds: Array.from($('group-recipients').selectedOptions, (option) => option.value),
+        modelId: groupModelId,
+      }));
+    } catch { /* draft storage is best-effort; never block navigation */ }
+  }
+  const refreshEpoch = groupRefreshGate.begin(groupId);
   activeGroupId = groupId;
   if (changed || reset) { groupMessageCursor = null; groupHasOlder = false; groupMessages = []; }
+  if (changed) {
+    setGroupComposerEnabled(false);
+    groupComposerGroupId = null;
+    $('group-input').value = '';
+    $('group-recipients').replaceChildren();
+    groupModelId = null;
+  }
   const result = await command('groups.get', { groupId });
+  if (!groupRefreshGate.isCurrent(groupId, refreshEpoch)) return;
   const group = result.group;
   if (!group) throw new Error('群聊不存在或已不可用。');
+  groupComposerGroupId = groupId;
+  setGroupComposerEnabled(true);
   $('group-title').textContent = group.name;
   const editor = $('group-members-editor');
   editor.replaceChildren(...bots.map((employee) => { const option = node('option', `${employee.name} · ${employee.id}`); option.value = employee.id; option.selected = (group.members || []).some((member) => member.botId === employee.id); return option; }));
   $('group-members').textContent = (group.members || []).map((m) => `${m.name} · ${m.botId}`).join('、');
   const memberIds = (group.members || []).map((member) => member.botId);
-  $('group-recipients').replaceChildren(...(group.members || []).map((member) => { const option = node('option', `${member.name} · ${member.botId}`); option.value = member.botId; return option; }));
-  $('group-send').disabled = memberIds.length === 0 || !modelOptions.some((item) => !item.status || item.status === 'available');
-  if (!hydratedGroupRetries.has(groupId)) {
+  const recipientSelect = $('group-recipients');
+  const previouslySelected = changed ? [] : Array.from(recipientSelect.selectedOptions, (option) => option.value);
+  renderMemberRecipients(recipientSelect, group.members || [], previouslySelected);
+  groupPendingBlocked = false;
+  $('group-send').disabled = memberIds.length === 0 || !modelOptions.some(modelIsUsable);
+  const pendingKey = `gk50-bot:pending-group:${groupId}`;
+  let pendingRequest = null;
+  try { pendingRequest = JSON.parse(localStorage.getItem(pendingKey) || 'null'); } catch { /* invalid retry record remains untouched */ }
+  const draftKey = groupDraftKey(groupId);
+  if (changed || !hydratedGroupRetries.has(groupId)) {
     hydratedGroupRetries.add(groupId);
     try {
-      const pending = JSON.parse(localStorage.getItem(`gk50-bot:pending-group:${groupId}`) || 'null');
-      if (pending) {
-        $('group-input').value = pending.text;
-        for (const option of $('group-recipients').options) option.selected = pending.recipientBotIds.includes(option.value);
-        const pendingModel = modelOptions.findIndex((item) => item.selection?.modelId === pending.modelId);
-        if (pendingModel >= 0) $('group-model').value = String(pendingModel);
-        $('group-send-hint').textContent = '有一条群消息发送结果未确认；已恢复原请求，可安全重试。';
+      const draft = JSON.parse(localStorage.getItem(draftKey) || 'null');
+      const restored = restoreGroupComposer({ pending: pendingRequest, draft, groupId, members: group.members || [], modelOptions });
+      if (restored) {
+        groupPendingBlocked = restored.isPending && restored.hasRemovedRecipient;
+        $('group-input').value = restored.text;
+        const savedRecipients = new Set(restored.recipientBotIds);
+        for (const option of $('group-recipients').options) option.selected = savedRecipients.has(option.value);
+        if (restored.modelIndex >= 0) { $('group-model').value = String(restored.modelIndex); groupModelId = modelOptions[restored.modelIndex].selection?.modelId || null; }
+        $('group-send-hint').textContent = restored.isPending && restored.hasRemovedRecipient
+          ? '未确认发送包含已移出群的收件人，原请求已保留且不能改内容重试。请先将原收件人加回群，再返回此群重试。'
+          : restored.isPending
+            ? '有一条群消息发送结果未确认；已恢复原请求，可安全重试。'
+          : restored.hasRemovedRecipient ? '草稿已恢复；已移除不再属于此群的收件人。' : '';
       }
     } catch { /* a malformed local retry record is ignored; no message is sent */ }
   }
+  if (pendingRequest) {
+    const restored = restoreGroupComposer({ pending: pendingRequest, groupId, members: group.members || [], modelOptions });
+    groupPendingBlocked = Boolean(restored?.hasRemovedRecipient);
+    if (restored) {
+      $('group-input').value = restored.text;
+      const recipients = new Set(restored.recipientBotIds);
+      for (const option of recipientSelect.options) option.selected = recipients.has(option.value);
+      if (restored.modelIndex >= 0) { $('group-model').value = String(restored.modelIndex); groupModelId = modelOptions[restored.modelIndex].selection?.modelId || null; }
+    }
+    if (groupPendingBlocked) {
+      $('group-send').disabled = true;
+      $('group-send-hint').textContent = '未确认发送包含已移出群的收件人，原请求已保留且不能改内容重试。请先将原收件人加回群，再返回此群重试。';
+    }
+  }
   const page = await command('groups.messages', { groupId, limit: 50, ...(older && groupMessageCursor ? { cursor: groupMessageCursor } : {}) });
+  if (!groupRefreshGate.isCurrent(groupId, refreshEpoch)) return;
   const incoming = page.items || [];
   if (changed || reset || groupMessageCursor === null) groupMessages = incoming;
   else {
@@ -886,7 +957,7 @@ async function openGroup(groupId, { reset = false, older = false } = {}) {
     const row = node('p', `${bots.find((item) => item.id === run.botId)?.name || run.botId} · ${statusLabels[run.status] || run.status}${run.errorCode ? ` · ${run.errorCode}` : ''}`, `group-run-status${failed ? ' failed' : ''}`);
     if (active) {
       const cancel = node('button', '停止'); cancel.type = 'button';
-      cancel.onclick = () => void command('groups.cancel', { groupId, runId: run.id }).then(() => openGroup(groupId)).catch(showError);
+      cancel.onclick = () => void command('groups.cancel', { groupId, runId: run.id }).then(() => shouldApplyGroupResult(groupId, activeGroupId) ? openGroup(groupId) : undefined).catch(showError);
       row.append(cancel);
     }
     list.append(row);
@@ -931,14 +1002,17 @@ async function enter() {
   $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
   $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
   $('new-group').onclick = () => { if (!bots.length) { notice('请先创建一位员工，再建立群聊。'); return; } void createGroup().catch(showError); };
-  $('group-load-older').onclick = () => void openGroup(activeGroupId, { older: true }).catch(showError);
-  $('group-members-save').onclick = () => void (async () => { if (!activeGroupId) throw new Error('请先选择一个群聊。'); const memberBotIds = Array.from($('group-members-editor').selectedOptions, (option) => option.value); await command('groups.members.set', { groupId: activeGroupId, memberBotIds }); await openGroup(activeGroupId, { reset: true }); })().catch(showError);
+  $('group-load-older').onclick = () => { const groupId = activeGroupId; if (groupId) void openGroup(groupId, { older: true }).catch(showError); };
+  $('group-model').onchange = () => { groupModelId = selectedModelOption($('group-model').value, modelOptions)?.selection?.modelId || null; };
+  $('group-members-save').onclick = () => void (async () => { const groupId = activeGroupId; if (!groupId) throw new Error('请先选择一个群聊。'); const memberBotIds = Array.from($('group-members-editor').selectedOptions, (option) => option.value); await command('groups.members.set', { groupId, memberBotIds }); await loadGroups(); if (shouldApplyGroupResult(groupId, activeGroupId)) await openGroup(groupId); })().catch(showError);
   $('dismiss-group-create').onclick = () => $('group-dialog').close();
   form('group-create-form', async () => {
     const memberBotIds = Array.from($('group-create-members').selectedOptions, (option) => option.value);
     if (!memberBotIds.length) throw new Error('请至少选择一位员工。');
+    const requestEpoch = groupSelectionEpoch;
     const result = await command('groups.create', { name: $('group-create-name').value.trim(), memberBotIds });
-    $('group-dialog').close(); $('group-create-form').reset(); activeGroupId = result.group.id; await loadGroups();
+    $('group-dialog').close(); $('group-create-form').reset(); await loadGroups();
+    if (shouldSelectGroupAfterRequest(requestEpoch, groupSelectionEpoch)) await openGroup(result.group.id);
   });
   $('contact-save').onclick = () => { const employeeId = $('contact-picker').value; if (!employeeId) { notice('请先选择一位主要联系人。'); return; } const epoch = ++contactsRequestEpoch; void command('contacts.set-primary', { employeeId }).then((value) => { if (epoch !== contactsRequestEpoch) return; contacts = value; renderContacts(); notice('主要联系人已保存。'); }).catch(showError); };
   $('migration-select').onclick = () => void command('model-account.migration.select', { sourceBotId: $('migration-source').value }).then(loadAccount).catch(showError);
@@ -967,27 +1041,44 @@ async function enter() {
   $('browser-cancel').onclick = () => void command('browser.cancel', { botId: bot?.id, taskId: browserTaskId, sessionId: browserSessionId }).then(loadBrowser).catch(showError);
   $('browser-refresh').onclick = () => void loadBrowser().catch(showError);
   $('group-form').addEventListener('submit', (event) => { event.preventDefault(); void (async () => {
-    if (!activeGroupId) throw new Error('请先选择一个群聊。');
-    const recipientBotIds = Array.from($('group-recipients').selectedOptions, (option) => option.value);
-    if (!recipientBotIds.length) throw Object.assign(new Error('请选择至少一位回应员工。'), { code: 'group-recipient-required' });
-    if (recipientBotIds.length > 3) throw new Error('一次最多选择三位回应员工。');
-    const text = $('group-input').value.trim(); if (!text) return;
-    const model = modelOptions[Number($('group-model').value)];
-    if (!model?.selection?.modelId) throw Object.assign(new Error('请先选择一个共享模型。'), { code: 'model-account-required' });
-    const payload = { groupId: activeGroupId, text, recipientBotIds, modelId: model.selection.modelId };
-    const pendingKey = `gk50-bot:pending-group:${activeGroupId}`;
+    const groupId = activeGroupId;
+    if (!groupId) throw new Error('请先选择一个群聊。');
+    const pendingKey = `gk50-bot:pending-group:${groupId}`;
     let saved;
     try { saved = JSON.parse(localStorage.getItem(pendingKey) || 'null'); } catch { saved = null; }
-    if (saved && (saved.groupId !== payload.groupId || saved.text !== payload.text || saved.modelId !== payload.modelId || JSON.stringify(saved.recipientBotIds) !== JSON.stringify(payload.recipientBotIds)))
-      throw new Error('上一条群消息的发送结果尚未确认。请恢复原内容重试后，再发送新消息。');
-    const submission = saved || { ...payload, idempotencyKey: id() };
+    let payload, idempotencyKey;
+    if (saved) {
+      if (saved.groupId !== groupId) throw new Error('上一条群消息的发送结果尚未确认。');
+      if (groupPendingBlocked) throw Object.assign(new Error('未确认发送的原收件人已移出群。请先将其加回群后再安全重试。'), { code: 'pending-group-recipient-removed' });
+      const currentRecipients = Array.from($('group-recipients').selectedOptions, (option) => option.value);
+      if (!pendingComposerMatches(saved, { text: $('group-input').value, recipientBotIds: currentRecipients, modelId: groupModelId }))
+        throw Object.assign(new Error('未确认发送只能按原正文、收件人和模型重试；请恢复原内容。'), { code: 'pending-group-payload-changed' });
+      payload = { groupId: saved.groupId, text: saved.text, recipientBotIds: [...saved.recipientBotIds], modelId: saved.modelId };
+      idempotencyKey = saved.idempotencyKey;
+    } else {
+      const recipientBotIds = Array.from($('group-recipients').selectedOptions, (option) => option.value);
+      if (!recipientBotIds.length) throw Object.assign(new Error('请选择至少一位回应员工。'), { code: 'group-recipient-required' });
+      if (recipientBotIds.length > 3) throw new Error('一次最多选择三位回应员工。');
+      const text = $('group-input').value.trim(); if (!text) return;
+      const model = selectedModelOption($('group-model').value, modelOptions);
+      if (!model?.selection?.modelId) throw Object.assign(new Error('请先选择一个共享模型。'), { code: 'model-account-required' });
+      payload = { groupId, text, recipientBotIds, modelId: model.selection.modelId };
+      idempotencyKey = id();
+    }
+    const submission = groupSubmission({ pending: saved, payload, idempotencyKey });
     try { localStorage.setItem(pendingKey, JSON.stringify(submission)); }
     catch { throw new Error('无法保存群消息重试标识，消息尚未发送。'); }
-    try { await command('groups.send', submission); }
-    catch (error) { if (error.status && error.status < 500 && error.code !== 'group-capacity') localStorage.removeItem(pendingKey); throw error; }
-    localStorage.removeItem(pendingKey);
-    hydratedGroupRetries.delete(activeGroupId);
-    $('group-input').value = ''; await openGroup(activeGroupId);
+    await sendPendingGroupRequest({ send: (value) => command('groups.send', value), storage: localStorage, key: pendingKey, submission });
+    hydratedGroupRetries.delete(groupId);
+    try {
+      const storedDraft = JSON.parse(localStorage.getItem(groupDraftKey(groupId)) || 'null');
+      if (!storedDraft || (storedDraft.text === payload.text && storedDraft.modelId === payload.modelId && JSON.stringify(storedDraft.recipientBotIds) === JSON.stringify(payload.recipientBotIds)))
+        localStorage.removeItem(groupDraftKey(groupId));
+    } catch { /* malformed draft state is left untouched */ }
+    if (shouldApplyGroupResult(groupId, activeGroupId)) {
+      if ($('group-input').value.trim() === payload.text) $('group-input').value = '';
+      await openGroup(groupId);
+    }
   })().catch(showError); });
   form('create-form', async () => {
     const createPayload = { name: $('create-name').value.trim(), persona: $('create-persona').value.trim() };
