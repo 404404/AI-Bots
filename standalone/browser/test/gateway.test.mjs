@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { createServer as createNetServer } from 'node:net';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,6 +11,14 @@ import { createRestrictedProxy } from '../src/proxy.mjs';
 import { BrowserClient } from '../../src/browser-client.ts';
 
 const token = 'gateway-test-token-that-is-not-a-production-secret-0001';
+
+async function availablePort() {
+  const server = createNetServer();
+  await new Promise((resolve, reject) => server.once('error', reject).listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  await new Promise((resolve) => server.close(resolve));
+  return port;
+}
 
 test('gateway requires bearer auth and forwards JSON over its private worker socket', async (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'browser-gateway-'));
@@ -80,7 +89,10 @@ test('gateway carries worker policy proof from health, session JSON and screensh
   const proxyToken = 'gateway-worker-test-token-not-production-0001';
   const rules = { [origin]: { addresses: ['172.31.240.10'], allowPrivate: true } };
   const proxy = createRestrictedProxy({ rawRules: rules, adminToken: proxyToken });
-  await proxy.listen({ proxyPort: 0, adminPort: 0, host: '127.0.0.1' });
+  const relayPort = await availablePort();
+  const proxySocket = join(dir, 'proxy.sock');
+  const proxyAdminSocket = join(dir, 'proxy-admin.sock');
+  await proxy.listenUnix({ proxySocketPath: proxySocket, adminSocketPath: proxyAdminSocket });
 
   const sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes';
   const opened = [];
@@ -115,9 +127,11 @@ test('gateway carries worker policy proof from health, session JSON and screensh
   const worker = new BrowserWorker({
     rules,
     queryPolicy: 'deny',
-    proxyAdminUrl: `http://127.0.0.1:${proxy.admin.address().port}/internal/leases`,
+    proxyAdminSocket,
     proxyAdminToken: proxyToken,
-    proxyServer: `http://127.0.0.1:${proxy.proxy.address().port}`,
+    proxyServer: `http://127.0.0.1:${relayPort}`,
+    proxySocket,
+    loopbackProxyPort: relayPort,
     dataRoot,
     launcher: { async launch() { return browser; } },
     networkInspector: () => ({ lo: [{ internal: true, address: '127.0.0.1' }] }),

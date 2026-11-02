@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { rmSync, mkdtempSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -10,6 +11,14 @@ import { BrowserWorker } from '../src/worker.mjs';
 const origin = 'http://fixture.test:8081';
 const rules = { [origin]: { addresses: ['172.31.240.10'], allowPrivate: true } };
 const proxyToken = 'proxy-internal-test-token-is-not-a-real-secret-0001';
+
+async function availablePort() {
+  const server = createServer();
+  await new Promise((resolve, reject) => server.once('error', reject).listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  await new Promise((resolve) => server.close(resolve));
+  return port;
+}
 
 function makeFakeBrowser(sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes') {
   const opened = [];
@@ -52,19 +61,24 @@ function makeFakeBrowser(sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Ye
   return { browser, opened };
 }
 
-async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes', { networkInspector, bridgeProbe, maxSessions, queryPolicy } = {}) {
+async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes', { networkInspector, bridgeProbe, maxSessions, queryPolicy, proxyServer, proxySocket = true, loopbackProxyPort, logger = () => {} } = {}) {
   const proxy = createRestrictedProxy({ rawRules: rules, adminToken: proxyToken });
-  await proxy.listen({ proxyPort: 0, adminPort: 0, host: '127.0.0.1' });
   const dataRoot = mkdtempSync(join(tmpdir(), 'browser-worker-test-'));
+  const relayPort = loopbackProxyPort ?? await availablePort();
+  const privateProxySocket = join(dataRoot, 'proxy.sock');
+  const privateAdminSocket = join(dataRoot, 'proxy-admin.sock');
+  await proxy.listenUnix({ proxySocketPath: privateProxySocket, adminSocketPath: privateAdminSocket });
   const driver = makeFakeBrowser(sandbox);
   const worker = new BrowserWorker({
     rules,
-    proxyAdminUrl: `http://127.0.0.1:${proxy.admin.address().port}/internal/leases`,
+    proxyAdminSocket: privateAdminSocket,
     proxyAdminToken: proxyToken,
-    proxyServer: `http://127.0.0.1:${proxy.proxy.address().port}`,
+    proxyServer: proxyServer ?? `http://127.0.0.1:${relayPort}`,
+    proxySocket: proxySocket ? privateProxySocket : undefined,
+    loopbackProxyPort: relayPort,
     dataRoot,
     launcher: { async launch(options) { driver.launchOptions = options; return driver.browser; } },
-    logger: () => {},
+    logger,
     networkInspector: networkInspector ?? (() => ({ lo: [{ internal: true, address: '127.0.0.1' }] })),
     bridgeGateway: '172.31.240.1',
     sensitivePorts: ['22', '2375', '2376', '22443'],
@@ -83,14 +97,32 @@ test('worker refuses to create a session unless its sandbox probe passes', async
 });
 
 test('worker startup explicitly disables Chromium proxy bypass and keeps sandbox enabled', async (t) => {
-  const { worker, driver } = await setup(t);
+  const logs = [];
+  const { worker, driver } = await setup(t, undefined, { logger: (entry) => logs.push(entry) });
   await worker.start();
   assert.equal(driver.launchOptions.chromiumSandbox, true);
   assert.ok(driver.launchOptions.args.includes('--proxy-bypass-list=<-loopback>'));
-  assert.ok(driver.launchOptions.args.includes('--host-resolver-rules=MAP * ~NOTFOUND'));
+  assert.ok(driver.launchOptions.args.includes('--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'));
+  assert.equal(driver.launchOptions.proxy.server.startsWith('http://127.0.0.1:'), true);
   assert.equal(driver.launchOptions.args.some((arg) => arg.includes('no-sandbox')), false);
   assert.equal(Object.hasOwn(driver.launchOptions.env, 'BROWSER_CONTROL_TOKEN'), false);
   assert.equal(Object.hasOwn(driver.launchOptions.env, 'BROWSER_PROXY_ADMIN_TOKEN'), false);
+  const sandboxLog = logs.find((entry) => entry.event === 'chromium-sandbox-status');
+  assert.deepEqual(sandboxLog, { event: 'chromium-sandbox-status', layerOneNamespace: true, pidNamespaces: true, seccompBpf: true, at: sandboxLog.at });
+  assert.equal(JSON.stringify(logs).includes('Layer 1 Sandbox'), false);
+});
+
+test('worker rejects proxy endpoints outside its fixed loopback relay before launching Chromium', async (t) => {
+  const { worker } = await setup(t, undefined, { proxyServer: 'http://proxy.internal:8080' });
+  await assert.rejects(worker.start(), { code: 'invalid-proxy-endpoint' });
+});
+
+test('worker requires its private proxy socket and rejects a proxy URL port different from the relay listener', async (t) => {
+  const missingSocket = await setup(t, undefined, { proxySocket: false });
+  await assert.rejects(missingSocket.worker.start(), { code: 'proxy-socket-required' });
+
+  const portMismatch = await setup(t, undefined, { proxyServer: 'http://127.0.0.1:20001', loopbackProxyPort: 20000 });
+  await assert.rejects(portMismatch.worker.start(), { code: 'invalid-proxy-endpoint' });
 });
 
 test('worker rejects missing PID namespace and seccomp positive rows', async (t) => {

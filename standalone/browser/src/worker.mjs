@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 import { parseTargetRules, canonicalTarget } from './policy.mjs';
 import { BrowserError, requireValue } from './errors.mjs';
+import { isChromiumSandboxVerified, readChromiumSandboxStatus } from './sandbox-status.mjs';
 
 const MAX_BODY = 128 * 1024;
 const MAX_TEXT = 16 * 1024;
@@ -29,6 +30,16 @@ const SAFE_RELAY_METHODS = new Set(['GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DE
 
 export function safeRelayMethod(method) {
   return SAFE_RELAY_METHODS.has(method) ? method : 'OTHER';
+}
+
+function isLoopbackProxyServer(value, relayPort) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' && url.hostname === '127.0.0.1' && url.port === String(relayPort)
+      && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
 }
 
 function safeJson(res, status, value, headers = {}) {
@@ -212,13 +223,14 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
 }
 
 export class BrowserWorker {
-  constructor({ rules, proxyAdminUrl, proxyAdminSocket, proxyAdminToken, proxySocket, proxyServer, dataRoot, launcher = chromium, now = () => Date.now(), logger = () => {}, maxSessions = MAX_SESSIONS, networkInspector = networkInterfaces, bridgeGateway = process.env.BROWSER_BRIDGE_GATEWAY, sensitivePorts = process.env.BROWSER_HOST_SENSITIVE_PORTS?.split(','), bridgeProbe, queryPolicy = process.env.BROWSER_SESSION_QUERY_POLICY ?? 'allow' }) {
+  constructor({ rules, proxyAdminUrl, proxyAdminSocket, proxyAdminToken, proxySocket, proxyServer, loopbackProxyPort = Number(process.env.BROWSER_LOOPBACK_PROXY_PORT ?? 8080), dataRoot, launcher = chromium, now = () => Date.now(), logger = () => {}, maxSessions = MAX_SESSIONS, networkInspector = networkInterfaces, bridgeGateway = process.env.BROWSER_BRIDGE_GATEWAY, sensitivePorts = process.env.BROWSER_HOST_SENSITIVE_PORTS?.split(','), bridgeProbe, queryPolicy = process.env.BROWSER_SESSION_QUERY_POLICY ?? 'allow' }) {
     this.rules = parseTargetRules(rules);
     this.proxyAdminUrl = proxyAdminUrl;
     this.proxyAdminSocket = proxyAdminSocket;
     this.proxyAdminToken = proxyAdminToken;
     this.proxySocket = proxySocket;
     this.proxyServer = proxyServer;
+    this.loopbackProxyPort = loopbackProxyPort;
     this.dataRoot = resolve(dataRoot ?? join(tmpdir(), 'standalone-browser'));
     this.launcher = launcher;
     this.now = now;
@@ -239,13 +251,16 @@ export class BrowserWorker {
   }
 
   async start() {
+    requireValue(typeof this.proxySocket === 'string' && this.proxySocket.length > 0, 'proxy-socket-required', '必须配置受限代理的私有 Unix socket。', 500);
+    requireValue(Number.isInteger(this.loopbackProxyPort) && this.loopbackProxyPort >= 1 && this.loopbackProxyPort <= 65535, 'invalid-proxy-endpoint', '浏览器本地代理端口无效。', 500);
+    requireValue(isLoopbackProxyServer(this.proxyServer, this.loopbackProxyPort), 'invalid-proxy-endpoint', '浏览器代理必须使用本地 loopback relay 的监听端口。', 500);
     mkdirSync(this.dataRoot, { recursive: true, mode: 0o700 });
     chmodSync(this.dataRoot, 0o700);
     this.verifyNetworkNamespace();
     await this.verifyHostBridgeIsolation();
     if (this.proxySocket) {
       this.proxyRelay = createLoopbackProxyRelay(this.proxySocket, this.logger);
-      await new Promise((resolveListen, reject) => this.proxyRelay.once('error', reject).listen(Number(process.env.BROWSER_LOOPBACK_PROXY_PORT ?? 8080), '127.0.0.1', resolveListen));
+      await new Promise((resolveListen, reject) => this.proxyRelay.once('error', reject).listen(this.loopbackProxyPort, '127.0.0.1', resolveListen));
       this.logger({ event: 'proxy-relay-listening', proxySocketConfigured: true, at: this.now() });
     }
     this.browser = await this.launcher.launch({
@@ -253,7 +268,7 @@ export class BrowserWorker {
       chromiumSandbox: true,
       executablePath: process.env.CHROMIUM_PATH || undefined,
       proxy: { server: this.proxyServer },
-      args: ['--proxy-bypass-list=<-loopback>', '--host-resolver-rules=MAP * ~NOTFOUND'],
+      args: ['--proxy-bypass-list=<-loopback>', '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'],
       env: { PATH: process.env.PATH || '/usr/bin:/bin', HOME: '/tmp/chrome-home', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', TZ: 'UTC' },
       timeout: 20_000,
     });
@@ -308,12 +323,9 @@ export class BrowserWorker {
     try {
       const page = await context.newPage();
       await page.goto('chrome://sandbox', { waitUntil: 'domcontentloaded', timeout: 5000 });
-      const status = (await page.locator('body').innerText({ timeout: 3000 })).toLowerCase();
-      // Check Chromium's named rows, not nearby text that merely contains "yes".
-      const rows = status.split(/\r?\n/u).map((line) => line.trim().replace(/\s+/gu, ' '));
-      const hasRow = (label, value) => rows.some((line) => new RegExp(`^${label}\\s+${value}$`, 'iu').test(line));
-      const layerOneNamespace = hasRow('layer 1 sandbox', 'namespace') || hasRow('namespace sandbox', 'yes');
-      return layerOneNamespace && hasRow('pid namespaces', 'yes') && hasRow('seccomp-bpf sandbox', 'yes');
+      const status = readChromiumSandboxStatus(await page.locator('body').innerText({ timeout: 3000 }));
+      this.logger({ event: 'chromium-sandbox-status', ...status, at: this.now() });
+      return isChromiumSandboxVerified(status);
     } catch { return false; }
     finally { await context.close().catch(() => {}); }
   }
