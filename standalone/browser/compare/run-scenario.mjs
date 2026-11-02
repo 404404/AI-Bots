@@ -36,6 +36,15 @@ export function runtimeProbeScript() {
   ].join(' ');
 }
 
+export function syftScanArgs(image, outputPath) {
+  return [
+    'syft', 'scan', image,
+    '--platform=linux/amd64',
+    '--select-catalogers=+binary-classifier-cataloger',
+    '--output=syft-json=' + outputPath,
+  ];
+}
+
 function redact(value, env) {
   let output = String(value ?? '');
   for (const key of ['BROWSER_CONTROL_TOKEN', 'BROWSER_PROXY_ADMIN_TOKEN']) {
@@ -248,11 +257,7 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
       const observedVersion = versionData.version ?? versionData.Version ?? versionData.application?.version;
       if (syftVersion.status !== 0 || observedVersion !== '1.55.0') throw new Error('Expected Syft 1.55.0, observed ' + (observedVersion ?? 'missing') + '.');
       report.nodeBinaryAudit.syft.version = observedVersion;
-      const generated = run([
-        'syft', 'image', '--platform', 'linux/amd64',
-        '--select-catalogers', '+binary-classifier-cataloger',
-        '--output', 'syft-json=' + nodeSbomPath, scenario.image,
-      ], { allowFailure: true });
+      const generated = run(syftScanArgs(scenario.image, nodeSbomPath), { allowFailure: true });
       report.nodeBinaryAudit.syft.exitCode = generated.status;
       report.nodeBinaryAudit.syft.stderr = redact(generated.stderr, env).trim();
       if (generated.status !== 0) throw new Error('Syft image inventory exited ' + generated.status + '.');

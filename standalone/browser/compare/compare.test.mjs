@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { parse } from 'yaml';
 import { getScenario, scenarios } from './scenarios.mjs';
-import { buildArgs, runScenario, runtimeProbeScript } from './run-scenario.mjs';
+import { buildArgs, runScenario, runtimeProbeScript, syftScanArgs } from './run-scenario.mjs';
 import { summarizeNodeGrypeFindings, validateGrypeDatabase, validateNodeBinarySbom } from './node-binary-audit.mjs';
 
 const root = new URL('../../../', import.meta.url);
@@ -161,6 +161,7 @@ test('push trigger is restricted to the feature branch and comparison-only paths
   assert.deepEqual(config.on.push.paths, [
     '.github/workflows/standalone-browser-compare.yml',
     'standalone/browser/compare/**',
+    'standalone/browser/src/**',
   ]);
   assert.ok(Object.hasOwn(config.on, 'workflow_dispatch'));
 });
@@ -197,6 +198,18 @@ test('build args target the production worker and runtime probe prefers CHROMIUM
   assert.match(probe, /PLAYWRIGHT_EXPECTED_VERSION/u);
   assert.match(probe, /fs\.existsSync\(executable\)/u);
   assert.doesNotMatch(probe, /`|\$\{/u);
+});
+
+test('Syft scan arguments use the v1.55 CLI syntax with exactly one source positional', () => {
+  const args = syftScanArgs('standalone-browser-compare:noble', '/tmp/node-sbom.json');
+  assert.deepEqual(args, [
+    'syft', 'scan', 'standalone-browser-compare:noble',
+    '--platform=linux/amd64',
+    '--select-catalogers=+binary-classifier-cataloger',
+    '--output=syft-json=/tmp/node-sbom.json',
+  ]);
+  assert.equal(args.filter((arg) => !arg.startsWith('-') && arg !== 'syft' && arg !== 'scan').length, 1);
+  assert.doesNotMatch(args.join(' '), /(^|\s)image(\s|$)/u);
 });
 
 test('actual CLI records build failure, stderr, redaction, and a partial report', (t) => {
