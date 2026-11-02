@@ -67,4 +67,15 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 [CI 41512379257](https://github.com/404404/AI-Bots/actions/runs/41512379257)（源码 `e64f3649e10d3c907f8bdda6e7eb7544657c4b81`）独立构建了 Ubuntu 26.04 的 Proxy、Gateway、Fixture 比较镜像。三项 Trivy HIGH/CRITICAL 扫描均无发现、SBOM 均生成，但各 job 因 Node core 覆盖仍标为 `uncovered` 而失败。它们分别只生成 runner 内 image config ID，未发布 registry digest；与 Resolute Worker 同批次运行的集成验收尚未完成。旧生产镜像的四项失败不因这些比较结果而改变。
 
+[CI 41513606564 的 integrated-resolute 作业](https://github.com/404404/AI-Bots/actions/runs/41513606564/job/125511386336)（源码 `f5431e1ab8d1fc23154cef2631161bed50dd303d`）在同一隔离 runner 构建四个比较镜像及独立 E2E runner。Terra 独立核对：五个镜像分别按 config ID 扫描，Trivy OS/library HIGH/CRITICAL 均无发现、SBOM 已记录；Compose 实际五个容器的镜像 ID 与扫描对象一致，真实 fixture E2E 和资源清理均退出 0。该 job 因 Node core 完整漏洞覆盖未建立而按门禁失败，未发布或部署。四个产品镜像的 runner 内 config ID 为：
+
+| 镜像 | 仅供本次 CI 追踪的 config ID |
+| --- | --- |
+| Worker | `sha256:caee4abfb54909eeb70b3f4667a425eaf946de1277a00c9bd19da0120969a75f` |
+| Proxy | `sha256:292140b9ff5136c318e24bb381838d1d6591f47df0a8c31e35b099960090d9a2` |
+| Gateway | `sha256:5487c3540d8b0f4124cf9990cc49348fc08258a2858c13dd8b6ff8fe9f35754f` |
+| Fixture | `sha256:61bb0b4841ef3c7bb98c39d895e19bc202a02e9e408ef9511a99935cf389a111` |
+
+这些 ID 是本次 runner 中的镜像配置摘要，并非已发布的 registry manifest digest，也不能当作 GK50 部署身份。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

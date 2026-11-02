@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runScenario } from './run-scenario.mjs';
 import { runServiceScenario, serviceScenarios } from './run-services.mjs';
+import { auditNodeImage, nodeAuditPolicy } from './audit-node-image.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const services = ['proxy', 'gateway', 'fixture'];
@@ -65,9 +66,10 @@ export async function runIntegrated({ projectRoot = root, outputDir, env = proce
   const lockSha256 = createHash('sha256').update(lockBytes).digest('hex');
   const report = {
     schemaVersion: 1, result: 'failed-or-incomplete', sourceRevision, packageLockSha256: lockSha256,
-    nodeCoreVulnerabilityCoverage: { status: 'uncovered', component: 'official Node.js 24.22.2 runtime binary', reason: 'Trivy and the known-advisory auxiliary audit do not establish complete Node.js core vulnerability coverage.' },
+    nodeCoreVulnerabilityCoverage: { status: 'uncovered', component: 'official Node.js 24.22.2 runtime binary', scope: nodeAuditPolicy.scope, reason: 'Unknown or unrecorded Node.js core advisories may remain; this compare job does not claim complete upstream core coverage.' },
     images: {}, scans: {}, e2e: { status: 'not-run' }, diagnostics: [],
   };
+  // This diagnostic lane retains the existing fail-closed Node core coverage gate.
   let failed = true;
   const run = (args, commandEnv = env) => {
     let result;
@@ -86,7 +88,7 @@ export async function runIntegrated({ projectRoot = root, outputDir, env = proce
     if (!/^sha256:[a-f0-9]{64}$/u.test(data.Id ?? '')) throw new Error(`Invalid image config ID for ${image}.`);
     return data.Id;
   };
-  const recordScan = (name, image, imageId) => {
+  const recordScan = async (name, image, imageId) => {
     const dir = resolve(output, name);
     mkdirSync(dir, { recursive: true });
     const jsonPath = resolve(dir, 'trivy-vulnerabilities.json');
@@ -121,6 +123,12 @@ export async function runIntegrated({ projectRoot = root, outputDir, env = proce
     } catch (error) { trivy.error = String(error.message ?? error); }
     report.scans[name] = { image, imageConfigId: imageId, status: scan.status === 0 && findings?.total === 0 ? 'passed' : scan.status === 1 && findings?.total ? 'findings' : 'incomplete', exitCode: scan.status, stderr: scrub(scan.stderr, env), findings, parseError, sbom, sbomExitCode: sbomResult.status, trivy };
     if (report.scans[name].status !== 'passed' || sbom.status !== 'recorded' || trivy.status !== 'recorded') failed = true;
+    const nodeBinaryAudit = await auditNodeImage({
+      name, imageId, expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node',
+      outputDir: resolve(dir, 'node-binary-audit'), projectRoot, env, execute,
+    });
+    report.scans[name].nodeBinaryAudit = nodeBinaryAudit;
+    if (nodeBinaryAudit.status !== 'passed-known-advisory-gate') failed = true;
   };
 
   try {
@@ -129,7 +137,10 @@ export async function runIntegrated({ projectRoot = root, outputDir, env = proce
       const worker = await runWorker({ name: 'resolute', projectRoot, outputDir: workerDir, env: { ...env, GITHUB_SHA: sourceRevision }, execute, runE2E: false });
       const workerImageId = worker.report.image?.imageId;
       report.images.worker = { image: outputNames.worker, imageConfigId: workerImageId, buildStatus: worker.report.build.status, runtimeStatus: worker.report.runtime.status, sourceReport: 'worker/report.json' };
-      if (workerImageId) recordScan('worker', outputNames.worker, workerImageId);
+      if (worker.report.build.status !== 'passed' || worker.report.runtime.status !== 'passed'
+        || worker.report.scan.status !== 'passed' || worker.report.sbom.status !== 'passed'
+        || worker.report.nodeBinaryAudit.status !== 'passed-no-high-critical') failed = true;
+      if (workerImageId) await recordScan('worker', outputNames.worker, workerImageId);
       else { report.scans.worker = { status: 'blocked', reason: 'worker build did not produce a verified image config ID' }; failed = true; }
     } catch (error) {
       report.images.worker = { image: outputNames.worker, buildStatus: 'failed-or-incomplete', error: scrub(error.message ?? error, env), sourceReport: 'worker/report.json' };
@@ -142,7 +153,9 @@ export async function runIntegrated({ projectRoot = root, outputDir, env = proce
       try {
         const result = await runService({ service, projectRoot, outputDir: serviceDir, env: { ...env, GITHUB_SHA: sourceRevision }, execute });
         report.images[service] = { image: outputNames[service], imageConfigId: result.report.image?.imageId ?? null, buildStatus: result.report.build.status, sourceReport: `${service}/report.json` };
-        if (result.report.image?.imageId) recordScan(service, outputNames[service], result.report.image.imageId);
+        if (result.report.build.status !== 'passed' || result.report.scan.status !== 'passed-no-high-critical'
+          || result.report.sbom.status !== 'passed' || result.report.trivy.status !== 'recorded') failed = true;
+        if (result.report.image?.imageId) await recordScan(service, outputNames[service], result.report.image.imageId);
         else { report.scans[service] = { status: 'blocked', reason: 'service build did not produce a verified image config ID' }; failed = true; }
       } catch (error) {
         report.images[service] = { image: outputNames[service], buildStatus: 'failed', error: scrub(error.message ?? error, env) };
@@ -155,7 +168,7 @@ export async function runIntegrated({ projectRoot = root, outputDir, env = proce
     const e2eBuild = run(integratedBuildArgs('e2e-runner', sourceRevision, lockSha256, projectRoot));
     report.images.e2eRunner = { image: e2eImage, buildStatus: e2eBuild.status === 0 ? 'passed' : 'failed', stderr: scrub(e2eBuild.stderr, env) };
     if (e2eBuild.status === 0) {
-      try { report.images.e2eRunner.imageConfigId = inspectId(e2eImage); recordScan('e2eRunner', e2eImage, report.images.e2eRunner.imageConfigId); }
+      try { report.images.e2eRunner.imageConfigId = inspectId(e2eImage); await recordScan('e2eRunner', e2eImage, report.images.e2eRunner.imageConfigId); }
       catch (error) { report.images.e2eRunner.error = scrub(error.message ?? error, env); report.scans.e2eRunner = { status: 'incomplete' }; failed = true; }
     } else { report.scans.e2eRunner = { status: 'blocked', reason: 'E2E runner build failed' }; failed = true; }
 
@@ -214,7 +227,7 @@ export async function runIntegrated({ projectRoot = root, outputDir, env = proce
     report.diagnostics = report.diagnostics.map((entry) => ({ ...entry, stdout: scrub(entry.stdout, env), stderr: scrub(entry.stderr, env) }));
     writeFileSync(resolve(output, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
     writeFileSync(resolve(output, 'diagnostics.log'), report.diagnostics.map((entry) => `$ ${entry.command} [${entry.exitCode}]\n${entry.stdout}${entry.stderr}${entry.error ? JSON.stringify(entry.error) : ''}`).join('\n'));
-    writeFileSync(resolve(output, 'report.md'), [`# Resolute integrated image comparison`, '', `- Result: **${report.result}**`, `- Source revision: \`${sourceRevision}\``, `- Node core vulnerability coverage: **uncovered**.`, `- E2E: ${report.e2e.status}.`, `- Per-image strict Trivy scan and CycloneDX SBOM are recorded independently.`, '- Diagnostic only: no image is published; Node core coverage remains uncovered.', ''].join('\n'));
+    writeFileSync(resolve(output, 'report.md'), [`# Resolute integrated image comparison`, '', `- Result: **${report.result}**`, `- Source revision: \`${sourceRevision}\``, `- Node advisory scope: Grype evaluates known NVD/CPE HIGH and CRITICAL findings for one verified Node ELF per image, including unfixed findings.`, `- Node.js core coverage: **not complete**; unknown or unrecorded advisories may remain.`, `- E2E: ${report.e2e.status}.`, `- Each image has independent Trivy and Syft/Grype reports.`, '- Diagnostic only: no image is published or deployed.', ''].join('\n'));
   }
   return { report, exitCode: failed ? 1 : 0 };
 }

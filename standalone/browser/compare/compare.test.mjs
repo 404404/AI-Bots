@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -10,6 +10,7 @@ import { getScenario, scenarios } from './scenarios.mjs';
 import { buildArgs, grypeScanArgs, runScenario, runtimeProbeScript, syftScanArgs } from './run-scenario.mjs';
 import { runServiceScenario, serviceBuildArgs, serviceScanArgs, serviceScenarios } from './run-services.mjs';
 import { composeProjectName, integratedBuildArgs, integratedImageScanArgs, runIntegrated, validateComposeContainerImages } from './run-integrated.mjs';
+import { auditNodeImage } from './audit-node-image.mjs';
 import { summarizeNodeGrypeFindings, validateGrypeDatabase, validateNodeBinarySbom } from './node-binary-audit.mjs';
 
 const root = new URL('../../../', import.meta.url);
@@ -295,6 +296,16 @@ test('integrated runner scans every built image and runs compose E2E despite sca
       return { status: 0, stdout: '', stderr: '' };
     }
     if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+    if (command === 'syft' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ version: '1.55.0' }), stderr: '' };
+    if (command === 'syft' && args[0] === 'scan') {
+      const output = args.find((arg) => arg.startsWith('--output=syft-json=')).slice('--output=syft-json='.length);
+      writeFileSync(output, JSON.stringify({ artifacts: [{ id: 'node-elf-integrated', name: 'node', type: 'binary', version: '24.22.2', foundBy: 'binary-classifier-cataloger', locations: [{ path: '/opt/node-v24/bin/node' }], cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*' }] }] }));
+      return { status: 0, stdout: '', stderr: '' };
+    }
+    if (command === 'grype' && args.includes('version')) return { status: 0, stdout: JSON.stringify({ version: '0.121.0' }), stderr: '' };
+    if (command === 'grype' && args.includes('update')) return { status: 0, stdout: '', stderr: '' };
+    if (command === 'grype' && args.includes('status')) return { status: 0, stdout: JSON.stringify({ built: new Date(Date.now() - 30 * 60_000).toISOString(), schemaVersion: 'v6.1.3', valid: true, from: 'https://grype.anchore.io/databases/v6/example.tar.zst', checksum: 'sha256:example' }), stderr: '' };
+    if (command === 'grype' && args.includes('--file')) { writeFileSync(args[args.indexOf('--file') + 1], JSON.stringify({ matches: [] })); return { status: 0, stdout: '', stderr: '' }; }
     if (command === 'docker' && args[0] === 'compose') {
       compose.push(args);
       if (args.includes('up')) lifecycle.push('up');
@@ -303,14 +314,16 @@ test('integrated runner scans every built image and runs compose E2E despite sca
     }
     return { status: 0, stdout: '', stderr: '' };
   };
-  const runWorker = async (options) => { workerE2EOption = options.runE2E; return { report: { image: { imageId: imageIds['standalone-browser-compare:resolute'] }, build: { status: 'passed' }, runtime: { status: 'passed' } }, exitCode: 1 }; };
-  const runService = async ({ service }) => ({ report: { image: { imageId: imageIds[`standalone-browser-services:${service}`] }, build: { status: 'passed' } }, exitCode: 1 });
+  const runWorker = async (options) => { workerE2EOption = options.runE2E; return { report: { image: { imageId: imageIds['standalone-browser-compare:resolute'] }, build: { status: 'passed' }, runtime: { status: 'passed' }, scan: { status: 'passed' }, sbom: { status: 'passed' }, nodeBinaryAudit: { status: 'passed-no-high-critical' } }, exitCode: 1 }; };
+  const runService = async ({ service }) => ({ report: { image: { imageId: imageIds[`standalone-browser-services:${service}`] }, build: { status: 'passed' }, scan: { status: 'passed-no-high-critical' }, sbom: { status: 'passed' }, trivy: { status: 'recorded' } }, exitCode: 1 });
   const { report, exitCode } = await runIntegrated({ projectRoot: root.pathname, outputDir: temp, env: { GITHUB_SHA: 'abc123', GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '111222', GITHUB_RUN_ATTEMPT: '3' }, execute, runWorker, runService });
   assert.equal(exitCode, 1, 'uncovered Node core must remain fail-closed');
   assert.equal(report.nodeCoreVulnerabilityCoverage.status, 'uncovered');
   assert.equal(workerE2EOption, false, 'the worker runner must not build old support images or run its separate E2E path');
   assert.deepEqual(scanned.sort(), [...new Set(Object.values(imageIds))].sort());
   assert.equal(report.e2e.status, 'passed');
+  assert.ok(Object.values(report.scans).every((scan) => scan.nodeBinaryAudit.status === 'passed-known-advisory-gate'));
+  assert.ok(Object.values(report.scans).every((scan) => scan.nodeBinaryAudit.findings.highCriticalCount === 0));
   assert.equal(report.e2e.containerInspectionPhase, 'after-compose-up-before-cleanup');
   assert.deepEqual(report.e2e.scannedImageConfigIds, {
     worker: imageIds['standalone-browser-compare:resolute'],
@@ -352,21 +365,104 @@ test('worker runner exception is recorded without skipping service and E2E-runne
       return { status: 0, stdout: '', stderr: '' };
     }
     if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+    if (command === 'syft' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ version: '1.55.0' }), stderr: '' };
+    if (command === 'syft' && args[0] === 'scan') {
+      const output = args.find((arg) => arg.startsWith('--output=syft-json=')).slice('--output=syft-json='.length);
+      writeFileSync(output, JSON.stringify({ artifacts: [{ id: `node-${args[1]}`, name: 'node', type: 'binary', version: '24.22.2', foundBy: 'binary-classifier-cataloger', locations: [{ path: '/opt/node-v24/bin/node' }], cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*' }] }] }));
+      return { status: 0, stdout: '', stderr: '' };
+    }
+    if (command === 'grype' && args.includes('version')) return { status: 0, stdout: JSON.stringify({ version: '0.121.0' }), stderr: '' };
+    if (command === 'grype' && args.includes('update')) return { status: 0, stdout: '', stderr: '' };
+    if (command === 'grype' && args.includes('status')) return { status: 0, stdout: JSON.stringify({ built: new Date(Date.now() - 30 * 60_000).toISOString(), schemaVersion: 'v6.1.3', valid: true, from: 'https://grype.anchore.io/databases/v6/example.tar.zst' }), stderr: '' };
+    if (command === 'grype' && args.includes('--file')) { writeFileSync(args[args.indexOf('--file') + 1], JSON.stringify({ matches: [] })); return { status: 0, stdout: '', stderr: '' }; }
     return { status: 0, stdout: '', stderr: '' };
   };
-  const runService = async ({ service }) => ({ report: { image: { imageId: imageIds[service] }, build: { status: 'passed' } }, exitCode: 1 });
+  const runService = async ({ service }) => ({ report: { image: { imageId: imageIds[service] }, build: { status: 'passed' }, scan: { status: 'passed-no-high-critical' }, sbom: { status: 'passed' }, trivy: { status: 'recorded' } }, exitCode: 1 });
   const { report, exitCode } = await runIntegrated({
     projectRoot: root.pathname, outputDir: temp, env: { GITHUB_SHA: 'abc123' }, execute,
     runWorker: async () => { throw new Error('worker report initialization failed'); }, runService,
   });
   assert.equal(exitCode, 1);
   assert.match(report.images.worker.error, /worker report initialization failed/u);
-  assert.deepEqual(scanned.sort(), Object.values(imageIds).sort());
+  assert.deepEqual(scanned.sort(), Object.values(imageIds).sort(), JSON.stringify({ images: report.images, scans: report.scans }, null, 2));
   assert.equal(report.scans.proxy.status, 'passed');
   assert.equal(report.scans.gateway.status, 'passed');
   assert.equal(report.scans.fixture.status, 'passed');
   assert.equal(report.scans.e2eRunner.status, 'passed');
+  assert.ok(['proxy', 'gateway', 'fixture', 'e2eRunner'].every((name) => report.scans[name].nodeBinaryAudit.status === 'passed-known-advisory-gate'));
   assert.equal(report.e2e.status, 'blocked');
+});
+
+test('Node image audit passes only after exact Syft identity, fresh Grype DB, and zero HIGH/CRITICAL findings', async (t) => {
+  const temp = mkdtempSync(join(tmpdir(), 'browser-compare-node-audit-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  const imageId = 'sha256:' + 'a'.repeat(64);
+  const artifact = { id: 'node-artifact', name: 'node', type: 'binary', version: '24.22.2', foundBy: 'binary-classifier-cataloger', locations: [{ path: '/opt/node-v24/bin/node' }], cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*' }] };
+  let grypeFindings = [];
+  let auditOutput;
+  const execute = (command, args) => {
+    if (command === 'syft' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ version: '1.55.0' }), stderr: '' };
+    if (command === 'syft' && args[0] === 'scan') {
+      assert.equal(args[1], imageId, 'Syft must audit the config ID, not a mutable tag');
+      const path = args.find((value) => value.startsWith('--output=syft-json=')).slice('--output=syft-json='.length);
+      writeFileSync(path, JSON.stringify({ artifacts: [artifact] }));
+      return { status: 0, stdout: '', stderr: '' };
+    }
+    if (command === 'grype' && args.includes('version')) return { status: 0, stdout: JSON.stringify({ version: '0.121.0' }), stderr: '' };
+    if (command === 'grype' && args.includes('update')) return { status: 0, stdout: '', stderr: '' };
+    if (command === 'grype' && args.includes('status')) return { status: 0, stdout: JSON.stringify({ built: new Date(Date.now() - 30 * 60_000).toISOString(), schemaVersion: 'v6.1.3', valid: true, from: 'https://grype.anchore.io/databases/v6/example.tar.zst', checksum: 'sha256:db' }), stderr: '' };
+    if (command === 'grype' && args.includes('--file')) {
+      auditOutput = readFileSync(args[args.indexOf('--config') + 1], 'utf8');
+      writeFileSync(args[args.indexOf('--file') + 1], JSON.stringify({ matches: grypeFindings }));
+      return { status: 0, stdout: '', stderr: '' };
+    }
+    throw new Error(`Unexpected command ${command} ${args.join(' ')}`);
+  };
+  const clean = await auditNodeImage({ name: 'worker', imageId, expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node', outputDir: join(temp, 'clean'), projectRoot: root.pathname, env: {}, execute });
+  assert.equal(clean.status, 'passed-known-advisory-gate');
+  assert.equal(clean.artifact.version, '24.22.2');
+  assert.equal(clean.database.status, 'fresh');
+  assert.equal(clean.findings.highCriticalCount, 0);
+  assert.match(auditOutput, /only-fixed: false/u);
+  assert.match(auditOutput, /only-notfixed: false/u);
+  assert.match(auditOutput, /ignore: \[\]/u);
+
+  grypeFindings = [{ artifact, vulnerability: { id: 'CVE-EXAMPLE-UNFIXED', severity: 'High', fix: { state: 'not-fixed', versions: [] } }, matchDetails: [{ type: 'CPE' }] }];
+  const vulnerable = await auditNodeImage({ name: 'proxy', imageId, expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node', outputDir: join(temp, 'unfixed'), projectRoot: root.pathname, env: {}, execute });
+  assert.equal(vulnerable.status, 'failed-or-incomplete');
+  assert.equal(vulnerable.grype.status, 'high-critical-findings');
+  assert.equal(vulnerable.findings.highCriticalCount, 1);
+  assert.equal(vulnerable.findings.findings[0].id, 'CVE-EXAMPLE-UNFIXED');
+  assert.deepEqual(JSON.parse(readFileSync(join(temp, 'unfixed/grype-node-binary-findings.json'), 'utf8')).matches[0].vulnerability.fix, { state: 'not-fixed', versions: [] });
+});
+
+test('Node image audit fails closed on ambiguous Syft identity and stale vulnerability DB', async (t) => {
+  const temp = mkdtempSync(join(tmpdir(), 'browser-compare-node-audit-fail-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  const artifact = { id: 'node-artifact', name: 'node', type: 'binary', version: '24.22.2', foundBy: 'binary-classifier-cataloger', locations: [{ path: '/opt/node-v24/bin/node' }], cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*' }] };
+  for (const variant of ['duplicate-node', 'stale-db']) {
+    const outputDir = join(temp, variant);
+    const execute = (command, args) => {
+      if (command === 'syft' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ version: '1.55.0' }), stderr: '' };
+      if (command === 'syft' && args[0] === 'scan') {
+        const path = args.find((value) => value.startsWith('--output=syft-json=')).slice('--output=syft-json='.length);
+        writeFileSync(path, JSON.stringify({ artifacts: variant === 'duplicate-node' ? [artifact, { ...artifact, id: 'node-second' }] : [artifact] }));
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'grype' && args.includes('version')) return { status: 0, stdout: JSON.stringify({ version: '0.121.0' }), stderr: '' };
+      if (command === 'grype' && args.includes('update')) return { status: 0, stdout: '', stderr: '' };
+      if (command === 'grype' && args.includes('status')) {
+        const built = variant === 'stale-db' ? new Date(Date.now() - 72 * 60 * 60_000).toISOString() : new Date(Date.now() - 30 * 60_000).toISOString();
+        return { status: 0, stdout: JSON.stringify({ built, schemaVersion: 'v6.1.3', valid: true, from: 'https://grype.anchore.io/databases/v6/example.tar.zst' }), stderr: '' };
+      }
+      return { status: 0, stdout: '', stderr: '' };
+    };
+    const report = await auditNodeImage({ name: variant, imageId: 'sha256:' + 'b'.repeat(64), expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node', outputDir, projectRoot: root.pathname, env: {}, execute });
+    assert.equal(report.status, 'failed-or-incomplete');
+    if (variant === 'duplicate-node') assert.match(report.syft.error, /exactly one Syft Node binary artifact/u);
+    else assert.match(report.grype.error, /database age/u);
+    assert.equal(existsSync(join(outputDir, 'report.json')), true);
+  }
 });
 
 test('service runner preserves full findings and SBOM when Trivy reports vulnerabilities', async (t) => {
@@ -409,8 +505,18 @@ test('service runner preserves full findings and SBOM when Trivy reports vulnera
         writeFileSync(file, '{"bomFormat":"CycloneDX","components":[{"name":"libexample"}]}');
         return { status: 0, stdout: '', stderr: '' };
       }
-      if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+    if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+    if (command === 'syft' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ version: '1.55.0' }), stderr: '' };
+    if (command === 'syft' && args[0] === 'scan') {
+      const output = args.find((arg) => arg.startsWith('--output=syft-json=')).slice('--output=syft-json='.length);
+      writeFileSync(output, JSON.stringify({ artifacts: [{ id: `node-${args[1]}`, name: 'node', type: 'binary', version: '24.22.2', foundBy: 'binary-classifier-cataloger', locations: [{ path: '/opt/node-v24/bin/node' }], cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*' }] }] }));
       return { status: 0, stdout: '', stderr: '' };
+    }
+    if (command === 'grype' && args.includes('version')) return { status: 0, stdout: JSON.stringify({ version: '0.121.0' }), stderr: '' };
+    if (command === 'grype' && args.includes('update')) return { status: 0, stdout: '', stderr: '' };
+    if (command === 'grype' && args.includes('status')) return { status: 0, stdout: JSON.stringify({ built: new Date(Date.now() - 30 * 60_000).toISOString(), schemaVersion: 'v6.1.3', valid: true, from: 'https://grype.anchore.io/databases/v6/example.tar.zst' }), stderr: '' };
+    if (command === 'grype' && args.includes('--file')) { writeFileSync(args[args.indexOf('--file') + 1], JSON.stringify({ matches: [] })); return { status: 0, stdout: '', stderr: '' }; }
+    return { status: 0, stdout: '', stderr: '' };
     };
     const { report, exitCode } = await runServiceScenario({ service: role, projectRoot: root.pathname, outputDir, env: { GITHUB_SHA: 'abc123' }, execute });
     assert.equal(imageBuilt, true);
