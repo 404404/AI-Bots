@@ -5,6 +5,7 @@ import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unl
 import { networkInterfaces } from 'node:os';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 import { parseTargetRules, canonicalTarget } from './policy.mjs';
@@ -22,6 +23,9 @@ const MAX_RELAY_TUNNEL_MS = 30_000;
 const MAX_RELAY_TUNNEL_BYTES = 16 * 1024 * 1024;
 const MAX_RELAY_DIAGNOSTIC_EVENTS = 64;
 const MAX_SESSION_DIAGNOSTIC_EVENTS = 96;
+const SESSION_CREATE_TIMEOUT_MS = 10_000;
+const SESSION_CREATE_CLEANUP_BUDGET_MS = 5_000;
+const SESSION_CLEANUP_TIMEOUT_MS = 3_000;
 const SAFE_PROXY_ERROR_CODES = new Set([
   'ECONNREFUSED', 'ENOENT', 'EACCES', 'EPIPE', 'ETIMEDOUT', 'ECONNRESET', 'EHOSTUNREACH', 'ENETUNREACH', 'EADDRINUSE',
   'ERR_SOCKET_CLOSED', 'ERR_PROXY_CONNECTION_FAILED', 'ERR_TUNNEL_CONNECTION_FAILED', 'ERR_NO_SUPPORTED_PROXIES',
@@ -31,7 +35,7 @@ const SAFE_RELAY_METHODS = new Set(['GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DE
 const SESSION_STAGE_NAMES = new Set([
   'proxy-lease-register', 'context-create', 'page-create', 'query-guard-attach', 'query-guard-enable',
   'query-guard-block-queries', 'request-routes-install', 'session-activate',
-  'session-close-query-guard', 'session-close-context', 'session-close-proxy-lease',
+  'session-close-query-guard', 'session-close-context', 'session-close-proxy-lease', 'late-result-cleanup',
 ]);
 
 export function safeRelayMethod(method) {
@@ -52,6 +56,39 @@ function safeJson(res, status, value, headers = {}) {
   const bytes = Buffer.from(JSON.stringify(value));
   res.writeHead(status, { 'content-type': 'application/json', 'content-length': bytes.length, 'cache-control': 'no-store', ...headers });
   res.end(bytes);
+}
+
+function safeCgroupValue(readText, path) {
+  try {
+    const value = readText(path).trim();
+    if (value === 'max') return 'max';
+    if (!/^\d{1,16}$/u.test(value)) return null;
+    const number = Number(value);
+    return Number.isSafeInteger(number) ? number : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readCgroupResourceStatus(readText = (path) => readFileSync(path, 'utf8')) {
+  let pidsMaxEvents = null;
+  try {
+    const line = readText('/sys/fs/cgroup/pids.events').split('\n').find((entry) => entry.startsWith('max '));
+    if (line) {
+      const match = /^max (\d{1,16})$/u.exec(line);
+      if (match) {
+        const count = Number(match[1]);
+        if (Number.isSafeInteger(count)) pidsMaxEvents = count;
+      }
+    }
+  } catch {}
+  return {
+    pidsCurrent: safeCgroupValue(readText, '/sys/fs/cgroup/pids.current'),
+    pidsMax: safeCgroupValue(readText, '/sys/fs/cgroup/pids.max'),
+    pidsMaxEvents,
+    memoryCurrent: safeCgroupValue(readText, '/sys/fs/cgroup/memory.current'),
+    memoryMax: safeCgroupValue(readText, '/sys/fs/cgroup/memory.max'),
+  };
 }
 
 async function readJson(req) {
@@ -229,7 +266,7 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
 }
 
 export class BrowserWorker {
-  constructor({ rules, proxyAdminUrl, proxyAdminSocket, proxyAdminToken, proxySocket, proxyServer, loopbackProxyPort = Number(process.env.BROWSER_LOOPBACK_PROXY_PORT ?? 8080), dataRoot, launcher = chromium, now = () => Date.now(), logger = () => {}, maxSessions = MAX_SESSIONS, networkInspector = networkInterfaces, bridgeGateway = process.env.BROWSER_BRIDGE_GATEWAY, sensitivePorts = process.env.BROWSER_HOST_SENSITIVE_PORTS?.split(','), bridgeProbe, queryPolicy = process.env.BROWSER_SESSION_QUERY_POLICY ?? 'allow' }) {
+  constructor({ rules, proxyAdminUrl, proxyAdminSocket, proxyAdminToken, proxySocket, proxyServer, loopbackProxyPort = Number(process.env.BROWSER_LOOPBACK_PROXY_PORT ?? 8080), dataRoot, launcher = chromium, now = () => Date.now(), logger = () => {}, maxSessions = MAX_SESSIONS, networkInspector = networkInterfaces, bridgeGateway = process.env.BROWSER_BRIDGE_GATEWAY, sensitivePorts = process.env.BROWSER_HOST_SENSITIVE_PORTS?.split(','), bridgeProbe, queryPolicy = process.env.BROWSER_SESSION_QUERY_POLICY ?? 'allow', sessionCreateTimeoutMs = SESSION_CREATE_TIMEOUT_MS, sessionCleanupTimeoutMs = SESSION_CLEANUP_TIMEOUT_MS }) {
     this.rules = parseTargetRules(rules);
     this.proxyAdminUrl = proxyAdminUrl;
     this.proxyAdminSocket = proxyAdminSocket;
@@ -243,6 +280,11 @@ export class BrowserWorker {
     this.logger = logger;
     this.sessionDiagnosticEvents = 0;
     this.sessionDiagnosticsSuppressed = false;
+    this.pageCreateAttempts = 0;
+    this.pageCreateFailures = 0;
+    this.degraded = false;
+    this.sessionCreateTimeoutMs = Math.max(1, Math.min(SESSION_CREATE_TIMEOUT_MS, sessionCreateTimeoutMs));
+    this.sessionCleanupTimeoutMs = Math.max(1, Math.min(SESSION_CLEANUP_TIMEOUT_MS, sessionCleanupTimeoutMs));
     this.maxSessions = maxSessions;
     this.networkInspector = networkInspector;
     this.bridgeGateway = bridgeGateway;
@@ -346,17 +388,58 @@ export class BrowserWorker {
     });
   }
 
-  async runSessionStage(phase, action) {
+  async runSessionStage(phase, action, timeoutMs = SESSION_CREATE_TIMEOUT_MS, closeLateResult) {
     const startedAt = this.now();
     this.sessionStage(phase, 'started');
+    let timer;
+    let timedOut = false;
+    const operation = Promise.resolve().then(action);
+    operation.then((value) => {
+      if (timedOut && closeLateResult) {
+        void this.runCleanupStage('late-result-cleanup', () => closeLateResult(value));
+      }
+    }, () => {});
     try {
-      const result = await action();
+      const result = await Promise.race([
+        operation,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            timedOut = true;
+            reject(new BrowserError('session-stage-timeout', '浏览器会话阶段超时。', 503));
+          }, timeoutMs);
+        }),
+      ]);
       this.sessionStage(phase, 'completed', startedAt);
       return result;
     } catch (error) {
       this.sessionStage(phase, 'failed', startedAt, error);
       throw error;
+    } finally {
+      clearTimeout(timer);
     }
+  }
+
+  async runCleanupStage(phase, action, timeoutMs = this.sessionCleanupTimeoutMs) {
+    try {
+      await this.runSessionStage(phase, action, timeoutMs);
+      return true;
+    } catch {
+      this.degraded = true;
+      return false;
+    }
+  }
+
+  pageResourceSnapshot(point) {
+    if (this.sessionDiagnosticEvents >= MAX_SESSION_DIAGNOSTIC_EVENTS) {
+      this.sessionStage('page-create', 'started');
+      return;
+    }
+    this.sessionDiagnosticEvents += 1;
+    this.logger({
+      event: 'browser-session-resources', phase: 'page-create', point,
+      attempts: this.pageCreateAttempts, failures: this.pageCreateFailures,
+      ...readCgroupResourceStatus(), at: this.now(),
+    });
   }
 
   async verifySandbox(browser) {
@@ -386,7 +469,7 @@ export class BrowserWorker {
   }
 
   async create(input) {
-    requireValue(this.browser && this.sandboxVerified, 'browser-not-ready', '浏览器沙箱尚未通过启动检查。', 503);
+    requireValue(this.browser && this.sandboxVerified && !this.degraded, 'browser-not-ready', '浏览器沙箱尚未通过启动检查。', 503);
     const operationId = input?.operationId;
     requireValue(typeof operationId === 'string' && /^[A-Za-z0-9-]{16,80}$/u.test(operationId), 'invalid-operation-id', '创建操作 ID 无效。');
     const botId = simpleId(input?.botId, 'Bot ID');
@@ -422,32 +505,48 @@ export class BrowserWorker {
     record.sessionId = id;
     const secret = randomBytes(32).toString('base64url');
     const expiresAt = this.now() + leaseMs;
+    const createDeadline = performance.now() + this.sessionCreateTimeoutMs;
+    const runCreateStage = (phase, action, closeLateResult) => this.runSessionStage(
+      phase, action, Math.max(1, Math.min(SESSION_CREATE_TIMEOUT_MS, createDeadline - performance.now())), closeLateResult,
+    );
     const directory = mkdtempSync(join(this.dataRoot, 'session-'));
     chmodSync(directory, 0o700);
     const session = { id, botId, taskId, secret, expiresAt, allowedOrigins: new Set(allowedOrigins), queryPolicy: this.queryPolicy, directory, context: null, page: null, nextSequence: 1, steps: 0, operations: new Map(), busy: null, state: 'starting', screenshots: new Map() };
     try {
-      await this.runSessionStage('proxy-lease-register', () => this.updateProxyLease({ sessionId: id, secret, expiresAt, origins: allowedOrigins, queryPolicy: session.queryPolicy }));
-      session.context = await this.runSessionStage('context-create', () => this.browser.newContext({
+      await runCreateStage(
+        'proxy-lease-register',
+        () => this.updateProxyLease({ sessionId: id, secret, expiresAt, origins: allowedOrigins, queryPolicy: session.queryPolicy }),
+        () => this.updateProxyLease({ sessionId: id, close: true }),
+      );
+      session.context = await runCreateStage('context-create', () => this.browser.newContext({
         acceptDownloads: false,
         serviceWorkers: 'block',
         proxy: { server: this.proxyServer, username: id, password: secret },
         viewport: { width: 1280, height: 800 },
-      }));
+      }), (context) => context.close());
       session.context.setDefaultTimeout(OP_TIMEOUT_MS);
       session.context.setDefaultNavigationTimeout(OP_TIMEOUT_MS);
-      session.page = await this.runSessionStage('page-create', () => session.context.newPage());
+      this.pageCreateAttempts += 1;
+      this.pageResourceSnapshot('before');
+      try {
+        session.page = await runCreateStage('page-create', () => session.context.newPage(), (page) => page.close());
+        this.pageResourceSnapshot('completed');
+      } catch (error) {
+        this.pageCreateFailures += 1;
+        this.pageResourceSnapshot('failed');
+        throw error;
+      }
       if (session.queryPolicy === 'deny') {
         try {
-          session.networkPolicySession = await this.runSessionStage('query-guard-attach', () => session.context.newCDPSession(session.page));
-          await this.runSessionStage('query-guard-enable', () => session.networkPolicySession.send('Network.enable'));
+          session.networkPolicySession = await runCreateStage('query-guard-attach', () => session.context.newCDPSession(session.page));
+          await runCreateStage('query-guard-enable', () => session.networkPolicySession.send('Network.enable'));
           // Defense in depth; the proxy lease remains the enforcement point for every page.
-          await this.runSessionStage('query-guard-block-queries', () => session.networkPolicySession.send('Network.setBlockedURLs', { urls: ['*?*'] }));
+          await runCreateStage('query-guard-block-queries', () => session.networkPolicySession.send('Network.setBlockedURLs', { urls: ['*?*'] }));
         } catch {
-          await session.networkPolicySession?.detach().catch(() => {});
           throw new BrowserError('query-guard-unavailable', '严格查询策略的浏览器网络拦截不可用。', 503);
         }
       }
-      await this.runSessionStage('request-routes-install', async () => {
+      await runCreateStage('request-routes-install', async () => {
         await session.context.route('**/*', async (route) => {
           try {
             const target = canonicalTarget(route.request().url());
@@ -468,18 +567,23 @@ export class BrowserWorker {
           page.on('download', (download) => download.cancel().catch(() => {}));
         });
       });
-      await this.runSessionStage('session-activate', async () => {
+      await runCreateStage('session-activate', async () => {
+        requireValue(!this.degraded, 'browser-not-ready', '浏览器 worker 已进入 fail-closed 状态。', 503);
         session.state = 'active';
         this.sessions.set(id, session);
       });
       this.event(session, 'session-created');
       return { operationId, sessionId: id, taskId, expiresAt, stepBudget: MAX_STEPS, enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy } };
     } catch (error) {
+      const cleanupDeadline = performance.now() + SESSION_CREATE_CLEANUP_BUDGET_MS;
+      const runCreateCleanupStage = (phase, action) => this.runCleanupStage(
+        phase, action, Math.max(1, Math.min(this.sessionCleanupTimeoutMs, cleanupDeadline - performance.now())),
+      );
+      await runCreateCleanupStage('session-close-proxy-lease', () => this.updateProxyLease({ sessionId: id, close: true }));
       if (session.networkPolicySession) {
-        await this.runSessionStage('session-close-query-guard', () => session.networkPolicySession.detach()).catch(() => {});
+        await runCreateCleanupStage('session-close-query-guard', () => session.networkPolicySession.detach());
       }
-      await this.runSessionStage('session-close-context', () => session.context?.close()).catch(() => {});
-      await this.runSessionStage('session-close-proxy-lease', () => this.updateProxyLease({ sessionId: id, close: true })).catch(() => {});
+      await runCreateCleanupStage('session-close-context', () => session.context?.close());
       rmSync(directory, { recursive: true, force: true });
       throw error;
     }
@@ -588,7 +692,8 @@ export class BrowserWorker {
       return { resourceId, contentType: 'image/png', bytes: bytes.length };
     }
     if (action === 'close') {
-      await this.closeSession(session, 'closed');
+      const cleanupComplete = await this.closeSession(session, 'closed');
+      requireValue(cleanupComplete, 'session-cleanup-incomplete', '浏览器会话清理未能完成。', 503);
       return { closed: true };
     }
     throw new BrowserError('unsupported-browser-action', '浏览器操作不受支持。');
@@ -613,7 +718,8 @@ export class BrowserWorker {
     const session = this.sessions.get(id);
     requireValue(session, 'session-not-found', '浏览器会话不存在。', 404);
     this.assertScope(session, input);
-    await this.closeSession(session, 'cancelled');
+    const cleanupComplete = await this.closeSession(session, 'cancelled');
+    requireValue(cleanupComplete, 'session-cleanup-incomplete', '浏览器会话清理未能完成。', 503);
     return { sessionId: id, status: 'cancelled', enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy } };
   }
 
@@ -623,26 +729,36 @@ export class BrowserWorker {
       const old = this.tombstones.get(id);
       requireValue(old && old.botId === input?.botId && old.taskId === input?.taskId, 'session-not-found', '浏览器会话不存在。', 404);
       this.assertRequiredPolicy(input, old.queryPolicy, old.queryPolicy === 'deny');
+      requireValue(old.cleanupComplete !== false, 'session-cleanup-incomplete', '浏览器会话清理未能完成。', 503);
       return { sessionId: id, status: old.status, enforcedPolicy: { version: 1, queryPolicy: old.queryPolicy } };
     }
     requireValue(input?.botId === session.botId && input?.taskId === session.taskId, 'session-scope-denied', '浏览器会话归属不匹配。', 404);
     this.assertRequiredPolicy(input, session.queryPolicy, session.queryPolicy === 'deny');
-    await this.closeSession(session, 'closed');
+    const cleanupComplete = await this.closeSession(session, 'closed');
+    requireValue(cleanupComplete, 'session-cleanup-incomplete', '浏览器会话清理未能完成。', 503);
     return { sessionId: id, status: 'closed', enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy } };
   }
 
-  async closeSession(session, status) {
-    if (session.state === 'closed' || session.state === 'cancelled') return;
+  closeSession(session, status) {
+    if (session.cleanupPromise) return session.cleanupPromise;
+    if (session.state === 'closed' || session.state === 'cancelled') return Promise.resolve(session.cleanupComplete !== false);
+    session.cleanupPromise = this.performCloseSession(session, status);
+    return session.cleanupPromise;
+  }
+
+  async performCloseSession(session, status) {
     session.state = status;
     this.sessions.delete(session.id);
+    let cleanupComplete = await this.runCleanupStage('session-close-proxy-lease', () => this.updateProxyLease({ sessionId: session.id, close: true }));
     if (session.networkPolicySession) {
-      await this.runSessionStage('session-close-query-guard', () => session.networkPolicySession.detach()).catch(() => {});
+      cleanupComplete = await this.runCleanupStage('session-close-query-guard', () => session.networkPolicySession.detach()) && cleanupComplete;
     }
-    await this.runSessionStage('session-close-context', () => session.context?.close()).catch(() => {});
-    await this.runSessionStage('session-close-proxy-lease', () => this.updateProxyLease({ sessionId: session.id, close: true })).catch(() => {});
+    cleanupComplete = await this.runCleanupStage('session-close-context', () => session.context?.close()) && cleanupComplete;
     rmSync(session.directory, { recursive: true, force: true });
-    this.tombstones.set(session.id, { botId: session.botId, taskId: session.taskId, queryPolicy: session.queryPolicy, status, at: this.now(), closeOperation: session.closingOperation });
+    session.cleanupComplete = cleanupComplete;
+    this.tombstones.set(session.id, { botId: session.botId, taskId: session.taskId, queryPolicy: session.queryPolicy, status, cleanupComplete, at: this.now(), closeOperation: session.closingOperation });
     this.event(session, `session-${status}`);
+    return cleanupComplete;
   }
 
   async reap() {
@@ -670,7 +786,7 @@ export class BrowserWorker {
 export function createWorkerServer(worker, logger = () => {}) {
   const server = createServer(async (req, res) => {
     try {
-      if ((req.url === '/health' || req.url === '/healthz') && req.method === 'GET') return safeJson(res, 200, { ready: !!worker.browser, sandboxVerified: worker.sandboxVerified, capabilities: { version: 1, queryPolicy: worker.queryPolicy } });
+      if ((req.url === '/health' || req.url === '/healthz') && req.method === 'GET') return safeJson(res, worker.browser && !worker.degraded ? 200 : 503, { ready: !!worker.browser && !worker.degraded, sandboxVerified: worker.sandboxVerified, capabilities: { version: 1, queryPolicy: worker.queryPolicy } });
       const body = ['GET', 'HEAD'].includes(req.method) ? {} : await readJson(req);
       if (req.method === 'POST' && req.url === '/v1/sessions') return safeJson(res, 201, await worker.create(body));
       const route = /^\/v1\/sessions\/([^/]+)(?:\/(operations|cancel|close|screenshots\/([^/]+)))?$/u.exec(req.url ?? '');

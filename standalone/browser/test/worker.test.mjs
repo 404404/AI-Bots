@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { createRestrictedProxy } from '../src/proxy.mjs';
-import { BrowserWorker } from '../src/worker.mjs';
+import { BrowserWorker, readCgroupResourceStatus } from '../src/worker.mjs';
 
 const origin = 'http://fixture.test:8081';
 const secureOrigin = 'https://fixture.test:8443';
@@ -71,7 +71,7 @@ function makeFakeBrowser(sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Ye
   return { browser, opened, cdpState };
 }
 
-async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes', { networkInspector, bridgeProbe, maxSessions, queryPolicy, proxyServer, proxySocket = true, loopbackProxyPort, logger = () => {} } = {}) {
+async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes', { networkInspector, bridgeProbe, maxSessions, queryPolicy, proxyServer, proxySocket = true, loopbackProxyPort, logger = () => {}, sessionCreateTimeoutMs, sessionCleanupTimeoutMs } = {}) {
   const proxy = createRestrictedProxy({ rawRules: rules, adminToken: proxyToken });
   const dataRoot = mkdtempSync(join(tmpdir(), 'browser-worker-test-'));
   const relayPort = loopbackProxyPort ?? await availablePort();
@@ -95,10 +95,28 @@ async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes
     bridgeProbe: bridgeProbe ?? (async () => 'ENETUNREACH'),
     ...(queryPolicy ? { queryPolicy } : {}),
     ...(maxSessions ? { maxSessions } : {}),
+    ...(sessionCreateTimeoutMs ? { sessionCreateTimeoutMs } : {}),
+    ...(sessionCleanupTimeoutMs ? { sessionCleanupTimeoutMs } : {}),
   });
   t.after(async () => { await worker.stop(); proxy.close(); rmSync(dataRoot, { recursive: true, force: true }); });
   return { worker, proxy, driver, dataRoot };
 }
+
+test('cgroup resource diagnostics parse only bounded numeric counters and max markers', () => {
+  const values = new Map([
+    ['/sys/fs/cgroup/pids.current', '127\n'],
+    ['/sys/fs/cgroup/pids.max', '128\n'],
+    ['/sys/fs/cgroup/pids.events', 'max 4\n'],
+    ['/sys/fs/cgroup/memory.current', '1048576\n'],
+    ['/sys/fs/cgroup/memory.max', 'max\n'],
+  ]);
+  assert.deepEqual(readCgroupResourceStatus((path) => values.get(path) ?? ''), {
+    pidsCurrent: 127, pidsMax: 128, pidsMaxEvents: 4, memoryCurrent: 1048576, memoryMax: 'max',
+  });
+  assert.deepEqual(readCgroupResourceStatus((path) => path.includes('events') ? 'max not-a-number' : 'secret-path /proc/cmdline'), {
+    pidsCurrent: null, pidsMax: null, pidsMaxEvents: null, memoryCurrent: null, memoryMax: null,
+  });
+});
 
 test('worker refuses to create a session unless its sandbox probe passes', async (t) => {
   const { worker } = await setup(t, 'Layer 1 Sandbox Namespace No\nPID namespaces Yes\nSeccomp-BPF sandbox Yes');
@@ -311,6 +329,132 @@ test('session-stage diagnostics expose only a fixed phase and safe error-name en
   for (const secret of ['private.test', 'token=do-not-log', 'https://']) assert.equal(serialized.includes(secret), false);
 });
 
+test('a hung page creation and context cleanup are bounded and retain proxy revocation', async (t) => {
+  const logs = [];
+  const { worker, proxy, driver } = await setup(t, undefined, {
+    queryPolicy: 'deny', logger: (entry) => logs.push(entry), sessionCreateTimeoutMs: 80, sessionCleanupTimeoutMs: 20,
+  });
+  await worker.start();
+  let latePageClosed = false;
+  const newContext = driver.browser.newContext.bind(driver.browser);
+  driver.browser.newContext = async (...args) => {
+    const context = await newContext(...args);
+    context.newPage = () => new Promise((resolve) => setTimeout(() => resolve({ async close() { latePageClosed = true; } }), 120));
+    context.close = () => new Promise(() => {});
+    return context;
+  };
+  const started = Date.now();
+  await assert.rejects(worker.create({
+    operationId: randomUUID(), botId: 'page-timeout-bot', taskId: 'page-timeout-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), { code: 'session-stage-timeout' });
+  assert.ok(Date.now() - started < 1000, 'create and cleanup must finish well before the gateway timeout');
+  assert.equal(proxy.leases.size, 0, 'proxy lease revocation must still be attempted after context cleanup times out');
+  assert.ok(logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'page-create' && entry.outcome === 'failed'));
+  assert.ok(logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'session-close-context' && entry.outcome === 'failed'));
+  assert.ok(logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'session-close-proxy-lease' && entry.outcome === 'completed'));
+  assert.equal(worker.degraded, true, 'a context that could not be closed must prevent further session creation');
+  await assert.rejects(worker.create({
+    operationId: randomUUID(), botId: 'page-timeout-next', taskId: 'page-timeout-next-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), { code: 'browser-not-ready' });
+  const resourceSnapshots = logs.filter((entry) => entry.event === 'browser-session-resources');
+  assert.ok(resourceSnapshots.some((entry) => entry.point === 'before' && entry.attempts === 1 && entry.failures === 0));
+  assert.ok(resourceSnapshots.some((entry) => entry.point === 'failed' && entry.attempts === 1 && entry.failures === 1));
+  assert.ok(resourceSnapshots.every((entry) => ['number', 'string'].includes(typeof entry.pidsCurrent) || entry.pidsCurrent === null));
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  assert.equal(latePageClosed, true, 'a page delivered after the deadline must be closed');
+  assert.equal(JSON.stringify(logs).includes('page-timeout-task'), false);
+  assert.equal(JSON.stringify(logs).includes('fixture.test'), false);
+});
+
+test('a late successful proxy lease registration is revoked after create timeout', async (t) => {
+  const logs = [];
+  const { worker, proxy } = await setup(t, undefined, {
+    queryPolicy: 'deny', logger: (entry) => logs.push(entry), sessionCreateTimeoutMs: 40, sessionCleanupTimeoutMs: 100,
+  });
+  await worker.start();
+  const register = worker.updateProxyLease.bind(worker);
+  let releaseRegistration;
+  let registrationStarted;
+  const started = new Promise((resolve) => { registrationStarted = resolve; });
+  const delayedRegistration = new Promise((resolve) => { releaseRegistration = resolve; });
+  worker.updateProxyLease = async (input) => {
+    if (input.close) return register(input);
+    registrationStarted();
+    await delayedRegistration;
+    return register(input);
+  };
+  const create = worker.create({
+    operationId: randomUUID(), botId: 'late-lease-bot', taskId: 'late-lease-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  });
+  await started;
+  await assert.rejects(create, { code: 'session-stage-timeout' });
+  releaseRegistration();
+  for (let attempt = 0; attempt < 50 && proxy.leases.size !== 0; attempt += 1) await new Promise((resolve) => setTimeout(resolve, 5));
+  // Registration may not have reached the proxy yet; wait for the late-result cleanup event.
+  for (let attempt = 0; attempt < 50 && !logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'late-result-cleanup' && entry.outcome === 'completed'); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(proxy.leases.size, 0, 'a successful registration delivered after timeout must be revoked');
+  assert.ok(logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'late-result-cleanup' && entry.outcome === 'completed'));
+  assert.equal(worker.sessions.size, 0);
+});
+
+test('a late context that cannot be closed degrades the worker', async (t) => {
+  const logs = [];
+  const { worker, driver } = await setup(t, undefined, {
+    queryPolicy: 'deny', logger: (entry) => logs.push(entry), sessionCreateTimeoutMs: 40, sessionCleanupTimeoutMs: 100,
+  });
+  await worker.start();
+  let releaseContext;
+  let contextCreateStarted;
+  const started = new Promise((resolve) => { contextCreateStarted = resolve; });
+  const delayedContext = new Promise((resolve) => { releaseContext = resolve; });
+  driver.browser.newContext = () => { contextCreateStarted(); return delayedContext; };
+  await assert.rejects(worker.create({
+    operationId: randomUUID(), botId: 'late-context-bot', taskId: 'late-context-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), { code: 'session-stage-timeout' });
+  await started;
+  releaseContext({ async close() { throw new Error('late context close detail'); } });
+  for (let attempt = 0; attempt < 50 && !logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'late-result-cleanup'); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 5));
+  const cleanup = logs.find((entry) => entry.event === 'browser-session-stage' && entry.phase === 'late-result-cleanup' && entry.outcome === 'failed');
+  assert.ok(cleanup);
+  assert.equal(cleanup?.errorName, 'Error');
+  assert.equal(worker.degraded, true);
+  assert.equal(JSON.stringify(logs).includes('late context close detail'), false);
+});
+
+test('an in-flight create rolls back if another create degrades the worker before activation', async (t) => {
+  const { worker, proxy, driver } = await setup(t, undefined, { queryPolicy: 'deny' });
+  await worker.start();
+  const newContext = driver.browser.newContext.bind(driver.browser);
+  let firstPageStarted;
+  const firstStarted = new Promise((resolve) => { firstPageStarted = resolve; });
+  let releaseFirstPage;
+  const firstPage = new Promise((resolve) => { releaseFirstPage = resolve; });
+  let contexts = 0;
+  driver.browser.newContext = async (...args) => {
+    const context = await newContext(...args);
+    contexts += 1;
+    if (contexts === 1) {
+      context.newPage = () => { firstPageStarted(); return firstPage; };
+    } else {
+      context.newPage = async () => { throw new Error('controlled page-create failure'); };
+      context.close = async () => { throw new Error('controlled cleanup failure'); };
+    }
+    return context;
+  };
+  const firstCreate = worker.create({
+    operationId: randomUUID(), botId: 'concurrent-good', taskId: 'concurrent-good-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  });
+  await firstStarted;
+  await assert.rejects(worker.create({
+    operationId: randomUUID(), botId: 'concurrent-failing', taskId: 'concurrent-failing-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }));
+  assert.equal(worker.degraded, true);
+  releaseFirstPage({ async close() {} });
+  await assert.rejects(firstCreate, { code: 'browser-not-ready' });
+  assert.equal(worker.sessions.size, 0, 'a create completing after degradation must never activate');
+  assert.equal(proxy.leases.size, 0, 'both failed creates must revoke their leases');
+});
+
 test('asynchronous request route installation failure rejects session creation', async (t) => {
   const logs = [];
   const { worker, proxy, driver } = await setup(t, undefined, { queryPolicy: 'deny', logger: (entry) => logs.push(entry) });
@@ -328,6 +472,36 @@ test('asynchronous request route installation failure rejects session creation',
   assert.ok(logs.some((entry) => entry.event === 'browser-session-stage' && entry.phase === 'session-close-proxy-lease' && entry.outcome === 'completed'));
   assert.equal(JSON.stringify(logs).includes('secret text'), false);
   assert.equal(proxy.leases.size, 0);
+});
+
+test('query guard failure uses bounded outer cleanup and revokes the lease before CDP detach', async (t) => {
+  const logs = [];
+  const { worker, proxy, driver } = await setup(t, undefined, {
+    queryPolicy: 'deny', logger: (entry) => logs.push(entry), sessionCleanupTimeoutMs: 20,
+  });
+  await worker.start();
+  const newContext = driver.browser.newContext.bind(driver.browser);
+  driver.browser.newContext = async (...args) => {
+    const context = await newContext(...args);
+    context.newCDPSession = async () => ({
+      async send() { throw new Error('CDP command failure'); },
+      async detach() { return new Promise(() => {}); },
+    });
+    return context;
+  };
+  const started = Date.now();
+  await assert.rejects(worker.create({
+    operationId: randomUUID(), botId: 'query-guard-cleanup-bot', taskId: 'query-guard-cleanup-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), { code: 'query-guard-unavailable' });
+  assert.ok(Date.now() - started < 1000, 'failed query guard cleanup must remain bounded');
+  assert.equal(proxy.leases.size, 0);
+  const stages = logs.filter((entry) => entry.event === 'browser-session-stage');
+  const leaseRevoke = stages.findIndex((entry) => entry.phase === 'session-close-proxy-lease' && entry.outcome === 'completed');
+  const detachStart = stages.findIndex((entry) => entry.phase === 'session-close-query-guard' && entry.outcome === 'started');
+  assert.ok(leaseRevoke >= 0 && detachStart > leaseRevoke, 'proxy lease must be revoked before the bounded CDP detach attempt');
+  assert.ok(stages.some((entry) => entry.phase === 'session-close-query-guard' && entry.outcome === 'failed'));
+  assert.ok(stages.some((entry) => entry.phase === 'session-close-context' && entry.outcome === 'completed'));
+  assert.equal(worker.degraded, true);
 });
 
 test('cleanup stage failures are logged as failed while later cleanup stages continue', async (t) => {
@@ -349,12 +523,13 @@ test('cleanup stage failures are logged as failed while later cleanup stages con
   const session = await worker.create({
     operationId: randomUUID(), botId: 'cleanup-failure-bot', taskId: 'cleanup-failure-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
   });
-  await worker.close(session.sessionId, { botId: 'cleanup-failure-bot', taskId: 'cleanup-failure-task', requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  await assert.rejects(worker.close(session.sessionId, { botId: 'cleanup-failure-bot', taskId: 'cleanup-failure-task', requiredPolicy: { version: 1, queryPolicy: 'deny' } }), { code: 'session-cleanup-incomplete' });
   const stages = logs.filter((entry) => entry.event === 'browser-session-stage');
   assert.ok(stages.some((entry) => entry.phase === 'session-close-query-guard' && entry.outcome === 'failed'));
   assert.ok(stages.some((entry) => entry.phase === 'session-close-context' && entry.outcome === 'failed'));
   assert.ok(stages.some((entry) => entry.phase === 'session-close-proxy-lease' && entry.outcome === 'completed'));
   assert.equal(proxy.leases.has(session.sessionId), false);
+  assert.equal(worker.degraded, true);
   assert.equal(JSON.stringify(stages).includes('sensitive'), false);
 });
 
