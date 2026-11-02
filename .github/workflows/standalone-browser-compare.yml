@@ -2,6 +2,12 @@ name: Standalone browser base comparison
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/gui-container-codex-prototype
+    paths:
+      - .github/workflows/standalone-browser-compare.yml
+      - standalone/browser/compare/**
 
 permissions:
   contents: read

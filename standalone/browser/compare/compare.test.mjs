@@ -45,6 +45,16 @@ test('workflow isolates each base in a non-publishing manual matrix and keeps ev
   assert.match(workflow, /if-no-files-found: error/u);
 });
 
+test('push trigger is restricted to the feature branch and comparison-only paths', () => {
+  const config = parse(workflow);
+  assert.deepEqual(config.on.push.branches, ['feature/gui-container-codex-prototype']);
+  assert.deepEqual(config.on.push.paths, [
+    '.github/workflows/standalone-browser-compare.yml',
+    'standalone/browser/compare/**',
+  ]);
+  assert.ok(Object.hasOwn(config.on, 'workflow_dispatch'));
+});
+
 test('build args target the production worker and runtime probe prefers CHROMIUM_PATH with strict version checks', () => {
   const rootPath = '/repo';
   const trixie = buildArgs(getScenario('trixie'), 'abc123', rootPath);
