@@ -194,6 +194,7 @@ test('source identity and security gates remain fixed while the OS base changes'
 
   const worker = compose.split('  worker:\n')[1]?.split('\n  gateway:')[0] ?? '';
   assert.match(worker, /network_mode: none/u);
+  assert.match(worker, /pids_limit: 256/u, 'isolated Chromium worker PID cap must remain explicitly bounded at the CI experiment value');
   assert.match(worker, /cap_drop: \[ALL\]/u);
   assert.match(worker, /seccomp=\.\/chromium-userns-seccomp\.json/u);
   assert.equal(createHash('sha256').update(seccomp).digest('hex'), 'a8ec691e2b21a15ccc4ab1d1af7284f900a334887936403ff3b4b51beead1ee4');

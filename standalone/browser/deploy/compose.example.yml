@@ -78,7 +78,7 @@ services:
       - seccomp=./chromium-userns-seccomp.json
     mem_limit: 1536m
     cpus: 2.0
-    pids_limit: 128
+    pids_limit: 256
     depends_on:
       egress:
         condition: service_healthy
