@@ -236,7 +236,9 @@ test('cancelling a worker child leaves the root active so the main model can rec
 });
 
 test('a persisted worker deadline is terminal failed with task-deadline-exceeded under the global account', async () => {
-  const server = createServer(() => {});
+  let requestStartedResolve;
+  const requestStarted = new Promise((resolve) => { requestStartedResolve = resolve; });
+  const server = createServer((req) => { requestStartedResolve(); req.on('aborted', () => {}); });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const app = new BotApplication(dir());
   try {
@@ -249,12 +251,35 @@ test('a persisted worker deadline is terminal failed with task-deadline-exceeded
       requestKey: 'deadline-worker', input: 'wait until cancelled', connectionId: null,
       connectionEpoch: connection.sourceModelEpoch, configRevision: worker.configRevision,
       configSnapshot: JSON.stringify({ name: worker.name, persona: worker.persona }),
-      deadlineAt: new Date(Date.now() + 100).toISOString(), at }).task;
+      deadlineAt: new Date(Date.now() + 60000).toISOString(), at }).task;
     assert(app.tasks.store.begin(task.id, new Date().toISOString()));
     const controller = new AbortController();
     app.tasks.active.set(task.id, controller);
-    await app.tasks.runDirect(task.id, worker, 'wait until cancelled', connection.config,
-      connection.credential, '@owner', [], controller);
+    const originalSetTimeout = globalThis.setTimeout;
+    let expireDeadline;
+    globalThis.setTimeout = (callback, delay, ...args) => {
+      if (!expireDeadline && delay >= 50000) expireDeadline = () => callback(...args);
+      return originalSetTimeout(callback, delay, ...args);
+    };
+    try {
+      const execution = app.tasks.runDirect(task.id, worker, 'wait until cancelled', connection.config,
+        connection.credential, '@owner', [], controller);
+      assert.equal(typeof expireDeadline, 'function', 'runDirect must install its deadline timer');
+      let requestGuard;
+      try {
+        await Promise.race([requestStarted, new Promise((_, reject) => {
+          requestGuard = originalSetTimeout(() => reject(new Error('worker model request did not start')), 5000);
+        })]);
+      } finally {
+        if (requestGuard) clearTimeout(requestGuard);
+      }
+      app.storage.db.prepare('UPDATE tasks SET deadline_at=? WHERE id=?').run(new Date(Date.now() - 1).toISOString(), task.id);
+      expireDeadline();
+      await execution;
+      assert.equal(controller.signal.aborted, true);
+    } finally {
+      globalThis.setTimeout = originalSetTimeout;
+    }
     const completed = app.tasks.store.get(task.id);
     assert.equal(completed.status, 'failed');
     assert.equal(completed.error_code, 'task-deadline-exceeded');

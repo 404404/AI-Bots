@@ -1,5 +1,11 @@
 # 单用户员工与群聊独立验收结果（2026-10-31）
 
+## 2026-11-02：隔离预览代理核查
+
+- 23443 预览初始的模型账户未配置显式代理，容器也没有代理环境变量。Codex 登录尝试返回 `unsupported_country_region_territory`，当时 `signedIn=false`，未发送真实模型请求。
+- 宿主机代理监听 `127.0.0.1:7890` 和 `172.17.0.1:7890`；从预览容器连接 `host.docker.internal:7890` 的 TCP 测试成功。已通过预览自身的认证业务接口配置 `http://host.docker.internal:7890`，保留原模型名称；等待重新登录和实际模型请求的代理路径证据。TCP 连通不证明 Codex 请求已通过代理，也不保证上游允许该账户使用。
+- 20443 旧候选没有代理环境变量；15 个 Bot 配置中 1 个含 `http://host.docker.internal:7890`，其余 14 个没有显式代理。没有改动该候选，也未确认其实际请求路径。
+
 验收依据：[用例](standalone-single-user-employee-cases-2026-10-31.md)。实现仍在集成，以下为中间态诊断，不代表最终版本验收。独立验收仅使用临时隔离数据，未访问现有 20443、22443、用户数据或凭据。
 
 ## 中间态诊断
@@ -101,3 +107,35 @@ Node 22.23.1、npm 10.9.8，在 `standalone` 下分别以 300 秒和 120 秒超�
 测试前后 `standalone/src` 与 `standalone/test` 所有 `rg --files` 文件依路径排序的逐文件 SHA-256 清单一致；清单 `/tmp/standalone-test-after.sha256` 的 SHA-256 为 `14a11b028752a1d77726afeb6c3d02506321a9dce98aecd3a629ebdd83509064`，包含未跟踪文件，不代表仓库其余文件或构建产物指纹。
 
 审查 `delegation.test.mjs`、`employee-independent.test.mjs`、`worker-management.test.mjs` 和 `worker-management-independent.test.mjs` 的差异：旧逐 Bot 连接/模型管理设置按新全局账户和用户创建员工规则替换；SDK SSE 工具调用到持久 child、worker、工具结果和主回复的链路仍有执行断言，worker 记忆隔离、合成 access/refresh 脱敏仍检查。任务预算、最大子任务数、并发容量、超时、取消、同键重放及冲突仍有独立断言；原模型创建/修改员工的成功用例按新需求改成拒绝并检查无副作用。此审查是对所列测试覆盖的核对，未证明真实外部模型、真实 LAN 页面或固定镜像。
+
+### GK50 固定候选网页独立验收（2026-11-02）
+
+指定隔离预览 `gk50-employee-preview` 使用镜像 ID `796245e2cb69`、端口 23443 和独立数据。非 root QA 容器使用项目 `deploy/chromium-userns-seccomp.json` 与 Xvfb；`chrome://sandbox` 显示 namespace、PID namespace 和 seccomp-BPF 均启用。QA 容器的 host 网络访问 LAN 地址成功，未启动 DSH。默认 Docker seccomp 首次启动 Chromium 报无可用沙箱；未使用 `--no-sandbox`。浏览器实际访问 LAN 页面，未使用其他实例凭据。
+
+- **部分通过：** 空员工列表；网页创建 Alpha、Beta 两位员工；创建后各有一条可见欢迎语。唯一员工时 Alpha 自动为联系人；两员工后 canonical 要求选择；网页指定 Beta 后，`contacts.get` 确认显式选择，刷新后仍为 Beta。
+- **发现：** 两个员工的 `employees.onboarding.status` 均为 `pending`、`model-account-required`，欢迎语类型 `preset-welcome`。模型账户设置中的员工列表显示“预设欢迎语 · 角色分析待完成”和重试入口，但创建后私聊中的欢迎消息本身没有预设标识，且私聊未显示分析待完成。用户在私聊无法从消息辨别其来源。
+- **部分通过：** 网页创建包含两位员工的群，`groups.list` 的群 ID、名称和成员 ID 与页面一致；刷新后网页与 canonical 联系人、群成员一致。未测进程重启、真实模型发送或群回复。
+- **头像：** Beta 默认头像可见；网页上传合规的 32×32 合成 RGB PNG 后，页面显示已保存，`bots.get` 返回同一头像 revision 和尺寸。首次灰度 PNG 被明确拒绝，符合页面公布的格式限制。未验证刷新后的图片呈现或删除。
+- **失败：** 390px 群页面的 `document.documentElement.scrollWidth` 为 403px，水平滚动条可见；`#group-members-editor` 与 `#group-recipients` 均从 x=27 延伸至 x=403，超出视口。浏览器未报告 pageerror。
+
+脱敏截图、脚本及 canonical/布局 JSON 保存在本机 `/tmp/employee-gk50-qa/`（`alpha.png`、`beta.png`、`settings.png`、`group.png`、`mobile.png`、`mobile-detail.png`、`avatar.png`、`result.json`、`followup.json`），不包含访问码或 cookie。两处网页问题已交实现方处理。真实 OAuth、真实模型回复、远端 EasyTier 设备及其他验收场景仍未完成；本次不构成最终通过。
+
+### 网页修复源码独立审查（未重新部署）
+
+欢迎标识按服务端 `welcome.kind` 和消息 ID 精确匹配，两个群成员选择框增加容器宽度限制；方向符合前述两项问题。审查时发现创建流程先渲染私聊、再保存 onboarding 状态，首次标识须等待时间线轮询；若后续状态请求失败，创建响应已使用 `roleStatus`，前端却读取 `status` 并回退为 `running`，可能误报分析进行中。已交实现方修正。新增测试是源码正则断言，不能证明实际 DOM、状态转换或 390px 布局。当前 23443 仍为旧固定镜像，上述修复尚未进行真实网页复测；须待新 CI 固定产物后复验。
+
+### 创建竞态修订审查（未部署）
+
+本地修订保留创建响应的 `roleStatus`，状态读取失败时使用该响应；针对性静态检查 6/6 和 standalone 完整 `npm test` 146/146 通过。独立审查发现选择版本在 `bots.create` 返回后才捕获：若用户在创建请求进行时切换 Bot，完成后仍可能跳回新员工。已交实现方修正；现有静态测试未执行这一异步时序，也未证明 retry 与定时状态读取并发时的结果。未访问或重启预览；修复后的固定镜像网页验收仍待执行。
+
+### 异步修订与真实模型尝试（2026-11-02）
+
+新协调器延迟响应测试覆盖创建期间切换、旧轮询迟到与重试期间抑制轮询；创建响应的 `roleStatus` 在状态请求失败时保留。审查发现新增模块最初未在服务端静态白名单中，导致网页脚本无法加载；实现方已添加白名单与临时 HTTP 回归。静态资源不经 API 登录门禁，模块与现有脚本共用该路径。针对性测试 7/7 通过。首次完整套件 146/147：短截止时间用例在 `TaskStore.begin` 抛出 `task-deadline-exceeded`；该用例单独重跑通过，修订后完整套件 148/148 通过（日志 `/tmp/standalone-review-final-20261102.log`）。首次失败不能因此视作已消除。上述 helper 测试与静态源码断言不能替代真实浏览器对修订后镜像的验证。
+
+用户确认登录后尝试当前 23443 旧镜像的真实模型场景：网页 Alpha、Beta 模型目录全部显示 `not-signed-in`，选项禁用；脱敏 `model-account.get` 为 `configured=false`、`provider=openai-codex`、`auth.signedIn=false`、`attempt.phase=idle`、`migration.state=not-configured`。没有发送模型请求，实际模型调用数为零。当前状态不能判断登录曾否成功或如何失效；真实私聊、双成员群回复和委派均因授权状态阻塞。失败截图和脱敏状态位于 `/tmp/employee-gk50-qa/real-failure.png`、`real-failure.json`、`model-status.json`。未访问其他服务或使用其他实例凭据。
+
+### 截止时间测试夹具复审（2026-11-02）
+
+独立审查 `delegation.test.mjs` 的修订：先以未来截止时间成功 `begin`，调用生产 `runDirect`，等待本地 HTTP 服务器实际收到请求；随后将测试任务的持久截止时间设为过去并触发捕获的生产定时器回调，断言真实 AbortController 信号已中止、任务持久状态为 `failed/task-deadline-exceeded`。这是受控触发而非等待真实时钟到期；服务器端 `aborted` 事件没有断言。针对性用例 1/1、完整 `npm test` 148/148 通过，完整日志 `/tmp/standalone-deadline-review-20261102.log`。本轮未访问预览。
+
+再次按用户确认检查隔离预览：`model-account.get` 返回 `configured=false`、`signedIn=false`，认证尝试状态 `failed/unsupported_country_region_territory`，Beta 模型仍为 `not-signed-in`。主代理只读确认账户代理未配置。按停止条件未发起模型请求，未修改账户或代理；本轮模型调用与在途任务均为零。授权和代理设置完成后方可继续真实模型验收；不能由本次状态推断流量实际经过何处。
