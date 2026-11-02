@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { parse } from 'yaml';
 import { getScenario, scenarios } from './scenarios.mjs';
 import { buildArgs, runScenario, runtimeProbeScript } from './run-scenario.mjs';
+import { summarizeNodeGrypeFindings, validateGrypeDatabase, validateNodeBinarySbom } from './node-binary-audit.mjs';
 
 const root = new URL('../../../', import.meta.url);
 const lock = JSON.parse(readFileSync(new URL('standalone/browser/package-lock.json', root), 'utf8'));
@@ -77,6 +78,10 @@ test('workflow isolates each base in a non-publishing manual matrix and keeps ev
   assert.match(workflow, /fail-fast: false/u);
   assert.match(workflow, /contents: read/u);
   assert.match(workflow, /aquasecurity\/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514/u);
+  assert.match(workflow, /anchore\/syft\/releases\/download\/v1\.55\.0/u);
+  assert.match(workflow, /anchore\/grype\/releases\/download\/v0\.121\.0/u);
+  assert.match(workflow, /bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d/u);
+  assert.match(workflow, /64e07133d3486115de647a66581461dccf5c732748a0a3119077395565f15519/u);
   assert.match(workflow, /if: always\(\)/u);
   assert.match(workflow, /upload-artifact/u);
   assert.doesNotMatch(workflow, /docker\/login|docker\/build-push-action|ghcr\.io|docker push/iu);
@@ -87,11 +92,67 @@ test('workflow isolates each base in a non-publishing manual matrix and keeps ev
   assert.match(runner, /--vuln-type', 'os,library'/u);
   assert.match(runner, /--list-all-pkgs/u);
   assert.match(runner, /--format', 'cyclonedx'/u);
+  assert.match(runner, /binary-classifier-cataloger/u);
+  assert.match(runner, /grype', '--config', grypeConfigPath, 'db', 'update'/u);
+  assert.match(runner, /only-fixed: false/u);
+  assert.match(runner, /ignore-wontfix: ""/u);
+  assert.match(runner, /vex-documents: \[\]/u);
+  assert.match(runner, /vex-add: \[\]/u);
+  assert.match(runner, /maximumDatabaseAge: '48h'/u);
+  assert.match(runner, /maximumAgeHours: 48/u);
+  assert.match(runner, /not complete Node\.js core advisory coverage/u);
   assert.match(runner, /--network', 'none'/u);
   assert.match(runner, /--cap-drop', 'ALL'/u);
   assert.match(runner, /seccomp=standalone\/browser\/deploy\/chromium-userns-seccomp\.json/u);
   assert.match(runner, /--user', '10001:10001'/u);
   assert.match(workflow, /if-no-files-found: error/u);
+});
+
+test('Syft audit accepts only the exact classified Node ELF, version, path, and NVD CPE', () => {
+  const packageRecord = {
+    id: 'node-elf-identity',
+    name: 'node',
+    version: '24.22.2',
+    type: 'binary',
+    foundBy: 'binary-classifier-cataloger',
+    purl: 'pkg:generic/node@24.22.2',
+    locations: [{ path: '/opt/node-v24/bin/node' }],
+    cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*' }],
+  };
+  const sbom = { artifacts: [packageRecord] };
+  assert.equal(validateNodeBinarySbom(sbom, { expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node' }).version, '24.22.2');
+  assert.equal(validateNodeBinarySbom(sbom, { expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node' }).cpeVersion, 'wildcard');
+  assert.throws(() => validateNodeBinarySbom(sbom, { expectedVersion: '24.21.0', expectedPath: '/opt/node-v24/bin/node' }), /identity did not match/u);
+  assert.throws(() => validateNodeBinarySbom({ artifacts: [{ ...packageRecord, locations: [{ path: '/tmp/node' }] }] }, { expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node' }), /identity did not match/u);
+  assert.throws(() => validateNodeBinarySbom({ artifacts: [packageRecord, { ...packageRecord, id: 'other-node', version: '24.21.0', locations: [{ path: '/usr/bin/node' }] }] }, { expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node' }), /exactly one Syft Node binary/u);
+  assert.throws(() => validateNodeBinarySbom({ artifacts: [{ ...packageRecord, id: '' }] }, { expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node' }), /unique package ID/u);
+  assert.throws(() => validateNodeBinarySbom({ artifacts: [{ ...packageRecord, cpes: [] }] }, { expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node' }), /expected nodejs:node\.js NVD CPE/u);
+  assert.throws(() => validateNodeBinarySbom({ artifacts: [{ ...packageRecord, cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:24.22.1:*:*:*:*:*:*:*' }] }] }, { expectedVersion: '24.22.2', expectedPath: '/opt/node-v24/bin/node' }), /CPE version is incompatible/u);
+});
+
+test('Grype database freshness fails closed and node findings retain fixed and unfixed HIGH/CRITICAL states', () => {
+  const current = '2026-11-02T12:00:00.000Z';
+  const fresh = { built: '2026-11-01T12:00:00.000Z', schemaVersion: 'v6.1.3', valid: true, from: 'https://grype.anchore.io/databases/v6/example.tar.zst', checksum: 'sha256:abc' };
+  assert.equal(validateGrypeDatabase(fresh, current).ageHours, 24);
+  for (const status of [{ ...fresh, valid: false }, { ...fresh, built: '' }, { built: fresh.built, valid: true }, { ...fresh, schemaVersion: null }, { ...fresh, from: '' }]) {
+    assert.throws(() => validateGrypeDatabase(status, current), /Grype DB status/u);
+  }
+  assert.throws(() => validateGrypeDatabase({ ...fresh, built: '2026-10-28T12:00:00Z' }, current), /freshness limit/u);
+  const scan = { matches: [
+    { artifact: { id: 'node-elf-identity', name: 'node', version: '24.22.2', type: 'binary', locations: [{ path: '/opt/node-v24/bin/node' }] }, vulnerability: { id: 'CVE-1', severity: 'HIGH', fix: { state: 'not-fixed', versions: [] } } },
+    { artifact: { id: 'node-elf-identity', name: 'node', version: '24.22.2', type: 'binary', locations: [{ path: '/opt/node-v24/bin/node' }] }, vulnerability: { id: 'CVE-2', severity: 'CRITICAL', fix: { state: 'fixed', versions: ['24.22.3'] } } },
+    { artifact: { name: 'node', version: '24.22.2', type: 'npm' }, vulnerability: { id: 'CVE-3', severity: 'HIGH' } },
+    { artifact: { name: 'openssl', version: '3.0.0', type: 'deb' }, vulnerability: { id: 'CVE-4', severity: 'LOW' } },
+  ] };
+  const nodeIdentity = { id: 'node-elf-identity', version: '24.22.2', expectedPath: '/opt/node-v24/bin/node' };
+  const result = summarizeNodeGrypeFindings(scan, nodeIdentity);
+  assert.equal(result.highCriticalCount, 2);
+  assert.deepEqual(result.findings.map((finding) => finding.id), ['CVE-1', 'CVE-2']);
+  assert.equal(result.findings[0].fix.state, 'not-fixed');
+  assert.equal(result.findings[1].fix.state, 'fixed');
+  assert.throws(() => summarizeNodeGrypeFindings({ matches: [{ ...scan.matches[0], artifact: { ...scan.matches[0].artifact, id: 'different-node-elf' } }] }, nodeIdentity), /does not match the verified Syft Node ELF/u);
+  assert.throws(() => summarizeNodeGrypeFindings({ matches: [{ ...scan.matches[0], artifact: { ...scan.matches[0].artifact, locations: [{ path: '/tmp/node' }] } }] }, nodeIdentity), /does not match the verified Syft Node ELF/u);
+  assert.throws(() => summarizeNodeGrypeFindings({ matches: [{ ...scan.matches[0], artifact: { ...scan.matches[0].artifact, version: '24.21.0' } }] }, nodeIdentity), /does not match the verified Syft Node ELF/u);
 });
 
 test('push trigger is restricted to the feature branch and comparison-only paths', () => {
@@ -194,6 +255,12 @@ test('workflow setup writes a valid fallback artifact before any tool action can
   assert.equal(report.phase, 'workflow-setup');
   assert.equal(report.nodeCoreVulnerabilityCoverage.status, 'uncovered');
   assert.equal(report.nodeCoreVulnerabilityCoverage.component, 'official Node.js 24.21.0 runtime binary');
+  const auditStep = parsed.jobs.compare.steps.find((item) => item.name === 'Add fail-closed Node binary audit fields to fallback evidence');
+  const auditSetup = spawnSync('/bin/bash', ['-ec', auditStep.run], { cwd: root, encoding: 'utf8', env: { ...process.env, COMPARE_OUTPUT: outputDir } });
+  assert.equal(auditSetup.status, 0, auditSetup.stderr);
+  const fallbackReport = JSON.parse(readFileSync(join(outputDir, 'report.json'), 'utf8'));
+  assert.equal(fallbackReport.nodeBinaryAudit.status, 'not-run');
+  assert.match(fallbackReport.nodeBinaryAudit.scope, /not complete Node\.js core advisory coverage/u);
   assert.equal(readFileSync(join(outputDir, 'diagnostics.log'), 'utf8').trim(), 'No scenario commands have run.');
 });
 

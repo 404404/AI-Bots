@@ -36,6 +36,24 @@ jobs:
         run: |
           mkdir -p "$COMPARE_OUTPUT"
           node --input-type=module -e 'import { writeFileSync } from "node:fs"; const nodeVersion = process.env.SCENARIO === "trixie" ? "24.21.0" : "24.22.2"; const report = { schemaVersion: 1, scenario: process.env.SCENARIO, result: "failed-or-incomplete", phase: "workflow-setup", build: { status: "not-run" }, runtime: { status: "not-run" }, scan: { status: "not-run" }, nodeCoreVulnerabilityCoverage: { status: "uncovered", component: `official Node.js ${nodeVersion} runtime binary`, reason: "Trivy image scanning does not establish coverage of the official Node binary; no complete severity-aware upstream core advisory feed is available." }, sbom: { status: "not-run" }, e2e: { status: "not-run" }, trivy: { status: "not-run" } }; writeFileSync(`${process.env.COMPARE_OUTPUT}/report.json`, `${JSON.stringify(report, null, 2)}\n`); writeFileSync(`${process.env.COMPARE_OUTPUT}/report.md`, `# ${process.env.SCENARIO} comparison\n\nWorkflow setup failed before the scenario runner could replace this fallback report. Node core binary vulnerability coverage is uncovered.\n`); writeFileSync(`${process.env.COMPARE_OUTPUT}/diagnostics.log`, "No scenario commands have run.\n");'
+      - name: Add fail-closed Node binary audit fields to fallback evidence
+        env:
+          COMPARE_OUTPUT: standalone-browser-compare-results/${{ matrix.scenario }}
+        run: |
+          node --input-type=module -e 'import { readFileSync, writeFileSync } from "node:fs"; const path = process.env.COMPARE_OUTPUT + "/report.json"; const report = JSON.parse(readFileSync(path, "utf8")); report.nodeBinaryAudit = { status: "not-run", scope: "known NVD/CPE-recorded advisories matched to the Syft-classified Node ELF only; not complete Node.js core advisory coverage", syft: { status: "not-run", expectedVersion: "1.55.0" }, grype: { status: "not-run", expectedVersion: "0.121.0" }, database: { status: "not-run", maximumAgeHours: 48 }, nodePackage: null, findings: null }; writeFileSync(path, JSON.stringify(report, null, 2) + "\n");'
+      - name: Install pinned Syft and Grype with official release checksums
+        env:
+          TOOL_DIR: ${{ runner.temp }}/compare-security-tools
+        run: |
+          set -euo pipefail
+          mkdir -p "$TOOL_DIR/downloads"
+          curl --fail --location --retry 3 --output "$TOOL_DIR/downloads/syft.tar.gz" https://github.com/anchore/syft/releases/download/v1.55.0/syft_1.55.0_linux_amd64.tar.gz
+          echo 'bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d  '"$TOOL_DIR/downloads/syft.tar.gz" | sha256sum --check --strict
+          tar -xzf "$TOOL_DIR/downloads/syft.tar.gz" -C "$TOOL_DIR" syft
+          curl --fail --location --retry 3 --output "$TOOL_DIR/downloads/grype.tar.gz" https://github.com/anchore/grype/releases/download/v0.121.0/grype_0.121.0_linux_amd64.tar.gz
+          echo '64e07133d3486115de647a66581461dccf5c732748a0a3119077395565f15519  '"$TOOL_DIR/downloads/grype.tar.gz" | sha256sum --check --strict
+          tar -xzf "$TOOL_DIR/downloads/grype.tar.gz" -C "$TOOL_DIR" grype
+          echo "$TOOL_DIR" >> "$GITHUB_PATH"
       - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
         with:
           version: v0.70.0

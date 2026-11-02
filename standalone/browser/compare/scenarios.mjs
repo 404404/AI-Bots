@@ -4,18 +4,21 @@ export const scenarios = Object.freeze({
     dockerfile: 'standalone/browser/Dockerfile',
     target: 'worker',
     nodeVersion: '24.21.0',
+    nodeBinaryPath: '/usr/local/bin/node',
     role: 'current-production-worker-baseline',
   }),
   noble: Object.freeze({
     base: 'mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f',
     dockerfile: 'standalone/browser/compare/Dockerfile.noble',
     nodeVersion: '24.22.2',
+    nodeBinaryPath: '/opt/node-v24/bin/node',
     role: 'official-playwright-ubuntu-24.04',
   }),
   resolute: Object.freeze({
     base: 'mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4',
     dockerfile: 'standalone/browser/compare/Dockerfile.resolute',
     nodeVersion: '24.22.2',
+    nodeBinaryPath: '/opt/node-v24/bin/node',
     role: 'official-playwright-ubuntu-26.04',
   }),
 });

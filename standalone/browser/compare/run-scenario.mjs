@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getScenario } from './scenarios.mjs';
+import { summarizeNodeGrypeFindings, validateGrypeDatabase, validateNodeBinarySbom } from './node-binary-audit.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -62,6 +63,23 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
     build: { status: 'not-run', command: buildArgs(scenario, sourceRevision, projectRoot) },
     image: null,
     trivy: { status: 'not-run', version: null, vulnerabilityDatabase: null },
+    nodeBinaryAudit: {
+      status: 'not-run',
+      scope: 'known NVD/CPE-recorded advisories matched to the Syft-classified Node ELF only; not complete Node.js core advisory coverage',
+      limitations: 'Node CPE uses a wildcard version template and relies on the exact Syft artifact version; binary CPE matching can associate advisories with non-binary target_sw values. This is a known-advisory aid, not complete core coverage.',
+      references: [
+        'https://github.com/anchore/syft/blob/v1.55.0/syft/pkg/cataloger/binary/classifiers.go',
+        'https://oss.anchore.com/docs/reference/grype/cli/',
+        'https://github.com/anchore/grype/issues/2883',
+        'https://github.com/anchore/syft/releases/tag/v1.55.0',
+        'https://github.com/anchore/grype/releases/tag/v0.121.0',
+      ],
+      syft: { status: 'not-run', expectedVersion: '1.55.0' },
+      grype: { status: 'not-run', expectedVersion: '0.121.0' },
+      database: { status: 'not-run', maximumAgeHours: 48 },
+      nodePackage: null,
+      findings: null,
+    },
     scan: { status: 'not-run', severity: ['HIGH', 'CRITICAL'], ignoreUnfixed: false, vulnTypes: ['os', 'library'] },
     nodeCoreVulnerabilityCoverage: {
       status: 'uncovered',
@@ -205,6 +223,93 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
       failed = true;
     }
 
+    const nodeSbomPath = resolve(out, 'node-binary-syft.json');
+    const grypeConfigPath = resolve(out, 'grype-node-audit.yaml');
+    const grypeConfig = [
+      'db:',
+      '  auto-update: false',
+      '  validate-age: true',
+      '  max-allowed-built-age: 48h',
+      'only-fixed: false',
+      'only-notfixed: false',
+      'ignore-wontfix: ""',
+      'ignore: []',
+      'vex-documents: []',
+      'vex-add: []',
+      '',
+    ].join('\n');
+    save('grype-node-audit.yaml', grypeConfig);
+    report.nodeBinaryAudit.configuration = { path: 'grype-node-audit.yaml', autoUpdate: false, validateDatabaseAge: true, maximumDatabaseAge: '48h', onlyFixed: false, onlyNotFixed: false, ignoreWontFix: '', ignoreRules: [], vexDocuments: [], vexAdd: [] };
+    const syftVersion = run(['syft', 'version', '-o', 'json'], { allowFailure: true });
+    report.nodeBinaryAudit.syft.versionExitCode = syftVersion.status;
+    report.nodeBinaryAudit.syft.versionOutput = redact(syftVersion.stdout, env).trim();
+    try {
+      const versionData = JSON.parse(syftVersion.stdout);
+      const observedVersion = versionData.version ?? versionData.Version ?? versionData.application?.version;
+      if (syftVersion.status !== 0 || observedVersion !== '1.55.0') throw new Error('Expected Syft 1.55.0, observed ' + (observedVersion ?? 'missing') + '.');
+      report.nodeBinaryAudit.syft.version = observedVersion;
+      const generated = run([
+        'syft', 'image', '--platform', 'linux/amd64',
+        '--select-catalogers', '+binary-classifier-cataloger',
+        '--output', 'syft-json=' + nodeSbomPath, scenario.image,
+      ], { allowFailure: true });
+      report.nodeBinaryAudit.syft.exitCode = generated.status;
+      report.nodeBinaryAudit.syft.stderr = redact(generated.stderr, env).trim();
+      if (generated.status !== 0) throw new Error('Syft image inventory exited ' + generated.status + '.');
+      const nodeSbom = JSON.parse(readFileSync(nodeSbomPath, 'utf8'));
+      report.nodeBinaryAudit.nodePackage = validateNodeBinarySbom(nodeSbom, {
+        expectedVersion: scenario.nodeVersion,
+        expectedPath: scenario.nodeBinaryPath,
+      });
+      report.nodeBinaryAudit.syft.status = 'passed';
+      save('node-binary-syft.json', JSON.stringify(nodeSbom, null, 2) + '\n');
+    } catch (error) {
+      report.nodeBinaryAudit.syft.status = 'incomplete';
+      report.nodeBinaryAudit.syft.error = redact(error.message ?? error, env);
+      failed = true;
+    }
+
+    const grypeVersion = run(['grype', '--config', grypeConfigPath, 'version', '-o', 'json'], { allowFailure: true });
+    report.nodeBinaryAudit.grype.versionExitCode = grypeVersion.status;
+    report.nodeBinaryAudit.grype.versionOutput = redact(grypeVersion.stdout, env).trim();
+    try {
+      const versionData = JSON.parse(grypeVersion.stdout);
+      const observedVersion = versionData.version ?? versionData.Version ?? versionData.application?.version;
+      if (grypeVersion.status !== 0 || observedVersion !== '0.121.0') throw new Error('Expected Grype 0.121.0, observed ' + (observedVersion ?? 'missing') + '.');
+      report.nodeBinaryAudit.grype.version = observedVersion;
+      const update = run(['grype', '--config', grypeConfigPath, 'db', 'update'], { allowFailure: true });
+      report.nodeBinaryAudit.database.updateExitCode = update.status;
+      report.nodeBinaryAudit.database.updateOutput = redact(update.stdout + '\n' + update.stderr, env).trim();
+      if (update.status !== 0) throw new Error('Grype database update exited ' + update.status + '.');
+      const dbStatus = run(['grype', '--config', grypeConfigPath, 'db', 'status', '-o', 'json'], { allowFailure: true });
+      report.nodeBinaryAudit.database.statusExitCode = dbStatus.status;
+      report.nodeBinaryAudit.database.rawOutput = redact(dbStatus.stdout, env).trim();
+      report.nodeBinaryAudit.database.errorOutput = redact(dbStatus.stderr, env).trim();
+      if (dbStatus.status !== 0) throw new Error('Grype database status exited ' + dbStatus.status + '.');
+      const observedAt = new Date().toISOString();
+      const dbJson = JSON.parse(dbStatus.stdout);
+      report.nodeBinaryAudit.database.metadata = validateGrypeDatabase(dbJson, observedAt, 48);
+      report.nodeBinaryAudit.database.status = 'fresh';
+      save('grype-db-status.json', JSON.stringify(dbJson, null, 2) + '\n');
+      if (report.nodeBinaryAudit.syft.status !== 'passed') throw new Error('Node binary SBOM is incomplete; refusing Grype evaluation.');
+      const grype = run(['grype', '--config', grypeConfigPath, 'sbom:' + nodeSbomPath, '-o', 'json'], { allowFailure: true });
+      report.nodeBinaryAudit.grype.exitCode = grype.status;
+      report.nodeBinaryAudit.grype.stderr = redact(grype.stderr, env).trim();
+      report.nodeBinaryAudit.grype.rawOutput = redact(grype.stdout, env).trim();
+      if (grype.status !== 0) throw new Error('Grype SBOM scan exited ' + grype.status + '.');
+      const grypeJson = JSON.parse(grype.stdout);
+      report.nodeBinaryAudit.findings = summarizeNodeGrypeFindings(grypeJson, report.nodeBinaryAudit.nodePackage);
+      save('grype-node-binary-findings.json', JSON.stringify(grypeJson, null, 2) + '\n');
+      report.nodeBinaryAudit.grype.status = report.nodeBinaryAudit.findings.highCriticalCount === 0 ? 'passed-no-high-critical' : 'high-critical-findings';
+      report.nodeBinaryAudit.status = report.nodeBinaryAudit.grype.status;
+      if (report.nodeBinaryAudit.findings.highCriticalCount > 0) failed = true;
+    } catch (error) {
+      report.nodeBinaryAudit.grype.status = 'incomplete';
+      report.nodeBinaryAudit.status = 'incomplete';
+      report.nodeBinaryAudit.error = redact(error.message ?? error, env);
+      failed = true;
+    }
+
     report.scan.startedAt = new Date().toISOString();
     const scan = run([
       'trivy', 'image', '--exit-code', '1', '--scanners', 'vuln', '--vuln-type', 'os,library',
@@ -277,6 +382,11 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
     report.runnerError = redact(error.message ?? error, env);
     if (report.build.status === 'not-run') report.build.status = 'failed';
   } finally {
+    if (report.nodeBinaryAudit.status === 'not-run') {
+      report.nodeBinaryAudit.status = 'incomplete';
+      report.nodeBinaryAudit.error = 'Syft/Grype audit did not run because image construction or an earlier phase failed.';
+      failed = true;
+    }
     if (!trivyVersionAttempted) recordTrivyVersion();
     report.result = failed ? 'failed-or-incomplete' : 'all-gates-passed';
     save('diagnostics.log', diagnostics.join('\n\n') + '\n');
@@ -289,6 +399,7 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
       `- Node core binary vulnerability coverage: **${report.nodeCoreVulnerabilityCoverage.status}** — ${report.nodeCoreVulnerabilityCoverage.reason}`,
       `- Trivy: ${report.trivy.version ?? report.trivy.status}; DB metadata: \`${JSON.stringify(report.trivy.vulnerabilityDatabase)}\`.`,
       '- Scan policy: OS and library vulnerabilities, HIGH and CRITICAL, `ignore-unfixed=false`; no exceptions.',
+      '- Syft/Grype Node binary CPE audit: **' + report.nodeBinaryAudit.status + '**; scope is known NVD/CPE advisories only, not complete Node core coverage.',
       '- Image identity, full package/vulnerability JSON, CycloneDX SBOM, Trivy version/DB metadata and diagnostics are attached when available.', '',
       'This is diagnostic evidence only. Selection requires a passing strict scan, Node core binary vulnerability coverage, and real Chromium sandbox plus fixture E2E; no image was published.', '',
     ].join('\n'));
@@ -323,6 +434,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       sbom: { status: 'not-run' },
       e2e: { status: 'not-run' },
       trivy: { status: 'not-run' },
+      nodeBinaryAudit: {
+        status: 'incomplete',
+        scope: 'known NVD/CPE-recorded advisories matched to the Syft-classified Node ELF only; not complete Node.js core advisory coverage',
+        limitations: 'Node CPE uses a wildcard version template and relies on the exact Syft artifact version; binary CPE matching can associate advisories with non-binary target_sw values. This is a known-advisory aid, not complete core coverage.',
+        error: 'Scenario initialization failed before Syft/Grype evidence could be collected.',
+      },
     };
     writeFileSync(resolve(outputDir, 'report.json'), `${JSON.stringify(partial, null, 2)}\n`);
     writeFileSync(resolve(outputDir, 'report.md'), `# Comparison failed\n\nRunner failed before it could initialize a scenario report: ${partial.runnerError}\n`);
