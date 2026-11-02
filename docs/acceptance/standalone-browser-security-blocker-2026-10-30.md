@@ -7,6 +7,7 @@
 | `d67c86d2` / [40985034393](https://github.com/404404/AI-Bots/actions/runs/40985034393) | Bookworm worker 扫描报告 100 项 HIGH/CRITICAL | 停止；未发布或部署失败产物。 |
 | `f27130ee` / [41013347453](https://github.com/404404/AI-Bots/actions/runs/41013347453) | 单元测试未挂载其读取的 workflow，ENOENT；未进入构建/扫描 | 保留失败，修复精确只读 fixture 挂载；缺少文件仍失败关闭。 |
 | `57493d4e` / [41013969970](https://github.com/404404/AI-Bots/actions/runs/41013969970) | 测试及四个镜像构建成功；Trixie worker 扫描仍有 67 项（66 HIGH、1 CRITICAL） | 扫描门禁失败，后续扫描/真实沙箱/E2E/归档均跳过；无可晋级产物。 |
+| `dbb9fb3b` / [41378523337](https://github.com/404404/AI-Bots/actions/runs/41378523337) | 2026-11-02 测试、语法检查及四个镜像构建成功；worker 严格扫描有 109 项（108 HIGH、1 CRITICAL） | 后续镜像扫描、真实沙箱/E2E 和归档跳过；本次无可晋级产物。 |
 
 本地固定 Node24 隔离测试及 CI fixture 复测通过，不代替扫描、真实 Chromium 沙箱或容器网络隔离验收。具体日志和脱敏调查存放在 gitignored `.local/standalone-bot-expansion/evidence/`，不会随镜像公开私有测试数据。
 
