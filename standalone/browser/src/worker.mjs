@@ -655,6 +655,7 @@ export class BrowserWorker {
       try { await page.goto(target.href, { waitUntil: 'domcontentloaded', timeout: OP_TIMEOUT_MS }); }
       catch (error) {
         this.logger({ event: 'browser-navigation-failed', sessionId: session.id, phase: 'page-goto', protocol: target.protocol, ...diagnosticError(error), at: this.now() });
+        if (error?.name === 'TimeoutError') throw new BrowserError('navigation-timeout', '浏览器导航超时。', 504);
         throw error;
       }
       const finalTarget = canonicalTarget(page.url());

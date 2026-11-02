@@ -26,18 +26,22 @@ assert.equal(healthResponse.status, 200, JSON.stringify(health));
 assert.deepEqual(health.capabilities, { version: 1, queryPolicy: 'deny' }, 'browser_read E2E requires the worker to report enforced query denial');
 
 async function operation(session, sequence, action, args = {}) {
-  const result = await request(`/v1/sessions/${session.sessionId}/operations`, {
+  const result = await operationRequest(session, sequence, action, args);
+  assert.equal(result.status, 200, JSON.stringify(result.value));
+  assert.equal(result.value.status, 'completed');
+  return result.value.result;
+}
+
+function operationRequest(session, sequence, action, args = {}, operationId = randomUUID()) {
+  return request(`/v1/sessions/${session.sessionId}/operations`, {
     botId: session.botId,
     taskId: session.taskId,
     requiredPolicy: { version: 1, queryPolicy: 'deny' },
     sequence,
-    operationId: randomUUID(),
+    operationId,
     action,
     args,
   });
-  assert.equal(result.status, 200, JSON.stringify(result.value));
-  assert.equal(result.value.status, 'completed');
-  return result.value.result;
 }
 
 async function openSession(botId, taskId) {
@@ -58,10 +62,18 @@ try {
   await operation(sessionA, 3, 'navigate', { url: `${origin}/` });
   assert.deepEqual(await operation(sessionA, 4, 'type', { selector: '#note', text: 'one isolated fixture action' }), { typed: true, characters: 27 });
   assert.equal((await operation(sessionA, 5, 'scroll', { direction: 'down', pixels: 120 })).scrolled, 'down');
-  await operation(sessionA, 6, 'click', { selector: '#increment' });
+  const incrementOperationId = randomUUID();
+  const firstIncrement = await operationRequest(sessionA, 6, 'click', { selector: '#increment' }, incrementOperationId);
+  const repeatedIncrement = await operationRequest(sessionA, 6, 'click', { selector: '#increment' }, incrementOperationId);
+  assert.equal(firstIncrement.status, 200, JSON.stringify(firstIncrement.value));
+  assert.deepEqual(repeatedIncrement, firstIncrement, 'repeating an operation ID must return the cached result');
   const afterText = await operation(sessionA, 7, 'read');
   assert.match(afterText.text, new RegExp(`Count:\\s*${before + 1}`, 'u'));
   const screenshot = await operation(sessionA, 8, 'screenshot');
+  const wrongBotImage = await request(`/v1/sessions/${sessionA.sessionId}/screenshots/${screenshot.resourceId}`, { botId: `${botA}-other`, taskId: taskA, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  assert.equal(wrongBotImage.status, 404, 'screenshot must reject a different Bot owner');
+  const wrongTaskImage = await request(`/v1/sessions/${sessionA.sessionId}/screenshots/${screenshot.resourceId}`, { botId: botA, taskId: `${taskA}-other`, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  assert.equal(wrongTaskImage.status, 404, 'screenshot must reject a different task owner');
   const image = await request(`/v1/sessions/${sessionA.sessionId}/screenshots/${screenshot.resourceId}`, { botId: botA, taskId: taskA, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
   assert.equal(image.status, 200);
   assert.equal(image.contentType, 'image/png');
@@ -86,6 +98,18 @@ try {
   await operation(sessionB, 1, 'navigate', { url: `${origin}/isolation` });
   const observed = await operation(sessionB, 2, 'read');
   assert.equal(observed.text.includes('fixture-session'), false, 'a new context must not inherit cookies from another Bot/task');
+  await operation(sessionB, 3, 'navigate', { url: `${origin}/popup-page` });
+  await operation(sessionB, 4, 'click', { selector: '#open-popup' });
+  let popupCounts;
+  let popupSequence = 5;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await operation(sessionB, popupSequence++, 'navigate', { url: `${origin}/request-count` });
+    popupCounts = JSON.parse((await operation(sessionB, popupSequence++, 'read')).text);
+    if (popupCounts.popupRedirectRequests >= 1) break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.ok(popupCounts.popupRedirectRequests >= 1, 'fixture must observe the real popup initial request');
+  assert.equal(popupCounts.requestCount, 0, 'popup redirect query must be blocked before the fixture hit endpoint');
 } finally {
   await request(`/v1/sessions/${sessionB.sessionId}/close`, { botId: botB, taskId: taskB, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
 }
@@ -120,4 +144,54 @@ try {
   await request(`/v1/sessions/${sessionC.sessionId}/close`, { botId: botC, taskId: taskC, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
 }
 
-process.stdout.write(JSON.stringify({ result: 'pass', operations: 16, screenshotBytes: 'captured-after-action', fixtureCountIncremented: true, isolatedCookieAbsent: true, queryRedirectAndSubresourceBlocked: true }) + '\n');
+const botD = `e2e-${randomUUID()}`;
+const taskD = `task-${randomUUID()}`;
+const sessionD = await openSession(botD, taskD);
+try {
+  const slowNavigation = operationRequest(sessionD, 1, 'navigate', { url: `${origin}/slow` });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const observer = await openSession(`e2e-${randomUUID()}`, `task-${randomUUID()}`);
+  try {
+    await operation(observer, 1, 'navigate', { url: `${origin}/slow-status` });
+    const slowStatus = JSON.parse((await operation(observer, 2, 'read')).text);
+    assert.ok(slowStatus.slowRequests >= 1, 'fixture must confirm the slow request is actually in flight before cancel');
+  } finally {
+    await request(`/v1/sessions/${observer.sessionId}/close`, { botId: observer.botId, taskId: observer.taskId, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  }
+  const cancellation = await request(`/v1/sessions/${sessionD.sessionId}/cancel`, { botId: botD, taskId: taskD, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  assert.equal(cancellation.status, 200, JSON.stringify(cancellation.value));
+  const cancelledNavigation = await slowNavigation;
+  assert.ok(cancelledNavigation.status >= 400, 'cancelled in-flight navigation must not report completed');
+  assert.notEqual(cancelledNavigation.value?.status, 'completed');
+  const afterCancel = await request(`/v1/sessions/${sessionD.sessionId}/operations`, {
+    botId: botD, taskId: taskD, requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 2, operationId: randomUUID(), action: 'read',
+  });
+  assert.ok(afterCancel.status >= 400, 'cancelled session must reject subsequent operations');
+} finally {
+  await request(`/v1/sessions/${sessionD.sessionId}/close`, { botId: botD, taskId: taskD, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+}
+
+const botE = `e2e-${randomUUID()}`;
+const taskE = `task-${randomUUID()}`;
+const sessionE = await openSession(botE, taskE);
+const timeoutObserver = await openSession(`e2e-${randomUUID()}`, `task-${randomUUID()}`);
+try {
+  await operation(timeoutObserver, 1, 'navigate', { url: `${origin}/slow-status` });
+  const baselineSlowRequests = JSON.parse((await operation(timeoutObserver, 2, 'read')).text).slowRequests;
+  assert.ok(Number.isInteger(baselineSlowRequests));
+  const timeoutStartedAt = Date.now();
+  const timeout = await operationRequest(sessionE, 1, 'navigate', { url: `${origin}/slow` });
+  const timeoutElapsedMs = Date.now() - timeoutStartedAt;
+  assert.equal(timeout.status, 504, JSON.stringify(timeout.value));
+  assert.equal(timeout.value.error.code, 'navigation-timeout', JSON.stringify(timeout.value));
+  assert.ok(timeoutElapsedMs >= 12_000 && timeoutElapsedMs < 22_000, `navigation timeout elapsed outside the expected bound: ${timeoutElapsedMs}ms`);
+  await operation(timeoutObserver, 3, 'navigate', { url: `${origin}/slow-status` });
+  const slowStatus = JSON.parse((await operation(timeoutObserver, 4, 'read')).text);
+  assert.equal(slowStatus.slowRequests, baselineSlowRequests + 1, 'the timed-out navigation must increment the fixture slow-request counter exactly once');
+  assert.equal((await operation(sessionE, 2, 'navigate', { url: `${origin}/count` })).url, `${origin}/count`, 'session context must remain usable after navigation timeout');
+} finally {
+  await request(`/v1/sessions/${timeoutObserver.sessionId}/close`, { botId: timeoutObserver.botId, taskId: timeoutObserver.taskId, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  await request(`/v1/sessions/${sessionE.sessionId}/close`, { botId: botE, taskId: taskE, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+}
+
+process.stdout.write(JSON.stringify({ result: 'pass', screenshotScopeDenied: true, operationIdSideEffectOnce: true, cancellationCleanupVerified: true, navigationTimeoutVerified: true, fixtureCountIncremented: true, isolatedCookieAbsent: true, popupRedirectAndQueryBlocked: true, queryRedirectAndSubresourceBlocked: true }) + '\n');

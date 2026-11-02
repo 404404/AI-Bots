@@ -55,4 +55,12 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 [CI 41440677136](https://github.com/404404/AI-Bots/actions/runs/41440677136) 中，严格租约的 HTTPS CONNECT 在代理处返回 403；第一个会话完成基础操作后，第二个会话创建等待超时，Gateway 返回 `worker-unavailable`，因此后续 query 重定向零命中和跨会话用例未完成。[CI 41440677038](https://github.com/404404/AI-Bots/actions/runs/41440677038) 的 Resolute 使用完整 Chromium channel 后仍在沙箱页面导航阶段超时，严格沙箱门禁保持失败。此次两轮均未发布或部署。
 
+## 当前已验证范围与剩余门禁
+
+[CI 41445703818](https://github.com/404404/AI-Bots/actions/runs/41445703818)（源码 `6f5b8f40da1a332bd3cedd85404becb4b74f1121`）的独立 Chromium E2E 成功，四个生产候选镜像扫描仍失败，候选归档跳过。Terra 核对了真实 fixture 的导航、读取、输入、滚动、点击及截图，沙箱三项正向状态、metadata 拒绝、不同 Bot/Task 会话的 cookie 隔离、HTTP query 重定向与图片目标零命中。真实取消、超时、操作幂等重放、实际 popup、截图跨范围隔离和真实模型调用未包含在这次通过范围中；HTTPS 重定向仅验证返回错误。
+
+[CI 41445703831](https://github.com/404404/AI-Bots/actions/runs/41445703831) 的 Resolute 比较镜像在同一源码下通过 Trivy HIGH/CRITICAL、Node 24 运行探针、沙箱及现有 fixture E2E；Syft/Grype 对已知 NVD/CPE 的 Node 二进制匹配无 HIGH/CRITICAL。比较结果仍为失败：Node 核心覆盖未完全证明的单独门禁未通过。该 runner 内 image config ID 为 `sha256:a252f0a2ef8a71f867648e729ec2d3bbf8d36a1f643cafe990d9db23402feb9a`，无 registry digest；这不是可部署镜像。比较用途的 256 PID 有界配置下，三个页面创建成功且内核上限事件为零；先前 128 上限时曾有达到上限的事件，第二个页面创建超时。
+
+严格 `browser_read` 当前拒绝 HTTPS 和包含 query 的目标；HTTPS 支持、真实模型/工作 Bot 汇报、所有镜像的扫描与完整隔离验收仍未完成。镜像组必须来自同次构建；旧 Worker 与新 Proxy 混用会因缺少租约策略而拒绝。以上候选均未发布、未部署至 GK50。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

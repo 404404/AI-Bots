@@ -209,7 +209,7 @@ test('strict proxy lease blocks popup-style redirect queries before fixture rece
   }
   const counter = await proxyRequest(proxyPort, { path: `${fixtureOrigin}/request-count`, headers: { host: expectedHost, 'proxy-authorization': auth } });
   assert.equal(counter.status, 200);
-  assert.deepEqual(JSON.parse(counter.body), { requestCount: 0 });
+  assert.deepEqual(JSON.parse(counter.body), { requestCount: 0, popupRedirectRequests: 1 });
   assert.equal(denied.length, 3);
   assert.ok(denied.every((entry) => entry.code === 'target-query-denied'));
 });

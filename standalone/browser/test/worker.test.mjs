@@ -280,6 +280,23 @@ test('trusted deny query policy blocks navigations and each routed request befor
   }), { code: 'target-query-denied' });
 });
 
+test('navigation timeout errors preserve a specific code for the real E2E gate', async (t) => {
+  const { worker, driver } = await setup(t, undefined, { queryPolicy: 'deny' });
+  await worker.start();
+  const session = await worker.create({
+    operationId: randomUUID(), botId: 'timeout-code-bot', taskId: 'timeout-code-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  });
+  driver.opened.at(-1).page.goto = async () => {
+    const error = new Error('navigation timed out');
+    error.name = 'TimeoutError';
+    throw error;
+  };
+  await assert.rejects(worker.operate(session.sessionId, {
+    botId: 'timeout-code-bot', taskId: 'timeout-code-task', requiredPolicy: { version: 1, queryPolicy: 'deny' },
+    sequence: 1, operationId: randomUUID(), action: 'navigate', args: { url: `${origin}/slow` },
+  }), { code: 'navigation-timeout', status: 504 });
+});
+
 test('strict query sessions fail closed when HTTPS or the Chromium network query guard is unavailable', async (t) => {
   const httpsSetup = await setup(t, undefined, { queryPolicy: 'deny' });
   await httpsSetup.worker.start();

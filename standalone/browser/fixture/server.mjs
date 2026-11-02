@@ -4,6 +4,8 @@ import { pathToFileURL } from 'node:url';
 export function createFixtureServer({ expectedHost = process.env.FIXTURE_HOST || 'fixture.test:8081' } = {}) {
   let count = 0;
   let requestCount = 0;
+  let popupRedirectRequests = 0;
+  let slowRequests = 0;
   return createServer((req, res) => {
     const acceptedHost = typeof expectedHost === 'function' ? expectedHost(req) : expectedHost;
     if (req.headers.host !== acceptedHost) {
@@ -12,15 +14,29 @@ export function createFixtureServer({ expectedHost = process.env.FIXTURE_HOST ||
     }
     const url = new URL(req.url ?? '/', 'http://fixture.test:8081');
     if (req.method === 'GET' && url.pathname === '/request-count') {
-      const body = JSON.stringify({ requestCount });
+      const body = JSON.stringify({ requestCount, popupRedirectRequests });
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       return res.end(body);
+    }
+    if (req.method === 'GET' && url.pathname === '/slow-status') {
+      const body = JSON.stringify({ slowRequests });
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      return res.end(body);
+    }
+    if (req.method === 'GET' && url.pathname === '/slow') {
+      slowRequests += 1;
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      res.write('<!doctype html><title>Slow fixture</title><p>response pending');
+      const timer = setTimeout(() => res.end('</p>'), 20_000);
+      res.on('close', () => clearTimeout(timer));
+      return;
     }
     if (req.method === 'GET' && url.pathname === '/redirect-query') {
       res.writeHead(302, { location: '/hit?redirect=1', 'cache-control': 'no-store' });
       return res.end();
     }
     if (req.method === 'GET' && url.pathname === '/popup-redirect') {
+      popupRedirectRequests += 1;
       res.writeHead(302, { location: '/hit?popup=1', 'cache-control': 'no-store' });
       return res.end();
     }
