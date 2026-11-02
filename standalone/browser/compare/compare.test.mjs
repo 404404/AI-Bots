@@ -18,6 +18,9 @@ const runner = readFileSync(new URL('./run-scenario.mjs', import.meta.url), 'utf
 
 test('comparison pins all requested official immutable indexes and the unchanged Trixie worker baseline', () => {
   assert.equal(scenarios.trixie.base, 'node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66');
+  assert.equal(scenarios.trixie.nodeVersion, '24.21.0');
+  assert.equal(scenarios.noble.nodeVersion, '24.22.2');
+  assert.equal(scenarios.resolute.nodeVersion, '24.22.2');
   assert.equal(scenarios.noble.base, 'mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f');
   assert.equal(scenarios.resolute.base, 'mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4');
   assert.equal(lock.packages[''].dependencies['playwright-core'], '1.64.1');
@@ -39,9 +42,33 @@ test('Playwright candidates use checksummed official Node 24.22.2 and update the
     assert.match(dockerfile, /apt-get purge -y nodejs/u);
     assert.match(dockerfile, /tar -xzf \/tmp\/node-v24\.22\.2-linux-x64\.tar\.gz -C \/opt/u);
     assert.match(dockerfile, /test -s \/opt\/node-v24\.22\.2-linux-x64\/LICENSE/u);
-    assert.match(dockerfile, /PATH="\/opt\/node-v24\.22\.2-linux-x64\/bin:\$\{PATH\}"/u);
-    assert.doesNotMatch(dockerfile, /COPY --from=/u);
+    assert.match(dockerfile, /ENV PATH="\/opt\/node-v24\.22\.2-linux-x64\/bin:\$\{PATH\}"/u);
   }
+});
+
+test('candidate runtime stages keep only Node and locked production dependencies while recording uncovered Node core scan', () => {
+  const bases = [scenarios.noble.base, scenarios.resolute.base];
+  for (const [index, dockerfile] of candidateDockerfiles.entries()) {
+    const base = bases[index];
+    assert.equal(dockerfile.split(`FROM ${base} AS `).length - 1, 2);
+    assert.match(dockerfile, /FROM .* AS dependencies/u);
+    assert.match(dockerfile, /FROM .* AS worker/u);
+    assert.match(dockerfile, /COPY package\.json package-lock\.json \.\//u);
+    assert.match(dockerfile, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/u);
+    assert.match(dockerfile, /COPY --from=dependencies --chown=10001:10001 \/opt\/browser\/node_modules \.\/node_modules/u);
+    assert.match(dockerfile, /COPY --from=dependencies \/opt\/node-v24\.22\.2-linux-x64\/bin\/node \/opt\/node-v24\/bin\/node/u);
+    assert.match(dockerfile, /COPY --from=dependencies \/opt\/node-v24\.22\.2-linux-x64\/LICENSE \/usr\/share\/doc\/nodejs\/LICENSE/u);
+    const copiedNodeFiles = dockerfile.split('\n').filter((line) => line.startsWith('COPY --from=dependencies /opt/node-v24.22.2-linux-x64/'));
+    assert.deepEqual(copiedNodeFiles, [
+      'COPY --from=dependencies /opt/node-v24.22.2-linux-x64/bin/node /opt/node-v24/bin/node',
+      'COPY --from=dependencies /opt/node-v24.22.2-linux-x64/LICENSE /usr/share/doc/nodejs/LICENSE',
+    ]);
+    assert.doesNotMatch(dockerfile, /COPY --from=dependencies [^\n]*node_modules\/npm/u);
+    assert.match(dockerfile, /io\.404404\.scan\.node-core\.coverage="uncovered"/u);
+    assert.match(dockerfile, /io\.404404\.scan\.node-core\.reason=/u);
+    assert.match(dockerfile, /COPY LICENSE NOTICE\.md \.\//u);
+  }
+  assert.match(runner, /nodeCoreVulnerabilityCoverage: \{\s*status: 'uncovered'/u);
 });
 
 test('workflow isolates each base in a non-publishing manual matrix and keeps evidence after failure', () => {
@@ -105,6 +132,7 @@ test('build args target the production worker and runtime probe prefers CHROMIUM
   const probe = runtimeProbeScript();
   assert.match(probe, /process\.env\.CHROMIUM_PATH\|\|pw\.chromium\.executablePath\(\)/u);
   assert.match(probe, /assert\.match\(process\.version,\/\^v24/u);
+  assert.match(probe, /NODE_EXPECTED_VERSION/u);
   assert.match(probe, /PLAYWRIGHT_EXPECTED_VERSION/u);
   assert.match(probe, /fs\.existsSync\(executable\)/u);
   assert.doesNotMatch(probe, /`|\$\{/u);
@@ -154,16 +182,18 @@ test('workflow setup writes a valid fallback artifact before any tool action can
   const parsed = parse(workflow);
   const step = parsed.jobs.compare.steps.find((item) => item.name === 'Prepare fallback evidence before tool installation');
   assert.ok(step);
-  const outputDir = join(temp, 'artifacts', 'noble');
+  const outputDir = join(temp, 'artifacts', 'trixie');
   const execution = spawnSync('/bin/bash', ['-ec', step.run], {
     cwd: root,
     encoding: 'utf8',
-    env: { ...process.env, SCENARIO: 'noble', COMPARE_OUTPUT: outputDir },
+    env: { ...process.env, SCENARIO: 'trixie', COMPARE_OUTPUT: outputDir },
   });
   assert.equal(execution.status, 0, execution.stderr);
   const report = JSON.parse(readFileSync(join(outputDir, 'report.json'), 'utf8'));
-  assert.equal(report.scenario, 'noble');
+  assert.equal(report.scenario, 'trixie');
   assert.equal(report.phase, 'workflow-setup');
+  assert.equal(report.nodeCoreVulnerabilityCoverage.status, 'uncovered');
+  assert.equal(report.nodeCoreVulnerabilityCoverage.component, 'official Node.js 24.21.0 runtime binary');
   assert.equal(readFileSync(join(outputDir, 'diagnostics.log'), 'utf8').trim(), 'No scenario commands have run.');
 });
 
@@ -173,12 +203,16 @@ test('generated Compose tokens are redacted from command diagnostics and every r
   const outputDir = join(temp, 'output');
   const env = { SOURCE_REVISION: 'abc123' };
   const composeTokens = [];
+  let runtimeArgs;
   const execute = (command, args, options) => {
     if (command === 'docker' && args[0] === 'image' && args[1] === 'inspect') {
       return { status: 0, stdout: JSON.stringify([{ Id: 'sha256:image', RootFS: { Layers: [] }, Config: { Labels: {} }, Os: 'linux', Architecture: 'amd64' }]), stderr: '' };
     }
     if (command === 'docker' && args[0] === 'history') return { status: 0, stdout: 'sha256:layer\n', stderr: '' };
-    if (command === 'docker' && args[0] === 'run') return { status: 0, stdout: 'v24.21.0\n1.64.1\nChromium 140.0\n', stderr: '' };
+    if (command === 'docker' && args[0] === 'run') {
+      runtimeArgs = args;
+      return { status: 0, stdout: 'v24.21.0\n1.64.1\nChromium 140.0\n', stderr: '' };
+    }
     if (command === 'docker' && args[0] === 'compose') {
       const control = options.env.BROWSER_CONTROL_TOKEN;
       const proxy = options.env.BROWSER_PROXY_ADMIN_TOKEN;
@@ -195,9 +229,13 @@ test('generated Compose tokens are redacted from command diagnostics and every r
     }
     return { status: 0, stdout: '', stderr: '' };
   };
-  const { report, exitCode } = await runScenario({ name: 'noble', projectRoot: root.pathname, outputDir, env, execute });
-  assert.equal(exitCode, 0);
+  const { report, exitCode } = await runScenario({ name: 'trixie', projectRoot: root.pathname, outputDir, env, execute });
+  assert.equal(exitCode, 1);
   assert.equal(report.e2e.status, 'passed');
+  assert.equal(report.nodeCoreVulnerabilityCoverage.status, 'uncovered');
+  assert.equal(report.nodeCoreVulnerabilityCoverage.component, 'official Node.js 24.21.0 runtime binary');
+  assert.ok(runtimeArgs.includes('NODE_EXPECTED_VERSION=24.21.0'));
+  assert.equal(report.result, 'failed-or-incomplete');
   assert.equal(composeTokens.length, 4);
   const artifacts = readFileSync(join(outputDir, 'diagnostics.log'), 'utf8')
     + readFileSync(join(outputDir, 'report.json'), 'utf8')

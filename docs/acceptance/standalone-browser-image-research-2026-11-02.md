@@ -40,6 +40,8 @@ The worker is deliberately non-root (`10001:10001`), has `chromiumSandbox: true`
 
 ## Candidate image baselines and digest availability
 
+**后续实测更正：** 下文有关官方 Playwright 镜像 Node 版本的推断不能作为运行时证据。固定 digest 的 Noble 与 Resolute 镜像在第一轮隔离 CI 实测均为 Node 26.13.0；后续候选另行安装 Node 24。各轮真实版本与扫描结论以 [Browser 验收记录](standalone-browser-worker-results-2026-11-02.md) 为准。
+
 1. **Trixie / Node official image.** The exact pinned current baseline is known and reproducible from the CI log. Rebuilding it with package refreshes is the lowest-change experiment, but Debian currently still marks the Trixie libxml2 package vulnerable for CVE-2026-6653, so do not expect the CRITICAL to disappear from an OS scan simply because apt upgraded. A newer Trixie tag should be resolved to a digest and recorded before comparison; mutable tags alone are not a result.
 2. **Ubuntu 24.04 Noble.** Playwright's official `mcr.microsoft.com/playwright:v1.64.1-noble` image has an OCI index digest published by Microsoft's Artifact Registry. The registry listing observed during this research showed digest `sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f` (published 2026-11-01); verify the registry digest again at run time before pinning because tags can be republished. ([Microsoft Artifact Registry](https://mcr.microsoft.com/product/playwright))
 3. **Ubuntu 26.04 Resolute.** The official `mcr.microsoft.com/playwright:v1.64.1-resolute` OCI index digest was listed as `sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4` (published 2026-11-01). The registry page also listed an amd64-specific artifact. Verify digest and architecture at run time. ([Microsoft Artifact Registry](https://mcr.microsoft.com/product/playwright))

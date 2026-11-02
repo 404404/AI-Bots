@@ -23,6 +23,7 @@ export function runtimeProbeScript() {
     JSON.stringify([
       'const assert=require("node:assert/strict"),fs=require("node:fs"),cp=require("node:child_process"),pw=require("playwright-core");',
       'assert.match(process.version,/^v24\\./,"Node 24 is required");',
+      'assert.equal(process.version,"v"+process.env.NODE_EXPECTED_VERSION,"Node version must match the scenario baseline");',
       'const version=require("playwright-core/package.json").version;',
       'assert.equal(version,process.env.PLAYWRIGHT_EXPECTED_VERSION,"playwright-core must match package-lock.json");',
       'const executable=process.env.CHROMIUM_PATH||pw.chromium.executablePath();',
@@ -62,6 +63,11 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
     image: null,
     trivy: { status: 'not-run', version: null, vulnerabilityDatabase: null },
     scan: { status: 'not-run', severity: ['HIGH', 'CRITICAL'], ignoreUnfixed: false, vulnTypes: ['os', 'library'] },
+    nodeCoreVulnerabilityCoverage: {
+      status: 'uncovered',
+      component: `official Node.js ${scenario.nodeVersion} runtime binary`,
+      reason: 'Trivy image scanning does not establish coverage of the official Node binary; no complete severity-aware upstream core advisory feed is available.',
+    },
     sbom: { status: 'not-run', format: 'CycloneDX JSON' },
     runtime: { status: 'not-run', node: null, playwrightCore: null, chromium: null, user: '10001:10001', sandboxRequired: true },
     e2e: { status: 'not-run' },
@@ -71,7 +77,8 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
       'Container E2E uses the existing network_mode:none worker, cap_drop:ALL, no-new-privileges, and unchanged Chromium user-namespace seccomp profile.',
     ],
   };
-  let failed = false;
+  // Diagnostic comparisons cannot be promotable until Node core binary coverage is established.
+  let failed = true;
   let trivyVersionAttempted = false;
   const diagnostics = [];
 
@@ -184,7 +191,7 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
       'docker', 'run', '--rm', '--network', 'none', '--read-only', '--tmpfs', '/tmp:size=384m,mode=0700,uid=10001,gid=10001',
       '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true',
       '--security-opt', 'seccomp=standalone/browser/deploy/chromium-userns-seccomp.json',
-      '--user', '10001:10001', '-e', `PLAYWRIGHT_EXPECTED_VERSION=${expectedPlaywright}`,
+      '--user', '10001:10001', '-e', `PLAYWRIGHT_EXPECTED_VERSION=${expectedPlaywright}`, '-e', `NODE_EXPECTED_VERSION=${scenario.nodeVersion}`,
       scenario.image, 'sh', '-ec', probe,
     ], { allowFailure: true });
     report.runtime.output = redact(runtime.stdout, env).trim();
@@ -279,10 +286,11 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
       `- Result: **${report.result}**`, `- Base: \`${scenario.base}\``, `- Source revision: \`${sourceRevision}\``,
       `- Lock SHA-256: \`${report.dependencyLockSha256}\``,
       `- Build / runtime / strict scan / SBOM / fixture E2E: ${report.build.status} / ${report.runtime.status} / ${report.scan.status} / ${report.sbom.status} / ${report.e2e.status}.`,
+      `- Node core binary vulnerability coverage: **${report.nodeCoreVulnerabilityCoverage.status}** — ${report.nodeCoreVulnerabilityCoverage.reason}`,
       `- Trivy: ${report.trivy.version ?? report.trivy.status}; DB metadata: \`${JSON.stringify(report.trivy.vulnerabilityDatabase)}\`.`,
       '- Scan policy: OS and library vulnerabilities, HIGH and CRITICAL, `ignore-unfixed=false`; no exceptions.',
       '- Image identity, full package/vulnerability JSON, CycloneDX SBOM, Trivy version/DB metadata and diagnostics are attached when available.', '',
-      'This is diagnostic evidence only. Selection requires a passing strict scan and real Chromium sandbox plus fixture E2E; no image was published.', '',
+      'This is diagnostic evidence only. Selection requires a passing strict scan, Node core binary vulnerability coverage, and real Chromium sandbox plus fixture E2E; no image was published.', '',
     ].join('\n'));
   }
   return { report, exitCode: failed ? 1 : 0 };
@@ -291,6 +299,8 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const name = process.argv[2];
   const outputDir = process.env.COMPARE_OUTPUT || 'standalone-browser-compare-results';
+  let nodeVersion = 'unknown';
+  try { nodeVersion = getScenario(name).nodeVersion; } catch {}
   try {
     const { report, exitCode } = await runScenario({ name, outputDir });
     console.log(`comparison ${name}: ${report.result}`);
@@ -305,6 +315,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       build: { status: 'not-run' },
       runtime: { status: 'not-run' },
       scan: { status: 'not-run' },
+      nodeCoreVulnerabilityCoverage: {
+        status: 'uncovered',
+        component: `official Node.js ${nodeVersion} runtime binary`,
+        reason: 'Trivy image scanning does not establish coverage of the official Node binary; no complete severity-aware upstream core advisory feed is available.',
+      },
       sbom: { status: 'not-run' },
       e2e: { status: 'not-run' },
       trivy: { status: 'not-run' },
