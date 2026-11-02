@@ -7,8 +7,7 @@ on:
       - feature/gui-container-codex-prototype
     paths:
       - .github/workflows/standalone-browser-compare.yml
-      - standalone/browser/compare/**
-      - standalone/browser/src/**
+      - standalone/browser/**
 
 permissions:
   contents: read

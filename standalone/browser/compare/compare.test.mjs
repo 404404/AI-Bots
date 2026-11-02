@@ -160,9 +160,17 @@ test('push trigger is restricted to the feature branch and comparison-only paths
   assert.deepEqual(config.on.push.branches, ['feature/gui-container-codex-prototype']);
   assert.deepEqual(config.on.push.paths, [
     '.github/workflows/standalone-browser-compare.yml',
-    'standalone/browser/compare/**',
-    'standalone/browser/src/**',
+    'standalone/browser/**',
   ]);
+  for (const input of [
+    'standalone/browser/Dockerfile',
+    'standalone/browser/package.json',
+    'standalone/browser/package-lock.json',
+    'standalone/browser/scripts/e2e.mjs',
+    'standalone/browser/fixture/server.mjs',
+    'standalone/browser/deploy/compose.example.yml',
+    'standalone/browser/compare/run-scenario.mjs',
+  ]) assert.ok(config.on.push.paths.some((pattern) => input.startsWith(pattern.slice(0, -2))), `${input} must trigger comparison`);
   assert.ok(Object.hasOwn(config.on, 'workflow_dispatch'));
 });
 
