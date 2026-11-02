@@ -319,15 +319,29 @@ export class BrowserWorker {
   }
 
   async verifySandbox(browser) {
-    const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false });
+    let context;
+    let stage = 'context-create';
     try {
+      context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false });
+      stage = 'page-create';
       const page = await context.newPage();
+      stage = 'navigation';
       await page.goto('chrome://sandbox', { waitUntil: 'domcontentloaded', timeout: 5000 });
+      stage = 'status-read';
       const status = readChromiumSandboxStatus(await page.locator('body').innerText({ timeout: 3000 }));
+      stage = 'status-evaluate';
       this.logger({ event: 'chromium-sandbox-status', ...status, at: this.now() });
       return isChromiumSandboxVerified(status);
-    } catch { return false; }
-    finally { await context.close().catch(() => {}); }
+    } catch (error) {
+      const knownErrorNames = new Set(['Error', 'TypeError', 'TimeoutError', 'ProtocolError']);
+      this.logger({
+        event: 'chromium-sandbox-probe-failed',
+        stage,
+        errorName: knownErrorNames.has(error?.name) ? error.name : 'Other',
+        at: this.now(),
+      });
+      return false;
+    } finally { await context?.close().catch(() => {}); }
   }
 
   async create(input) {

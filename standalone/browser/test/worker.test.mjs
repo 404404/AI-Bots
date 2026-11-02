@@ -96,6 +96,46 @@ test('worker refuses to create a session unless its sandbox probe passes', async
   await assert.rejects(worker.create({ botId: 'bot-a', taskId: 'task-a', allowedOrigins: [origin] }), { code: 'browser-not-ready' });
 });
 
+test('worker sandbox probe logs only a safe failure stage and error-name enum', async (t) => {
+  const logs = [];
+  const { worker, driver } = await setup(t, undefined, { logger: (entry) => logs.push(entry) });
+  driver.browser.newContext = async () => {
+    const error = new Error('unsafe page text /secret/token');
+    error.name = 'CredentialError';
+    throw error;
+  };
+
+  await assert.rejects(worker.start(), { code: 'chromium-sandbox-unverified' });
+  const probeFailure = logs.find((entry) => entry.event === 'chromium-sandbox-probe-failed');
+  assert.deepEqual(probeFailure, {
+    event: 'chromium-sandbox-probe-failed', stage: 'context-create', errorName: 'Other', at: probeFailure.at,
+  });
+  assert.equal(JSON.stringify(logs).includes('unsafe page text'), false);
+  assert.equal(JSON.stringify(logs).includes('/secret/token'), false);
+});
+
+test('worker keeps sandbox verification closed when navigation fails', async (t) => {
+  const logs = [];
+  const { worker, driver } = await setup(t, undefined, { logger: (entry) => logs.push(entry) });
+  const newContext = driver.browser.newContext.bind(driver.browser);
+  driver.browser.newContext = async (...args) => {
+    const context = await newContext(...args);
+    const newPage = context.newPage.bind(context);
+    context.newPage = async () => {
+      const page = await newPage();
+      page.goto = async () => { throw Object.assign(new Error('chrome://sandbox /sensitive'), { name: 'TimeoutError' }); };
+      return page;
+    };
+    return context;
+  };
+
+  await assert.rejects(worker.start(), { code: 'chromium-sandbox-unverified' });
+  assert.ok(logs.some((entry) => entry.event === 'chromium-sandbox-probe-failed'
+    && entry.stage === 'navigation' && entry.errorName === 'TimeoutError'));
+  assert.equal(JSON.stringify(logs).includes('chrome://sandbox'), false);
+  assert.equal(JSON.stringify(logs).includes('/sensitive'), false);
+});
+
 test('worker startup explicitly disables Chromium proxy bypass and keeps sandbox enabled', async (t) => {
   const logs = [];
   const { worker, driver } = await setup(t, undefined, { logger: (entry) => logs.push(entry) });
