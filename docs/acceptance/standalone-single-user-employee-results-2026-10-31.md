@@ -5,6 +5,7 @@
 - 23443 预览初始的模型账户未配置显式代理，容器也没有代理环境变量。Codex 登录尝试返回 `unsupported_country_region_territory`，当时 `signedIn=false`，未发送真实模型请求。
 - 宿主机代理监听 `127.0.0.1:7890` 和 `172.17.0.1:7890`；从预览容器连接 `host.docker.internal:7890` 的 TCP 测试成功。已通过预览自身的认证业务接口配置 `http://host.docker.internal:7890`，保留原模型名称；等待重新登录和实际模型请求的代理路径证据。TCP 连通不证明 Codex 请求已通过代理，也不保证上游允许该账户使用。
 - 20443 旧候选没有代理环境变量；15 个 Bot 配置中 1 个含 `http://host.docker.internal:7890`，其余 14 个没有显式代理。没有改动该候选，也未确认其实际请求路径。
+- 网页修复版来自成功 CI `41373108047`、源码 `41e7c76e04f52cceb763d8ae2fbd3e6f4ba63261`，校验后的本机 OCI 镜像 ID 为 `sha256:66cb4affaae0e314c2bdbf56d06c10b84283418ab363df6807999bd6364f1515`，尚未发布 GHCR。24443 的专用网页验收容器测试后已停止；独立数据位于 `.local/standalone-bot-expansion/preview-41e7c76e/data`，保留供复核。23443 预览继续运行，20443 与 22443 未切换。
 
 验收依据：[用例](standalone-single-user-employee-cases-2026-10-31.md)。实现仍在集成，以下为中间态诊断，不代表最终版本验收。独立验收仅使用临时隔离数据，未访问现有 20443、22443、用户数据或凭据。
 
@@ -139,3 +140,15 @@ Node 22.23.1、npm 10.9.8，在 `standalone` 下分别以 300 秒和 120 秒超�
 独立审查 `delegation.test.mjs` 的修订：先以未来截止时间成功 `begin`，调用生产 `runDirect`，等待本地 HTTP 服务器实际收到请求；随后将测试任务的持久截止时间设为过去并触发捕获的生产定时器回调，断言真实 AbortController 信号已中止、任务持久状态为 `failed/task-deadline-exceeded`。这是受控触发而非等待真实时钟到期；服务器端 `aborted` 事件没有断言。针对性用例 1/1、完整 `npm test` 148/148 通过，完整日志 `/tmp/standalone-deadline-review-20261102.log`。本轮未访问预览。
 
 再次按用户确认检查隔离预览：`model-account.get` 返回 `configured=false`、`signedIn=false`，认证尝试状态 `failed/unsupported_country_region_territory`，Beta 模型仍为 `not-signed-in`。主代理只读确认账户代理未配置。按停止条件未发起模型请求，未修改账户或代理；本轮模型调用与在途任务均为零。授权和代理设置完成后方可继续真实模型验收；不能由本次状态推断流量实际经过何处。
+
+### 24443 固定修复镜像网页复测（2026-11-02）
+
+隔离容器 `gk50-employee-fix-qa` 使用镜像 `sha256:66cb4affaae0e314c2bdbf56d06c10b84283418ab363df6807999bd6364f1515` 和全新数据，非 root Chromium 使用项目窄 seccomp，namespace、PID namespace 和 seccomp-BPF 均启用。
+
+- 创建两员工后，私聊直接显示“预设欢迎语 · 角色分析待完成 · 请先设置模型账户”；Alpha 标签所在消息 ID 与 `employees.onboarding.status` 的 `preset-welcome` ID 一致，两员工状态均为 pending/model-account-required。
+- 网页创建双成员群并指定 Beta 为联系人，刷新后群成员和联系人与 canonical 数据一致。390px 时文档宽 375px，成员和回应者两个 select 均位于 x=27–348，无页面级横向溢出。
+- 默认头像可见；上传 32×32 合成 RGB PNG 后页面显示已保存，`bots.get` 返回相同 revision 和尺寸。
+- `/onboarding-state.js` 返回 200、JavaScript MIME；无 pageerror。console 有一次未登录时 `GET /api/v1/session` 的 401，登录后操作正常。
+- 浏览器拦截并延迟创建 Gamma 请求，关闭创建对话框并切换 Alpha，再释放请求：Gamma 出现在列表中，当前页面仍为 Alpha。该检查覆盖创建请求在途的切换，不穷举所有异步交错。
+
+截图及脱敏 JSON 位于 `/tmp/employee-fix-qa/`，浏览器 QA 容器已退出；预览容器及数据保留。未配置模型或访问 23443、20443；真实模型和远端设备不在本次结果中。
