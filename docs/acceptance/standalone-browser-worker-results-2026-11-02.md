@@ -78,4 +78,13 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 这些 ID 是本次 runner 中的镜像配置摘要，并非已发布的 registry manifest digest，也不能当作 GK50 部署身份。
 
+[CI 41516079293 的 integrated-resolute 作业](https://github.com/404404/AI-Bots/actions/runs/41516079293/job/125519868804)（源码 `b78afea5edc8b9572c0575660a868ed0f98b61b6`）增加了逐镜像 Node 二进制辅助审计。Terra 核对五个镜像的实际容器、扫描对象与 config ID 一致；五项 Trivy HIGH/CRITICAL 为零，Syft 均识别预期 Node 24.22.2，Grype 对当时 NVD/CPE 记录的已知匹配均为零，数据库有效且包含未修复项；真实 E2E 与清理退出码均为 0。该结果只覆盖已收录的漏洞，不能证明未知或未收录漏洞不存在。作业仍按已有 Node core `uncovered` 门禁失败，未发布或部署。该轮四个产品镜像的 runner 内 config ID：
+
+| 镜像 | 仅供本次 CI 追踪的 config ID |
+| --- | --- |
+| Worker | `sha256:296567687c881d35528e5b607b21e1c6bbaad5e1fbbc6298ca89b185bc800b8e` |
+| Proxy | `sha256:98773471d2900025644f5b5ded7d20e0a83eae69c6f280dab070bb0220324034` |
+| Gateway | `sha256:b636afb4847dcc2fd2fbe31699617c6d94d74ae27bfa5e5a05a0613b7df809a7` |
+| Fixture | `sha256:e2667f9953422df931ee40f52cee54438b70a1ad6f6c6843bc049cfaf9d70414` |
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。
