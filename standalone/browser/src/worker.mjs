@@ -266,7 +266,7 @@ export class BrowserWorker {
     this.browser = await this.launcher.launch({
       headless: true,
       chromiumSandbox: true,
-      executablePath: process.env.CHROMIUM_PATH || undefined,
+      ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : { channel: 'chromium' }),
       proxy: { server: this.proxyServer },
       args: ['--proxy-bypass-list=<-loopback>', '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'],
       env: { PATH: process.env.PATH || '/usr/bin:/bin', HOME: '/tmp/chrome-home', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', TZ: 'UTC' },
@@ -356,6 +356,11 @@ export class BrowserWorker {
     const allowedOrigins = [...new Set(input.allowedOrigins)];
     for (const origin of allowedOrigins) requireValue(this.rules.has(origin), 'target-origin-denied', '目标 origin 不在部署授权范围。', 403);
     this.assertRequiredPolicy(input, this.queryPolicy, this.queryPolicy === 'deny');
+    if (this.queryPolicy === 'deny') {
+      for (const origin of allowedOrigins) {
+        requireValue(new URL(origin).protocol === 'http:', 'strict-https-denied', '严格查询策略暂不允许 HTTPS 会话。', 403);
+      }
+    }
     const fingerprint = stableFingerprint({ botId, taskId, leaseMs, allowedOrigins, queryPolicy: this.queryPolicy });
     const existing = this.createRequests.get(operationId);
     if (existing) {
@@ -380,7 +385,7 @@ export class BrowserWorker {
     chmodSync(directory, 0o700);
     const session = { id, botId, taskId, secret, expiresAt, allowedOrigins: new Set(allowedOrigins), queryPolicy: this.queryPolicy, directory, context: null, page: null, nextSequence: 1, steps: 0, operations: new Map(), busy: null, state: 'starting', screenshots: new Map() };
     try {
-      await this.updateProxyLease({ sessionId: id, secret, expiresAt, origins: allowedOrigins });
+      await this.updateProxyLease({ sessionId: id, secret, expiresAt, origins: allowedOrigins, queryPolicy: session.queryPolicy });
       session.context = await this.browser.newContext({
         acceptDownloads: false,
         serviceWorkers: 'block',
@@ -389,6 +394,18 @@ export class BrowserWorker {
       });
       session.context.setDefaultTimeout(OP_TIMEOUT_MS);
       session.context.setDefaultNavigationTimeout(OP_TIMEOUT_MS);
+      session.page = await session.context.newPage();
+      if (session.queryPolicy === 'deny') {
+        try {
+          session.networkPolicySession = await session.context.newCDPSession(session.page);
+          await session.networkPolicySession.send('Network.enable');
+          // Block any URL query at Chromium's network layer, including redirect targets and subresources.
+          await session.networkPolicySession.send('Network.setBlockedURLs', { urls: ['*?*'] });
+        } catch {
+          await session.networkPolicySession?.detach().catch(() => {});
+          throw new BrowserError('query-guard-unavailable', '严格查询策略的浏览器网络拦截不可用。', 503);
+        }
+      }
       session.context.route('**/*', async (route) => {
         try {
           const target = canonicalTarget(route.request().url());
@@ -408,7 +425,6 @@ export class BrowserWorker {
         if (session.page && page !== session.page) page.close().catch(() => {});
         page.on('download', (download) => download.cancel().catch(() => {}));
       });
-      session.page = await session.context.newPage();
       session.state = 'active';
       this.sessions.set(id, session);
       this.event(session, 'session-created');
@@ -571,6 +587,7 @@ export class BrowserWorker {
     if (session.state === 'closed' || session.state === 'cancelled') return;
     session.state = status;
     this.sessions.delete(session.id);
+    await session.networkPolicySession?.detach().catch(() => {});
     await session.context?.close().catch(() => {});
     await this.updateProxyLease({ sessionId: session.id, close: true }).catch(() => {});
     rmSync(session.directory, { recursive: true, force: true });

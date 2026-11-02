@@ -9,7 +9,11 @@ import { createRestrictedProxy } from '../src/proxy.mjs';
 import { BrowserWorker } from '../src/worker.mjs';
 
 const origin = 'http://fixture.test:8081';
-const rules = { [origin]: { addresses: ['172.31.240.10'], allowPrivate: true } };
+const secureOrigin = 'https://fixture.test:8443';
+const rules = {
+  [origin]: { addresses: ['172.31.240.10'], allowPrivate: true },
+  [secureOrigin]: { addresses: ['172.31.240.10'], allowPrivate: true },
+};
 const proxyToken = 'proxy-internal-test-token-is-not-a-real-secret-0001';
 
 async function availablePort() {
@@ -22,10 +26,12 @@ async function availablePort() {
 
 function makeFakeBrowser(sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes') {
   const opened = [];
+  const cdpState = { unavailable: false };
   const browser = {
     async newContext() {
       const context = {
         routes: [],
+        cdpCommands: [],
         async newPage() {
           const state = { currentUrl: 'about:blank', clicks: 0, fills: [], scrolls: [] };
           const page = {
@@ -52,13 +58,17 @@ function makeFakeBrowser(sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Ye
         setDefaultNavigationTimeout() {},
         route(pattern, handler) { context.routes.push([pattern, handler]); },
         routeWebSocket(pattern, handler) { context.websocketHandler = handler; },
+        async newCDPSession() {
+          if (cdpState.unavailable) throw new Error('CDP unavailable');
+          return { async send(method, params) { context.cdpCommands.push({ method, params }); }, async detach() {} };
+        },
         on() {},
       };
       return context;
     },
     async close() { browser.closed = true; },
   };
-  return { browser, opened };
+  return { browser, opened, cdpState };
 }
 
 async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes', { networkInspector, bridgeProbe, maxSessions, queryPolicy, proxyServer, proxySocket = true, loopbackProxyPort, logger = () => {} } = {}) {
@@ -141,6 +151,8 @@ test('worker startup explicitly disables Chromium proxy bypass and keeps sandbox
   const { worker, driver } = await setup(t, undefined, { logger: (entry) => logs.push(entry) });
   await worker.start();
   assert.equal(driver.launchOptions.chromiumSandbox, true);
+  if (process.env.CHROMIUM_PATH) assert.equal(driver.launchOptions.executablePath, process.env.CHROMIUM_PATH);
+  else assert.equal(driver.launchOptions.channel, 'chromium', 'use full Chromium headless instead of Playwright headless shell');
   assert.ok(driver.launchOptions.args.includes('--proxy-bypass-list=<-loopback>'));
   assert.ok(driver.launchOptions.args.includes('--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'));
   assert.equal(driver.launchOptions.proxy.server.startsWith('http://127.0.0.1:'), true);
@@ -210,11 +222,12 @@ test('worker binds sessions to trusted Bot/task scope and caches idempotent oper
 });
 
 test('trusted deny query policy blocks navigations and each routed request before continue', async (t) => {
-  const { worker, driver } = await setup(t, undefined, { queryPolicy: 'deny' });
+  const { worker, proxy, driver } = await setup(t, undefined, { queryPolicy: 'deny' });
   const ready = await worker.start();
   assert.deepEqual(ready.capabilities, { version: 1, queryPolicy: 'deny' });
   const session = await worker.create({ operationId: randomUUID(), botId: 'bot-policy', taskId: 'task-policy', allowedOrigins: [origin], queryPolicy: 'allow', requiredPolicy: { version: 1, queryPolicy: 'deny' } });
   assert.deepEqual(session.enforcedPolicy, { version: 1, queryPolicy: 'deny' });
+  assert.equal(proxy.leases.get(session.sessionId)?.queryPolicy, 'deny', 'worker trusted policy must be bound into the proxy lease');
   await assert.rejects(worker.operate(session.sessionId, { botId: 'bot-policy', taskId: 'task-policy', requiredPolicy: { version: 1, queryPolicy: 'allow' } }), { code: 'required-policy-unmet' });
   await assert.rejects(worker.operate(session.sessionId, {
     botId: 'bot-policy', taskId: 'task-policy', sequence: 1, operationId: randomUUID(), action: 'navigate', args: { url: 'http://169.254.169.254/latest/meta-data/' },
@@ -225,6 +238,10 @@ test('trusted deny query policy blocks navigations and each routed request befor
   assert.equal(driver.opened.at(-1).page.state.currentUrl, 'about:blank');
 
   const context = driver.opened.at(-1);
+  assert.deepEqual(context.cdpCommands, [
+    { method: 'Network.enable', params: undefined },
+    { method: 'Network.setBlockedURLs', params: { urls: ['*?*'] } },
+  ]);
   const routeHandler = context.routes.find(([pattern]) => pattern === '**/*')[1];
   for (const url of [`${origin}/redirected?secret=value`, `${origin}/resource?secret=value`, `${origin}/trailing?`, 'https://user:pass@fixture.test:8081/']) {
     let continued = false;
@@ -237,6 +254,23 @@ test('trusted deny query policy blocks navigations and each routed request befor
     assert.equal(continued, false, `${url} must never be sent`);
     assert.equal(aborted, true, `${url} must be blocked before sending`);
   }
+});
+
+test('strict query sessions fail closed when HTTPS or the Chromium network query guard is unavailable', async (t) => {
+  const httpsSetup = await setup(t, undefined, { queryPolicy: 'deny' });
+  await httpsSetup.worker.start();
+  await assert.rejects(httpsSetup.worker.create({
+    operationId: randomUUID(), botId: 'https-policy', taskId: 'https-policy-task', allowedOrigins: [secureOrigin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), { code: 'strict-https-denied' });
+  assert.equal(httpsSetup.worker.sessions.size, 0);
+
+  const noCdp = await setup(t, undefined, { queryPolicy: 'deny' });
+  await noCdp.worker.start();
+  noCdp.driver.cdpState.unavailable = true;
+  await assert.rejects(noCdp.worker.create({
+    operationId: randomUUID(), botId: 'cdp-policy', taskId: 'cdp-policy-task', allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+  }), { code: 'query-guard-unavailable' });
+  assert.equal(noCdp.worker.sessions.size, 0);
 });
 
 test('closing through an operation remains idempotent after the session is removed', async (t) => {

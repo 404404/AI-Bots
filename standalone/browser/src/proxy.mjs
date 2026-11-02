@@ -35,6 +35,12 @@ function publicError(error) {
     : { code: 'upstream-failed', message: 'The restricted upstream request failed.', status: 502 };
 }
 
+function hasRequestTargetQuery(requestTarget) {
+  if (typeof requestTarget !== 'string') return true;
+  const fragmentAt = requestTarget.indexOf('#');
+  return (fragmentAt < 0 ? requestTarget : requestTarget.slice(0, fragmentAt)).includes('?');
+}
+
 function authLease(header, leases, now) {
   if (typeof header !== 'string' || !header.startsWith('Basic ')) return null;
   let decoded;
@@ -117,8 +123,8 @@ export function createRestrictedProxy({ rawRules, adminToken, lookup, httpReques
     try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return json(res, 400, { error: { code: 'invalid-json' } }); }
     const url = new URL(req.url, 'http://admin.local');
     if (url.pathname === '/internal/leases') {
-      const { sessionId, secret, expiresAt, origins } = body ?? {};
-      if (typeof sessionId !== 'string' || !/^[a-f0-9-]{36}$/iu.test(sessionId) || typeof secret !== 'string' || secret.length < 32 || !Number.isSafeInteger(expiresAt) || expiresAt <= now() || expiresAt > now() + 5 * 60_000 || !Array.isArray(origins) || origins.length < 1 || origins.length > 8)
+      const { sessionId, secret, expiresAt, origins, queryPolicy } = body ?? {};
+      if (typeof sessionId !== 'string' || !/^[a-f0-9-]{36}$/iu.test(sessionId) || typeof secret !== 'string' || secret.length < 32 || !Number.isSafeInteger(expiresAt) || expiresAt <= now() || expiresAt > now() + 5 * 60_000 || !Array.isArray(origins) || origins.length < 1 || origins.length > 8 || !['allow', 'deny'].includes(queryPolicy))
         return json(res, 400, { error: { code: 'invalid-lease' } });
       if (leases.size >= MAX_LEASES && !leases.has(sessionId)) return json(res, 429, { error: { code: 'lease-capacity' } });
       const allowedRules = new Map();
@@ -128,7 +134,7 @@ export function createRestrictedProxy({ rawRules, adminToken, lookup, httpReques
         allowedRules.set(origin, rule);
       }
       revokeLease(sessionId);
-      const lease = { id: sessionId, secret, expiresAt, rules: allowedRules, connections: new Set() };
+      const lease = { id: sessionId, secret, expiresAt, rules: allowedRules, queryPolicy, connections: new Set() };
       leases.set(sessionId, lease);
       return json(res, 201, { ok: true });
     }
@@ -147,6 +153,7 @@ export function createRestrictedProxy({ rawRules, adminToken, lookup, httpReques
       requireValue(target.protocol === 'http:' && !target.username && !target.password, 'proxy-protocol-denied', 'Only HTTP proxy requests are accepted; HTTPS must use CONNECT.', 403);
       requireValue(['GET', 'HEAD', 'POST'].includes(req.method), 'proxy-method-denied', 'This proxy method is not enabled.', 403);
       requireValue(!req.headers.upgrade, 'websocket-denied', 'WebSocket upgrades are disabled.', 403);
+      requireValue(lease.queryPolicy !== 'deny' || !hasRequestTargetQuery(req.url), 'target-query-denied', 'Target URL queries are disabled for this lease.', 403);
       requireValue(lease.rules.has(target.origin), 'target-origin-denied', 'Target origin is not authorized.', 403);
       resolved = await authorizeTarget(target, lease.rules, lookup);
     } catch (error) {
@@ -212,6 +219,7 @@ export function createRestrictedProxy({ rawRules, adminToken, lookup, httpReques
       const parsed = parseConnectAuthority(req.url);
       target = parsed.url;
       connectPort = parsed.port;
+      requireValue(lease.queryPolicy !== 'deny', 'strict-https-denied', 'HTTPS CONNECT is disabled for this lease.', 403);
       requireValue(lease.rules.has(target.origin), 'target-origin-denied', 'Target origin is not authorized.', 403);
       resolved = await authorizeTarget(target, lease.rules, lookup);
       requireValue(target.protocol === 'https:', 'proxy-protocol-denied', 'CONNECT is only enabled for HTTPS.', 403);

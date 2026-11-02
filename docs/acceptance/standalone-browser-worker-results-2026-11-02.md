@@ -51,4 +51,6 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 [CI 41438552270](https://github.com/404404/AI-Bots/actions/runs/41438552270) 补齐测试所需策略参数后，metadata 地址拒绝通过，但发现 **安全失败**：严格 deny 会话访问无 query 的测试地址时，HTTP 重定向后的含 query 目标实际经过代理到达 fixture，Worker 错误地返回完成。现有 Playwright route 拦截不足以约束重定向后的请求；不能将该版本的模型 Browser 工具作为安全可用功能部署。后续必须在请求发出前覆盖重定向，HTTPS 无法证明安全时必须拒绝。
 
+[CI 41439388440](https://github.com/404404/AI-Bots/actions/runs/41439388440) 的 Resolute 镜像由 Syft 正确识别 Node 24.22.2，Grype 对已知 NVD/CPE 匹配未报告该 Node 二进制的 HIGH/CRITICAL；这是辅助证据，CPE 匹配存在范围与误匹配限制，不证明 Node 核心漏洞的完整覆盖。该镜像沙箱探针仍失败，脱敏诊断显示失败发生在 `chrome://sandbox` 导航阶段，原因尚未确认。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

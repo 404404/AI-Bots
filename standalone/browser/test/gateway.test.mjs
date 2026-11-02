@@ -99,6 +99,7 @@ test('gateway carries worker policy proof from health, session JSON and screensh
   const browser = {
     async newContext() {
       const context = {
+        async newCDPSession() { return { async send() {}, async detach() {} }; },
         async newPage() {
           const state = { currentUrl: 'about:blank' };
           const page = {

@@ -27,7 +27,7 @@ services:
       target: proxy
       args: { SOURCE_REVISION: "${SOURCE_REVISION:?set immutable source revision}" }
     environment:
-      BROWSER_TARGET_RULES: '{"http://fixture.test:8081":{"addresses":["172.31.240.10"],"allowPrivate":true}}'
+      BROWSER_TARGET_RULES: '{"http://fixture.test:8081":{"addresses":["172.31.240.10"],"allowPrivate":true},"https://fixture.test:8443":{"addresses":["172.31.240.10"],"allowPrivate":true}}'
       BROWSER_PROXY_ADMIN_TOKEN: ${BROWSER_PROXY_ADMIN_TOKEN:?set a random 32+ character value}
       BROWSER_PROXY_SOCKET: /run/browser-egress/proxy.sock
       BROWSER_PROXY_ADMIN_SOCKET: /run/browser-egress/admin.sock
@@ -56,7 +56,7 @@ services:
       target: worker
       args: { SOURCE_REVISION: "${SOURCE_REVISION:?set immutable source revision}" }
     environment:
-      BROWSER_TARGET_RULES: '{"http://fixture.test:8081":{"addresses":["172.31.240.10"],"allowPrivate":true}}'
+      BROWSER_TARGET_RULES: '{"http://fixture.test:8081":{"addresses":["172.31.240.10"],"allowPrivate":true},"https://fixture.test:8443":{"addresses":["172.31.240.10"],"allowPrivate":true}}'
       BROWSER_PROXY_ADMIN_TOKEN: ${BROWSER_PROXY_ADMIN_TOKEN:?set a random 32+ character value}
       BROWSER_PROXY_ADMIN_SOCKET: /run/browser-egress/admin.sock
       BROWSER_PROXY_SOCKET: /run/browser-egress/proxy.sock

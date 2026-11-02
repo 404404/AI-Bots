@@ -47,13 +47,13 @@ test('proxy lease control is authenticated and requests revalidate DNS before co
 
   const badAdmin = await fetch(`http://127.0.0.1:${adminPort}/internal/leases`, {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': 'wrong-token' },
-    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin] }),
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin], queryPolicy: 'allow' }),
   });
   assert.equal(badAdmin.status, 403);
 
   const registered = await fetch(`http://127.0.0.1:${adminPort}/internal/leases`, {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
-    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin] }),
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin], queryPolicy: 'allow' }),
   });
   assert.equal(registered.status, 201);
 
@@ -71,9 +71,14 @@ test('proxy rejects an origin not covered by the lease before DNS or connection'
   await service.listen({ proxyPort: 0, adminPort: 0, host: '127.0.0.1' });
   const proxyPort = service.proxy.address().port, adminPort = service.admin.address().port;
   t.after(() => service.close());
-  const registered = await fetch(`http://127.0.0.1:${adminPort}/internal/leases`, {
+  const missingPolicy = await fetch(`http://127.0.0.1:${adminPort}/internal/leases`, {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
     body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin] }),
+  });
+  assert.equal(missingPolicy.status, 400);
+  const registered = await fetch(`http://127.0.0.1:${adminPort}/internal/leases`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin], queryPolicy: 'allow' }),
   });
   assert.equal(registered.status, 201);
   const auth = `Basic ${Buffer.from(`${sessionId}:${secret}`).toString('base64')}`;
@@ -91,7 +96,7 @@ test('proxy refuses an unapproved CONNECT destination before DNS or TCP connect'
   t.after(() => service.close());
   const registered = await fetch(`http://127.0.0.1:${adminPort}/internal/leases`, {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
-    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin] }),
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin], queryPolicy: 'allow' }),
   });
   assert.equal(registered.status, 201);
   const response = await new Promise((resolve, reject) => {
@@ -139,13 +144,103 @@ test('proxy allows pinned HTTP fixture requests with Node all-address lookup sem
   });
   const registered = await fetch(`http://127.0.0.1:${service.admin.address().port}/internal/leases`, {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
-    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [fixtureOrigin] }),
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [fixtureOrigin], queryPolicy: 'allow' }),
   });
   assert.equal(registered.status, 201);
   const auth = `Basic ${Buffer.from(`${sessionId}:${secret}`).toString('base64')}`;
   const result = await proxyRequest(service.proxy.address().port, { path: `${fixtureOrigin}/count`, headers: { host: `fixture.test:${fixturePort}`, 'proxy-authorization': auth } });
   assert.equal(result.status, 200);
   assert.match(result.body, /Count: 0/u);
+});
+
+test('strict proxy lease blocks popup-style redirect queries before fixture receives them', async (t) => {
+  let expectedHost;
+  const fixture = createFixtureServer({ expectedHost: () => expectedHost });
+  fixture.listen(0, '127.0.0.1');
+  await new Promise((resolve) => fixture.once('listening', resolve));
+  const fixturePort = fixture.address().port;
+  expectedHost = `fixture.test:${fixturePort}`;
+  const fixtureOrigin = `http://fixture.test:${fixturePort}`;
+  const fixtureRules = { [fixtureOrigin]: { addresses: ['172.31.240.10'], allowPrivate: true } };
+  const denied = [];
+  const service = createRestrictedProxy({
+    rawRules: fixtureRules,
+    adminToken,
+    lookup: async () => [{ address: '172.31.240.10', family: 4 }],
+    logger: (event) => denied.push(event),
+    httpRequestImpl(options, callback) {
+      const lookup = (host, lookupOptions, done) => options.lookup(host, lookupOptions, (error, address) => {
+        assert.ifError(error);
+        const mapped = Array.isArray(address) ? address.map((item) => ({ ...item, address: '127.0.0.1' })) : '127.0.0.1';
+        done(null, mapped);
+      });
+      return httpRequest({ ...options, lookup }, callback);
+    },
+  });
+  await service.listen({ proxyPort: 0, adminPort: 0, host: '127.0.0.1' });
+  t.after(async () => {
+    service.close();
+    await new Promise((resolve) => fixture.close(resolve));
+  });
+  const registered = await fetch(`http://127.0.0.1:${service.admin.address().port}/internal/leases`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [fixtureOrigin], queryPolicy: 'deny' }),
+  });
+  assert.equal(registered.status, 201);
+  const auth = `Basic ${Buffer.from(`${sessionId}:${secret}`).toString('base64')}`;
+  const proxyPort = service.proxy.address().port;
+
+  // A popup's first same-origin navigation may receive this redirect; its separate follow-up
+  // request is authenticated by the same trusted lease and must be stopped at the proxy edge.
+  const popupPage = await proxyRequest(proxyPort, { path: `${fixtureOrigin}/popup-page`, headers: { host: expectedHost, 'proxy-authorization': auth } });
+  assert.equal(popupPage.status, 200);
+  assert.match(popupPage.body, /target="_blank" href="\/popup-redirect"/u);
+  const popupResponse = await proxyRequest(proxyPort, { path: `${fixtureOrigin}/popup-redirect`, headers: { host: expectedHost, 'proxy-authorization': auth } });
+  assert.equal(popupResponse.status, 302);
+  assert.equal(popupResponse.headers.location, '/hit?popup=1');
+  const redirected = await proxyRequest(proxyPort, { path: `${fixtureOrigin}/hit?popup=1`, headers: { host: expectedHost, 'proxy-authorization': auth } });
+  assert.equal(redirected.status, 403);
+  assert.equal(JSON.parse(redirected.body).error.code, 'target-query-denied');
+
+  for (const path of ['/hit?', '/hit?resource=1']) {
+    const response = await proxyRequest(proxyPort, { path: `${fixtureOrigin}${path}`, headers: { host: expectedHost, 'proxy-authorization': auth } });
+    assert.equal(response.status, 403);
+    assert.equal(JSON.parse(response.body).error.code, 'target-query-denied');
+  }
+  const counter = await proxyRequest(proxyPort, { path: `${fixtureOrigin}/request-count`, headers: { host: expectedHost, 'proxy-authorization': auth } });
+  assert.equal(counter.status, 200);
+  assert.deepEqual(JSON.parse(counter.body), { requestCount: 0 });
+  assert.equal(denied.length, 3);
+  assert.ok(denied.every((entry) => entry.code === 'target-query-denied'));
+});
+
+test('strict proxy lease rejects HTTPS CONNECT before DNS or TCP connect', async (t) => {
+  let lookedUp = false, connected = false;
+  const secureOrigin = 'https://fixture.test';
+  const service = createRestrictedProxy({
+    rawRules: { [secureOrigin]: { addresses: ['172.31.240.10'], allowPrivate: true } },
+    adminToken,
+    lookup: async () => { lookedUp = true; return [{ address: '172.31.240.10', family: 4 }]; },
+    tcpConnectImpl: () => { connected = true; throw new Error('must not connect'); },
+  });
+  await service.listen({ proxyPort: 0, adminPort: 0, host: '127.0.0.1' });
+  t.after(() => service.close());
+  const registered = await fetch(`http://127.0.0.1:${service.admin.address().port}/internal/leases`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [secureOrigin], queryPolicy: 'deny' }),
+  });
+  assert.equal(registered.status, 201);
+  const response = await new Promise((resolve, reject) => {
+    const socket = tcpConnect(service.proxy.address().port, '127.0.0.1');
+    let data = '';
+    socket.once('connect', () => socket.write(`CONNECT fixture.test:443 HTTP/1.1\r\nHost: fixture.test:443\r\nProxy-Authorization: Basic ${Buffer.from(`${sessionId}:${secret}`).toString('base64')}\r\n\r\n`));
+    socket.on('data', (chunk) => { data += chunk.toString('latin1'); if (data.includes('\r\n\r\n')) { socket.destroy(); resolve(data); } });
+    socket.on('error', reject);
+  });
+  assert.match(response, /^HTTP\/1\.1 403/u);
+  assert.match(response, /strict-https-denied/u);
+  assert.equal(lookedUp, false);
+  assert.equal(connected, false);
 });
 
 test('proxy opens an authorized CONNECT tunnel to the pinned address on effective port 443', async (t) => {
@@ -171,7 +266,7 @@ test('proxy opens an authorized CONNECT tunnel to the pinned address on effectiv
   });
   const registered = await fetch(`http://127.0.0.1:${service.admin.address().port}/internal/leases`, {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken },
-    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [secureOrigin] }),
+    body: JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [secureOrigin], queryPolicy: 'allow' }),
   });
   assert.equal(registered.status, 201);
   const response = await new Promise((resolve, reject) => {
@@ -212,7 +307,7 @@ test('loopback relay carries HTTP proxy auth over the private proxy UDS', async 
   const registration = await new Promise((resolve, reject) => {
     const req = httpRequest({ socketPath: adminPath, path: '/internal/leases', method: 'POST', headers: { 'content-type': 'application/json', 'x-proxy-admin-token': adminToken } }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
     req.on('error', reject);
-    req.end(JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin] }));
+    req.end(JSON.stringify({ sessionId, secret, expiresAt: Date.now() + 60_000, origins: [origin], queryPolicy: 'allow' }));
   });
   assert.equal(registration, 201);
   const auth = `Basic ${Buffer.from(`${sessionId}:${secret}`).toString('base64')}`;

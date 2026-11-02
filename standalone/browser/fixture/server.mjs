@@ -20,6 +20,19 @@ export function createFixtureServer({ expectedHost = process.env.FIXTURE_HOST ||
       res.writeHead(302, { location: '/hit?redirect=1', 'cache-control': 'no-store' });
       return res.end();
     }
+    if (req.method === 'GET' && url.pathname === '/popup-redirect') {
+      res.writeHead(302, { location: '/hit?popup=1', 'cache-control': 'no-store' });
+      return res.end();
+    }
+    if (req.method === 'GET' && url.pathname === '/popup-page') {
+      const body = '<!doctype html><title>Popup redirect fixture</title><a id="open-popup" target="_blank" href="/popup-redirect">Open popup</a>';
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(body);
+    }
+    if (req.method === 'GET' && url.pathname === '/redirect-https-query') {
+      res.writeHead(302, { location: 'https://fixture.test:8443/hit?redirect=1', 'cache-control': 'no-store' });
+      return res.end();
+    }
     if (req.method === 'GET' && url.pathname === '/query-page') {
       const body = '<!doctype html><title>Query resource fixture</title><img src="/hit?resource=1">';
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });

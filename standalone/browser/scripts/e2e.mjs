@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 
 const origin = 'http://fixture.test:8081';
+const secureOrigin = 'https://fixture.test:8443';
 const gateway = process.env.BROWSER_GATEWAY_URL || 'http://gateway:8090';
 const token = process.env.BROWSER_CONTROL_TOKEN;
 if (!token || token.length < 32) throw new Error('BROWSER_CONTROL_TOKEN must be configured.');
@@ -70,6 +71,10 @@ try {
   });
   assert.equal(denied.status, 403);
   assert.equal(denied.value.error.code, 'target-origin-denied');
+  const httpsRedirect = await request(`/v1/sessions/${sessionA.sessionId}/operations`, {
+    botId: botA, taskId: taskA, requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 10, operationId: randomUUID(), action: 'navigate', args: { url: `${origin}/redirect-https-query` },
+  });
+  assert.ok(httpsRedirect.status >= 400, JSON.stringify(httpsRedirect.value));
 } finally {
   await request(`/v1/sessions/${sessionA.sessionId}/close`, { botId: botA, taskId: taskA, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
 }
@@ -87,6 +92,13 @@ try {
 
 const botC = `e2e-${randomUUID()}`;
 const taskC = `task-${randomUUID()}`;
+const deniedHttpsSession = await request('/v1/sessions', {
+  operationId: randomUUID(), botId: `e2e-${randomUUID()}`, taskId: `task-${randomUUID()}`,
+  allowedOrigins: [secureOrigin], requiredPolicy: { version: 1, queryPolicy: 'deny' },
+});
+assert.equal(deniedHttpsSession.status, 403);
+assert.equal(deniedHttpsSession.value.error.code, 'strict-https-denied');
+
 const sessionC = await openSession(botC, taskC);
 try {
   assert.deepEqual(sessionC.enforcedPolicy, { version: 1, queryPolicy: 'deny' });
