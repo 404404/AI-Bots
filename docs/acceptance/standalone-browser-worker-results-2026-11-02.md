@@ -37,4 +37,8 @@
 
 Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.22.2 文件；其 SHA-256 已与 Node 官方发布清单核对。文件形式安装的 Node 本体是否被镜像扫描与 SBOM 覆盖仍需单独证明，不能将系统包扫描结果作为该运行时本体的漏洞扫描结论。新一轮比较见 [CI 41414613249](https://github.com/404404/AI-Bots/actions/runs/41414613249)，以该作业最终结果为准。
 
+该轮三个候选均完成构建与运行时探针，严格扫描和 fixture E2E 均未通过：Trixie 为 107 HIGH、1 CRITICAL；Noble 为 8 HIGH（两个 GStreamer 系统包发现没有修复版本，另外六项来自 Node 官方包内 npm 的依赖）；Resolute 为 6 HIGH，均来自同一 npm 依赖。Node 24 本体漏洞覆盖仍待证明，不能把 npm 依赖扫描等同 Node 本体扫描。所有比较均未形成可发布镜像。
+
+提交 `899a2e2b49f1bc3667e57c34390f5c78c2b0193d` 的 [CI 41415627822](https://github.com/404404/AI-Bots/actions/runs/41415627822) 在构建前的测试步骤失败：隔离测试容器缺少新加入的 Host 客户端测试文件，因此扫描与 Chromium 诊断被跳过。独立 Terra 在非容器环境执行相同源码的 Standalone 154/154、Browser 40/40 通过；这些是合成测试，不能代替真实 Chromium 或模型验收。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

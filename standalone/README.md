@@ -18,6 +18,19 @@
 
 **尚未完成：** 产品浏览器 worker 的镜像安全扫描仍阻塞交付，模型尚不能使用该浏览器；Computer、IM、定时任务和客户端版本继续延后。不能用测试 Chromium 或原 DSH 功能替代独立产品验收。完整发布门禁未达到，尚未发布正式 GHCR 镜像。
 
+## Browser 开发候选
+
+源码中的 Browser 接线尚未部署到上述预览。网页「设置 → 浏览器」和 `browser.origins.grant` 可为指定 Bot 授权精确 origin；`browser.open`、`browser.step`、`browser.close`、`browser.cancel`、`browser.trace` 及 `browser.screenshot` 使用相同后台和 SQLite 任务记录。新的 `browser.read` 是受限读取候选，使用已有授权、稳定 Bot ID 和幂等键，在一个会话中导航、读取并关闭；模型侧的 `browser_read` 调用同一实现。当前只允许精确授权 origin 内没有 query 的 URL，页面内容作为不可信数据处理。模型实用性、真实 Chromium 和完整工具链尚未通过验收。
+
+以下仅为隔离候选的命令格式；需要事先登录 CLI、配置合格 worker，并使用测试站点和实际 Bot ID，不能在现有预览上假定此版本已运行：
+
+```sh
+printf '%s' '{"botId":"BOT_ID","origin":"https://fixture.example"}' | node --experimental-strip-types standalone/src/cli.ts browser.origins.grant
+printf '%s' '{"botId":"BOT_ID","idempotencyKey":"read-example-1","origin":"https://fixture.example","url":"https://fixture.example/"}' | node --experimental-strip-types standalone/src/cli.ts browser.read
+```
+
+API 通过已认证的 `POST /api/v1/command` 使用同名命令及参数。用户直接控制、模型工具及委派链的通过、失败和未覆盖项见 [Browser 验收记录](../docs/acceptance/standalone-browser-worker-results-2026-11-02.md)。镜像扫描或沙箱门禁失败时不得部署或发布候选。
+
 ## 网页、CLI 与 API
 
 [单用户员工和群聊说明](docs/single-user-employee-guide.md)提供网页操作路径与 CLI 示例。`POST /api/v1/session` 创建会话；`POST /api/v1/command` 接收命令和参数，Web 与 CLI 调用相同的认证业务实现。CLI 使用私密 JSON 文件或标准输入传递参数，凭据不放在命令行：
