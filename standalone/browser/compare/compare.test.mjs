@@ -9,6 +9,7 @@ import { parse } from 'yaml';
 import { getScenario, scenarios } from './scenarios.mjs';
 import { buildArgs, grypeScanArgs, runScenario, runtimeProbeScript, syftScanArgs } from './run-scenario.mjs';
 import { runServiceScenario, serviceBuildArgs, serviceScanArgs, serviceScenarios } from './run-services.mjs';
+import { composeProjectName, integratedBuildArgs, integratedImageScanArgs, runIntegrated, validateComposeContainerImages } from './run-integrated.mjs';
 import { summarizeNodeGrypeFindings, validateGrypeDatabase, validateNodeBinarySbom } from './node-binary-audit.mjs';
 
 const root = new URL('../../../', import.meta.url);
@@ -221,6 +222,151 @@ test('service scan artifacts are independent, always uploaded, and never publish
   assert.ok(job.steps.some((step) => step.run?.includes('run-services.mjs')));
   assert.doesNotMatch(workflow, /docker\/login|docker\/build-push-action|ghcr\.io|docker push/iu);
   assert.match(dockerfile, /io\.404404\.scan\.node-core\.coverage="uncovered"/u);
+});
+
+test('integrated Resolute job uses a same-runner build, retains strict gates, and uploads evidence', () => {
+  const config = parse(workflow);
+  const job = config.jobs['integrated-resolute'];
+  assert.ok(job);
+  assert.equal(job['timeout-minutes'], 120);
+  assert.ok(job.steps.some((step) => step.run?.includes('run-integrated.mjs')));
+  assert.ok(job.steps.some((step) => step.uses?.startsWith('actions/upload-artifact@') && step.if === 'always()' && step.with['if-no-files-found'] === 'error'));
+  assert.match(workflow, /Node core coverage remains uncovered/u);
+  assert.doesNotMatch(workflow, /docker\/login|docker\/build-push-action|ghcr\.io|docker push/iu);
+  const args = integratedBuildArgs('e2e-runner', 'abc123', 'a'.repeat(64));
+  assert.ok(args.includes('--target') && args.includes('e2e-runner'));
+  assert.ok(args.includes('--platform') && args.includes('linux/amd64'));
+  assert.ok(args.includes(`SOURCE_REVISION=abc123`));
+  assert.ok(args.includes(`PACKAGE_LOCK_SHA256=${'a'.repeat(64)}`));
+  assert.deepEqual(integratedImageScanArgs('image:test', '/tmp/scan.json'), [
+    'trivy', 'image', '--exit-code', '1', '--scanners', 'vuln', '--vuln-type', 'os,library',
+    '--severity', 'HIGH,CRITICAL', '--ignore-unfixed=false', '--list-all-pkgs', '--format', 'json', '--output', '/tmp/scan.json', 'image:test',
+  ]);
+  assert.throws(() => composeProjectName({}), /requires a GitHub Actions runner/u);
+  assert.equal(composeProjectName({ GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '12345', GITHUB_RUN_ATTEMPT: '2' }), 'browser-compare-12345-2');
+  assert.throws(() => validateComposeContainerImages([
+    { Id: 'c1', Image: 'sha256:' + '1'.repeat(64), Config: { Image: 'sha256:' + '1'.repeat(64), Labels: { 'com.docker.compose.service': 'worker' } } },
+  ], { worker: 'sha256:' + '2'.repeat(64) }), /ran image .* expected/u);
+  const dockerfile = readFileSync(new URL('./Dockerfile.services.resolute', import.meta.url), 'utf8');
+  assert.match(dockerfile, /FROM service-base AS e2e-runner/u);
+  assert.match(dockerfile, /COPY --chown=10001:10001 scripts\/e2e\.mjs \.\/scripts/u);
+});
+
+test('integrated runner scans every built image and runs compose E2E despite scan findings while checking config identity', async (t) => {
+  const temp = mkdtempSync(join(tmpdir(), 'browser-compare-integrated-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  const imageIds = {
+    'standalone-browser-compare:resolute': 'sha256:' + '1'.repeat(64),
+    'standalone-browser-worker:candidate': 'sha256:' + '1'.repeat(64),
+    'standalone-browser-services:proxy': 'sha256:' + '2'.repeat(64),
+    'standalone-browser-proxy:candidate': 'sha256:' + '2'.repeat(64),
+    'standalone-browser-services:gateway': 'sha256:' + '3'.repeat(64),
+    'standalone-browser-gateway:candidate': 'sha256:' + '3'.repeat(64),
+    'standalone-browser-services:fixture': 'sha256:' + '4'.repeat(64),
+    'standalone-browser-fixture:candidate': 'sha256:' + '4'.repeat(64),
+    'standalone-browser-services:e2e-runner': 'sha256:' + '5'.repeat(64),
+  };
+  const scanned = [];
+  const compose = [];
+  const lifecycle = [];
+  let workerE2EOption;
+  const execute = (command, args) => {
+    if (command === 'docker' && args[0] === 'build') return { status: 0, stdout: '', stderr: '' };
+    if (command === 'docker' && args[0] === 'image' && args[1] === 'inspect') return { status: 0, stdout: JSON.stringify([{ Id: imageIds[args[2]] }]), stderr: '' };
+    if (command === 'docker' && args[0] === 'inspect') {
+      lifecycle.push('inspect-containers');
+      const containers = [
+        ['worker', imageIds['standalone-browser-compare:resolute']],
+        ['egress', imageIds['standalone-browser-services:proxy']],
+        ['gateway', imageIds['standalone-browser-services:gateway']],
+        ['fixture', imageIds['standalone-browser-services:fixture']],
+        ['e2e', imageIds['standalone-browser-services:e2e-runner']],
+      ].map(([service, Image], index) => ({ Id: `container-${index}`, Image, Config: { Image, Labels: { 'com.docker.compose.service': service } } }));
+      return { status: 0, stdout: JSON.stringify(containers), stderr: '' };
+    }
+    if (command === 'trivy' && args[0] === 'image' && args.includes('--output')) {
+      const output = args[args.indexOf('--output') + 1];
+      if (args.includes('--list-all-pkgs')) {
+        scanned.push(args.at(-1));
+        writeFileSync(output, JSON.stringify({ Results: [{ Vulnerabilities: [{ Severity: 'HIGH', FixedVersion: '' }] }] }));
+        return { status: 1, stdout: '', stderr: 'finding preserved' };
+      }
+      writeFileSync(output, JSON.stringify({ bomFormat: 'CycloneDX', components: [{ name: 'package' }] }));
+      return { status: 0, stdout: '', stderr: '' };
+    }
+    if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+    if (command === 'docker' && args[0] === 'compose') {
+      compose.push(args);
+      if (args.includes('up')) lifecycle.push('up');
+      if (args.includes('down')) lifecycle.push('down');
+      return args.includes('ps') ? { status: 0, stdout: 'container-0\ncontainer-1\ncontainer-2\ncontainer-3\ncontainer-4\n', stderr: '' } : { status: 0, stdout: '', stderr: '' };
+    }
+    return { status: 0, stdout: '', stderr: '' };
+  };
+  const runWorker = async (options) => { workerE2EOption = options.runE2E; return { report: { image: { imageId: imageIds['standalone-browser-compare:resolute'] }, build: { status: 'passed' }, runtime: { status: 'passed' } }, exitCode: 1 }; };
+  const runService = async ({ service }) => ({ report: { image: { imageId: imageIds[`standalone-browser-services:${service}`] }, build: { status: 'passed' } }, exitCode: 1 });
+  const { report, exitCode } = await runIntegrated({ projectRoot: root.pathname, outputDir: temp, env: { GITHUB_SHA: 'abc123', GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '111222', GITHUB_RUN_ATTEMPT: '3' }, execute, runWorker, runService });
+  assert.equal(exitCode, 1, 'uncovered Node core must remain fail-closed');
+  assert.equal(report.nodeCoreVulnerabilityCoverage.status, 'uncovered');
+  assert.equal(workerE2EOption, false, 'the worker runner must not build old support images or run its separate E2E path');
+  assert.deepEqual(scanned.sort(), [...new Set(Object.values(imageIds))].sort());
+  assert.equal(report.e2e.status, 'passed');
+  assert.equal(report.e2e.containerInspectionPhase, 'after-compose-up-before-cleanup');
+  assert.deepEqual(report.e2e.scannedImageConfigIds, {
+    worker: imageIds['standalone-browser-compare:resolute'],
+    proxy: imageIds['standalone-browser-services:proxy'],
+    gateway: imageIds['standalone-browser-services:gateway'],
+    fixture: imageIds['standalone-browser-services:fixture'],
+    e2eRunner: imageIds['standalone-browser-services:e2e-runner'],
+  });
+  assert.equal(Object.hasOwn(report.e2e, 'identityStable'), false);
+  assert.equal(Object.hasOwn(report.e2e, 'composeImageConfigIdsAfter'), false);
+  assert.equal(compose.filter((args) => args.includes('up')).length, 1);
+  assert.ok(compose.find((args) => args.includes('up')).includes('--no-build'));
+  assert.ok(compose.find((args) => args.includes('ps')).includes('-a'));
+  assert.ok(compose.find((args) => args.includes('ps')).includes('-q'));
+  assert.deepEqual(lifecycle, ['up', 'inspect-containers', 'down']);
+  assert.ok(compose.every((args) => args.includes('-p') && args.includes('browser-compare-111222-3')));
+  assert.ok(compose.every((args) => !args.includes('standalone-browser-worker:candidate')));
+  assert.ok(compose.find((args) => args.includes('up')).includes('--no-build'));
+  assert.ok(readFileSync(join(temp, 'compose.e2e-override.yml'), 'utf8').includes(`image: ${imageIds['standalone-browser-compare:resolute']}`));
+  assert.deepEqual(Object.keys(report.e2e.containers).sort(), ['egress', 'e2e', 'fixture', 'gateway', 'worker'].sort());
+  assert.ok(report.e2e.containers.worker.image.startsWith('sha256:'));
+  assert.deepEqual(Object.values(report.scans).map((scan) => scan.status), Array(5).fill('findings'));
+  assert.ok(Object.values(report.scans).every((scan) => scan.sbom.status === 'recorded'));
+  assert.equal(JSON.parse(readFileSync(join(temp, 'report.json'), 'utf8')).e2e.status, 'passed');
+});
+
+test('worker runner exception is recorded without skipping service and E2E-runner scans', async (t) => {
+  const temp = mkdtempSync(join(tmpdir(), 'browser-compare-integrated-worker-error-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  const scanned = [];
+  const imageIds = { proxy: 'sha256:' + '2'.repeat(64), gateway: 'sha256:' + '3'.repeat(64), fixture: 'sha256:' + '4'.repeat(64), e2eRunner: 'sha256:' + '5'.repeat(64) };
+  const execute = (command, args) => {
+    if (command === 'docker' && args[0] === 'build') return { status: 0, stdout: '', stderr: '' };
+    if (command === 'docker' && args[0] === 'image' && args[1] === 'inspect') return { status: 0, stdout: JSON.stringify([{ Id: imageIds.e2eRunner }]), stderr: '' };
+    if (command === 'trivy' && args[0] === 'image' && args.includes('--output')) {
+      const output = args[args.indexOf('--output') + 1];
+      if (args.includes('--list-all-pkgs')) { scanned.push(args.at(-1)); writeFileSync(output, JSON.stringify({ Results: [] })); return { status: 0, stdout: '', stderr: '' }; }
+      writeFileSync(output, JSON.stringify({ bomFormat: 'CycloneDX', components: [] }));
+      return { status: 0, stdout: '', stderr: '' };
+    }
+    if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+    return { status: 0, stdout: '', stderr: '' };
+  };
+  const runService = async ({ service }) => ({ report: { image: { imageId: imageIds[service] }, build: { status: 'passed' } }, exitCode: 1 });
+  const { report, exitCode } = await runIntegrated({
+    projectRoot: root.pathname, outputDir: temp, env: { GITHUB_SHA: 'abc123' }, execute,
+    runWorker: async () => { throw new Error('worker report initialization failed'); }, runService,
+  });
+  assert.equal(exitCode, 1);
+  assert.match(report.images.worker.error, /worker report initialization failed/u);
+  assert.deepEqual(scanned.sort(), Object.values(imageIds).sort());
+  assert.equal(report.scans.proxy.status, 'passed');
+  assert.equal(report.scans.gateway.status, 'passed');
+  assert.equal(report.scans.fixture.status, 'passed');
+  assert.equal(report.scans.e2eRunner.status, 'passed');
+  assert.equal(report.e2e.status, 'blocked');
 });
 
 test('service runner preserves full findings and SBOM when Trivy reports vulnerabilities', async (t) => {

@@ -57,7 +57,7 @@ function redact(value, env) {
   return output.replace(/(authorization:\s*bearer\s+)\S+/giu, '$1[REDACTED]');
 }
 
-export async function runScenario({ name, projectRoot = root, outputDir, env = process.env, execute = spawnSync }) {
+export async function runScenario({ name, projectRoot = root, outputDir, env = process.env, execute = spawnSync, runE2E = true }) {
   const scenario = getScenario(name);
   const out = resolve(outputDir || env.COMPARE_OUTPUT || 'standalone-browser-compare-results');
   mkdirSync(out, { recursive: true });
@@ -354,7 +354,9 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
     report.sbom.stderr = redact(sbom.stderr, env).trim();
     if (sbom.status !== 0) failed = true;
 
-    if (runtime.status === 0) {
+    if (!runE2E) {
+      report.e2e = { status: 'deferred', reason: 'E2E will be run by the same-runner Resolute integrated comparison after all comparison images are built and scanned.' };
+    } else if (runtime.status === 0) {
       let supportFailed = false;
       for (const target of ['proxy', 'gateway', 'fixture']) {
         const tag = `standalone-browser-${target}:candidate`;

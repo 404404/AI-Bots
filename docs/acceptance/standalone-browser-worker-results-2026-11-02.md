@@ -63,4 +63,8 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 严格 `browser_read` 当前拒绝 HTTPS 和包含 query 的目标；HTTPS 支持、真实模型/工作 Bot 汇报、所有镜像的扫描与完整隔离验收仍未完成。镜像组必须来自同次构建；旧 Worker 与新 Proxy 混用会因缺少租约策略而拒绝。以上候选均未发布、未部署至 GK50。
 
+[CI 41447306166](https://github.com/404404/AI-Bots/actions/runs/41447306166)（源码 `b63554497c8755361a05e282b3f9ed4eea0ef7cf`）的独立 Chromium 作业通过。Terra 核对：同一 operation ID 的重复点击只产生一次 fixture 副作用；截图对错误 Bot 和 Task 均返回 404；popup 初始请求到达 fixture，query 目标计数为零；慢请求到达后取消、随后拒绝会话操作；另一慢请求返回 `504 navigation-timeout`，fixture 计数增加一次且会话可恢复。Cookie 隔离、HTTP 重定向和子资源零命中及 metadata 拒绝也有真实测试证据。HTTPS 重定向只验证返回错误，TLS 目标零命中、真实模型与 Host 集成、完整跨范围状态以及崩溃重启恢复仍未覆盖。四个生产镜像扫描失败、归档跳过，整个 run 失败。
+
+[CI 41512379257](https://github.com/404404/AI-Bots/actions/runs/41512379257)（源码 `e64f3649e10d3c907f8bdda6e7eb7544657c4b81`）独立构建了 Ubuntu 26.04 的 Proxy、Gateway、Fixture 比较镜像。三项 Trivy HIGH/CRITICAL 扫描均无发现、SBOM 均生成，但各 job 因 Node core 覆盖仍标为 `uncovered` 而失败。它们分别只生成 runner 内 image config ID，未发布 registry digest；与 Resolute Worker 同批次运行的集成验收尚未完成。旧生产镜像的四项失败不因这些比较结果而改变。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

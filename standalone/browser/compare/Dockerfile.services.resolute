@@ -77,3 +77,9 @@ FROM service-base AS fixture
 LABEL io.404404.role="fixture"
 COPY --chown=10001:10001 fixture/server.mjs ./fixture/
 CMD ["node", "fixture/server.mjs"]
+
+# Separate test client image; the gateway runtime remains free of the E2E harness.
+FROM service-base AS e2e-runner
+LABEL io.404404.role="e2e-runner"
+COPY --chown=10001:10001 scripts/e2e.mjs ./scripts/
+CMD ["node", "scripts/e2e.mjs"]

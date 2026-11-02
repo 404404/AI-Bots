@@ -122,3 +122,55 @@ jobs:
         env:
           OUTCOME: ${{ steps.service_scan.outcome }}
         run: test "$OUTCOME" = success
+
+  integrated-resolute:
+    if: github.repository == '404404/AI-Bots'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Prepare fallback integrated evidence
+        env:
+          COMPARE_OUTPUT: standalone-browser-integrated-results
+        run: |
+          mkdir -p "$COMPARE_OUTPUT"
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; const report = { schemaVersion: 1, result: "failed-or-incomplete", phase: "workflow-setup", images: {}, scans: {}, e2e: { status: "not-run" }, nodeCoreVulnerabilityCoverage: { status: "uncovered", component: "official Node.js 24.22.2 runtime binary" } }; writeFileSync(`${process.env.COMPARE_OUTPUT}/report.json`, `${JSON.stringify(report, null, 2)}\n`); writeFileSync(`${process.env.COMPARE_OUTPUT}/report.md`, "# Resolute integrated comparison\n\nWorkflow setup failed before integrated evidence could be collected. Node core coverage remains uncovered.\n"); writeFileSync(`${process.env.COMPARE_OUTPUT}/diagnostics.log`, "No integrated commands have run.\n");'
+      - name: Install pinned Syft and Grype with official release checksums
+        env:
+          TOOL_DIR: ${{ runner.temp }}/compare-security-tools
+        run: |
+          set -euo pipefail
+          mkdir -p "$TOOL_DIR/downloads"
+          curl --fail --location --retry 3 --output "$TOOL_DIR/downloads/syft.tar.gz" https://github.com/anchore/syft/releases/download/v1.55.0/syft_1.55.0_linux_amd64.tar.gz
+          echo 'bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d  '"$TOOL_DIR/downloads/syft.tar.gz" | sha256sum --check --strict
+          tar -xzf "$TOOL_DIR/downloads/syft.tar.gz" -C "$TOOL_DIR" syft
+          curl --fail --location --retry 3 --output "$TOOL_DIR/downloads/grype.tar.gz" https://github.com/anchore/grype/releases/download/v0.121.0/grype_0.121.0_linux_amd64.tar.gz
+          echo '64e07133d3486115de647a66581461dccf5c732748a0a3119077395565f15519  '"$TOOL_DIR/downloads/grype.tar.gz" | sha256sum --check --strict
+          tar -xzf "$TOOL_DIR/downloads/grype.tar.gz" -C "$TOOL_DIR" grype
+          echo "$TOOL_DIR" >> "$GITHUB_PATH"
+      - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
+        with:
+          version: v0.70.0
+          cache: true
+      - name: Build, independently scan, and E2E the same Resolute images
+        id: integrated
+        continue-on-error: true
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          COMPARE_OUTPUT: standalone-browser-integrated-results
+        run: node standalone/browser/compare/run-integrated.mjs
+      - name: Upload integrated evidence, including partial diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: standalone-browser-integrated-resolute-${{ github.sha }}
+          path: standalone-browser-integrated-results
+          if-no-files-found: error
+          retention-days: 30
+      - name: Fail closed on findings, incomplete evidence, or uncovered Node core
+        if: always()
+        env:
+          OUTCOME: ${{ steps.integrated.outcome }}
+        run: test "$OUTCOME" = success
