@@ -30,3 +30,11 @@
 | Ubuntu 26.04 Resolute / Playwright | 6 HIGH，均有修复版本 | 镜像实际为 Node 26.13.0，不满足 Node 24；探针失败 | 运行时不合格，未执行。 |
 
 三个比较任务均失败；不能据此选定合格镜像。候选的 Node 24 和安全包修订须分别验证，且不能跨发行版覆盖系统库。安全门禁没有放宽；真实 sandbox、浏览器操作、隔离和模型工具验收仍待执行。
+
+## Compose 修复后的独立诊断
+
+[CI 41414339031](https://github.com/404404/AI-Bots/actions/runs/41414339031)，源码 `1ae9c8084795d5377f0813bd81efd8c3d5ff95fb`：四个镜像的扫描均失败，候选归档跳过。隔离 runner 成功创建服务并建立浏览器会话，但首次导航至 fixture `/count` 返回 `browser-operation-failed`（HTTP 502），浏览器操作验收失败，具体原因待定位。CI 随后删除了测试容器、网络和卷。会话创建不等于 PID namespace、Seccomp-BPF 或其他验收项全部通过。
+
+Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.22.2 文件；其 SHA-256 已与 Node 官方发布清单核对。文件形式安装的 Node 本体是否被镜像扫描与 SBOM 覆盖仍需单独证明，不能将系统包扫描结果作为该运行时本体的漏洞扫描结论。新一轮比较见 [CI 41414613249](https://github.com/404404/AI-Bots/actions/runs/41414613249)，以该作业最终结果为准。
+
+执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

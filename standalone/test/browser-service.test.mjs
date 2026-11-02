@@ -18,7 +18,7 @@ function png() {
   return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(Buffer.from([0, 0, 0, 0, 255]))), chunk('IEND', Buffer.alloc(0))]);
 }
 
-let root, socketPath, db, storage, server, service, calls, taskRunning, currentTask, taskAdapter, delayCreate, signalCreateStarted, createStarted, ownerDeadlineOverride, delayOperate, signalOperateStarted, operationStarted, releaseOperate, wrongScopeReply, delayScreenshot, screenshotStarted, signalScreenshotStarted, releaseScreenshot;
+let root, socketPath, db, storage, server, service, calls, taskRunning, currentTask, taskAdapter, delayHealth, healthStarted, signalHealthStarted, delayCreate, signalCreateStarted, createStarted, ownerDeadlineOverride, delayOperate, signalOperateStarted, operationStarted, releaseOperate, wrongScopeReply, delayScreenshot, screenshotStarted, signalScreenshotStarted, releaseScreenshot;
 const botId = 'bot-a';
 const taskId = 'task-worker';
 
@@ -43,6 +43,8 @@ beforeEach(async () => {
   setupSchema(db);
   storage = { db, transaction(fn) { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (error) { db.exec('ROLLBACK'); throw error; } } };
   calls = { create: 0, operate: 0, cancel: 0, close: 0, screenshots: 0, failOperate: false };
+  delayHealth = false;
+  healthStarted = new Promise((resolve) => { signalHealthStarted = resolve; });
   delayCreate = false;
   createStarted = new Promise((resolve) => { signalCreateStarted = resolve; });
   ownerDeadlineOverride = null;
@@ -56,21 +58,29 @@ beforeEach(async () => {
   server = createServer(async (req, res) => {
     const chunks = []; for await (const data of req) chunks.push(data);
     const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
-    if (req.url === '/v1/sessions' && req.method === 'POST') { calls.create++; if (delayCreate) { signalCreateStarted(); await new Promise((resolve) => setTimeout(resolve, 35)); } return json(res, 201, { operationId: body.operationId, sessionId: 'remote-session', taskId: body.taskId, expiresAt: Date.now() + body.leaseMs, stepBudget: 12 }); }
+    if (req.url === '/healthz' && req.method === 'GET') {
+      if (delayHealth) {
+        signalHealthStarted();
+        await new Promise((resolve) => res.once('close', resolve));
+      }
+      if (!res.destroyed) return json(res, 200, { ready: true, sandboxVerified: true, capabilities: { version: 1, queryPolicy: 'deny' } });
+      return;
+    }
+    if (req.url === '/v1/sessions' && req.method === 'POST') { calls.create++; if (delayCreate) { signalCreateStarted(); await new Promise((resolve) => setTimeout(resolve, 35)); } return json(res, 201, { operationId: body.operationId, sessionId: 'remote-session', taskId: body.taskId, expiresAt: Date.now() + body.leaseMs, stepBudget: 12, ...(body.requiredPolicy ? { enforcedPolicy: body.requiredPolicy } : {}) }); }
     if (req.url === '/v1/sessions/remote-session/operations' && req.method === 'POST') {
       calls.operate++;
       if (delayOperate) { signalOperateStarted(); await new Promise((resolve) => { releaseOperate = resolve; }); }
       if (calls.failOperate) { res.destroy(); return; }
       const result = body.action === 'screenshot' ? { resourceId: 'remote-resource', contentType: 'image/png', bytes: png().length } : { clicked: body.action === 'click' };
-      return json(res, 200, { sessionId: wrongScopeReply ? 'wrong-session' : 'remote-session', taskId: body.taskId, operationId: body.operationId, sequence: body.sequence, status: 'completed', result });
+      return json(res, 200, { sessionId: wrongScopeReply ? 'wrong-session' : 'remote-session', taskId: body.taskId, operationId: body.operationId, sequence: body.sequence, status: 'completed', result, ...(body.requiredPolicy ? { enforcedPolicy: body.requiredPolicy } : {}) });
     }
     if (req.url === '/v1/sessions/remote-session/screenshots/remote-resource') {
       calls.screenshots++;
       if (delayScreenshot) { signalScreenshotStarted(); await new Promise((resolve) => { releaseScreenshot = resolve; }); }
       res.writeHead(200, { 'content-type': 'image/png' }); return res.end(png());
     }
-    if (req.url === '/v1/sessions/remote-session/cancel') { calls.cancel++; if (calls.failCancel) { res.destroy(); return; } return json(res, 200, { status: 'cancelled' }); }
-    if (req.url === '/v1/sessions/remote-session/close') { calls.close++; return json(res, 200, { status: 'closed' }); }
+    if (req.url === '/v1/sessions/remote-session/cancel') { calls.cancel++; if (calls.failCancel) { res.destroy(); return; } return json(res, 200, { status: 'cancelled', ...(body.requiredPolicy ? { enforcedPolicy: body.requiredPolicy } : {}) }); }
+    if (req.url === '/v1/sessions/remote-session/close') { calls.close++; return json(res, 200, { status: 'closed', ...(body.requiredPolicy ? { enforcedPolicy: body.requiredPolicy } : {}) }); }
     return json(res, 404, { error: { code: 'not-found' } });
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(socketPath, resolve); });
@@ -128,6 +138,29 @@ test('worker open requires actual active child executor scope and an exact Bot g
   const opened = await service.openForWorker({ botId, taskId, idempotencyKey: 'worker-open-4', origin: 'https://fixture.example' });
   assert.equal(opened.status, 'active');
   assert.equal(calls.create, 1);
+});
+
+test('strict read health preflight observes cancellation before session create and every operation', async () => {
+  delayHealth = true;
+  const openAbort = new AbortController();
+  const opening = service.openForWorker({ botId, taskId, idempotencyKey: 'cancel-health-open', origin: 'https://fixture.example', queryPolicy: 'deny', signal: openAbort.signal });
+  await healthStarted;
+  openAbort.abort();
+  await assert.rejects(opening, { code: 'browser-request-cancelled' });
+  assert.equal(calls.create, 0);
+  assert.equal(db.prepare("SELECT status FROM browser_sessions WHERE open_key LIKE 'browser-read:%'").get().status, 'interrupted');
+
+  delayHealth = false;
+  const opened = await service.openForWorker({ botId, taskId, idempotencyKey: 'cancel-health-step', origin: 'https://fixture.example', queryPolicy: 'deny' });
+  delayHealth = true;
+  healthStarted = new Promise((resolve) => { signalHealthStarted = resolve; });
+  const stepAbort = new AbortController();
+  const stepping = service.step({ sessionId: opened.sessionId, botId, taskId, stepId: 'health-cancelled-step', action: 'read', signal: stepAbort.signal });
+  await healthStarted;
+  stepAbort.abort();
+  await assert.rejects(stepping, { code: 'browser-request-cancelled' });
+  assert.equal(calls.operate, 0);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM browser_steps WHERE session_id=?").get(opened.sessionId).n, 0);
 });
 
 test('owner open creates no-model canonical task once and open replay does not create another session', async () => {

@@ -38,6 +38,7 @@ import { validateBotIdentityPatch } from './bot-fields.ts';
 import { BrowserClient, type BrowserAction } from './browser-client.ts';
 import { BrowserService } from './browser-service.ts';
 import { BrowserTaskAdapterImpl } from './browser-task-adapter.ts';
+import { executeBrowserRead, parseBrowserReadArguments } from './browser-read-tool.ts';
 import { GroupChat } from './group-chat.ts';
 
 export type ExecutionContext = { kind: 'owner' } | { kind: 'bot'; botId: string };
@@ -120,7 +121,12 @@ export class BotApplication {
     this.browserTasks = new BrowserTaskAdapterImpl(this.storage, this.tasks.store);
     this.browser = new BrowserService({ storage: this.storage,
       client: new BrowserClient({ socketPath: this.browserSocketPath }),
-      tasks: this.browserTasks });
+      tasks: this.browserTasks,
+      sensitiveValues: () => this.auth.browserSensitiveValues() });
+    this.tasks.browser = this.browser;
+    this.tasks.browserEnabled = this.browserConfigured;
+    this.tasks.browserRunAsExecutor = <T>(botId: string, taskId: string, operation: () => T) =>
+      this.browserTasks.runAsExecutor(botId, taskId, operation);
     this.groups = new GroupChat(this.storage, {
       resolve: (botId, modelId) => {
         const resolved=this.privateChat.resolve(botId,{kind:'global',modelId});
@@ -542,6 +548,39 @@ export class BotApplication {
     }
     if (command === 'browser.status') return { configured: this.browserConfigured,
       status: this.browserConfigured ? 'configured' : 'browser-unavailable' };
+    if (command === 'browser.read') {
+      requireValue(this.browserConfigured, 'browser-unavailable', '浏览器服务未配置。', 503);
+      const botId = text(params.botId, 'Bot ID', 64);
+      const idempotencyKey = text(params.idempotencyKey, '操作 ID', 128);
+      const args = parseBrowserReadArguments({ id: 'direct-browser-read', name: 'browser_read',
+        arguments: { origin: params.origin, url: params.url } });
+      const grant = this.browser.listOriginGrants(botId).find((entry) => entry.origin === args.origin);
+      requireValue(grant?.granted === 1,
+        'browser-origin-not-authorized', '此 Bot 尚未获准访问该 origin。', 403);
+      this.browser.assertOwnerReadReplayRevision({ botId, origin: args.origin, idempotencyKey, grantRevision: grant.revision });
+      const task = this.browserTasks.createOwnerRootTask({ botId, idempotencyKey,
+        deadlineAt: new Date(Date.now() + 120_000).toISOString() });
+      const callId = 'browser-read';
+      const callArguments = JSON.stringify({ arguments: { origin: args.origin, url: args.url }, grantRevision: grant.revision });
+      const reservation = this.tasks.store.beginTool(task.id, callId, 'browser_read', callArguments, new Date().toISOString());
+      if (reservation.replayed) {
+        if (reservation.errorCode) throw new BotError(reservation.errorCode, '浏览器读取已失败或结果不可重放。', 409);
+        requireValue(typeof reservation.result === 'string', 'browser-tool-result-unavailable', '浏览器读取结果不可用。', 409);
+        return JSON.parse(this.browser.sanitizeToolResult(botId, task.id, callId));
+      }
+      try {
+        requireValue(task.status === 'running', 'browser-task-not-active', '原浏览器任务已结束，不能重放。', 409);
+        const result = await executeBrowserRead({ browser: this.browser, mode: 'owner', botId,
+          idempotencyKey, origin: args.origin, url: args.url });
+        this.tasks.store.finishTool(task.id, callId, JSON.stringify(result), null, new Date().toISOString());
+        return result;
+      } catch (error) {
+        const code = error instanceof BotError ? error.code : 'browser-tool-failed';
+        this.tasks.store.finishTool(task.id, callId, JSON.stringify({ error: code }), code, new Date().toISOString());
+        this.browserTasks.finishOwnerRootTask(task.id, 'interrupted', code);
+        throw error;
+      }
+    }
     if (command === 'browser.origins.list') return this.browser.listOriginGrants(text(params.botId, 'Bot ID', 64));
     if (command === 'browser.origins.grant') return this.browser.grantOrigin({ botId: text(params.botId, 'Bot ID', 64), origin: params.origin as string });
     if (command === 'browser.origins.revoke') return await this.browser.revokeOrigin({ botId: text(params.botId, 'Bot ID', 64), origin: params.origin as string });

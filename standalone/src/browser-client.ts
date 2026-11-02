@@ -9,7 +9,9 @@ export type BrowserAction = 'navigate' | 'read' | 'click' | 'type' | 'scroll' | 
 export type BrowserScope = Readonly<{ botId: string; taskId: string }>;
 export type BrowserStepReply = Readonly<{
   sessionId: string; taskId: string; operationId: string; sequence: number; status: 'completed'; result: unknown;
+  enforcedPolicy?: { version: number; queryPolicy: string };
 }>;
+export type BrowserRequiredPolicy = Readonly<{ version: 1; queryPolicy: 'deny' }>;
 
 /** Trusted application-side HTTP-over-UDS client for the fixed browser worker protocol. */
 export class BrowserClient {
@@ -20,25 +22,31 @@ export class BrowserClient {
     this.socketPath = options.socketPath;
   }
 
-  create(input: BrowserScope & { operationId: string; leaseMs: number; allowedOrigins: string[]; signal?: AbortSignal }) {
+  health(signal?: AbortSignal) {
+    return this.jsonRequest('GET', '/healthz', {}, signal);
+  }
+  create(input: BrowserScope & { operationId: string; leaseMs: number; allowedOrigins: string[]; requiredPolicy?: BrowserRequiredPolicy; signal?: AbortSignal }) {
     const { signal, ...body } = input;
     return this.jsonRequest('POST', '/v1/sessions', body, signal);
   }
-  operate(sessionId: string, input: BrowserScope & { operationId: string; sequence: number; action: BrowserAction; args?: Record<string, unknown>; signal?: AbortSignal }) {
+  operate(sessionId: string, input: BrowserScope & { operationId: string; sequence: number; action: BrowserAction; args?: Record<string, unknown>; requiredPolicy?: BrowserRequiredPolicy; signal?: AbortSignal }) {
     const { signal, ...body } = input;
     return this.jsonRequest('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/operations`, body, signal);
   }
-  cancel(sessionId: string, scope: BrowserScope, signal?: AbortSignal) {
-    return this.jsonRequest('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/cancel`, scope, signal);
+  cancel(sessionId: string, scope: BrowserScope, signal?: AbortSignal, requiredPolicy?: BrowserRequiredPolicy) {
+    return this.jsonRequest('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/cancel`, { ...scope, ...(requiredPolicy ? { requiredPolicy } : {}) }, signal);
   }
-  close(sessionId: string, scope: BrowserScope, signal?: AbortSignal) {
-    return this.jsonRequest('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/close`, scope, signal);
+  close(sessionId: string, scope: BrowserScope, signal?: AbortSignal, requiredPolicy?: BrowserRequiredPolicy) {
+    return this.jsonRequest('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/close`, { ...scope, ...(requiredPolicy ? { requiredPolicy } : {}) }, signal);
   }
-  screenshot(sessionId: string, resourceId: string, scope: BrowserScope, signal?: AbortSignal) {
-    return this.request('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/screenshots/${encodeURIComponent(resourceId)}`, scope, PNG_LIMIT, signal)
-      .then(({ status, contentType, bytes }) => {
+  screenshot(sessionId: string, resourceId: string, scope: BrowserScope, signal?: AbortSignal, requiredPolicy?: BrowserRequiredPolicy) {
+    const body = { ...scope, ...(requiredPolicy ? { requiredPolicy } : {}) };
+    return this.request('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/screenshots/${encodeURIComponent(resourceId)}`, body, PNG_LIMIT, signal)
+      .then(({ status, contentType, bytes, queryPolicy, policyVersion }) => {
         requireValue(status >= 200 && status < 300 && contentType.toLowerCase().startsWith('image/png'),
           'browser-worker-refused', '浏览器截图暂不可用。', 502);
+        if (requiredPolicy) requireValue(policyVersion === requiredPolicy.version && queryPolicy === requiredPolicy.queryPolicy,
+          'browser-worker-policy-unverified', '浏览器 worker 未确认此截图请求仍绑定只读页面策略。', 503);
         return bytes;
       });
   }
@@ -62,9 +70,9 @@ export class BrowserClient {
 
   private request(method: string, path: string, body: Record<string, unknown>, limit: number, signal?: AbortSignal) {
     requireValue(!signal?.aborted, 'browser-request-cancelled', '浏览器请求已取消。', 499);
-    const payload = Buffer.from(JSON.stringify(body));
+    const payload = method === 'GET' ? Buffer.alloc(0) : Buffer.from(JSON.stringify(body));
     requireValue(payload.length <= JSON_LIMIT, 'browser-request-too-large', '浏览器请求超过大小限制。', 413);
-    return new Promise<{ status: number; contentType: string; bytes: Buffer }>((resolve, reject) => {
+    return new Promise<{ status: number; contentType: string; bytes: Buffer; queryPolicy: string | undefined; policyVersion: number | undefined }>((resolve, reject) => {
       let settled = false;
       const finishError = (error: Error) => { if (!settled) { settled = true; clearTimeout(timer); signal?.removeEventListener('abort', abort); reject(error); } };
       const req: ClientRequest = httpRequest({ socketPath: this.socketPath, method, path,
@@ -79,7 +87,10 @@ export class BrowserClient {
         res.on('end', () => {
           if (settled) return;
           settled = true; clearTimeout(timer); signal?.removeEventListener('abort', abort);
-          resolve({ status: res.statusCode ?? 502, contentType: String(res.headers['content-type'] ?? ''), bytes: Buffer.concat(chunks) });
+          const version = Number(res.headers['x-browser-policy-version']);
+          resolve({ status: res.statusCode ?? 502, contentType: String(res.headers['content-type'] ?? ''), bytes: Buffer.concat(chunks),
+            queryPolicy: typeof res.headers['x-browser-query-policy'] === 'string' ? res.headers['x-browser-query-policy'] : undefined,
+            policyVersion: Number.isFinite(version) ? version : undefined });
         });
         res.on('error', () => finishError(new BotError('browser-worker-unavailable', '浏览器 worker 暂不可用。', 503)));
       });

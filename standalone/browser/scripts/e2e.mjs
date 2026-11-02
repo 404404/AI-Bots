@@ -19,10 +19,16 @@ async function request(path, body) {
   return { status: response.status, value };
 }
 
+const healthResponse = await fetch(`${gateway}/healthz`, { signal: AbortSignal.timeout(5000) });
+const health = await healthResponse.json();
+assert.equal(healthResponse.status, 200, JSON.stringify(health));
+assert.deepEqual(health.capabilities, { version: 1, queryPolicy: 'deny' }, 'browser_read E2E requires the worker to report enforced query denial');
+
 async function operation(session, sequence, action, args = {}) {
   const result = await request(`/v1/sessions/${session.sessionId}/operations`, {
     botId: session.botId,
     taskId: session.taskId,
+    requiredPolicy: { version: 1, queryPolicy: 'deny' },
     sequence,
     operationId: randomUUID(),
     action,
@@ -34,7 +40,7 @@ async function operation(session, sequence, action, args = {}) {
 }
 
 async function openSession(botId, taskId) {
-  const response = await request('/v1/sessions', { operationId: randomUUID(), botId, taskId, leaseMs: 60_000, allowedOrigins: [origin] });
+  const response = await request('/v1/sessions', { operationId: randomUUID(), botId, taskId, leaseMs: 60_000, allowedOrigins: [origin], requiredPolicy: { version: 1, queryPolicy: 'deny' } });
   assert.equal(response.status, 201, JSON.stringify(response.value));
   return { ...response.value, botId, taskId };
 }
@@ -55,7 +61,7 @@ try {
   const afterText = await operation(sessionA, 7, 'read');
   assert.match(afterText.text, new RegExp(`Count:\\s*${before + 1}`, 'u'));
   const screenshot = await operation(sessionA, 8, 'screenshot');
-  const image = await request(`/v1/sessions/${sessionA.sessionId}/screenshots/${screenshot.resourceId}`, { botId: botA, taskId: taskA });
+  const image = await request(`/v1/sessions/${sessionA.sessionId}/screenshots/${screenshot.resourceId}`, { botId: botA, taskId: taskA, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
   assert.equal(image.status, 200);
   assert.equal(image.contentType, 'image/png');
   assert.ok(image.bytes.length > 100);
@@ -65,7 +71,7 @@ try {
   assert.equal(denied.status, 403);
   assert.equal(denied.value.error.code, 'target-origin-denied');
 } finally {
-  await request(`/v1/sessions/${sessionA.sessionId}/close`, { botId: botA, taskId: taskA });
+  await request(`/v1/sessions/${sessionA.sessionId}/close`, { botId: botA, taskId: taskA, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
 }
 
 const botB = `e2e-${randomUUID()}`;
@@ -76,7 +82,30 @@ try {
   const observed = await operation(sessionB, 2, 'read');
   assert.equal(observed.text.includes('fixture-session'), false, 'a new context must not inherit cookies from another Bot/task');
 } finally {
-  await request(`/v1/sessions/${sessionB.sessionId}/close`, { botId: botB, taskId: taskB });
+  await request(`/v1/sessions/${sessionB.sessionId}/close`, { botId: botB, taskId: taskB, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
 }
 
-process.stdout.write(JSON.stringify({ result: 'pass', operations: 11, screenshotBytes: 'captured-after-action', fixtureCountIncremented: true, isolatedCookieAbsent: true }) + '\n');
+const botC = `e2e-${randomUUID()}`;
+const taskC = `task-${randomUUID()}`;
+const sessionC = await openSession(botC, taskC);
+try {
+  assert.deepEqual(sessionC.enforcedPolicy, { version: 1, queryPolicy: 'deny' });
+  const deniedQuery = await request(`/v1/sessions/${sessionC.sessionId}/operations`, {
+    botId: botC, taskId: taskC, requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 1, operationId: randomUUID(), action: 'navigate', args: { url: `${origin}/?secret=value` },
+  });
+  assert.equal(deniedQuery.status, 403);
+  assert.equal(deniedQuery.value.error.code, 'target-query-denied');
+
+  const redirected = await request(`/v1/sessions/${sessionC.sessionId}/operations`, {
+    botId: botC, taskId: taskC, requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 2, operationId: randomUUID(), action: 'navigate', args: { url: `${origin}/redirect-query` },
+  });
+  assert.ok(redirected.status >= 400, JSON.stringify(redirected.value));
+  await operation(sessionC, 3, 'navigate', { url: `${origin}/query-page` });
+  await operation(sessionC, 4, 'navigate', { url: `${origin}/request-count` });
+  const counter = await operation(sessionC, 5, 'read');
+  assert.match(counter.text, /"requestCount":0/u, 'redirect and subresource query URLs must not reach the isolated fixture');
+} finally {
+  await request(`/v1/sessions/${sessionC.sessionId}/close`, { botId: botC, taskId: taskC, requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+}
+
+process.stdout.write(JSON.stringify({ result: 'pass', operations: 16, screenshotBytes: 'captured-after-action', fixtureCountIncremented: true, isolatedCookieAbsent: true, queryRedirectAndSubresourceBlocked: true }) + '\n');

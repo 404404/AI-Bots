@@ -39,7 +39,13 @@ function workerRequest(socketPath, method, path, body, responseLimit = MAX_BODY)
         if (size > limit) { req.destroy(new Error('worker response too large')); return; }
         chunks.push(chunk);
       });
-      res.on('end', () => resolve({ status: res.statusCode ?? 502, contentType: res.headers['content-type'] ?? 'application/json', bytes: Buffer.concat(chunks) }));
+      res.on('end', () => resolve({
+        status: res.statusCode ?? 502,
+        contentType: res.headers['content-type'] ?? 'application/json',
+        policyVersion: res.headers['x-browser-policy-version'],
+        queryPolicy: res.headers['x-browser-query-policy'],
+        bytes: Buffer.concat(chunks),
+      }));
     });
     req.on('error', reject);
     req.on('timeout', () => req.destroy(new Error('worker timeout')));
@@ -56,9 +62,15 @@ export function createGateway({ socketPath = '/run/browser-control/worker.sock',
         const worker = await workerRequest(socketPath, 'GET', '/health', undefined, 4096);
         const status = JSON.parse(worker.bytes.toString('utf8'));
         const ready = worker.status === 200 && status.ready === true && status.sandboxVerified === true;
-        return json(res, ready ? 200 : 503, { gatewayReady: true, workerReady: ready });
+        return json(res, ready ? 200 : 503, {
+          gatewayReady: true,
+          workerReady: ready,
+          ready,
+          sandboxVerified: status.sandboxVerified === true,
+          ...(status.capabilities && typeof status.capabilities === 'object' && !Array.isArray(status.capabilities) ? { capabilities: status.capabilities } : {}),
+        });
       } catch {
-        return json(res, 503, { gatewayReady: true, workerReady: false });
+        return json(res, 503, { gatewayReady: true, workerReady: false, ready: false, sandboxVerified: false });
       }
     }
     const authorization = req.headers.authorization ?? '';
@@ -82,7 +94,13 @@ export function createGateway({ socketPath = '/run/browser-control/worker.sock',
       else return json(res, 404, { error: { code: 'not-found' } });
       const result = await workerRequest(socketPath, 'POST', path, bytes, screenshot ? MAX_IMAGE : MAX_BODY);
       if (result.contentType.startsWith('image/')) {
-        res.writeHead(result.status, { 'content-type': result.contentType, 'content-length': result.bytes.length, 'cache-control': 'private, no-store' });
+        res.writeHead(result.status, {
+          'content-type': result.contentType,
+          'content-length': result.bytes.length,
+          'cache-control': 'private, no-store',
+          ...(result.policyVersion ? { 'x-browser-policy-version': result.policyVersion } : {}),
+          ...(result.queryPolicy ? { 'x-browser-query-policy': result.queryPolicy } : {}),
+        });
         return res.end(result.bytes);
       }
       res.writeHead(result.status, { 'content-type': 'application/json', 'content-length': result.bytes.length, 'cache-control': 'no-store' });

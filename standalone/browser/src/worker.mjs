@@ -53,6 +53,18 @@ function stableFingerprint(value) {
   return createHash('sha256').update(canonicalJson(value)).digest('hex');
 }
 
+function hasQuery(target) {
+  const hashAt = target.href.indexOf('#');
+  return (hashAt < 0 ? target.href : target.href.slice(0, hashAt)).includes('?');
+}
+
+function diagnosticError(error) {
+  const name = typeof error?.name === 'string' && /^[A-Za-z][A-Za-z0-9]{0,39}$/u.test(error.name) ? error.name : 'Error';
+  const directCode = typeof error?.code === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,79}$/u.test(error.code) ? error.code : undefined;
+  const chromiumCode = typeof error?.message === 'string' ? /\bnet::(ERR_[A-Z0-9_]+)\b/u.exec(error.message)?.[1] : undefined;
+  return { errorName: name, ...(directCode ?? chromiumCode ? { errorCode: directCode ?? chromiumCode } : {}) };
+}
+
 async function proxyAdmin({ url, socketPath, token }, body) {
   const path = body.close ? `/internal/leases/${body.sessionId}/close` : '/internal/leases';
   const payload = Buffer.from(JSON.stringify(body));
@@ -169,7 +181,7 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
 }
 
 export class BrowserWorker {
-  constructor({ rules, proxyAdminUrl, proxyAdminSocket, proxyAdminToken, proxySocket, proxyServer, dataRoot, launcher = chromium, now = () => Date.now(), logger = () => {}, maxSessions = MAX_SESSIONS, networkInspector = networkInterfaces, bridgeGateway = process.env.BROWSER_BRIDGE_GATEWAY, sensitivePorts = process.env.BROWSER_HOST_SENSITIVE_PORTS?.split(','), bridgeProbe }) {
+  constructor({ rules, proxyAdminUrl, proxyAdminSocket, proxyAdminToken, proxySocket, proxyServer, dataRoot, launcher = chromium, now = () => Date.now(), logger = () => {}, maxSessions = MAX_SESSIONS, networkInspector = networkInterfaces, bridgeGateway = process.env.BROWSER_BRIDGE_GATEWAY, sensitivePorts = process.env.BROWSER_HOST_SENSITIVE_PORTS?.split(','), bridgeProbe, queryPolicy = process.env.BROWSER_SESSION_QUERY_POLICY ?? 'allow' }) {
     this.rules = parseTargetRules(rules);
     this.proxyAdminUrl = proxyAdminUrl;
     this.proxyAdminSocket = proxyAdminSocket;
@@ -185,6 +197,8 @@ export class BrowserWorker {
     this.bridgeGateway = bridgeGateway;
     this.sensitivePorts = sensitivePorts;
     this.bridgeProbe = bridgeProbe ?? ((host, port) => this.probeTcp(host, port));
+    requireValue(['allow', 'deny'].includes(queryPolicy), 'invalid-session-policy', '浏览器会话 URL 策略无效。', 500);
+    this.queryPolicy = queryPolicy;
     this.sessions = new Map();
     this.tombstones = new Map();
     this.createRequests = new Map();
@@ -222,7 +236,7 @@ export class BrowserWorker {
     }
     this.reaper = setInterval(() => this.reap().catch(() => {}), 1000);
     this.reaper.unref();
-    return { ready: true, sandboxVerified: true };
+    return { ready: true, sandboxVerified: true, capabilities: { version: 1, queryPolicy: this.queryPolicy } };
   }
 
   verifyNetworkNamespace() {
@@ -283,7 +297,8 @@ export class BrowserWorker {
     requireValue(Array.isArray(input?.allowedOrigins) && input.allowedOrigins.length > 0 && input.allowedOrigins.length <= 8, 'invalid-target-scope', '须指定一个或多个允许 origin。');
     const allowedOrigins = [...new Set(input.allowedOrigins)];
     for (const origin of allowedOrigins) requireValue(this.rules.has(origin), 'target-origin-denied', '目标 origin 不在部署授权范围。', 403);
-    const fingerprint = stableFingerprint({ botId, taskId, leaseMs, allowedOrigins });
+    this.assertRequiredPolicy(input, this.queryPolicy, this.queryPolicy === 'deny');
+    const fingerprint = stableFingerprint({ botId, taskId, leaseMs, allowedOrigins, queryPolicy: this.queryPolicy });
     const existing = this.createRequests.get(operationId);
     if (existing) {
       requireValue(existing.fingerprint === fingerprint, 'operation-id-conflict', '创建操作 ID 已用于不同参数。', 409);
@@ -305,7 +320,7 @@ export class BrowserWorker {
     const expiresAt = this.now() + leaseMs;
     const directory = mkdtempSync(join(this.dataRoot, 'session-'));
     chmodSync(directory, 0o700);
-    const session = { id, botId, taskId, secret, expiresAt, allowedOrigins: new Set(allowedOrigins), directory, context: null, page: null, nextSequence: 1, steps: 0, operations: new Map(), busy: null, state: 'starting', screenshots: new Map() };
+    const session = { id, botId, taskId, secret, expiresAt, allowedOrigins: new Set(allowedOrigins), queryPolicy: this.queryPolicy, directory, context: null, page: null, nextSequence: 1, steps: 0, operations: new Map(), busy: null, state: 'starting', screenshots: new Map() };
     try {
       await this.updateProxyLease({ sessionId: id, secret, expiresAt, origins: allowedOrigins });
       session.context = await this.browser.newContext({
@@ -320,8 +335,15 @@ export class BrowserWorker {
         try {
           const target = canonicalTarget(route.request().url());
           requireValue(session.allowedOrigins.has(target.origin), 'target-origin-denied', '页面请求目标未获精确授权。', 403);
+          requireValue(session.queryPolicy !== 'deny' || !hasQuery(target), 'target-query-denied', '页面请求 URL 不允许查询参数。', 403);
           await route.continue();
-        } catch { await route.abort('blockedbyclient').catch(() => {}); }
+        } catch (error) {
+          const request = route.request();
+          const code = typeof error?.code === 'string' && /^[a-z0-9-]{1,80}$/u.test(error.code) ? error.code : 'target-request-denied';
+          const resourceType = typeof request.resourceType === 'function' ? request.resourceType() : 'unknown';
+          this.logger({ event: 'browser-request-refused', sessionId: session.id, code, resourceType, at: this.now() });
+          await route.abort('blockedbyclient').catch(() => {});
+        }
       });
       session.context.routeWebSocket('**/*', (webSocketRoute) => webSocketRoute.close());
       session.context.on('page', (page) => {
@@ -332,7 +354,7 @@ export class BrowserWorker {
       session.state = 'active';
       this.sessions.set(id, session);
       this.event(session, 'session-created');
-      return { operationId, sessionId: id, taskId, expiresAt, stepBudget: MAX_STEPS };
+      return { operationId, sessionId: id, taskId, expiresAt, stepBudget: MAX_STEPS, enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy } };
     } catch (error) {
       await session.context?.close().catch(() => {});
       await this.updateProxyLease({ sessionId: id, close: true }).catch(() => {});
@@ -344,6 +366,14 @@ export class BrowserWorker {
   assertScope(session, input) {
     requireValue(input?.botId === session.botId && input?.taskId === session.taskId, 'session-scope-denied', '浏览器会话归属不匹配。', 404);
     requireValue(session.state === 'active' && session.expiresAt > this.now(), 'session-expired', '浏览器会话已结束或租约已过期。', 410);
+    this.assertRequiredPolicy(input, session.queryPolicy, session.queryPolicy === 'deny');
+  }
+
+  assertRequiredPolicy(input, enforcedQueryPolicy, required) {
+    if (required || input?.requiredPolicy !== undefined) {
+      requireValue(input?.requiredPolicy?.version === 1 && input.requiredPolicy.queryPolicy === enforcedQueryPolicy,
+        'required-policy-unmet', '浏览器 worker 不满足调用方要求的 URL 策略。', 403);
+    }
   }
 
   async operate(id, input) {
@@ -351,6 +381,7 @@ export class BrowserWorker {
     if (!session) {
       const old = this.tombstones.get(id);
       requireValue(old && old.botId === input?.botId && old.taskId === input?.taskId, 'session-not-found', '浏览器会话不存在。', 404);
+      this.assertRequiredPolicy(input, old.queryPolicy, old.queryPolicy === 'deny');
       const cached = old.closeOperation;
       requireValue(input?.action === 'close' && cached && cached.operationId === input.operationId, 'session-not-found', '浏览器会话不存在。', 404);
       requireValue(cached.fingerprint === stableFingerprint({ action: input.action, args: input.args ?? {}, sequence: input.sequence }), 'operation-id-conflict', '操作 ID 已用于不同请求。', 409);
@@ -374,9 +405,10 @@ export class BrowserWorker {
     const promise = this.runAction(session, action, args).then((result) => {
       requireValue(action === 'close' || session.state === 'active', 'session-terminated', '浏览器会话已终止，操作结果已丢弃。', 410);
       this.event(session, 'operation-completed', action);
-      return { sessionId: id, taskId: session.taskId, operationId, sequence, status: 'completed', result };
+      return { sessionId: id, taskId: session.taskId, operationId, sequence, status: 'completed', enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy }, result };
     }).catch((error) => {
       this.event(session, 'operation-refused', error.code ?? 'operation-failed');
+      if (!(error instanceof BrowserError)) this.logger({ event: 'browser-action-failed', sessionId: session.id, action, ...diagnosticError(error), at: this.now() });
       throw error instanceof BrowserError ? error : new BrowserError('browser-operation-failed', '浏览器操作未完成。', 502);
     }).finally(() => { session.busy = null; });
     session.busy = promise;
@@ -393,7 +425,12 @@ export class BrowserWorker {
       requireValue(typeof args.url === 'string' && args.url.length <= 2048, 'invalid-target', '导航 URL 无效。');
       const target = canonicalTarget(args.url);
       requireValue(session.allowedOrigins.has(target.origin), 'target-origin-denied', '目标 origin 未获精确授权。', 403);
-      await page.goto(target.href, { waitUntil: 'domcontentloaded', timeout: OP_TIMEOUT_MS });
+      requireValue(session.queryPolicy !== 'deny' || !hasQuery(target), 'target-query-denied', '导航 URL 不允许查询参数。', 403);
+      try { await page.goto(target.href, { waitUntil: 'domcontentloaded', timeout: OP_TIMEOUT_MS }); }
+      catch (error) {
+        this.logger({ event: 'browser-navigation-failed', sessionId: session.id, phase: 'page-goto', protocol: target.protocol, ...diagnosticError(error), at: this.now() });
+        throw error;
+      }
       return { url: page.url() };
     }
     if (action === 'read') {
@@ -455,7 +492,7 @@ export class BrowserWorker {
     requireValue(session, 'session-not-found', '浏览器会话不存在。', 404);
     this.assertScope(session, input);
     await this.closeSession(session, 'cancelled');
-    return { sessionId: id, status: 'cancelled' };
+    return { sessionId: id, status: 'cancelled', enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy } };
   }
 
   async close(id, input) {
@@ -463,11 +500,13 @@ export class BrowserWorker {
     if (!session) {
       const old = this.tombstones.get(id);
       requireValue(old && old.botId === input?.botId && old.taskId === input?.taskId, 'session-not-found', '浏览器会话不存在。', 404);
-      return { sessionId: id, status: old.status };
+      this.assertRequiredPolicy(input, old.queryPolicy, old.queryPolicy === 'deny');
+      return { sessionId: id, status: old.status, enforcedPolicy: { version: 1, queryPolicy: old.queryPolicy } };
     }
     requireValue(input?.botId === session.botId && input?.taskId === session.taskId, 'session-scope-denied', '浏览器会话归属不匹配。', 404);
+    this.assertRequiredPolicy(input, session.queryPolicy, session.queryPolicy === 'deny');
     await this.closeSession(session, 'closed');
-    return { sessionId: id, status: 'closed' };
+    return { sessionId: id, status: 'closed', enforcedPolicy: { version: 1, queryPolicy: session.queryPolicy } };
   }
 
   async closeSession(session, status) {
@@ -477,7 +516,7 @@ export class BrowserWorker {
     await session.context?.close().catch(() => {});
     await this.updateProxyLease({ sessionId: session.id, close: true }).catch(() => {});
     rmSync(session.directory, { recursive: true, force: true });
-    this.tombstones.set(session.id, { botId: session.botId, taskId: session.taskId, status, at: this.now(), closeOperation: session.closingOperation });
+    this.tombstones.set(session.id, { botId: session.botId, taskId: session.taskId, queryPolicy: session.queryPolicy, status, at: this.now(), closeOperation: session.closingOperation });
     this.event(session, `session-${status}`);
   }
 
@@ -506,7 +545,7 @@ export class BrowserWorker {
 export function createWorkerServer(worker, logger = () => {}) {
   const server = createServer(async (req, res) => {
     try {
-      if (req.url === '/health' && req.method === 'GET') return safeJson(res, 200, { ready: !!worker.browser, sandboxVerified: worker.sandboxVerified });
+      if ((req.url === '/health' || req.url === '/healthz') && req.method === 'GET') return safeJson(res, 200, { ready: !!worker.browser, sandboxVerified: worker.sandboxVerified, capabilities: { version: 1, queryPolicy: worker.queryPolicy } });
       const body = ['GET', 'HEAD'].includes(req.method) ? {} : await readJson(req);
       if (req.method === 'POST' && req.url === '/v1/sessions') return safeJson(res, 201, await worker.create(body));
       const route = /^\/v1\/sessions\/([^/]+)(?:\/(operations|cancel|close|screenshots\/([^/]+)))?$/u.exec(req.url ?? '');
@@ -517,7 +556,9 @@ export function createWorkerServer(worker, logger = () => {}) {
       if (op === 'close' && req.method === 'POST') return safeJson(res, 200, await worker.close(id, body));
       if (op?.startsWith('screenshots/') && req.method === 'POST') {
         const bytes = await worker.screenshot(id, body, resourceId);
-        res.writeHead(200, { 'content-type': 'image/png', 'content-length': bytes.length, 'cache-control': 'private, no-store' });
+        const queryPolicy = worker.sessions.get(id)?.queryPolicy;
+        requireValue(queryPolicy, 'session-not-found', '浏览器会话不存在。', 404);
+        res.writeHead(200, { 'content-type': 'image/png', 'content-length': bytes.length, 'cache-control': 'private, no-store', 'x-browser-policy-version': '1', 'x-browser-query-policy': queryPolicy });
         return res.end(bytes);
       }
       throw new BrowserError('not-found', '接口不存在。', 404);
@@ -526,7 +567,12 @@ export function createWorkerServer(worker, logger = () => {}) {
         ? error
         : new BrowserError('internal-error', '浏览器请求未完成。', 500);
       logger({ event: 'worker-request-failed', code: safe.code });
-      if (!res.headersSent) safeJson(res, safe.status, { error: { code: safe.code, message: safe.message } });
+      if (!res.headersSent) {
+        const sessionId = /^\/v1\/sessions\/([^/]+)/u.exec(req.url ?? '')?.[1];
+        const session = sessionId ? worker.sessions.get(sessionId) ?? worker.tombstones.get(sessionId) : null;
+        const enforcedPolicy = session ? { version: 1, queryPolicy: session.queryPolicy } : (req.url === '/v1/sessions' ? { version: 1, queryPolicy: worker.queryPolicy } : undefined);
+        safeJson(res, safe.status, { ...(enforcedPolicy ? { enforcedPolicy } : {}), error: { code: safe.code, message: safe.message } });
+      }
       else res.destroy();
     }
   });
@@ -547,17 +593,20 @@ export async function listenUnix(server, socketPath) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  const logger = (entry) => process.stderr.write(`${JSON.stringify(entry)}\n`);
   const worker = new BrowserWorker({
     rules: process.env.BROWSER_TARGET_RULES,
+    queryPolicy: process.env.BROWSER_SESSION_QUERY_POLICY ?? 'allow',
     proxyAdminUrl: process.env.BROWSER_PROXY_ADMIN_URL || 'http://egress:9090/internal/leases',
     proxyAdminSocket: process.env.BROWSER_PROXY_ADMIN_SOCKET,
     proxyAdminToken: process.env.BROWSER_PROXY_ADMIN_TOKEN,
     proxySocket: process.env.BROWSER_PROXY_SOCKET,
     proxyServer: process.env.BROWSER_PROXY_URL || 'http://127.0.0.1:8080',
     dataRoot: process.env.BROWSER_DATA_ROOT || '/tmp/browser-sessions',
+    logger,
   });
   await worker.start();
-  const server = createWorkerServer(worker);
+  const server = createWorkerServer(worker, logger);
   await listenUnix(server, process.env.BROWSER_CONTROL_SOCKET || '/run/browser-control/worker.sock');
   const stop = async () => { server.close(); await worker.stop(); process.exit(0); };
   process.once('SIGTERM', stop); process.once('SIGINT', stop);

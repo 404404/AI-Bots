@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { BotError, requireValue, text } from './errors.ts';
-import type { BrowserAction, BrowserClient, BrowserStepReply } from './browser-client.ts';
+import type { BrowserAction, BrowserClient, BrowserRequiredPolicy, BrowserStepReply } from './browser-client.ts';
 
 type Sqlite = {
   exec(sql: string): void;
@@ -91,6 +92,40 @@ const MAX_SESSION_MS = 120_000;
 const MAX_SCREENSHOTS = 8;
 const MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024;
 const MAX_SESSION_SCREENSHOT_BYTES = 8 * 1024 * 1024;
+const BROWSER_READ_KEY_PREFIX = 'browser-read:';
+const BROWSER_READ_POLICY: BrowserRequiredPolicy = Object.freeze({ version: 1, queryPolicy: 'deny' });
+const isExactReadPolicy = (value: unknown) => !!value && typeof value === 'object' &&
+  Object.keys(value).sort().join(',') === 'queryPolicy,version' &&
+  (value as Record<string, unknown>).version === BROWSER_READ_POLICY.version &&
+  (value as Record<string, unknown>).queryPolicy === BROWSER_READ_POLICY.queryPolicy;
+const browserReadSessionKey = (key: string) => `${BROWSER_READ_KEY_PREFIX}${key}`;
+const browserSensitiveContext = new AsyncLocalStorage<readonly string[]>();
+function safeNavigationUrl(value: unknown, origin: string, secrets: readonly string[]) {
+  requireValue(typeof value === 'string' && value.length <= 2048, 'invalid-browser-operation', '导航 URL 无效。', 400);
+  requireValue(!secrets.some((secret) => secret && value.includes(secret)), 'browser-sensitive-url-refused', '导航 URL 含有敏感值，已拒绝。', 400);
+  let url: URL;
+  try { url = new URL(value); } catch { throw new BotError('invalid-browser-operation', '导航 URL 无效。', 400); }
+  requireValue(url.origin === origin && !url.username && !url.password && !url.hash,
+    'browser-target-outside-grant', '浏览器 URL 必须位于获准的精确 origin。', 403);
+  requireValue(!url.search && !url.href.includes('?'), 'browser-query-not-supported', '首片浏览器不支持含 query 的 URL。', 400);
+  return url.href;
+}
+function redactValue(value: unknown, secrets: readonly string[]): unknown {
+  if (typeof value === 'string') {
+    let output = value;
+    for (const secret of secrets) if (secret) output = output.replaceAll(secret, '[REDACTED]');
+    return output;
+  }
+  if (Array.isArray(value)) return value.map((item) => redactValue(item, secrets));
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [redactText(key, secrets), redactValue(item, secrets)]));
+  return value;
+}
+function redactText(value: string, secrets: readonly string[]) {
+  let output = value;
+  for (const secret of secrets) if (secret) output = output.replaceAll(secret, '[REDACTED]');
+  return output;
+}
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const CRC_TABLE = new Uint32Array(256);
 for (let n = 0; n < 256; n += 1) {
@@ -161,14 +196,76 @@ export class BrowserService {
   client: BrowserClient;
   tasks: BrowserTaskAdapter;
   now: () => number;
+  sensitiveValues: () => readonly string[];
   activeSteps = new Map<string, Promise<unknown>>();
   activeOpens = new Map<string, { fingerprint: string; promise: Promise<unknown> }>();
 
-  constructor(options: { storage: BrowserStorage; client: BrowserClient; tasks: BrowserTaskAdapter; now?: () => number }) {
+  constructor(options: { storage: BrowserStorage; client: BrowserClient; tasks: BrowserTaskAdapter; now?: () => number; sensitiveValues?: () => readonly string[] }) {
     this.storage = options.storage; this.client = options.client; this.tasks = options.tasks; this.now = options.now ?? (() => Date.now());
+    this.sensitiveValues = options.sensitiveValues ?? (() => []);
     const required = ['browser_origin_grants', 'browser_sessions', 'browser_steps', 'browser_screenshots'];
     const existing = new Set((this.storage.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map((row) => row.name));
     requireValue(required.every((name) => existing.has(name)), 'schema-upgrade-required', '浏览器数据结构尚未迁移。', 503);
+  }
+
+  /** Adds short-lived executor credentials to the single Browser response sanitizer scope. */
+  withSensitiveValues<T>(values: readonly string[], operation: () => T): T {
+    return browserSensitiveContext.run([...(browserSensitiveContext.getStore() ?? []), ...values.filter(Boolean)], operation);
+  }
+
+  private currentSensitiveValues() {
+    const scoped = browserSensitiveContext.getStore() ?? [];
+    return [...new Set([...this.sensitiveValues(), ...scoped])]
+      .filter((secret): secret is string => typeof secret === 'string' && secret.length > 0)
+      .sort((a, b) => b.length - a.length);
+  }
+
+  private requiredPolicy(session: Record<string, any>) {
+    return typeof session.open_key === 'string' && session.open_key.startsWith(BROWSER_READ_KEY_PREFIX)
+      ? BROWSER_READ_POLICY : undefined;
+  }
+
+  private async verifyPolicyHealth(policy: BrowserRequiredPolicy, signal?: AbortSignal) {
+    const health = await this.client.health(signal);
+    requireValue(health.ready === true && health.sandboxVerified === true && isExactReadPolicy(health.capabilities),
+      'browser-worker-policy-unverified', '浏览器 worker 未证明只读页面所需的 query 拦截策略。', 503);
+  }
+
+  private async cancelWorker(session: Record<string, any>) {
+    const policy = this.requiredPolicy(session);
+    const reply = await this.client.cancel(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id }, undefined, policy);
+    if (policy) requireValue(isExactReadPolicy(reply.enforcedPolicy), 'browser-worker-policy-unverified', '浏览器 worker 未确认取消请求仍绑定只读页面策略。', 503);
+  }
+
+  private async closeWorker(session: Record<string, any>) {
+    const policy = this.requiredPolicy(session);
+    const reply = await this.client.close(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id }, undefined, policy);
+    if (policy) requireValue(isExactReadPolicy(reply.enforcedPolicy), 'browser-worker-policy-unverified', '浏览器 worker 未确认关闭请求仍绑定只读页面策略。', 503);
+  }
+
+  private sanitizeStoredResult(sessionId: string, stepId: string, encoded: string, secrets = this.currentSensitiveValues()) {
+    const safe = JSON.stringify(redactValue(JSON.parse(encoded), secrets));
+    if (safe !== encoded) this.storage.db.prepare('UPDATE browser_steps SET result_json=?,updated_at=? WHERE session_id=? AND step_id=?')
+      .run(safe, this.timestamp(), sessionId, stepId);
+    return JSON.parse(safe);
+  }
+
+  /** Sanitize legacy persisted tool results before a trusted owner/executor replay returns them. */
+  sanitizeToolResult(botId: string, taskId: string, callId: string) {
+    const task = this.tasks.resolveTask(taskId);
+    requireValue(task && task.botId === botId && task.executorBotId === botId,
+      'browser-task-scope-denied', '工具结果与当前 Bot 任务不匹配。', 403);
+    if (task.parentId === null) this.tasks.assertOwnerBot(botId);
+    else requireValue(this.tasks.isCurrentExecutorTask(botId, taskId), 'browser-task-scope-denied', '当前执行任务无权读取工具结果。', 403);
+    const row = this.storage.db.prepare('SELECT result FROM task_tool_calls WHERE task_id=? AND tool_call_id=? AND tool_name=\'browser_read\'')
+      .get(taskId, callId) as { result: string | null } | undefined;
+    requireValue(row && typeof row.result === 'string', 'browser-tool-result-unavailable', '浏览器工具结果不可用。', 409);
+    let safe: string;
+    try { safe = JSON.stringify(redactValue(JSON.parse(row.result), this.currentSensitiveValues())); }
+    catch { safe = redactText(row.result, this.currentSensitiveValues()); }
+    if (safe !== row.result) this.storage.db.prepare('UPDATE task_tool_calls SET result=? WHERE task_id=? AND tool_call_id=?')
+      .run(safe, taskId, callId);
+    return safe;
   }
 
   grantOrigin(input: { botId: string; origin: string }) {
@@ -201,7 +298,7 @@ export class BrowserService {
       let workerClosed = !session.worker_session_id && session.status !== 'creating';
       if (session.worker_session_id) {
         try {
-          await this.client.cancel(session.worker_session_id, { botId, taskId: session.task_id });
+          await this.cancelWorker(session);
           workerClosed = true;
         } catch {
           cleanupPending.push({ sessionId: session.id, leaseExpiresAt: session.expires_at });
@@ -224,7 +321,25 @@ export class BrowserService {
     return this.storage.db.prepare('SELECT origin,revision,granted,updated_at AS updatedAt FROM browser_origin_grants WHERE bot_id=? ORDER BY origin').all(botId);
   }
 
-  openForOwner(input: { botId: string; idempotencyKey: string; origin: string; signal?: AbortSignal }) {
+  /** Reject a direct-read replay when its persisted owner session belongs to an older grant revision. */
+  assertOwnerReadReplayRevision(input: { botId: string; origin: string; idempotencyKey: string; grantRevision: number }) {
+    const botId = text(input.botId, 'botId', 64), origin = exactOrigin(input.origin);
+    this.tasks.assertOwnerBot(botId);
+    const prior = this.storage.db.prepare(`SELECT grant_revision FROM browser_sessions
+      WHERE bot_id=? AND open_kind='owner' AND open_key=? AND origin=? ORDER BY created_at DESC LIMIT 1`)
+      .get(botId, browserReadSessionKey(text(input.idempotencyKey, 'idempotencyKey', 128)), origin) as { grant_revision: number } | undefined;
+    requireValue(!prior || prior.grant_revision === input.grantRevision,
+      'browser-origin-grant-changed', '浏览器授权已变更，不能重放旧页面结果。', 403);
+  }
+
+  /** Trusted model-tool discovery; exposes only exact active origins for the specified Bot. */
+  grantedOriginsForBot(botIdInput: string) {
+    const botId = text(botIdInput, 'Bot ID', 64);
+    return (this.storage.db.prepare('SELECT origin FROM browser_origin_grants WHERE bot_id=? AND granted=1 ORDER BY origin').all(botId) as { origin: string }[])
+      .map((row) => row.origin);
+  }
+
+  openForOwner(input: { botId: string; idempotencyKey: string; origin: string; queryPolicy?: 'deny'; signal?: AbortSignal }) {
     const botId = text(input.botId, 'botId', 64);
     const idempotencyKey = text(input.idempotencyKey, 'idempotencyKey', 128);
     this.tasks.assertOwnerBot(botId);
@@ -235,17 +350,22 @@ export class BrowserService {
       this.tasks.finishOwnerRootTask(task.id, 'interrupted', 'browser-task-scope-denied');
       throw new BotError('browser-task-scope-denied', '所有者浏览器任务归属无效。', 403);
     }
-    return this.open({ botId, task, origin, grantRevision: grant.revision, kind: 'owner', openKey: idempotencyKey, signal: input.signal });
+    return this.open({ botId, task, origin, grantRevision: grant.revision, kind: 'owner',
+      openKey: input.queryPolicy === 'deny' ? browserReadSessionKey(idempotencyKey) : idempotencyKey,
+      queryPolicy: input.queryPolicy, signal: input.signal });
   }
 
-  openForWorker(input: { botId: string; taskId: string; idempotencyKey: string; origin: string; signal?: AbortSignal }) {
+  openForWorker(input: { botId: string; taskId: string; idempotencyKey: string; origin: string; queryPolicy?: 'deny'; signal?: AbortSignal }) {
     const botId = text(input.botId, 'botId', 64), taskId = text(input.taskId, 'taskId', 64);
     const task = this.tasks.resolveTask(taskId);
     requireValue(task && task.id === taskId && task.botId === botId && task.executorBotId === botId && task.parentId !== null && task.status === 'running' && this.tasks.isCurrentExecutorTask(botId, taskId),
       'browser-task-scope-denied', '当前执行任务无权创建浏览器会话。', 403);
     requireValue(Date.parse(task.deadlineAt) > this.now(), 'task-deadline-exceeded', '任务截止时间已到。', 409);
     const origin = exactOrigin(input.origin), grant = this.readGrant(botId, origin);
-    return this.open({ botId, task, origin, grantRevision: grant.revision, kind: 'worker', openKey: text(input.idempotencyKey, 'idempotencyKey', 128), signal: input.signal });
+    const key = text(input.idempotencyKey, 'idempotencyKey', 128);
+    return this.open({ botId, task, origin, grantRevision: grant.revision, kind: 'worker',
+      openKey: input.queryPolicy === 'deny' ? browserReadSessionKey(key) : key,
+      queryPolicy: input.queryPolicy, signal: input.signal });
   }
 
   private readGrant(botId: string, origin: string) {
@@ -254,8 +374,8 @@ export class BrowserService {
     return grant;
   }
 
-  private open(input: { botId: string; task: BrowserTask; origin: string; grantRevision: number; kind: 'owner' | 'worker'; openKey: string; signal?: AbortSignal }) {
-    const fingerprint = digest({ botId: input.botId, taskId: input.task.id, origin: input.origin, grantRevision: input.grantRevision });
+  private open(input: { botId: string; task: BrowserTask; origin: string; grantRevision: number; kind: 'owner' | 'worker'; openKey: string; queryPolicy?: 'deny'; signal?: AbortSignal }) {
+    const fingerprint = digest({ botId: input.botId, taskId: input.task.id, origin: input.origin, grantRevision: input.grantRevision, queryPolicy: input.queryPolicy ?? 'allow' });
     const pendingKey = `${input.botId}:${input.kind}:${input.openKey}`;
     const pending = this.activeOpens.get(pendingKey);
     if (pending) {
@@ -274,7 +394,7 @@ export class BrowserService {
     return promise;
   }
 
-  private async openOnce(input: { botId: string; task: BrowserTask; origin: string; grantRevision: number; kind: 'owner' | 'worker'; openKey: string; signal?: AbortSignal }, fingerprint: string) {
+  private async openOnce(input: { botId: string; task: BrowserTask; origin: string; grantRevision: number; kind: 'owner' | 'worker'; openKey: string; queryPolicy?: 'deny'; signal?: AbortSignal }, fingerprint: string) {
     const remaining = Date.parse(input.task.deadlineAt) - this.now();
     requireValue(remaining >= 1000, 'task-deadline-exceeded', '任务剩余时间不足以创建浏览器租约。', 409);
     const leaseMs = Math.min(MAX_SESSION_MS, remaining);
@@ -294,14 +414,25 @@ export class BrowserService {
         VALUES(?,?,?,?,?,?,?,?,?,'creating',?,?,?)`).run(id, input.botId, input.task.id, input.kind, input.openKey, fingerprint, createOperationId, input.origin, input.grantRevision, expiresAt, at, at);
     });
     try {
-      const reply = await this.client.create({ operationId: createOperationId, botId: input.botId, taskId: input.task.id, leaseMs, allowedOrigins: [input.origin], signal: input.signal });
+      const requiredPolicy = input.queryPolicy === 'deny' ? BROWSER_READ_POLICY : undefined;
+      if (requiredPolicy) await this.verifyPolicyHealth(requiredPolicy, input.signal);
+      const reply = await this.client.create({ operationId: createOperationId, botId: input.botId, taskId: input.task.id, leaseMs, allowedOrigins: [input.origin], requiredPolicy, signal: input.signal });
       requireValue(typeof reply.sessionId === 'string' && reply.taskId === input.task.id && reply.operationId === createOperationId,
         'browser-worker-invalid-response', '浏览器 worker 返回了无效会话。', 502);
+      if (requiredPolicy && !isExactReadPolicy(reply.enforcedPolicy)) {
+        this.storage.db.prepare("UPDATE browser_sessions SET worker_session_id=?,status='closing',updated_at=? WHERE id=? AND status='creating'")
+          .run(reply.sessionId, this.timestamp(), id);
+        try {
+          await this.cancelWorker({ worker_session_id: reply.sessionId, bot_id: input.botId, task_id: input.task.id, open_key: input.openKey });
+          this.storage.db.prepare("UPDATE browser_sessions SET status='cancelled',updated_at=? WHERE id=? AND status='closing'").run(this.timestamp(), id);
+        } catch { /* closing row retains the remote ID for lease reaping */ }
+        throw new BotError('browser-worker-policy-unverified', '浏览器 worker 未确认只读页面所需的 query 拦截策略。', 503);
+      }
       const changes = this.storage.db.prepare("UPDATE browser_sessions SET worker_session_id=?,status='active',updated_at=? WHERE id=? AND status='creating'").run(reply.sessionId, this.timestamp(), id).changes;
       if (changes !== 1) {
         this.storage.db.prepare("UPDATE browser_sessions SET worker_session_id=?,updated_at=? WHERE id=? AND status='closing'").run(reply.sessionId, this.timestamp(), id);
         try {
-          await this.client.cancel(reply.sessionId, { botId: input.botId, taskId: input.task.id });
+          await this.cancelWorker({ worker_session_id: reply.sessionId, bot_id: input.botId, task_id: input.task.id, open_key: input.openKey });
           this.storage.db.prepare("UPDATE browser_sessions SET status='cancelled',updated_at=? WHERE id=? AND status='closing'").run(this.timestamp(), id);
         } catch { /* the persisted remote ID lets the lease reaper retry until expiry */ }
         throw new BotError('browser-session-interrupted', '浏览器会话已中断。', 409);
@@ -315,9 +446,14 @@ export class BrowserService {
 
   async step(input: { sessionId: string; botId: string; taskId: string; stepId: string; action: BrowserAction; args?: Record<string, unknown>; signal?: AbortSignal }) {
     const session = this.lookupSession(input);
-    const stepId = text(input.stepId, 'stepId', 128), args = input.args ?? {};
+    const stepId = text(input.stepId, 'stepId', 128), rawArgs = input.args ?? {};
     requireValue(['navigate', 'read', 'click', 'type', 'scroll', 'screenshot'].includes(input.action), 'unsupported-browser-action', '浏览器操作不受支持。');
-    requireValue(args !== null && typeof args === 'object' && !Array.isArray(args), 'invalid-browser-operation', '浏览器操作参数无效。');
+    requireValue(rawArgs !== null && typeof rawArgs === 'object' && !Array.isArray(rawArgs), 'invalid-browser-operation', '浏览器操作参数无效。');
+    const args = { ...rawArgs };
+    const secrets = this.currentSensitiveValues();
+    if (input.action === 'navigate') args.url = safeNavigationUrl(args.url, session.origin, secrets);
+    const requiredPolicy = this.requiredPolicy(session);
+    if (requiredPolicy) await this.verifyPolicyHealth(requiredPolicy, input.signal);
     const fingerprint = digest({ action: input.action, args });
     const existing = this.storage.db.prepare('SELECT * FROM browser_steps WHERE session_id=? AND step_id=?').get(session.id, stepId) as Record<string, any> | undefined;
     if (existing) {
@@ -332,7 +468,7 @@ export class BrowserService {
       requireValue(existing.fingerprint === fingerprint, 'browser-step-id-conflict', '浏览器步骤 ID 已用于不同参数。', 409);
       const active = this.activeSteps.get(`${session.id}:${stepId}`);
       if (active) return active;
-      if (existing.status === 'completed') return JSON.parse(existing.result_json);
+      if (existing.status === 'completed') return this.sanitizeStoredResult(session.id, stepId, existing.result_json);
       if (existing.status === 'accepted') {
         this.storage.db.prepare("UPDATE browser_steps SET status='interrupted',error_code='process-interrupted',updated_at=? WHERE session_id=? AND step_id=? AND status='accepted'").run(this.timestamp(), session.id, stepId);
         this.storage.db.prepare("UPDATE browser_sessions SET status='interrupted',updated_at=? WHERE id=? AND status='active'").run(this.timestamp(), session.id);
@@ -352,30 +488,36 @@ export class BrowserService {
         VALUES(?,?,?,?,?,'accepted',?,?)`).run(session.id, stepId, next, fingerprint, input.action, at, at);
       return next;
     });
-    const operation = this.performStep(session, { stepId, sequence, action: input.action, args, signal: input.signal });
+    const operation = this.performStep(session, { stepId, sequence, action: input.action, args, signal: input.signal, secrets });
     this.activeSteps.set(`${session.id}:${stepId}`, operation);
     try { return await operation; }
     finally { this.activeSteps.delete(`${session.id}:${stepId}`); }
   }
 
-  private async performStep(session: Record<string, any>, input: { stepId: string; sequence: number; action: BrowserAction; args: Record<string, unknown>; signal?: AbortSignal }) {
+  private async performStep(session: Record<string, any>, input: { stepId: string; sequence: number; action: BrowserAction; args: Record<string, unknown>; signal?: AbortSignal; secrets: readonly string[] }) {
     const operationId = randomUUID();
     try {
       this.assertTaskStillActive(session);
-      const reply = await this.client.operate(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id, sequence: input.sequence, operationId, action: input.action, args: input.args, signal: input.signal }) as unknown as BrowserStepReply;
+      const requiredPolicy = this.requiredPolicy(session);
+      const reply = await this.client.operate(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id, sequence: input.sequence, operationId, action: input.action, args: input.args, requiredPolicy, signal: input.signal }) as unknown as BrowserStepReply;
       requireValue(reply.status === 'completed' && reply.sessionId === session.worker_session_id &&
         reply.taskId === session.task_id && reply.operationId === operationId && reply.sequence === input.sequence,
       'browser-worker-invalid-response', '浏览器 worker 返回了无效步骤状态。', 502);
+      if (requiredPolicy) requireValue(isExactReadPolicy(reply.enforcedPolicy), 'browser-worker-policy-unverified', '浏览器 worker 未确认此步骤仍绑定只读页面策略。', 503);
       let result = reply.result;
+      if (input.action === 'navigate' && result && typeof result === 'object' && typeof (result as Record<string, unknown>).url === 'string') {
+        result = { ...(result as Record<string, unknown>), url: safeNavigationUrl((result as Record<string, unknown>).url, session.origin, input.secrets) };
+      }
       let screenshot: { resourceId: string; png: Buffer; width: number; height: number } | null = null;
       if (input.action === 'screenshot') {
         requireValue(result && typeof result === 'object' && typeof (result as Record<string, unknown>).resourceId === 'string', 'browser-worker-invalid-response', '浏览器 worker 未返回截图资源。', 502);
         const workerResourceId = (result as Record<string, unknown>).resourceId as string;
-        const png = await this.client.screenshot(session.worker_session_id, workerResourceId, { botId: session.bot_id, taskId: session.task_id }, input.signal);
+        const png = await this.client.screenshot(session.worker_session_id, workerResourceId, { botId: session.bot_id, taskId: session.task_id }, input.signal, requiredPolicy);
         const dimensions = inspectScreenshot(png);
         screenshot = { resourceId: randomUUID(), png, ...dimensions };
         result = { resourceId: screenshot.resourceId, width: dimensions.width, height: dimensions.height, bytes: png.length };
       }
+      result = redactValue(result, input.secrets);
       const encoded = JSON.stringify({ sessionId: session.id, taskId: session.task_id, stepId: input.stepId, sequence: input.sequence, status: 'completed', result });
       this.storage.transaction(() => {
         this.assertTaskStillActive(session);
@@ -421,21 +563,33 @@ export class BrowserService {
     this.tasks.assertOwnerBot(botId);
     const task = this.storage.db.prepare(`SELECT id,root_id,parent_id,initiator_bot_id,executor_bot_id,status,error_code,created_at,started_at,finished_at,deadline_at,request_key
       FROM tasks WHERE id=?`).get(taskId) as Record<string, any> | undefined;
-    requireValue(task && task.parent_id === null && task.root_id === taskId && task.initiator_bot_id === botId &&
-      task.executor_bot_id === botId && typeof task.request_key === 'string' && task.request_key.startsWith('browser-owner:'),
-    'browser-task-not-found', '浏览器任务不存在。', 404);
+    const ownerTask = task && task.parent_id === null && task.root_id === taskId && task.initiator_bot_id === botId &&
+      task.executor_bot_id === botId && typeof task.request_key === 'string' && task.request_key.startsWith('browser-owner:');
+    const workerTask = task && task.parent_id !== null && task.executor_bot_id === botId &&
+      this.storage.db.prepare('SELECT 1 FROM tasks WHERE id=? AND root_id=? AND parent_id IS NULL').get(task.root_id, task.root_id);
+    requireValue(ownerTask || workerTask, 'browser-task-not-found', '浏览器任务不存在。', 404);
+    const secrets = this.currentSensitiveValues();
     const sessions = this.storage.db.prepare(`SELECT id,task_id,origin,status,expires_at,created_at,updated_at
-      FROM browser_sessions WHERE bot_id=? AND task_id=? AND open_kind='owner' ORDER BY created_at,id`).all(botId, taskId) as Record<string, any>[];
+      FROM browser_sessions WHERE bot_id=? AND task_id=? AND open_kind=? ORDER BY created_at,id`).all(botId, taskId, ownerTask ? 'owner' : 'worker') as Record<string, any>[];
     return {
       task: { id: task.id, status: task.status, errorCode: task.error_code, createdAt: task.created_at,
         startedAt: task.started_at, finishedAt: task.finished_at, deadlineAt: task.deadline_at },
+      toolCalls: ownerTask ? [] : (this.storage.db.prepare(`SELECT tool_call_id AS callId,status,error_code AS errorCode,result,created_at AS createdAt,finished_at AS finishedAt
+        FROM task_tool_calls WHERE task_id=? AND tool_name='browser_read' ORDER BY created_at,tool_call_id`).all(taskId) as Record<string, any>[])
+        .map((call) => {
+          if (!call.result) return { ...call, result: null };
+          const safe = JSON.stringify(redactValue(JSON.parse(call.result), secrets));
+          if (safe !== call.result) this.storage.db.prepare('UPDATE task_tool_calls SET result=? WHERE task_id=? AND tool_call_id=?')
+            .run(safe, taskId, call.callId);
+          return { ...call, result: JSON.parse(safe) };
+        }),
       sessions: sessions.map((session) => ({
         id: session.id, taskId: session.task_id, origin: session.origin, status: session.status,
         expiresAt: session.expires_at, createdAt: session.created_at, updatedAt: session.updated_at,
         steps: (this.storage.db.prepare(`SELECT step_id,sequence,action,status,result_json,error_code,created_at,updated_at
           FROM browser_steps WHERE session_id=? ORDER BY sequence`).all(session.id) as Record<string, any>[]).map((step) => ({
           stepId: step.step_id, sequence: step.sequence, action: step.action, status: step.status,
-          result: step.result_json ? JSON.parse(step.result_json) : null, errorCode: step.error_code,
+          result: step.result_json ? this.sanitizeStoredResult(session.id, step.step_id, step.result_json, secrets) : null, errorCode: step.error_code,
           createdAt: step.created_at, updatedAt: step.updated_at,
         })),
       })),
@@ -480,8 +634,8 @@ export class BrowserService {
     let workerClosed = !session.worker_session_id && session.status !== 'creating';
     try {
       if (session.worker_session_id) {
-        if (mode === 'cancelled') await this.client.cancel(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id });
-        else await this.client.close(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id });
+        if (mode === 'cancelled') await this.cancelWorker(session);
+        else await this.closeWorker(session);
         workerClosed = true;
       }
     } catch { /* the returned closing state includes the independent lease deadline */ }
@@ -505,7 +659,7 @@ export class BrowserService {
       this.storage.db.prepare("UPDATE browser_steps SET status='interrupted',error_code='task-terminal',updated_at=? WHERE session_id=? AND status='accepted'").run(this.timestamp(), session.id);
       let workerClosed = !session.worker_session_id && session.status !== 'creating';
       if (session.worker_session_id) {
-        try { await this.client.cancel(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id }); workerClosed = true; }
+        try { await this.cancelWorker(session); workerClosed = true; }
         catch { cleanupPending.push({ sessionId: session.id, leaseExpiresAt: session.expires_at }); }
       }
       const status = terminal === 'cancelled' ? 'cancelled' : terminal === 'interrupted' ? 'interrupted' : 'closed';
@@ -522,7 +676,7 @@ export class BrowserService {
       this.storage.db.prepare("UPDATE browser_steps SET status='interrupted',error_code='process-interrupted',updated_at=? WHERE session_id=? AND status='accepted'").run(this.timestamp(), row.id);
       let workerClosed = !row.worker_session_id && row.status !== 'closing';
       if (row.worker_session_id && remoteAvailable) {
-        try { await this.client.cancel(row.worker_session_id, { botId: row.bot_id, taskId: row.task_id }); workerClosed = true; }
+        try { await this.cancelWorker(row); workerClosed = true; }
         catch { cleanupPending.push({ sessionId: row.id, leaseExpiresAt: row.expires_at }); }
       } else if (row.worker_session_id) cleanupPending.push({ sessionId: row.id, leaseExpiresAt: row.expires_at });
       if (workerClosed) this.storage.db.prepare("UPDATE browser_sessions SET status='interrupted',updated_at=? WHERE id=? AND status='closing'").run(this.timestamp(), row.id);
@@ -538,7 +692,7 @@ export class BrowserService {
       const expired = Date.parse(row.expires_at) <= Date.parse(now);
       let workerClosed = !row.worker_session_id && row.status !== 'creating';
       if (row.worker_session_id) {
-        try { await this.client.cancel(row.worker_session_id, { botId: row.bot_id, taskId: row.task_id }); workerClosed = true; }
+        try { await this.cancelWorker(row); workerClosed = true; }
         catch { /* expiry is the worker-side lease cleanup bound */ }
       }
       if (workerClosed || expired) {
@@ -585,7 +739,7 @@ export class BrowserService {
     let persisted = true;
     try { this.tasks.interruptTask(session.task_id, 'browser-step-interrupted'); }
     catch { persisted = false; }
-    await this.client.cancel(session.worker_session_id, { botId: session.bot_id, taskId: session.task_id }).catch(() => {});
+    await this.cancelWorker(session).catch(() => {});
     if (!persisted) throw new BotError('browser-step-interrupted', '浏览器步骤结果不确定；任务终止写入失败，调用方必须停止当前任务且不能重试。', 500);
   }
 

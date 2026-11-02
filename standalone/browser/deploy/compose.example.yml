@@ -61,6 +61,7 @@ services:
       BROWSER_PROXY_ADMIN_SOCKET: /run/browser-egress/admin.sock
       BROWSER_PROXY_SOCKET: /run/browser-egress/proxy.sock
       BROWSER_PROXY_URL: http://127.0.0.1:8080
+      BROWSER_SESSION_QUERY_POLICY: deny
       BROWSER_CONTROL_SOCKET: /run/browser-control/worker.sock
       BROWSER_DATA_ROOT: /tmp/browser-sessions
       BROWSER_BRIDGE_GATEWAY: 172.31.240.1

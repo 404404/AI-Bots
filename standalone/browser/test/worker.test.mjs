@@ -52,7 +52,7 @@ function makeFakeBrowser(sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Ye
   return { browser, opened };
 }
 
-async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes', { networkInspector, bridgeProbe, maxSessions } = {}) {
+async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes\nSeccomp-BPF sandbox Yes', { networkInspector, bridgeProbe, maxSessions, queryPolicy } = {}) {
   const proxy = createRestrictedProxy({ rawRules: rules, adminToken: proxyToken });
   await proxy.listen({ proxyPort: 0, adminPort: 0, host: '127.0.0.1' });
   const dataRoot = mkdtempSync(join(tmpdir(), 'browser-worker-test-'));
@@ -69,6 +69,7 @@ async function setup(t, sandbox = 'Layer 1 Sandbox Namespace\nPID namespaces Yes
     bridgeGateway: '172.31.240.1',
     sensitivePorts: ['22', '2375', '2376', '22443'],
     bridgeProbe: bridgeProbe ?? (async () => 'ENETUNREACH'),
+    ...(queryPolicy ? { queryPolicy } : {}),
     ...(maxSessions ? { maxSessions } : {}),
   });
   t.after(async () => { await worker.stop(); proxy.close(); rmSync(dataRoot, { recursive: true, force: true }); });
@@ -134,6 +135,33 @@ test('worker binds sessions to trusted Bot/task scope and caches idempotent oper
   assert.equal(driver.opened.at(-1).closed, true);
   assert.equal((await worker.close(session.sessionId, { botId: 'bot-a', taskId: 'task-a' })).status, 'cancelled');
   assert.equal(dataRoot.includes('browser-worker-test-'), true);
+});
+
+test('trusted deny query policy blocks navigations and each routed request before continue', async (t) => {
+  const { worker, driver } = await setup(t, undefined, { queryPolicy: 'deny' });
+  const ready = await worker.start();
+  assert.deepEqual(ready.capabilities, { version: 1, queryPolicy: 'deny' });
+  const session = await worker.create({ operationId: randomUUID(), botId: 'bot-policy', taskId: 'task-policy', allowedOrigins: [origin], queryPolicy: 'allow', requiredPolicy: { version: 1, queryPolicy: 'deny' } });
+  assert.deepEqual(session.enforcedPolicy, { version: 1, queryPolicy: 'deny' });
+  await assert.rejects(worker.operate(session.sessionId, { botId: 'bot-policy', taskId: 'task-policy', requiredPolicy: { version: 1, queryPolicy: 'allow' } }), { code: 'required-policy-unmet' });
+  const op = { botId: 'bot-policy', taskId: 'task-policy', requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 1, operationId: randomUUID(), action: 'navigate', args: { url: `${origin}/page?secret=value` } };
+  await assert.rejects(worker.operate(session.sessionId, op), { code: 'target-query-denied' });
+  await assert.rejects(worker.operate(session.sessionId, { ...op, sequence: 2, operationId: randomUUID(), args: { url: `${origin}/page?` } }), { code: 'target-query-denied' });
+  assert.equal(driver.opened.at(-1).page.state.currentUrl, 'about:blank');
+
+  const context = driver.opened.at(-1);
+  const routeHandler = context.routes.find(([pattern]) => pattern === '**/*')[1];
+  for (const url of [`${origin}/redirected?secret=value`, `${origin}/resource?secret=value`, `${origin}/trailing?`, 'https://user:pass@fixture.test:8081/']) {
+    let continued = false;
+    let aborted = false;
+    await routeHandler({
+      request: () => ({ url: () => url }),
+      async continue() { continued = true; },
+      async abort() { aborted = true; },
+    });
+    assert.equal(continued, false, `${url} must never be sent`);
+    assert.equal(aborted, true, `${url} must be blocked before sending`);
+  }
 });
 
 test('closing through an operation remains idempotent after the session is removed', async (t) => {

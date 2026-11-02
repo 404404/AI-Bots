@@ -99,6 +99,7 @@ try {
           'avatar.set',
           'avatars.delete',
           'browser.status',
+          'browser.read',
           'browser.origins.list',
           'browser.origins.grant',
           'browser.origins.revoke',

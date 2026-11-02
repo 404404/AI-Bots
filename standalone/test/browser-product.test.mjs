@@ -39,17 +39,29 @@ function cli(base, sessionFile, args, input) {
 
 test('browser owner API, UI, canonical task trace, protected PNG and CLI share one path', async () => {
   const root = dir(), workerSocket = join(root, 'browser-worker.sock');
+  const otherBotApiKey = 'synthetic-other-bot-api-key';
+  let workerCreates = 0;
   const worker = createServer(async (req, res) => {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
     const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
-    if (req.url === '/v1/sessions' && req.method === 'POST')
-      return sendJson(res, 201, { operationId: body.operationId, sessionId: 'remote-session', taskId: body.taskId, expiresAt: Date.now() + body.leaseMs, stepBudget: 12 });
+    if (req.url === '/healthz' && req.method === 'GET')
+      return sendJson(res, 200, { ready: true, sandboxVerified: true, capabilities: { version: 1, queryPolicy: 'deny' } });
+    if (req.url === '/v1/sessions' && req.method === 'POST') {
+      workerCreates += 1;
+      return sendJson(res, 201, { operationId: body.operationId, sessionId: 'remote-session', taskId: body.taskId, expiresAt: Date.now() + body.leaseMs, stepBudget: 12,
+        ...(body.requiredPolicy ? { enforcedPolicy: body.requiredPolicy } : {}) });
+    }
     if (req.url === '/v1/sessions/remote-session/operations' && req.method === 'POST') {
-      const result = body.action === 'screenshot' ? { resourceId: 'remote-image' } : { action: body.action, accepted: true };
-      return sendJson(res, 200, { sessionId: 'remote-session', taskId: body.taskId, operationId: body.operationId, sequence: body.sequence, status: 'completed', result });
+      const result = body.action === 'screenshot' ? { resourceId: 'remote-image' }
+        : body.action === 'navigate' ? { url: body.args.url }
+          : body.action === 'read' ? { text: `fixture page text ${otherBotApiKey}`, truncated: false, trust: 'untrusted-page-content' }
+            : { action: body.action, accepted: true };
+      return sendJson(res, 200, { sessionId: 'remote-session', taskId: body.taskId, operationId: body.operationId, sequence: body.sequence, status: 'completed', result,
+        ...(body.requiredPolicy ? { enforcedPolicy: body.requiredPolicy } : {}) });
     }
     if (req.url === '/v1/sessions/remote-session/screenshots/remote-image') { res.writeHead(200, { 'content-type': 'image/png' }); return res.end(png()); }
-    if (req.url === '/v1/sessions/remote-session/close' || req.url === '/v1/sessions/remote-session/cancel') return sendJson(res, 200, { status: 'closed' });
+    if (req.url === '/v1/sessions/remote-session/close' || req.url === '/v1/sessions/remote-session/cancel') return sendJson(res, 200, { status: 'closed',
+      ...(body.requiredPolicy ? { enforcedPolicy: body.requiredPolicy } : {}) });
     return sendJson(res, 404, { error: { code: 'not-found' } });
   });
   await new Promise((resolve, reject) => { worker.once('error', reject); worker.listen(workerSocket, resolve); });
@@ -85,9 +97,51 @@ test('browser owner API, UI, canonical task trace, protected PNG and CLI share o
     assert.deepEqual(await command('browser.status', {}, cookie), { configured: true, status: 'configured' });
     const bot = await command('main.get', {}, cookie).then((result) => result.bot);
     const other = await command('bots.create', { slug: 'browser-other', name: 'Other' }, cookie);
+    runtime.app.storage.db.prepare('UPDATE bots SET credential=? WHERE id=?').run(runtime.app.storage.encrypt(otherBotApiKey), other.id);
     await command('browser.origins.grant', { botId: bot.id, origin: 'https://example.test' }, cookie);
     await assert.rejects(command('browser.open', { botId: bot.id, origin: 'https://unapproved.test', idempotencyKey: 'denied-open' }, cookie), { code: 'browser-origin-not-authorized' });
     const opened = await command('browser.open', { botId: bot.id, origin: 'https://example.test', idempotencyKey: 'api-open' }, cookie);
+    const replay = await command('browser.open', { botId: bot.id, origin: 'https://example.test', idempotencyKey: 'api-open' }, cookie);
+    assert.equal(replay.replayed, true);
+    assert.equal(replay.sessionId, opened.sessionId);
+    assert.equal(replay.taskId, opened.taskId);
+    assert.equal(workerCreates, 1);
+    assert.equal(runtime.app.storage.db.prepare("SELECT count(*) AS n FROM tasks WHERE initiator_bot_id=? AND request_key='browser-owner:api-open'").get(bot.id).n, 1);
+    assert.equal(runtime.app.storage.db.prepare("SELECT count(*) AS n FROM browser_sessions WHERE bot_id=? AND open_kind='owner' AND open_key='api-open'").get(bot.id).n, 1);
+
+    await command('browser.origins.grant', { botId: bot.id, origin: 'https://other-origin.test' }, cookie);
+    await assert.rejects(command('browser.open', { botId: bot.id, origin: 'https://other-origin.test', idempotencyKey: 'api-open' }, cookie), { code: 'browser-open-id-conflict' });
+    assert.equal(runtime.app.storage.db.prepare("SELECT count(*) AS n FROM tasks WHERE initiator_bot_id=? AND request_key='browser-owner:api-open'").get(bot.id).n, 1);
+    assert.equal(runtime.app.storage.db.prepare('SELECT status FROM tasks WHERE id=?').get(opened.taskId).status, 'running');
+    assert.equal(runtime.app.storage.db.prepare("SELECT count(*) AS n FROM browser_sessions WHERE bot_id=? AND open_kind='owner' AND open_key='api-open'").get(bot.id).n, 1);
+    assert.equal(workerCreates, 1);
+    const directReadArgs = { botId: bot.id, origin: 'https://example.test', url: 'https://example.test/read-only', idempotencyKey: 'direct-read' };
+    const directRead = await command('browser.read', directReadArgs, cookie);
+    const directReadExpected = { source: 'untrusted-page-content', botId: bot.id, taskId: directRead.taskId,
+      origin: directReadArgs.origin, url: directReadArgs.url, text: 'fixture page text [REDACTED]', truncated: false };
+    assert.deepEqual(directRead, directReadExpected);
+    const taskCountBeforeQueryRefusal = runtime.app.storage.db.prepare('SELECT count(*) AS n FROM tasks WHERE initiator_bot_id=?').get(bot.id).n;
+    await assert.rejects(command('browser.read', { ...directReadArgs, idempotencyKey: 'query-read', url: 'https://example.test/private?token=synthetic-sensitive-value' }, cookie),
+      { code: 'browser-query-not-supported' });
+    assert.equal(runtime.app.storage.db.prepare('SELECT count(*) AS n FROM tasks WHERE initiator_bot_id=?').get(bot.id).n, taskCountBeforeQueryRefusal);
+    assert.equal(workerCreates, 2);
+    const directReadTaskId = directRead.taskId;
+    const directToolRow = runtime.app.storage.db.prepare("SELECT result FROM task_tool_calls WHERE task_id=? AND tool_name='browser_read'").get(directReadTaskId);
+    assert.equal(JSON.stringify(directToolRow).includes(otherBotApiKey), false);
+    runtime.app.storage.db.prepare("UPDATE task_tool_calls SET result=? WHERE task_id=? AND tool_call_id='browser-read'")
+      .run(JSON.stringify({ ...directReadExpected, text: `legacy ${otherBotApiKey}` }), directReadTaskId);
+    const cliRead = await cli(base, sessionFile, ['browser.read'], directReadArgs);
+    assert.equal(cliRead.code, 0);
+    assert.deepEqual(cliRead.body.result, { ...directReadExpected, text: 'legacy [REDACTED]' });
+    assert.equal(runtime.app.storage.db.prepare("SELECT result FROM task_tool_calls WHERE task_id=? AND tool_call_id='browser-read'").get(directReadTaskId).result.includes(otherBotApiKey), false);
+    assert.equal(runtime.app.storage.db.prepare("SELECT count(*) AS n FROM task_tool_calls WHERE task_id=? AND tool_name='browser_read'").get(directReadTaskId).n, 1);
+    const directTrace = await command('browser.trace', { botId: bot.id, taskId: directReadTaskId }, cookie);
+    assert.equal(JSON.stringify(directTrace).includes(otherBotApiKey), false);
+    assert.equal(directTrace.sessions[0].steps.length, 2);
+    const directCliTrace = await cli(base, sessionFile, ['browser.trace'], { botId: bot.id, taskId: directReadTaskId });
+    assert.equal(directCliTrace.code, 0);
+    assert.equal(directCliTrace.body.result.sessions[0].steps.length, 2);
+    assert.equal(workerCreates, 2);
     const taskId = opened.taskId, sessionId = opened.sessionId;
     for (const [stepId, action, args] of [
       ['nav', 'navigate', { url: 'https://example.test/' }],
@@ -169,6 +223,12 @@ test('browser owner API, UI, canonical task trace, protected PNG and CLI share o
     const completed = await command('browser.trace', { botId: bot.id, taskId }, cookie);
     assert.equal(completed.task.status, 'completed');
     assert.equal(completed.task.errorCode, null);
+    const taskCountBeforeRevisionChange = runtime.app.storage.db.prepare('SELECT count(*) AS n FROM tasks WHERE initiator_bot_id=?').get(bot.id).n;
+    await command('browser.origins.revoke', { botId: bot.id, origin: directReadArgs.origin }, cookie);
+    await command('browser.origins.grant', { botId: bot.id, origin: directReadArgs.origin }, cookie);
+    await assert.rejects(command('browser.read', directReadArgs, cookie), { code: 'browser-origin-grant-changed' });
+    assert.equal(runtime.app.storage.db.prepare('SELECT count(*) AS n FROM tasks WHERE initiator_bot_id=?').get(bot.id).n, taskCountBeforeRevisionChange);
+    assert.equal(workerCreates, 2);
   } finally {
     await runtime.close();
     worker.closeAllConnections();

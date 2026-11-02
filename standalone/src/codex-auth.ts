@@ -47,6 +47,30 @@ export class CodexAuth {
       .prepare('SELECT credential FROM oauth_credentials WHERE bot_id=?')
       .get(botId)?.credential as string | undefined;
   }
+  /** Current locally stored model credentials used only to redact Browser worker output. */
+  browserSensitiveValues() {
+    const db = this.storage.db;
+    const rows = [
+      ...db.prepare('SELECT oauth_credential AS credential FROM model_account WHERE singleton=1 AND oauth_credential IS NOT NULL').all(),
+      ...db.prepare('SELECT credential FROM oauth_credentials').all(),
+      ...db.prepare('SELECT credential FROM model_account WHERE singleton=1 AND credential IS NOT NULL').all(),
+      ...db.prepare('SELECT credential FROM bots WHERE credential IS NOT NULL').all(),
+    ] as { credential: string }[];
+    const values = new Set<string>();
+    for (const row of rows) {
+      const decoded = this.storage.decrypt(row.credential);
+      if (decoded.length > 0) values.add(decoded);
+      let parsed: unknown;
+      try { parsed = JSON.parse(decoded); } catch { continue; }
+      if (parsed && typeof parsed === 'object') {
+        const grant = parsed as Record<string, unknown>;
+        for (const key of ['access', 'refresh']) {
+          if (typeof grant[key] === 'string' && grant[key].length > 0) values.add(grant[key]);
+        }
+      }
+    }
+    return [...values];
+  }
   decode(blob: string): Grant {
     const grant = JSON.parse(this.storage.decrypt(blob));
     requireValue(

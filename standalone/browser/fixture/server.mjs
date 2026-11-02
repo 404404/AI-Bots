@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 export function createFixtureServer({ expectedHost = process.env.FIXTURE_HOST || 'fixture.test:8081' } = {}) {
   let count = 0;
+  let requestCount = 0;
   return createServer((req, res) => {
     const acceptedHost = typeof expectedHost === 'function' ? expectedHost(req) : expectedHost;
     if (req.headers.host !== acceptedHost) {
@@ -10,6 +11,25 @@ export function createFixtureServer({ expectedHost = process.env.FIXTURE_HOST ||
       return res.end('wrong host');
     }
     const url = new URL(req.url ?? '/', 'http://fixture.test:8081');
+    if (req.method === 'GET' && url.pathname === '/request-count') {
+      const body = JSON.stringify({ requestCount });
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      return res.end(body);
+    }
+    if (req.method === 'GET' && url.pathname === '/redirect-query') {
+      res.writeHead(302, { location: '/hit?redirect=1', 'cache-control': 'no-store' });
+      return res.end();
+    }
+    if (req.method === 'GET' && url.pathname === '/query-page') {
+      const body = '<!doctype html><title>Query resource fixture</title><img src="/hit?resource=1">';
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(body);
+    }
+    if (req.method === 'GET' && url.pathname === '/hit') {
+      requestCount += 1;
+      res.writeHead(200, { 'content-type': 'image/gif', 'cache-control': 'no-store' });
+      return res.end(Buffer.from('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', 'base64'));
+    }
     if (req.method === 'GET' && url.pathname === '/') {
       const page = `<!doctype html><html><head><title>Isolated Browser Fixture</title><style>main{height:1800px;font:18px sans-serif}input,button{margin:1rem;padding:.6rem}</style></head><body><main><h1>Isolated fixture</h1><form method="post" action="/increment"><label>Input <input name="note" id="note"></label><button id="increment" type="submit">Increment</button></form><p id="count">Count: ${count}</p><p id="end">Scroll target</p></main></body></html>`;
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': Buffer.byteLength(page), 'set-cookie': 'fixture-session=isolated; HttpOnly; SameSite=Strict; Path=/' });
