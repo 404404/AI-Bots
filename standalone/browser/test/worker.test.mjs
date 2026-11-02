@@ -272,6 +272,12 @@ test('trusted deny query policy blocks navigations and each routed request befor
     assert.equal(continued, false, `${url} must never be sent`);
     assert.equal(aborted, true, `${url} must be blocked before sending`);
   }
+
+  context.page.goto = async () => { context.page.state.currentUrl = `${origin}/redirected?secret=value`; };
+  await assert.rejects(worker.operate(session.sessionId, {
+    botId: 'bot-policy', taskId: 'task-policy', requiredPolicy: { version: 1, queryPolicy: 'deny' }, sequence: 3,
+    operationId: randomUUID(), action: 'navigate', args: { url: `${origin}/redirected` },
+  }), { code: 'target-query-denied' });
 });
 
 test('strict query sessions fail closed when HTTPS or the Chromium network query guard is unavailable', async (t) => {

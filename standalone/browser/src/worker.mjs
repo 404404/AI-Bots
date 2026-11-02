@@ -657,7 +657,10 @@ export class BrowserWorker {
         this.logger({ event: 'browser-navigation-failed', sessionId: session.id, phase: 'page-goto', protocol: target.protocol, ...diagnosticError(error), at: this.now() });
         throw error;
       }
-      return { url: page.url() };
+      const finalTarget = canonicalTarget(page.url());
+      requireValue(session.allowedOrigins.has(finalTarget.origin), 'target-origin-denied', '导航最终地址未获精确授权。', 403);
+      requireValue(session.queryPolicy !== 'deny' || !hasQuery(finalTarget), 'target-query-denied', '导航最终地址不允许查询参数。', 403);
+      return { url: finalTarget.href };
     }
     if (action === 'read') {
       const selector = args.selector === undefined ? 'body' : this.selector(args.selector);
