@@ -78,3 +78,47 @@ jobs:
         env:
           OUTCOME: ${{ steps.comparison.outcome }}
         run: test "$OUTCOME" = success
+
+  services:
+    if: github.repository == '404404/AI-Bots'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [proxy, gateway, fixture]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Prepare fallback service evidence
+        env:
+          SERVICE: ${{ matrix.service }}
+          COMPARE_OUTPUT: standalone-browser-services-results/${{ matrix.service }}
+        run: |
+          mkdir -p "$COMPARE_OUTPUT"
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; const report = { schemaVersion: 1, service: process.env.SERVICE, result: "failed-or-incomplete", phase: "workflow-setup", build: { status: "not-run" }, image: null, scan: { status: "not-run", severity: ["HIGH", "CRITICAL"], vulnTypes: ["os", "library"], ignoreUnfixed: false }, sbom: { status: "not-run", format: "CycloneDX JSON" }, trivy: { status: "not-run", expectedVersion: "0.70.0" }, nodeCoreVulnerabilityCoverage: { status: "uncovered", component: "official Node.js 24.22.2 runtime binary", reason: "Trivy image scanning does not establish complete vulnerability coverage for the official Node.js binary." } }; writeFileSync(`${process.env.COMPARE_OUTPUT}/report.json`, `${JSON.stringify(report, null, 2)}\n`); writeFileSync(`${process.env.COMPARE_OUTPUT}/report.md`, `# Resolute ${process.env.SERVICE} service comparison\n\nWorkflow setup failed before service evidence was collected. Node core coverage remains uncovered.\n`); writeFileSync(`${process.env.COMPARE_OUTPUT}/diagnostics.log`, "No service commands have run.\n");'
+      - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
+        with:
+          version: v0.70.0
+          cache: true
+      - name: Build and independently scan Resolute service image
+        id: service_scan
+        continue-on-error: true
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          COMPARE_OUTPUT: standalone-browser-services-results/${{ matrix.service }}
+        run: node standalone/browser/compare/run-services.mjs "${{ matrix.service }}"
+      - name: Upload service evidence, including partial diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: standalone-browser-services-${{ matrix.service }}-${{ github.sha }}
+          path: standalone-browser-services-results/${{ matrix.service }}
+          if-no-files-found: error
+          retention-days: 30
+      - name: Fail this service unless all required gates passed
+        if: always()
+        env:
+          OUTCOME: ${{ steps.service_scan.outcome }}
+        run: test "$OUTCOME" = success

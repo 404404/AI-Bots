@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +8,7 @@ import { test } from 'node:test';
 import { parse } from 'yaml';
 import { getScenario, scenarios } from './scenarios.mjs';
 import { buildArgs, grypeScanArgs, runScenario, runtimeProbeScript, syftScanArgs } from './run-scenario.mjs';
+import { runServiceScenario, serviceBuildArgs, serviceScanArgs, serviceScenarios } from './run-services.mjs';
 import { summarizeNodeGrypeFindings, validateGrypeDatabase, validateNodeBinarySbom } from './node-binary-audit.mjs';
 
 const root = new URL('../../../', import.meta.url);
@@ -172,6 +174,136 @@ test('push trigger is restricted to the feature branch and comparison-only paths
     'standalone/browser/compare/run-scenario.mjs',
   ]) assert.ok(config.on.push.paths.some((pattern) => input.startsWith(pattern.slice(0, -2))), `${input} must trigger comparison`);
   assert.ok(Object.hasOwn(config.on, 'workflow_dispatch'));
+});
+
+test('Resolute service comparison pins the official minimal Ubuntu base and builds three independent targets', () => {
+  const base = 'ubuntu:resolute@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c';
+  const amd64Manifest = 'sha256:157dc3d6e4a3e4f2c68d12df9df9ed6e808b59af6d4c3757b432b4f519916725';
+  const dockerfile = readFileSync(new URL('./Dockerfile.services.resolute', import.meta.url), 'utf8');
+  assert.equal(serviceScenarios.proxy.base, base);
+  assert.equal(serviceScenarios.gateway.base, base);
+  assert.equal(serviceScenarios.fixture.base, base);
+  for (const scenario of Object.values(serviceScenarios)) assert.equal(scenario.platformManifestDigest, amd64Manifest);
+  assert.equal(serviceScenarios.proxy.platform, 'linux/amd64');
+  assert.equal(dockerfile.split(`FROM ${base} AS runtime-base`).length - 1, 1);
+  assert.match(dockerfile, /apt-get upgrade -y --no-install-recommends/u);
+  assert.ok(dockerfile.includes('ADD --checksum=sha256:361718c444e49af2ca5a110c83ba6a8901143f23ab285ebbef0341f391f482a9'));
+  assert.ok(dockerfile.includes(`org.opencontainers.image.base.platform.manifest.digest="${amd64Manifest}"`));
+  assert.match(dockerfile, /https:\/\/nodejs\.org\/dist\/v24\.22\.2\/node-v24\.22\.2-linux-x64\.tar\.gz/u);
+  assert.match(dockerfile, /\/usr\/share\/doc\/nodejs\/LICENSE/u);
+  assert.match(dockerfile, /COPY package\.json package-lock\.json LICENSE NOTICE\.md/u);
+  assert.match(dockerfile, /COPY package\.json package-lock\.json/u);
+  assert.match(dockerfile, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/u);
+  assert.match(dockerfile, /USER 10001:10001/u);
+  assert.match(dockerfile, /io\.404404\.scan\.node-core\.coverage="uncovered"/u);
+  for (const role of Object.keys(serviceScenarios)) {
+    assert.match(dockerfile, new RegExp(`FROM service-base AS ${role}\\b`, 'u'));
+    const args = serviceBuildArgs(role, 'abc123', 'a'.repeat(64));
+    assert.ok(args.includes('--target') && args.includes(role));
+    assert.ok(args.includes(`SOURCE_REVISION=abc123`));
+    assert.ok(args.includes(`PACKAGE_LOCK_SHA256=${'a'.repeat(64)}`));
+    assert.ok(args.includes('--platform') && args.includes('linux/amd64'));
+    assert.deepEqual(serviceScanArgs(`standalone-browser-services:${role}`, `/tmp/${role}.json`), [
+      'trivy', 'image', '--exit-code', '1', '--scanners', 'vuln', '--vuln-type', 'os,library',
+      '--severity', 'HIGH,CRITICAL', '--ignore-unfixed=false', '--list-all-pkgs', '--format', 'json',
+      '--output', `/tmp/${role}.json`, `standalone-browser-services:${role}`,
+    ]);
+  }
+});
+
+test('service scan artifacts are independent, always uploaded, and never published', () => {
+  const config = parse(workflow);
+  const dockerfile = readFileSync(new URL('./Dockerfile.services.resolute', import.meta.url), 'utf8');
+  const job = config.jobs.services;
+  assert.deepEqual(job.strategy.matrix.service, ['proxy', 'gateway', 'fixture']);
+  assert.equal(job.strategy['fail-fast'], false);
+  assert.ok(job.steps.some((step) => step.uses?.startsWith('actions/upload-artifact@') && step.if === 'always()' && step.with['if-no-files-found'] === 'error'));
+  assert.ok(job.steps.some((step) => step.run?.includes('run-services.mjs')));
+  assert.doesNotMatch(workflow, /docker\/login|docker\/build-push-action|ghcr\.io|docker push/iu);
+  assert.match(dockerfile, /io\.404404\.scan\.node-core\.coverage="uncovered"/u);
+});
+
+test('service runner preserves full findings and SBOM when Trivy reports vulnerabilities', async (t) => {
+  const temp = mkdtempSync(join(tmpdir(), 'browser-compare-service-scan-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  for (const role of Object.keys(serviceScenarios)) {
+    const outputDir = join(temp, role);
+    let imageBuilt = false;
+    let scanStarted = false;
+    let imageLabels = {};
+    const scanJson = { Results: [{ Target: 'ubuntu:resolute', Type: 'ubuntu', Packages: [{ Name: 'libexample', Version: '1.0' }], Vulnerabilities: [
+      { VulnerabilityID: 'CVE-EXAMPLE-1', Severity: 'HIGH', PkgName: 'libexample', InstalledVersion: '1.0', FixedVersion: '1.1' },
+      { VulnerabilityID: 'CVE-EXAMPLE-2', Severity: 'CRITICAL', PkgName: 'libexample', InstalledVersion: '1.0', FixedVersion: '' },
+    ] }] };
+    const execute = (command, args) => {
+      if (command === 'docker' && args[0] === 'build') {
+        imageBuilt = true;
+        const packageLockSha256 = args.find((arg) => arg.startsWith('PACKAGE_LOCK_SHA256=')).split('=')[1];
+        imageLabels = {
+          'org.opencontainers.image.revision': 'abc123',
+          'org.opencontainers.image.base.digest': serviceScenarios[role].indexDigest,
+          'org.opencontainers.image.base.platform.manifest.digest': serviceScenarios[role].platformManifestDigest,
+          'io.404404.platform': 'linux/amd64',
+          'io.404404.runtime.node.version': '24.22.2',
+          'io.404404.package-lock.sha256': packageLockSha256,
+          'io.404404.scan.node-core.coverage': 'uncovered',
+          'io.404404.role': role,
+        };
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'docker' && args[0] === 'image') return { status: 0, stdout: JSON.stringify([{ Id: 'sha256:image-id', RepoDigests: [], RootFS: { Layers: ['sha256:layer'] }, Config: { Labels: imageLabels }, Os: 'linux', Architecture: 'amd64' }]), stderr: '' };
+      if (command === 'docker' && args[0] === 'history') return { status: 0, stdout: 'sha256:layer apt-upgrade\n', stderr: '' };
+      if (command === 'trivy' && args[0] === 'image' && args.includes('--output')) {
+        const file = args[args.indexOf('--output') + 1];
+        if (args.includes('--list-all-pkgs')) {
+          scanStarted = true;
+          writeFileSync(file, JSON.stringify(scanJson));
+          return { status: 1, stdout: '', stderr: 'HIGH/CRITICAL findings present' };
+        }
+        writeFileSync(file, '{"bomFormat":"CycloneDX","components":[{"name":"libexample"}]}');
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+      return { status: 0, stdout: '', stderr: '' };
+    };
+    const { report, exitCode } = await runServiceScenario({ service: role, projectRoot: root.pathname, outputDir, env: { GITHUB_SHA: 'abc123' }, execute });
+    assert.equal(imageBuilt, true);
+    assert.equal(scanStarted, true);
+    assert.equal(exitCode, 1);
+    assert.equal(report.result, 'failed-or-incomplete');
+    assert.equal(report.scan.findings.total, 2);
+    assert.equal(report.scan.findings.bySeverity.HIGH, 1);
+    assert.equal(report.scan.findings.fixed, 1);
+    assert.equal(report.scan.findings.unfixed, 1);
+    assert.equal(report.sbom.status, 'passed');
+    assert.equal(report.sbom.componentCount, 1);
+    assert.equal(report.nodeCoreVulnerabilityCoverage.status, 'uncovered');
+    assert.equal(report.image.labelValidation.status, 'passed');
+    assert.equal(report.source.base.platformManifestDigest, serviceScenarios[role].platformManifestDigest);
+    assert.equal(JSON.parse(readFileSync(join(outputDir, 'trivy-vulnerabilities.json'), 'utf8')).Results[0].Vulnerabilities.length, 2);
+    assert.equal(JSON.parse(readFileSync(join(outputDir, 'sbom.cdx.json'), 'utf8')).components[0].name, 'libexample');
+    assert.equal(report.scan.outputSha256, createHash('sha256').update(readFileSync(join(outputDir, 'trivy-vulnerabilities.json'))).digest('hex'));
+    assert.equal(report.sbom.outputSha256, createHash('sha256').update(readFileSync(join(outputDir, 'sbom.cdx.json'))).digest('hex'));
+  }
+});
+
+test('service runner keeps a partial artifact for build spawn failures', async (t) => {
+  const temp = mkdtempSync(join(tmpdir(), 'browser-compare-service-build-failure-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  const outputDir = join(temp, 'proxy');
+  const execute = (command, args) => command === 'docker' && args[0] === 'build'
+    ? { status: null, stdout: '', stderr: '', error: Object.assign(new Error('spawn docker ENOENT'), { code: 'ENOENT' }) }
+    : { status: 0, stdout: '', stderr: '' };
+  const { report, exitCode } = await runServiceScenario({ service: 'proxy', projectRoot: root.pathname, outputDir, env: {}, execute });
+  assert.equal(exitCode, 1);
+  assert.equal(report.build.status, 'failed');
+  assert.equal(report.build.exitCode, null);
+  assert.match(report.error, /ENOENT/u);
+  assert.equal(report.scan.status, 'blocked');
+  assert.equal(report.sbom.status, 'blocked');
+  assert.equal(report.nodeCoreVulnerabilityCoverage.status, 'uncovered');
+  assert.equal(JSON.parse(readFileSync(join(outputDir, 'report.json'), 'utf8')).result, 'failed-or-incomplete');
+  assert.ok(readFileSync(join(outputDir, 'diagnostics.log'), 'utf8').includes('spawn docker ENOENT'));
 });
 
 test('comparison Compose keeps all five tmpfs mounts as one quoted entry with existing size and mode options', () => {
