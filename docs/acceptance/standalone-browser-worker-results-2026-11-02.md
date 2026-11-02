@@ -49,4 +49,6 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 [CI 41437483966](https://github.com/404404/AI-Bots/actions/runs/41437483966) 使用 `cc05b09d4638b34e09a8290eedf232545789d11d`：四个镜像扫描均失败，归档跳过。真实 Trixie Chromium 的 namespace、PID namespace 和 Seccomp-BPF 状态均为 true，隔离测试页的导航、读取、输入、滚动、点击和截图经 relay 完成；完整 E2E 随后在权限错误码断言失败（期望 `target-origin-denied`，实际 `required-policy-unmet`）。尚未完成后续取消、隔离及清理等全部用例，不能将作业标记通过。
 
+[CI 41438552270](https://github.com/404404/AI-Bots/actions/runs/41438552270) 补齐测试所需策略参数后，metadata 地址拒绝通过，但发现 **安全失败**：严格 deny 会话访问无 query 的测试地址时，HTTP 重定向后的含 query 目标实际经过代理到达 fixture，Worker 错误地返回完成。现有 Playwright route 拦截不足以约束重定向后的请求；不能将该版本的模型 Browser 工具作为安全可用功能部署。后续必须在请求发出前覆盖重定向，HTTPS 无法证明安全时必须拒绝。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

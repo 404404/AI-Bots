@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { parse } from 'yaml';
 import { getScenario, scenarios } from './scenarios.mjs';
-import { buildArgs, runScenario, runtimeProbeScript, syftScanArgs } from './run-scenario.mjs';
+import { buildArgs, grypeScanArgs, runScenario, runtimeProbeScript, syftScanArgs } from './run-scenario.mjs';
 import { summarizeNodeGrypeFindings, validateGrypeDatabase, validateNodeBinarySbom } from './node-binary-audit.mjs';
 
 const root = new URL('../../../', import.meta.url);
@@ -210,6 +210,70 @@ test('Syft scan arguments use the v1.55 CLI syntax with exactly one source posit
   ]);
   assert.equal(args.filter((arg) => !arg.startsWith('-') && arg !== 'syft' && arg !== 'scan').length, 1);
   assert.doesNotMatch(args.join(' '), /(^|\s)image(\s|$)/u);
+});
+
+test('Grype writes its complete JSON report to a file and preserves spawn failures as incomplete', async (t) => {
+  const temp = mkdtempSync(join(tmpdir(), 'browser-compare-grype-output-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  const configPath = '/tmp/grype.yaml';
+  const sbomPath = '/tmp/node-sbom.json';
+  const reportPath = '/tmp/grype-report.json';
+  assert.deepEqual(grypeScanArgs(configPath, sbomPath, reportPath), [
+    'grype', '--config', configPath, `sbom:${sbomPath}`, '-o', 'json', '--file', reportPath,
+  ]);
+
+  const nodeArtifact = {
+    id: 'node-elf-identity', name: 'node', version: '24.21.0', type: 'binary',
+    foundBy: 'binary-classifier-cataloger', purl: 'pkg:generic/node@24.21.0',
+    locations: [{ path: '/usr/local/bin/node' }],
+    cpes: [{ cpe: 'cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*' }],
+  };
+  for (const failure of [false, true]) {
+    const outputDir = join(temp, failure ? 'spawn-error' : 'large-output');
+    const fullJson = JSON.stringify({ matches: [], evidencePadding: 'x'.repeat(2 * 1024 * 1024) });
+    let sawBoundedBuffer = false;
+    const execute = (command, args, options) => {
+      sawBoundedBuffer ||= options.maxBuffer === 8 * 1024 * 1024;
+      if (command === 'docker' && args[0] === 'build') return { status: 0, stdout: '', stderr: '' };
+      if (command === 'docker' && args[0] === 'image') return { status: 0, stdout: JSON.stringify([{ Id: 'sha256:image', RootFS: { Layers: [] }, Config: { Labels: {} }, Os: 'linux', Architecture: 'amd64' }]), stderr: '' };
+      if (command === 'docker' && args[0] === 'history') return { status: 0, stdout: 'sha256:layer\n', stderr: '' };
+      if (command === 'docker' && args[0] === 'run') return { status: 0, stdout: 'v24.21.0\n1.64.1\nChromium 140.0\n', stderr: '' };
+      if (command === 'syft' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ version: '1.55.0' }), stderr: '' };
+      if (command === 'syft' && args[0] === 'scan') {
+        const output = args.find((arg) => arg.startsWith('--output=syft-json=')).split('=').at(-1);
+        writeFileSync(output, JSON.stringify({ artifacts: [nodeArtifact] }));
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'grype' && args.includes('version')) return { status: 0, stdout: JSON.stringify({ version: '0.121.0' }), stderr: '' };
+      if (command === 'grype' && args.includes('db') && args.includes('update')) return { status: 0, stdout: '', stderr: '' };
+      if (command === 'grype' && args.includes('db') && args.includes('status')) return { status: 0, stdout: JSON.stringify({ built: '2026-11-02T00:00:00Z', schemaVersion: 'v6.1.3', valid: true, from: 'https://grype.anchore.io/databases/v6/example.tar.zst', checksum: 'sha256:abc' }), stderr: '' };
+      if (command === 'grype' && args.includes('--file')) {
+        if (failure) return { status: null, stdout: '', stderr: 'partial scan output', error: Object.assign(new Error('spawn ENOBUFS'), { code: 'ENOBUFS' }) };
+        writeFileSync(args[args.indexOf('--file') + 1], fullJson);
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'trivy' && args[0] === 'version') return { status: 0, stdout: JSON.stringify({ Version: '0.70.0', VulnerabilityDB: { Version: 2, UpdatedAt: '2026-11-02T00:00:00Z' } }), stderr: '' };
+      if (command === 'trivy' && args[0] === 'image') {
+        writeFileSync(args[args.indexOf('--output') + 1], args.includes('cyclonedx') ? '{"bomFormat":"CycloneDX"}' : '{"Results":[]}');
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      if (command === 'docker' && args[0] === 'compose') return { status: 0, stdout: '', stderr: '' };
+      return { status: 0, stdout: '', stderr: '' };
+    };
+    const { report, exitCode } = await runScenario({ name: 'trixie', projectRoot: root.pathname, outputDir, env: {}, execute });
+    assert.equal(exitCode, 1, 'uncovered Node core advisory scope remains a mandatory fail-closed gate');
+    assert.ok(sawBoundedBuffer);
+    if (failure) {
+      assert.equal(report.nodeBinaryAudit.status, 'incomplete');
+      assert.equal(report.nodeBinaryAudit.grype.exitCode, null);
+      assert.equal(report.nodeBinaryAudit.grype.spawnError.code, 'ENOBUFS');
+      assert.match(report.nodeBinaryAudit.error, /could not complete/u);
+    } else {
+      assert.equal(report.nodeBinaryAudit.grype.status, 'passed-no-high-critical', JSON.stringify(report.nodeBinaryAudit, null, 2));
+      assert.equal(readFileSync(join(outputDir, 'grype-node-binary-findings.json'), 'utf8'), fullJson);
+      assert.equal(report.nodeBinaryAudit.grype.outputBytes, Buffer.byteLength(fullJson));
+    }
+  }
 });
 
 test('actual CLI records build failure, stderr, redaction, and a partial report', (t) => {

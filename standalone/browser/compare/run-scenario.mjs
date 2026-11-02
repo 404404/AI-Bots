@@ -45,6 +45,10 @@ export function syftScanArgs(image, outputPath) {
   ];
 }
 
+export function grypeScanArgs(configPath, sbomPath, outputPath) {
+  return ['grype', '--config', configPath, 'sbom:' + sbomPath, '-o', 'json', '--file', outputPath];
+}
+
 function redact(value, env) {
   let output = String(value ?? '');
   for (const key of ['BROWSER_CONTROL_TOKEN', 'BROWSER_PROXY_ADMIN_TOKEN']) {
@@ -112,17 +116,17 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
   function run(args, { allowFailure = false, cwd = projectRoot, commandEnv = env } = {}) {
     let result;
     try {
-      result = execute(args[0], args.slice(1), { cwd, encoding: 'utf8', stdio: 'pipe', env: commandEnv });
+      result = execute(args[0], args.slice(1), { cwd, encoding: 'utf8', stdio: 'pipe', maxBuffer: 8 * 1024 * 1024, env: commandEnv });
     } catch (error) {
       result = { status: null, stdout: '', stderr: '', error };
     }
-    const status = result.status ?? 127;
+    const status = result.status ?? (result.error ? null : 127);
     const entry = { command: args.map((part) => part.includes('TOKEN') ? '[REDACTED]' : part).join(' '), exitCode: status };
     if (result.error) entry.error = redact(result.error.message, commandEnv);
     const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
     if (output) diagnostics.push(`$ ${entry.command}\n${redact(output, commandEnv)}`);
     if (!allowFailure && status !== 0) throw new Error(entry.error || `${args[0]} exited ${status}`);
-    return { status, stdout: result.stdout ?? '', stderr: result.stderr ?? '', error: result.error?.message };
+    return { status, stdout: result.stdout ?? '', stderr: result.stderr ?? '', error: result.error?.message, errorCode: result.error?.code };
   }
 
   function save(file, content) {
@@ -297,14 +301,17 @@ export async function runScenario({ name, projectRoot = root, outputDir, env = p
       report.nodeBinaryAudit.database.status = 'fresh';
       save('grype-db-status.json', JSON.stringify(dbJson, null, 2) + '\n');
       if (report.nodeBinaryAudit.syft.status !== 'passed') throw new Error('Node binary SBOM is incomplete; refusing Grype evaluation.');
-      const grype = run(['grype', '--config', grypeConfigPath, 'sbom:' + nodeSbomPath, '-o', 'json'], { allowFailure: true });
+      const grypeOutputPath = resolve(out, 'grype-node-binary-findings.json');
+      const grype = run(grypeScanArgs(grypeConfigPath, nodeSbomPath, grypeOutputPath), { allowFailure: true });
       report.nodeBinaryAudit.grype.exitCode = grype.status;
+      if (grype.error) report.nodeBinaryAudit.grype.spawnError = { code: grype.errorCode ?? null, message: redact(grype.error, env) };
       report.nodeBinaryAudit.grype.stderr = redact(grype.stderr, env).trim();
-      report.nodeBinaryAudit.grype.rawOutput = redact(grype.stdout, env).trim();
-      if (grype.status !== 0) throw new Error('Grype SBOM scan exited ' + grype.status + '.');
-      const grypeJson = JSON.parse(grype.stdout);
+      if (grype.status !== 0) throw new Error(grype.error ? 'Grype SBOM scan could not complete: ' + grype.error : 'Grype SBOM scan exited ' + grype.status + '.');
+      const grypeRaw = readFileSync(grypeOutputPath, 'utf8');
+      report.nodeBinaryAudit.grype.outputFile = 'grype-node-binary-findings.json';
+      report.nodeBinaryAudit.grype.outputBytes = Buffer.byteLength(grypeRaw);
+      const grypeJson = JSON.parse(grypeRaw);
       report.nodeBinaryAudit.findings = summarizeNodeGrypeFindings(grypeJson, report.nodeBinaryAudit.nodePackage);
-      save('grype-node-binary-findings.json', JSON.stringify(grypeJson, null, 2) + '\n');
       report.nodeBinaryAudit.grype.status = report.nodeBinaryAudit.findings.highCriticalCount === 0 ? 'passed-no-high-critical' : 'high-critical-findings';
       report.nodeBinaryAudit.status = report.nodeBinaryAudit.grype.status;
       if (report.nodeBinaryAudit.findings.highCriticalCount > 0) failed = true;
