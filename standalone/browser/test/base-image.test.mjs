@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
@@ -119,6 +120,39 @@ function assertWorkflowGateStructure(source) {
   const candidateUpload = requiredStep(candidateSteps, /uses: actions\/upload-artifact@/u, 'candidate archive upload');
   assert.match(candidateUpload, /name: standalone-browser-candidate-\$\{\{ github\.sha \}\}/u, 'only candidate job should publish candidate artifact');
 }
+
+test('compose config keeps each tmpfs as one volume with its intended mode and ownership', (context) => {
+  const dockerAvailable = spawnSync('docker', ['compose', 'version'], { stdio: 'ignore' }).status === 0;
+  if (!dockerAvailable) {
+    context.skip('Docker Compose CLI is unavailable in this isolated test environment');
+    return;
+  }
+
+  const config = JSON.parse(execFileSync('docker', ['compose', '-f', new URL('../deploy/compose.example.yml', import.meta.url).pathname, '--profile', 'e2e', 'config', '--format', 'json'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      SOURCE_REVISION: 'a'.repeat(40),
+      BROWSER_CONTROL_TOKEN: 'synthetic-control-token-00000000000000000000000000000000',
+      BROWSER_PROXY_ADMIN_TOKEN: 'synthetic-proxy-admin-token-00000000000000000000000000000000',
+    },
+  }));
+  const expectedTmpfs = {
+    fixture: ['/tmp:size=8m,mode=1777'],
+    egress: ['/tmp:size=8m,mode=1777'],
+    worker: ['/tmp:size=384m,mode=0700,uid=10001,gid=10001'],
+    gateway: ['/tmp:size=8m,mode=1777'],
+    e2e: ['/tmp:size=8m,mode=1777'],
+  };
+  for (const [service, expected] of Object.entries(expectedTmpfs)) {
+    assert.deepEqual(config.services[service].tmpfs, expected, `${service} tmpfs must remain one complete mount string`);
+  }
+});
+
+test('compose tmpfs flow-list mount strings are quoted as whole entries', () => {
+  const entries = compose.match(/^    tmpfs: \["\/tmp:[^\n]+"\]$/gmu) ?? [];
+  assert.equal(entries.length, 5, 'every tmpfs flow-list value must be quoted as one item');
+});
 
 test('compose build args quote required SOURCE_REVISION interpolation as YAML strings', () => {
   const args = compose.match(/^      args: \{ SOURCE_REVISION: "\$\{SOURCE_REVISION:\?set immutable source revision\}" \}$/gmu) ?? [];
