@@ -1,15 +1,33 @@
 FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
 ARG SOURCE_REVISION=unknown
+ARG NODE_VERSION=24.22.2
 LABEL org.opencontainers.image.title="404404 AI-Bots standalone browser service comparison" \
       org.opencontainers.image.source="https://github.com/404404/AI-Bots" \
+      org.opencontainers.image.licenses="MIT AND Apache-2.0" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
       org.opencontainers.image.base.name="mcr.microsoft.com/playwright:v1.64.1-noble" \
       org.opencontainers.image.base.digest="sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f" \
+      io.404404.runtime.node.version="24.22.2" \
+      io.404404.runtime.node.source="https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-x64.tar.gz" \
+      io.404404.runtime.node.sha256="361718c444e49af2ca5a110c83ba6a8901143f23ab285ebbef0341f391f482a9" \
+      io.404404.runtime.node.license="MIT" \
       io.404404.role="worker"
-ENV NODE_ENV=production HOME=/tmp BROWSER_DATA_ROOT=/tmp/browser-sessions
+ADD --checksum=sha256:361718c444e49af2ca5a110c83ba6a8901143f23ab285ebbef0341f391f482a9 \
+    https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-x64.tar.gz /tmp/node-v24.22.2-linux-x64.tar.gz
+# Keep the image's Ubuntu shared libraries; only install the official Node runtime files, not libraries from another distribution.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get purge -y nodejs \
+    && tar -xzf /tmp/node-v24.22.2-linux-x64.tar.gz -C /opt \
+    && test -s /opt/node-v24.22.2-linux-x64/LICENSE \
+    && rm -f /tmp/node-v24.22.2-linux-x64.tar.gz \
+    && rm -rf /var/lib/apt/lists/*
+ENV PATH="/opt/node-v24.22.2-linux-x64/bin:${PATH}" \
+    NODE_ENV=production HOME=/tmp BROWSER_DATA_ROOT=/tmp/browser-sessions
 WORKDIR /opt/browser
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
+RUN node --version | grep -Fx "v${NODE_VERSION}" \
+    && npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
     && mkdir -p /run/browser-control /run/browser-egress /tmp/browser-sessions \
     && chown -R 10001:10001 /opt/browser /run/browser-control /run/browser-egress /tmp/browser-sessions
 COPY src ./src

@@ -11,6 +11,9 @@ import { buildArgs, runScenario, runtimeProbeScript } from './run-scenario.mjs';
 const root = new URL('../../../', import.meta.url);
 const lock = JSON.parse(readFileSync(new URL('standalone/browser/package-lock.json', root), 'utf8'));
 const workflow = readFileSync(new URL('.github/workflows/standalone-browser-compare.yml', root), 'utf8');
+const composeText = readFileSync(new URL('standalone/browser/deploy/compose.example.yml', root), 'utf8');
+const compose = parse(composeText);
+const candidateDockerfiles = ['noble', 'resolute'].map((name) => readFileSync(new URL(`standalone/browser/compare/Dockerfile.${name}`, root), 'utf8'));
 const runner = readFileSync(new URL('./run-scenario.mjs', import.meta.url), 'utf8');
 
 test('comparison pins all requested official immutable indexes and the unchanged Trixie worker baseline', () => {
@@ -20,6 +23,25 @@ test('comparison pins all requested official immutable indexes and the unchanged
   assert.equal(lock.packages[''].dependencies['playwright-core'], '1.64.1');
   assert.equal(lock.packages['node_modules/playwright-core'].version, '1.64.1');
   assert.throws(() => getScenario('latest'));
+});
+
+test('Playwright candidates use checksummed official Node 24.22.2 and update their Ubuntu packages', () => {
+  const nodeSource = 'https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-x64.tar.gz';
+  const nodeSha256 = '361718c444e49af2ca5a110c83ba6a8901143f23ab285ebbef0341f391f482a9';
+  for (const dockerfile of candidateDockerfiles) {
+    assert.ok(dockerfile.includes(`ADD --checksum=sha256:${nodeSha256}`));
+    assert.ok(dockerfile.includes(nodeSource));
+    assert.ok(dockerfile.includes(`io.404404.runtime.node.version="24.22.2"`));
+    assert.ok(dockerfile.includes(`io.404404.runtime.node.sha256="${nodeSha256}"`));
+    assert.match(dockerfile, /io\.404404\.runtime\.node\.license="MIT"/u);
+    assert.match(dockerfile, /org\.opencontainers\.image\.licenses="MIT AND Apache-2\.0"/u);
+    assert.match(dockerfile, /apt-get upgrade -y --no-install-recommends/u);
+    assert.match(dockerfile, /apt-get purge -y nodejs/u);
+    assert.match(dockerfile, /tar -xzf \/tmp\/node-v24\.22\.2-linux-x64\.tar\.gz -C \/opt/u);
+    assert.match(dockerfile, /test -s \/opt\/node-v24\.22\.2-linux-x64\/LICENSE/u);
+    assert.match(dockerfile, /PATH="\/opt\/node-v24\.22\.2-linux-x64\/bin:\$\{PATH\}"/u);
+    assert.doesNotMatch(dockerfile, /COPY --from=/u);
+  }
 });
 
 test('workflow isolates each base in a non-publishing manual matrix and keeps evidence after failure', () => {
@@ -53,6 +75,22 @@ test('push trigger is restricted to the feature branch and comparison-only paths
     'standalone/browser/compare/**',
   ]);
   assert.ok(Object.hasOwn(config.on, 'workflow_dispatch'));
+});
+
+test('comparison Compose keeps all five tmpfs mounts as one quoted entry with existing size and mode options', () => {
+  const expected = {
+    fixture: '/tmp:size=8m,mode=1777',
+    egress: '/tmp:size=8m,mode=1777',
+    worker: '/tmp:size=384m,mode=0700,uid=10001,gid=10001',
+    gateway: '/tmp:size=8m,mode=1777',
+    e2e: '/tmp:size=8m,mode=1777',
+  };
+  for (const [serviceName, tmpfsEntry] of Object.entries(expected)) {
+    assert.deepEqual(compose.services[serviceName].tmpfs, [tmpfsEntry], `${serviceName} tmpfs must remain one complete list item`);
+    const escapedEntry = tmpfsEntry.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    assert.match(composeText, new RegExp(`^\\s+tmpfs: \\["${escapedEntry}"\\]$`, 'mu'), `${serviceName} tmpfs must be quoted as a whole item`);
+  }
+  assert.equal(Object.keys(expected).length, 5);
 });
 
 test('build args target the production worker and runtime probe prefers CHROMIUM_PATH with strict version checks', () => {
