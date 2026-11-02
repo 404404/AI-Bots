@@ -41,4 +41,10 @@ Ubuntu 比较候选随后改用发行版自身的安全更新及 Node 官方 24.
 
 提交 `899a2e2b49f1bc3667e57c34390f5c78c2b0193d` 的 [CI 41415627822](https://github.com/404404/AI-Bots/actions/runs/41415627822) 在构建前的测试步骤失败：隔离测试容器缺少新加入的 Host 客户端测试文件，因此扫描与 Chromium 诊断被跳过。独立 Terra 在非容器环境执行相同源码的 Standalone 154/154、Browser 40/40 通过；这些是合成测试，不能代替真实 Chromium 或模型验收。
 
+[CI 41416024016](https://github.com/404404/AI-Bots/actions/runs/41416024016) 的测试挂载修复后，构建成功，四个扫描仍失败，候选归档跳过。Chromium 在隔离 runner 创建会话并首次导航时给出 `ERR_PROXY_CONNECTION_FAILED`，导航失败；会话随后关闭。该错误定位到代理连接阶段，不能据此宣称已查明根因或通过任何后续浏览器操作和隔离验收。
+
+[CI 41416625175](https://github.com/404404/AI-Bots/actions/runs/41416625175) 在比较镜像中将仅构建时使用的 npm 留在构建阶段，并保留最终镜像的系统包数据库、生产依赖及许可证。Trixie 扫描为 107 HIGH、1 CRITICAL；Noble 为 2 HIGH（GStreamer 的 CVE-2025-3887 两个包项，未提供修复版本）；Resolute 的 Trivy OS/应用扫描无 HIGH 或 CRITICAL。三种结果均未完成验收：Noble 和 Trixie 的扫描失败，Resolute 在真实容器启动时报 `chromium-sandbox-unverified`；Node 本体扫描覆盖在三种候选中均未证明且强制失败。Trivy 的零发现不代表完整发布门禁通过。
+
+该轮 Resolute 仅在 runner 内构建的 image config ID 为 `sha256:2183c4684d6f87328c644647f384a4e6f70af1fdfb3ba83abf84cdec920974c3`，没有 registry repo digest，不能用作已发布镜像或部署身份。
+
 执行记录：一次本机 Compose 构建在获取基础镜像 metadata 时被中止，未创建项目容器、网络或卷；只读核查未发现该构建的候选镜像或基础镜像。现有 Docker 构建缓存无法逐项归因，未清理。后续容器诊断限定在 GitHub 隔离 runner。

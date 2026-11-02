@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { createRestrictedProxy, parseConnectAuthority } from '../src/proxy.mjs';
-import { createLoopbackProxyRelay } from '../src/worker.mjs';
+import { createLoopbackProxyRelay, safeRelayMethod } from '../src/worker.mjs';
 import { createFixtureServer } from '../fixture/server.mjs';
 
 const origin = 'http://fixture.test:8081';
@@ -200,7 +200,8 @@ test('loopback relay carries HTTP proxy auth over the private proxy UDS', async 
   const proxyPath = join(dir, 'proxy.sock'), adminPath = join(dir, 'admin.sock');
   const service = createRestrictedProxy({ rawRules: rules, adminToken, lookup: async () => [{ address: '172.31.240.11', family: 4 }] });
   await service.listenUnix({ proxySocketPath: proxyPath, adminSocketPath: adminPath });
-  const relay = createLoopbackProxyRelay(proxyPath);
+  const relayEvents = [];
+  const relay = createLoopbackProxyRelay(proxyPath, (entry) => relayEvents.push(entry));
   await new Promise((resolve, reject) => relay.once('error', reject).listen(0, '127.0.0.1', resolve));
   const relayPort = relay.address().port;
   t.after(async () => {
@@ -215,9 +216,19 @@ test('loopback relay carries HTTP proxy auth over the private proxy UDS', async 
   });
   assert.equal(registration, 201);
   const auth = `Basic ${Buffer.from(`${sessionId}:${secret}`).toString('base64')}`;
-  const result = await proxyRequest(relayPort, { path: `${origin}/`, headers: { host: 'fixture.test:8081', 'proxy-authorization': auth } });
+  const result = await proxyRequest(relayPort, { path: `${origin}/?probe-secret=must-not-be-logged`, headers: { host: 'fixture.test:8081', 'proxy-authorization': auth } });
   assert.equal(result.status, 403);
   assert.equal(JSON.parse(result.body).error.code, 'target-address-changed');
+  for (let index = 0; index < 40; index += 1) {
+    const response = await proxyRequest(relayPort, { path: `${origin}/?probe-secret=${index}`, headers: { host: 'fixture.test:8081', 'proxy-authorization': auth } });
+    assert.equal(response.status, 403);
+  }
+  assert.ok(relayEvents.some((entry) => entry.event === 'relay-http-received'));
+  assert.ok(relayEvents.some((entry) => entry.event === 'relay-http-response' && entry.status === 403));
+  assert.equal(relayEvents.at(-1).event, 'relay-diagnostics-suppressed');
+  assert.ok(relayEvents.length <= 64);
+  const serializedEvents = JSON.stringify(relayEvents);
+  for (const value of [secret, adminToken, 'probe-secret', 'fixture.test', '/?']) assert.equal(serializedEvents.includes(value), false);
   const connectResponse = await new Promise((resolve, reject) => {
     const socket = tcpConnect(relayPort, '127.0.0.1');
     let data = Buffer.alloc(0);
@@ -229,6 +240,32 @@ test('loopback relay carries HTTP proxy auth over the private proxy UDS', async 
     socket.on('error', reject);
   });
   assert.match(connectResponse, /^HTTP\/1\.1 403/u);
+});
+
+test('loopback relay reports a bounded whitelist error when its proxy UDS is unavailable', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'browser-relay-missing-uds-'));
+  const socketPath = join(dir, 'private-proxy.sock');
+  const relayEvents = [];
+  const relay = createLoopbackProxyRelay(socketPath, (entry) => relayEvents.push(entry));
+  await new Promise((resolve, reject) => relay.once('error', reject).listen(0, '127.0.0.1', resolve));
+  t.after(async () => {
+    await new Promise((resolve) => relay.close(resolve));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const response = await proxyRequest(relay.address().port, { path: `${origin}/?private=query`, headers: { host: 'fixture.test:8081', authorization: 'Basic hidden-credential' } });
+  assert.equal(response.status, 502);
+  assert.ok(relayEvents.some((entry) => entry.event === 'relay-http-upstream-error' && entry.errorCode === 'ENOENT'));
+  const serializedEvents = JSON.stringify(relayEvents);
+  for (const value of [socketPath, 'private=query', 'hidden-credential', 'fixture.test']) assert.equal(serializedEvents.includes(value), false);
+  assert.ok(relayEvents.length <= 64);
+});
+
+test('relay method sanitizer maps unknown and sensitive values to OTHER', () => {
+  assert.equal(safeRelayMethod('GET'), 'GET');
+  assert.equal(safeRelayMethod('CONNECT'), 'CONNECT');
+  assert.equal(safeRelayMethod('X-Sensitive-Method'), 'OTHER');
+  assert.equal(safeRelayMethod('Bearer-secret'), 'OTHER');
 });
 
 test('loopback relay closes its upstream CONNECT socket when the browser client disconnects', async (t) => {

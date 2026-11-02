@@ -19,6 +19,17 @@ const MAX_LEASE_MS = 120_000;
 const OP_TIMEOUT_MS = 15_000;
 const MAX_RELAY_TUNNEL_MS = 30_000;
 const MAX_RELAY_TUNNEL_BYTES = 16 * 1024 * 1024;
+const MAX_RELAY_DIAGNOSTIC_EVENTS = 64;
+const SAFE_PROXY_ERROR_CODES = new Set([
+  'ECONNREFUSED', 'ENOENT', 'EACCES', 'EPIPE', 'ETIMEDOUT', 'ECONNRESET', 'EHOSTUNREACH', 'ENETUNREACH', 'EADDRINUSE',
+  'ERR_SOCKET_CLOSED', 'ERR_PROXY_CONNECTION_FAILED', 'ERR_TUNNEL_CONNECTION_FAILED', 'ERR_NO_SUPPORTED_PROXIES',
+  'ERR_CONNECTION_CLOSED', 'ERR_CONNECTION_REFUSED', 'ERR_TIMED_OUT', 'ERR_NAME_NOT_RESOLVED',
+]);
+const SAFE_RELAY_METHODS = new Set(['GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'PATCH', 'CONNECT']);
+
+export function safeRelayMethod(method) {
+  return SAFE_RELAY_METHODS.has(method) ? method : 'OTHER';
+}
 
 function safeJson(res, status, value, headers = {}) {
   const bytes = Buffer.from(JSON.stringify(value));
@@ -59,10 +70,11 @@ function hasQuery(target) {
 }
 
 function diagnosticError(error) {
-  const name = typeof error?.name === 'string' && /^[A-Za-z][A-Za-z0-9]{0,39}$/u.test(error.name) ? error.name : 'Error';
-  const directCode = typeof error?.code === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,79}$/u.test(error.code) ? error.code : undefined;
+  const name = ['Error', 'TypeError', 'TimeoutError', 'AbortError', 'BrowserError'].includes(error?.name) ? error.name : 'Error';
+  const directCode = SAFE_PROXY_ERROR_CODES.has(error?.code) ? error.code : undefined;
   const chromiumCode = typeof error?.message === 'string' ? /\bnet::(ERR_[A-Z0-9_]+)\b/u.exec(error.message)?.[1] : undefined;
-  return { errorName: name, ...(directCode ?? chromiumCode ? { errorCode: directCode ?? chromiumCode } : {}) };
+  const errorCode = directCode ?? (SAFE_PROXY_ERROR_CODES.has(chromiumCode) ? chromiumCode : undefined);
+  return { errorName: name, ...(errorCode ? { errorCode } : {}) };
 }
 
 async function proxyAdmin({ url, socketPath, token }, body) {
@@ -85,19 +97,33 @@ async function proxyAdmin({ url, socketPath, token }, body) {
 }
 
 export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
+  let diagnosticCount = 0;
+  let diagnosticsSuppressed = false;
+  const diagnostic = (entry) => {
+    if (diagnosticCount < MAX_RELAY_DIAGNOSTIC_EVENTS - 1) {
+      diagnosticCount += 1;
+      logger(entry);
+    } else if (!diagnosticsSuppressed) {
+      diagnosticsSuppressed = true;
+      logger({ event: 'relay-diagnostics-suppressed', limit: MAX_RELAY_DIAGNOSTIC_EVENTS });
+    }
+  };
   const server = createServer((req, res) => {
+    diagnostic({ event: 'relay-http-received', method: safeRelayMethod(req.method) });
     const upstream = httpRequest({ socketPath: proxySocketPath, path: req.url, method: req.method, headers: req.headers, timeout: 15_000, agent: false }, (response) => {
+      diagnostic({ event: 'relay-http-response', status: response.statusCode ?? 502 });
       res.writeHead(response.statusCode ?? 502, response.headers);
       response.pipe(res);
     });
-    upstream.on('error', () => { if (!res.headersSent) res.writeHead(502); res.end(); });
-    upstream.on('timeout', () => upstream.destroy(new Error('proxy relay timeout')));
+    upstream.on('error', (error) => { diagnostic({ event: 'relay-http-upstream-error', ...diagnosticError(error) }); if (!res.headersSent) res.writeHead(502); res.end(); });
+    upstream.on('timeout', () => { diagnostic({ event: 'relay-http-upstream-timeout' }); upstream.destroy(new Error('proxy relay timeout')); });
     const abort = () => { if (!res.writableEnded) upstream.destroy(); };
     req.once('aborted', abort);
     res.once('close', abort);
     req.pipe(upstream);
   });
   server.on('connect', (req, client, head) => {
+    diagnostic({ event: 'relay-connect-received' });
     const upstream = httpRequest({ socketPath: proxySocketPath, method: 'CONNECT', path: req.url, headers: req.headers, timeout: 15_000, agent: false });
     let established = false;
     let closed = false;
@@ -109,7 +135,7 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
     const logCleanup = () => {
       if (cleanupLogged || !proxySocket) return;
       cleanupLogged = true;
-      logger({ event: 'relay-cleanup', upstreamSocketDestroyed: proxySocket.destroyed });
+      diagnostic({ event: 'relay-cleanup', upstreamSocketDestroyed: proxySocket.destroyed });
     };
     const cleanup = () => {
       closed = true;
@@ -124,10 +150,12 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
     };
     upstream.once('socket', (socket) => {
       proxySocket = socket;
+      diagnostic({ event: 'relay-connect-proxy-socket-created' });
       socket.once('close', () => { if (!established) cleanup(); });
       if (closed) { socket.destroy(); logCleanup(); }
     });
     upstream.on('connect', (response, socket, upstreamHead) => {
+      diagnostic({ event: 'relay-connect-upstream-response', status: response.statusCode ?? 502 });
       if (client.destroyed) { socket.destroy(); cleanup(); return; }
       established = true;
       tunnelSocket = socket;
@@ -147,6 +175,7 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
       socket.once('close', cleanup);
     });
     upstream.on('response', (response) => {
+      diagnostic({ event: 'relay-connect-upstream-response', status: response.statusCode ?? 502 });
       established = true;
       clearTimeout(handshakeTimer);
       client.write(`HTTP/1.1 ${response.statusCode ?? 502} ${response.statusMessage ?? 'Proxy Response'}\r\n`);
@@ -155,7 +184,8 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
       response.resume();
       upstream.destroy();
     });
-    upstream.on('error', () => {
+    upstream.on('error', (error) => {
+      diagnostic({ event: 'relay-connect-upstream-error', ...diagnosticError(error) });
       if (!client.destroyed && !established) {
         established = true;
         clearTimeout(handshakeTimer);
@@ -168,6 +198,7 @@ export function createLoopbackProxyRelay(proxySocketPath, logger = () => {}) {
     client.once('end', cleanup);
     client.once('error', cleanup);
     handshakeTimer = setTimeout(() => {
+      diagnostic({ event: 'relay-connect-handshake-timeout' });
       if (!client.destroyed && !established) {
         established = true;
         client.end('HTTP/1.1 504 Proxy Relay Timeout\r\nConnection: close\r\n\r\n');
@@ -213,8 +244,9 @@ export class BrowserWorker {
     this.verifyNetworkNamespace();
     await this.verifyHostBridgeIsolation();
     if (this.proxySocket) {
-      this.proxyRelay = createLoopbackProxyRelay(this.proxySocket);
+      this.proxyRelay = createLoopbackProxyRelay(this.proxySocket, this.logger);
       await new Promise((resolveListen, reject) => this.proxyRelay.once('error', reject).listen(Number(process.env.BROWSER_LOOPBACK_PROXY_PORT ?? 8080), '127.0.0.1', resolveListen));
+      this.logger({ event: 'proxy-relay-listening', proxySocketConfigured: true, at: this.now() });
     }
     this.browser = await this.launcher.launch({
       headless: true,
