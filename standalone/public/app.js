@@ -1,3 +1,5 @@
+import { OnboardingRequestCoordinator, selectCreatedBotIfUnchanged } from './onboarding-state.js';
+
 const $ = (id) => document.getElementById(id);
 let bots = [],
   contacts = null,
@@ -7,6 +9,7 @@ let bots = [],
   groupHasOlder = false,
   groupMessages = [],
   groupOnboardings = new Map(),
+  onboardingRequests = new OnboardingRequestCoordinator(),
   hydratedGroupRetries = new Set(),
   bot = null,
   conversation = null,
@@ -118,6 +121,17 @@ function node(tag, text, className) {
   if (text !== undefined) item.textContent = text;
   if (className) item.className = className;
   return item;
+}
+function nextOnboardingRequest(botId) {
+  return onboardingRequests.begin(botId);
+}
+function acceptOnboardingStatus(botId, status, epoch) {
+  if (!onboardingRequests.isCurrent(botId, epoch) || !status) return false;
+  groupOnboardings.set(botId, status);
+  renderContacts();
+  if (bot?.id === botId && conversation?.id === status.conversationId)
+    void refreshTimeline({ reset: true }).catch(showError);
+  return true;
 }
 function avatarVisual(metadata, label, size = 'sm', botId = metadata?.botId) {
   const avatar = node('span', undefined, `avatar ${size}`);
@@ -424,7 +438,21 @@ function renderTimelineItem(item) {
   const button = node('button', '复制');
   button.onclick = () => void copy(message.content);
   header.append(button);
-  article.append(header, node('p', message.content));
+  article.append(header);
+  const onboarding = role === 'assistant' ? groupOnboardings.get(bot.id) : null;
+  if (onboarding?.welcome?.kind === 'preset-welcome' && onboarding.welcome.messageId === message.id) {
+    const state = onboarding.roleStatus === 'completed'
+      ? '角色分析已完成'
+      : onboarding.roleStatus === 'running'
+        ? '角色分析进行中'
+        : onboarding.roleStatus === 'failed'
+          ? `角色分析失败${onboarding.roleErrorCode ? ` · ${onboarding.roleErrorCode}` : ''}`
+          : onboarding.roleStatus === 'pending'
+            ? `角色分析待完成${onboarding.roleErrorCode === 'model-account-required' ? ' · 请先设置模型账户' : ''}`
+            : '角色分析状态待同步';
+    article.append(node('p', `预设欢迎语 · ${state}`, 'onboarding-note'));
+  }
+  article.append(node('p', message.content));
   return article;
 }
 async function refreshTimeline({ reset = false, older = false } = {}) {
@@ -729,7 +757,15 @@ function renderContacts() {
     if (onboarding?.welcome?.kind === 'preset-welcome') row.append(node('p', `已显示预设欢迎语 · 角色分析${onboarding.roleStatus === 'completed' ? '已完成' : onboarding.roleStatus === 'failed' ? `失败${onboarding.roleErrorCode ? ` · ${onboarding.roleErrorCode}` : ''}` : '待完成'}`, 'muted fine'));
     if (['pending', 'failed'].includes(onboarding?.roleStatus)) {
       const retry = node('button', '重试角色分析'); retry.type = 'button';
-      retry.onclick = () => void command('employees.onboarding.retry', { botId: employee.id }).then((result) => { groupOnboardings.set(employee.id, result); renderContacts(); }).catch(showError);
+      retry.onclick = () => {
+        const epoch = onboardingRequests.beginRetry(employee.id);
+        if (epoch === null) return;
+        retry.disabled = true;
+        void command('employees.onboarding.retry', { botId: employee.id })
+          .then((result) => acceptOnboardingStatus(employee.id, result, epoch))
+          .catch(showError)
+          .finally(() => { onboardingRequests.finishRetry(employee.id); renderContacts(); });
+      };
       row.append(retry);
     }
     employeeList.append(row);
@@ -758,16 +794,22 @@ async function loadContacts() {
   renderContacts();
 }
 async function loadEmployeeStatuses() {
-  const results = await Promise.allSettled(bots.map((employee) => command('employees.onboarding.status', { botId: employee.id })));
-  results.forEach((result, index) => { if (result.status === 'fulfilled' && result.value) groupOnboardings.set(bots[index].id, result.value); });
+  const requests = bots.map((employee) => ({ employee, epoch: nextOnboardingRequest(employee.id) }));
+  const results = await Promise.allSettled(requests.map(({ employee }) => command('employees.onboarding.status', { botId: employee.id })));
+  results.forEach((result, index) => {
+    const { employee, epoch } = requests[index];
+    if (result.status === 'fulfilled') acceptOnboardingStatus(employee.id, result.value, epoch);
+  });
   renderContacts();
 }
 async function refreshOnboardings() {
   const pendingIds = [...groupOnboardings.entries()].filter(([, value]) => ['pending', 'running'].includes(value?.roleStatus)).map(([botId]) => botId);
   if (!pendingIds.length) return;
   await Promise.all(pendingIds.map(async (botId) => {
+    const epoch = onboardingRequests.beginPoll(botId);
+    if (epoch === null) return;
     const status = await command('employees.onboarding.status', { botId });
-    groupOnboardings.set(botId, status);
+    acceptOnboardingStatus(botId, status, epoch);
   }));
   renderContacts();
 }
@@ -955,15 +997,27 @@ async function enter() {
       throw new Error('上一条员工创建请求结果尚未确认。请恢复原名称和定义后安全重试。');
     const retry = Boolean(stored);
     const createKey = retry ? stored.idempotencyKey : id();
+    const selectionEpoch = botSelectionEpoch;
     try { localStorage.setItem('gk50-bot:create-employee', JSON.stringify({ ...createPayload, idempotencyKey: createKey })); }
     catch { throw new Error('无法保存创建请求标识，员工尚未创建。'); }
     const created = await command('bots.create', { ...createPayload, idempotencyKey: createKey });
     localStorage.removeItem('gk50-bot:create-employee');
     const employee = created.bot || created;
-    $('bot-dialog').close(); $('create-form').reset(); await refreshBots(); await selectBot(employee.id);
     const onboarding = created.onboarding;
-    if (onboarding) groupOnboardings.set(employee.id, { ...onboarding, roleStatus: onboarding.status === 'completed' ? 'completed' : onboarding.status === 'failed' ? 'failed' : 'running' });
-    try { const onboardingStatus = await command('employees.onboarding.status', { botId: employee.id }); groupOnboardings.set(employee.id, onboardingStatus); } catch { /* status remains whatever creation returned */ }
+    const roleStatuses = ['pending', 'running', 'completed', 'failed'];
+    if (onboarding) {
+      const roleStatus = roleStatuses.includes(onboarding.roleStatus) ? onboarding.roleStatus
+        : roleStatuses.includes(onboarding.status) ? onboarding.status : undefined;
+      groupOnboardings.set(employee.id, { ...onboarding, ...(roleStatus ? { roleStatus } : {}) });
+      nextOnboardingRequest(employee.id);
+    }
+    const statusEpoch = nextOnboardingRequest(employee.id);
+    try {
+      const onboardingStatus = await command('employees.onboarding.status', { botId: employee.id });
+      acceptOnboardingStatus(employee.id, onboardingStatus, statusEpoch);
+    } catch { /* the creation response remains the available source of onboarding state */ }
+    $('bot-dialog').close(); $('create-form').reset(); await refreshBots();
+    await selectCreatedBotIfUnchanged(selectionEpoch, () => botSelectionEpoch, () => selectBot(employee.id));
     await loadContacts();
     if (onboarding?.status === 'failed') notice(`员工已创建 · 首次问候待完成 · ${onboarding.errorCode || 'model-unavailable'}`);
   });

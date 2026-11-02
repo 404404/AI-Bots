@@ -236,6 +236,7 @@ export async function startServer(options: {
       const files: Record<string, [string, string]> = {
         '/': ['index.html', 'text/html'],
         '/app.js': ['app.js', 'text/javascript'],
+        '/onboarding-state.js': ['onboarding-state.js', 'text/javascript'],
         '/style.css': ['style.css', 'text/css'],
       };
       requireValue(Object.hasOwn(files, path), 'not-found', '页面不存在。', 404);

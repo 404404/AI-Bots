@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { OnboardingRequestCoordinator, selectCreatedBotIfUnchanged } from '../public/onboarding-state.js';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
@@ -32,7 +33,66 @@ test('new employee onboarding uses the backend status and retry APIs without com
   assert.match(app, /employees\.onboarding\.status/u);
   assert.match(app, /employees\.onboarding\.retry/u);
   assert.match(app, /welcome\?\.kind === 'preset-welcome'/u);
+  assert.match(app, /onboarding\.welcome\.messageId === message\.id/u);
+  assert.match(app, /预设欢迎语 · \$\{state\}/u);
+  assert.match(app, /onboarding\.roleStatus === 'pending'[\s\S]*?onboarding\.roleErrorCode === 'model-account-required'[\s\S]*?请先设置模型账户/u);
+  assert.match(css, /\.onboarding-note\s*\{/u);
   assert.doesNotMatch(app, /创建后.*(你好|欢迎)|员工已创建并完成首次问候/u);
+});
+
+test('employee creation preserves returned role state, fetches status before opening chat, and ignores stale switches', () => {
+  const createStart = app.indexOf("form('create-form'");
+  const createFlow = app.slice(createStart, app.indexOf("const employeeId = initialEmployeeId()", createStart));
+  assert.match(createFlow, /roleStatuses\.includes\(onboarding\.roleStatus\)[\s\S]*?roleStatuses\.includes\(onboarding\.status\)/u);
+  assert.match(createFlow, /groupOnboardings\.set\(employee\.id, \{ \.\.\.onboarding/u);
+  assert.ok(createFlow.indexOf("command('employees.onboarding.status'") < createFlow.indexOf('await refreshBots()'));
+  assert.ok(createFlow.indexOf('await refreshBots()') < createFlow.indexOf('selectCreatedBotIfUnchanged'));
+  assert.match(createFlow, /selectCreatedBotIfUnchanged\(selectionEpoch, \(\) => botSelectionEpoch, \(\) => selectBot/u);
+  assert.match(app, /onboardingRequests\.isCurrent\(botId, epoch\)/u);
+  assert.match(app, /bot\?\.id === botId && conversation\?\.id === status\.conversationId[\s\S]*?refreshTimeline\(\{ reset: true \}\)/u);
+  assert.doesNotMatch(createFlow, /onboarding\.status === 'failed' \? 'failed' : 'running'/u);
+  assert.ok(createFlow.indexOf('const selectionEpoch = botSelectionEpoch') < createFlow.indexOf("command('bots.create'"));
+});
+
+test('async creation does not override a Bot switch and retry wins over in-flight polling', async () => {
+  let selectionEpoch = 12;
+  const creationSelectionEpoch = selectionEpoch;
+  let finishCreate;
+  const createResponse = new Promise((resolve) => { finishCreate = resolve; });
+  let selectedBot = null;
+  const shouldNavigate = createResponse.then(({ bot }) => selectCreatedBotIfUnchanged(
+    creationSelectionEpoch, () => selectionEpoch, async () => { selectedBot = bot.id; },
+  ));
+  selectionEpoch += 1;
+  finishCreate({ bot: { id: 'created-later' } });
+  assert.equal(await shouldNavigate, false);
+  assert.equal(selectedBot, null);
+
+  const requests = new OnboardingRequestCoordinator();
+  let saved = null;
+  const pollEpoch = requests.beginPoll('employee-a');
+  let finishPoll;
+  const pollResponse = new Promise((resolve) => { finishPoll = resolve; });
+  const acceptPoll = pollResponse.then((status) => {
+    if (requests.isCurrent('employee-a', pollEpoch)) saved = status.roleStatus;
+  });
+  const retryEpoch = requests.beginRetry('employee-a');
+  assert.equal(requests.isCurrent('employee-a', pollEpoch), false);
+  assert.equal(requests.beginPoll('employee-a'), null, 'polling is suppressed during an explicit retry');
+  let finishRetry;
+  const retryResponse = new Promise((resolve) => { finishRetry = resolve; });
+  const acceptRetry = retryResponse.then((status) => {
+    if (requests.isCurrent('employee-a', retryEpoch)) saved = status.roleStatus;
+  });
+  finishRetry({ roleStatus: 'running' });
+  await acceptRetry;
+  finishPoll({ roleStatus: 'completed' });
+  await acceptPoll;
+  assert.equal(saved, 'running', 'a late pre-retry poll cannot overwrite the retry response');
+  requests.finishRetry('employee-a');
+  const finalPollEpoch = requests.beginPoll('employee-a');
+  if (requests.isCurrent('employee-a', finalPollEpoch)) saved = 'completed';
+  assert.equal(saved, 'completed');
 });
 
 test('group interface uses persisted groups, stable employee IDs, explicit recipients and global model IDs', () => {
@@ -68,6 +128,10 @@ test('global model selector stays before send on a narrow viewport', () => {
   const mobile = css.slice(css.indexOf('@media (max-width: 750px)'));
   assert.match(mobile, /#chat-model\s*\{[^}]*flex:\s*1 1 0;[^}]*min-width:\s*0;/su);
   assert.match(mobile, /#group-model\s*\{[^}]*flex:\s*1 1 0;[^}]*min-width:\s*0;/su);
+  for (const selector of ['#group-members-editor', '#group-recipients']) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    assert.match(css, new RegExp(`${escaped}[^}]*width:\\s*100%[^}]*min-width:\\s*0`, 'su'));
+  }
   assert.match(mobile, /\.chat-view\s*\{[^}]*width:\s*100%;/su);
   assert.match(mobile, /\.composer-control-row\s*\{[^}]*min-width:\s*0;/su);
 });

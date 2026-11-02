@@ -375,6 +375,15 @@ nav#bots button.bot-nav-item { display: flex; align-items: center; gap: 8px; }
 .message p {
   margin: 0;
 }
+.onboarding-note {
+  margin: 8px 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #fff6e8;
+  color: #654b20;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 .composer {
   flex: 0 0 auto;
   background: white;
@@ -801,6 +810,8 @@ dialog::backdrop {
 #groups-list { display: grid; gap: 6px; margin-top: 12px; }
 #groups-list button { width: 100%; text-align: left; overflow-wrap: anywhere; }
 .group-members { color: var(--muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+#group-members-editor,
+#group-recipients { display: block; width: 100%; min-width: 0; max-width: 100%; }
 .group-messages { min-height: 220px; max-height: 50dvh; overflow: auto; display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
 .group-message { max-width: min(90%, 760px); padding: 11px 13px; border: 1px solid var(--border); border-radius: 12px; background: #f8faf7; overflow-wrap: anywhere; }
 .group-message.user { align-self: flex-end; background: #e9f2eb; }
