@@ -1,0 +1,56 @@
+name: Standalone browser base comparison
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: standalone-browser-compare-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    if: github.repository == '404404/AI-Bots'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [trixie, noble, resolute]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Prepare fallback evidence before tool installation
+        env:
+          SCENARIO: ${{ matrix.scenario }}
+          COMPARE_OUTPUT: standalone-browser-compare-results/${{ matrix.scenario }}
+        run: |
+          mkdir -p "$COMPARE_OUTPUT"
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; const report = { schemaVersion: 1, scenario: process.env.SCENARIO, result: "failed-or-incomplete", phase: "workflow-setup", build: { status: "not-run" }, runtime: { status: "not-run" }, scan: { status: "not-run" }, sbom: { status: "not-run" }, e2e: { status: "not-run" }, trivy: { status: "not-run" } }; writeFileSync(`${process.env.COMPARE_OUTPUT}/report.json`, `${JSON.stringify(report, null, 2)}\n`); writeFileSync(`${process.env.COMPARE_OUTPUT}/report.md`, `# ${process.env.SCENARIO} comparison\n\nWorkflow setup failed before the scenario runner could replace this fallback report.\n`); writeFileSync(`${process.env.COMPARE_OUTPUT}/diagnostics.log`, "No scenario commands have run.\n");'
+      - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
+        with:
+          version: v0.70.0
+          cache: true
+      - name: Build, inventory, scan, and run isolated Chromium fixture
+        id: comparison
+        continue-on-error: true
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          COMPARE_OUTPUT: standalone-browser-compare-results/${{ matrix.scenario }}
+        run: node standalone/browser/compare/run-scenario.mjs "${{ matrix.scenario }}"
+      - name: Upload comparison evidence, including partial diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: standalone-browser-compare-${{ matrix.scenario }}-${{ github.sha }}
+          path: standalone-browser-compare-results/${{ matrix.scenario }}
+          if-no-files-found: error
+          retention-days: 30
+      - name: Fail this scenario unless every required gate passed
+        if: always()
+        env:
+          OUTCOME: ${{ steps.comparison.outcome }}
+        run: test "$OUTCOME" = success

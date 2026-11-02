@@ -1,0 +1,22 @@
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
+ARG SOURCE_REVISION=unknown
+LABEL org.opencontainers.image.title="404404 AI-Bots standalone browser service comparison" \
+      org.opencontainers.image.source="https://github.com/404404/AI-Bots" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      org.opencontainers.image.base.name="mcr.microsoft.com/playwright:v1.64.1-noble" \
+      org.opencontainers.image.base.digest="sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f" \
+      io.404404.role="worker"
+ENV NODE_ENV=production HOME=/tmp BROWSER_DATA_ROOT=/tmp/browser-sessions
+WORKDIR /opt/browser
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
+    && mkdir -p /run/browser-control /run/browser-egress /tmp/browser-sessions \
+    && chown -R 10001:10001 /opt/browser /run/browser-control /run/browser-egress /tmp/browser-sessions
+COPY src ./src
+COPY fixture ./fixture
+COPY scripts ./scripts
+USER 10001:10001
+ENV BROWSER_CONTROL_SOCKET=/run/browser-control/worker.sock \
+    BROWSER_PROXY_SOCKET=/run/browser-egress/proxy.sock \
+    BROWSER_PROXY_ADMIN_SOCKET=/run/browser-egress/admin.sock
+CMD ["node", "src/worker.mjs"]
