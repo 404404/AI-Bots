@@ -2,11 +2,11 @@
 
 > The [GK50 candidate runbook](docs/standalone-bot-gk50.md) records access, Compose and immutable identities. Main Bot, delegation, avatars and product browser work follow the [expansion plan](docs/standalone-bot-expansion-plan.md), with a separate [acceptance record](docs/acceptance/standalone-bot-expansion-test-results.md). Registry publication awaits the release gates.
 
-> Verified paths include a persistent main Bot, conversational worker creation/configuration, real Codex delegation/result aggregation and custom PNG avatars. The expansion record identifies each tested image and remaining boundaries.
+> The independent 23443 preview has evidence for a shared single-user Codex account, user-created Bots, real private chat, delegation, two-Bot group replies and custom PNG avatars. Models cannot create or modify Bots. See the [current acceptance record](docs/acceptance/standalone-single-user-employee-results-2026-10-31.md) for scope and limitations.
 
 > GK50 preview: [LAN](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443). Private-network sources are allowed; access-code login remains required. See the runbook for local retrieval. The product browser remains blocked by its image qualification gate.
 
-> The 2026-10-31 employee private-chat preview is now on that entry: direct worker chat, model selection beside Send, global source settings and chronological summaries of real delegation. See the [usage guide](standalone/docs/digital-employee-guide.md), [independent acceptance](docs/acceptance/standalone-digital-employee-test-results-2026-10-30.md) and [immutable image/rollback record](docs/acceptance/standalone-employee-deployment-2026-10-30.md). Group chat is not implemented; the complete release gates remain unmet.
+> The newer single-user and group candidate runs separately at [23443](http://192.168.68.11:23443); 20443 remains the previous candidate. See the [usage guide](standalone/docs/single-user-employee-guide.md) and [GK50 runbook](docs/standalone-bot-gk50.md). The complete release gates remain unmet, including browser worker qualification.
 
 <div align="center">
   <a href="https://deepseekbot.app/en/">

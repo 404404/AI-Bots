@@ -4,7 +4,16 @@ This ledger concerns the fork's `standalone/` product. The original project's le
 
 本记录只描述 fork 的 `standalone/` 产品。原项目变更记录与 MIT 归属单独保留。以下是 GK50 候选记录，不代表正式 registry 发布。
 
-## Unreleased — employee private chat / 员工私聊
+## Unreleased — single-user account and groups / 单用户账户与群聊
+
+- A single user configures a shared model account for all Bots. Users create and define Bots; model tools cannot create or modify them. One Bot is selected automatically; with multiple Bots the user chooses the coordinating contact.
+- Groups persist members and messages with stable IDs; the owner selects responders, and retries preserve the original idempotency key and payload. Real two-Bot replies, a lost-response retry, delegation and preview restart were verified on GK50.
+- 单用户设置一次模型账户，所有 Bot 共用；Bot 由用户创建和定义，模型不能创建或修改。只有一个 Bot 时自动作为联系人，有多个时由用户选择协调联系人。
+- 群聊持久保存成员与消息，回应成员由用户选择；重试保留原幂等键和请求内容。GK50 已验证真实双 Bot 回复、响应丢失重试、委派与预览重启恢复。
+
+Source / 源码：[`dbb9fb3b`](https://github.com/404404/AI-Bots/commit/dbb9fb3bdff140b09ab04116c5c96554ad131ab6)；CI：[41377499611](https://github.com/404404/AI-Bots/actions/runs/41377499611)。[Cases / 用例](../docs/acceptance/standalone-single-user-employee-cases-2026-10-31.md) · [Results / 结果](../docs/acceptance/standalone-single-user-employee-results-2026-10-31.md)。产品浏览器仍受安全扫描阻塞，完整发布门禁未达到。
+
+## Earlier employee private chat / 先前员工私聊候选
 
 - Workers can use their explicitly authorized server-side model reference for direct private chat. The composer selects the model beside Send; model sources and private authorization are managed in global settings.
 - Real child-task summaries appear chronologically in chat, with canonical input, status, executor and result in a dialog. Legacy Conversations remain accessible from private-chat history without a separate sidebar section.

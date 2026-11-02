@@ -1,6 +1,22 @@
 # GK50 独立 Bot 候选访问与部署
 
-这是新独立产品的候选。既有真实 Codex、明确保存的文件记忆、主 Bot、委派和头像证据分别见 PX 及扩展报告；2026-10-31 已将员工私聊第一片固定候选切到 20443。完整边界仍有部分验证项，群聊尚未实现，产品浏览器仍受镜像门禁阻塞；IM、定时任务、Computer 和客户端继续延后。架构依据见 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)、[ADR-0249](adr/0249-digital-employees-share-private-and-group-chat-surfaces.md)及[迁移评估](standalone-bot-migration.md)。
+这是 GK50 新独立产品的候选。20443 仍为旧员工私聊候选；23443 为新的单用户共享账户与群聊隔离预览。产品浏览器仍受镜像安全门禁阻塞，IM、定时任务、Computer 和客户端继续延后。架构依据见 [ADR-0243](adr/0243-fork-bot-product-owns-an-independent-runtime.md)、[ADR-0250](adr/0250-single-user-model-account-and-employee-conversations.md)及[迁移评估](standalone-bot-migration.md)。
+
+## 单用户和群聊预览：23443
+
+- 地址：<http://192.168.68.11:23443>；容器：`gk50-employee-preview`。它使用独立测试数据，不是 20443 数据的迁移副本。
+- 在 GK50 本机私下读取访问码，填入网页，不要发送到聊天：
+
+```sh
+sudo docker exec gk50-employee-preview cat /data/bot/secrets/access-code
+```
+
+- 固定镜像 `sha256:ddc43a235d3ac051460689535faa98f4b6382d44e27b9cf1b6a86c97551dceec`，源码 `dbb9fb3bdff140b09ab04116c5c96554ad131ab6`，来自成功 [CI 41377499611](https://github.com/404404/AI-Bots/actions/runs/41377499611)；没有在 GK50 重建，也没有发布 GHCR。
+- 网页设置一次模型账户，用户创建和定义 Bot；多个 Bot 时可指定主要联系人。真实 Codex 私聊、委派与双 Bot 群回复、丢失响应后的幂等重试及预览重启恢复已有独立验收。模型列表中的候选表示尚待该账户实际验证。
+- 代理显式配置为 `http://host.docker.internal:7890`；真实委派期间的应用路由记录与容器至宿主代理的连接元数据已核对。设备码曾出现授权失败，后续登录成功，不能把早期失败当作已解决的设备码兼容性结论。
+- 升级前的私密完整数据备份在 `.local/standalone-bot-expansion/private/preview-before-dbb9fb3b/`；其中包含加密授权和密钥，不得公开。恢复数据会丢失备份后写入。原 20443 和 22443 未切换；完整发布门禁尚未达到。
+
+操作与 CLI/API 见[单用户员工和群聊说明](../standalone/docs/single-user-employee-guide.md)，逐项通过、失败及未覆盖项见[本轮独立验收](acceptance/standalone-single-user-employee-results-2026-10-31.md)。
 
 ## 当前体验入口：20443
 

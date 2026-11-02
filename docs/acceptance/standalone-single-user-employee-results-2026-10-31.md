@@ -1,11 +1,17 @@
 # 单用户员工与群聊独立验收结果（2026-10-31）
 
+## 当前结论（2026-11-02）
+
+23443 隔离预览已运行固定源码 `dbb9fb3b` 的 CI 镜像；真实 Codex 登录、两位 Bot 私聊、委派、双 Bot 群回复、响应丢失后的同键重试及重启恢复有下文证据。代理配置与对应时段的容器连接元数据均已核对。设备码流程曾报无法完成授权，单独结论仍未完成。完整测试 152/152；远端 EasyTier 设备和部分安全边界未全覆盖。产品浏览器 worker 的最新严格扫描未通过，完整发布门禁未达到；20443 旧候选未切换。以下保留各阶段失败及复验，不以早期状态替代本结论。
+
 ## 2026-11-02：隔离预览代理核查
 
 - 23443 预览初始的模型账户未配置显式代理，容器也没有代理环境变量。Codex 登录尝试返回 `unsupported_country_region_territory`，当时 `signedIn=false`，未发送真实模型请求。
 - 宿主机代理监听 `127.0.0.1:7890` 和 `172.17.0.1:7890`；从预览容器连接 `host.docker.internal:7890` 的 TCP 测试成功。已通过预览自身的认证业务接口配置 `http://host.docker.internal:7890`，保留原模型名称；等待重新登录和实际模型请求的代理路径证据。TCP 连通不证明 Codex 请求已通过代理，也不保证上游允许该账户使用。
 - 20443 旧候选没有代理环境变量；15 个 Bot 配置中 1 个含 `http://host.docker.internal:7890`，其余 14 个没有显式代理。没有改动该候选，也未确认其实际请求路径。
 - 网页修复版来自成功 CI `41373108047`、源码 `41e7c76e04f52cceb763d8ae2fbd3e6f4ba63261`，校验后的本机 OCI 镜像 ID 为 `sha256:66cb4affaae0e314c2bdbf56d06c10b84283418ab363df6807999bd6364f1515`，尚未发布 GHCR。24443 的专用网页验收容器测试后已停止；独立数据位于 `.local/standalone-bot-expansion/preview-41e7c76e/data`，保留供复核。23443 预览继续运行，20443 与 22443 未切换。
+- 群发送修复版来自成功 CI `41377499611`、源码 `dbb9fb3bdff140b09ab04116c5c96554ad131ab6`，23443 现运行经校验的本机 OCI 镜像 `sha256:ddc43a235d3ac051460689535faa98f4b6382d44e27b9cf1b6a86c97551dceec`。升级前在停止状态备份完整目录并私下校验；备份在 `.local/standalone-bot-expansion/private/preview-before-dbb9fb3b/`，其中含授权和密钥，不得公开。重启后授权、代理及真实群历史恢复；20443 与 22443 未切换。
+- 重新运行的浏览器 worker [CI 41378523337](https://github.com/404404/AI-Bots/actions/runs/41378523337) 在严格镜像扫描报告 108 项 HIGH、1 项 CRITICAL 后失败；后续代理镜像扫描、真实 Chromium 隔离测试及产物归档均未执行。此扫描不是群聊验收，也不能由验收用 Chromium 代替；完整产品发布门禁未达到。
 
 验收依据：[用例](standalone-single-user-employee-cases-2026-10-31.md)。实现仍在集成，以下为中间态诊断，不代表最终版本验收。独立验收仅使用临时隔离数据，未访问现有 20443、22443、用户数据或凭据。
 
@@ -173,3 +179,20 @@ Node 22.23.1、npm 10.9.8，在 `standalone` 下分别以 300 秒和 120 秒超�
 `npm run build` 成功。完整 `npm test` 为 151/152：`private-chat.test.mjs` 的 `each Bot uses the shared global account selection without local model configuration` 报 `conversation-busy`，日志 `/tmp/standalone-group-final2.log`；该测试单独重跑 1/1 通过。完整套件失败仍需分析，单独通过不能证明根因或将完整套件记为通过。当前 23443 预览仍为旧镜像，修订未部署，群双成员真实回复仍未验证。
 
 为调查该失败，完整套件再运行一次，仍为 151/152，且同一私聊测试再次报 `conversation-busy`；日志 `/tmp/standalone-group-final3.log`。这与单测独立通过并存，原因尚待调查。
+
+### 私聊夹具修订独立复验（2026-11-02）
+
+私聊夹具先等待 setup 时的在途运行结束并清空 setup 请求，首轮私聊同时等待上游请求到达与持久状态 `completed` 后才提交第二轮。独立审查确认，未授权选择被拒绝且不发请求、保存的模型选择与显式选择的断言仍保留；`completed` 与私聊提交的 `queued/running` 忙碌检查对应。
+
+完整 `npm test` **152/152**，日志 `/tmp/standalone-fixture-review.log`；`npm run build` 成功。测试及构建前后六个文件指纹一致，见 `/tmp/standalone-fixture-review-sha.txt`；其中 `test/private-chat.test.mjs` SHA-256 为 `4e26f9cf0d83130e0e5e6afb665cdaa249110eadcdd3ad9a6cc858bf8ee37130`，基础 HEAD 为 `4caa17b5051e902f15b21ff9780601f9e0c4241f`，工作树未提交。此前两次完整套件的 `conversation-busy` 失败仍按原记录保留；本次通过不证明真实群网页行为，须待新固定镜像复验。
+
+### 23443 固定镜像群聊与重启复测（2026-11-02）
+
+隔离预览使用通过 CI `41377499611` 的固定镜像 `sha256:ddc43a235d3ac051460689535faa98f4b6382d44e27b9cf1b6a86c97551dceec`，源码 revision `dbb9fb3b`。从非 root QA Chromium 经 LAN HTTP 操作页面；该 QA 使用项目窄 seccomp、Xvfb，`chrome://sandbox` 显示 namespace、PID namespace、seccomp-BPF 均启用。未使用 `--no-sandbox`。
+
+- 原有 `Terra QA 群` 的 Alpha 和 Beta 两人选中后，7 秒轮询后接收人、草稿和模型选择仍保留，发送按钮启用。网页分别选择 `candidate` 模型 `gpt-5.3-codex-spark` 和 `verified` 模型 `gpt-6-luna`，等待轮询后两者均保持选择且发送启用；candidate 仅验证可选及启用，没有另发模型请求。
+- 网页新建隔离群 `Terra QA Switch 1102`（`20380542-c5a1-456f-9697-410c595bebea`），切入时未带入原群输入和收件人，返回原群后草稿、两名收件人和模型恢复。
+- 对原群发送唯一短任务 `GROUP-FINAL-QA-1102`，测试浏览器让首次 `groups.send` 到达服务端后模拟响应丢失；切到另一群再返回，未确认的正文、收件人和模型在页面恢复。同一原始 payload 和幂等键经页面重试，持久记录恰有一条用户消息和两条 Bot 回复，避免重复执行。两名 Bot 的真实页面回复与 canonical 数据一致：seq 1 为用户，seq 2 为 Beta `4eb5c785-49f6-4d9f-84f7-fab566f8c3ef`，seq 3 为 Alpha `cc8523d4-e0e2-4fd6-ab42-3f179cbf6f62`；两条 run 分别为 `adbbfdc4-6c61-458b-8ed5-44d23d88d7a8`、`6f8e3810-f13f-4215-8a9a-724898ae4e1f`，均 completed、无错误，recipient index 0/1 与页面顺序一致。两次使用 `gpt-6-luna`、model epoch 4，与账户 epoch 4 一致。
+- 02:32:28 UTC 核对 runs、tasks、group runs 的 queued/running 均为零后，仅重启 `gk50-employee-preview` 一次。02:32:54 网页重新登录后仍显示同一群的两条 Bot 回复，sender ID 顺序不变；账户 `configured=true`、`signedIn=true`、代理存在。
+
+截图及脱敏 JSON 位于 `/tmp/employee-group-final-qa/`：`pending.png`、`replies.png`、`model-status.png`、`after-restart.png`、`result.json`、`model-status.json`、`after-restart.json`。其中 `replies.png` 的连接中断提示来自测试主动模拟首次响应丢失。此次新增上述测试群及原群一条测试消息和两条回复，保留于隔离预览；本轮未触碰 20443 或 22443，QA Chromium 容器均已退出。

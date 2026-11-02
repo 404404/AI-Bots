@@ -2,11 +2,11 @@
 
 > GK50 候选访问、Compose 和固定身份见[独立产品运行说明](docs/standalone-bot-gk50.md)。主 Bot、委派、头像和产品浏览器按[扩展计划](docs/standalone-bot-expansion-plan.md)逐片实现，[扩展验收](docs/acceptance/standalone-bot-expansion-test-results.md)单独记录；完成发布门禁前不发布正式 GHCR 镜像。
 
-> 已有真实验收证据：持久主 Bot、对话内创建和配置工作 Bot、真实 Codex 委派与结果汇总、自定义 PNG 头像；完整边界及对应镜像见扩展验收。
+> 独立产品的 23443 预览已验证单用户共享 Codex 账户、用户创建 Bot、真实私聊、真实委派、双 Bot 群回复和自定义 PNG 头像；完整边界及镜像身份见[本轮验收](docs/acceptance/standalone-single-user-employee-results-2026-10-31.md)。模型不能创建或修改 Bot。
 
 > 当前 GK50 体验入口：[局域网](http://192.168.68.11:20443) / [EasyTier](http://10.250.250.1:20443)。已放通内网来源，仍需访问码登录；获取方式见运行说明。浏览器能力仍受镜像门禁阻塞，未作为正式功能交付。
 
-> 2026-10-31 员工私聊第一片已更新到上述入口：工作 Bot 直接私聊、发送左侧模型选择、全局来源设置及按时间展开的真实协作摘要。见[操作说明](standalone/docs/digital-employee-guide.md)、[独立验收](docs/acceptance/standalone-digital-employee-test-results-2026-10-30.md)和[固定镜像及回退记录](docs/acceptance/standalone-employee-deployment-2026-10-30.md)。群聊尚未实现，完整发布门禁未达到。
+> 2026-11-02 新的单用户与群聊候选在 [23443 隔离预览](http://192.168.68.11:23443)；20443 仍是旧候选，尚未切换。使用方式见[单用户与群聊说明](standalone/docs/single-user-employee-guide.md)。完整发布门禁未达到，产品浏览器仍受安全扫描阻塞。
 
 <div align="center">
   <a href="https://deepseekbot.app">
