@@ -5,15 +5,15 @@
   "testBot": {
     "name": "UI QA 测试 Bot",
     "persona": "仅用于 GitHub Actions UI 界面验收的隔离测试 Bot。",
-    "id": "90dc65ee-4d99-43fa-b0ff-40840962d617"
+    "id": "1dee5638-203e-4ccd-ad78-72b3495709ab"
   },
   "runtime": {
     "host": "127.0.0.1",
-    "port": 41587,
-    "pid": 3096,
+    "port": 34827,
+    "pid": 3120,
     "health": "passed",
-    "startedAt": "2026-11-03T04:37:49.403Z",
-    "stoppedAt": "2026-11-03T04:37:53.056Z"
+    "startedAt": "2026-11-03T04:49:31.060Z",
+    "stoppedAt": "2026-11-03T04:49:34.360Z"
   },
   "interactions": [
     "通过真实登录表单创建临时 owner session；访问码未写入报告或日志。",
@@ -130,7 +130,7 @@
     "modelStubStopped": true,
     "loopbackRelayStopped": true,
     "temporaryDataRemoved": true,
-    "finishedAt": "2026-11-03T04:37:53.058Z"
+    "finishedAt": "2026-11-03T04:49:34.362Z"
   },
   "realModelCommunication": {
     "status": "not-verified",
@@ -140,17 +140,17 @@
     "status": "passed",
     "label": "模拟模型 / 测试数据",
     "model": "in-process CodexTransport fixture",
-    "threadId": "e6a84bd6-93de-424f-ad4a-7e90db05f2a0",
-    "senderMessageId": "92bec00e-0bb6-4a71-9a51-3d72097eb105",
-    "recipientReplyId": "ccc4f6ba-c629-4b09-a985-0a99712f7605",
-    "runId": "9f8164cd-91d1-46f1-bda2-7af85620292b",
+    "threadId": "01174d21-d159-46cd-a0a2-24d87a499529",
+    "senderMessageId": "c92effb2-9ffb-4a27-b55e-88a35c48793c",
+    "recipientReplyId": "b5741952-a076-4741-90ca-a853e97579e0",
+    "runId": "7e8f69e5-8f8f-462e-90c1-f6d96a517969",
     "senderBody": "UI QA synthetic model: 跨 Bot 通信持久化检查。",
     "recipientReply": "UI QA synthetic model: 已收到独立通信并完成测试回复。"
   },
   "testConversation": {
-    "id": "eb943c45-075f-4fac-8477-dcb206b9a01e",
-    "userMessageId": "4ea1f3e1-4de6-4af2-9c62-a5236b02a9e2",
-    "assistantMessageId": "04fda393-ad4c-4041-8d5b-6e859bbad7e6",
+    "id": "95ec72ec-9533-4715-92dc-20574510e704",
+    "userMessageId": "1e1bb373-00bc-486d-90a5-0aecffe18f41",
+    "assistantMessageId": "1669606f-b926-4837-ae03-d6e76f38b4ea",
     "userMessage": "UI QA：你好，请确认消息发送和回复正常。",
     "assistantReply": "隔离 UI 验收回复：我已收到你的消息。",
     "model": "loopback deterministic stub"
