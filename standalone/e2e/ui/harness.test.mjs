@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { createServer } from 'node:http';
 import net from 'node:net';
 import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -35,12 +36,20 @@ test('UI QA completes all ordinary-chat viewport screenshots before synthetic Bo
   assert(directionSpecificCard < summaryAssociationAssertion, 'direction-specific card must be opened before verifying its summary association');
   assert(communicationViewportAssertion < communicationScreenshot, 'communication viewport must be checked before its screenshot');
   const viewportLoop = source.slice(viewportChecks, communicationStart);
+  const communicationSetup = source.slice(communicationStart, communicationScreenshot);
   const configuredViewports = source.slice(source.indexOf('const viewports = ['), source.indexOf('];', source.indexOf('const viewports = [')));
   for (const name of ['desktop-1920', 'desktop-1366', 'tablet-768', 'mobile-390'])
     assert(configuredViewports.includes(`name: '${name}'`), `${name} ordinary-chat viewport must be configured`);
   assert(viewportLoop.includes('await page.screenshot('), 'ordinary-chat screenshots must be captured inside the viewport loop');
   assert(viewportLoop.includes('assert.equal(layout.userVisible, true'), 'ordinary-chat user message visibility must be asserted per viewport');
   assert(viewportLoop.includes('assert.equal(layout.assistantVisible, true'), 'ordinary-chat assistant reply visibility must be asserted per viewport');
+  assert(communicationSetup.includes("recipientModels.selected?.modelId, 'standalone-ui-qa-stub'"),
+    'synthetic path must retain the recipient compatible selection until explicitly changed');
+  assert(communicationSetup.includes("'private-chat.select-model'"),
+    'owner must explicitly select the recipient Codex model after the provider switch');
+  assert(communicationSetup.indexOf('await waitForOnboarding(page, origin, recipient.id)') <
+    communicationSetup.indexOf("'model-account.update', { provider: 'openai-codex'"),
+  'recipient onboarding must finish with the compatible model before switching the global provider');
 });
 
 test('relay owns its kernel-assigned loopback port and forwards only to its fixed child port', async () => {
@@ -192,6 +201,7 @@ test('real UI QA server emits readiness on fd 3 despite startup diagnostics on s
   });
   let identity;
   let closeOnExit;
+  let compatibleModel;
   let stdout = '';
   child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
   try {
@@ -230,11 +240,47 @@ test('real UI QA server emits readiness on fd 3 despite startup diagnostics on s
       return payload.result;
     };
     const sender = await apiCommand('bots.create', { name: 'UI QA API Sender', persona: 'Synthetic fixture sender.' });
-    const recipient = await apiCommand('bots.create', { name: 'UI QA API Recipient', persona: 'Synthetic fixture recipient.' });
-    const pair = await apiCommand('bot-messages.authorize', { botAId: sender.id, botBId: recipient.id });
+    compatibleModel = createServer(async (request, response) => {
+      for await (const _chunk of request) { /* consume isolated fixture request */ }
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ choices: [{ message: { content: 'Synthetic compatible reply before Codex switch.' } }] }));
+    });
+    await new Promise((resolve, reject) => compatibleModel.listen(0, '127.0.0.1', resolve).once('error', reject));
+    await apiCommand('model-account.update', {
+      provider: 'compatible', model: 'ui-qa-compatible-fixture', baseUrl: `http://127.0.0.1:${compatibleModel.address().port}/v1`, keyless: true,
+    });
     const chat = await apiCommand('private-chat.open', { botId: sender.id });
+    const compatibleRun = await apiCommand('runs.submit', {
+      botId: sender.id, conversationId: chat.conversation.id, idempotencyKey: 'harness-compatible-run-before-codex',
+      content: 'UI QA synthetic compatible turn before switching to Codex.', selection: { kind: 'global', modelId: 'ui-qa-compatible-fixture' },
+    });
+    let compatibleResult;
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      compatibleResult = await apiCommand('runs.get', { botId: sender.id, runId: compatibleRun.id });
+      if (['completed', 'failed', 'cancelled'].includes(compatibleResult.status)) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(compatibleResult?.status, 'completed', `compatible prelude run failed (${compatibleResult?.errorCode ?? 'unknown'})`);
+    const recipient = await apiCommand('bots.create', { name: 'UI QA API Recipient', persona: 'Synthetic fixture recipient.' });
+    let onboarding;
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      onboarding = await apiCommand('employees.onboarding.status', { botId: recipient.id });
+      if (onboarding.roleStatus === 'completed') break;
+      assert.notEqual(onboarding.roleStatus, 'failed', `recipient onboarding failed (${onboarding.roleErrorCode ?? 'unknown'})`);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(onboarding?.roleStatus, 'completed', 'compatible recipient onboarding must complete before switching to Codex');
+    const recipientModelBeforeSwitch = await apiCommand('private-chat.models', { botId: recipient.id });
+    assert.equal(recipientModelBeforeSwitch.selected?.modelId, 'ui-qa-compatible-fixture',
+      'recipient must retain the compatible model selected during onboarding');
+    const pair = await apiCommand('bot-messages.authorize', { botAId: sender.id, botBId: recipient.id });
     const modelId = openaiCodexProvider().getModels()[0].id;
     await apiCommand('model-account.update', { provider: 'openai-codex', model: modelId, keyless: true });
+    const recipientModels = await apiCommand('private-chat.models', { botId: recipient.id });
+    assert.equal(recipientModels.selected?.modelId, 'ui-qa-compatible-fixture',
+      'global provider changes must not silently overwrite the recipient model selection');
+    assert(recipientModels.items.some((item) => item.selection?.modelId === modelId), 'new Codex model must be offered for explicit selection');
+    await apiCommand('private-chat.select-model', { botId: recipient.id, selection: { kind: 'global', modelId } });
     const submitted = await apiCommand('runs.submit', {
       botId: sender.id, conversationId: chat.conversation.id, idempotencyKey: 'harness-synthetic-tool-run',
       content: 'UI QA synthetic model: run the authorized Bot message tool.', selection: { kind: 'global', modelId },
@@ -268,6 +314,10 @@ test('real UI QA server emits readiness on fd 3 despite startup diagnostics on s
     if (child.exitCode === null && child.signalCode === null) await once(child, 'exit');
     if (closeOnExit) await closeOnExit();
     else await relay.close();
+    if (compatibleModel) {
+      compatibleModel.closeAllConnections();
+      await new Promise((resolve) => compatibleModel.close(resolve));
+    }
     await rm(root, { recursive: true, force: true });
   }
 });

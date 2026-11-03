@@ -316,9 +316,19 @@ try {
   const recipient = await command(page, origin, 'bots.create', {
     slug: 'ui-qa-synthetic-recipient', name: 'UI QA 接收测试 Bot', persona: '仅用于 GitHub Actions 隔离验收的测试 Bot。',
   });
+  await waitForOnboarding(page, origin, recipient.id);
   const pair = await command(page, origin, 'bot-messages.authorize', { botAId: bot.id, botBId: recipient.id });
   const codexModel = openaiCodexProvider().getModels()[0].id;
   await command(page, origin, 'model-account.update', { provider: 'openai-codex', model: codexModel, keyless: true });
+  const recipientModels = await command(page, origin, 'private-chat.models', { botId: recipient.id });
+  assert.equal(recipientModels.selected?.modelId, 'standalone-ui-qa-stub',
+    'recipient onboarding must retain its previous compatible model selection until the owner changes it');
+  assert(recipientModels.items.some((item) => item.selection?.modelId === codexModel),
+    'the owner-selected Codex model must be available to the recipient');
+  await command(page, origin, 'private-chat.select-model', {
+    botId: recipient.id, selection: { kind: 'global', modelId: codexModel },
+  });
+  report.interactions.push('所有者在切换全局账户后，为接收 Bot 显式选择 Codex 模型；已有 compatible 选择保持不变，直到明确更新。');
   const communicationRun = await command(page, origin, 'runs.submit', {
     botId: bot.id, conversationId: opened.conversation.id,
     idempotencyKey: 'ui-qa-synthetic-bot-message', content: 'UI QA synthetic model: 请发送一条授权的测试通信。',
