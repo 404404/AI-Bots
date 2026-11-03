@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "environment": "isolated GitHub Actions UI QA; temporary loopback service and SQLite data",
+  "testBot": {
+    "name": "UI QA 测试 Bot",
+    "persona": "仅用于 GitHub Actions UI 界面验收的隔离测试 Bot。",
+    "id": "90dc65ee-4d99-43fa-b0ff-40840962d617"
+  },
+  "runtime": {
+    "host": "127.0.0.1",
+    "port": 41587,
+    "pid": 3096,
+    "health": "passed",
+    "startedAt": "2026-11-03T04:37:49.403Z",
+    "stoppedAt": "2026-11-03T04:37:53.056Z"
+  },
+  "interactions": [
+    "通过真实登录表单创建临时 owner session；访问码未写入报告或日志。",
+    "通过已认证命令 API 配置仅监听 loopback 的确定性测试模型。",
+    "在真实网页创建明确标注的 UI QA 测试 Bot。",
+    "在真实网页输入并发送私聊，服务端通过本地测试模型完成 run，页面显示持久化回复。",
+    "所有者在切换全局账户后，为接收 Bot 显式选择 Codex 模型；已有 compatible 选择保持不变，直到明确更新。",
+    "隔离 Codex 协议测试替身通过 owner API run 触发真实 send_bot_message 工具；产品代码写入 Bot 消息和接收方回复。",
+    "真实 Web UI 打开产品持久化通信事件浮窗并截图；消息正文显示 UI QA synthetic model 标记。"
+  ],
+  "screenshots": [
+    {
+      "file": "desktop-1920.png",
+      "viewport": {
+        "name": "desktop-1920",
+        "width": 1920,
+        "height": 1080
+      },
+      "viewportWidth": 1920,
+      "viewportHeight": 1080,
+      "documentWidth": 1920,
+      "botTitle": "UI QA 测试 Bot",
+      "userText": "UI QA：你好，请确认消息发送和回复正常。",
+      "assistantText": "隔离 UI 验收回复：我已收到你的消息。",
+      "visibleMessages": 4,
+      "userVisible": true,
+      "assistantVisible": true,
+      "inputVisible": true,
+      "sendVisible": true
+    },
+    {
+      "file": "desktop-1366.png",
+      "viewport": {
+        "name": "desktop-1366",
+        "width": 1366,
+        "height": 900
+      },
+      "viewportWidth": 1366,
+      "viewportHeight": 900,
+      "documentWidth": 1366,
+      "botTitle": "UI QA 测试 Bot",
+      "userText": "UI QA：你好，请确认消息发送和回复正常。",
+      "assistantText": "隔离 UI 验收回复：我已收到你的消息。",
+      "visibleMessages": 4,
+      "userVisible": true,
+      "assistantVisible": true,
+      "inputVisible": true,
+      "sendVisible": true
+    },
+    {
+      "file": "tablet-768.png",
+      "viewport": {
+        "name": "tablet-768",
+        "width": 768,
+        "height": 1024
+      },
+      "viewportWidth": 768,
+      "viewportHeight": 1024,
+      "documentWidth": 768,
+      "botTitle": "UI QA 测试 Bot",
+      "userText": "UI QA：你好，请确认消息发送和回复正常。",
+      "assistantText": "隔离 UI 验收回复：我已收到你的消息。",
+      "visibleMessages": 4,
+      "userVisible": true,
+      "assistantVisible": true,
+      "inputVisible": true,
+      "sendVisible": true
+    },
+    {
+      "file": "mobile-390.png",
+      "viewport": {
+        "name": "mobile-390",
+        "width": 390,
+        "height": 844
+      },
+      "viewportWidth": 390,
+      "viewportHeight": 844,
+      "documentWidth": 390,
+      "botTitle": "UI QA 测试 Bot",
+      "userText": "UI QA：你好，请确认消息发送和回复正常。",
+      "assistantText": "隔离 UI 验收回复：我已收到你的消息。",
+      "visibleMessages": 4,
+      "userVisible": true,
+      "assistantVisible": true,
+      "inputVisible": true,
+      "sendVisible": true
+    },
+    {
+      "file": "bot-communication-synthetic-1366.png",
+      "viewport": {
+        "name": "bot-communication-synthetic-1366",
+        "width": 1366,
+        "height": 900
+      },
+      "contents": "synthetic model test data in product Bot communication summary dialog"
+    }
+  ],
+  "browserConsole": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    }
+  ],
+  "httpUnauthorizedResponses": [
+    {
+      "method": "GET",
+      "path": "/api/v1/session",
+      "phase": "pre-login"
+    }
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serviceStopped": true,
+    "modelStubStopped": true,
+    "loopbackRelayStopped": true,
+    "temporaryDataRemoved": true,
+    "finishedAt": "2026-11-03T04:37:53.058Z"
+  },
+  "realModelCommunication": {
+    "status": "not-verified",
+    "reason": "Bot 间通信截图使用隔离的 CodexTransport 测试替身；真实外部模型驱动的 Bot 间通信未验收。"
+  },
+  "syntheticModelCommunication": {
+    "status": "passed",
+    "label": "模拟模型 / 测试数据",
+    "model": "in-process CodexTransport fixture",
+    "threadId": "e6a84bd6-93de-424f-ad4a-7e90db05f2a0",
+    "senderMessageId": "92bec00e-0bb6-4a71-9a51-3d72097eb105",
+    "recipientReplyId": "ccc4f6ba-c629-4b09-a985-0a99712f7605",
+    "runId": "9f8164cd-91d1-46f1-bda2-7af85620292b",
+    "senderBody": "UI QA synthetic model: 跨 Bot 通信持久化检查。",
+    "recipientReply": "UI QA synthetic model: 已收到独立通信并完成测试回复。"
+  },
+  "testConversation": {
+    "id": "eb943c45-075f-4fac-8477-dcb206b9a01e",
+    "userMessageId": "4ea1f3e1-4de6-4af2-9c62-a5236b02a9e2",
+    "assistantMessageId": "04fda393-ad4c-4041-8d5b-6e859bbad7e6",
+    "userMessage": "UI QA：你好，请确认消息发送和回复正常。",
+    "assistantReply": "隔离 UI 验收回复：我已收到你的消息。",
+    "model": "loopback deterministic stub"
+  },
+  "modelStubCalls": 3
+}

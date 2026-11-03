@@ -176,6 +176,24 @@ describe('inbox list DOM', () => {
     expect(app).toMatch(/if \(!bots\.length\)[\s\S]*?还没有 Bot，请先创建一个/u);
   });
 
+  it('uses a star in visible private-chat labels and keeps the primary marker accessible', () => {
+    expect(app).toMatch(/inboxParticipants\(item\).*?\? ' · ★' : ''/u);
+    expect(app).toMatch(/chat\.botId === contacts\?\.primaryEmployeeId \? '私聊 · ★ 新会话'/u);
+    expect(app).toMatch(/isPrimaryBot \? '★ · 私聊' : '私聊'/u);
+    expect(app).toMatch(/setAttribute\('aria-label', isPrimaryBot \? '主要 Bot · 私聊' : '私聊'\)/u);
+    expect(app).toMatch(/setAttribute\('aria-label', `\$\{bot\.name\}\$\{bot\.id === contacts\?\.primaryEmployeeId \? '，主要 Bot' : ''\}`\)/u);
+  });
+
+  it('synchronizes the chat star from the selected Bot on contact refresh and chat navigation', () => {
+    const sync = app.slice(app.indexOf('function syncPrimaryBotMarker('), app.indexOf('function view(', app.indexOf('function syncPrimaryBotMarker(')));
+    expect(sync).toMatch(/contacts\?\.primaryEmployeeId === bot\.id/u);
+    expect(sync).toMatch(/!\$\('view-chat'\)\.hidden && bot && conversation && conversation\.botId === bot\.id/u);
+    expect(sync).toContain("$('conversation-eyebrow').textContent = isPrimaryBot ? '★ · 私聊' : '私聊'");
+    expect(app).toMatch(/function view\(name\)[\s\S]*?if \(name === 'chat'\) syncPrimaryBotMarker\(\)/u);
+    const contactsRefresh = app.slice(app.indexOf('function renderContacts('), app.indexOf('async function loadContacts('));
+    expect(contactsRefresh).toContain('syncPrimaryBotMarker()');
+  });
+
   it('loads shared models when opening an existing group without a selected Bot', () => {
     expect(app).toMatch(
       /if \(!modelOptions\.length && bots\[0\]\) \{\s*try \{ await loadGroupModels\(bots\[0\]\.id, refreshEpoch, groupId\); \}/u,

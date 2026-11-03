@@ -191,10 +191,21 @@ function pending() {
     return null;
   }
 }
+function syncPrimaryBotMarker() {
+  const isPrimaryBot = Boolean(bot && contacts?.primaryEmployeeId === bot.id);
+  if (bot) $('bot-title').setAttribute('aria-label', `${bot.name}${isPrimaryBot ? '，主要 Bot' : ''}`);
+  const isCurrentPrivateChat = Boolean(
+    !$('view-chat').hidden && bot && conversation && conversation.botId === bot.id,
+  );
+  if (!isCurrentPrivateChat) return;
+  $('conversation-eyebrow').textContent = isPrimaryBot ? '★ · 私聊' : '私聊';
+  $('conversation-eyebrow').setAttribute('aria-label', isPrimaryBot ? '主要 Bot · 私聊' : '私聊');
+}
 function view(name) {
   for (const section of document.querySelectorAll('.view'))
     section.hidden = section.id !== `view-${name}`;
   if ($('chat-entry')) $('chat-entry').hidden = name === 'chat';
+  if (name === 'chat') syncPrimaryBotMarker();
   if (name === 'memory' && bot) void loadMemory().catch(showError);
   if (name === 'diagnostics') void diagnostics().catch(showError);
   if (name === 'browser') void loadBrowser().catch(showError);
@@ -262,13 +273,13 @@ function renderInboxRow(item, pinned) {
   const select = node('button', undefined, 'inbox-select');
   select.type = 'button';
   select.setAttribute('aria-current', String(selectedInboxItem?.key === row.dataset.inboxKey));
-  select.setAttribute('aria-label', `${item.type === 'group' ? '群聊' : '私聊'}：${item.title}${item.unreadCount ? `，${item.unreadCount} 条未读` : ''}`);
+  select.setAttribute('aria-label', `${item.type === 'group' ? '群聊' : '私聊'}：${item.title}${item.type === 'private' && item.botId === contacts?.primaryEmployeeId ? '，主要 Bot' : ''}${item.unreadCount ? `，${item.unreadCount} 条未读` : ''}`);
   const avatar = item.type === 'private'
     ? avatarVisual(bots.find((person) => person.id === item.botId)?.avatar, inboxParticipants(item), 'xs', item.botId)
     : node('span', '群', 'group-avatar');
   const copy = node('span', undefined, 'inbox-copy');
   const title = node('span', undefined, 'inbox-title');
-  title.append(node('strong', item.title || inboxParticipants(item)), node('small', `${item.type === 'group' ? '群聊' : '私聊'} · ${inboxParticipants(item)}${item.botId === contacts?.primaryEmployeeId ? ' · ★ 主要 Bot' : ''}`));
+  title.append(node('strong', item.title || inboxParticipants(item)), node('small', `${item.type === 'group' ? '群聊' : '私聊'} · ${inboxParticipants(item)}${item.type === 'private' && item.botId === contacts?.primaryEmployeeId ? ' · ★' : ''}`));
   const preview = node('span', inboxPreview(item), 'inbox-preview');
   copy.append(title, preview);
   if (item.unreadCount > 0) copy.append(node('span', String(item.unreadCount), 'unread-count'));
@@ -298,7 +309,7 @@ function renderInbox() {
     button.type = 'button';
     button.append(avatarVisual(bots.find((person) => person.id === chat.botId)?.avatar, chat.name, 'xs', chat.botId), node('span', undefined, 'inbox-copy'));
     const label = node('span', undefined, 'inbox-title');
-    label.append(node('strong', chat.name), node('small', chat.botId === contacts?.primaryEmployeeId ? '私聊 · ★ 主要 Bot' : '私聊 · 新会话'));
+    label.append(node('strong', chat.name), node('small', chat.botId === contacts?.primaryEmployeeId ? '私聊 · ★ 新会话' : '私聊 · 新会话'));
     button.lastElementChild.append(label, node('span', '开始一段新对话', 'inbox-preview'));
     button.setAttribute('aria-label', `开始与 ${chat.name} 私聊${chat.botId === contacts?.primaryEmployeeId ? '，主要 Bot' : ''}`);
     button.onclick = () => void startPrivateChat(chat.botId).catch(showError);
@@ -591,6 +602,7 @@ async function refreshBots() {
 function fillSettings() {
   if (!bot) return;
   $('bot-title').textContent = bot.name;
+  $('bot-title').setAttribute('aria-label', `${bot.name}${bot.id === contacts?.primaryEmployeeId ? '，主要 Bot' : ''}`);
   $('bot-title-avatar').replaceChildren(avatarVisual(bot.avatar, bot.name, 'sm', bot.id));
   renderAvatarSettings();
   $('bot-name').value = bot.name;
@@ -785,7 +797,7 @@ async function selectConversation(item, { skipOpen = false, inboxEpoch = null, s
   if (inboxEpoch !== null && !inboxSelection.isCurrent(inboxEpoch)) return;
   $('conversation-info').disabled = false;
   $('conversation-summary').hidden = true;
-  $('conversation-eyebrow').textContent = selectedInboxItem?.botId === contacts?.primaryEmployeeId ? '★ 主要 Bot · 私聊' : '私聊';
+  syncPrimaryBotMarker();
   renderConversationDetail();
   if (!$('conversation-detail').hidden) void loadConversationDetailData();
   renderInbox();
@@ -1247,6 +1259,7 @@ function renderContacts() {
   const primary = bots.find((item) => item.id === contacts.primaryEmployeeId);
   $('primary-bot-label').textContent = primary ? `★ 主要 Bot · ${primary.name}` : '未设置主要 Bot';
   $('primary-bot-action').textContent = primary ? `打开主要 Bot：${primary.name}` : '主要 Bot：未设置';
+  syncPrimaryBotMarker();
   $('contact-status').textContent = contacts.count === 0
     ? '先创建一位员工。'
     : contacts.count === 1
