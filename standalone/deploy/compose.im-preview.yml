@@ -1,0 +1,30 @@
+name: gk50-im-preview
+services:
+  bot:
+    image: sha256:48950b0b3a26f761b30a7429ac9e082c92d0e88c65b04ccfe8dd0cd1bb94d388
+    container_name: gk50-im-preview
+    user: '10001:10001'
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    network_mode: bridge
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - '0.0.0.0:24443:3080'
+    environment:
+      BOT_PUBLIC_URL: http://192.168.68.11:24443
+      BOT_TRUSTED_URLS: '["http://10.250.250.1:24443","http://192.168.68.12:24443","http://192.168.110.11:24443"]'
+    volumes:
+      - type: bind
+        source: ${BOT_IM_DATA_DIR:?Use a new isolated IM preview data directory}
+        target: /data/bot
+        bind:
+          create_host_path: false
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
+    stop_grace_period: 20s
