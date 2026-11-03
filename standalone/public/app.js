@@ -213,16 +213,40 @@ async function copy(content) {
   }
 }
 function renderBots() {
-  const nav = $('bots');
+  const nav = $('new-chat-bots');
+  if (!nav) return;
   nav.replaceChildren();
+  if (!bots.length) {
+    nav.append(node('p', '还没有 Bot，请先创建一个。', 'muted fine'));
+    return;
+  }
   for (const item of bots) {
     const button = node('button', undefined, 'bot-nav-item');
-    button.append(avatarVisual(item.avatar, item.name, 'xs', item.id), node('span', `${item.name}${item.id === contacts?.primaryEmployeeId ? ' ★' : ''}`));
-    button.setAttribute('aria-label', item.name);
+    button.append(avatarVisual(item.avatar, item.name, 'xs', item.id), node('span', `${item.name}${item.id === contacts?.primaryEmployeeId ? ' ★' : ''} · 开始私聊`));
+    button.setAttribute('aria-label', `与 ${item.name} 开始私聊`);
     button.setAttribute('aria-current', String(item.id === bot?.id));
-    button.onclick = () => void selectBot(item.id).catch(showError);
+    button.onclick = () => {
+      $('new-chat-dialog').close();
+      void startPrivateChatWithBot(item.id).catch(showError);
+    };
     nav.append(button);
   }
+}
+async function startPrivateChatWithBot(employeeId) {
+  const selectionEpoch = invalidatePendingSelections();
+  const isCurrent = () => inboxSelection.isCurrent(selectionEpoch);
+  const history = await command('private-chat.history', { botId: employeeId, limit: 1 });
+  if (!isCurrent()) return;
+  const hadConversation = Boolean(history.items?.length);
+  await selectBot(employeeId, { inboxEpoch: selectionEpoch });
+  if (!isCurrent()) return;
+  if (!hadConversation) { await refreshInboxSafely({ selectionEpoch }); return; }
+  const created = await command('conversations.create', { botId: employeeId, title: '私聊' });
+  if (!isCurrent()) return;
+  defaultConversationId = created.id;
+  await selectConversation({ ...created, botId: employeeId }, { inboxEpoch: selectionEpoch });
+  if (!isCurrent()) return;
+  await refreshInboxSafely({ selectionEpoch });
 }
 function inboxPreview(item) {
   if (!item.lastMessage) return item.type === 'group' ? `${(item.participants || []).length} 位 Bot` : '开始一段新对话';
@@ -1544,26 +1568,9 @@ async function enter() {
     if (employeeId) void selectBot(employeeId).then(() => refreshInboxSafely()).catch(showError);
     else { notice('请先在模型账户设置中选择主要 Bot。'); closeMobileNav(); view('catalog'); void loadAccount().catch(showError); }
   };
-  $('new-chat').onclick = () => {
-    const selectionEpoch = invalidatePendingSelections();
-    const isCurrent = () => inboxSelection.isCurrent(selectionEpoch);
-    const employeeId = bot?.id || contacts?.primaryEmployeeId || bots[0]?.id;
-    if (!employeeId) { notice('请先创建一个 Bot。'); return; }
-    void (async () => {
-      const history = await command('private-chat.history', { botId: employeeId, limit: 1 });
-      if (!isCurrent()) return;
-      const hadConversation = Boolean(history.items?.length);
-      await selectBot(employeeId, { inboxEpoch: selectionEpoch });
-      if (!isCurrent()) return;
-      if (!hadConversation) { await refreshInboxSafely({ selectionEpoch }); return; }
-      const created = await command('conversations.create', { botId: employeeId, title: '私聊' });
-      if (!isCurrent()) return;
-      defaultConversationId = created.id;
-      await selectConversation({ ...created, botId: employeeId }, { inboxEpoch: selectionEpoch });
-      if (!isCurrent()) return;
-      await refreshInboxSafely({ selectionEpoch });
-    })().catch(showError);
-  };
+  $('new-chat').onclick = () => { renderBots(); $('new-chat-dialog').showModal(); };
+  $('dismiss-new-chat').onclick = () => $('new-chat-dialog').close();
+  $('new-chat-create-bot').onclick = () => { $('new-chat-dialog').close(); $('bot-dialog').showModal(); };
   $('conversation-info').onclick = openConversationDetail;
   $('close-conversation-detail').onclick = closeConversationDetail;
   $('conversation-summary').onclick = () => openCommunicationSummary(communicationSummaryEvent);
@@ -1677,7 +1684,6 @@ $('logout').onclick = () =>
       conversation = null;
     })
     .catch(showError);
-$('new-bot').onclick = () => $('bot-dialog').showModal();
 $('mobile-bots-toggle').onclick = toggleMobileNav;
 $('nav-scrim').onclick = closeMobileNav;
 document.addEventListener('keydown', (event) => {

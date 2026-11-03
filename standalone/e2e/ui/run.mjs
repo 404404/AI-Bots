@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '../../browser/node_modules/playwright-core/index.mjs';
+import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex';
 import { assertChildAlive, assertExpectedUnauthenticatedSessionProbe, captureProcessIdentity, closeRelayWhenChildExits, createReservedLoopbackRelay, isProcessIdentityAlive, parseServerReadyLine, prepareEmptyOutputDir } from './harness.mjs';
 
 const standalone = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -132,7 +133,8 @@ const report = {
   browserConsole: [],
   httpUnauthorizedResponses: [],
   cleanup: { browserClosed: false, serviceStopped: false, modelStubStopped: false, loopbackRelayStopped: false, temporaryDataRemoved: false },
-  realModelCommunication: { status: 'not-verified', reason: '隔离 UI 流程不运行 Bot 间通信测试；真实模型驱动的 Bot 间通信未验收。' },
+  realModelCommunication: { status: 'not-verified', reason: 'Bot 间通信截图使用隔离的 CodexTransport 测试替身；真实外部模型驱动的 Bot 间通信未验收。' },
+  syntheticModelCommunication: { status: 'pending', label: '模拟模型 / 测试数据', model: 'in-process CodexTransport fixture' },
 };
 let serverProcess;
 let serverIdentity;
@@ -169,6 +171,7 @@ try {
       BOT_HOST: '127.0.0.1',
       BOT_DATA_DIR: dataDir,
       UI_QA_PUBLIC_URL: origin,
+      UI_QA_TEST_MODEL: 'synthetic-codex-tool',
       NODE_ENV: 'test',
     },
     stdio: ['ignore', 'ignore', 'ignore', 'pipe'],
@@ -216,8 +219,8 @@ try {
   });
   report.interactions.push('通过已认证命令 API 配置仅监听 loopback 的确定性测试模型。');
 
-  await page.locator('.employee-roster summary').click();
-  await page.locator('#new-bot').click();
+  await page.locator('#new-chat').click();
+  await page.locator('#new-chat-create-bot').click();
   await page.locator('#bot-dialog').waitFor({ state: 'visible' });
   await page.locator('#create-name').fill(report.testBot.name);
   await page.locator('#create-persona').fill(report.testBot.persona);
@@ -309,6 +312,65 @@ try {
     assert.equal(layout.inputVisible, true, `${viewport.name} message input is clipped or hidden`);
     assert.equal(layout.sendVisible, true, `${viewport.name} send control is clipped or hidden`);
   }
+
+  const recipient = await command(page, origin, 'bots.create', {
+    slug: 'ui-qa-synthetic-recipient', name: 'UI QA 接收测试 Bot', persona: '仅用于 GitHub Actions 隔离验收的测试 Bot。',
+  });
+  const pair = await command(page, origin, 'bot-messages.authorize', { botAId: bot.id, botBId: recipient.id });
+  const codexModel = openaiCodexProvider().getModels()[0].id;
+  await command(page, origin, 'model-account.update', { provider: 'openai-codex', model: codexModel, keyless: true });
+  const communicationRun = await command(page, origin, 'runs.submit', {
+    botId: bot.id, conversationId: opened.conversation.id,
+    idempotencyKey: 'ui-qa-synthetic-bot-message', content: 'UI QA synthetic model: 请发送一条授权的测试通信。',
+    selection: { kind: 'global', modelId: codexModel },
+  });
+  let completedRun;
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    completedRun = await command(page, origin, 'runs.get', { botId: bot.id, runId: communicationRun.id });
+    if (['completed', 'failed', 'cancelled'].includes(completedRun.status)) break;
+    await sleep(200);
+  }
+  assert.equal(completedRun?.status, 'completed', `synthetic Codex tool run failed: ${completedRun?.errorCode ?? 'timeout'}`);
+  let persisted = [];
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    persisted = await command(page, origin, 'bot-messages.list', { threadId: pair.thread.id, limit: 10 });
+    if (persisted.length === 2) break;
+    await sleep(200);
+  }
+  assert.equal(persisted.length, 2, 'authorized tool message and receiver reply must persist via BotMessaging');
+  assert.equal(persisted[0].sourceRunId, communicationRun.id);
+  assert.match(persisted[0].body, /UI QA synthetic model/u);
+  assert.equal(persisted[1].replyToMessageId, persisted[0].id);
+  report.syntheticModelCommunication = {
+    status: 'passed', label: '模拟模型 / 测试数据', model: 'in-process CodexTransport fixture',
+    threadId: pair.thread.id, senderMessageId: persisted[0].id, recipientReplyId: persisted[1].id,
+    runId: communicationRun.id, senderBody: persisted[0].body, recipientReply: persisted[1].body,
+  };
+  report.interactions.push('隔离 Codex 协议测试替身通过 owner API run 触发真实 send_bot_message 工具；产品代码写入 Bot 消息和接收方回复。');
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('#workspace').waitFor({ state: 'visible' });
+  const senderConversationRow = page.locator('#inbox-list .inbox-row').filter({ hasText: report.testBot.name });
+  await senderConversationRow.getByRole('button', { name: /^私聊：/u }).click();
+  const communicationButton = page.getByRole('button', {
+    name: /^打开 Bot 间通信内容：UI QA 测试 Bot → UI QA 接收测试 Bot/u,
+  });
+  await communicationButton.waitFor({ state: 'visible', timeout: 15_000 });
+  await communicationButton.click();
+  await page.locator('#summary-dialog[open]').waitFor({ state: 'visible' });
+  await page.locator('#summary-body .communication-message').filter({ hasText: persisted[0].body }).waitFor({ state: 'visible' });
+  await page.locator('#summary-body .communication-message').filter({ hasText: persisted[1].body }).waitFor({ state: 'visible' });
+  assert.match(await page.locator('#summary-body').innerText(), /UI QA synthetic model/u, 'summary must visibly identify synthetic test data');
+  assert.match(await page.locator('#summary-meta').innerText(), new RegExp(`来源会话 ${opened.conversation.id} · 来源 Run ${communicationRun.id} · 2 条往返消息`, 'u'),
+    'summary must show the source conversation, source run, and complete send/reply round trip');
+  const communicationViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+  assert.deepEqual(communicationViewport, { width: 1366, height: 900 }, 'communication screenshot must use its reported viewport');
+  const communicationScreenshot = 'bot-communication-synthetic-1366.png';
+  await page.screenshot({ path: join(outputDir, communicationScreenshot), fullPage: true, animations: 'disabled' });
+  report.screenshots.push({ file: communicationScreenshot, viewport: { name: 'bot-communication-synthetic-1366', width: 1366, height: 900 }, contents: 'synthetic model test data in product Bot communication summary dialog' });
+  report.interactions.push('真实 Web UI 打开产品持久化通信事件浮窗并截图；消息正文显示 UI QA synthetic model 标记。');
+  await page.locator('#close-summary').click();
+
   const consoleErrors = report.browserConsole.filter((entry) => ['error', 'pageerror', 'http-error'].includes(entry.type));
   assertExpectedUnauthenticatedSessionProbe(report.httpUnauthorizedResponses, consoleErrors.map((entry) => entry.text));
   assert.deepEqual(consoleErrors.filter((entry) => !/status of 401 \(Unauthorized\)/u.test(entry.text)), [], 'browser emitted a console or static-resource error');

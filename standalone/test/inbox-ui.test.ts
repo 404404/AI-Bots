@@ -111,7 +111,7 @@ describe('inbox list DOM', () => {
       /button\.onclick = \(\) => \{ invalidatePendingSelections\(\); void openGroup/u,
     );
     expect(app).toMatch(
-      /\$\('new-chat'\)\.onclick = \(\) => \{\s*const selectionEpoch = invalidatePendingSelections\(\)/u,
+      /\$\('new-chat'\)\.onclick = \(\) => \{ renderBots\(\); \$\('new-chat-dialog'\)\.showModal\(\); \}/u,
     );
     expect(app).toMatch(/selectBot\(item\.botId, \{ inboxEpoch: epoch \}\)/u);
   });
@@ -153,13 +153,10 @@ describe('inbox list DOM', () => {
     );
   });
 
-  it('keeps new-chat async steps tied to the Bot and navigation epoch captured at entry', () => {
-    const start = app.indexOf("$('new-chat').onclick = () => {");
-    const flow = app.slice(start, app.indexOf("$('conversation-info').onclick", start));
+  it('keeps selected-Bot chat startup tied to the navigation epoch', () => {
+    const start = app.indexOf('async function startPrivateChatWithBot(employeeId)');
+    const flow = app.slice(start, app.indexOf('function inboxPreview(', start));
     expect(flow).toMatch(/const selectionEpoch = invalidatePendingSelections\(\)/u);
-    expect(flow).toMatch(
-      /const employeeId = bot\?\.id \|\| contacts\?\.primaryEmployeeId \|\| bots\[0\]\?\.id/u,
-    );
     expect(flow).toMatch(
       /await command\('private-chat\.history'[\s\S]*?if \(!isCurrent\(\)\) return/u,
     );
@@ -172,6 +169,11 @@ describe('inbox list DOM', () => {
     expect(flow).toMatch(
       /await selectConversation\(\{ \.\.\.created, botId: employeeId \}, \{ inboxEpoch: selectionEpoch \}\);\s*if \(!isCurrent\(\)\) return/u,
     );
+  });
+
+  it('offers every Bot, including those without history, only when starting a chat', () => {
+    expect(app).toMatch(/function renderBots\(\)[\s\S]*?for \(const item of bots\)[\s\S]*?startPrivateChatWithBot\(item\.id\)/u);
+    expect(app).toMatch(/if \(!bots\.length\)[\s\S]*?还没有 Bot，请先创建一个/u);
   });
 
   it('loads shared models when opening an existing group without a selected Bot', () => {

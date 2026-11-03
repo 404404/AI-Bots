@@ -14,6 +14,10 @@ test('small-screen Bot navigation becomes a closable drawer and keeps the chat u
   );
   assert.match(html, /id="nav-scrim"[^>]*aria-label="关闭 Bot 导航"/u);
   assert.match(html, /id="groups-entry"[^>]*>群聊/u);
+  assert.match(html, /id="new-chat-dialog"[\s\S]*?id="new-chat-bots"[^>]*aria-label="选择 Bot 开始私聊"/u);
+  assert.doesNotMatch(html, /<summary>Bot 列表<\/summary>|id="bots"/u);
+  assert.match(app, /\$\('new-chat'\)\.onclick = \(\) => \{ renderBots\(\); \$\('new-chat-dialog'\)\.showModal\(\); \}/u);
+  assert.match(app, /async function startPrivateChatWithBot\(employeeId\)[\s\S]*?private-chat\.history[\s\S]*?selectBot\(employeeId, \{ inboxEpoch: selectionEpoch \}\)/u);
   assert.match(html, /id="chat-entry"[^>]*hidden>返回聊天/u);
   assert.match(html, /id="conversation-detail"[^>]*aria-label="会话详情"/u);
   assert.doesNotMatch(html, /class="tabs"|data-view=/u);

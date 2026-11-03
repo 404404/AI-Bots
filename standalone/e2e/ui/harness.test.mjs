@@ -2,12 +2,46 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import net from 'node:net';
-import { chmod, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex';
 import { assertChildAlive, assertExpectedUnauthenticatedSessionProbe, captureProcessIdentity, closeRelayWhenChildExits, createReservedLoopbackRelay, isProcessIdentityAlive, parseLinuxProcessStat, parseServerReadyLine, prepareEmptyOutputDir } from './harness.mjs';
+
+test('UI QA completes all ordinary-chat viewport screenshots before synthetic Bot communication', async () => {
+  const source = await readFile(new URL('./run.mjs', import.meta.url), 'utf8');
+  const viewportChecks = source.indexOf('for (const viewport of viewports) {');
+  const communicationStart = source.indexOf("const recipient = await command(page, origin, 'bots.create'");
+  const communicationViewportRestore = source.indexOf('await page.setViewportSize({ width: 1366, height: 900 });', communicationStart);
+  const communicationViewportAssertion = source.indexOf('assert.deepEqual(communicationViewport, { width: 1366, height: 900 }', communicationStart);
+  const senderConversationRestore = source.indexOf("const senderConversationRow = page.locator('#inbox-list .inbox-row').filter({ hasText: report.testBot.name });", communicationStart);
+  const directionSpecificCard = source.indexOf('name: /^打开 Bot 间通信内容：UI QA 测试 Bot → UI QA 接收测试 Bot/u,', communicationStart);
+  const summaryAssociationAssertion = source.indexOf('summary must show the source conversation, source run, and complete send/reply round trip', communicationStart);
+  const communicationScreenshot = source.indexOf("const communicationScreenshot = 'bot-communication-synthetic-1366.png'");
+  assert.notEqual(viewportChecks, -1, 'ordinary-chat viewport loop must exist');
+  assert.notEqual(communicationStart, -1, 'synthetic communication path must exist');
+  assert.notEqual(communicationViewportRestore, -1, 'communication screenshot viewport must be restored');
+  assert.notEqual(communicationViewportAssertion, -1, 'communication screenshot viewport must be checked at runtime');
+  assert.notEqual(senderConversationRestore, -1, 'reload must explicitly restore the sender original inbox conversation');
+  assert.notEqual(directionSpecificCard, -1, 'communication card locator must select the sender-to-recipient direction');
+  assert.notEqual(summaryAssociationAssertion, -1, 'opened summary must assert source conversation and complete round trip');
+  assert.notEqual(communicationScreenshot, -1, 'synthetic communication screenshot must exist');
+  assert(viewportChecks < communicationStart, 'all ordinary-chat viewport checks and screenshots must precede synthetic communication');
+  assert(communicationStart < communicationScreenshot, 'communication screenshot must follow the synthetic communication run');
+  assert(communicationViewportRestore < communicationViewportAssertion, 'communication viewport must be restored before its runtime assertion');
+  assert(senderConversationRestore < directionSpecificCard, 'sender conversation must be restored before locating its communication card');
+  assert(directionSpecificCard < summaryAssociationAssertion, 'direction-specific card must be opened before verifying its summary association');
+  assert(communicationViewportAssertion < communicationScreenshot, 'communication viewport must be checked before its screenshot');
+  const viewportLoop = source.slice(viewportChecks, communicationStart);
+  const configuredViewports = source.slice(source.indexOf('const viewports = ['), source.indexOf('];', source.indexOf('const viewports = [')));
+  for (const name of ['desktop-1920', 'desktop-1366', 'tablet-768', 'mobile-390'])
+    assert(configuredViewports.includes(`name: '${name}'`), `${name} ordinary-chat viewport must be configured`);
+  assert(viewportLoop.includes('await page.screenshot('), 'ordinary-chat screenshots must be captured inside the viewport loop');
+  assert(viewportLoop.includes('assert.equal(layout.userVisible, true'), 'ordinary-chat user message visibility must be asserted per viewport');
+  assert(viewportLoop.includes('assert.equal(layout.assistantVisible, true'), 'ordinary-chat assistant reply visibility must be asserted per viewport');
+});
 
 test('relay owns its kernel-assigned loopback port and forwards only to its fixed child port', async () => {
   const relay = await createReservedLoopbackRelay();
@@ -151,6 +185,7 @@ test('real UI QA server emits readiness on fd 3 despite startup diagnostics on s
       TMPDIR: root,
       BOT_DATA_DIR: dataDir,
       UI_QA_PUBLIC_URL: origin,
+      UI_QA_TEST_MODEL: 'synthetic-codex-tool',
       NODE_ENV: 'test',
     },
     stdio: ['ignore', 'pipe', 'ignore', 'pipe'],
@@ -181,6 +216,49 @@ test('real UI QA server emits readiness on fd 3 despite startup diagnostics on s
     relay.setTarget(port, () => isProcessIdentityAlive(identity, child));
     const response = await fetch(`${origin}/healthz`);
     assert.equal(response.status, 200);
+    const code = (await readFile(join(dataDir, 'secrets', 'access-code'), 'utf8')).trim();
+    const login = await fetch(`${origin}/api/v1/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) });
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get('set-cookie')?.split(';', 1)[0];
+    assert.ok(cookie?.startsWith('bot_session='));
+    const apiCommand = async (command, params = {}) => {
+      const result = await fetch(`${origin}/api/v1/command`, {
+        method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ command, params }),
+      });
+      const payload = await result.json();
+      assert.ok(result.ok, `isolated API command failed: ${command} (${payload?.error?.code ?? result.status})`);
+      return payload.result;
+    };
+    const sender = await apiCommand('bots.create', { name: 'UI QA API Sender', persona: 'Synthetic fixture sender.' });
+    const recipient = await apiCommand('bots.create', { name: 'UI QA API Recipient', persona: 'Synthetic fixture recipient.' });
+    const pair = await apiCommand('bot-messages.authorize', { botAId: sender.id, botBId: recipient.id });
+    const chat = await apiCommand('private-chat.open', { botId: sender.id });
+    const modelId = openaiCodexProvider().getModels()[0].id;
+    await apiCommand('model-account.update', { provider: 'openai-codex', model: modelId, keyless: true });
+    const submitted = await apiCommand('runs.submit', {
+      botId: sender.id, conversationId: chat.conversation.id, idempotencyKey: 'harness-synthetic-tool-run',
+      content: 'UI QA synthetic model: run the authorized Bot message tool.', selection: { kind: 'global', modelId },
+    });
+    let run;
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      run = await apiCommand('runs.get', { botId: sender.id, runId: submitted.id });
+      if (['completed', 'failed', 'cancelled'].includes(run.status)) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(run?.status, 'completed', `synthetic Codex test run should complete (${run?.errorCode ?? 'unknown'})`);
+    let messages = [];
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      messages = await apiCommand('bot-messages.list', { threadId: pair.thread.id, limit: 10 });
+      if (messages.length === 2) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(messages.length, 2, 'BotMessaging must persist the tool message and recipient reply');
+    assert.equal(messages[0].sourceRunId, submitted.id);
+    assert.match(messages[0].body, /UI QA synthetic model/u);
+    assert.equal(messages[1].replyToMessageId, messages[0].id);
+    const linked = await apiCommand('bot-messages.timeline', { conversationId: chat.conversation.id, limit: 10 });
+    assert.equal(linked.items.length, 2);
+    assert(linked.items.every((message) => message.sourceConversationId === chat.conversation.id));
     const logUntil = Date.now() + 2000;
     while (!stdout.includes('"event":"startup"') && Date.now() < logUntil) await new Promise((resolve) => setTimeout(resolve, 10));
     assert.match(stdout, /"event":"startup"/u);

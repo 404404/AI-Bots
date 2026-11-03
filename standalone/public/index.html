@@ -47,10 +47,6 @@
         <nav id="pinned-conversations" class="session-list" aria-label="置顶会话"></nav>
         <div class="session-section-title">最近</div>
         <nav id="inbox-list" class="session-list recent-list" aria-label="私聊与群聊"><p id="inbox-status" class="muted fine">正在读取会话…</p></nav>
-        <details class="employee-roster">
-          <summary>Bot 列表</summary><button id="new-bot" type="button" aria-label="创建员工" title="创建员工">＋</button>
-          <nav id="bots" aria-label="员工列表"></nav>
-        </details>
         <footer><span class="status-dot"></span>独立网页预览</footer>
       </aside>
       <button id="nav-scrim" class="nav-scrim" aria-label="关闭 Bot 导航"></button>
@@ -239,6 +235,14 @@
           ><button class="primary" type="submit">创建</button>
         </div>
       </form>
+    </dialog>
+    <dialog id="new-chat-dialog" aria-labelledby="new-chat-title">
+      <section class="dialog-content">
+        <header class="summary-dialog-header"><div><p class="eyebrow">开始对话</p><h2 id="new-chat-title">选择 Bot</h2></div><button id="dismiss-new-chat" class="icon-button" type="button" aria-label="关闭 Bot 选择">×</button></header>
+        <p class="muted fine">选择一位 Bot 开始私聊；没有历史会话的 Bot 也会列在这里。</p>
+        <nav id="new-chat-bots" class="new-chat-bot-list" aria-label="选择 Bot 开始私聊"></nav>
+        <button id="new-chat-create-bot" type="button">创建 Bot</button>
+      </section>
     </dialog>
     <dialog id="group-dialog" aria-labelledby="group-create-title">
       <form id="group-create-form">

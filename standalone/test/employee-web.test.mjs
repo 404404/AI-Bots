@@ -7,7 +7,8 @@ const app = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
 
 test('private employee chat remains available with persisted conversation and model commands', () => {
-  assert.match(html, /id="bots" aria-label="员工列表"/u);
+  assert.match(html, /id="new-chat-bots" class="new-chat-bot-list" aria-label="选择 Bot 开始私聊"/u);
+  assert.match(html, /id="new-chat-dialog"/u);
   assert.match(html, /id="settings-entry"[^>]*>模型账户设置/u);
   assert.match(html, /id="chat-model" aria-label="选择本次使用的模型"/u);
   assert.match(html, /id="history-entry"[^>]*>历史记录/u);
