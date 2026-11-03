@@ -13,7 +13,7 @@ test('small-screen Bot navigation becomes a closable drawer and keeps the chat u
     /id="mobile-bots-toggle"[^>]*aria-controls="bot-sidebar"[^>]*aria-expanded="false"/u,
   );
   assert.match(html, /id="nav-scrim"[^>]*aria-label="关闭 Bot 导航"/u);
-  assert.match(html, /id="groups-entry"[^>]*>群聊/u);
+  assert.match(html, /id="new-group"[^>]*aria-label="新建群聊"/u);
   assert.match(html, /id="new-chat-dialog"[\s\S]*?id="new-chat-bots"[^>]*aria-label="选择 Bot 开始私聊"/u);
   assert.doesNotMatch(html, /<summary>Bot 列表<\/summary>|id="bots"/u);
   assert.match(app, /\$\('new-chat'\)\.onclick = \(\) => \{ renderBots\(\); \$\('new-chat-dialog'\)\.showModal\(\); \}/u);
@@ -62,4 +62,36 @@ test('small-screen Bot navigation becomes a closable drawer and keeps the chat u
   assert.match(mobile, /\.composer-control-row\s*\{[^}]*min-width:\s*0;[^}]*gap:\s*6px;/su);
   assert.match(mobile, /#chat-model\s*\{[^}]*flex:\s*1 1 0;[^}]*min-width:\s*0;/su);
   assert.doesNotMatch(mobile, /grid-template-columns:\s*160px/u);
+});
+
+test('group chat shares the unified chat workspace and reports unavailable group features honestly', () => {
+  assert.match(html, /<nav id="inbox-list"[^>]*aria-label="私聊与群聊"/u);
+  assert.match(html, /<section id="view-groups" class="view group-chat-view" hidden>/u);
+  assert.match(html, /class="group-tabs"[^>]*aria-label="群聊页面"/u);
+  assert.match(html, /title="独立版未提供群文件"/u);
+  assert.match(html, /title="独立版未提供群记忆"/u);
+  assert.match(html, /title="群内执行不等同于委派任务"/u);
+  assert.match(html, /id="group-model"[^>]*aria-label="选择群聊使用的模型"/u);
+  assert.match(app, /command\('groups\.messages'/u);
+  assert.match(app, /group\.members\.length\} 位成员/u);
+  assert.match(app, /独立版未提供群文件或附件/u);
+  assert.match(app, /独立版未提供群记忆/u);
+  assert.match(app, /avatarVisual\(employee\?\.avatar, employee\?\.name \|\| message\.senderName, 'sm'/u);
+  assert.match(app, /memberSelect\.id = 'group-members-editor'/u);
+  assert.match(app, /async function openGroup\(groupId, options = \{\}\)[\s\S]*?renderGroup\(groupId, options\)/u);
+  const openGroupFlow = app.slice(app.indexOf('async function openGroup('), app.indexOf('function setGroupComposerEnabled('));
+  assert.doesNotMatch(openGroupFlow, /view\('groups'\)/u, 'background refresh must not reclaim the group view');
+  assert.match(app, /if \(shouldSelectGroupAfterRequest\(requestEpoch, groupSelectionEpoch\)\) \{\s*invalidatePendingSelections\(\);\s*view\('groups'\);\s*await openGroup/u);
+  assert.match(app, /const runStatus = \$\('group-run-status'\);[\s\S]*?runStatus\.append\(row\)/u);
+  const groupRunRows = app.slice(app.indexOf('for (const run of result.runs || [])'), app.indexOf('const latestGroupMessage = groupMessages.at(-1)'));
+  assert.match(groupRunRows, /runStatus\.append\(row\)/u);
+  assert.doesNotMatch(groupRunRows, /list\.append\(row\)/u);
+  assert.match(app, /async function returnToPrivateChat\(\)[\s\S]*?await selectInboxItem\(item\)/u);
+  assert.match(app, /\$\('chat-entry'\)\.onclick = \(\) => void returnToPrivateChat\(\)\.catch\(showError\)/u);
+  assert.match(app, /async function selectInboxItem\(item\)[\s\S]*?await selectBot\(item\.botId, \{ inboxEpoch: epoch \}\)[\s\S]*?await selectConversation\(/u);
+  assert.match(css, /\.group-chat-view\s*\{[^}]*height:\s*calc\(100dvh - 94px\)/su);
+  assert.match(css, /\.workspace\.details-open\s*\{[^}]*260px minmax\(0, 1fr\) 300px/su);
+  const mobile = css.slice(css.indexOf('@media (max-width: 750px)'));
+  assert.match(mobile, /\.group-chat-view\s*\{[^}]*height:\s*calc\(100dvh - 140px\)/su);
+  assert.match(mobile, /\.group-composer\s*\{[^}]*padding:\s*8px/su);
 });

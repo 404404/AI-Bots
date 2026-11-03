@@ -53,6 +53,12 @@ export function shouldApplyGroupResult(targetGroupId, activeGroupId) {
   return targetGroupId === activeGroupId;
 }
 
+export function shouldRefreshSelectedGroup(targetGroupId, activeGroupId, viewName, expectedSelectionEpoch, currentSelectionEpoch) {
+  return targetGroupId === activeGroupId
+    && viewName === 'groups'
+    && expectedSelectionEpoch === currentSelectionEpoch;
+}
+
 export function shouldSelectGroupAfterRequest(requestEpoch, currentEpoch) {
   return requestEpoch === currentEpoch;
 }

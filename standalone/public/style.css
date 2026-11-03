@@ -888,6 +888,72 @@ dialog::backdrop {
 .communication-message > strong,
 .communication-message > span { display: block; }
 .communication-message > p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Group conversations share the primary chat shell and the same inbox as DMs. */
+.group-chat-view {
+  height: calc(100dvh - 94px);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 28px 18px;
+  max-width: none;
+}
+.group-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 26px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.group-tab {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.group-tab.active { color: var(--accent); font-weight: 700; }
+.group-tab.active::after { content: ''; position: absolute; inset: auto 0 -1px; height: 2px; background: var(--accent); }
+.group-tab:disabled { opacity: .62; }
+.group-chat-context { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; flex: 0 0 auto; }
+.group-members { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.group-member-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 3px; border: 1px solid var(--border); border-radius: 20px; background: #fff; font-size: 11px; }
+.group-title-avatar { width: 42px; height: 42px; border-radius: 50%; font-size: 13px; background: #e4e9fa; color: #5d60a4; }
+.group-messages { flex: 1 1 0; min-height: 100px; max-height: none; overflow: auto; display: flex; flex-direction: column; gap: 18px; margin: 0; padding: 10px 4px 16px; }
+.group-message { display: flex; flex-direction: column; gap: 5px; max-width: min(86%, 720px); padding: 0; border: 0; background: transparent; }
+.group-message.bot { align-self: flex-start; }
+.group-message.user { align-self: flex-end; align-items: flex-end; background: transparent; }
+.group-message-heading { display: flex; align-items: center; gap: 8px; min-height: 30px; color: var(--muted); font-size: 12px; }
+.group-message-heading .avatar { flex: 0 0 auto; }
+.group-message-heading strong { color: #202b29; font-size: 13px; font-weight: 650; }
+.group-message-heading time { margin: 0; font-size: 11px; }
+.group-message p { margin: 0 0 0 38px; padding: 11px 15px; border: 1px solid var(--border); border-radius: 4px 14px 14px 14px; background: #fff; box-shadow: 0 2px 8px #24372c05; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.group-message.user p { margin: 0; border-color: transparent; border-radius: 14px 4px 14px 14px; background: #e7eee3; }
+.group-run-status-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 80px; overflow: auto; }
+.group-run-status { margin: 0; padding: 5px 9px; border-radius: 14px; background: #fff6e8; color: #735521; font-size: 11px; }
+.group-run-status button { margin-left: 7px; padding: 3px 7px; font-size: 10px; }
+.group-composer { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 7px; border-radius: 14px; }
+.group-composer label { margin: 0; }
+.group-recipient-label { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; }
+.group-recipient-label select { width: auto; min-width: 160px; max-width: min(100%, 260px); padding: 4px 8px; font-size: 11px; }
+.group-composer textarea { min-height: 50px; padding: 6px; }
+.group-composer .composer-control-row { border-top: 1px solid #edf0eb; padding-top: 8px; }
+.group-composer #group-model { flex: 1 1 0; max-width: 360px; min-width: 0; padding: 8px; }
+.group-composer .composer-hint { margin-top: 0; }
+.detail-card { margin: 12px 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.detail-card h4 { margin-top: 0; }
+.detail-card label { margin-top: 14px; }
+.detail-card select { min-width: 0; }
+.detail-run-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; }
+.detail-run-row button { padding: 5px 8px; font-size: 11px; }
+
 @media (max-width: 980px) {
   .workspace.details-open { grid-template-columns: 260px minmax(0, 1fr); }
   .conversation-detail { position: fixed; z-index: 25; inset: 0 0 0 auto; width: min(330px, 86vw); box-shadow: -12px 0 38px #1d2b2220; }
@@ -903,6 +969,15 @@ dialog::backdrop {
   .header-actions button { padding: 7px 9px; font-size: 11px; }
   .view { padding: 14px 12px; }
   .summary-dialog { padding: 17px; }
+  .group-chat-view { height: calc(100dvh - 140px); min-height: 300px; padding: 0 12px 10px; }
+  .group-tabs { min-height: 46px; gap: 20px; }
+  .group-chat-context { min-height: 40px; }
+  .group-message { max-width: 96%; }
+  .group-message p { margin-left: 31px; padding: 9px 12px; }
+  .group-composer { padding: 8px; }
+  .group-recipient-label { justify-content: space-between; }
+  .group-recipient-label select { flex: 1 1 0; min-width: 0; max-width: none; }
+  .detail-card { padding: 12px; }
 }
 @media (max-width: 420px) {
   .sidebar { width: min(330px, 88vw); padding: 14px 10px; }

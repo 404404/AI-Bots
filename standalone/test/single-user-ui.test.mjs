@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { OnboardingRequestCoordinator, selectCreatedBotIfUnchanged } from '../public/onboarding-state.js';
-import { findModelIndexById, GroupRefreshGate, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, retainMemberRecipients, selectedModelOption, sendPendingGroupRequest, shouldApplyGroupResult, shouldSelectGroupAfterRequest } from '../public/group-ui-state.js';
+import { SelectionEpoch } from '../public/inbox-ui-state.js';
+import { findModelIndexById, GroupRefreshGate, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, retainMemberRecipients, selectedModelOption, sendPendingGroupRequest, shouldApplyGroupResult, shouldRefreshSelectedGroup, shouldSelectGroupAfterRequest } from '../public/group-ui-state.js';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
@@ -104,7 +105,7 @@ test('group interface uses persisted groups, stable employee IDs, explicit recip
   assert.match(app, /groups\.messages', \{ groupId, limit: 50, \.\.\.\(older && groupMessageCursor \? \{ cursor: groupMessageCursor \} : \{\}\) \}/u);
   assert.match(app, /groupMessages = older \? \[\.\.\.unseen, \.\.\.groupMessages\] : \[\.\.\.groupMessages, \.\.\.unseen\]/u);
   assert.doesNotMatch(app, /groupMessages[\s\S]{0,200}\.sort\(/u);
-  assert.match(app, /import \{ GroupRefreshGate, findModelIndexById, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, selectedModelOption, sendPendingGroupRequest, shouldApplyGroupResult, shouldSelectGroupAfterRequest \}/u);
+  assert.match(app, /import \{ GroupRefreshGate, findModelIndexById, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, selectedModelOption, sendPendingGroupRequest, shouldRefreshSelectedGroup, shouldSelectGroupAfterRequest \}/u);
   assert.equal(modelIsUsable({ status: 'candidate' }), true);
   assert.equal(modelIsUsable({ status: 'verified' }), true);
   assert.equal(modelIsUsable({ status: 'not-signed-in' }), false);
@@ -153,7 +154,7 @@ test('group polling preserves same-group composer state, filters removed members
   assert.equal(ui.text, '');
   assert.match(app, /if \(changed\) \{\s*setGroupComposerEnabled\(false\);[\s\S]*?\$\('group-input'\)\.value = ''/u);
   assert.match(app, /const previouslySelected = changed \? \[\] : Array\.from\(recipientSelect\.selectedOptions/u);
-  const openGroupFlow = app.slice(app.indexOf('async function openGroup('), app.indexOf('async function loadGroupsListOnly('));
+  const openGroupFlow = app.slice(app.indexOf('async function openGroup('), app.indexOf('async function loadGroupModels('));
   assert.equal((openGroupFlow.match(/\$\('group-input'\)\.value = ''/gu) || []).length, 1);
   assert.match(openGroupFlow, /restored\.modelIndex >= 0\) \{ \$\('group-model'\)\.value/u);
   assert.ok((openGroupFlow.match(/\$\('group-model'\)\.value\s*=/gu) || []).length >= 1);
@@ -311,27 +312,75 @@ test('group async callbacks stay scoped and older-page work cannot be invalidate
   assert.equal(shouldApplyGroupResult(newGroupId, newGroupId), true);
 
   let selectionEpoch = 7;
+  let activeView = 'groups';
+  let activeGroup = oldGroupId;
+  const delayedRefreshEpoch = selectionEpoch;
+  let finishMemberSave;
+  const delayedMemberSave = new Promise((resolve) => { finishMemberSave = resolve; }).then(() =>
+    shouldRefreshSelectedGroup(oldGroupId, activeGroup, activeView, delayedRefreshEpoch, selectionEpoch));
+  activeView = 'chat';
+  selectionEpoch += 1;
+  finishMemberSave();
+  assert.equal(await delayedMemberSave, false, 'a delayed member save cannot reclaim the group view after navigation to private chat');
+  assert.equal(shouldRefreshSelectedGroup(oldGroupId, activeGroup, 'groups', selectionEpoch - 1, selectionEpoch), false,
+    'an obsolete selection epoch blocks a background group refresh');
+  assert.equal(shouldRefreshSelectedGroup(oldGroupId, activeGroup, 'groups', selectionEpoch, selectionEpoch), true);
+  assert.match(app, /function currentViewName()[\s\S]*?view-\//u);
+  assert.match(app, /shouldRefreshSelectedGroup\(item\.id, activeGroupId, currentViewName\(\), selectionEpoch, groupSelectionEpoch\)/u);
+  assert.match(app, /shouldRefreshSelectedGroup\(groupId, activeGroupId, currentViewName\(\), selectionEpoch, groupSelectionEpoch\)/u);
+  const openGroupFlow = app.slice(app.indexOf('async function openGroup('), app.indexOf('function setGroupComposerEnabled('));
+  assert.doesNotMatch(openGroupFlow, /view\('groups'\)/u, 'background refreshes must not navigate to the group view');
+
+  selectionEpoch = 7;
   const creationEpoch = selectionEpoch;
+  const privateSelection = new SelectionEpoch();
+  const pendingPrivateEpoch = privateSelection.begin();
+  let currentView = 'chat';
+  let finishPrivateOpen;
+  const delayedPrivateOpen = new Promise((resolve) => { finishPrivateOpen = resolve; }).then(() => {
+    if (privateSelection.isCurrent(pendingPrivateEpoch)) currentView = 'chat';
+  });
   let finishCreate;
   const create = new Promise((resolve) => { finishCreate = resolve; });
   let selectedGroup = null;
   const selectAfterCreate = create.then((created) => {
-    if (shouldSelectGroupAfterRequest(creationEpoch, selectionEpoch)) selectedGroup = created.id;
+    if (shouldSelectGroupAfterRequest(creationEpoch, selectionEpoch)) {
+      privateSelection.invalidate();
+      currentView = 'groups';
+      selectedGroup = created.id;
+    }
   });
-  selectionEpoch += 1;
   finishCreate({ id: 'created-group' });
   await selectAfterCreate;
-  assert.equal(selectedGroup, null, 'a late group creation cannot override a group selected while it was pending');
+  finishPrivateOpen();
+  await delayedPrivateOpen;
+  assert.equal(selectedGroup, 'created-group');
+  assert.equal(privateSelection.isCurrent(pendingPrivateEpoch), false,
+    'successful group creation invalidates an older pending private-chat selection');
+  assert.equal(currentView, 'groups', 'a delayed private-chat completion cannot reclaim the view after group creation');
+
+  selectionEpoch += 1;
+  let finishLateCreate;
+  const lateCreate = new Promise((resolve) => { finishLateCreate = resolve; });
+  let lateSelectedGroup = null;
+  const selectLateCreate = lateCreate.then((created) => {
+    if (shouldSelectGroupAfterRequest(creationEpoch, selectionEpoch)) lateSelectedGroup = created.id;
+  });
+  finishLateCreate({ id: 'stale-group' });
+  await selectLateCreate;
+  assert.equal(lateSelectedGroup, null, 'a group creation cannot navigate after a newer selection epoch');
 
   const createFlow = app.slice(app.indexOf("form('group-create-form'"), app.indexOf("$('contact-save')", app.indexOf("form('group-create-form'")));
   assert.ok(createFlow.indexOf('await loadGroups()') < createFlow.indexOf('await openGroup(result.group.id)'));
   assert.match(createFlow, /const requestEpoch = groupSelectionEpoch[\s\S]*?shouldSelectGroupAfterRequest\(requestEpoch, groupSelectionEpoch\)/u);
+  assert.match(createFlow, /shouldSelectGroupAfterRequest\(requestEpoch, groupSelectionEpoch\)\) \{\s*invalidatePendingSelections\(\);\s*view\('groups'\)/u,
+    'group creation must invalidate pending private-chat work before navigating');
   assert.doesNotMatch(createFlow, /activeGroupId\s*=\s*result\.group\.id/u, 'new group selection must pass through changed-group draft handling');
 });
 
 test('group history resolves sender avatars by stable ID and safely falls back for removed members', () => {
   assert.match(app, /message\.senderType === 'bot' \? bots\.find\(\(item\) => item\.id === message\.senderId\) : null/u);
-  assert.match(app, /avatarVisual\(employee\?\.avatar, employee\?\.name \|\| message\.senderName, 'xs', employee\?\.id\)/u);
+  assert.match(app, /avatarVisual\(employee\?\.avatar, employee\?\.name \|\| message\.senderName, 'sm', employee\?\.id\)/u);
   assert.match(app, /row\.dataset\.senderId = message\.senderId/u);
   assert.match(app, /function avatarVisual\(metadata, label[\s\S]*?metadata\?\.revision[\s\S]*?else avatar\.textContent/u);
   assert.match(app, /image\.src = `\/api\/v1\/bots\/\$\{encodeURIComponent\(metadata\.botId\)\}\/avatar\/\$\{metadata\.revision\}`/u);

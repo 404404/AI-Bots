@@ -42,7 +42,7 @@
             <button id="logout" type="button" role="menuitem">退出</button>
           </div>
         </div>
-        <div class="session-heading"><span>会话</span><div><button id="groups-entry" type="button" aria-label="打开群聊">群聊</button><button id="new-chat" type="button" aria-label="新建私聊" title="新建私聊">＋</button></div></div>
+        <div class="session-heading"><span>会话</span><div><button id="new-group" type="button" aria-label="新建群聊">群＋</button><button id="new-chat" type="button" aria-label="新建私聊" title="新建私聊">＋</button></div></div>
         <div id="pinned-heading" class="session-section-title" hidden>置顶</div>
         <nav id="pinned-conversations" class="session-list" aria-label="置顶会话"></nav>
         <div class="session-section-title">最近</div>
@@ -122,9 +122,22 @@
           <section class="grant-panel"><h3>主要联系人</h3><p id="contact-status" class="muted" role="status"></p><label id="contact-picker-label">选择主要联系人<select id="contact-picker"></select></label><button id="contact-save" type="button">保存联系人</button></section>
           <section class="grant-panel"><h3>员工</h3><p class="muted">你定义每位员工的名称和身份。新员工会在自己的私聊中分析角色并询问你希望它承担什么工作。</p><div id="employee-list"></div></section>
         </section>
-        <section id="view-groups" class="view settings-view" hidden>
-          <h2>群聊</h2><p class="muted">选择群成员后发送。每位被选成员都会在同一条群聊记录中真实回应。</p>
-          <div class="group-layout"><aside><div class="group-heading"><h3>群聊</h3><button id="new-group" type="button">新建</button></div><nav id="groups-list" aria-label="群聊列表"></nav></aside><section><h3 id="group-title">选择一个群聊</h3><div id="group-members" class="group-members"></div><label>群成员<select id="group-members-editor" multiple size="4"></select></label><button id="group-members-save" type="button">保存成员</button><button id="group-load-older" type="button" hidden>更早消息</button><div id="group-messages" class="group-messages" aria-live="polite"></div><form id="group-form"><label>本次回应的员工<select id="group-recipients" multiple size="3"></select></label><label>消息<textarea id="group-input" rows="3" maxlength="12000"></textarea></label><div class="composer-control-row"><label class="sr-only" for="group-model">本次使用</label><select id="group-model" aria-label="选择群聊使用的模型" disabled></select><button id="group-send" type="submit" class="primary">发送到群聊</button></div><p id="group-send-hint" class="composer-hint muted fine">选择共享模型和回应员工后发送。</p></form></section></div>
+        <section id="view-groups" class="view group-chat-view" hidden>
+          <nav class="group-tabs" aria-label="群聊页面">
+            <span class="group-tab active" aria-current="page">聊天</span>
+            <button class="group-tab" type="button" disabled title="独立版未提供群文件">文件</button>
+            <button class="group-tab" type="button" disabled title="独立版未提供群记忆">记忆</button>
+            <button class="group-tab" type="button" disabled title="群内执行不等同于委派任务">任务</button>
+          </nav>
+          <div class="group-chat-context"><div id="group-members" class="group-members"></div><button id="group-load-older" class="load-older" type="button" hidden>更早消息</button></div>
+          <div id="group-messages" class="group-messages" aria-live="polite"></div>
+          <div id="group-run-status" class="group-run-status-list" aria-live="polite"></div>
+          <form id="group-form" class="composer group-composer">
+            <label class="group-recipient-label">本次回应<select id="group-recipients" multiple size="2" aria-label="选择本次回应的 Bot"></select></label>
+            <label class="sr-only" for="group-input">发送群聊消息</label><textarea id="group-input" rows="2" maxlength="12000" placeholder="发送消息…"></textarea>
+            <div class="composer-control-row"><label class="sr-only" for="group-model">本次使用</label><select id="group-model" aria-label="选择群聊使用的模型" disabled></select><button id="group-send" type="submit" class="primary">发送</button></div>
+            <p id="group-send-hint" class="composer-hint muted fine">选择共享模型和回应 Bot 后发送。</p>
+          </form>
         </section>
         <section id="view-identity" class="view settings-view" hidden>
           <h2>Bot 身份</h2>

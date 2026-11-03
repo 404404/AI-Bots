@@ -257,6 +257,11 @@ try {
     assistantReply: reply,
     model: 'loopback deterministic stub',
   };
+  const historicalConversation = await command(page, origin, 'conversations.create', {
+    botId: bot.id, title: 'UI QA 历史会话',
+  });
+  assert(historicalConversation?.id && historicalConversation.id !== report.testConversation.id,
+    'historical private conversation must be a distinct persisted conversation');
 
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -312,6 +317,106 @@ try {
     assert.equal(layout.inputVisible, true, `${viewport.name} message input is clipped or hidden`);
     assert.equal(layout.sendVisible, true, `${viewport.name} send control is clipped or hidden`);
   }
+
+  await page.locator('#history-entry').click();
+  await page.locator('#history-dialog').waitFor({ state: 'visible' });
+  await page.locator('#history-list .history-item').filter({ hasText: 'UI QA 历史会话' }).click();
+  await page.locator('#history-dialog').waitFor({ state: 'hidden' });
+  const selectedHistoryConversation = await page.evaluate(() => ({
+    conversationId: document.querySelector('#view-chat')?.dataset?.conversationId ?? '',
+    historicalContextVisible: !document.querySelector('#chat-context')?.hidden,
+  }));
+  assert.equal(selectedHistoryConversation.conversationId, historicalConversation.id,
+    'history picker must select the persisted non-default conversation ID');
+  assert.equal(selectedHistoryConversation.historicalContextVisible, true,
+    'selecting a historical conversation must show historical-context state');
+  assert.equal((await command(page, origin, 'private-chat.open', { botId: bot.id })).conversation.id, historicalConversation.id,
+    'the server-side selected conversation must match the history picker selection');
+  report.testHistoricalConversationId = historicalConversation.id;
+  report.interactions.push('通过历史记录真实选择非默认 conversation ID，并确认服务端私聊选择指针一致。');
+
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.locator('#new-group').click();
+  await page.locator('#group-dialog').waitFor({ state: 'visible' });
+  await page.locator('#group-create-name').fill('UI QA 项目协作群');
+  await page.locator('#group-create-members').selectOption(bot.id);
+  await page.locator('#group-create-form button[type="submit"]').click();
+  await page.getByRole('heading', { name: 'UI QA 项目协作群', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('#view-groups').waitFor({ state: 'visible' });
+  const group = (await command(page, origin, 'groups.list')).groups.find((item) => item.name === 'UI QA 项目协作群');
+  assert(group?.id, 'group created through the UI was not persisted');
+  await page.locator('#group-recipients').selectOption(bot.id);
+  const groupModel = await page.locator('#group-model option:not([value=""])').first().getAttribute('value');
+  assert(groupModel !== null, 'group composer did not load an available model');
+  await page.locator('#group-model').selectOption(groupModel);
+  const groupPrompt = 'UI QA 群聊：请确认这条真实群消息。';
+  await page.locator('#group-input').fill(groupPrompt);
+  await page.locator('#group-send').click();
+  await page.locator('#group-messages .group-message.user p').filter({ hasText: groupPrompt }).waitFor({ state: 'visible', timeout: 15_000 });
+  await page.locator('#group-messages .group-message.bot p').filter({ hasText: reply }).waitFor({ state: 'visible', timeout: 30_000 });
+  const persistedGroup = await command(page, origin, 'groups.messages', { groupId: group.id, limit: 20 });
+  assert(persistedGroup.items.some((item) => item.senderType === 'user' && item.content === groupPrompt), 'group user message was not persisted');
+  assert(persistedGroup.items.some((item) => item.senderType === 'bot' && item.content === reply), 'group Bot reply was not persisted');
+  report.interactions.push('在主会话栏创建群聊、从统一会话列表打开、发送群消息，并核对页面回复与持久化群消息。');
+  await page.locator('#conversation-info').click();
+  await page.locator('#conversation-detail .detail-card').waitFor({ state: 'visible' });
+  await page.getByText('独立版未提供群文件或附件。', { exact: true }).waitFor({ state: 'visible' });
+  await page.getByText('独立版未提供群记忆。成员的私聊记忆不会共享。', { exact: true }).waitFor({ state: 'visible' });
+  const groupDetailDesktop = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: innerWidth,
+    workspaceColumns: getComputedStyle(document.querySelector('#workspace')).gridTemplateColumns,
+  }));
+  assert.equal(groupDetailDesktop.documentWidth <= groupDetailDesktop.viewportWidth, true, 'desktop group details cause horizontal page overflow');
+  await page.screenshot({ path: join(outputDir, 'group-chat-desktop-1366.png'), fullPage: true, animations: 'disabled' });
+  report.screenshots.push({ file: 'group-chat-desktop-1366.png', viewport: { width: 1366, height: 900 }, ...groupDetailDesktop });
+  await page.locator('#close-conversation-detail').click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const groupMobile = await page.evaluate(() => {
+    const rect = (element) => { const box = element?.getBoundingClientRect(); return box ? { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height } : null; };
+    const visible = (element) => { const style = element && getComputedStyle(element); const box = rect(element); return !!box && style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0; };
+    const message = [...document.querySelectorAll('#group-messages .group-message.bot p')].find((item) => item.textContent.includes('隔离 UI 验收回复'));
+    const viewport = { left: 0, right: innerWidth, top: 0, bottom: innerHeight };
+    const inside = (box, bounds) => !!box && box.left >= bounds.left && box.right <= bounds.right && box.top >= bounds.top && box.bottom <= bounds.bottom;
+    return {
+      documentWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth,
+      title: document.querySelector('#bot-title')?.textContent?.trim() ?? '',
+      messageVisible: visible(message) && inside(rect(message), document.querySelector('#group-messages').getBoundingClientRect()),
+      modelVisible: visible(document.querySelector('#group-model')) && inside(rect(document.querySelector('#group-model')), viewport),
+      sendVisible: visible(document.querySelector('#group-send')) && inside(rect(document.querySelector('#group-send')), viewport),
+    };
+  });
+  assert.equal(groupMobile.documentWidth <= groupMobile.viewportWidth, true, '390px group view has horizontal page overflow');
+  assert.equal(groupMobile.title, 'UI QA 项目协作群');
+  assert.equal(groupMobile.messageVisible, true, '390px group reply is clipped or hidden');
+  assert.equal(groupMobile.modelVisible, true, '390px group model selector is clipped or hidden');
+  assert.equal(groupMobile.sendVisible, true, '390px group send button is clipped or hidden');
+  await page.screenshot({ path: join(outputDir, 'group-chat-mobile-390.png'), fullPage: true, animations: 'disabled' });
+  report.screenshots.push({ file: 'group-chat-mobile-390.png', viewport: { width: 390, height: 844 }, ...groupMobile });
+  report.interactions.push('在 1366px 三栏详情和 390px 群聊工作区验证真实消息、模型选择及发送控件可见且无横向溢出。');
+  await page.locator('#chat-entry').click();
+  await page.waitForFunction((expectedConversationId) => {
+    const chat = document.querySelector('#view-chat');
+    const history = document.querySelector('#history-entry');
+    return chat && !chat.hidden
+      && chat.dataset.conversationId === expectedConversationId
+      && history && !history.disabled && !history.hidden;
+  }, report.testHistoricalConversationId);
+  const privateRestored = await page.evaluate(() => ({
+    title: document.querySelector('#bot-title')?.textContent?.trim() ?? '',
+    conversationId: document.querySelector('#view-chat')?.dataset?.conversationId ?? '',
+    eyebrow: document.querySelector('#conversation-eyebrow')?.textContent?.trim() ?? '',
+    historyVisible: !document.querySelector('#history-entry')?.hidden && !document.querySelector('#history-entry')?.disabled,
+    detailLabel: document.querySelector('#conversation-info')?.getAttribute('aria-label') ?? '',
+  }));
+  assert.equal(privateRestored.title, report.testBot.name, 'returning from group must restore the selected private Bot title');
+  assert.equal(privateRestored.conversationId, report.testHistoricalConversationId, 'returning from group must restore the selected historical conversation');
+  assert.match(privateRestored.eyebrow, /私聊/u, 'returning from group must restore private-chat context');
+  assert.equal(privateRestored.historyVisible, true, 'returning from group must restore private history navigation');
+  assert.equal(privateRestored.detailLabel, 'Bot 详情与工具', 'returning from group must restore private detail semantics');
+  assert.equal((await command(page, origin, 'private-chat.open', { botId: bot.id })).conversation.id, report.testHistoricalConversationId,
+    'server-side selected history conversation must be restored after returning from the group');
+  report.interactions.push('先选择非默认历史私聊，再进入群聊并返回，验证页面和服务端都恢复同一历史 conversation ID。');
 
   const recipient = await command(page, origin, 'bots.create', {
     slug: 'ui-qa-synthetic-recipient', name: 'UI QA 接收测试 Bot', persona: '仅用于 GitHub Actions 隔离验收的测试 Bot。',
