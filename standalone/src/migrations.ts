@@ -5,6 +5,7 @@ import { unusedMainSlug } from './bot-identity.ts';
 import { avatarSchemaSql } from './avatars.ts';
 import { browserSchemaSql } from './browser-service.ts';
 import { GroupChatSql } from './group-chat.ts';
+import { BotMessagingSql } from './bot-messaging.ts';
 
 function transaction(db: DatabaseSync, fn: () => void) {
   db.exec('BEGIN IMMEDIATE');
@@ -34,7 +35,7 @@ function createV1(db: DatabaseSync) {
 export function migrate(db: DatabaseSync) {
   let version = Number(db.prepare('PRAGMA user_version').get()?.user_version);
   const freshDatabase = version === 0;
-  requireValue(Number.isInteger(version) && version >= 0 && version <= 10, 'schema-upgrade-required', '数据库版本不兼容。');
+  requireValue(Number.isInteger(version) && version >= 0 && version <= 12, 'schema-upgrade-required', '数据库版本不兼容。');
   if (version === 0) {
     transaction(db, () => {
       createV1(db);
@@ -268,7 +269,25 @@ export function migrate(db: DatabaseSync) {
     transaction(db, () => { db.exec(`${GroupChatSql}\nPRAGMA user_version=10`); });
     version = 10;
   }
-  requireValue(version === 10, 'schema-upgrade-required', '数据库版本不兼容。');
+  if (version === 10) {
+    transaction(db, () => {
+      db.exec(`CREATE TABLE inbox_session_state(
+        conversation_type TEXT NOT NULL CHECK(conversation_type IN ('private','group')),
+        conversation_id TEXT NOT NULL,
+        pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0,1)),
+        read_through_seq INTEGER NOT NULL DEFAULT 0 CHECK(read_through_seq>=0),
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(conversation_type,conversation_id)
+      );
+      PRAGMA user_version=11`);
+    });
+    version = 11;
+  }
+  if (version === 11) {
+    transaction(db, () => { db.exec(`${BotMessagingSql}\nPRAGMA user_version=12`); });
+    version = 12;
+  }
+  requireValue(version === 12, 'schema-upgrade-required', '数据库版本不兼容。');
   const singleton = db.prepare('SELECT bot_id FROM main_bot WHERE singleton=1').get() as { bot_id?: string } | undefined;
   const rows = Number(db.prepare('SELECT count(*) AS n FROM main_bot').get()?.n);
   requireValue(rows === 1 && typeof singleton?.bot_id === 'string', 'main-bot-state-invalid', '主 Bot 身份记录损坏。', 500);

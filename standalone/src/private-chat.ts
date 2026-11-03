@@ -150,31 +150,48 @@ export class PrivateChat {
     const limit = pageSize(params.limit);
     const direction = params.direction === undefined ? 'forward' : params.direction;
     requireValue(direction === 'forward' || direction === 'backward', 'invalid-direction', '时间线方向无效。');
-    const scope = `private-timeline:${botId}:${conversationId}:${direction}`;
-    let after: { createdAt: string; id: string } | null = null;
-    const encoded = storage.keysetAfter(params.cursor, scope);
-    if (encoded) {
-      try { const parsed = JSON.parse(encoded) as { createdAt?: unknown; id?: unknown };
-        requireValue(typeof parsed.createdAt === 'string' && typeof parsed.id === 'string', 'invalid-cursor', '时间线游标无效。');
-        after = { createdAt: parsed.createdAt, id: parsed.id };
-      } catch { throw new BotError('invalid-cursor', '时间线游标无效，请从第一页重新读取。'); }
+    const scope = `private-timeline:v2:${botId}:${conversationId}:${direction}`;
+    const legacyScope = `private-timeline:${botId}:${conversationId}:${direction}`;
+    type Boundary = { seq: number; rank: number; order: number; id: string };
+    let after: Boundary | null = null;
+    if (params.cursor !== undefined && params.cursor !== null && params.cursor !== '') {
+      let encoded: string | null = null;
+      try { encoded = storage.keysetAfter(params.cursor, scope); }
+      catch {
+        try { storage.keysetAfter(params.cursor, legacyScope); }
+        catch { throw new BotError('invalid-cursor', '时间线游标无效，请从第一页重新读取。'); }
+        throw new BotError('timeline-cursor-restart', '时间线排序已更新，请从最新页面重新读取。', 409);
+      }
+      if (encoded !== null) {
+        try {
+          const parsed = JSON.parse(encoded) as { version?: unknown; seq?: unknown; rank?: unknown; order?: unknown; id?: unknown };
+          requireValue(parsed.version === 2 && Number.isSafeInteger(parsed.seq) && Number.isSafeInteger(parsed.rank) &&
+            Number.isSafeInteger(parsed.order) && typeof parsed.id === 'string', 'invalid-cursor', '时间线游标无效。');
+          after = { seq: parsed.seq as number, rank: parsed.rank as number, order: parsed.order as number, id: parsed.id };
+        } catch { throw new BotError('invalid-cursor', '时间线游标无效，请从第一页重新读取。'); }
+      }
     }
     const db = storage.db;
-    const afterSql = after ? `WHERE created_at${direction === 'forward' ? '>' : '<'}? OR (created_at=? AND id${direction === 'forward' ? '>' : '<'}?)` : '';
+    const comparator = direction === 'forward' ? '>' : '<';
+    const afterSql = after ? `WHERE (timeline_seq,timeline_rank,timeline_order,id) ${comparator} (?,?,?,?)` : '';
     const values: (string | number)[] = [botId, conversationId, botId, conversationId];
-    if (after) values.push(after.createdAt, after.createdAt, after.id);
+    if (after) values.push(after.seq, after.rank, after.order, after.id);
     values.push(limit + 1);
     const rows = db.prepare(`SELECT * FROM (
-      SELECT 'message:'||m.id AS id,'message' AS type,m.created_at AS created_at,m.id AS message_id,m.run_id AS run_id,
+      SELECT 'message:'||m.id AS id,'message' AS type,m.created_at AS created_at,m.seq AS timeline_seq,
+        CASE m.role WHEN 'user' THEN 0 ELSE 2 END AS timeline_rank,0 AS timeline_order,m.id AS message_id,m.run_id AS run_id,
         m.role AS role,m.content AS content,NULL AS task_id,NULL AS root_id,NULL AS parent_id,NULL AS initiator_bot_id,
         NULL AS executor_bot_id,NULL AS status,NULL AS error_code,NULL AS finished_at,NULL AS config_snapshot
       FROM messages m WHERE m.bot_id=? AND m.conversation_id=?
       UNION ALL
-      SELECT 'task:'||t.id,'task',t.created_at,NULL,r.id,NULL,NULL,t.id,t.root_id,t.parent_id,t.initiator_bot_id,
+      SELECT 'task:'||t.id,'task',t.created_at,um.seq,1,t.seq,NULL,r.id,NULL,NULL,t.id,t.root_id,t.parent_id,t.initiator_bot_id,
         t.executor_bot_id,t.status,t.error_code,t.finished_at,t.config_snapshot
-      FROM tasks t JOIN runs r ON r.task_id=t.root_id WHERE r.bot_id=? AND r.conversation_id=? AND t.parent_id IS NOT NULL
-    ) ${afterSql} ORDER BY created_at ${direction === 'forward' ? 'ASC' : 'DESC'},id ${direction === 'forward' ? 'ASC' : 'DESC'} LIMIT ?`).all(...values) as {
-      id: string; type: 'message' | 'task'; created_at: string; message_id: string | null; run_id: string | null;
+      FROM tasks t JOIN runs r ON r.task_id=t.root_id JOIN messages um ON um.run_id=r.id AND um.role='user'
+      WHERE r.bot_id=? AND r.conversation_id=? AND t.parent_id IS NOT NULL
+    ) ${afterSql} ORDER BY timeline_seq ${direction === 'forward' ? 'ASC' : 'DESC'},timeline_rank ${direction === 'forward' ? 'ASC' : 'DESC'},
+      timeline_order ${direction === 'forward' ? 'ASC' : 'DESC'},id ${direction === 'forward' ? 'ASC' : 'DESC'} LIMIT ?`).all(...values) as {
+      id: string; type: 'message' | 'task'; created_at: string; timeline_seq: number; timeline_rank: number; timeline_order: number;
+      message_id: string | null; run_id: string | null;
       role: string | null; content: string | null; task_id: string | null; root_id: string | null; parent_id: string | null;
       initiator_bot_id: string | null; executor_bot_id: string | null; status: string | null; error_code: string | null;
       finished_at: string | null; config_snapshot: string | null;
@@ -191,7 +208,8 @@ export class PrivateChat {
     const last = page.at(-1);
     const cursorRow = direction === 'backward' ? page[0] : last;
     return { botId, conversationId, direction, items, hasMore, nextCursor: hasMore && cursorRow
-      ? storage.keysetCursor(scope, JSON.stringify({ createdAt: cursorRow.created_at, id: cursorRow.id })) : null };
+      ? storage.keysetCursor(scope, JSON.stringify({ version: 2, seq: cursorRow.timeline_seq, rank: cursorRow.timeline_rank,
+        order: cursorRow.timeline_order, id: cursorRow.id })) : null };
   }
 
   taskDetail(botId: string, conversationId: string, taskIdInput: unknown) {

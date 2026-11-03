@@ -23,6 +23,7 @@ export default defineConfig({
       'apps/mobile/test/**/*.test.ts',
       'apps/mobile/test/**/*.test.tsx',
       'scripts/test/**/*.test.mjs',
+      'standalone/test/**/*.test.ts',
     ],
   },
 });

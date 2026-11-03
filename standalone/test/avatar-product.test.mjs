@@ -40,7 +40,7 @@ function png(metadataSize = 0, color = [40, 120, 80, 255]) {
 }
 const owner = (app, command, params = {}) => app.execute(command, params, { kind: 'owner' });
 function removeSchemaAfterV4(db) {
-  db.exec(`DROP TABLE IF EXISTS chat_group_runs; DROP TABLE IF EXISTS chat_group_messages; DROP TABLE IF EXISTS chat_group_members; DROP TABLE IF EXISTS chat_groups;
+  db.exec(`DROP TABLE IF EXISTS inbox_session_state; DROP TABLE IF EXISTS chat_group_runs; DROP TABLE IF EXISTS chat_group_messages; DROP TABLE IF EXISTS chat_group_members; DROP TABLE IF EXISTS chat_groups;
     DROP TABLE IF EXISTS employee_onboarding; DROP TABLE IF EXISTS employee_create_operations; DROP TABLE IF EXISTS contact_preferences; DROP TABLE IF EXISTS model_account;
     DROP TABLE IF EXISTS private_chat_state; DROP TABLE IF EXISTS browser_screenshots; DROP TABLE IF EXISTS browser_steps; DROP TABLE IF EXISTS browser_sessions; DROP TABLE IF EXISTS browser_origin_grants;
     DROP TABLE IF EXISTS worker_management_scope_targets; DROP TABLE IF EXISTS worker_management_operations; DROP TABLE IF EXISTS worker_management_policy; DROP TABLE IF EXISTS bot_avatars;`);
@@ -60,7 +60,7 @@ test('schema 4 fixture migrates transactionally to current schema without changi
   db.close();
   app = new BotApplication(root);
   try {
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 10);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 12);
     assert.equal((await owner(app, 'bots.get', { botId: bot.id })).id, bot.id);
     assert.equal((await owner(app, 'main.get')).bot.id, main);
     assert.equal((await owner(app, 'avatars.get', { botId: bot.id })).avatar, null);

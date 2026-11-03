@@ -237,6 +237,7 @@ export async function startServer(options: {
         '/': ['index.html', 'text/html'],
         '/app.js': ['app.js', 'text/javascript'],
         '/group-ui-state.js': ['group-ui-state.js', 'text/javascript'],
+        '/inbox-ui-state.js': ['inbox-ui-state.js', 'text/javascript'],
         '/onboarding-state.js': ['onboarding-state.js', 'text/javascript'],
         '/style.css': ['style.css', 'text/css'],
       };

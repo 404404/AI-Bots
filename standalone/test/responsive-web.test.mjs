@@ -12,7 +12,7 @@ test('small-screen Bot navigation becomes a closable drawer and keeps the chat u
   assert.match(html, /id="nav-scrim"[^>]*aria-label="关闭 Bot 导航"/u);
   assert.match(app, /function closeMobileNav\(\)[\s\S]*?classList\.remove\('mobile-nav-open'\)/u);
   assert.match(app, /event\.key === 'Escape'[\s\S]*?closeMobileNav\(\)/u);
-  assert.match(app, /async function selectBot\(botId\) \{\s*closeMobileNav\(\)/u);
+  assert.match(app, /async function selectBot\(botId, \{ inboxEpoch = null \} = \{\}\) \{\s*if \(inboxEpoch === null\) invalidatePendingSelections\(\);\s*closeMobileNav\(\)/u);
 
   const mobile = css.slice(css.indexOf('@media (max-width: 750px)'));
   assert.match(mobile, /\.workspace\s*\{[^}]*display:\s*block;[^}]*min-width:\s*0;/su);

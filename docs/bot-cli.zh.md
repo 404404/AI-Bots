@@ -6,6 +6,8 @@
 
 本 fork 的独立网页产品使用单独的认证 CLI，见 [standalone/README.md](../standalone/README.md#在线-api-与-cli)。执行 `node --experimental-strip-types standalone/src/cli.ts --help` 查看当前命令合同。主身份、所有者明确授权的连接引用、委派授权和持久任务均与网页 API 共用业务实现，参数从 stdin 或私密文件读取，不启动或调用 DSH Host。下文原 `deepseekbot` 在线命令仍由原 Host 持有数据权威；尚未迁移的 Session、Channel Timeline、Activity 和 Assignment 不在独立产品中伪造。当前实现和验收限制见[扩展验收报告](acceptance/standalone-bot-expansion-test-results.md)。
 
+独立产品还通过同一 CLI/API 命令契约提供仅所有者可用的 Bot 间消息：`bot-messages.authorize` 和 `bot-messages.revoke` 管理明确授权的 Bot 配对；`bot-messages.threads`、`bot-messages.list` 和 `bot-messages.timeline` 读取持久消息。`bot-messages.timeline` 接受 `{ "conversationId": "...", "afterSeq": 0, "limit": 50 }` 并返回 `{ items, nextCursor }`；将数字 `nextCursor` 作为下一页的 `afterSeq`，直到返回 `null`。结果只包含持久来源会话 ID 与该值完全一致的消息。Bot 只能通过真实的 `send_bot_message` 模型工具发信，没有所有者代 Bot 发信命令；当前首个切片要求发起方根任务运行在 Codex 工具循环中。收件方答复是独立持久消息，通过 `replyToMessageId` 以及发起方的 `sourceRunId`/`sourceConversationId` 建立关联。
+
 `list` 返回的 Bot 摘要在有记录时包含 `lastActivityAt`（毫秒时间戳），来自本地用户可见的 Bot 消息或 Assignment 汇报。后续频道消息和重启不会覆盖它；缺省表示没有记录到活动，不会用创建时间或频道访问时间代替。
 
 `deepseekbot create` 无需点击即可创建新的 PersonaBot：空白创建、从 Bot 包导入（目录或 zip，与[ Bot 打包导出](docs/bot-zip.md)形状相同）、或从 GitHub 导入。它为驱动 DSH 的外部编程智能体而建，因此输出以机器读取优先。

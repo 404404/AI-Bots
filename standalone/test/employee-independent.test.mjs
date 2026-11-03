@@ -88,7 +88,7 @@ test('DE-03 an employee requires explicit global model selection and replays an 
   } finally { await app.close(); model.closeAllConnections(); await new Promise(resolve => model.close(resolve)); }
 });
 
-test('DE-10 timeline paginates equal timestamps with stable IDs and scoped cursors', async () => {
+test('DE-10 timeline paginates equal timestamps by persisted seq, restarts legacy cursors, and versions new cursors', async () => {
   const app = new BotApplication(directory());
   try {
     const bot = await owner(app, 'bots.create', { slug: 'employee-timeline', name: 'Employee' });
@@ -105,6 +105,14 @@ test('DE-10 timeline paginates equal timestamps with stable IDs and scoped curso
     while (cursor) { const page = await owner(app, 'private-chat.timeline', { botId: bot.id, conversationId: a.id, limit: 2, cursor }); ids.push(...page.items.map(x => x.id)); cursor = page.nextCursor; }
     assert.deepEqual(ids, Array.from({ length: 7 }, (_, i) => `message:message-${i}`));
     assert.equal(new Set(ids).size, 7);
+    const legacyScope = `private-timeline:${bot.id}:${a.id}:forward`;
+    const legacy = app.storage.keysetCursor(legacyScope, JSON.stringify({ createdAt: at, id: 'message:message-1' }));
+    await assert.rejects(owner(app, 'private-chat.timeline', { botId: bot.id, conversationId: a.id,
+      direction: 'forward', limit: 2, cursor: legacy }), { code: 'timeline-cursor-restart', status: 409 });
+    const newScope = `private-timeline:v2:${bot.id}:${a.id}:forward`;
+    const decoded = JSON.parse(app.storage.keysetAfter(first.nextCursor, newScope));
+    assert.equal(decoded.version, 2);
+    assert.equal(decoded.seq, db.prepare('SELECT seq FROM messages WHERE id=?').get('message-1').seq);
     const backwards = await owner(app, 'private-chat.timeline', { botId: bot.id, conversationId: a.id, limit: 2, direction: 'backward' });
     assert.deepEqual(backwards.items.map(x => x.id), ids.slice(-2));
     await assert.rejects(owner(app, 'private-chat.timeline', { botId: bot.id, conversationId: a.id, limit: 2, cursor: backwards.nextCursor }), { code: 'invalid-cursor' });
@@ -113,9 +121,29 @@ test('DE-10 timeline paginates equal timestamps with stable IDs and scoped curso
     while (cursor) { const page = await owner(app, 'private-chat.timeline', { botId: bot.id, conversationId: a.id, limit: 2, direction: 'backward', cursor }); older = [...page.items.map(x => x.id), ...older]; cursor = page.nextCursor; }
     assert.deepEqual(older, ids);
     for (let i = 7; i < 1107; i++) { const id = `run-${i}`; run.run(id, bot.id, a.id, `key-${i}`, 'input', at); message.run(`message-${String(i).padStart(4, '0')}`, bot.id, a.id, id, `content-${i}`, at); }
-    const allIds = db.prepare("SELECT 'message:'||id AS id FROM messages WHERE bot_id=? AND conversation_id=? ORDER BY created_at,id").all(bot.id, a.id).map(x => x.id);
+    const allIds = db.prepare("SELECT 'message:'||id AS id FROM messages WHERE bot_id=? AND conversation_id=? ORDER BY seq").all(bot.id, a.id).map(x => x.id);
     const latest = await owner(app, 'private-chat.timeline', { botId: bot.id, conversationId: a.id, limit: 100, direction: 'backward' });
     assert.deepEqual(latest.items.map(x => x.id), allIds.slice(-100));
     assert.equal(latest.hasMore, true);
+  } finally { await app.close(); }
+});
+
+test('legacy private timeline cursor with reverse UUID order is explicitly rejected instead of skipping rows', async () => {
+  const app = new BotApplication(directory());
+  try {
+    const bot = await owner(app, 'bots.create', { slug: 'employee-legacy-order', name: 'Employee' });
+    const conversation = await owner(app, 'conversations.create', { botId: bot.id });
+    const at = '2026-01-01T00:00:00.000Z', db = app.storage.db;
+    const run = db.prepare("INSERT INTO runs(id,bot_id,conversation_id,request_key,input,status,created_at) VALUES(?,?,?,?,?,'completed',?)");
+    const message = db.prepare("INSERT INTO messages(id,bot_id,conversation_id,run_id,role,content,created_at) VALUES(?,?,?,?,'user',?,?)");
+    run.run('legacy-first-run', bot.id, conversation.id, 'legacy-first', 'input', at);
+    message.run('f0000000-0000-4000-8000-000000000000', bot.id, conversation.id, 'legacy-first-run', 'first by seq', at);
+    run.run('legacy-second-run', bot.id, conversation.id, 'legacy-second', 'input', at);
+    message.run('00000000-0000-4000-8000-000000000000', bot.id, conversation.id, 'legacy-second-run', 'second by seq', at);
+    const oldScope = `private-timeline:${bot.id}:${conversation.id}:backward`;
+    const cursor = app.storage.keysetCursor(oldScope, JSON.stringify({ createdAt: at,
+      id: 'message:f0000000-0000-4000-8000-000000000000' }));
+    await assert.rejects(owner(app, 'private-chat.timeline', { botId: bot.id, conversationId: conversation.id,
+      direction: 'backward', limit: 1, cursor }), { code: 'timeline-cursor-restart', status: 409 });
   } finally { await app.close(); }
 });

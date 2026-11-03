@@ -31,6 +31,13 @@ const assertGroupModuleServed = async (base) => {
   assert.match(await response.text(), /export class GroupRefreshGate/u);
 };
 
+const assertInboxUiModuleServed = async (base) => {
+  const response = await fetch(`${base}/inbox-ui-state.js`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'text/javascript; charset=utf-8');
+  assert.match(await response.text(), /export class SelectionEpoch/u);
+};
+
 test('HTTP serves imported UI modules with JavaScript MIME type from source and built assets', async () => {
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
@@ -40,12 +47,14 @@ test('HTTP serves imported UI modules with JavaScript MIME type from source and 
     assert.equal(appResponse.status, 200);
     assert.match(await appResponse.text(), /from ['"]\.\/onboarding-state\.js['"]/u);
     assert.match(await (await fetch(`${base}/app.js`)).text(), /from ['"]\.\/group-ui-state\.js['"]/u);
+    assert.match(await (await fetch(`${base}/app.js`)).text(), /from ['"]\.\/inbox-ui-state\.js['"]/u);
 
     const onboarding = await fetch(`${base}/onboarding-state.js`);
     assert.equal(onboarding.status, 200);
     assert.equal(onboarding.headers.get('content-type'), 'text/javascript; charset=utf-8');
     assert.match(await onboarding.text(), /export class OnboardingRequestCoordinator/u);
     await assertGroupModuleServed(base);
+    await assertInboxUiModuleServed(base);
   } finally {
     await runtime.close();
   }
@@ -58,6 +67,7 @@ test('HTTP serves imported UI modules with JavaScript MIME type from source and 
   const builtRuntime = await startBuiltServer({ dataDir: directory(), port: builtPort, host: '127.0.0.1', publicUrl: builtBase });
   try {
     await assertGroupModuleServed(builtBase);
+    await assertInboxUiModuleServed(builtBase);
     const builtOnboarding = await fetch(`${builtBase}/onboarding-state.js`);
     assert.equal(builtOnboarding.status, 200);
     assert.equal(builtOnboarding.headers.get('content-type'), 'text/javascript; charset=utf-8');

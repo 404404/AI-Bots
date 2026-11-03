@@ -4,6 +4,7 @@ import { test } from 'node:test';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
 
 test('private employee chat remains available with persisted conversation and model commands', () => {
   assert.match(html, /id="bots" aria-label="员工列表"/u);
@@ -41,4 +42,29 @@ test('timeline collaboration cards open canonical task details as accessible dia
   assert.match(app, /const title = `\$\{initiator \?\? 'Bot'\} → \$\{executor \?\? 'Bot'\}`/u);
   assert.match(app, /detail\.items[\s\S]*?detail\.root/u);
   assert.doesNotMatch(html, /id="task-trace"/u);
+});
+
+test('session workspace uses server inbox items for pinning, unread state, and private or group navigation', () => {
+  assert.match(html, /<nav id="pinned-conversations"[^>]*aria-label="置顶会话"/u);
+  assert.match(html, /<nav id="inbox-list"[^>]*aria-label="私聊与群聊"/u);
+  assert.match(html, /<aside id="conversation-detail"[^>]*aria-label="会话详情"/u);
+  assert.match(html, /id="account-menu-toggle"[^>]*aria-haspopup="menu"/u);
+  assert.match(html, /id="workspace-role-unavailable"[^>]*disabled/u);
+  for (const command of ['inbox.list', 'inbox.pin', 'inbox.read', 'groups.get', 'private-chat.select-conversation'])
+    assert.ok(app.includes(command), `missing ${command}`);
+  assert.match(app, /type: item\.type, id: item\.id, pinned/u);
+  assert.match(app, /through: \{ createdAt: message\.createdAt, id: message\.id \}/u);
+  assert.match(app, /startPrivateChat\(chat\.botId\)\.catch\(showError\)/u);
+  assert.match(app, /inbox\.startChats|inboxStartChats/u);
+  assert.match(app, /尚未提供真实通信事件数据；普通私聊和群聊不会显示为 Bot 间通信/u);
+  assert.match(app, /memory\.list/u);
+  assert.match(app, /browser\.origins\.list/u);
+  assert.match(app, /协作任务/u);
+  assert.match(app, /普通文件/u);
+  assert.match(html, /id="summary-dialog"[^>]*aria-labelledby="summary-title"/u);
+  assert.match(app, /summary-dialog'\)\.addEventListener\('click'/u);
+  assert.match(app, /event\.key === 'Escape'/u);
+  assert.match(css, /\.workspace\.details-open\s*\{/u);
+  assert.match(css, /@media \(max-width: 980px\)/u);
+  assert.match(css, /@media \(max-width: 420px\)/u);
 });

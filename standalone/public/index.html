@@ -30,29 +30,40 @@
     </section>
     <div id="workspace" class="workspace" hidden>
       <aside id="bot-sidebar" class="sidebar">
-        <header class="brand">
-          <span class="brandmark small">B</span><strong>GK50 Bot</strong>
-        </header>
-        <div class="side-heading">
-          <span>Bots</span
-          ><button id="new-bot" aria-label="创建员工" title="创建员工">＋</button>
+        <header class="brand"><span class="brandmark small">B</span><strong>BotHarness</strong></header>
+        <div class="account-menu-wrap">
+          <button id="account-menu-toggle" class="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false">
+            <span class="account-avatar" aria-hidden="true">你</span><span class="account-menu-label"><strong>本机账户</strong><small id="primary-bot-label">未设置主要 Bot</small></span><span aria-hidden="true">⌄</span>
+          </button>
+          <div id="account-menu" class="account-menu" role="menu" hidden>
+            <button id="workspace-role-unavailable" type="button" role="menuitem" disabled>工作区 / 用户角色切换（独立版暂不支持）</button>
+            <button id="primary-bot-action" type="button" role="menuitem">主要 Bot：未设置</button>
+            <button id="settings-entry" type="button" role="menuitem">模型账户设置</button>
+            <button id="logout" type="button" role="menuitem">退出</button>
+          </div>
         </div>
-        <button id="contact-shortcut" class="contact-shortcut" type="button" hidden></button>
-        <nav id="bots" aria-label="员工列表"></nav>
-        <footer>
-          <button id="settings-entry" type="button">模型账户设置</button>
-          <span class="status-dot"></span>独立网页预览<button id="logout">退出</button>
-        </footer>
+        <div class="session-heading"><span>会话</span><button id="new-chat" type="button" aria-label="新建私聊" title="新建私聊">＋</button></div>
+        <div id="pinned-heading" class="session-section-title" hidden>置顶</div>
+        <nav id="pinned-conversations" class="session-list" aria-label="置顶会话"></nav>
+        <div class="session-section-title">最近</div>
+        <nav id="inbox-list" class="session-list recent-list" aria-label="私聊与群聊"><p id="inbox-status" class="muted fine">正在读取会话…</p></nav>
+        <details class="employee-roster">
+          <summary>Bot 列表</summary><button id="new-bot" type="button" aria-label="创建员工" title="创建员工">＋</button>
+          <button id="contact-shortcut" class="contact-shortcut" type="button" hidden></button>
+          <nav id="bots" aria-label="员工列表"></nav>
+        </details>
+        <footer><span class="status-dot"></span>独立网页预览</footer>
       </aside>
       <button id="nav-scrim" class="nav-scrim" aria-label="关闭 Bot 导航"></button>
       <main>
         <header class="main-header">
           <button id="mobile-bots-toggle" class="mobile-nav-toggle" type="button" aria-controls="bot-sidebar" aria-expanded="false">☰ Bots</button>
           <div>
-            <p class="eyebrow">你的专属对话空间</p>
-            <div class="bot-title-row"><span id="bot-title-avatar"></span><h1 id="bot-title">选择或创建一个 Bot</h1></div>
+            <p class="eyebrow" id="conversation-eyebrow">你的专属对话空间</p>
+            <div class="bot-title-row"><span id="bot-title-avatar"></span><h1 id="bot-title">选择或创建一个 Bot</h1><button id="conversation-info" class="icon-button" type="button" aria-label="会话详情" aria-expanded="false" title="会话详情" disabled>ⓘ</button></div>
           </div>
           <div class="header-actions">
+            <button id="conversation-summary" type="button" hidden disabled title="尚无 Bot 间通信事件数据">通信摘要</button>
             <button id="history-entry" type="button" disabled>历史记录</button>
             <span id="execution-status" class="pill">就绪</span>
           </div>
@@ -68,6 +79,8 @@
         <section id="view-chat" class="view chat-view">
           <div id="chat-context" class="chat-context" hidden></div>
           <button id="load-older" class="load-older" type="button" hidden>更早记录</button>
+          <p id="timeline-status" class="muted fine" role="status" hidden></p>
+          <p id="communication-status" class="muted fine" role="status" hidden></p>
           <div id="messages" class="messages" aria-label="消息记录" aria-live="polite">
             <div class="empty">
               <h2>为一个 Bot 留出专属空间</h2>
@@ -219,6 +232,10 @@
           </section>
         </section>
       </main>
+      <aside id="conversation-detail" class="conversation-detail" aria-label="会话详情" hidden>
+        <header><h2>详情</h2><button id="close-conversation-detail" class="icon-button" type="button" aria-label="关闭详情">×</button></header>
+        <div id="conversation-detail-content" class="conversation-detail-content"></div>
+      </aside>
     </div>
     <dialog id="bot-dialog" aria-labelledby="create-title">
       <form id="create-form">
@@ -253,6 +270,15 @@
         <div id="history-list" class="history-list" aria-live="polite"></div>
         <button id="history-more" type="button" hidden>更多历史记录</button>
         <div class="dialog-actions"><button id="dismiss-history" type="button">关闭</button></div>
+      </section>
+    </dialog>
+    <dialog id="summary-dialog" class="summary-dialog" aria-labelledby="summary-title">
+      <section class="dialog-content">
+        <header class="summary-dialog-header"><div><p class="eyebrow">仅显示真实 Bot 间事件</p><h2 id="summary-title">Bot 间通信摘要</h2></div><button id="close-summary" class="icon-button" type="button" aria-label="关闭通信摘要">×</button></header>
+        <p id="summary-meta" class="muted fine"></p>
+        <p id="summary-partial" class="muted fine" role="status" hidden></p>
+        <div id="summary-body" class="summary-body" tabindex="0"></div>
+        <p id="summary-attachments" class="muted fine"></p>
       </section>
     </dialog>
     <dialog id="task-dialog" aria-labelledby="task-dialog-title">

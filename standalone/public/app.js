@@ -1,14 +1,28 @@
 import { OnboardingRequestCoordinator, selectCreatedBotIfUnchanged } from './onboarding-state.js';
+import { communicationThreadItems, createCommunicationTimelineNode, mergeTimelineItems, projectBotMessagesForConversation, replaceInboxChildren, resetCommunicationTimelineState, SelectionEpoch, shouldApplyInboxLoadError, shouldRestartTimeline, showInboxLoadError, timelineContextIsCurrent } from './inbox-ui-state.js';
 import { GroupRefreshGate, findModelIndexById, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, selectedModelOption, sendPendingGroupRequest, shouldApplyGroupResult, shouldSelectGroupAfterRequest } from './group-ui-state.js';
 
 const $ = (id) => document.getElementById(id);
 let bots = [],
   contacts = null,
   groups = [],
+  inboxItems = [],
+  inboxStartChats = [],
+  inboxCursor = null,
+  inboxHasMore = false,
+  selectedInboxItem = null,
+  inboxLoadError = false,
+  communicationSummaryEvent = null,
+  inboxRequestEpoch = 0,
+  detailRequestEpoch = 0,
+  detailBotData = { botId: null, memory: [], origins: [], loaded: false },
+  activeGroupRecord = null,
+  activeGroupRuns = [],
   activeGroupId = null,
   groupComposerGroupId = null,
   groupSelectionEpoch = 0,
   groupPendingBlocked = false,
+  groupModelLoadError = false,
   groupModelId = null,
   groupRefreshGate = new GroupRefreshGate(),
   groupMessageCursor = null,
@@ -24,6 +38,7 @@ let bots = [],
   modelSelectionPending = false,
   timelineCursor = null,
   timelineItems = [],
+  communicationTimeline = { conversationId: null, items: [], afterSeq: 0, loaded: false },
   timelineInitialized = false,
   hasOlderTimeline = false,
   botSelectionEpoch = 0,
@@ -42,6 +57,7 @@ let bots = [],
   browserSessionId = null,
   browserTaskId = null;
 let noticeTimer;
+const inboxSelection = new SelectionEpoch();
 let handlersBound = false;
 const statusLabels = {
   queued: '已排队',
@@ -201,12 +217,310 @@ function renderBots() {
   nav.replaceChildren();
   for (const item of bots) {
     const button = node('button', undefined, 'bot-nav-item');
-    button.append(avatarVisual(item.avatar, item.name, 'xs', item.id), node('span', item.name));
+    button.append(avatarVisual(item.avatar, item.name, 'xs', item.id), node('span', `${item.name}${item.id === contacts?.primaryEmployeeId ? ' ★' : ''}`));
     button.setAttribute('aria-label', item.name);
     button.setAttribute('aria-current', String(item.id === bot?.id));
     button.onclick = () => void selectBot(item.id).catch(showError);
     nav.append(button);
   }
+}
+function inboxPreview(item) {
+  if (!item.lastMessage) return item.type === 'group' ? `${(item.participants || []).length} 位 Bot` : '开始一段新对话';
+  return item.lastMessage.content || '（空消息）';
+}
+function inboxParticipants(item) {
+  if (item.type === 'group') return (item.participants || []).map((person) => person.name).join('、') || '群聊';
+  return bots.find((person) => person.id === item.botId)?.name || item.title || 'Bot';
+}
+function renderInboxRow(item, pinned) {
+  const row = node('div', undefined, 'inbox-row');
+  row.dataset.inboxKey = item.key || `${item.type}:${item.id}`;
+  const select = node('button', undefined, 'inbox-select');
+  select.type = 'button';
+  select.setAttribute('aria-current', String(selectedInboxItem?.key === row.dataset.inboxKey));
+  select.setAttribute('aria-label', `${item.type === 'group' ? '群聊' : '私聊'}：${item.title}${item.unreadCount ? `，${item.unreadCount} 条未读` : ''}`);
+  const avatar = item.type === 'private'
+    ? avatarVisual(bots.find((person) => person.id === item.botId)?.avatar, inboxParticipants(item), 'xs', item.botId)
+    : node('span', '群', 'group-avatar');
+  const copy = node('span', undefined, 'inbox-copy');
+  const title = node('span', undefined, 'inbox-title');
+  title.append(node('strong', item.title || inboxParticipants(item)), node('small', `${item.type === 'group' ? '群聊' : '私聊'} · ${inboxParticipants(item)}${item.botId === contacts?.primaryEmployeeId ? ' · ★ 主要 Bot' : ''}`));
+  const preview = node('span', inboxPreview(item), 'inbox-preview');
+  copy.append(title, preview);
+  if (item.unreadCount > 0) copy.append(node('span', String(item.unreadCount), 'unread-count'));
+  select.append(avatar, copy);
+  select.onclick = () => void selectInboxItem(item).catch(showError);
+  const pin = node('button', pinned ? '★' : '☆', 'pin-toggle');
+  pin.type = 'button';
+  pin.setAttribute('aria-label', pinned ? `取消置顶 ${item.title}` : `置顶 ${item.title}`);
+  pin.setAttribute('aria-pressed', String(pinned));
+  pin.onclick = (event) => { event.stopPropagation(); void toggleInboxPin(item, !pinned).catch(showError); };
+  row.append(select, pin);
+  return row;
+}
+function renderInbox() {
+  const pinned = inboxItems.filter((item) => item.pinned);
+  const recent = inboxItems.filter((item) => !item.pinned);
+  const pinnedList = $('pinned-conversations');
+  pinnedList.replaceChildren(...pinned.map((item) => renderInboxRow(item, true)));
+  $('pinned-heading').hidden = pinned.length === 0;
+  const list = $('inbox-list');
+  const status = $('inbox-status');
+  const rows = [];
+  for (const chat of inboxStartChats) {
+    if (inboxItems.some((item) => item.type === 'private' && item.botId === chat.botId)) continue;
+    const row = node('div', undefined, 'inbox-row');
+    const button = node('button', undefined, 'inbox-select');
+    button.type = 'button';
+    button.append(avatarVisual(bots.find((person) => person.id === chat.botId)?.avatar, chat.name, 'xs', chat.botId), node('span', undefined, 'inbox-copy'));
+    const label = node('span', undefined, 'inbox-title');
+    label.append(node('strong', chat.name), node('small', chat.botId === contacts?.primaryEmployeeId ? '私聊 · ★ 主要 Bot' : '私聊 · 新会话'));
+    button.lastElementChild.append(label, node('span', '开始一段新对话', 'inbox-preview'));
+    button.setAttribute('aria-label', `开始与 ${chat.name} 私聊${chat.botId === contacts?.primaryEmployeeId ? '，主要 Bot' : ''}`);
+    button.onclick = () => void startPrivateChat(chat.botId).catch(showError);
+    row.append(button);
+    rows.push(row);
+  }
+  const children = [...recent.map((item) => renderInboxRow(item, false)), ...rows];
+  let moreButton = null;
+  if (inboxHasMore) {
+    moreButton = node('button', '更多会话', 'inbox-more');
+    moreButton.type = 'button'; moreButton.onclick = () => void loadInbox({ append: true }).catch(showError);
+  }
+  replaceInboxChildren(list, status, children, moreButton, !inboxLoadError && (children.length > 0 || pinned.length > 0));
+}
+async function loadInbox({ append = false } = {}) {
+  const epoch = ++inboxRequestEpoch;
+  const result = await command('inbox.list', { limit: 100, ...(append && inboxCursor ? { cursor: inboxCursor } : {}) });
+  if (epoch !== inboxRequestEpoch) return;
+  const incoming = result.items ?? [];
+  inboxLoadError = false;
+  inboxItems = append ? [...inboxItems, ...incoming] : incoming;
+  inboxStartChats = result.startChats ?? (append ? inboxStartChats : []);
+  inboxCursor = result.nextCursor ?? null;
+  inboxHasMore = Boolean(result.hasMore ?? result.nextCursor);
+  const activeKey = !$('view-groups').hidden && activeGroupId
+    ? `group:${activeGroupId}`
+    : conversation ? `private:${conversation.id}` : null;
+  if (activeKey) selectedInboxItem = inboxItems.find((item) => (item.key || `${item.type}:${item.id}`) === activeKey) || null;
+  $('inbox-status').textContent = inboxItems.length || inboxStartChats.length ? '' : '还没有会话。';
+  renderInbox();
+  renderConversationDetail();
+}
+async function refreshInboxSafely({ selectionEpoch = inboxSelection.current() } = {}) {
+  const requestEpoch = inboxRequestEpoch + 1;
+  try { await loadInbox(); }
+  catch (error) {
+    if (!shouldApplyInboxLoadError({ requestEpoch, selectionEpoch }, {
+      requestEpoch: inboxRequestEpoch,
+      selectionEpoch: inboxSelection.current(),
+    })) return;
+    inboxLoadError = true;
+    showInboxLoadError($('inbox-status'), '会话暂时无法读取；现有私聊和群聊入口仍可使用。');
+  }
+}
+function invalidatePendingSelections() {
+  inboxSelection.invalidate();
+  botSelectionEpoch += 1;
+  conversationSelectionEpoch += 1;
+  groupSelectionEpoch += 1;
+  groupRefreshGate.begin('external-navigation');
+  return inboxSelection.current();
+}
+async function startPrivateChat(botId) {
+  const selectionEpoch = invalidatePendingSelections();
+  await selectBot(botId, { inboxEpoch: selectionEpoch });
+  if (!inboxSelection.isCurrent(selectionEpoch)) return;
+  view('chat');
+  await refreshInboxSafely({ selectionEpoch });
+}
+async function selectInboxItem(item) {
+  const epoch = inboxSelection.begin();
+  botSelectionEpoch += 1;
+  conversationSelectionEpoch += 1;
+  groupSelectionEpoch += 1;
+  groupRefreshGate.begin('inbox-selection');
+  selectedInboxItem = item;
+  renderInbox();
+  if (item.type === 'group') {
+    closeMobileNav();
+    view('groups');
+    await openGroup(item.groupId || item.id);
+    if (!inboxSelection.isCurrent(epoch)) return;
+    const last = groupMessages.at(-1);
+    if (last) {
+      await markInboxRead(item, last, epoch);
+      if (!inboxSelection.isCurrent(epoch)) return;
+    }
+  } else {
+    await selectBot(item.botId, { inboxEpoch: epoch });
+    if (!inboxSelection.isCurrent(epoch)) return;
+    await selectConversation({ id: item.id, botId: item.botId, title: item.title, createdAt: item.createdAt }, { inboxEpoch: epoch });
+    if (!inboxSelection.isCurrent(epoch)) return;
+    const last = [...timelineItems].reverse().find((entry) => entry.type === 'message');
+    const message = last?.message ?? last;
+    if (message?.createdAt && message?.id) {
+      await markInboxRead(item, message, epoch);
+      if (!inboxSelection.isCurrent(epoch)) return;
+    }
+  }
+  renderConversationDetail();
+  renderInbox();
+}
+async function markInboxRead(item, message, selectionEpoch) {
+  await command('inbox.read', { type: item.type, id: item.id, through: { createdAt: message.createdAt, id: message.id } });
+  await refreshInboxSafely({ selectionEpoch });
+}
+async function toggleInboxPin(item, pinned) {
+  await command('inbox.pin', { type: item.type, id: item.id, pinned });
+  await loadInbox();
+}
+function renderConversationDetail() {
+  const detail = $('conversation-detail-content');
+  if (!detail) return;
+  detail.replaceChildren();
+  const item = selectedInboxItem;
+  if (!item) { detail.append(node('p', '选择一个会话查看参与者和最近活动。', 'muted fine')); return; }
+  detail.append(node('h3', item.title || '会话'));
+  detail.append(node('span', item.type === 'group' ? '群聊' : '私聊', 'detail-type'));
+  detail.append(node('h4', '参与者'));
+  const participants = item.type === 'group' ? item.participants || [] : [{ botId: item.botId, name: bots.find((person) => person.id === item.botId)?.name || item.title }];
+  for (const participant of participants) {
+    const person = bots.find((entry) => entry.id === participant.botId);
+    const row = node('div', undefined, 'detail-participant');
+    row.append(avatarVisual(person?.avatar, participant.name, 'xs', participant.botId), node('span', `${participant.name}${participant.botId === contacts?.primaryEmployeeId ? ' ★' : ''}`));
+    detail.append(row);
+  }
+  detail.append(node('h4', '最近消息'));
+  const last = item.lastMessage;
+  if (!last) detail.append(node('p', '尚无消息。', 'muted fine'));
+  else {
+    detail.append(node('p', last.content, 'detail-last-message'));
+    detail.append(node('time', `${last.senderName} · ${new Date(last.createdAt).toLocaleString()}`, 'muted fine'));
+  }
+  detail.append(node('p', `${item.unreadCount || 0} 条未读`, 'muted fine'));
+  if (item.type === 'group') {
+    detail.append(node('h4', 'Bot 间通信'));
+    detail.append(node('p', '群聊暂不显示 Bot 间通信。', 'muted fine'));
+    const group = activeGroupRecord?.id === item.id ? activeGroupRecord : null;
+    detail.append(node('h4', '群聊信息'));
+    if (group?.createdAt) detail.append(node('p', `创建于 ${new Date(group.createdAt).toLocaleString()}`, 'muted fine'));
+    detail.append(node('p', '每次发送仍需明确选择回应 Bot；群聊不会共享成员的私聊历史或文件记忆。', 'muted fine'));
+    detail.append(node('h4', '群内执行记录'));
+    const runs = activeGroupRecord?.id === item.id ? activeGroupRuns : [];
+    if (!runs.length) detail.append(node('p', '没有群内执行记录。', 'muted fine'));
+    for (const run of runs.slice(0, 12)) {
+      const name = bots.find((person) => person.id === run.botId)?.name || run.botId;
+      detail.append(node('p', `${name} · ${statusLabels[run.status] || run.status}${run.errorCode ? ` · ${run.errorCode}` : ''}`, 'muted fine'));
+    }
+    detail.append(node('h4', '协作任务'));
+    detail.append(node('p', '群聊执行记录不等同于 Bot 委派任务；此群没有单独的委派任务详情。', 'muted fine'));
+    detail.append(node('h4', '文件记忆'));
+    detail.append(node('p', '群聊不提供成员文件记忆的汇总视图。', 'muted fine'));
+    detail.append(node('h4', '普通文件'));
+    detail.append(node('p', '独立版未提供群文件或附件列表。', 'muted fine'));
+  } else {
+    const currentBot = bot?.id === item.botId ? bot : null;
+    detail.append(node('h4', 'Bot 身份'));
+    detail.append(node('p', currentBot?.persona || '尚未设置身份提示。', 'detail-last-message'));
+    detail.append(node('h4', '模型'));
+    const selectedModel = modelOptions.find((option) => selectionKey(option.selection) === selectionKey(currentModelSelection));
+    detail.append(node('p', selectedModel?.label || selectedModel?.model || '尚未选择可用模型。', 'muted fine'));
+    detail.append(node('h4', '权限与访问'));
+    detail.append(node('p', '通过本机所有者账户访问；独立版没有工作区或用户角色切换。网页操作只使用下方逐 Bot 授权的网站来源。', 'muted fine'));
+    const data = detailBotData.botId === item.botId ? detailBotData : null;
+    detail.append(node('h4', '网站授权'));
+    if (!data?.loaded) detail.append(node('p', '正在读取授权…', 'muted fine'));
+    else if (data.originsError) detail.append(node('p', '网站授权暂时无法读取，请稍后重试。', 'muted fine'));
+    else if (!data.origins.length) detail.append(node('p', '没有网站授权。', 'muted fine'));
+    else for (const origin of data.origins) detail.append(node('p', `${origin.origin} · ${origin.granted ? '已授权' : '已撤销'}`, 'muted fine'));
+    detail.append(node('h4', '文件记忆'));
+    if (!data?.loaded) detail.append(node('p', '正在读取记忆文件…', 'muted fine'));
+    else if (data.memoryError) detail.append(node('p', '文件记忆暂时无法读取，请稍后重试。', 'muted fine'));
+    else if (!data.memory.length) detail.append(node('p', '没有已保存的文件记忆。', 'muted fine'));
+    else for (const file of data.memory) detail.append(node('p', `${file.path} · ${file.updatedAt ? new Date(file.updatedAt).toLocaleString() : '已保存'}`, 'muted fine'));
+    detail.append(node('h4', '普通文件'));
+    detail.append(node('p', '独立版未提供普通文件或附件列表。', 'muted fine'));
+    detail.append(node('h4', '协作任务'));
+    const tasks = bot?.id === item.botId ? timelineItems.filter((entry) => entry.type === 'task') : [];
+    if (!tasks.length) detail.append(node('p', '此对话没有协作任务记录。', 'muted fine'));
+    else for (const entry of tasks.slice(-12).reverse()) {
+      const task = entry.task;
+      const initiator = bots.find((person) => person.id === task.initiatorBotId)?.name || task.initiatorBotId;
+      const executor = bots.find((person) => person.id === task.executorBotId)?.name || task.executorBotId;
+      const button = node('button', `${initiator} → ${executor} · ${statusLabels[task.status] || task.status}`, 'detail-task');
+      button.type = 'button'; button.onclick = () => void openTaskDetail(task).catch(showError); detail.append(button);
+    }
+  }
+  if (item.type === 'private' && item.id === communicationTimeline.conversationId) {
+    detail.append(node('h4', 'Bot 间通信'));
+    if (!$('communication-status').hidden) detail.append(node('p', $('communication-status').textContent, 'muted fine'));
+    else if (!communicationTimeline.loaded) detail.append(node('p', '正在读取此会话的 Bot 间通信事件…', 'muted fine'));
+    else if (!communicationTimeline.items.length) detail.append(node('p', '此会话尚无关联的 Bot 间通信事件。', 'muted fine'));
+    else detail.append(node('p', `此会话有 ${communicationTimeline.items.length} 条真实通信消息，已显示在主时间线。`, 'muted fine'));
+  }
+}
+function resetCommunicationTimeline(conversationId = null) {
+  resetCommunicationTimelineState(communicationTimeline, conversationId);
+  $('communication-status').hidden = true;
+  $('communication-status').textContent = '';
+}
+function openConversationDetail() {
+  $('conversation-detail').hidden = false;
+  $('conversation-info').setAttribute('aria-expanded', 'true');
+  $('workspace').classList.add('details-open');
+  renderConversationDetail();
+  void loadConversationDetailData();
+}
+function closeConversationDetail() {
+  $('conversation-detail').hidden = true;
+  $('conversation-info').setAttribute('aria-expanded', 'false');
+  $('workspace').classList.remove('details-open');
+  detailRequestEpoch += 1;
+}
+function openCommunicationSummary(event) {
+  if (!event || event.type !== 'communication' || typeof event.body !== 'string') return;
+  const thread = communicationThreadItems(communicationTimeline.items, event);
+  $('summary-title').textContent = 'Bot 间通信';
+  const run = event.sourceRunId ? ` · 来源 Run ${event.sourceRunId}` : ' · 未关联 Run';
+  $('summary-meta').textContent = `来源会话 ${event.sourceConversationId}${run} · ${thread.items.length} 条往返消息`;
+  $('summary-attachments').textContent = '附件信息未由此事件提供。';
+  const body = $('summary-body');
+  body.replaceChildren();
+  for (const message of thread.items) {
+    const sender = bots.find((candidate) => candidate.id === message.senderBotId)?.name ?? message.senderBotId ?? 'Bot';
+    const recipient = bots.find((candidate) => candidate.id === message.recipientBotId)?.name ?? message.recipientBotId ?? 'Bot';
+    const entry = node('article', undefined, 'communication-message');
+    const sentAt = message.createdAt ? new Date(message.createdAt).toLocaleString() : '时间未知';
+    entry.append(node('strong', `${sender} → ${recipient}`), node('span', sentAt, 'muted fine'), node('p', message.body));
+    body.append(entry);
+  }
+  const partialNotice = $('summary-partial');
+  partialNotice.hidden = !thread.partial;
+  partialNotice.textContent = '无法关联的往返消息未显示。';
+  $('summary-dialog').showModal();
+  body.focus();
+}
+async function loadConversationDetailData() {
+  const item = selectedInboxItem;
+  if (!item || item.type !== 'private' || bot?.id !== item.botId) return;
+  const botId = item.botId;
+  const epoch = ++detailRequestEpoch;
+  detailBotData = { botId, memory: [], origins: [], loaded: false, memoryError: false, originsError: false };
+  renderConversationDetail();
+  const [memoryResult, originsResult] = await Promise.allSettled([
+    command('memory.list', { botId }), command('browser.origins.list', { botId }),
+  ]);
+  if (epoch !== detailRequestEpoch || selectedInboxItem?.type !== 'private' || selectedInboxItem.botId !== botId) return;
+  detailBotData = {
+    botId,
+    memory: memoryResult.status === 'fulfilled' ? memoryResult.value.items || [] : [],
+    origins: originsResult.status === 'fulfilled' ? originsResult.value || [] : [],
+    memoryError: memoryResult.status === 'rejected',
+    originsError: originsResult.status === 'rejected',
+    loaded: true,
+  };
+  renderConversationDetail();
 }
 async function refreshBots() {
   bots = await all('bots.list');
@@ -301,7 +615,8 @@ function toggleMobileNav() {
   const open = document.body.classList.toggle('mobile-nav-open');
   $('mobile-bots-toggle').setAttribute('aria-expanded', String(open));
 }
-async function selectBot(botId) {
+async function selectBot(botId, { inboxEpoch = null } = {}) {
+  if (inboxEpoch === null) invalidatePendingSelections();
   closeMobileNav();
   invalidateTaskDetail();
   const epoch = ++botSelectionEpoch;
@@ -310,8 +625,11 @@ async function selectBot(botId) {
   if (epoch !== botSelectionEpoch) return;
   bot = selected;
   conversation = null;
+  $('conversation-info').disabled = true;
   timelineCursor = null;
   timelineItems = [];
+  resetCommunicationTimeline();
+  $('communication-status').hidden = true;
   timelineInitialized = false;
   hasOlderTimeline = false;
   activeRun = null;
@@ -331,7 +649,9 @@ async function selectBot(botId) {
   currentModelSelection = modelSet.selected ?? opened.selection ?? null;
   defaultConversationId = opened.conversation.id;
   renderModelOptions(currentModelSelection);
-  await selectConversation(opened.conversation, { skipOpen: true });
+  await selectConversation(opened.conversation, { skipOpen: true, inboxEpoch, selectionOwned: true });
+  if (inboxEpoch !== null && !inboxSelection.isCurrent(inboxEpoch)) return;
+  await refreshInboxSafely({ selectionEpoch: inboxEpoch ?? inboxSelection.current() });
 }
 function selectionKey(selection) {
   return selection ? JSON.stringify(selection) : '';
@@ -376,18 +696,23 @@ function renderModelOptions(selected) {
   else if (found < 0) $('send-hint').textContent = '选择一个共享模型后发送。';
   else $('send-hint').textContent = 'Enter 发送 · Shift+Enter 换行';
 }
-async function selectConversation(item, { skipOpen = false } = {}) {
+async function selectConversation(item, { skipOpen = false, inboxEpoch = null, selectionOwned = false } = {}) {
+  if (inboxEpoch === null && !selectionOwned) invalidatePendingSelections();
+  else if (inboxEpoch !== null && !inboxSelection.isCurrent(inboxEpoch)) return;
   closeMobileNav();
   const botId = bot?.id;
   if (!botId) return;
   const epoch = ++conversationSelectionEpoch;
+  resetCommunicationTimeline(item.id);
   if (!skipOpen) {
     const selected = await command('private-chat.select-conversation', { botId, conversationId: item.id });
+    if (inboxEpoch !== null && !inboxSelection.isCurrent(inboxEpoch)) return;
     item = selected.conversation;
   }
   if (epoch !== conversationSelectionEpoch || bot?.id !== botId) return;
   invalidateTaskDetail();
   conversation = item;
+  selectedInboxItem = inboxItems.find((entry) => entry.type === 'private' && entry.id === item.id) || null;
   timelineCursor = null;
   timelineItems = [];
   timelineInitialized = false;
@@ -401,6 +726,14 @@ async function selectConversation(item, { skipOpen = false } = {}) {
   $('message-input').value = pending()?.content ?? '';
   if (pending()?.selection) renderModelOptions(pending().selection);
   await refreshTimeline({ reset: true });
+  if (epoch !== conversationSelectionEpoch || bot?.id !== botId) return;
+  if (inboxEpoch !== null && !inboxSelection.isCurrent(inboxEpoch)) return;
+  $('conversation-info').disabled = false;
+  $('conversation-summary').hidden = true;
+  $('conversation-eyebrow').textContent = selectedInboxItem?.botId === contacts?.primaryEmployeeId ? '★ 主要 Bot · 私聊' : '私聊';
+  renderConversationDetail();
+  if (!$('conversation-detail').hidden) void loadConversationDetailData();
+  renderInbox();
 }
 function updateComposer() {
   const active = activeRun && ['queued', 'running'].includes(activeRun.status);
@@ -418,6 +751,7 @@ function updateComposer() {
   } else $('run-error').hidden = true;
 }
 function renderTimelineItem(item) {
+  if (item.type === 'communication') return createCommunicationTimelineNode(item, bots, openCommunicationSummary);
   if (item.type === 'task') {
     const task = item.task;
     const card = node('article', undefined, 'timeline-task');
@@ -461,28 +795,92 @@ function renderTimelineItem(item) {
   article.append(node('p', message.content));
   return article;
 }
-async function refreshTimeline({ reset = false, older = false } = {}) {
+async function refreshCommunicationTimeline(requestContext, isCurrent) {
+  if (communicationTimeline.conversationId !== requestContext.conversationId) return;
+  let afterSeq = communicationTimeline.afterSeq;
+  const received = [];
+  try {
+    while (true) {
+      const previousAfterSeq = afterSeq;
+      const page = await command('bot-messages.timeline', {
+        conversationId: requestContext.conversationId,
+        afterSeq,
+        limit: 100,
+      });
+      if (!isCurrent()) return;
+      const items = projectBotMessagesForConversation(page.items, requestContext.conversationId);
+      received.push(...items);
+      if (page.nextCursor == null) {
+        if (items.length) afterSeq = Math.max(afterSeq, ...items.map((item) => Number(item.seq) || 0));
+        break;
+      }
+      afterSeq = Number(page.nextCursor);
+      if (!Number.isFinite(afterSeq) || afterSeq <= previousAfterSeq) {
+        throw new Error('Bot 间通信分页游标无效。');
+      }
+    }
+    if (!isCurrent()) return;
+    if (communicationTimeline.conversationId !== requestContext.conversationId) return;
+    communicationTimeline.afterSeq = afterSeq;
+    const merged = new Map(communicationTimeline.items.map((item) => [item.id, item]));
+    for (const item of received) merged.set(item.id, item);
+    communicationTimeline.items = [...merged.values()].filter((item) => item.sourceConversationId === requestContext.conversationId);
+    communicationTimeline.loaded = true;
+    $('communication-status').hidden = true;
+    renderConversationDetail();
+  } catch {
+    if (!isCurrent() || communicationTimeline.conversationId !== requestContext.conversationId) return;
+    const status = $('communication-status');
+    status.textContent = 'Bot 间通信暂时无法读取；私聊消息仍可查看。';
+    status.hidden = false;
+    renderConversationDetail();
+  }
+}
+async function refreshTimeline({ reset = false, older = false, restartAttempt = false } = {}) {
   if (!bot || !conversation) return;
+  if (reset && !restartAttempt) $('timeline-status').hidden = true;
   const botId = bot.id, conversationId = conversation.id, epoch = conversationSelectionEpoch;
   const requestKey = `${botId}\0${conversationId}\0${epoch}\0${older ? 'older' : 'latest'}`;
+  const requestContext = { botId, conversationId, epoch };
+  const isCurrent = () => timelineContextIsCurrent(requestContext, {
+    botId: bot?.id,
+    conversationId: conversation?.id,
+    epoch: conversationSelectionEpoch,
+  });
   if (timelineRequests.has(requestKey)) return;
   timelineRequests.add(requestKey);
   try {
-    const page = await command('private-chat.timeline', {
-      botId, conversationId, limit: 100, direction: 'backward',
-      ...(older && timelineCursor ? { cursor: timelineCursor } : {}),
-    });
-    if (bot?.id !== botId || conversation?.id !== conversationId || epoch !== conversationSelectionEpoch) return;
+    let page;
+    try {
+      page = await command('private-chat.timeline', {
+        botId, conversationId, limit: 100, direction: 'backward',
+        ...(older && timelineCursor ? { cursor: timelineCursor } : {}),
+      });
+    } catch (error) {
+      if (!isCurrent()) return;
+      if (!shouldRestartTimeline(error, { older, restartAttempt })) throw error;
+      timelineCursor = null;
+      hasOlderTimeline = false;
+      timelineInitialized = false;
+      timelineItems = [];
+      $('load-older').hidden = true;
+      $('messages').replaceChildren(node('div', '正在从最新记录重新读取…', 'empty'));
+      const status = $('timeline-status');
+      status.textContent = '会话记录顺序已更新，已清除旧分页位置并从最新记录重新读取。';
+      status.hidden = false;
+      await refreshTimeline({ reset: true, restartAttempt: true });
+      return;
+    }
+    if (!isCurrent()) return;
     const runPage = await command('messages.list', { botId, conversationId, limit: 1 });
-    if (bot?.id !== botId || conversation?.id !== conversationId || epoch !== conversationSelectionEpoch) return;
+    if (!isCurrent()) return;
+    await refreshCommunicationTimeline(requestContext, isCurrent);
+    if (!isCurrent()) return;
     const container = $('messages');
     const oldHeight = container.scrollHeight;
     const oldTop = container.scrollTop;
     const nearBottom = oldTop + container.clientHeight >= oldHeight - 80;
-    const merged = new Map(timelineItems.map((item) => [item.id, item]));
-    for (const item of page.items ?? []) merged.set(item.id, item);
-    timelineItems = [...merged.values()].sort((a, b) =>
-      String(a.createdAt).localeCompare(String(b.createdAt)) || String(a.id).localeCompare(String(b.id)));
+    timelineItems = mergeTimelineItems(timelineItems, page.items ?? [], communicationTimeline.items, { older });
     container.replaceChildren();
     if (!timelineItems.length) container.append(node('div', '发送第一条消息，开始这段对话。', 'empty'));
     for (const item of timelineItems) container.append(renderTimelineItem(item));
@@ -674,11 +1072,18 @@ async function loadBrowser() {
     $('browser-tasks').replaceChildren();
     return;
   }
-  const [origins, traces] = await Promise.all([
+  const [originsResult, tracesResult] = await Promise.allSettled([
     command('browser.origins.list', { botId }),
     command('browser.tasks.list', { botId, limit: 50 }),
   ]);
   if (bot?.id !== botId) return;
+  if (originsResult.status === 'rejected') {
+    $('browser-open-origin').replaceChildren();
+    $('browser-open').disabled = true;
+    $('browser-origins').replaceChildren(node('p', '网站来源授权暂时无法读取，请稍后重试。', 'muted fine'));
+  }
+  const origins = originsResult.status === 'fulfilled' ? originsResult.value : [];
+  const traces = tracesResult.status === 'fulfilled' ? tracesResult.value : [];
   const activeOrigins = origins.filter((item) => item.granted);
   $('browser-open-origin').replaceChildren(...activeOrigins.map((item) => {
     const option = node('option', item.origin);
@@ -692,7 +1097,8 @@ async function loadBrowser() {
   }
   const originList = $('browser-origins');
   originList.replaceChildren();
-  if (!origins.length) originList.append(node('p', '尚未授权任何网站来源。', 'muted fine'));
+  if (originsResult.status === 'rejected') originList.append(node('p', '网站来源授权暂时无法读取，请稍后重试。', 'muted fine'));
+  else if (!origins.length) originList.append(node('p', '尚未授权任何网站来源。', 'muted fine'));
   for (const grant of origins) {
     const row = node('div', undefined, 'browser-origin-row');
     row.append(node('span', `${grant.origin} · ${grant.granted ? '已授权' : '已撤销'} · revision ${grant.revision}`));
@@ -704,7 +1110,7 @@ async function loadBrowser() {
     }
     originList.append(row);
   }
-  $('browser-open').disabled = !status.configured || activeOrigins.length === 0;
+  $('browser-open').disabled = originsResult.status === 'rejected' || !status.configured || activeOrigins.length === 0;
   $('browser-run-step').disabled = !status.configured || !browserSessionId;
   $('browser-close').disabled = !status.configured || !browserSessionId;
   $('browser-cancel').disabled = !status.configured || !browserSessionId;
@@ -745,6 +1151,7 @@ async function loadAccount({ authOnly = false, refreshContacts = true } = {}) {
 }
 function renderContacts() {
   if (!contacts) return;
+  renderBots();
   const picker = $('contact-picker');
   picker.replaceChildren();
   if (contacts.count > 1 && !contacts.primaryEmployeeId) { const placeholder = node('option', '请选择主要联系人'); placeholder.value = ''; placeholder.selected = true; picker.append(placeholder); }
@@ -777,6 +1184,8 @@ function renderContacts() {
     employeeList.append(row);
   }
   const primary = bots.find((item) => item.id === contacts.primaryEmployeeId);
+  $('primary-bot-label').textContent = primary ? `★ 主要 Bot · ${primary.name}` : '未设置主要 Bot';
+  $('primary-bot-action').textContent = primary ? `打开主要 Bot：${primary.name}` : '主要 Bot：未设置';
   $('contact-shortcut').hidden = !primary;
   $('contact-shortcut').textContent = primary ? `主要联系人 · ${primary.name}` : '';
   $('contact-shortcut').onclick = () => void selectBot(primary.id).catch(showError);
@@ -830,7 +1239,7 @@ async function loadGroups() {
     button.type = 'button';
     button.dataset.groupId = group.id;
     button.setAttribute('aria-current', String(group.id === activeGroupId));
-    button.onclick = () => { groupSelectionEpoch += 1; void openGroup(group.id).catch(showError); };
+    button.onclick = () => { invalidatePendingSelections(); void openGroup(group.id).catch(showError); };
     list.append(button);
   }
   if (activeGroupId && groups.some((item) => item.id === activeGroupId)) await openGroup(activeGroupId);
@@ -852,6 +1261,7 @@ function setGroupComposerEnabled(enabled) {
   if (!enabled) $('group-send').disabled = true;
 }
 async function renderGroup(groupId, { reset = false, older = false } = {}) {
+  groupModelLoadError = false;
   const changed = activeGroupId !== groupId;
   if (changed && groupComposerGroupId) {
     const previousGroupId = groupComposerGroupId;
@@ -875,9 +1285,25 @@ async function renderGroup(groupId, { reset = false, older = false } = {}) {
   }
   const result = await command('groups.get', { groupId });
   if (!groupRefreshGate.isCurrent(groupId, refreshEpoch)) return;
+  if (!modelOptions.length && bots[0]) {
+    try { await loadGroupModels(bots[0].id, refreshEpoch, groupId); }
+    catch {
+      if (!groupRefreshGate.isCurrent(groupId, refreshEpoch)) return;
+      groupModelLoadError = true;
+    }
+    if (!groupRefreshGate.isCurrent(groupId, refreshEpoch)) return;
+  }
   const group = result.group;
   if (!group) throw new Error('群聊不存在或已不可用。');
+  activeGroupRecord = group;
+  activeGroupRuns = result.runs || [];
   groupComposerGroupId = groupId;
+  selectedInboxItem = inboxItems.find((entry) => entry.type === 'group' && entry.id === groupId) || null;
+  $('conversation-info').disabled = false;
+  $('conversation-summary').hidden = true;
+  $('conversation-eyebrow').textContent = '群聊';
+  renderConversationDetail();
+  if (!$('conversation-detail').hidden && selectedInboxItem?.type === 'private') void loadConversationDetailData();
   setGroupComposerEnabled(true);
   $('group-title').textContent = group.name;
   const editor = $('group-members-editor');
@@ -926,6 +1352,10 @@ async function renderGroup(groupId, { reset = false, older = false } = {}) {
       $('group-send-hint').textContent = '未确认发送包含已移出群的收件人，原请求已保留且不能改内容重试。请先将原收件人加回群，再返回此群重试。';
     }
   }
+  if (groupModelLoadError) {
+    const pendingHint = groupPendingBlocked ? $('group-send-hint').textContent : '';
+    $('group-send-hint').textContent = [pendingHint, '共享模型暂时无法读取；群聊历史仍可查看。重新打开群聊可重试。'].filter(Boolean).join(' ');
+  }
   const page = await command('groups.messages', { groupId, limit: 50, ...(older && groupMessageCursor ? { cursor: groupMessageCursor } : {}) });
   if (!groupRefreshGate.isCurrent(groupId, refreshEpoch)) return;
   const incoming = page.items || [];
@@ -964,6 +1394,13 @@ async function renderGroup(groupId, { reset = false, older = false } = {}) {
   }
   await loadGroupsListOnly();
 }
+async function loadGroupModels(botId, refreshEpoch, groupId) {
+  const selectionEpoch = botSelectionEpoch;
+  const modelSet = await command('private-chat.models', { botId });
+  if (selectionEpoch !== botSelectionEpoch || !groupRefreshGate.isCurrent(groupId, refreshEpoch) || modelOptions.length) return;
+  modelOptions = modelSet.items ?? [];
+  renderModelOptions(modelSet.selected ?? null);
+}
 async function loadGroupsListOnly() {
   const list = $('groups-list');
   for (const button of list.querySelectorAll('button')) button.setAttribute('aria-current', String(button.dataset.groupId === activeGroupId));
@@ -991,6 +1428,7 @@ async function enter() {
   try { const pendingCreate = JSON.parse(localStorage.getItem('gk50-bot:create-employee') || 'null'); if (pendingCreate) { $('create-name').value = pendingCreate.name; $('create-persona').value = pendingCreate.persona; } } catch { /* invalid retry state is not submitted automatically */ }
   await loadContacts();
   await loadEmployeeStatuses();
+  await refreshInboxSafely();
   if (handlersBound) {
     const employeeId = initialEmployeeId();
     if (employeeId) await selectBot(employeeId); else showNoEmployeeSelected();
@@ -998,7 +1436,11 @@ async function enter() {
     return;
   }
   handlersBound = true;
-  $('settings-entry').onclick = () => { closeMobileNav(); void loadAccount().then(() => view('catalog')).catch(showError); };
+  $('settings-entry').onclick = () => {
+    const selectionEpoch = invalidatePendingSelections();
+    closeMobileNav();
+    void loadAccount().then(() => { if (inboxSelection.isCurrent(selectionEpoch)) view('catalog'); }).catch(showError);
+  };
   $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
   $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
   $('new-group').onclick = () => { if (!bots.length) { notice('请先创建一位员工，再建立群聊。'); return; } void createGroup().catch(showError); };
@@ -1031,7 +1473,46 @@ async function enter() {
   $('codex-cancel').onclick = () => void command('model-account.auth.cancel').then(() => loadAccount({ authOnly: true })).catch(showError);
   $('codex-logout').onclick = () => void command('model-account.auth.logout').then(() => loadAccount({ authOnly: true })).catch(showError);
   form('codex-answer-form', async () => { const value = $('codex-callback').value; $('codex-callback').value = ''; await command('model-account.auth.answer', { value }); await loadAccount({ authOnly: true }); });
-  $('settings-entry').onclick = () => { closeMobileNav(); view('catalog'); void loadAccount().catch(showError); };
+  $('settings-entry').onclick = () => { invalidatePendingSelections(); closeMobileNav(); view('catalog'); void loadAccount().catch(showError); };
+  $('account-menu-toggle').onclick = () => {
+    const open = $('account-menu').hidden;
+    $('account-menu').hidden = !open;
+    $('account-menu-toggle').setAttribute('aria-expanded', String(open));
+    if (open) $('account-menu').querySelector('button:not(:disabled)')?.focus();
+  };
+  $('primary-bot-action').onclick = () => {
+    invalidatePendingSelections();
+    $('account-menu').hidden = true;
+    $('account-menu-toggle').setAttribute('aria-expanded', 'false');
+    const employeeId = contacts?.primaryEmployeeId;
+    if (employeeId) void selectBot(employeeId).then(() => refreshInboxSafely()).catch(showError);
+    else { notice('请先在模型账户设置中选择主要 Bot。'); closeMobileNav(); view('catalog'); void loadAccount().catch(showError); }
+  };
+  $('new-chat').onclick = () => {
+    const selectionEpoch = invalidatePendingSelections();
+    const isCurrent = () => inboxSelection.isCurrent(selectionEpoch);
+    const employeeId = bot?.id || contacts?.primaryEmployeeId || bots[0]?.id;
+    if (!employeeId) { notice('请先创建一个 Bot。'); return; }
+    void (async () => {
+      const history = await command('private-chat.history', { botId: employeeId, limit: 1 });
+      if (!isCurrent()) return;
+      const hadConversation = Boolean(history.items?.length);
+      await selectBot(employeeId, { inboxEpoch: selectionEpoch });
+      if (!isCurrent()) return;
+      if (!hadConversation) { await refreshInboxSafely({ selectionEpoch }); return; }
+      const created = await command('conversations.create', { botId: employeeId, title: '私聊' });
+      if (!isCurrent()) return;
+      defaultConversationId = created.id;
+      await selectConversation({ ...created, botId: employeeId }, { inboxEpoch: selectionEpoch });
+      if (!isCurrent()) return;
+      await refreshInboxSafely({ selectionEpoch });
+    })().catch(showError);
+  };
+  $('conversation-info').onclick = openConversationDetail;
+  $('close-conversation-detail').onclick = closeConversationDetail;
+  $('conversation-summary').onclick = () => openCommunicationSummary(communicationSummaryEvent);
+  $('close-summary').onclick = () => $('summary-dialog').close();
+  $('summary-dialog').addEventListener('click', (event) => { if (event.target === $('summary-dialog')) $('summary-dialog').close(); });
   $('avatar-save').onclick = () => void uploadAvatar().catch(showError);
   $('avatar-delete').onclick = () => void deleteAvatar().catch(showError);
   $('browser-origin-form').addEventListener('submit', (event) => { event.preventDefault(); void (async () => { if (!bot) throw new Error('请先选择一位员工。'); await command('browser.origins.grant', { botId: bot.id, origin: $('browser-origin').value.trim() }); $('browser-origin').value=''; await loadBrowser(); })().catch(showError); });
@@ -1144,7 +1625,30 @@ $('new-bot').onclick = () => $('bot-dialog').showModal();
 $('mobile-bots-toggle').onclick = toggleMobileNav;
 $('nav-scrim').onclick = closeMobileNav;
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeMobileNav();
+  if (event.key === 'Escape') {
+    closeMobileNav();
+    if ($('account-menu').contains(document.activeElement)) $('account-menu-toggle').focus();
+    $('account-menu').hidden = true;
+    $('account-menu-toggle').setAttribute('aria-expanded', 'false');
+    if (!$('summary-dialog').open) closeConversationDetail();
+  }
+});
+document.addEventListener('click', (event) => {
+  if (!event.target.closest?.('.account-menu-wrap')) {
+    $('account-menu').hidden = true;
+    $('account-menu-toggle').setAttribute('aria-expanded', 'false');
+  }
+});
+$('account-menu').addEventListener('keydown', (event) => {
+  const items = [...$('account-menu').querySelectorAll('button:not(:disabled)')];
+  const current = items.indexOf(document.activeElement);
+  if (!items.length) return;
+  let next = null;
+  if (event.key === 'ArrowDown') next = (current + 1) % items.length;
+  else if (event.key === 'ArrowUp') next = (current - 1 + items.length) % items.length;
+  else if (event.key === 'Home') next = 0;
+  else if (event.key === 'End') next = items.length - 1;
+  if (next !== null) { event.preventDefault(); items[next].focus(); }
 });
 $('dismiss-create').onclick = () => $('bot-dialog').close();
 $('dismiss-copy').onclick = () => $('copy-dialog').close();
@@ -1226,6 +1730,7 @@ $('chat-model').onchange = () => void (async () => {
 })().catch(showError);
 for (const button of document.querySelectorAll('[data-view]'))
   button.onclick = () => {
+    invalidatePendingSelections();
     if (button.dataset.view === 'catalog') { view(button.dataset.view); void loadAccount().catch(showError); }
     else view(button.dataset.view);
   };
@@ -1325,6 +1830,9 @@ setInterval(() => {
   if (!$('workspace').hidden && !$('view-catalog').hidden && !document.hidden)
     void loadAccount({ authOnly: true }).catch(showError);
 }, 5000);
+setInterval(() => {
+  if (!$('workspace').hidden && !document.hidden) void refreshInboxSafely();
+}, 8000);
 void enter().catch((error) => {
   if (error.status !== 401) showError(error);
 });

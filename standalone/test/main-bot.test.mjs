@@ -9,7 +9,7 @@ import { BotApplication } from '../src/application.ts';
 
 const dir = () => mkdtempSync(join(tmpdir(), 'standalone-main-'));
 function removeSchemaAfterV6(db) {
-  db.exec(`DROP TABLE IF EXISTS chat_group_runs; DROP TABLE IF EXISTS chat_group_messages; DROP TABLE IF EXISTS chat_group_members; DROP TABLE IF EXISTS chat_groups;
+  db.exec(`DROP TABLE IF EXISTS inbox_session_state; DROP TABLE IF EXISTS chat_group_runs; DROP TABLE IF EXISTS chat_group_messages; DROP TABLE IF EXISTS chat_group_members; DROP TABLE IF EXISTS chat_groups;
     DROP TABLE IF EXISTS employee_onboarding; DROP TABLE IF EXISTS employee_create_operations; DROP TABLE IF EXISTS contact_preferences; DROP TABLE IF EXISTS model_account;
     DROP TABLE IF EXISTS private_chat_state; DROP TABLE IF EXISTS browser_screenshots; DROP TABLE IF EXISTS browser_steps; DROP TABLE IF EXISTS browser_sessions; DROP TABLE IF EXISTS browser_origin_grants;`);
   if ((db.prepare('PRAGMA table_info(bots)').all()).some((column) => column.name === 'kind')) db.exec('ALTER TABLE bots DROP COLUMN kind');
@@ -21,7 +21,7 @@ test('current schema creates one stable main Bot, exposes catalog, and rejects m
     const first = await app.executeOwner('main.get');
     assert.equal(first.bot.isMain, true);
     assert.equal((await app.executeOwner('main.get')).bot.id, first.bot.id);
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 10);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 12);
     const catalog = await app.executeOwner('main.catalog');
     assert.equal(catalog.mainBotId, first.bot.id);
     assert.equal(catalog.items[0].role, 'main');
@@ -58,7 +58,7 @@ test('schema 6 upgrades atomically to current schema while preserving existing B
 
   app = new BotApplication(root);
   try {
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 10);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 12);
     const kept = await app.executeOwner('bots.get', { botId: bot.id });
     assert.deepEqual([kept.id, kept.name, kept.persona], [bot.id, 'Keep me', 'stable persona']);
     assert((await app.executeOwner('conversations.list', { botId: bot.id })).items.some((item) => item.id === conversation.id), 'migration retains the original conversation ID');
@@ -86,7 +86,7 @@ test('failed schema 6 to 7 DDL rolls back user_version and releases the lease fo
   afterFailure.exec('DROP TABLE browser_origin_grants');
   afterFailure.close();
   const recovered = new BotApplication(root);
-  try { assert.equal(recovered.storage.db.prepare('PRAGMA user_version').get().user_version, 10); }
+  try { assert.equal(recovered.storage.db.prepare('PRAGMA user_version').get().user_version, 12); }
   finally { await recovered.close(); }
 });
 
@@ -143,7 +143,7 @@ test('v1 migration preserves existing Bot IDs and data despite a reserved slug c
     const main = (await app.executeOwner('main.get')).bot;
     assert.notEqual(main.id, original.id);
     assert.notEqual(main.slug, 'main-bot');
-    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 10);
+    assert.equal(app.storage.db.prepare('PRAGMA user_version').get().user_version, 12);
   } finally {
     await app.close();
   }

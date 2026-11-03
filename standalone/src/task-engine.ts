@@ -13,6 +13,7 @@ import { BotError, requireValue } from './errors.ts';
 import { WorkerManagement, type WorkerManagementScope } from './worker-management.ts';
 import type { BrowserService } from './browser-service.ts';
 import { browserReadOperationKey, browserReadTool, executeBrowserRead, parseBrowserReadArguments } from './browser-read-tool.ts';
+import type { BotMessaging, TaskToolAuthority } from './bot-messaging.ts';
 
 export type ExecutionScope = Readonly<{
   rootTaskId: string;
@@ -33,6 +34,11 @@ export const delegateTool: Tool = {
     workerId: Type.String({ minLength: 1, maxLength: 64 }),
     task: Type.String({ minLength: 1, maxLength: 12000 }),
   }, { additionalProperties: false }),
+};
+export const sendBotMessageTool: Tool = {
+  name: 'send_bot_message',
+  description: '向所有者已授权通信的 Bot 发送独立消息。仅提供线程 ID 和正文；不会共享私聊、任务或凭据。',
+  parameters: Type.Object({ threadId: Type.String({ minLength: 1, maxLength: 200 }), body: Type.String({ minLength: 1, maxLength: 8000 }) }, { additionalProperties: false }),
 };
 
 export const createWorkerTool: Tool = {
@@ -72,6 +78,16 @@ export class TaskEngine {
   browser: BrowserService | null = null;
   browserEnabled = false;
   browserRunAsExecutor?: <T>(botId: string, taskId: string, operation: () => T) => T;
+  messaging: BotMessaging | null = null;
+  #issuedScopes = new WeakSet<object>();
+  #messageCapabilities = new WeakMap<object, { taskId: string; toolCallId: string; scope: ExecutionScope; threadId: string; body: string }>();
+  readonly messageAuthority: TaskToolAuthority = { resolve: (capability, args) => {
+    requireValue(capability !== null && typeof capability === 'object', 'tool-call-not-active', '消息调用身份无效。', 409);
+    const issued = this.#messageCapabilities.get(capability);
+    requireValue(issued && this.#issuedScopes.has(issued.scope) && issued.threadId === args.threadId && issued.body === args.body,
+      'tool-call-not-active', '消息必须来自当前受信任的模型工具调用。', 409);
+    return { taskId: issued.taskId, toolCallId: issued.toolCallId };
+  } };
   constructor(
     storage: Storage,
     auth: CodexAuth,
@@ -96,15 +112,24 @@ export class TaskEngine {
     requireValue(root.executor_bot_id===mainBotId,'delegation-scope-invalid','任务执行者与当前 Bot 不一致。',403);
     const managementScope = this.management.scope(rootTaskId, root.config_snapshot);
     const targets=this.storage.db.prepare("SELECT id FROM bots WHERE kind='employee' AND id<>? ORDER BY id").all(root.executor_bot_id) as {id:string}[];
-    return Object.freeze({ rootTaskId, taskId: rootTaskId, executorBotId: mainBotId,
-      allowedTools: Object.freeze(['delegate_to_worker']),
+    const allowedTools = ['delegate_to_worker', ...(this.messaging?.authorizedPeers(mainBotId).length ? ['send_bot_message'] : [])];
+    const scope = Object.freeze({ rootTaskId, taskId: rootTaskId, executorBotId: mainBotId,
+      allowedTools: Object.freeze(allowedTools),
       allowedWorkerIds: Object.freeze(targets.map((row) => row.id)),
       allowedConnections: Object.freeze({}), managementScope, remainingDepth: 1,
       deadlineAt: time(root.deadline_at) });
+    this.#issuedScopes.add(scope);
+    return scope;
   }
 
   modelTools(scope: ExecutionScope): Tool[] {
-    return scope.allowedWorkerIds.length ? [delegateTool] : [];
+    return [...(scope.allowedWorkerIds.length ? [delegateTool] : []),
+      ...(scope.allowedTools.includes(sendBotMessageTool.name) && this.messaging?.authorizedPeers(scope.executorBotId).length ? [sendBotMessageTool] : [])];
+  }
+
+  authorizedMessageDirectory(scope: ExecutionScope) {
+    requireValue(this.#issuedScopes.has(scope), 'delegation-scope-invalid', '执行范围无效。', 403);
+    return this.messaging?.authorizedPeers(scope.executorBotId).map((peer) => `- threadId: ${peer.thread_id}; botId: ${peer.bot_id}; name: ${peer.name}`) ?? [];
   }
 
   managementDirectory(scope: ExecutionScope) {
@@ -379,6 +404,33 @@ export class TaskEngine {
     if (call.name === delegateTool.name) return this.delegate(scope, call, signal, reservation);
     if (reservation.budgetExceeded) return this.toolResult(call, JSON.stringify({ error: 'tool-budget-exceeded' }), true, timestamp);
     if (reservation.replayed) return this.toolResult(call, reservation.result ?? JSON.stringify({ error: reservation.errorCode ?? 'tool-not-allowed' }), true, timestamp);
+    if (call.name === sendBotMessageTool.name) {
+      try {
+        requireValue(this.messaging && this.#issuedScopes.has(scope) && scope.allowedTools.includes(sendBotMessageTool.name), 'tool-not-allowed', '此执行没有消息权限。', 403);
+        let args: { threadId: string; body: string };
+        try { args = validateToolCall([sendBotMessageTool], call) as typeof args; }
+        catch { throw new BotError('invalid-tool-call', '消息工具参数无效。', 400); }
+        requireValue(!signal.aborted && scope.deadlineAt > Date.now(), 'task-deadline-exceeded', '任务已中断或超过截止时间。', 409);
+        const root = this.store.get(scope.rootTaskId);
+        requireValue(root.status === 'running' && root.executor_bot_id === scope.executorBotId, 'task-not-running', '根任务不在活动状态。', 409);
+        const epoch = Number((JSON.parse(root.config_snapshot ?? '{}') as { sourceModelEpoch?: number }).sourceModelEpoch ?? -1);
+        this.auth.assertEpoch(epoch);
+        const capability = Object.freeze({});
+        this.#messageCapabilities.set(capability, { taskId: scope.rootTaskId, toolCallId: call.id, scope, ...args });
+        const sent = this.messaging.sendFromTask(capability, args);
+        const serialized = JSON.stringify({ messageId: sent.message.id, threadId: sent.message.threadId,
+          recipientBotId: sent.message.recipientBotId, queued: true });
+        this.store.finishTool(scope.rootTaskId, call.id, serialized, null, now());
+        try { this.messaging.dispatchPending(); }
+        catch (error) { this.log('bot-message-dispatch-failed', scope.executorBotId, scope.taskId, error instanceof BotError ? error.code : 'dispatch-failed'); }
+        return this.toolResult(call, serialized, false, timestamp);
+      } catch (error) {
+        const code = error instanceof BotError ? error.code : 'bot-message-failed';
+        this.store.finishTool(scope.rootTaskId, call.id, JSON.stringify({ error: code }), code, now());
+        this.log('bot-message-refused', scope.executorBotId, scope.taskId, code);
+        return this.toolResult(call, JSON.stringify({ error: code }), true, timestamp);
+      }
+    }
     const output = JSON.stringify({ error: 'tool-not-allowed' });
     this.store.finishTool(scope.rootTaskId, call.id, output, 'tool-not-allowed', now());
     return this.toolResult(call, output, true, timestamp);
