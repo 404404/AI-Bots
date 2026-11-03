@@ -52,6 +52,19 @@ test('UI QA completes all ordinary-chat viewport screenshots before synthetic Bo
   'recipient onboarding must finish with the compatible model before switching the global provider');
 });
 
+test('UI QA failure diagnostics never persist arbitrary UI text, parsed error codes, or failure screenshots', async () => {
+  const source = await readFile(new URL('./run.mjs', import.meta.url), 'utf8');
+  const failurePath = source.slice(source.indexOf('} catch (error) {'), source.indexOf('} finally {', source.indexOf('} catch (error) {')));
+  assert.match(failurePath, /messageLength: String\(error\?\.message \?\? ''\)\.length/u);
+  assert.match(failurePath, /textLength: toastText\.length/u);
+  assert.match(failurePath, /textLength: statusText\.length/u);
+  assert.match(failurePath, /historyDialogOpen: Boolean/u);
+  assert.match(failurePath, /conversationMatchesExpected: Boolean/u);
+  assert.doesNotMatch(failurePath, /errorCode|failureCode|page\.screenshot|failure-ui\.png/u);
+  assert.doesNotMatch(failurePath, /toast: \{[^}]*text:/u);
+  assert.doesNotMatch(failurePath, /timelineStatus: \{[^}]*text:/u);
+});
+
 test('relay owns its kernel-assigned loopback port and forwards only to its fixed child port', async () => {
   const relay = await createReservedLoopbackRelay();
   const backendSockets = new Set();

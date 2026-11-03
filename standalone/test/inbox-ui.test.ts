@@ -9,12 +9,15 @@ import {
   createCommunicationTimelineNode,
   mergeTimelineItems,
   projectBotMessagesForConversation,
+  replaceConversationTimeline,
   replaceInboxChildren,
   resetCommunicationTimelineState,
   SelectionEpoch,
   shouldApplyInboxLoadError,
   shouldRestartTimeline,
   showInboxLoadError,
+  showConversationTimelineError,
+  showConversationTimelineLoading,
   timelineContextIsCurrent,
 } from '../public/inbox-ui-state.js';
 
@@ -71,7 +74,7 @@ describe('inbox list DOM', () => {
       app.indexOf('async function selectInboxItem('),
       app.indexOf('async function markInboxRead('),
     );
-    expect(flow.match(/await /gu)).toHaveLength(5);
+    expect(flow.match(/await /gu)).toHaveLength(7);
     expect(flow).toMatch(
       /await openGroup\([\s\S]*?if \(!inboxSelection\.isCurrent\(epoch\)\) return/u,
     );
@@ -108,8 +111,11 @@ describe('inbox list DOM', () => {
       /async function selectBot\(botId, \{ inboxEpoch = null \} = \{\}\) \{\s*if \(inboxEpoch === null\) invalidatePendingSelections\(\)/u,
     );
     expect(app).toMatch(
-      /button\.onclick = \(\) => \{ invalidatePendingSelections\(\); void openGroup/u,
+      /select\.onclick = \(\) => void selectInboxItem\(item\)\.catch\(showError\)/u,
     );
+    const groupSelection = app.slice(app.indexOf('async function selectInboxItem('), app.indexOf('async function returnToPrivateChat('));
+    expect(groupSelection).toMatch(/const epoch = inboxSelection\.begin\(\)[\s\S]*?if \(item\.type === 'group'\)[\s\S]*?view\('groups'\);\s*await openGroup/u);
+    expect(groupSelection).toMatch(/else \{\s*await selectBot\(item\.botId, \{ inboxEpoch: epoch \}\)/u);
     expect(app).toMatch(
       /\$\('new-chat'\)\.onclick = \(\) => \{ renderBots\(\); \$\('new-chat-dialog'\)\.showModal\(\); \}/u,
     );
@@ -312,8 +318,64 @@ describe('active chat read receipts', () => {
     expect(reads).toBe(0);
   });
 
+  it('clears the previous conversation while loading and rejects a delayed old timeline response', async () => {
+    const container = document.createElement('section');
+    const oldMessage = document.createElement('p');
+    oldMessage.textContent = 'old conversation content';
+    container.append(oldMessage);
+    let current = { botId: 'bot-a', conversationId: 'conversation-a', epoch: 4 };
+    const oldRequest = { ...current };
+    showConversationTimelineLoading(container);
+    expect(container.textContent).toBe('正在读取会话记录…');
+    expect(container.contains(oldMessage)).toBe(false);
+
+    let resolveOld;
+    const delayed = new Promise((resolve) => { resolveOld = resolve; }).then(() => {
+      const staleNode = document.createElement('p');
+      staleNode.textContent = 'stale response';
+      replaceConversationTimeline(container, [staleNode], () => timelineContextIsCurrent(oldRequest, current));
+    });
+    current = { botId: 'bot-a', conversationId: 'conversation-b', epoch: 5 };
+    showConversationTimelineLoading(container);
+    resolveOld();
+    await delayed;
+
+    expect(container.textContent).toBe('正在读取会话记录…');
+    expect(container.textContent).not.toContain('old conversation content');
+    expect(container.textContent).not.toContain('stale response');
+    const currentNode = document.createElement('p');
+    currentNode.textContent = 'current conversation content';
+    expect(replaceConversationTimeline(container, [currentNode], () => timelineContextIsCurrent(current, current))).toBe(true);
+    expect(container.textContent).toBe('current conversation content');
+  });
+
+  it('replaces the loading state with a visible error and never restores old messages', () => {
+    const container = document.createElement('section');
+    const oldMessage = document.createElement('p');
+    oldMessage.textContent = 'old conversation content';
+    container.append(oldMessage);
+    showConversationTimelineLoading(container);
+    showConversationTimelineError(container);
+    expect(container.textContent).toBe('会话记录暂时无法读取，请稍后重试。');
+    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    expect(container.contains(oldMessage)).toBe(false);
+
+    const selection = app.slice(app.indexOf('async function selectConversation('), app.indexOf('function updateComposer('));
+    expect(selection).toMatch(/showConversationTimelineLoading\(\$\('messages'\)\);\s*onSelected\?\.\(\);[\s\S]*?await refreshTimeline\(\{ reset: true \}\)/u);
+    expect(selection).toMatch(/catch \(error\) \{\s*if \(epoch === conversationSelectionEpoch && bot\?\.id === botId && conversation\?\.id === item\.id\)\s*showConversationTimelineError/u);
+    const loader = app.slice(app.indexOf('async function refreshTimeline('), app.indexOf('function renderTaskDetail('));
+    expect(loader).toMatch(/replaceConversationTimeline\(container, renderedTimeline, isCurrent\)/u);
+  });
+
   it('restores the active private selection when returning from a group and hides Bot tools for groups', () => {
-    expect(app).toMatch(/\$\('chat-entry'\)\.onclick = \(\) => \{[\s\S]*?selectedInboxItem = conversation[\s\S]*?entry\.type === 'private' && entry\.id === conversation\.id && entry\.botId === bot\?\.id[\s\S]*?renderInbox\(\);\s*renderConversationDetail\(\)/u);
+    expect(app).toMatch(/\$\('chat-entry'\)\.onclick = \(\) => void returnToPrivateChat\(\)\.catch\(showError\)/u);
+    const returnToPrivate = app.slice(app.indexOf('async function returnToPrivateChat('), app.indexOf('async function markInboxRead('));
+    expect(returnToPrivate).toMatch(/entry\.type === 'private' && entry\.id === conversation\.id && entry\.botId === bot\.id[\s\S]*?await selectInboxItem\(item\)/u);
+    const privateInboxSelection = app.slice(app.indexOf('async function selectInboxItem('), app.indexOf('async function returnToPrivateChat('));
+    expect(privateInboxSelection).toMatch(/await selectBot\(item\.botId, \{ inboxEpoch: epoch \}\);\s*if \(!inboxSelection\.isCurrent\(epoch\)\) return;\s*await selectConversation\([\s\S]*?renderInbox\(\);/u);
+    const conversationSelection = app.slice(app.indexOf('async function selectConversation('), app.indexOf('function updateComposer('));
+    expect(conversationSelection).toMatch(/showConversationTimelineLoading\(\$\('messages'\)\);\s*onSelected\?\.\(\);[\s\S]*?await refreshTimeline\(\{ reset: true \}\)/u);
+    expect(app).toMatch(/button\.onclick = \(\) => void selectConversation\(item, \{ onSelected: \(\) => \$\('history-dialog'\)\.close\(\) \}\)\.catch\(showError\)/u);
     const detail = app.slice(app.indexOf('function renderConversationDetail('), app.indexOf('async function loadConversationDetailData('));
     expect(detail).toMatch(/if \(item\.type === 'private'\)[\s\S]*?detail\.append\(featureNav\)[\s\S]*?群聊暂不支持身份、文件记忆、浏览器和诊断功能/u);
   });
@@ -544,6 +606,6 @@ describe('persistent Bot communication timeline items', () => {
     expect(app).toContain('正在读取此会话的 Bot 间通信事件…');
     expect(app).toContain('此会话尚无关联的 Bot 间通信事件。');
     expect(app).not.toContain('尚未提供真实通信事件数据；普通私聊和群聊不会显示为 Bot 间通信。');
-    expect(app).toContain('群聊暂不显示 Bot 间通信。');
+    expect(app).toContain('尚无群关联的 Bot 间通信数据。Bot 间通信只会在真实来源私聊中显示。');
   });
 });

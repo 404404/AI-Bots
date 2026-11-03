@@ -146,6 +146,7 @@ let page;
 let accessCode = '';
 let failure;
 let browserPhase = 'pre-login';
+let expectedHistoryConversationId = null;
 function assertServerAlive(phase) {
   assertChildAlive(serverProcess, phase);
   if (!isProcessIdentityAlive(serverIdentity, serverProcess))
@@ -155,7 +156,9 @@ const scrub = (value) => {
   let safe = String(value);
   if (accessCode) safe = safe.replaceAll(accessCode, '[REDACTED]');
   return safe.replace(/bot_session=[^;\s]+/gu, 'bot_session=[REDACTED]')
-    .replace(/(authorization|cookie)\s*[:=]\s*[^\s,;]+/giu, '$1=[REDACTED]');
+    .replace(/(authorization|cookie)\s*[:=]\s*[^\s,;]+/giu, '$1=[REDACTED]')
+    .replace(/\b(?:sk|sess|token|key)[-_][A-Za-z0-9_-]{12,}\b/giu, '[REDACTED]')
+    .replace(/https?:\/\/[^\s]+/gu, '[URL]');
 };
 
 try {
@@ -260,6 +263,7 @@ try {
   const historicalConversation = await command(page, origin, 'conversations.create', {
     botId: bot.id, title: 'UI QA 历史会话',
   });
+  expectedHistoryConversationId = historicalConversation.id;
   assert(historicalConversation?.id && historicalConversation.id !== report.testConversation.id,
     'historical private conversation must be a distinct persisted conversation');
 
@@ -318,9 +322,17 @@ try {
     assert.equal(layout.sendVisible, true, `${viewport.name} send control is clipped or hidden`);
   }
 
+  browserPhase = 'history-open-click';
   await page.locator('#history-entry').click();
+  browserPhase = 'history-list-open';
   await page.locator('#history-dialog').waitFor({ state: 'visible' });
+  browserPhase = 'history-item-select';
   await page.locator('#history-list .history-item').filter({ hasText: 'UI QA 历史会话' }).click();
+  browserPhase = 'history-conversation-switch';
+  await page.waitForFunction((expectedId) =>
+    document.querySelector('#view-chat')?.dataset?.conversationId === expectedId,
+  expectedHistoryConversationId);
+  browserPhase = 'history-dialog-close';
   await page.locator('#history-dialog').waitFor({ state: 'hidden' });
   const selectedHistoryConversation = await page.evaluate(() => ({
     conversationId: document.querySelector('#view-chat')?.dataset?.conversationId ?? '',
@@ -333,7 +345,9 @@ try {
   assert.equal((await command(page, origin, 'private-chat.open', { botId: bot.id })).conversation.id, historicalConversation.id,
     'the server-side selected conversation must match the history picker selection');
   report.testHistoricalConversationId = historicalConversation.id;
+  browserPhase = 'history-selection-complete';
   report.interactions.push('通过历史记录真实选择非默认 conversation ID，并确认服务端私聊选择指针一致。');
+  browserPhase = 'authenticated';
 
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.locator('#new-group').click();
@@ -492,7 +506,37 @@ try {
   report.status = 'passed';
 } catch (error) {
   failure = error;
-  report.failure = { name: error?.name ?? 'Error', message: scrub(error?.message ?? 'UI QA failed') };
+  const failureName = ['TimeoutError', 'AssertionError', 'TypeError', 'RangeError'].includes(error?.name) ? error.name : 'Error';
+  report.failure = { name: failureName, phase: browserPhase, messageLength: String(error?.message ?? '').length };
+  if (page) {
+    try {
+      const ui = await page.evaluate(({ expectedId, phase }) => {
+        const text = (selector) => document.querySelector(selector)?.textContent?.trim() ?? '';
+        const historyRows = [...document.querySelectorAll('#history-list .history-item')];
+        const toastText = text('#notice');
+        const statusText = text('#timeline-status');
+        return {
+          phase,
+          visibleViews: ['view-chat', 'view-groups', 'view-catalog'].filter((id) => {
+            const item = document.getElementById(id);
+            return item && !item.hidden;
+          }),
+          historyDialogOpen: Boolean(document.querySelector('#history-dialog')?.open),
+          historyEntryEnabled: Boolean(document.querySelector('#history-entry') && !document.querySelector('#history-entry').disabled && !document.querySelector('#history-entry').hidden),
+          historyRowCount: historyRows.length,
+          targetHistoryRowPresent: historyRows.some((item) => item.textContent?.includes('UI QA 历史会话')),
+          hasCurrentConversation: Boolean(document.querySelector('#view-chat')?.dataset?.conversationId),
+          conversationMatchesExpected: Boolean(expectedId)
+            && document.querySelector('#view-chat')?.dataset?.conversationId === expectedId,
+          toast: { visible: !document.querySelector('#notice')?.hidden, textLength: toastText.length },
+          timelineStatus: { visible: !document.querySelector('#timeline-status')?.hidden, textLength: statusText.length },
+        };
+      }, { expectedId: expectedHistoryConversationId, phase: browserPhase });
+      report.failure.ui = ui;
+    } catch {
+      report.failure.uiDiagnostic = 'structured UI snapshot unavailable';
+    }
+  }
 } finally {
   if (page) await page.context().close().catch(() => undefined);
   if (browser) {

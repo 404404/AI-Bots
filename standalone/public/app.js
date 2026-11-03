@@ -1,5 +1,5 @@
 import { OnboardingRequestCoordinator, selectCreatedBotIfUnchanged } from './onboarding-state.js';
-import { canMarkInboxRead, communicationThreadItems, createCommunicationTimelineNode, mergeTimelineItems, projectBotMessagesForConversation, replaceInboxChildren, resetCommunicationTimelineState, SelectionEpoch, shouldApplyInboxLoadError, shouldRestartTimeline, showInboxLoadError, timelineContextIsCurrent } from './inbox-ui-state.js';
+import { canMarkInboxRead, communicationThreadItems, createCommunicationTimelineNode, mergeTimelineItems, projectBotMessagesForConversation, replaceConversationTimeline, replaceInboxChildren, resetCommunicationTimelineState, SelectionEpoch, shouldApplyInboxLoadError, shouldRestartTimeline, showConversationTimelineError, showConversationTimelineLoading, showInboxLoadError, timelineContextIsCurrent } from './inbox-ui-state.js';
 import { GroupRefreshGate, findModelIndexById, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, selectedModelOption, sendPendingGroupRequest, shouldRefreshSelectedGroup, shouldSelectGroupAfterRequest } from './group-ui-state.js';
 
 const $ = (id) => document.getElementById(id);
@@ -828,7 +828,7 @@ function renderModelOptions(selected) {
   else if (found < 0) $('send-hint').textContent = '选择一个共享模型后发送。';
   else $('send-hint').textContent = 'Enter 发送 · Shift+Enter 换行';
 }
-async function selectConversation(item, { skipOpen = false, inboxEpoch = null, selectionOwned = false } = {}) {
+async function selectConversation(item, { skipOpen = false, inboxEpoch = null, selectionOwned = false, onSelected = null } = {}) {
   if (inboxEpoch === null && !selectionOwned) invalidatePendingSelections();
   else if (inboxEpoch !== null && !inboxSelection.isCurrent(inboxEpoch)) return;
   closeMobileNav();
@@ -861,9 +861,17 @@ async function selectConversation(item, { skipOpen = false, inboxEpoch = null, s
   $('chat-context').hidden = !historical;
   $('chat-context').textContent = historical ? `历史上下文 · ${item.title ?? item.id} · 后续消息将继续此上下文` : '';
   $('history-entry').disabled = false;
+  showConversationTimelineLoading($('messages'));
+  onSelected?.();
   $('message-input').value = pending()?.content ?? '';
   if (pending()?.selection) renderModelOptions(pending().selection);
-  await refreshTimeline({ reset: true });
+  try {
+    await refreshTimeline({ reset: true });
+  } catch (error) {
+    if (epoch === conversationSelectionEpoch && bot?.id === botId && conversation?.id === item.id)
+      showConversationTimelineError($('messages'));
+    throw error;
+  }
   if (epoch !== conversationSelectionEpoch || bot?.id !== botId) return;
   if (inboxEpoch !== null && !inboxSelection.isCurrent(inboxEpoch)) return;
   $('conversation-info').disabled = false;
@@ -1019,9 +1027,9 @@ async function refreshTimeline({ reset = false, older = false, restartAttempt = 
     const oldTop = container.scrollTop;
     const nearBottom = oldTop + container.clientHeight >= oldHeight - 80;
     timelineItems = mergeTimelineItems(timelineItems, page.items ?? [], communicationTimeline.items, { older });
-    container.replaceChildren();
-    if (!timelineItems.length) container.append(node('div', '发送第一条消息，开始这段对话。', 'empty'));
-    for (const item of timelineItems) container.append(renderTimelineItem(item));
+    const renderedTimeline = timelineItems.map((item) => renderTimelineItem(item));
+    if (!renderedTimeline.length) renderedTimeline.push(node('div', '发送第一条消息，开始这段对话。', 'empty'));
+    if (!replaceConversationTimeline(container, renderedTimeline, isCurrent)) return;
     if (older) {
       timelineCursor = page.nextCursor ?? null;
       hasOlderTimeline = Boolean(page.hasMore ?? page.nextCursor);
@@ -1815,7 +1823,7 @@ $('history-entry').onclick = () => void (async () => {
     button.type = 'button';
     button.setAttribute('aria-current', String(item.id === conversation?.id));
     button.append(node('span', item.title ?? item.id), node('span', item.createdAt ? new Date(item.createdAt).toLocaleString() : item.id));
-    button.onclick = () => void selectConversation(item).then(() => $('history-dialog').close()).catch(showError);
+    button.onclick = () => void selectConversation(item, { onSelected: () => $('history-dialog').close() }).catch(showError);
     list.append(button);
   }
   $('history-dialog').showModal();
@@ -1835,7 +1843,7 @@ $('history-more').onclick = () => void (async () => {
     button.type = 'button';
     button.setAttribute('aria-current', String(item.id === conversation?.id));
     button.append(node('span', item.title ?? item.id), node('span', item.createdAt ? new Date(item.createdAt).toLocaleString() : item.id));
-    button.onclick = () => void selectConversation(item).then(() => $('history-dialog').close()).catch(showError);
+    button.onclick = () => void selectConversation(item, { onSelected: () => $('history-dialog').close() }).catch(showError);
     list.append(button);
   }
 })().catch(showError);

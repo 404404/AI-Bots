@@ -36,6 +36,28 @@ export function showInboxLoadError(status, message) {
   status.hidden = false;
 }
 
+export function showConversationTimelineLoading(container) {
+  const status = document.createElement('div');
+  status.className = 'empty';
+  status.setAttribute('role', 'status');
+  status.textContent = '正在读取会话记录…';
+  container.replaceChildren(status);
+}
+
+export function showConversationTimelineError(container) {
+  const status = document.createElement('div');
+  status.className = 'empty';
+  status.setAttribute('role', 'alert');
+  status.textContent = '会话记录暂时无法读取，请稍后重试。';
+  container.replaceChildren(status);
+}
+
+export function replaceConversationTimeline(container, children, isCurrent) {
+  if (!isCurrent()) return false;
+  container.replaceChildren(...children);
+  return true;
+}
+
 export function shouldRestartTimeline(error, { older, restartAttempt }) {
   return older && !restartAttempt && error?.code === 'timeline-cursor-restart';
 }
