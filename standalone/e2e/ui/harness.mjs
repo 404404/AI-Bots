@@ -121,3 +121,14 @@ export function parseServerReadyLine(line, expectedPid) {
     throw new Error('Child server readiness record contained an invalid bound port.');
   return record.port;
 }
+
+export function assertExpectedUnauthenticatedSessionProbe(unauthorizedResponses, consoleErrors) {
+  const expected = unauthorizedResponses.length === 1 &&
+    unauthorizedResponses[0].method === 'GET' &&
+    unauthorizedResponses[0].path === '/api/v1/session' &&
+    unauthorizedResponses[0].phase === 'pre-login';
+  const authNoise = consoleErrors.filter((text) => /status of 401 \(Unauthorized\)/u.test(text));
+  const otherErrors = consoleErrors.filter((text) => !/status of 401 \(Unauthorized\)/u.test(text));
+  if (!expected || authNoise.length !== 1 || otherErrors.length)
+    throw new Error('Unexpected browser authorization response or console error.');
+}

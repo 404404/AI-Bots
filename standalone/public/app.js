@@ -1,5 +1,5 @@
 import { OnboardingRequestCoordinator, selectCreatedBotIfUnchanged } from './onboarding-state.js';
-import { communicationThreadItems, createCommunicationTimelineNode, mergeTimelineItems, projectBotMessagesForConversation, replaceInboxChildren, resetCommunicationTimelineState, SelectionEpoch, shouldApplyInboxLoadError, shouldRestartTimeline, showInboxLoadError, timelineContextIsCurrent } from './inbox-ui-state.js';
+import { canMarkInboxRead, communicationThreadItems, createCommunicationTimelineNode, mergeTimelineItems, projectBotMessagesForConversation, replaceInboxChildren, resetCommunicationTimelineState, SelectionEpoch, shouldApplyInboxLoadError, shouldRestartTimeline, showInboxLoadError, timelineContextIsCurrent } from './inbox-ui-state.js';
 import { GroupRefreshGate, findModelIndexById, groupDraftKey, groupSubmission, modelIsUsable, pendingComposerMatches, renderMemberRecipients, restoreGroupComposer, selectedModelOption, sendPendingGroupRequest, shouldApplyGroupResult, shouldSelectGroupAfterRequest } from './group-ui-state.js';
 
 const $ = (id) => document.getElementById(id);
@@ -12,6 +12,7 @@ let bots = [],
   inboxHasMore = false,
   selectedInboxItem = null,
   inboxLoadError = false,
+  inboxReadRequests = new Set(),
   communicationSummaryEvent = null,
   inboxRequestEpoch = 0,
   detailRequestEpoch = 0,
@@ -193,8 +194,7 @@ function pending() {
 function view(name) {
   for (const section of document.querySelectorAll('.view'))
     section.hidden = section.id !== `view-${name}`;
-  for (const button of document.querySelectorAll('[data-view]'))
-    button.setAttribute('aria-pressed', String(button.dataset.view === name));
+  if ($('chat-entry')) $('chat-entry').hidden = name === 'chat';
   if (name === 'memory' && bot) void loadMemory().catch(showError);
   if (name === 'diagnostics') void diagnostics().catch(showError);
   if (name === 'browser') void loadBrowser().catch(showError);
@@ -368,8 +368,22 @@ async function selectInboxItem(item) {
   renderInbox();
 }
 async function markInboxRead(item, message, selectionEpoch) {
-  await command('inbox.read', { type: item.type, id: item.id, through: { createdAt: message.createdAt, id: message.id } });
-  await refreshInboxSafely({ selectionEpoch });
+  if (!canMarkInboxRead({ type: item.type, id: item.id, selectionEpoch }, {
+    selectionEpoch: inboxSelection.current(),
+    documentVisible: !document.hidden,
+    viewName: !$('view-groups').hidden ? 'groups' : !$('view-chat').hidden ? 'chat' : null,
+    conversationId: conversation?.id,
+    groupId: activeGroupId,
+  })) return;
+  const key = `${item.type}:${item.id}:${message.id}`;
+  if (inboxReadRequests.has(key)) return;
+  inboxReadRequests.add(key);
+  try {
+    await command('inbox.read', { type: item.type, id: item.id, through: { createdAt: message.createdAt, id: message.id } });
+    await refreshInboxSafely({ selectionEpoch });
+  } finally {
+    inboxReadRequests.delete(key);
+  }
 }
 async function toggleInboxPin(item, pinned) {
   await command('inbox.pin', { type: item.type, id: item.id, pinned });
@@ -381,6 +395,23 @@ function renderConversationDetail() {
   detail.replaceChildren();
   const item = selectedInboxItem;
   if (!item) { detail.append(node('p', '选择一个会话查看参与者和最近活动。', 'muted fine')); return; }
+  if (item.type === 'private') {
+    const featureNav = node('nav', undefined, 'detail-feature-nav');
+    featureNav.setAttribute('aria-label', 'Bot 功能');
+    for (const [name, label] of [['identity', '身份'], ['memory', '文件记忆'], ['browser', '浏览器'], ['diagnostics', '诊断']]) {
+      const button = node('button', label);
+      button.type = 'button';
+      button.onclick = () => {
+        invalidatePendingSelections();
+        closeConversationDetail();
+        view(name);
+      };
+      featureNav.append(button);
+    }
+    detail.append(featureNav);
+  } else {
+    detail.append(node('p', '群聊暂不支持身份、文件记忆、浏览器和诊断功能。', 'muted fine'));
+  }
   detail.append(node('h3', item.title || '会话'));
   detail.append(node('span', item.type === 'group' ? '群聊' : '私聊', 'detail-type'));
   detail.append(node('h4', '参与者'));
@@ -898,6 +929,12 @@ async function refreshTimeline({ reset = false, older = false, restartAttempt = 
     else container.scrollTop = oldTop;
     activeRun = runPage.runs?.[0] ?? null;
     updateComposer();
+    const latestItem = [...timelineItems].reverse().find((item) => item.type === 'message');
+    const latestMessage = latestItem?.message ?? latestItem;
+    if (selectedInboxItem?.type === 'private' && selectedInboxItem.id === conversationId
+      && selectedInboxItem.unreadCount > 0 && latestMessage?.id && latestMessage.createdAt) {
+      void markInboxRead(selectedInboxItem, latestMessage, inboxSelection.current()).catch(showError);
+    }
   } finally {
     timelineRequests.delete(requestKey);
   }
@@ -1186,9 +1223,6 @@ function renderContacts() {
   const primary = bots.find((item) => item.id === contacts.primaryEmployeeId);
   $('primary-bot-label').textContent = primary ? `★ 主要 Bot · ${primary.name}` : '未设置主要 Bot';
   $('primary-bot-action').textContent = primary ? `打开主要 Bot：${primary.name}` : '主要 Bot：未设置';
-  $('contact-shortcut').hidden = !primary;
-  $('contact-shortcut').textContent = primary ? `主要联系人 · ${primary.name}` : '';
-  $('contact-shortcut').onclick = () => void selectBot(primary.id).catch(showError);
   $('contact-status').textContent = contacts.count === 0
     ? '先创建一位员工。'
     : contacts.count === 1
@@ -1392,6 +1426,11 @@ async function renderGroup(groupId, { reset = false, older = false } = {}) {
     }
     list.append(row);
   }
+  const latestGroupMessage = groupMessages.at(-1);
+  if (selectedInboxItem?.type === 'group' && selectedInboxItem.id === groupId
+    && selectedInboxItem.unreadCount > 0 && latestGroupMessage?.id && latestGroupMessage.createdAt) {
+    void markInboxRead(selectedInboxItem, latestGroupMessage, inboxSelection.current()).catch(showError);
+  }
   await loadGroupsListOnly();
 }
 async function loadGroupModels(botId, refreshEpoch, groupId) {
@@ -1474,6 +1513,23 @@ async function enter() {
   $('codex-logout').onclick = () => void command('model-account.auth.logout').then(() => loadAccount({ authOnly: true })).catch(showError);
   form('codex-answer-form', async () => { const value = $('codex-callback').value; $('codex-callback').value = ''; await command('model-account.auth.answer', { value }); await loadAccount({ authOnly: true }); });
   $('settings-entry').onclick = () => { invalidatePendingSelections(); closeMobileNav(); view('catalog'); void loadAccount().catch(showError); };
+  $('groups-entry').onclick = () => {
+    invalidatePendingSelections();
+    closeMobileNav();
+    closeConversationDetail();
+    view('groups');
+  };
+  $('chat-entry').onclick = () => {
+    invalidatePendingSelections();
+    closeConversationDetail();
+    selectedInboxItem = conversation
+      ? inboxItems.find((entry) => entry.type === 'private' && entry.id === conversation.id && entry.botId === bot?.id) || null
+      : null;
+    view('chat');
+    renderInbox();
+    renderConversationDetail();
+    if (bot && conversation) void refreshTimeline().catch(showError);
+  };
   $('account-menu-toggle').onclick = () => {
     const open = $('account-menu').hidden;
     $('account-menu').hidden = !open;
@@ -1728,12 +1784,6 @@ $('chat-model').onchange = () => void (async () => {
     }
   }
 })().catch(showError);
-for (const button of document.querySelectorAll('[data-view]'))
-  button.onclick = () => {
-    invalidatePendingSelections();
-    if (button.dataset.view === 'catalog') { view(button.dataset.view); void loadAccount().catch(showError); }
-    else view(button.dataset.view);
-  };
 form('identity-form', async () => {
   if (!bot) return;
   const botId = bot.id, epoch = botSelectionEpoch;

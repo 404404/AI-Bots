@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { assertChildAlive, captureProcessIdentity, closeRelayWhenChildExits, createReservedLoopbackRelay, isProcessIdentityAlive, parseLinuxProcessStat, parseServerReadyLine, prepareEmptyOutputDir } from './harness.mjs';
+import { assertChildAlive, assertExpectedUnauthenticatedSessionProbe, captureProcessIdentity, closeRelayWhenChildExits, createReservedLoopbackRelay, isProcessIdentityAlive, parseLinuxProcessStat, parseServerReadyLine, prepareEmptyOutputDir } from './harness.mjs';
 
 test('relay owns its kernel-assigned loopback port and forwards only to its fixed child port', async () => {
   const relay = await createReservedLoopbackRelay();
@@ -116,6 +116,25 @@ test('readiness handshake validates the launched PID and bound port', () => {
   assert.throws(() => parseServerReadyLine(JSON.stringify({ event: 'ready', pid: 43, port: 51823 }), 42), /launched process/u);
   assert.throws(() => parseServerReadyLine('{not json', 42), /invalid JSON/u);
   assert.throws(() => parseServerReadyLine(JSON.stringify({ event: 'ready', pid: 42, port: 0 }), 42), /invalid bound port/u);
+});
+
+test('only the initial unauthenticated session probe may explain a browser 401 console error', () => {
+  const message = 'Failed to load resource: the server responded with a status of 401 (Unauthorized)';
+  assert.doesNotThrow(() => assertExpectedUnauthenticatedSessionProbe(
+    [{ method: 'GET', path: '/api/v1/session', phase: 'pre-login' }], [message],
+  ));
+  assert.throws(() => assertExpectedUnauthenticatedSessionProbe(
+    [{ method: 'GET', path: '/api/v1/session', phase: 'authenticated' }], [message],
+  ), /Unexpected browser authorization/u);
+  assert.throws(() => assertExpectedUnauthenticatedSessionProbe(
+    [{ method: 'POST', path: '/api/v1/session', phase: 'pre-login' }], [message],
+  ), /Unexpected browser authorization/u);
+  assert.throws(() => assertExpectedUnauthenticatedSessionProbe(
+    [{ method: 'GET', path: '/api/v1/session', phase: 'pre-login' }, { method: 'GET', path: '/api/v1/private', phase: 'authenticated' }], [message],
+  ), /Unexpected browser authorization/u);
+  assert.throws(() => assertExpectedUnauthenticatedSessionProbe(
+    [{ method: 'GET', path: '/api/v1/session', phase: 'pre-login' }], [message, 'Unexpected page error'],
+  ), /Unexpected browser authorization/u);
 });
 
 test('real UI QA server emits readiness on fd 3 despite startup diagnostics on stdout', async () => {

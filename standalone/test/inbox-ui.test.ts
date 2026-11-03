@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   compareTimelineItems,
+  canMarkInboxRead,
   communicationThreadItems,
   createCommunicationTimelineNode,
   mergeTimelineItems,
@@ -115,12 +116,12 @@ describe('inbox list DOM', () => {
     expect(app).toMatch(/selectBot\(item\.botId, \{ inboxEpoch: epoch \}\)/u);
   });
 
-  it('invalidates delayed inbox selection on settings and feature-tab navigation', () => {
+  it('invalidates delayed inbox selection on settings and closeable detail navigation', () => {
     expect(app).toMatch(
       /\$\('settings-entry'\)\.onclick = \(\) => \{[\s\S]{0,90}invalidatePendingSelections\(\)/u,
     );
     expect(app).toMatch(
-      /for \(const button of document\.querySelectorAll\('\[data-view\]'\)\)[\s\S]*?button\.onclick = \(\) => \{\s*invalidatePendingSelections\(\)/u,
+      /button\.onclick = \(\) => \{\s*invalidatePendingSelections\(\);\s*closeConversationDetail\(\);\s*view\(name\)/u,
     );
     expect(app).toMatch(
       /loadAccount\(\)\.then\(\(\) => \{ if \(inboxSelection\.isCurrent\(selectionEpoch\)\) view\('catalog'\); \}\)/u,
@@ -245,6 +246,56 @@ describe('inbox list DOM', () => {
     expect(flow).toMatch(
       /catch \(error\) \{\s*if \(!isCurrent\(\)\) return;\s*if \(!shouldRestartTimeline/u,
     );
+  });
+});
+
+describe('active chat read receipts', () => {
+  const current = {
+    selectionEpoch: 8,
+    documentVisible: true,
+    viewName: 'chat',
+    conversationId: 'conversation-a',
+    groupId: 'group-b',
+  };
+
+  it('marks only the currently visible matching private or group view as read', () => {
+    expect(canMarkInboxRead({ type: 'private', id: 'conversation-a', selectionEpoch: 8 }, current)).toBe(true);
+    expect(canMarkInboxRead({ type: 'group', id: 'group-b', selectionEpoch: 8 }, { ...current, viewName: 'groups' })).toBe(true);
+    expect(canMarkInboxRead({ type: 'private', id: 'conversation-a', selectionEpoch: 8 }, { ...current, viewName: 'identity' })).toBe(false);
+    expect(canMarkInboxRead({ type: 'private', id: 'conversation-a', selectionEpoch: 8 }, { ...current, documentVisible: false })).toBe(false);
+    expect(canMarkInboxRead({ type: 'group', id: 'group-b', selectionEpoch: 8 }, { ...current, viewName: 'chat' })).toBe(false);
+    expect(canMarkInboxRead({ type: 'private', id: 'conversation-a', selectionEpoch: 7 }, current)).toBe(false);
+    expect(canMarkInboxRead({ type: 'private', id: 'conversation-old', selectionEpoch: 8 }, current)).toBe(false);
+  });
+
+  it('checks visibility, view, and epoch immediately before the inbox.read command', () => {
+    const marker = app.slice(app.indexOf('async function markInboxRead('), app.indexOf('async function toggleInboxPin('));
+    expect(marker).toMatch(/if \(!canMarkInboxRead\([\s\S]*?\)\) return;[\s\S]*?await command\('inbox\.read'/u);
+    expect(marker).toContain('documentVisible: !document.hidden');
+    expect(marker).toContain('selectionEpoch: inboxSelection.current()');
+  });
+
+  it('does not issue a deferred read after navigation changes the selection epoch', async () => {
+    const selection = new SelectionEpoch();
+    const epoch = selection.begin();
+    let resolveDelay;
+    let reads = 0;
+    const delayed = new Promise((resolve) => { resolveDelay = resolve; }).then(() => {
+      if (canMarkInboxRead({ type: 'private', id: 'conversation-a', selectionEpoch: epoch }, {
+        ...current,
+        selectionEpoch: selection.current(),
+      })) reads += 1;
+    });
+    selection.invalidate();
+    resolveDelay();
+    await delayed;
+    expect(reads).toBe(0);
+  });
+
+  it('restores the active private selection when returning from a group and hides Bot tools for groups', () => {
+    expect(app).toMatch(/\$\('chat-entry'\)\.onclick = \(\) => \{[\s\S]*?selectedInboxItem = conversation[\s\S]*?entry\.type === 'private' && entry\.id === conversation\.id && entry\.botId === bot\?\.id[\s\S]*?renderInbox\(\);\s*renderConversationDetail\(\)/u);
+    const detail = app.slice(app.indexOf('function renderConversationDetail('), app.indexOf('async function loadConversationDetailData('));
+    expect(detail).toMatch(/if \(item\.type === 'private'\)[\s\S]*?detail\.append\(featureNav\)[\s\S]*?群聊暂不支持身份、文件记忆、浏览器和诊断功能/u);
   });
 });
 

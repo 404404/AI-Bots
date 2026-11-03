@@ -832,7 +832,6 @@ dialog::backdrop {
   .group-messages { max-height: 42dvh; }
   #group-model { flex: 1 1 0; min-width: 0; max-width: none; }
 }
-.contact-shortcut { width: 100%; text-align: left; color: var(--accent); font-size: 12px; }
 .group-run-status.failed { background: #fff0ec; color: #8a3827; }
 
 /* Session-first desktop shell; the existing employee roster remains available below it. */
@@ -848,9 +847,11 @@ dialog::backdrop {
 .account-menu { position: absolute; z-index: 40; inset: calc(100% + 5px) 0 auto; padding: 6px; background: #fff; border: 1px solid var(--border); border-radius: 11px; box-shadow: 0 12px 32px #1d2b2220; }
 .account-menu button { width: 100%; border: 0; text-align: left; background: transparent; }
 .session-heading { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 0; font-weight: 700; font-size: 14px; }
-.session-heading button { border: 0; background: #e6ece7; padding: 3px 9px; font-size: 18px; line-height: 1.2; }
+.session-heading > div { display: flex; align-items: center; gap: 4px; }
+.session-heading button { border: 0; background: #e6ece7; padding: 3px 9px; font-size: 14px; line-height: 1.2; }
+.session-heading #new-chat { padding: 2px 9px; font-size: 19px; }
 .session-section-title { padding: 3px 8px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
-.session-list { display: grid; gap: 4px; overflow: auto; min-height: 0; }
+.session-list { display: grid; align-content: start; grid-auto-rows: max-content; gap: 4px; overflow: auto; min-height: 0; }
 .recent-list { flex: 1 1 0; }
 .inbox-row { display: flex; align-items: stretch; min-width: 0; border-radius: 10px; }
 .inbox-row:hover { background: #e9eeea; }
@@ -867,8 +868,7 @@ dialog::backdrop {
 .unread-count { justify-self: end; min-width: 19px; padding: 1px 5px; border-radius: 10px; background: #dcebe2; color: #1c654c; text-align: center; font-size: 10px; font-weight: 700; }
 .group-avatar { width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center; border-radius: 10px; background: #e7e5f0; color: #5c4c79; font-size: 11px; font-weight: 700; }
 .inbox-more { padding: 7px; font-size: 11px; }
-.employee-roster { border-top: 1px solid var(--border); padding-top: 8px; }
-.employee-roster { position: relative; }
+.employee-roster { position: relative; border-top: 1px solid var(--border); padding-top: 8px; }
 .employee-roster summary { padding: 6px 42px 6px 8px; color: var(--muted); font-size: 12px; cursor: pointer; }
 .employee-roster > button { position: absolute; top: 0; right: 4px; padding: 0 8px; border: 0; background: transparent; font-size: 19px; }
 .employee-roster nav { max-height: 170px; }
@@ -879,6 +879,8 @@ dialog::backdrop {
 .conversation-detail h3 { margin: 18px 0 7px; font-size: 17px; overflow-wrap: anywhere; }
 .conversation-detail h4 { margin: 22px 0 9px; font-size: 12px; color: var(--muted); }
 .conversation-detail-content { overflow-wrap: anywhere; }
+.detail-feature-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 10px 0 18px; }
+.detail-feature-nav button { min-width: 0; text-align: left; }
 .detail-type { display: inline-block; padding: 4px 8px; border-radius: 20px; background: #edf2ed; color: var(--accent); font-size: 11px; }
 .detail-participant { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 12px; }
 .detail-last-message { white-space: pre-wrap; line-height: 1.6; font-size: 13px; }
@@ -919,4 +921,5 @@ dialog::backdrop {
   .header-actions .pill { margin-left: auto; }
   .bot-title-row h1 { font-size: 17px; }
   .summary-dialog { width: calc(100vw - 18px); padding: 14px; }
+  .session-heading button { padding-inline: 7px; font-size: 12px; }
 }

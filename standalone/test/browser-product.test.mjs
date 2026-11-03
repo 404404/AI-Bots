@@ -81,7 +81,8 @@ test('browser owner API, UI, canonical task trace, protected PNG and CLI share o
   try {
     assert.equal((await post('/api/v1/command', { command: 'browser.status' })).status, 401);
     const html = await (await fetch(base)).text();
-    assert.match(html, /data-view="browser"/u);
+    assert.match(readFileSync(new URL('../public/app.js', import.meta.url), 'utf8'), /\['browser', '浏览器'\]/u);
+    assert.match(html, /id="conversation-info"[^>]*aria-label="Bot 详情与工具"/u);
     assert.match(html, /id="browser-origins"/u);
     assert.match(html, /id="browser-tasks"/u);
     assert.match(html, /id="browser-step-form"/u);

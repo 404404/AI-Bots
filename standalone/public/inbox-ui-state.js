@@ -55,6 +55,20 @@ export function shouldApplyInboxLoadError(request, current) {
   );
 }
 
+export function canMarkInboxRead(request, current) {
+  if (
+    request.selectionEpoch !== current.selectionEpoch ||
+    !current.documentVisible
+  ) return false;
+  if (request.type === 'private') {
+    return current.viewName === 'chat' && request.id === current.conversationId;
+  }
+  if (request.type === 'group') {
+    return current.viewName === 'groups' && request.id === current.groupId;
+  }
+  return false;
+}
+
 export function resetCommunicationTimelineState(state, conversationId = null) {
   state.conversationId = conversationId;
   state.items = [];

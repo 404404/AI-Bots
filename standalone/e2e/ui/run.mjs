@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '../../browser/node_modules/playwright-core/index.mjs';
-import { assertChildAlive, captureProcessIdentity, closeRelayWhenChildExits, createReservedLoopbackRelay, isProcessIdentityAlive, parseServerReadyLine, prepareEmptyOutputDir } from './harness.mjs';
+import { assertChildAlive, assertExpectedUnauthenticatedSessionProbe, captureProcessIdentity, closeRelayWhenChildExits, createReservedLoopbackRelay, isProcessIdentityAlive, parseServerReadyLine, prepareEmptyOutputDir } from './harness.mjs';
 
 const standalone = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const outputDir = resolve(process.env.UI_E2E_OUTPUT_DIR ?? join(tmpdir(), 'standalone-ui-evidence'));
@@ -130,8 +130,9 @@ const report = {
   interactions: [],
   screenshots: [],
   browserConsole: [],
+  httpUnauthorizedResponses: [],
   cleanup: { browserClosed: false, serviceStopped: false, modelStubStopped: false, loopbackRelayStopped: false, temporaryDataRemoved: false },
-  realModelCommunication: { status: 'not-verified', reason: '此隔离 UI 流程使用本地确定性测试模型，真实模型驱动的 Bot 间通信未验收。' },
+  realModelCommunication: { status: 'not-verified', reason: '隔离 UI 流程不运行 Bot 间通信测试；真实模型驱动的 Bot 间通信未验收。' },
 };
 let serverProcess;
 let serverIdentity;
@@ -142,6 +143,7 @@ let browser;
 let page;
 let accessCode = '';
 let failure;
+let browserPhase = 'pre-login';
 function assertServerAlive(phase) {
   assertChildAlive(serverProcess, phase);
   if (!isProcessIdentityAlive(serverIdentity, serverProcess))
@@ -194,14 +196,19 @@ try {
   page.on('pageerror', (error) => report.browserConsole.push({ type: 'pageerror', text: scrub(error.message) }));
   page.on('response', (response) => {
     const url = new URL(response.url());
+    if (url.origin === origin && response.status() === 401) {
+      report.httpUnauthorizedResponses.push({ method: response.request().method(), path: url.pathname, phase: browserPhase });
+    }
     if (url.origin === origin && !url.pathname.startsWith('/api/') && response.status() >= 400)
       report.browserConsole.push({ type: 'http-error', text: `${response.status()} ${url.pathname}` });
   });
 
   await page.goto(origin, { waitUntil: 'networkidle' });
   await page.locator('#access-code').fill(accessCode);
+  browserPhase = 'login-submit';
   await page.locator('#login-form button[type="submit"]').click();
   await page.locator('#workspace').waitFor({ state: 'visible' });
+  browserPhase = 'authenticated';
   assertServerAlive('completed login');
   report.interactions.push('通过真实登录表单创建临时 owner session；访问码未写入报告或日志。');
   await command(page, origin, 'model-account.update', {
@@ -302,7 +309,9 @@ try {
     assert.equal(layout.inputVisible, true, `${viewport.name} message input is clipped or hidden`);
     assert.equal(layout.sendVisible, true, `${viewport.name} send control is clipped or hidden`);
   }
-  assert.deepEqual(report.browserConsole.filter((entry) => ['error', 'pageerror', 'http-error'].includes(entry.type)), [], 'browser emitted a console or static-resource error');
+  const consoleErrors = report.browserConsole.filter((entry) => ['error', 'pageerror', 'http-error'].includes(entry.type));
+  assertExpectedUnauthenticatedSessionProbe(report.httpUnauthorizedResponses, consoleErrors.map((entry) => entry.text));
+  assert.deepEqual(consoleErrors.filter((entry) => !/status of 401 \(Unauthorized\)/u.test(entry.text)), [], 'browser emitted a console or static-resource error');
   report.status = 'passed';
 } catch (error) {
   failure = error;

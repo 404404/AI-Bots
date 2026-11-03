@@ -42,14 +42,13 @@
             <button id="logout" type="button" role="menuitem">退出</button>
           </div>
         </div>
-        <div class="session-heading"><span>会话</span><button id="new-chat" type="button" aria-label="新建私聊" title="新建私聊">＋</button></div>
+        <div class="session-heading"><span>会话</span><div><button id="groups-entry" type="button" aria-label="打开群聊">群聊</button><button id="new-chat" type="button" aria-label="新建私聊" title="新建私聊">＋</button></div></div>
         <div id="pinned-heading" class="session-section-title" hidden>置顶</div>
         <nav id="pinned-conversations" class="session-list" aria-label="置顶会话"></nav>
         <div class="session-section-title">最近</div>
         <nav id="inbox-list" class="session-list recent-list" aria-label="私聊与群聊"><p id="inbox-status" class="muted fine">正在读取会话…</p></nav>
         <details class="employee-roster">
           <summary>Bot 列表</summary><button id="new-bot" type="button" aria-label="创建员工" title="创建员工">＋</button>
-          <button id="contact-shortcut" class="contact-shortcut" type="button" hidden></button>
           <nav id="bots" aria-label="员工列表"></nav>
         </details>
         <footer><span class="status-dot"></span>独立网页预览</footer>
@@ -60,22 +59,15 @@
           <button id="mobile-bots-toggle" class="mobile-nav-toggle" type="button" aria-controls="bot-sidebar" aria-expanded="false">☰ Bots</button>
           <div>
             <p class="eyebrow" id="conversation-eyebrow">你的专属对话空间</p>
-            <div class="bot-title-row"><span id="bot-title-avatar"></span><h1 id="bot-title">选择或创建一个 Bot</h1><button id="conversation-info" class="icon-button" type="button" aria-label="会话详情" aria-expanded="false" title="会话详情" disabled>ⓘ</button></div>
+            <div class="bot-title-row"><span id="bot-title-avatar"></span><h1 id="bot-title">选择或创建一个 Bot</h1><button id="conversation-info" class="icon-button" type="button" aria-label="Bot 详情与工具" aria-expanded="false" title="Bot 详情与工具" disabled>ⓘ</button></div>
           </div>
           <div class="header-actions">
             <button id="conversation-summary" type="button" hidden disabled title="尚无 Bot 间通信事件数据">通信摘要</button>
+            <button id="chat-entry" type="button" hidden>返回聊天</button>
             <button id="history-entry" type="button" disabled>历史记录</button>
             <span id="execution-status" class="pill">就绪</span>
           </div>
         </header>
-        <nav id="views" class="tabs" aria-label="Bot 功能">
-          <button data-view="chat" aria-pressed="true">私聊</button>
-          <button data-view="groups">群聊</button>
-          <button data-view="identity">身份</button>
-          <button data-view="memory">文件记忆</button>
-          <button data-view="browser">浏览器</button>
-          <button data-view="diagnostics">诊断</button>
-        </nav>
         <section id="view-chat" class="view chat-view">
           <div id="chat-context" class="chat-context" hidden></div>
           <button id="load-older" class="load-older" type="button" hidden>更早记录</button>

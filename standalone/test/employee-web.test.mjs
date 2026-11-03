@@ -11,7 +11,13 @@ test('private employee chat remains available with persisted conversation and mo
   assert.match(html, /id="settings-entry"[^>]*>模型账户设置/u);
   assert.match(html, /id="chat-model" aria-label="选择本次使用的模型"/u);
   assert.match(html, /id="history-entry"[^>]*>历史记录/u);
-  for (const command of ['private-chat.open', 'private-chat.models', 'private-chat.select-conversation', 'private-chat.history', 'private-chat.select-model'])
+  for (const command of [
+    'private-chat.open',
+    'private-chat.models',
+    'private-chat.select-conversation',
+    'private-chat.history',
+    'private-chat.select-model',
+  ])
     assert.ok(app.includes(command), `missing ${command}`);
   assert.doesNotMatch(html, /model-settings-source|grant-delegation|worker-policy/u);
 });
@@ -34,7 +40,10 @@ test('timeline collaboration cards open canonical task details as accessible dia
   assert.match(app, /taskDetailEpoch/u);
   assert.match(app, /deadlineAt: Date\.now\(\) \+ 300000/u);
   assert.match(app, /setInterval\(\(\) => \{[\s\S]*?refreshTaskDetail\(context\.epoch\)/u);
-  assert.match(app, /if \(initial && !\$\('task-dialog'\)\.open\) \$\('task-dialog'\)\.showModal\(\)/u);
+  assert.match(
+    app,
+    /if \(initial && !\$\('task-dialog'\)\.open\) \$\('task-dialog'\)\.showModal\(\)/u,
+  );
   assert.match(app, /direction: 'backward'/u);
   assert.match(app, /task\.initiatorBotId/u);
   assert.match(app, /task\.executorBotId/u);
@@ -50,15 +59,40 @@ test('session workspace uses server inbox items for pinning, unread state, and p
   assert.match(html, /<aside id="conversation-detail"[^>]*aria-label="会话详情"/u);
   assert.match(html, /id="account-menu-toggle"[^>]*aria-haspopup="menu"/u);
   assert.match(html, /id="workspace-role-unavailable"[^>]*disabled/u);
-  for (const command of ['inbox.list', 'inbox.pin', 'inbox.read', 'groups.get', 'private-chat.select-conversation'])
+  for (const command of [
+    'inbox.list',
+    'inbox.pin',
+    'inbox.read',
+    'groups.get',
+    'private-chat.select-conversation',
+  ])
     assert.ok(app.includes(command), `missing ${command}`);
   assert.match(app, /type: item\.type, id: item\.id, pinned/u);
   assert.match(app, /through: \{ createdAt: message\.createdAt, id: message\.id \}/u);
   assert.match(app, /startPrivateChat\(chat\.botId\)\.catch\(showError\)/u);
+  assert.match(
+    app,
+    /selectedInboxItem\?\.type === 'private'[\s\S]*?selectedInboxItem\.unreadCount > 0[\s\S]*?markInboxRead\(selectedInboxItem, latestMessage/u,
+  );
+  assert.match(
+    app,
+    /selectedInboxItem\?\.type === 'group'[\s\S]*?selectedInboxItem\.unreadCount > 0[\s\S]*?markInboxRead\(selectedInboxItem, latestGroupMessage/u,
+  );
+  assert.match(app, /inboxReadRequests = new Set\(\)/u);
+  assert.match(app, /if \(inboxReadRequests\.has\(key\)\) return/u);
   assert.match(app, /inbox\.startChats|inboxStartChats/u);
-  assert.match(app, /if \(item\.type === 'private' && item\.id === communicationTimeline\.conversationId\)/u);
-  assert.match(app, /else if \(!communicationTimeline\.loaded\)[\s\S]*?正在读取此会话的 Bot 间通信事件/u);
-  assert.match(app, /else if \(!communicationTimeline\.items\.length\)[\s\S]*?此会话尚无关联的 Bot 间通信事件/u);
+  assert.match(
+    app,
+    /if \(item\.type === 'private' && item\.id === communicationTimeline\.conversationId\)/u,
+  );
+  assert.match(
+    app,
+    /else if \(!communicationTimeline\.loaded\)[\s\S]*?正在读取此会话的 Bot 间通信事件/u,
+  );
+  assert.match(
+    app,
+    /else if \(!communicationTimeline\.items\.length\)[\s\S]*?此会话尚无关联的 Bot 间通信事件/u,
+  );
   assert.match(app, /Bot 间通信暂时无法读取；私聊消息仍可查看/u);
   assert.match(app, /command\('bot-messages\.timeline'/u);
   assert.match(app, /memory\.list/u);
