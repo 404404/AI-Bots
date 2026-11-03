@@ -146,7 +146,20 @@ let page;
 let accessCode = '';
 let failure;
 let browserPhase = 'pre-login';
+const acceptancePhases = new Set([
+  'pre-login', 'login-submit', 'authenticated',
+  'history-open-click', 'history-list-open', 'history-item-select', 'history-conversation-switch', 'history-dialog-close', 'history-selection-complete',
+  'group-create-dialog', 'group-create-form', 'group-create-submit', 'group-created-title', 'group-view-visible', 'group-list-read', 'group-composer-ready',
+  'group-send-submit', 'group-user-message-visible', 'group-bot-reply-visible', 'group-messages-persisted', 'group-details-open',
+  'group-desktop-screenshot', 'group-mobile-layout', 'group-mobile-screenshot', 'group-return-private-click',
+  'group-return-private-selection', 'group-return-private-complete', 'synthetic-recipient-create', 'synthetic-recipient-onboarding',
+  'synthetic-message-authorize', 'synthetic-model-update', 'synthetic-recipient-model-select', 'synthetic-run-submit',
+  'synthetic-run-complete', 'synthetic-messages-persisted', 'synthetic-communication-chat-restore', 'synthetic-communication-card',
+  'synthetic-summary-open', 'synthetic-summary-screenshot', 'synthetic-summary-closed',
+]);
 let expectedHistoryConversationId = null;
+let qaOrigin = null;
+let qaGroupId = null;
 function assertServerAlive(phase) {
   assertChildAlive(serverProcess, phase);
   if (!isProcessIdentityAlive(serverIdentity, serverProcess))
@@ -164,6 +177,7 @@ const scrub = (value) => {
 try {
   relay = await createReservedLoopbackRelay();
   const origin = `http://127.0.0.1:${relay.port}`;
+  qaOrigin = origin;
   modelStub = await listenModelStub();
   serverProcess = spawn(process.execPath, ['--experimental-strip-types', 'e2e/ui/server.mjs'], {
     cwd: standalone,
@@ -350,28 +364,44 @@ try {
   browserPhase = 'authenticated';
 
   await page.setViewportSize({ width: 1366, height: 900 });
+  browserPhase = 'group-create-dialog';
   await page.locator('#new-group').click();
   await page.locator('#group-dialog').waitFor({ state: 'visible' });
+  browserPhase = 'group-create-form';
   await page.locator('#group-create-name').fill('UI QA 项目协作群');
   await page.locator('#group-create-members').selectOption(bot.id);
+  browserPhase = 'group-create-submit';
   await page.locator('#group-create-form button[type="submit"]').click();
-  await page.getByRole('heading', { name: 'UI QA 项目协作群', exact: true }).waitFor({ state: 'visible' });
+  browserPhase = 'group-created-title';
+  const groupHeading = page.getByRole('heading', { name: 'UI QA 项目协作群', exact: true });
+  await groupHeading.waitFor({ state: 'visible' });
+  assert.equal(await groupHeading.getAttribute('aria-label'), 'UI QA 项目协作群',
+    'group heading accessible name must track the active group title');
+  browserPhase = 'group-view-visible';
   await page.locator('#view-groups').waitFor({ state: 'visible' });
+  browserPhase = 'group-list-read';
   const group = (await command(page, origin, 'groups.list')).groups.find((item) => item.name === 'UI QA 项目协作群');
   assert(group?.id, 'group created through the UI was not persisted');
+  qaGroupId = group.id;
+  browserPhase = 'group-composer-ready';
   await page.locator('#group-recipients').selectOption(bot.id);
   const groupModel = await page.locator('#group-model option:not([value=""])').first().getAttribute('value');
   assert(groupModel !== null, 'group composer did not load an available model');
   await page.locator('#group-model').selectOption(groupModel);
   const groupPrompt = 'UI QA 群聊：请确认这条真实群消息。';
   await page.locator('#group-input').fill(groupPrompt);
+  browserPhase = 'group-send-submit';
   await page.locator('#group-send').click();
+  browserPhase = 'group-user-message-visible';
   await page.locator('#group-messages .group-message.user p').filter({ hasText: groupPrompt }).waitFor({ state: 'visible', timeout: 15_000 });
+  browserPhase = 'group-bot-reply-visible';
   await page.locator('#group-messages .group-message.bot p').filter({ hasText: reply }).waitFor({ state: 'visible', timeout: 30_000 });
+  browserPhase = 'group-messages-persisted';
   const persistedGroup = await command(page, origin, 'groups.messages', { groupId: group.id, limit: 20 });
   assert(persistedGroup.items.some((item) => item.senderType === 'user' && item.content === groupPrompt), 'group user message was not persisted');
   assert(persistedGroup.items.some((item) => item.senderType === 'bot' && item.content === reply), 'group Bot reply was not persisted');
   report.interactions.push('在主会话栏创建群聊、从统一会话列表打开、发送群消息，并核对页面回复与持久化群消息。');
+  browserPhase = 'group-details-open';
   await page.locator('#conversation-info').click();
   await page.locator('#conversation-detail .detail-card').waitFor({ state: 'visible' });
   await page.getByText('独立版未提供群文件或附件。', { exact: true }).waitFor({ state: 'visible' });
@@ -382,9 +412,11 @@ try {
     workspaceColumns: getComputedStyle(document.querySelector('#workspace')).gridTemplateColumns,
   }));
   assert.equal(groupDetailDesktop.documentWidth <= groupDetailDesktop.viewportWidth, true, 'desktop group details cause horizontal page overflow');
+  browserPhase = 'group-desktop-screenshot';
   await page.screenshot({ path: join(outputDir, 'group-chat-desktop-1366.png'), fullPage: true, animations: 'disabled' });
   report.screenshots.push({ file: 'group-chat-desktop-1366.png', viewport: { width: 1366, height: 900 }, ...groupDetailDesktop });
   await page.locator('#close-conversation-detail').click();
+  browserPhase = 'group-mobile-layout';
   await page.setViewportSize({ width: 390, height: 844 });
   const groupMobile = await page.evaluate(() => {
     const rect = (element) => { const box = element?.getBoundingClientRect(); return box ? { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height } : null; };
@@ -405,10 +437,13 @@ try {
   assert.equal(groupMobile.messageVisible, true, '390px group reply is clipped or hidden');
   assert.equal(groupMobile.modelVisible, true, '390px group model selector is clipped or hidden');
   assert.equal(groupMobile.sendVisible, true, '390px group send button is clipped or hidden');
+  browserPhase = 'group-mobile-screenshot';
   await page.screenshot({ path: join(outputDir, 'group-chat-mobile-390.png'), fullPage: true, animations: 'disabled' });
   report.screenshots.push({ file: 'group-chat-mobile-390.png', viewport: { width: 390, height: 844 }, ...groupMobile });
   report.interactions.push('在 1366px 三栏详情和 390px 群聊工作区验证真实消息、模型选择及发送控件可见且无横向溢出。');
+  browserPhase = 'group-return-private-click';
   await page.locator('#chat-entry').click();
+  browserPhase = 'group-return-private-selection';
   await page.waitForFunction((expectedConversationId) => {
     const chat = document.querySelector('#view-chat');
     const history = document.querySelector('#history-entry');
@@ -431,14 +466,20 @@ try {
   assert.equal((await command(page, origin, 'private-chat.open', { botId: bot.id })).conversation.id, report.testHistoricalConversationId,
     'server-side selected history conversation must be restored after returning from the group');
   report.interactions.push('先选择非默认历史私聊，再进入群聊并返回，验证页面和服务端都恢复同一历史 conversation ID。');
+  browserPhase = 'group-return-private-complete';
 
+  browserPhase = 'synthetic-recipient-create';
   const recipient = await command(page, origin, 'bots.create', {
     slug: 'ui-qa-synthetic-recipient', name: 'UI QA 接收测试 Bot', persona: '仅用于 GitHub Actions 隔离验收的测试 Bot。',
   });
+  browserPhase = 'synthetic-recipient-onboarding';
   await waitForOnboarding(page, origin, recipient.id);
+  browserPhase = 'synthetic-message-authorize';
   const pair = await command(page, origin, 'bot-messages.authorize', { botAId: bot.id, botBId: recipient.id });
   const codexModel = openaiCodexProvider().getModels()[0].id;
+  browserPhase = 'synthetic-model-update';
   await command(page, origin, 'model-account.update', { provider: 'openai-codex', model: codexModel, keyless: true });
+  browserPhase = 'synthetic-recipient-model-select';
   const recipientModels = await command(page, origin, 'private-chat.models', { botId: recipient.id });
   assert.equal(recipientModels.selected?.modelId, 'standalone-ui-qa-stub',
     'recipient onboarding must retain its previous compatible model selection until the owner changes it');
@@ -448,11 +489,13 @@ try {
     botId: recipient.id, selection: { kind: 'global', modelId: codexModel },
   });
   report.interactions.push('所有者在切换全局账户后，为接收 Bot 显式选择 Codex 模型；已有 compatible 选择保持不变，直到明确更新。');
+  browserPhase = 'synthetic-run-submit';
   const communicationRun = await command(page, origin, 'runs.submit', {
     botId: bot.id, conversationId: opened.conversation.id,
     idempotencyKey: 'ui-qa-synthetic-bot-message', content: 'UI QA synthetic model: 请发送一条授权的测试通信。',
     selection: { kind: 'global', modelId: codexModel },
   });
+  browserPhase = 'synthetic-run-complete';
   let completedRun;
   for (let attempt = 0; attempt < 150; attempt += 1) {
     completedRun = await command(page, origin, 'runs.get', { botId: bot.id, runId: communicationRun.id });
@@ -460,6 +503,7 @@ try {
     await sleep(200);
   }
   assert.equal(completedRun?.status, 'completed', `synthetic Codex tool run failed: ${completedRun?.errorCode ?? 'timeout'}`);
+  browserPhase = 'synthetic-messages-persisted';
   let persisted = [];
   for (let attempt = 0; attempt < 150; attempt += 1) {
     persisted = await command(page, origin, 'bot-messages.list', { threadId: pair.thread.id, limit: 10 });
@@ -477,6 +521,7 @@ try {
   };
   report.interactions.push('隔离 Codex 协议测试替身通过 owner API run 触发真实 send_bot_message 工具；产品代码写入 Bot 消息和接收方回复。');
   await page.setViewportSize({ width: 1366, height: 900 });
+  browserPhase = 'synthetic-communication-chat-restore';
   await page.reload({ waitUntil: 'networkidle' });
   await page.locator('#workspace').waitFor({ state: 'visible' });
   const senderConversationRow = page.locator('#inbox-list .inbox-row').filter({ hasText: report.testBot.name });
@@ -484,8 +529,10 @@ try {
   const communicationButton = page.getByRole('button', {
     name: /^打开 Bot 间通信内容：UI QA 测试 Bot → UI QA 接收测试 Bot/u,
   });
+  browserPhase = 'synthetic-communication-card';
   await communicationButton.waitFor({ state: 'visible', timeout: 15_000 });
   await communicationButton.click();
+  browserPhase = 'synthetic-summary-open';
   await page.locator('#summary-dialog[open]').waitFor({ state: 'visible' });
   await page.locator('#summary-body .communication-message').filter({ hasText: persisted[0].body }).waitFor({ state: 'visible' });
   await page.locator('#summary-body .communication-message').filter({ hasText: persisted[1].body }).waitFor({ state: 'visible' });
@@ -494,11 +541,13 @@ try {
     'summary must show the source conversation, source run, and complete send/reply round trip');
   const communicationViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
   assert.deepEqual(communicationViewport, { width: 1366, height: 900 }, 'communication screenshot must use its reported viewport');
+  browserPhase = 'synthetic-summary-screenshot';
   const communicationScreenshot = 'bot-communication-synthetic-1366.png';
   await page.screenshot({ path: join(outputDir, communicationScreenshot), fullPage: true, animations: 'disabled' });
   report.screenshots.push({ file: communicationScreenshot, viewport: { name: 'bot-communication-synthetic-1366', width: 1366, height: 900 }, contents: 'synthetic model test data in product Bot communication summary dialog' });
   report.interactions.push('真实 Web UI 打开产品持久化通信事件浮窗并截图；消息正文显示 UI QA synthetic model 标记。');
   await page.locator('#close-summary').click();
+  browserPhase = 'synthetic-summary-closed';
 
   const consoleErrors = report.browserConsole.filter((entry) => ['error', 'pageerror', 'http-error'].includes(entry.type));
   assertExpectedUnauthenticatedSessionProbe(report.httpUnauthorizedResponses, consoleErrors.map((entry) => entry.text));
@@ -507,10 +556,32 @@ try {
 } catch (error) {
   failure = error;
   const failureName = ['TimeoutError', 'AssertionError', 'TypeError', 'RangeError'].includes(error?.name) ? error.name : 'Error';
-  report.failure = { name: failureName, phase: browserPhase, messageLength: String(error?.message ?? '').length };
+  report.failure = {
+    name: failureName,
+    phase: acceptancePhases.has(browserPhase) ? browserPhase : 'unknown',
+    messageLength: String(error?.message ?? '').length,
+  };
+  let groupApiRunState = 'not-requested';
+  if (page && qaOrigin && qaGroupId) {
+    groupApiRunState = 'unavailable';
+    try {
+      const response = await page.request.post(`${qaOrigin}/api/v1/command`, {
+        data: { command: 'groups.get', params: { groupId: qaGroupId } },
+        timeout: 1500,
+      });
+      if (response.ok()) {
+        const payload = await response.json();
+        const statuses = (payload.result?.runs ?? []).map((run) => run.status);
+        const latest = statuses[0];
+        groupApiRunState = ['queued', 'running', 'completed', 'failed', 'cancelled', 'interrupted'].includes(latest)
+          ? latest
+          : latest === undefined ? 'no-runs' : 'unknown';
+      }
+    } catch { /* report only a fixed state; never serialize API error text */ }
+  }
   if (page) {
     try {
-      const ui = await page.evaluate(({ expectedId, phase }) => {
+      const ui = await page.evaluate(({ expectedId, phase, groupApiRunState }) => {
         const text = (selector) => document.querySelector(selector)?.textContent?.trim() ?? '';
         const historyRows = [...document.querySelectorAll('#history-list .history-item')];
         const toastText = text('#notice');
@@ -528,10 +599,21 @@ try {
           hasCurrentConversation: Boolean(document.querySelector('#view-chat')?.dataset?.conversationId),
           conversationMatchesExpected: Boolean(expectedId)
             && document.querySelector('#view-chat')?.dataset?.conversationId === expectedId,
+          groupTitleMatchesExpected: text('#bot-title') === 'UI QA 项目协作群',
+          groupTitleAccessibleNameMatchesExpected: document.querySelector('#bot-title')?.getAttribute('aria-label') === 'UI QA 项目协作群',
+          groupViewVisible: !document.querySelector('#view-groups')?.hidden,
+          groupComposerVisible: !document.querySelector('#view-groups')?.hidden
+            && Boolean(document.querySelector('#group-form') && getComputedStyle(document.querySelector('#group-form')).display !== 'none'),
+          groupSendEnabled: Boolean(document.querySelector('#group-send') && !document.querySelector('#group-send').disabled),
+          groupMessageCount: document.querySelectorAll('#group-messages .group-message').length,
+          groupRunStatusCount: document.querySelectorAll('#group-run-status .group-run-status').length,
+          groupDetailsOpen: Boolean(document.querySelector('#conversation-detail .detail-card')
+            && getComputedStyle(document.querySelector('#conversation-detail .detail-card')).display !== 'none'),
+          groupApiRunState,
           toast: { visible: !document.querySelector('#notice')?.hidden, textLength: toastText.length },
           timelineStatus: { visible: !document.querySelector('#timeline-status')?.hidden, textLength: statusText.length },
         };
-      }, { expectedId: expectedHistoryConversationId, phase: browserPhase });
+      }, { expectedId: expectedHistoryConversationId, phase: browserPhase, groupApiRunState });
       report.failure.ui = ui;
     } catch {
       report.failure.uiDiagnostic = 'structured UI snapshot unavailable';

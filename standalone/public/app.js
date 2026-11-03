@@ -1446,6 +1446,7 @@ async function renderGroup(groupId, { reset = false, older = false } = {}) {
   $('conversation-eyebrow').textContent = `${group.members.length} 位成员 · 群聊`;
   $('conversation-eyebrow').removeAttribute('aria-label');
   $('bot-title').textContent = group.name;
+  $('bot-title').setAttribute('aria-label', group.name);
   $('bot-title-avatar').replaceChildren(node('span', '群', 'group-avatar group-title-avatar'));
   $('history-entry').disabled = true;
   $('history-entry').hidden = true;
@@ -1577,6 +1578,7 @@ function initialEmployeeId() {
 function showNoEmployeeSelected() {
   bot = null; conversation = null; modelOptions = []; currentModelSelection = null;
   $('bot-title').textContent = '选择员工开始对话';
+  $('bot-title').setAttribute('aria-label', '选择员工开始对话');
   $('bot-title-avatar').replaceChildren(); $('history-entry').disabled = true;
   $('messages').replaceChildren(node('div', contacts?.count > 1 && !contacts.primaryEmployeeId ? '请先在模型账户设置中选择主要联系人；也可以继续访问每位员工的私聊。' : '创建一位员工，或从左侧选择一位员工。', 'empty'));
   renderModelOptions(null); updateComposer();

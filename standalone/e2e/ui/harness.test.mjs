@@ -60,7 +60,12 @@ test('UI QA failure diagnostics never persist arbitrary UI text, parsed error co
   assert.match(failurePath, /textLength: statusText\.length/u);
   assert.match(failurePath, /historyDialogOpen: Boolean/u);
   assert.match(failurePath, /conversationMatchesExpected: Boolean/u);
+  assert.match(failurePath, /acceptancePhases\.has\(browserPhase\) \? browserPhase : 'unknown'/u);
+  assert.match(failurePath, /groupApiRunState/u);
+  for (const status of ['queued', 'running', 'completed', 'failed', 'cancelled', 'interrupted', 'no-runs', 'unknown', 'unavailable', 'not-requested'])
+    assert(source.includes(`'${status}'`), `group API diagnostic must use the fixed ${status} enum`);
   assert.doesNotMatch(failurePath, /errorCode|failureCode|page\.screenshot|failure-ui\.png/u);
+  assert.doesNotMatch(failurePath, /error\.code|\.message\s*\)|toastText\s*[,}]/u);
   assert.doesNotMatch(failurePath, /toast: \{[^}]*text:/u);
   assert.doesNotMatch(failurePath, /timelineStatus: \{[^}]*text:/u);
 });
