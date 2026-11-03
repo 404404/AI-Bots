@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import net from 'node:net';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { assertChildAlive, captureProcessIdentity, closeRelayWhenChildExits, createReservedLoopbackRelay, isProcessIdentityAlive, parseLinuxProcessStat, parseServerReadyLine, prepareEmptyOutputDir } from './harness.mjs';
 
 test('relay owns its kernel-assigned loopback port and forwards only to its fixed child port', async () => {
@@ -110,11 +111,68 @@ test('real child exit closes the relay before a replacement can serve its old po
   }
 });
 
-test('readiness handshake rejects unrelated PIDs, malformed lines, and invalid ports', () => {
+test('readiness handshake validates the launched PID and bound port', () => {
   assert.equal(parseServerReadyLine(JSON.stringify({ event: 'ready', pid: 42, port: 51823 }), 42), 51823);
-  assert.throws(() => parseServerReadyLine(JSON.stringify({ event: 'ready', pid: 43, port: 51823 }), 42), /did not match/u);
+  assert.throws(() => parseServerReadyLine(JSON.stringify({ event: 'ready', pid: 43, port: 51823 }), 42), /launched process/u);
   assert.throws(() => parseServerReadyLine('{not json', 42), /invalid JSON/u);
-  assert.throws(() => parseServerReadyLine(JSON.stringify({ event: 'ready', pid: 42, port: 0 }), 42), /did not match/u);
+  assert.throws(() => parseServerReadyLine(JSON.stringify({ event: 'ready', pid: 42, port: 0 }), 42), /invalid bound port/u);
+});
+
+test('real UI QA server emits readiness on fd 3 despite startup diagnostics on stdout', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'standalone-ui-qa-server-test-'));
+  await chmod(root, 0o700);
+  const dataDir = join(root, 'data');
+  const relay = await createReservedLoopbackRelay();
+  const origin = `http://127.0.0.1:${relay.port}`;
+  const child = spawn(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./server.mjs', import.meta.url))], {
+    cwd: fileURLToPath(new URL('../..', import.meta.url)),
+    env: {
+      PATH: process.env.PATH ?? '',
+      HOME: root,
+      TMPDIR: root,
+      BOT_DATA_DIR: dataDir,
+      UI_QA_PUBLIC_URL: origin,
+      NODE_ENV: 'test',
+    },
+    stdio: ['ignore', 'pipe', 'ignore', 'pipe'],
+  });
+  let identity;
+  let closeOnExit;
+  let stdout = '';
+  child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
+  try {
+    identity = await captureProcessIdentity(child.pid);
+    closeOnExit = closeRelayWhenChildExits(child, relay);
+    const line = await new Promise((resolve, reject) => {
+      let output = '';
+      const timer = setTimeout(() => reject(new Error('child readiness line timed out')), 5000);
+      child.stdio[3].on('data', (chunk) => {
+        output += chunk.toString('utf8');
+        const newline = output.indexOf('\n');
+        if (newline >= 0) {
+          clearTimeout(timer);
+          resolve(output.slice(0, newline));
+        }
+      });
+      child.once('error', reject);
+      child.once('exit', () => reject(new Error('child exited before readiness')));
+    });
+    const port = parseServerReadyLine(line, child.pid);
+    assert.notEqual(port, 0);
+    relay.setTarget(port, () => isProcessIdentityAlive(identity, child));
+    const response = await fetch(`${origin}/healthz`);
+    assert.equal(response.status, 200);
+    const logUntil = Date.now() + 2000;
+    while (!stdout.includes('"event":"startup"') && Date.now() < logUntil) await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.match(stdout, /"event":"startup"/u);
+    assert.equal(isProcessIdentityAlive(identity, child), true);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+    if (child.exitCode === null && child.signalCode === null) await once(child, 'exit');
+    if (closeOnExit) await closeOnExit();
+    else await relay.close();
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('output directory preparation accepts only a fresh or empty location', async () => {

@@ -115,7 +115,9 @@ export function parseServerReadyLine(line, expectedPid) {
   let record;
   try { record = JSON.parse(line); }
   catch { throw new Error('Child server readiness channel returned invalid JSON.'); }
-  if (!record || record.event !== 'ready' || record.pid !== expectedPid || !Number.isInteger(record.port) || record.port < 1 || record.port > 65535)
+  if (!record || record.event !== 'ready' || record.pid !== expectedPid)
     throw new Error('Child server readiness record did not match its launched process.');
+  if (!Number.isInteger(record.port) || record.port < 1 || record.port > 65535)
+    throw new Error('Child server readiness record contained an invalid bound port.');
   return record.port;
 }

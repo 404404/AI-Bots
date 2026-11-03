@@ -1,4 +1,5 @@
 import { startServer } from '../../src/server.ts';
+import { writeSync } from 'node:fs';
 
 let runtime;
 try {
@@ -9,7 +10,7 @@ try {
   const address = runtime.server.address();
   if (!address || typeof address === 'string' || address.address !== '127.0.0.1' || !Number.isInteger(address.port) || address.port < 1)
     throw new Error('Standalone server did not bind a valid ephemeral loopback port.');
-  process.stdout.write(`${JSON.stringify({ event: 'ready', pid: process.pid, port: address.port })}\n`);
+  writeSync(3, `${JSON.stringify({ event: 'ready', pid: process.pid, port: address.port })}\n`);
 } catch (error) {
   const code = typeof error?.code === 'string' ? error.code : 'ui-qa-server-start-failed';
   process.stderr.write(`${JSON.stringify({ event: 'failed', code })}\n`);
@@ -23,7 +24,6 @@ if (runtime) {
     stopping = true;
     try {
       await runtime.close();
-      process.stdout.write(`${JSON.stringify({ event: 'stopped', pid: process.pid })}\n`);
     } catch {
       process.exitCode = 1;
     }

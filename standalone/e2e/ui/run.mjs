@@ -33,6 +33,8 @@ async function waitForHealth(origin, child) {
 }
 
 async function waitForReadiness(child) {
+  const readiness = child.stdio[3];
+  if (!readiness) throw new Error('Isolated server readiness pipe was not created.');
   return new Promise((resolveReady, rejectReady) => {
     let pending = '';
     let finished = false;
@@ -40,7 +42,7 @@ async function waitForReadiness(child) {
       if (finished) return;
       finished = true;
       clearTimeout(timer);
-      child.stdout.off('data', onData);
+      readiness.off('data', onData);
       child.off('exit', onExit);
       child.off('error', onError);
       if (error) rejectReady(error);
@@ -57,7 +59,7 @@ async function waitForReadiness(child) {
     };
     const onExit = () => finish(new Error('Isolated server exited before readiness.'));
     const onError = () => finish(new Error('Isolated server process could not start.'));
-    child.stdout.on('data', onData);
+    readiness.on('data', onData);
     child.once('exit', onExit);
     child.once('error', onError);
   });
@@ -129,7 +131,7 @@ const report = {
   screenshots: [],
   browserConsole: [],
   cleanup: { browserClosed: false, serviceStopped: false, modelStubStopped: false, loopbackRelayStopped: false, temporaryDataRemoved: false },
-  communicationEvents: { status: 'blocked', reason: 'Bot 间通信尚未接入 standalone Application/API/UI；不使用模拟消息冒充真实通信。' },
+  realModelCommunication: { status: 'not-verified', reason: '此隔离 UI 流程使用本地确定性测试模型，真实模型驱动的 Bot 间通信未验收。' },
 };
 let serverProcess;
 let serverIdentity;
@@ -167,7 +169,7 @@ try {
       UI_QA_PUBLIC_URL: origin,
       NODE_ENV: 'test',
     },
-    stdio: ['ignore', 'pipe', 'ignore'],
+    stdio: ['ignore', 'ignore', 'ignore', 'pipe'],
   });
   serverIdentity = await captureProcessIdentity(serverProcess.pid);
   closeRelayOnServerExit = closeRelayWhenChildExits(serverProcess, relay, (closed) => {
@@ -347,5 +349,5 @@ try {
   accessCode = '';
 }
 
-process.stdout.write(`${JSON.stringify({ status: report.status, screenshots: report.screenshots.map((item) => item.file), communicationEvents: report.communicationEvents.status })}\n`);
+process.stdout.write(`${JSON.stringify({ status: report.status, screenshots: report.screenshots.map((item) => item.file), realModelCommunication: report.realModelCommunication.status })}\n`);
 if (failure || !report.cleanup.browserClosed || !report.cleanup.serviceStopped || !report.cleanup.modelStubStopped || !report.cleanup.loopbackRelayStopped || !report.cleanup.temporaryDataRemoved) process.exitCode = 1;

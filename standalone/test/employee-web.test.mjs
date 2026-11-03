@@ -56,7 +56,11 @@ test('session workspace uses server inbox items for pinning, unread state, and p
   assert.match(app, /through: \{ createdAt: message\.createdAt, id: message\.id \}/u);
   assert.match(app, /startPrivateChat\(chat\.botId\)\.catch\(showError\)/u);
   assert.match(app, /inbox\.startChats|inboxStartChats/u);
-  assert.match(app, /尚未提供真实通信事件数据；普通私聊和群聊不会显示为 Bot 间通信/u);
+  assert.match(app, /if \(item\.type === 'private' && item\.id === communicationTimeline\.conversationId\)/u);
+  assert.match(app, /else if \(!communicationTimeline\.loaded\)[\s\S]*?正在读取此会话的 Bot 间通信事件/u);
+  assert.match(app, /else if \(!communicationTimeline\.items\.length\)[\s\S]*?此会话尚无关联的 Bot 间通信事件/u);
+  assert.match(app, /Bot 间通信暂时无法读取；私聊消息仍可查看/u);
+  assert.match(app, /command\('bot-messages\.timeline'/u);
   assert.match(app, /memory\.list/u);
   assert.match(app, /browser\.origins\.list/u);
   assert.match(app, /协作任务/u);
